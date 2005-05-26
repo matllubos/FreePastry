@@ -5,6 +5,7 @@ import java.security.spec.*;
 import java.util.*;
 import java.math.*;
 import java.io.*;
+
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
@@ -248,11 +249,28 @@ public class StorageService {
                   if ((results[i] == null) || (! results[i].booleanValue())) 
                     failed++;
                 }
-                
-                if (failed <= results.length/2) 
-                  parent.receiveResult(new Object[] {location, key});
-                else 
+             
+                if (failed > results.length/2) 
                   parent.receiveException(new IOException("Storage of content hash data into PAST failed - had " + failed + "/" + results.length + " failures."));
+
+                // retrieve to make sure it got committed safely
+                retrieveContentHashEntry(location, key, new StandardContinuation(parent) {
+                  public void receiveResult(Object result) {
+                    byte[] recoveredText = (byte[]) result;
+                    if (!Arrays.equals(recoveredText, plainText)) {
+                    	  System.out.println("******* CRYPTO ERROR (storeContentHashEntry) *******");
+                    	  System.out.println("plaintext: "+MathUtils.toHex(plainText));
+                    	  System.out.println("location: "+location);
+                    	  System.out.println("key: "+MathUtils.toHex(key));
+                    	  System.out.println("ciphertext: "+MathUtils.toHex(cipherText));
+                    	  System.out.println("recovered plaintext: "+MathUtils.toHex(recoveredText));
+
+                      	parent.receiveException(new IOException("Storage of content hash data into PAST failed - could not decrypt after encryption"));
+                    }
+
+                    parent.receiveResult(new Object[] {location, key});
+                  }
+                });
               }
             };
             
@@ -394,7 +412,7 @@ public class StorageService {
       
       Id[] ids = (Id[]) idset.toArray(new Id[0]);
       
-      System.out.println("CALLING REFERSH WITH " + ids.length + " OBJECTS!");
+      System.out.println("CALLING REFRESH WITH " + ids.length + " OBJECTS!");
       ((GCPast) immutablePast).refresh(ids, getTimeout(), new StandardContinuation(command) {
         public void receiveResult(Object o) {
           parent.receiveResult(Boolean.TRUE);
@@ -517,8 +535,45 @@ public class StorageService {
    * @param location The location where to store the data
    * @param command The command to run once the store has completed.
    */
-  public void storeSigned(PostData data, Id location, Continuation command) {
-    storeSigned(data, location, System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, command);
+  public void storeSigned(final PostData data, final Id location, Continuation command) {
+    storeSigned(data, location, System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, 
+        new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        final SignedReference sr = (SignedReference) o;
+
+        retrieveAndVerifySigned(sr, keyPair.getPublic(), new Continuation() {
+          public void receiveResult(Object o) {
+            // if we got here then the signature verified
+            // pass the result up to the parent
+            parent.receiveResult(sr);
+          }
+          
+          public void receiveException(Exception e) {
+            if (e instanceof SecurityException) {
+              ByteArrayOutputStream xxx = new ByteArrayOutputStream();
+              ObjectOutputStream oo;
+              try {
+                oo = new ObjectOutputStream(xxx);
+                oo.writeObject(data);
+              } catch (IOException e1) {
+                // do nothing
+              }
+              System.out.println("******* CRYPTO ERROR (storeSigned) *******");
+              System.out.println("data: "+MathUtils.toHex(xxx.toByteArray()));
+              System.out.println("location: "+location);
+              System.out.println("public key: "+keyPair.getPublic());
+              System.out.println("private key: "+keyPair.getPrivate());
+              System.out.println("signed referece: "+sr);
+              System.out.print("stack trace:");
+              e.printStackTrace();
+              parent.receiveException(new IOException("Storage of singed data into PAST failed - could not verify"));
+            } else {
+              parent.receiveException(e);
+            }
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -528,12 +583,16 @@ public class StorageService {
    *
    * Once the data has been stored, the command.receiveResult() method
    * will be called with a SignedReference as the argument.
+   * 
+   * Calling this method does not verify the signed contents after storage.
+   * If you need verification you will have to call retrieveAndVerifySigned
+   * yourself.
    *
    * @param data The data to store
    * @param location The location where to store the data
    * @param command The command to run once the store has completed.
    */
-  protected static void storeSigned(final PostData data, final Id location, long time, long expiration, KeyPair keyPair, Past past, Continuation command) {
+  protected static void storeSigned(final PostData data, final Id location, long time, long expiration, final KeyPair keyPair, Past past, Continuation command) {
     try {
       byte[] plainText = SecurityUtils.serialize(data);
       byte[] timestamp = MathUtils.longToByteArray(time);
@@ -698,8 +757,8 @@ public class StorageService {
   public void storeSecure(final PostData data, Continuation command) {
     try {
       final byte[] key = SecurityUtils.generateKeySymmetric();
-      byte[] plainText = SecurityUtils.serialize(data);
-      byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, key);
+      final byte[] plainText = SecurityUtils.serialize(data);
+      final byte[] cipherText = SecurityUtils.encryptSymmetric(plainText, key);
       byte[] loc = SecurityUtils.hash(cipherText);
       
       final Id location = factory.buildId(loc);
@@ -715,10 +774,37 @@ public class StorageService {
             if ((results[i] == null) || (! results[i].booleanValue())) 
               failed++;
           
-          if (failed <= results.length/2)         
-            parent.receiveResult(data.buildSecureReference(location, key));
-          else 
+          if (failed > results.length/2)         
             parent.receiveException(new IOException("Storage of secure data into PAST failed - had " + failed + "/" + results.length + " failures."));
+
+          SecureReference sr = data.buildSecureReference(location, key);
+          retrieveSecure(sr, new Continuation() {
+            public void receiveResult(Object o) {
+              PostData recovered = (PostData)o;
+              try {
+                // XXX this is kind of stupid; retrieveSecure just deserialized it
+                // and we reserialze just to compare
+                if (!Arrays.equals(plainText, SecurityUtils.serialize(recovered))) { 
+                  System.out.println("******* CRYPTO ERROR (storeSecure) *******");
+                  System.out.println("plaintext: "+MathUtils.toHex(plainText));
+                  System.out.println("location: "+location);
+                  System.out.println("key: "+MathUtils.toHex(key));
+                  System.out.println("ciphertext: "+MathUtils.toHex(cipherText));
+                  System.out.println("recovered plaintext: " + SecurityUtils.serialize(recovered));
+                  parent.receiveException(new IOException("Storage of secure data into PAST failed - could not recover data"));
+                } else {
+                  parent.receiveResult(data.buildSecureReference(location, key));
+                }
+              } catch (IOException e) {
+                parent.receiveException(e);
+              }
+            }
+            
+            public void receiveException(Exception e) {
+              parent.receiveException(e);
+            }
+          });
+        
         }
       };
       
