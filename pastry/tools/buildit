@@ -1,0 +1,7 @@
+declare -x ANT_OPTS=-Xmx1024m
+rm -rf pastry
+cvs -d /net/madras/FreePastry/cvsroot/ co pastry
+cd pastry
+#ant beautifyandlicense
+ant/bin/ant freepastry-release -Dfreepastry-version=1.4.1
+cd ..
