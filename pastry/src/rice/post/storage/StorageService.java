@@ -256,19 +256,18 @@ public class StorageService {
                 // retrieve to make sure it got committed safely
                 retrieveContentHashEntry(location, key, new StandardContinuation(parent) {
                   public void receiveResult(Object result) {
-                    byte[] recoveredText = (byte[]) result;
-                    if (!Arrays.equals(recoveredText, plainText)) {
-                    	  System.out.println("******* CRYPTO ERROR (storeContentHashEntry) *******");
-                    	  System.out.println("plaintext: "+MathUtils.toHex(plainText));
-                    	  System.out.println("location: "+location);
-                    	  System.out.println("key: "+MathUtils.toHex(key));
-                    	  System.out.println("ciphertext: "+MathUtils.toHex(cipherText));
-                    	  System.out.println("recovered plaintext: "+MathUtils.toHex(recoveredText));
-
-                      	parent.receiveException(new IOException("Storage of content hash data into PAST failed - could not decrypt after encryption"));
-                    }
-
                     parent.receiveResult(new Object[] {location, key});
+                  }
+                  
+                  public void receiveException(Exception e) {
+                    System.out.println("******* CRYPTO ERROR (storeContentHashEntry) *******");
+                    System.out.println("Received exception " + e + " while verifying inserted data!");
+                    System.out.println("plaintext: " + MathUtils.toHex(plainText));
+                    System.out.println("location: " + location);
+                    System.out.println("key: "  +MathUtils.toHex(key));
+                    System.out.println("ciphertext: " + MathUtils.toHex(cipherText));
+                    
+                    parent.receiveException(new IOException("Storage of content hash data into PAST failed - could not decrypt after encryption"));                    
                   }
                 });
               }
@@ -367,9 +366,9 @@ public class StorageService {
         
         // Verify hash(cipher) == location
         if (! Arrays.equals(SecurityUtils.hash(cipherText), location.toByteArray())) {
-          parent.receiveResult(new StorageException("Hash of cipher text does not match location."));
+          parent.receiveException(new StorageException("Hash of cipher text does not match location."));
           return;
-        }
+        } 
         
         endpoint.process(new Executable() {
           public Object execute() {
@@ -378,12 +377,12 @@ public class StorageService {
         }, new StandardContinuation(parent) {
           public void receiveResult(Object o) {
             final byte[] plainText = (byte[]) o;
-            
+                        
             // Verify hash(plain) == key
             if (! Arrays.equals(SecurityUtils.hash(plainText), key)) {
               parent.receiveException(new StorageException("Hash of retrieved content does not match key."));
               return;
-            }
+            } 
             
             // finally return the plaintext
             parent.receiveResult(plainText);
@@ -536,15 +535,12 @@ public class StorageService {
    * @param command The command to run once the store has completed.
    */
   public void storeSigned(final PostData data, final Id location, Continuation command) {
-    storeSigned(data, location, System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, 
-        new StandardContinuation(command) {
+    storeSigned(data, location, System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         final SignedReference sr = (SignedReference) o;
 
-        retrieveAndVerifySigned(sr, keyPair.getPublic(), new Continuation() {
+        retrieveAndVerifySigned(sr, keyPair.getPublic(), new StandardContinuation(parent) {
           public void receiveResult(Object o) {
-            // if we got here then the signature verified
-            // pass the result up to the parent
             parent.receiveResult(sr);
           }
           
@@ -558,6 +554,7 @@ public class StorageService {
               } catch (IOException e1) {
                 // do nothing
               }
+              
               System.out.println("******* CRYPTO ERROR (storeSigned) *******");
               System.out.println("data: "+MathUtils.toHex(xxx.toByteArray()));
               System.out.println("location: "+location);
@@ -777,34 +774,26 @@ public class StorageService {
           if (failed > results.length/2)         
             parent.receiveException(new IOException("Storage of secure data into PAST failed - had " + failed + "/" + results.length + " failures."));
 
-          SecureReference sr = data.buildSecureReference(location, key);
-          retrieveSecure(sr, new Continuation() {
+          final SecureReference sr = data.buildSecureReference(location, key);
+          
+          retrieveSecure(sr, new StandardContinuation(parent) {
             public void receiveResult(Object o) {
-              PostData recovered = (PostData)o;
-              try {
-                // XXX this is kind of stupid; retrieveSecure just deserialized it
-                // and we reserialze just to compare
-                if (!Arrays.equals(plainText, SecurityUtils.serialize(recovered))) { 
-                  System.out.println("******* CRYPTO ERROR (storeSecure) *******");
-                  System.out.println("plaintext: "+MathUtils.toHex(plainText));
-                  System.out.println("location: "+location);
-                  System.out.println("key: "+MathUtils.toHex(key));
-                  System.out.println("ciphertext: "+MathUtils.toHex(cipherText));
-                  System.out.println("recovered plaintext: " + SecurityUtils.serialize(recovered));
-                  parent.receiveException(new IOException("Storage of secure data into PAST failed - could not recover data"));
-                } else {
-                  parent.receiveResult(data.buildSecureReference(location, key));
-                }
-              } catch (IOException e) {
-                parent.receiveException(e);
-              }
+              parent.receiveResult(sr);
             }
             
             public void receiveException(Exception e) {
-              parent.receiveException(e);
+              // XXX this is kind of stupid; retrieveSecure just deserialized it
+              // and we reserialze just to compare
+              System.out.println("******* CRYPTO ERROR (storeSecure) *******");
+              System.out.println("Received exception " + e + " verifying inserted data.");
+              System.out.println("plaintext: " + MathUtils.toHex(plainText));
+              System.out.println("location: " + location);
+              System.out.println("key: "+ MathUtils.toHex(key));
+              System.out.println("ciphertext: " + MathUtils.toHex(cipherText));
+              
+              parent.receiveException(new IOException("Storage of secure data into PAST failed - could not recover data"));
             }
           });
-        
         }
       };
       
@@ -840,14 +829,14 @@ public class StorageService {
           
           byte[] key = reference.getKey();
           byte[] cipherText = sd.getData();
-          byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
-          Object data = SecurityUtils.deserialize(plainText);
-          
+
           // Verify hash(cipher) == location
           if (! Arrays.equals(SecurityUtils.hash(cipherText), reference.getLocation().toByteArray()))
             throw new StorageException("Hash of cipher text does not match location for secure data.");
           
-          parent.receiveResult((PostData) data);
+          byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
+          
+          parent.receiveResult((PostData) SecurityUtils.deserialize(plainText));
         } catch (ClassCastException cce) {
           parent.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
         } catch (IOException ioe) {
