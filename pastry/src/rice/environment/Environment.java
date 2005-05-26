@@ -3,6 +3,7 @@
  */
 package rice.environment;
 
+import rice.environment.logging.LogManager;
 import rice.environment.time.TimeSource;
 
 
@@ -12,9 +13,11 @@ import rice.environment.time.TimeSource;
 public class Environment {
 
   public TimeSource time;
+  public LogManager lm;
   
-  public Environment(TimeSource time) {
+  public Environment(TimeSource time, LogManager lm) {
     this.time = time; 
   }
+  
   
 }
