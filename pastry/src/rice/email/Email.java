@@ -114,9 +114,9 @@ public class Email implements java.io.Serializable {
    * @return A string representing this email
    */
   public String toString() {
-    String result = "[Email from " + sender + " to " + recipients[0];
-    for (int i = 1; i < recipients.length; i++) {
-      result += ", " + recipients[i];
+    String result = "[Email from " + sender + " to ";
+    for (int i = 0; i < recipients.length; i++) {
+      result += recipients[i] + ", ";
     }
     result += "]";
     
