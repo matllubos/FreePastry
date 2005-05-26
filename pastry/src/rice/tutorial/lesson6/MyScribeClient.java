@@ -21,8 +21,8 @@ import rice.pastry.PastryNode;
 import rice.pastry.commonapi.PastryIdFactory;
 
 /**
- * We implement Application to receive regular timed messages (see lesson5).
- * We implement ScribeClient to receive scribe messages (called ScribeContent).
+ * We implement the Application interface to receive regular timed messages (see lesson5).
+ * We implement the ScribeClient interface to receive scribe messages (called ScribeContent).
  * 
  * @author Jeff Hoye
  */
@@ -60,14 +60,12 @@ public class MyScribeClient implements ScribeClient, Application {
    */
   protected Endpoint endpoint;
 
-  public PastryNode node;
-  
   /**
+   * The constructor for this scribe client.  It will construct the ScribeApplication.
+   * 
    * @param node the PastryNode
    */
   public MyScribeClient(PastryNode node) {
-    this.node = node;
-    
     // you should recognize this from lesson 3
     this.endpoint = node.registerApplication(this, "myinstance");
     // construct Scribe

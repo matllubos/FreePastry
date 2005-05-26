@@ -25,12 +25,13 @@ public class DistTutorial {
   Vector apps = new Vector();
   
   /**
-   * This constructor sets up a PastryNode.  It will bootstrap to an 
-   * existing ring if it can find one at the specified location, otherwise
+   * This constructor launches numNodes PastryNodes.  They will bootstrap 
+   * to an existing ring if one exists at the specified location, otherwise
    * it will start a new ring.
    * 
    * @param bindport the local port to bind to 
    * @param bootaddress the IP:port of the node to boot from
+   * @param numNodes the number of nodes to create in this JVM
    */
   public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes) throws Exception {
     
@@ -115,22 +116,30 @@ public class DistTutorial {
 
   /**
    * Usage: 
-   * java [-cp FreePastry-<version>.jar] rice.tutorial.DistTutorial localbindport bootIP bootPort
-   * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
+   * java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes
+   * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
    */
   public static void main(String[] args) throws Exception {
-    // the port to use locally
-    int bindport = Integer.parseInt(args[0]);
-    
-    // build the bootaddress from the command line args
-    InetAddress bootaddr = InetAddress.getByName(args[1]);
-    int bootport = Integer.parseInt(args[2]);
-    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-
-    // the port to use locally
-    int numNodes = Integer.parseInt(args[3]);    
-    
-    // launch our node!
-    DistTutorial dt = new DistTutorial(bindport, bootaddress, numNodes);
+    try {
+      // the port to use locally
+      int bindport = Integer.parseInt(args[0]);
+      
+      // build the bootaddress from the command line args
+      InetAddress bootaddr = InetAddress.getByName(args[1]);
+      int bootport = Integer.parseInt(args[2]);
+      InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+  
+      // the port to use locally
+      int numNodes = Integer.parseInt(args[3]);    
+      
+      // launch our node!
+      DistTutorial dt = new DistTutorial(bindport, bootaddress, numNodes);
+    } catch (Exception e) {
+      // remind user how to use
+      System.out.println("Usage:"); 
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes");
+      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
+      throw e; 
+    }
   }
 }

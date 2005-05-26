@@ -62,19 +62,27 @@ public class DistTutorial {
 
   /**
    * Usage: 
-   * java [-cp FreePastry-<version>.jar] rice.tutorial.DistTutorial localbindport bootIP bootPort
+   * java [-cp FreePastry-<version>.jar] rice.tutorial.lesson5.DistTutorial localbindport bootIP bootPort
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
-    // the port to use locally
-    int bindport = Integer.parseInt(args[0]);
-    
-    // build the bootaddress from the command line args
-    InetAddress bootaddr = InetAddress.getByName(args[1]);
-    int bootport = Integer.parseInt(args[2]);
-    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-
-    // launch our node!
-    DistTutorial dt = new DistTutorial(bindport, bootaddress);
+    try {
+      // the port to use locally
+      int bindport = Integer.parseInt(args[0]);
+      
+      // build the bootaddress from the command line args
+      InetAddress bootaddr = InetAddress.getByName(args[1]);
+      int bootport = Integer.parseInt(args[2]);
+      InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+  
+      // launch our node!
+      DistTutorial dt = new DistTutorial(bindport, bootaddress);
+    } catch (Exception e) {
+      // remind user how to use
+      System.out.println("Usage:"); 
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson5.DistTutorial localbindport bootIP bootPort");
+      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001");
+      throw e; 
+    } 
   }
 }
