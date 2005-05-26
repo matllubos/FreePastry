@@ -3722,27 +3722,11 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
   public void emptyTrash(final Continuation c) {
     if (trashStorage != null) {
-      final IdSet trashKeys = trashStorage.scan();
-      final Iterator iter = trashKeys.getIterator();
+      log(2, "Emptying trash (removing all objects)");
 
-      log(2, "Emptying trash (removing "+trashKeys.numElements()+" objects)");
-
-      Continuation c2 = new Continuation() {
-        public void receiveResult(Object o) {
-          if (!iter.hasNext()) {
-            c.receiveResult(new Boolean(true));
-            return;
-          }
-          
-          final Id thisPiece = (Id) iter.next();
-          trashStorage.unstore(thisPiece, this);
-        }
-        public void receiveException(Exception e) {
-          receiveResult(e);
-        }
-      };
-      
-      c2.receiveResult(null);
+      trashStorage.flush(c);
+    } else {
+      c.receiveResult(null);
     }
   }
   
