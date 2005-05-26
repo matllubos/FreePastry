@@ -225,7 +225,9 @@ public class SecurityUtils {
    * @exception SecurityException If the hashing does not happen properly
    */
   public static byte[] hash(byte[] input) throws SecurityException {
-    return hash.digest(input);
+    synchronized (hash) {
+      return hash.digest(input);
+    }
   }
   
   /**
@@ -238,9 +240,11 @@ public class SecurityUtils {
    * @exception SecurityException If the hashing does not happen properly
    */
   public static byte[] apop(byte[] challenge, byte[] password) throws SecurityException {
-    apop.update(challenge);
-    apop.update(password);
-    return apop.digest();
+    synchronized (apop) {
+      apop.update(challenge);
+      apop.update(password);
+      return apop.digest();
+    }
   }
   
   /**
@@ -253,14 +257,16 @@ public class SecurityUtils {
    * @exception SecurityException If the hmacing does not happen properly
    */
   public static byte[] hmac(byte[] key, byte[] text) throws SecurityException {
-    byte[] realKey = new byte[HMAC_KEY_LENGTH];
-    System.arraycopy(key, 0, realKey, 0, (key.length < realKey.length ? key.length : realKey.length));
+    synchronized (hmac1) {
+      byte[] realKey = new byte[HMAC_KEY_LENGTH];
+      System.arraycopy(key, 0, realKey, 0, (key.length < realKey.length ? key.length : realKey.length));
     
-    hmac1.update(MathUtils.xor(realKey, HMAC_IPAD));
-    hmac1.update(text);
-    hmac2.update(MathUtils.xor(realKey, HMAC_OPAD));
-    hmac2.update(hmac1.digest());
-    return hmac2.digest();
+      hmac1.update(MathUtils.xor(realKey, HMAC_IPAD));
+      hmac1.update(text);
+      hmac2.update(MathUtils.xor(realKey, HMAC_OPAD));
+      hmac2.update(hmac1.digest());
+      return hmac2.digest();
+    }
   }
   
   /**
@@ -444,7 +450,9 @@ public class SecurityUtils {
    * @return A new, random DES key
    */
   public static byte[] generateKeySymmetric() {
-    return generatorSymmetric.generateKey().getEncoded();
+    synchronized (generatorSymmetric) {
+      return generatorSymmetric.generateKey().getEncoded();
+    }
   }
 
   /**
@@ -454,7 +462,9 @@ public class SecurityUtils {
    * @return A new, random DES key
    */
   public static KeyPair generateKeyAsymmetric() {
-    return generatorAsymmetric.generateKeyPair();
+    synchronized (generatorAsymmetric) {
+      return generatorAsymmetric.generateKeyPair();
+    }
   }
 
   /**
