@@ -758,7 +758,7 @@ public class Folder {
 
       public void receiveResult(Object o) {        
         EmailLogEntry entry = (EmailLogEntry) o;
-
+        
         while (entry != null) {
           if (entry instanceof InsertMailLogEntry) {
             insert(((InsertMailLogEntry) entry).getStoredEmail());
@@ -810,6 +810,13 @@ public class Folder {
             break;
           }
         } 
+        
+        if (entry == null) {
+          // if there is a snapshot in the log, add it in
+          if (snapshots != null) 
+            for (int i=0; i<snapshots.length; i++)
+              insert(snapshots[i].getStoredEmails());
+        }          
 
         // now, sort the list (by UID)
         Collections.sort(emails);
