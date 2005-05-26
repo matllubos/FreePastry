@@ -96,6 +96,38 @@ public class MathUtils {
   }
   
   /**
+   * Utility method which converts a hex string to a byte[]
+   *
+   * @param text The text to convert
+   * @return The bytes
+   */
+  public static byte[] fromHex(String text) {
+    byte[] result = new byte[text.length() / 2];
+    
+    for (int i=0; i<result.length; i++) 
+      result[i] = (byte) ((byte) ((byte) 0xf0 & ((getByte(text.charAt(2*i))) << 4)) | getByte(text.charAt(2*i + 1)));
+    
+    return result;
+  }
+
+  /**  
+   * Utility method for converting a char to a byte
+   *
+   * @param c The char
+   * @return The byte
+   */  
+  protected static byte getByte(char c) {
+    if ((c >= '0') && (c <= '9'))
+      return (byte) (c - '0');
+    else if ((c >= 'A') && (c <= 'F'))
+      return (byte) (10 + (byte) (c - 'A'));
+    else if ((c >= 'a') && (c <= 'f'))
+      return (byte) (10 + (byte) (c - 'a'));
+    else
+      throw new RuntimeException("Could not decode hex character '" + c + "'");
+  }
+  
+  /**
    * Utility method for converting a int into a byte[]
    *
    * @param input The log to convert
