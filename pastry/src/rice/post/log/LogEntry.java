@@ -174,7 +174,7 @@ public abstract class LogEntry implements PostData {
       if (previousEntryReferences == null) {
         post.getStorageService().retrieveContentHash(previousEntryReference, fetch);
       } else {
-      		post.getStorageService().retrieveContentHash(previousEntryReferences[0],fetch);
+        post.getStorageService().retrieveContentHash(previousEntryReferences[0],fetch);
       }
     } else {
       command.receiveResult(prev);
