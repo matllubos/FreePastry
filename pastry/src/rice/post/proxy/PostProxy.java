@@ -274,9 +274,7 @@ public class PostProxy {
    * The well-known public key of the CA
    */
   protected PublicKey caPublic;
-  
-  protected RemoteProxy remoteProxy;
-  
+    
   /**
    * The dialog showing the post status to users
    */
@@ -475,37 +473,6 @@ public class PostProxy {
       dialog = new PostDialog(this); 
     }
   }
-
-  /**
-   * Method which sees if we are going to use a proxy for the pastry node, and if so
-   * initiates the remote connection.
-   *
-   * @param parameters The parameters to use
-   */
-  protected void startPastryProxy(Parameters parameters) throws Exception {
-   /* if (parameters.getBooleanParameter("pastry_proxy_enable")) {
-      sectionStart("Preparing Proxy Address");
-      
-      proxyAddress = parameters.getInetSocketAddressParameter("pastry_proxy_address");
-      
-    if (parameters.getStringParameter("pastry_proxy_password") == null) {
-        String password = CAKeyGenerator.fetchPassword(parameters.getStringParameter("pastry_proxy_username") + "@" + 
-                                                       proxy.getAddress() + "'s SSH Password");
-        parameters.setStringParameter("pastry_proxy_password", password);
-      }
-      
-      stepStart("Launching Remote Proxy to " + proxy.getAddress());
-      remoteProxy = new RemoteProxy(proxy.getAddress().getHostAddress(), 
-                                    parameters.getStringParameter("pastry_proxy_username"), 
-                                    parameters.getStringParameter("pastry_proxy_password"), 
-                                    proxy.getPort(),
-                                  parameters.getIntParameter("pastry_port"));
-      remoteProxy.run(); 
-      stepDone(SUCCESS);
-      
-      sectionDone();
-    } */
-  } 
   
   /**
    * Method which installs shutdown hooks
@@ -1429,7 +1396,6 @@ public class PostProxy {
     startRedirection(parameters);
     startCheckBoot(parameters);    
     startDialog(parameters);
-    //startPastryProxy(parameters);
         
     System.out.println("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
     
