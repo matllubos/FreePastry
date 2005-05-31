@@ -7,6 +7,7 @@ import java.nio.channels.*;
 
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.leafset.*;
@@ -214,7 +215,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
-    final SocketPastryNode pn = new SocketPastryNode(nodeId);
+    final SocketPastryNode pn = new SocketPastryNode(nodeId, new Environment(null,null,null,null,null));
 
     SocketSourceRouteManager srManager = null;
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);

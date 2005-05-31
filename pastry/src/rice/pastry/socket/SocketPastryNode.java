@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.client.*;
 import rice.pastry.dist.*;
@@ -39,8 +40,8 @@ public class SocketPastryNode extends DistPastryNode {
    *
    * @param id The NodeId of this Pastry node.
    */
-  public SocketPastryNode(NodeId id) {
-    super(id);
+  public SocketPastryNode(NodeId id, Environment e) {
+    super(id, e);
   }
   
   /**

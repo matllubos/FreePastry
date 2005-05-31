@@ -1,6 +1,7 @@
 
 package rice.pastry.direct;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
@@ -53,7 +54,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return a new PastryNode
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
-    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator);
+    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, new Environment(null, null, null, null, null));
 
     DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
     simulator.registerNodeId( localhandle );

@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.util.*;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.pastry.ExponentialBackoffScheduledMessage;
 import rice.pastry.NetworkListener;
 import rice.pastry.NodeHandle;
@@ -62,8 +63,8 @@ public abstract class DistPastryNode extends PastryNode {
    *
    * @param id DESCRIBE THE PARAMETER
    */
-  protected DistPastryNode(NodeId id) {    
-    super(id);
+  protected DistPastryNode(NodeId id, Environment e) {    
+    super(id, e);
     SignalHandler s;
     
 //    timer = new Timer(true);
