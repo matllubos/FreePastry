@@ -2,17 +2,12 @@
 
 package rice.p2p.splitstream.testing;
 
-import java.io.Serializable;
-import java.net.*;
+import java.util.Random;
 
-import java.util.*;
-
-import rice.*;
-
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.testing.*;
+import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.splitstream.*;
-
 import rice.pastry.PastrySeed;
 
 /**
@@ -50,7 +45,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public SplitStreamRegrTest() {
+  public SplitStreamRegrTest(Environment env) {
+    super(env);
     splitstreams = new SplitStreamImpl[NUM_NODES];
     ssclients = new SplitStreamTestClient[NUM_NODES];
     rng = new Random(PastrySeed.getSeed()+2);
@@ -72,7 +68,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
       PastrySeed.setSeed(seed);
       System.out.println("Seed= " + PastrySeed.getSeed());
       parseArgs(args);
-    SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest();
+    SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest(new Environment());
     splitstreamTest.start();
   }
 

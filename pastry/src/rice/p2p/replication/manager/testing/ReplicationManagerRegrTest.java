@@ -1,18 +1,11 @@
 package rice.p2p.replication.manager.testing;
 
-import java.io.Serializable;
-import java.net.*;
+import java.util.Random;
 
-import java.util.*;
-
-import rice.*;
-import rice.Continuation.*;
-
-import rice.persistence.*;
-
+import rice.Continuation;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.testing.*;
-import rice.p2p.replication.*;
+import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.replication.manager.*;
 
 /**
@@ -52,7 +45,8 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public ReplicationManagerRegrTest() {
+  public ReplicationManagerRegrTest(Environment env) {
+    super(env);
     replications = new ReplicationManagerImpl[NUM_NODES];
     clients = new TestReplicationManagerClient[NUM_NODES];
     rng = new Random();
@@ -67,7 +61,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    */
   public static void main(String args[]) {
     parseArgs(args);
-    ReplicationManagerRegrTest test = new ReplicationManagerRegrTest();
+    ReplicationManagerRegrTest test = new ReplicationManagerRegrTest(new Environment());
     test.start();
   }
 

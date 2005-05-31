@@ -3,6 +3,7 @@ package rice.p2p.past.testing;
 
 import rice.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.*;
 import rice.p2p.past.*;
@@ -46,7 +47,8 @@ public class PastRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public PastRegrTest() {
+  public PastRegrTest(Environment env) {
+    super(env);
     pasts = new PastImpl[NUM_NODES];
     storages = new StorageManager[NUM_NODES];
     rng = new Random();
@@ -727,7 +729,7 @@ public class PastRegrTest extends CommonAPITest {
    */
   public static void main(String args[]) {
     parseArgs(args);
-    PastRegrTest pastTest = new PastRegrTest();
+    PastRegrTest pastTest = new PastRegrTest(new Environment());
     pastTest.start();
   }
   

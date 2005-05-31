@@ -1,18 +1,13 @@
 package rice.p2p.replication.testing;
 
-import java.io.Serializable;
-import java.net.*;
-
 import java.util.*;
 
-import rice.*;
-import rice.Continuation.*;
-
-import rice.persistence.*;
-
+import rice.Continuation.ListenerContinuation;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.testing.*;
+import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.replication.*;
+import rice.persistence.MemoryStorage;
 
 /**
  * @(#) ReplicationRegrTest.java Provides regression testing for the replication service using distributed
@@ -51,7 +46,8 @@ public class ReplicationRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public ReplicationRegrTest() {
+  public ReplicationRegrTest(Environment env) {
+    super(env);
     replications = new ReplicationImpl[NUM_NODES];
     clients = new TestReplicationClient[NUM_NODES];
     rng = new Random();
@@ -66,7 +62,7 @@ public class ReplicationRegrTest extends CommonAPITest {
    */
   public static void main(String args[]) {
     parseArgs(args);
-    ReplicationRegrTest test = new ReplicationRegrTest();
+    ReplicationRegrTest test = new ReplicationRegrTest(new Environment());
     test.start();
   }
 
