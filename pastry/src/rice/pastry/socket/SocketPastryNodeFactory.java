@@ -1,22 +1,18 @@
 package rice.pastry.socket;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
-
-import java.util.*;
+import java.nio.channels.SocketChannel;
 
 import rice.environment.Environment;
+import rice.environment.random.RandomSource;
 import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.pastry.leafset.*;
+import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
-import rice.pastry.security.*;
 import rice.pastry.socket.messaging.*;
 import rice.pastry.standard.*;
-import rice.selector.*;
 
 /**
  * Pastry node factory for Socket-linked nodes.
@@ -26,33 +22,64 @@ import rice.selector.*;
  * @author Alan Mislove
  */
 public class SocketPastryNodeFactory extends DistPastryNodeFactory {
+  // max number of handles stored per routing table entry
+  public static final int DEFAULT_RT_MAX = 1;
+  
+  // leafset size
+  public static final int DEFAULT_LEAFSET_SIZE = 24;
+
+  /**
+   * Large period (in seconds) means infrequent, 0 means never.
+   */
+  private final static int DEFAULT_LEAFSET_MAINT_FREQ = 1 * 60;
+  private final static int DEFAULT_ROUTESET_MAINT_FREQ = 15 * 60;
+  
+  private Environment environment;
 
   private NodeIdFactory nidFactory;
 
   private int port;
 
-  private final static int rtMax = 1;
-  private final static int lSetSize = 24;
-  private final static int maxOpenSockets = 5;
+  // max number of handles stored per routing table entry
+  private int rtMax;
 
+  // leafset size
+  private int lSetSize;
+  
   /**
    * Large period (in seconds) means infrequent, 0 means never.
    */
-  private final static int leafSetMaintFreq = 1 * 60;
-  private final static int routeSetMaintFreq = 15 * 60;
+  private int leafSetMaintFreq;
+  private int routeSetMaintFreq;
   
-  private Random random;
+  private RandomSource random;
 
   /**
-   * Constructor.
+   * Convienience constructor.  Uses a default environment.
    *
    * @param nf The factory for building node ids
    * @param startPort The port to start creating nodes on
    */
   public SocketPastryNodeFactory(NodeIdFactory nf, int startPort) {
+    this(nf, startPort, new Environment());
+  }
+  
+  /**
+   * Constructor.
+   *
+   * @param nf The factory for building node ids
+   * @param startPort The port to start creating nodes on
+	 * @param env The environment.
+   */
+  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env) {
+    environment = env;
     nidFactory = nf;
     port = startPort;
-    this.random = new Random();
+    rtMax = env.getParameters().getInt("socket.SocketPastryNoddeFactory.rtMax", DEFAULT_RT_MAX);
+    lSetSize = env.getParameters().getInt("socket.SocketPastryNoddeFactory.lSetSize", DEFAULT_LEAFSET_SIZE);
+    leafSetMaintFreq = env.getParameters().getInt("socket.SocketPastryNoddeFactory.leafSetMaintFreq", DEFAULT_LEAFSET_MAINT_FREQ);
+    routeSetMaintFreq = env.getParameters().getInt("socket.SocketPastryNoddeFactory.routeSetMaintFreq", DEFAULT_ROUTESET_MAINT_FREQ);
+    this.random = env.getRandomSource();
   }
   
   /**
@@ -215,7 +242,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
-    final SocketPastryNode pn = new SocketPastryNode(nodeId, new Environment(null,null,null,null,null));
+    final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
 
     SocketSourceRouteManager srManager = null;
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);

@@ -3,6 +3,7 @@ package rice.pastry.socket.testing;
 import java.net.*;
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.*;
 import rice.pastry.standard.*;
@@ -17,7 +18,7 @@ public class SourceRouteTest {
   }
  
   public static void main2(String[] args) throws Exception {
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(), 20001);
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(), 20001, new Environment());
     /*
     InetSocketAddress bind = new InetSocketAddress(InetAddress.getLocalHost(), 10001);
     InetSocketAddress local = new InetSocketAddress(InetAddress.getLocalHost(), 10001);
@@ -46,7 +47,7 @@ public class SourceRouteTest {
   }
   
   public static void main(String[] args) throws Exception {
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(), 20001);
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(), 20001, new Environment());
     
     new Thread() {
       int k=0;
