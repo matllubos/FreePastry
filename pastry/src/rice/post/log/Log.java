@@ -497,7 +497,6 @@ public class Log implements PostData {
 
     public void start() {
       if (topEntryReferences == null) {
-        // this is probably not strictly necessary, but I don't think it hurts
         previousTopReferences = new LogEntryReference[1];
         previousTopReferences[0] = topEntryReference;
       } else {
@@ -508,7 +507,7 @@ public class Log implements PostData {
       entry.setPost(post);
       entry.setUser(post.getEntityAddress());
       System.out.println("setting PreviousEntryReferences on entry with: "+topEntryReferencesToString());
-      entry.setPreviousEntryReferences(topEntryReferences);
+      entry.setPreviousEntryReferences(previousTopReferences);
       entry.setPreviousEntry(topEntry);
       post.getStorageService().storeContentHash(entry, this);
     }
