@@ -82,11 +82,7 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
   }
   
   protected synchronized void addMessage(Object obj, InetSocketAddress address, int size, Vector location, Vector locationAddresses, Vector locationSizes) {
-    if (obj instanceof rice.pastry.wire.messaging.datagram.DatagramTransportMessage) {
-      addMessage(((rice.pastry.wire.messaging.datagram.DatagramTransportMessage) obj).getObject(), address, size, location, locationAddresses, locationSizes);
-    } else if (obj instanceof rice.pastry.wire.messaging.socket.SocketTransportMessage) {
-      addMessage(((rice.pastry.wire.messaging.socket.SocketTransportMessage) obj).getObject(), address, size, location, locationAddresses, locationSizes);
-    } else if (obj instanceof rice.pastry.routing.RouteMessage) {
+    if (obj instanceof rice.pastry.routing.RouteMessage) {
       addMessage(((rice.pastry.routing.RouteMessage) obj).unwrap(), address, size, location, locationAddresses, locationSizes);
     } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
       addMessage(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), address, size, location, locationAddresses, locationSizes);

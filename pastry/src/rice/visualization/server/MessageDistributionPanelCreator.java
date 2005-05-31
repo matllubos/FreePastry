@@ -128,11 +128,7 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
   }
   
   protected synchronized void addMessage(Object obj, int size) {
-    if (obj instanceof rice.pastry.wire.messaging.datagram.DatagramTransportMessage) {
-      addMessage(((rice.pastry.wire.messaging.datagram.DatagramTransportMessage) obj).getObject(), size);
-    } else if (obj instanceof rice.pastry.wire.messaging.socket.SocketTransportMessage) {
-      addMessage(((rice.pastry.wire.messaging.socket.SocketTransportMessage) obj).getObject(), size);
-    } else if (obj instanceof rice.pastry.routing.RouteMessage) {
+    if (obj instanceof rice.pastry.routing.RouteMessage) {
       addMessage(((rice.pastry.routing.RouteMessage) obj).unwrap(), size);
     } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
       addMessage(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size);

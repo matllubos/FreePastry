@@ -10,7 +10,6 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.*;
 import rice.pastry.direct.*;
-import rice.pastry.wire.*;
 import rice.pastry.standard.*;
 
 import rice.p2p.past.*;
