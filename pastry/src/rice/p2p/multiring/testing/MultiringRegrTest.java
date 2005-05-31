@@ -1,23 +1,19 @@
 
 package rice.p2p.multiring.testing;
 
-import rice.*;
+import java.net.*;
+import java.util.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
-import rice.p2p.multiring.*;
-
-import rice.pastry.PastryNodeFactory;
-import rice.pastry.NodeId;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNode;
-import rice.pastry.commonapi.*;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.multiring.MultiringNode;
+import rice.pastry.*;
+import rice.pastry.commonapi.PastryIdFactory;
 import rice.pastry.direct.*;
 import rice.pastry.dist.*;
-import rice.pastry.standard.*;
-
-import java.util.*;
-import java.net.*;
-import java.io.Serializable;
+import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
  * Provides regression testing setup for applications written on top of the
@@ -142,15 +138,15 @@ public class MultiringRegrTest {
    * Constructor, which takes no arguments and sets up the
    * factories in preparation for node creation.
    */
-  public MultiringRegrTest() {
+  public MultiringRegrTest(Environment env) {
     if (SIMULATOR == SIMULATOR_SPHERE) {
       simulator = new SphereNetwork();
     } else {
-      simulator = new EuclideanNetwork();
+      simulator = new EuclideanNetwork(env);
     }
     
     if (PROTOCOL == PROTOCOL_DIRECT) {
-      factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
+      factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, env);
     } else {
       factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(),
                                                  PROTOCOL,
@@ -606,7 +602,7 @@ public class MultiringRegrTest {
   
   public static void main(String[] args) {
     parseArgs(args);
-    MultiringRegrTest test = new MultiringRegrTest();
+    MultiringRegrTest test = new MultiringRegrTest(new Environment());
     test.start();
   }
 }

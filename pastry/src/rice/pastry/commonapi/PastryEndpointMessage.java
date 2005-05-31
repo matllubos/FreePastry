@@ -1,14 +1,7 @@
 
 package rice.pastry.commonapi;
 
-import rice.p2p.commonapi.*;
-
-import rice.pastry.Log;
-import rice.pastry.NodeId;
-import rice.pastry.PastryNode;
-import rice.pastry.client.CommonAPIAppl;
-import rice.pastry.security.*;
-import rice.pastry.routing.SendOptions;
+import rice.p2p.commonapi.Message;
 import rice.pastry.messaging.Address;
 
 /**
