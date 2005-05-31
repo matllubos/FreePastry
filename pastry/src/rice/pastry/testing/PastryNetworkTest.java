@@ -26,6 +26,8 @@ public class PastryNetworkTest {
   
   protected HashSet unknown;
   
+  protected final int MAX_THREADS = 100;
+  
   public PastryNetworkTest(SocketPastryNodeFactory factory, InetSocketAddress bootstrap) {
     this.factory = factory;
     this.bootstrap = bootstrap;
@@ -44,7 +46,7 @@ public class PastryNetworkTest {
 
     synchronized (unseen) {
       while (true) {
-        if (numThreads > 20) 
+        if (numThreads >= MAX_THREADS) 
           unseen.wait();
         
         if (unseen.size() > 0) {
@@ -53,12 +55,13 @@ public class PastryNetworkTest {
           final SocketNodeHandle handle = (SocketNodeHandle) unseen.iterator().next();          
           unseen.remove(handle);
           nodes.add(handle);
-          System.out.println("Fetching leafset of " + handle + " (thread " + numThreads + " of 20)");
+          System.out.println("Fetching leafset of " + handle + " (thread " + numThreads + " of "+MAX_THREADS+")");
           
           Thread t = new Thread() {
             public void run() {  
               try {
                 LeafSet ls = factory.getLeafSet(handle);
+                System.out.println(ls);
         //        SourceRoute[] routes = factory.getRoutes(handle);
                 
         //        for (int i=0; i<routes.length; i++) 
@@ -191,10 +194,13 @@ public class PastryNetworkTest {
   
   public void start() throws Exception {
     testLeafSets();
-    testRoutingTables();
+    //testRoutingTables();
   }
   
   public static void main(String[] args) throws Exception {
+//    PrintStream ps = new PrintStream(new FileOutputStream("lses5.txt"));
+//    System.setOut(ps);
+//    System.setErr(ps);
     PastryNetworkTest test = new PastryNetworkTest(new SocketPastryNodeFactory(null, 1), new InetSocketAddress(args[0], Integer.parseInt(args[1])));
     test.start();
   }
