@@ -1,12 +1,9 @@
 package rice.tutorial.lesson1;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.net.*;
 
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNode;
-import rice.pastry.PastryNodeFactory;
+import rice.environment.Environment;
+import rice.pastry.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 
@@ -31,7 +28,7 @@ public class DistTutorial {
     NodeIdFactory nidFactory = new RandomNodeIdFactory();
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
 
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);

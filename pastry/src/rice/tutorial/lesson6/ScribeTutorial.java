@@ -1,16 +1,11 @@
 package rice.tutorial.lesson6;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.Vector;
+import java.net.*;
+import java.util.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.NodeHandle;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNode;
-import rice.pastry.PastryNodeFactory;
+import rice.pastry.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 
@@ -42,7 +37,7 @@ public class ScribeTutorial {
     NodeIdFactory nidFactory = new RandomNodeIdFactory();
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
 
    
     // loop to construct the nodes/apps

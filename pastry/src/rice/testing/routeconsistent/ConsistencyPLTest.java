@@ -8,6 +8,7 @@ import java.net.*;
 import java.nio.channels.*;
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
@@ -129,7 +130,7 @@ public class ConsistencyPLTest implements Observer {
     NodeIdFactory nidFactory = new RandomNodeIdFactory();
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
 
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);

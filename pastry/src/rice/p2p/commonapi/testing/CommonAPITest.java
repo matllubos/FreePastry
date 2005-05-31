@@ -3,6 +3,7 @@ package rice.p2p.commonapi.testing;
 
 import rice.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 
 import rice.pastry.*;
@@ -110,18 +111,18 @@ public abstract class CommonAPITest {
    * Constructor, which takes no arguments and sets up the
    * factories in preparation for node creation.
    */
-  public CommonAPITest() {
+  public CommonAPITest(Environment env) {
       //idFactory = new IPNodeIdFactory(PORT); 
       idFactory = new RandomNodeIdFactory();
 
     if (SIMULATOR == SIMULATOR_SPHERE) {
       simulator = new SphereNetwork();
     } else {
-      simulator = new EuclideanNetwork();
+      simulator = new EuclideanNetwork(env);
     }
     
     if (PROTOCOL == PROTOCOL_DIRECT) {
-      factory = new DirectPastryNodeFactory(idFactory, simulator);
+      factory = new DirectPastryNodeFactory(idFactory, simulator, env);
     } else {
       factory = DistPastryNodeFactory.getFactory(idFactory,
                                                  PROTOCOL,

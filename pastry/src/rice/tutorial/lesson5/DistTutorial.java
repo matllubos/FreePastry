@@ -3,6 +3,7 @@ package rice.tutorial.lesson5;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.NodeHandleSet;
 import rice.pastry.NodeHandle;
@@ -34,7 +35,7 @@ public class DistTutorial {
     NodeIdFactory nidFactory = new RandomNodeIdFactory();
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
 
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);

@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Vector;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
@@ -39,7 +40,7 @@ public class DistTutorial {
     NodeIdFactory nidFactory = new RandomNodeIdFactory();
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
 
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
