@@ -1,6 +1,6 @@
-
 package rice.pastry.testing;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -12,79 +12,80 @@ import java.lang.*;
 
 /**
  * DirectPastryPingTest
- *
- * A performance test suite for pastry. 
- *
+ * 
+ * A performance test suite for pastry.
+ * 
  * @version $Id$
- *
+ * 
  * @author Rongmei Zhang
  */
 
 public class DirectPastryPingTest {
-    public DirectPastryPingTest(){ }
 
-    private static boolean parseInput( String in ) {
-	StringTokenizer tokened = new StringTokenizer( in );
-	if( !tokened.hasMoreTokens() ) {
-	    return false;
-	}
+  private static final Environment environment = new Environment();
+  
+  public DirectPastryPingTest() {
+  }
 
-	String token = tokened.nextToken();
-	int n = -1;
-	int k = -1;
-	SinglePingTest	spt;
-	int i;
-        
-	if( token.startsWith( "q" ) ) { 			//quit
-	    return true;
-	}
-	else if ( token.startsWith( "s" ) ) {	   	//standalone
-	    Vector trlist = new Vector();
-
-//	    k = 200000;
-
-	    for( i=0; i<8; i++ ){
-		n = k =(i+1)*1000;
-		PingTestRecord tr = new PingTestRecord(n,k); 
-		spt = new SinglePingTest( tr );
-		spt.test();
-		System.out.println( tr.getNodeNumber() + "\t" + tr.getAveHops() +"\t"+ tr.getAveDistance() );
-//		System.out.println( "probability of " + i + " hops: " + tr.getProbability()[i] );
-	    }
-/*
-	    for( i=0; i<10; i++ ){
-		trlist.addElement( new PingTestRecord( (i+1)*10000, k ) ); 
-		spt = new SinglePingTest( (PingTestRecord)(trlist.lastElement()) );
-		spt.test();
-		PingTestRecord tr = (PingTestRecord)trlist.elementAt(i);
-		System.out.println( tr.getNodeNumber() + "\t" + tr.getAveHops() +"\t"+ tr.getAveDistance() );
-		System.out.println( "probability of " + i + " hops: " + tr.getProbability()[i] );
-	    }
-*/	    
-	}
-	return false;
+  private static boolean parseInput(String in) {
+    StringTokenizer tokened = new StringTokenizer(in);
+    if (!tokened.hasMoreTokens()) {
+      return false;
     }
 
-    public static void main(String args[]) {
-	boolean quit = false;
-	BufferedReader input
-	    = new BufferedReader( new InputStreamReader(System.in));
-	String command = null;
+    String token = tokened.nextToken();
+    int n = -1;
+    int k = -1;
+    SinglePingTest spt;
+    int i;
 
-	System.out.println( "Usage: s - run standalone test" );
-	System.out.println( "       q - quit" );
+    if (token.startsWith("q")) { //quit
+      return true;
+    } else if (token.startsWith("s")) { //standalone
+      Vector trlist = new Vector();
 
-	while( !quit ) {
-	    try {
-		command = input.readLine();
-	    } 
-	    catch( Exception e ) {
-		System.out.println( e );
-	    }
-	    quit = parseInput( command );
-	}
+      //	    k = 200000;
 
+      for (i = 0; i < 8; i++) {
+        n = k = (i + 1) * 1000;
+        PingTestRecord tr = new PingTestRecord(n, k);
+        spt = new SinglePingTest(tr, environment);
+        spt.test();
+        System.out.println(tr.getNodeNumber() + "\t" + tr.getAveHops() + "\t"
+            + tr.getAveDistance());
+        //		System.out.println( "probability of " + i + " hops: " +
+        // tr.getProbability()[i] );
+      }
+      /*
+       * for( i=0; i <10; i++ ){ trlist.addElement( new PingTestRecord(
+       * (i+1)*10000, k ) ); spt = new SinglePingTest(
+       * (PingTestRecord)(trlist.lastElement()) ); spt.test(); PingTestRecord tr =
+       * (PingTestRecord)trlist.elementAt(i); System.out.println(
+       * tr.getNodeNumber() + "\t" + tr.getAveHops() +"\t"+ tr.getAveDistance() );
+       * System.out.println( "probability of " + i + " hops: " +
+       * tr.getProbability()[i] ); }
+       */
     }
+    return false;
+  }
+
+  public static void main(String args[]) {
+    boolean quit = false;
+    BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
+    String command = null;
+
+    System.out.println("Usage: s - run standalone test");
+    System.out.println("       q - quit");
+
+    while (!quit) {
+      try {
+        command = input.readLine();
+      } catch (Exception e) {
+        System.out.println(e);
+      }
+      quit = parseInput(command);
+    }
+
+  }
 }
-
 

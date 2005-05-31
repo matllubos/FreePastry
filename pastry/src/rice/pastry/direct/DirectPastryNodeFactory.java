@@ -23,20 +23,52 @@ import java.util.*;
  */
 public class DirectPastryNodeFactory extends PastryNodeFactory {
 
+  // max number of handles stored per routing table entry
+  public static final int DEFAULT_RT_MAX = 1;
+  
+  // leafset size
+  public static final int DEFAULT_LEAFSET_SIZE = 24;
+  
   private NodeIdFactory nidFactory;
   private NetworkSimulator simulator;
+  private Environment environment;
 
   // max number of handles stored per routing table entry
-  private static final int rtMax = 1;
+  private int rtMax = 1;
 
   // leafset size
-  private static final int lSetSize = 24;
+  private int lSetSize = 24;
 
-  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) {
+  /**
+   * Convienience constructor that builds a default Environment.
+   * 
+   * @param nf the NodeIdFactory to use
+   * @param sim the NetworkSimulator to use
+   */
+  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) {    
+    this(nf,sim,new Environment(null, null, null, null, null));
+  }
+  
+  /**
+   * Main constructor.
+   * 
+   * @param nf the NodeIdFactory
+   * @param sim the NetworkSimulator
+   * @param e the Enviornment
+   */
+  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim, Environment e) {    
     nidFactory = nf;
     simulator = sim;
+    environment = e;
+    rtMax = e.getParameters().getInt("direct.DirectPastryNoddeFactory.rtMax", DEFAULT_RT_MAX);
+    lSetSize = e.getParameters().getInt("direct.DirectPastryNoddeFactory.lSetSize", DEFAULT_LEAFSET_SIZE);
   }
 
+  /**
+   * Getter for the NetworkSimulator.
+   * 
+   * @return the NetworkSimulator we are using.
+   */
   public NetworkSimulator getNetworkSimulator() { return simulator; }
   
   /**
@@ -54,7 +86,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return a new PastryNode
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
-    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, new Environment(null, null, null, null, null));
+    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment);
 
     DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
     simulator.registerNodeId( localhandle );

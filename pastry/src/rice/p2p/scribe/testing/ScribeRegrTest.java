@@ -1,16 +1,12 @@
 
 package rice.p2p.scribe.testing;
-import java.io.Serializable;
-import java.net.*;
-
 import java.util.*;
 
-import rice.*;
-
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.testing.*;
+import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.scribe.*;
-import rice.p2p.scribe.messaging.*;
+import rice.p2p.scribe.messaging.SubscribeMessage;
 
 /**
  * @(#) DistScribeRegrTest.java Provides regression testing for the Scribe service using distributed
@@ -50,7 +46,8 @@ public class ScribeRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public ScribeRegrTest() {
+  public ScribeRegrTest(Environment env) {
+    super(env);
     scribes = new ScribeImpl[NUM_NODES];
     policies = new TestScribePolicy[NUM_NODES];
     rng = new Random();
@@ -66,7 +63,7 @@ public class ScribeRegrTest extends CommonAPITest {
    */
   public static void main(String args[]) {
     parseArgs(args);
-    ScribeRegrTest scribeTest = new ScribeRegrTest();
+    ScribeRegrTest scribeTest = new ScribeRegrTest(new Environment());
     scribeTest.start();
   }
 

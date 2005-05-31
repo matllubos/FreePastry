@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
@@ -201,7 +202,7 @@ public class PastryNetworkTest {
 //    PrintStream ps = new PrintStream(new FileOutputStream("lses5.txt"));
 //    System.setOut(ps);
 //    System.setErr(ps);
-    PastryNetworkTest test = new PastryNetworkTest(new SocketPastryNodeFactory(null, 1), new InetSocketAddress(args[0], Integer.parseInt(args[1])));
+    PastryNetworkTest test = new PastryNetworkTest(new SocketPastryNodeFactory(null, 1, new Environment()), new InetSocketAddress(args[0], Integer.parseInt(args[1])));
     test.start();
   }
 }

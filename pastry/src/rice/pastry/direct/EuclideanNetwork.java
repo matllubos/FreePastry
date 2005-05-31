@@ -3,6 +3,8 @@ import java.lang.*;
 
 import java.util.*;
 
+import rice.environment.Environment;
+import rice.environment.random.RandomSource;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -16,7 +18,7 @@ import rice.pastry.messaging.*;
  */
 public class EuclideanNetwork implements NetworkSimulator {
 
-  private Random rng;
+  private RandomSource rng;
   private HashMap nodeMap;
   private Vector msgQueue;
 
@@ -25,8 +27,8 @@ public class EuclideanNetwork implements NetworkSimulator {
   /**
    * Constructor.
    */
-  public EuclideanNetwork() {
-    rng = new Random(PastrySeed.getSeed());
+  public EuclideanNetwork(Environment e) {
+    rng = e.getRandomSource(); //new Random(PastrySeed.getSeed());
     nodeMap = new HashMap();
     msgQueue = new Vector();
     testRecord = null;
@@ -158,12 +160,6 @@ public class EuclideanNetwork implements NetworkSimulator {
     return nra.proximity(nrb);
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param msg DESCRIBE THE PARAMETER
-   * @param node DESCRIBE THE PARAMETER
-   */
   public void deliverMessage(Message msg, PastryNode node) {
     if (isAlive(msg.getSenderId())) {
       MessageDelivery md = new MessageDelivery(msg, node);
@@ -171,11 +167,6 @@ public class EuclideanNetwork implements NetworkSimulator {
     }
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @return DESCRIBE THE RETURN VALUE
-   */
   public boolean simulate() {
     if (msgQueue.size() == 0) {
       return false;
@@ -191,8 +182,7 @@ public class EuclideanNetwork implements NetworkSimulator {
   }
 
   /**
-   * DESCRIBE THE CLASS
-   *
+   * 
    * @version $Id$
    * @author amislove
    */
@@ -202,18 +192,12 @@ public class EuclideanNetwork implements NetworkSimulator {
 
     /**
      * Constructor for MessageDelivery.
-     *
-     * @param m DESCRIBE THE PARAMETER
-     * @param pn DESCRIBE THE PARAMETER
      */
     public MessageDelivery(Message m, PastryNode pn) {
       msg = m;
       node = pn;
     }
 
-    /**
-     * DESCRIBE THE METHOD
-     */
     public void deliver() {
       //System.out.println("delivering to " + node);
       //System.out.println(msg);
@@ -231,22 +215,18 @@ public class EuclideanNetwork implements NetworkSimulator {
    */
   private class NodeRecord {
     /**
-     * DESCRIBE THE FIELD
+     * The euclidean position.
      */
     public int x, y;
-    /**
-     * DESCRIBE THE FIELD
-     */
+
     public boolean alive;
-    /**
-     * DESCRIBE THE FIELD
-     */
+
     public Vector handles;
 
     /**
      * Constructor for NodeRecord.
      *
-     * @param nh DESCRIBE THE PARAMETER
+     * @param nh 
      */
     public NodeRecord(DirectNodeHandle nh) {
       x = rng.nextInt() % 10000;
@@ -257,12 +237,7 @@ public class EuclideanNetwork implements NetworkSimulator {
       handles.add(nh);
     }
 
-    /**
-     * DESCRIBE THE METHOD
-     *
-     * @param nr DESCRIBE THE PARAMETER
-     * @return DESCRIBE THE RETURN VALUE
-     */
+
     public int proximity(NodeRecord nr) {
       int dx = x - nr.x;
       int dy = y - nr.y;

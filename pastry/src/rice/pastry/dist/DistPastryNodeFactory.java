@@ -1,15 +1,12 @@
 
 package rice.pastry.dist;
 
-import java.io.*;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.Random;
 
-import rice.*;
-import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.socket.*;
+import rice.pastry.socket.SocketPastryNodeFactory;
 
 /**
  * An abstraction of the nodeId factory for distributed nodes. In order to
@@ -155,13 +152,8 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @throws IllegalArgumentException If protocol is an unsupported port.
    */
   public static DistPastryNodeFactory getFactory(NodeIdFactory nf, int protocol, int port) {
-//    if (protocol == PROTOCOL_RMI) {
-//      return new RMIPastryNodeFactory(nf, port);
-//    } else if (protocol == PROTOCOL_WIRE) {
-//      return new WirePastryNodeFactory(nf, port);
-//    } else 
-      if (protocol == PROTOCOL_SOCKET) {
-      return new SocketPastryNodeFactory(nf, port);
+    if (protocol == PROTOCOL_SOCKET) {
+      return new SocketPastryNodeFactory(nf, port, new Environment());
     }
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);

@@ -1,6 +1,7 @@
 
 package rice.pastry.testing;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -40,7 +41,7 @@ public class ClosestRegrTest {
    */
   private ClosestRegrTest() {
     simulator = new SphereNetwork();
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, new Environment());
     pastryNodes = new Vector();
   }
 
