@@ -8,6 +8,7 @@ import rice.pastry.client.*;
 import rice.pastry.messaging.*;
 
 import rice.pastry.security.*;
+import rice.pastry.testing.CommonAPIAppl;
 import rice.rm.*;
 import rice.rm.messaging.*;
 import rice.pastry.direct.*;
