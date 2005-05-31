@@ -11,6 +11,7 @@ import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
+import rice.pastry.PastrySeed;
 import rice.selector.SelectorManager;
 
 
@@ -53,25 +54,37 @@ public class Environment {
   }
   
   /**
+   * Convienience for defaults.
+   */
+  public Environment() {
+    this(null,null,null,null,null);
+  }
+
+  /**
    * Can be easily overridden by a subclass.
    */
   protected void chooseDefaults() {
     // choose defaults for all non-specified parameters
-    if (selectorManager == null) {
-      selectorManager = new SelectorManager(false); 
-    }
+    if (params == null) {
+      params = new SimpleParameters(); 
+    }    
     if (randomSource == null) {
-      randomSource = new SimpleRandomSource(); 
-    }
+      randomSource = new SimpleRandomSource(params.getInt("PastrySeed.seedValue", PastrySeed.getSeed())); 
+    }    
     if (time == null) {
       time = new SimpleTimeSource(); 
+    }
+    if (selectorManager == null) {      
+    // XXX this is used until converison to using the environment is complete.  
+    // SelectorManager.getSelectorManager() should be removed when complete.
+    // in the meantime, if we don't use this, then there could be two SelectorManagers floating
+    // around out there which will break everything.
+      selectorManager = SelectorManager.getSelectorManager(); 
+//    selectorManager = new SelectorManager(false); 
     }
     if (logging == null) {
       logging = new SimpleLogManager(time, Logger.SEVERE); 
     }
-    if (params == null) {
-      params = new SimpleParameters(); 
-    }    
   }
   
   // Accessors
