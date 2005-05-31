@@ -189,8 +189,8 @@ public abstract class PastryAppl implements MessageReceiver
    * @param dest the destination node
    * @param msg the message to deliver.
    * @param cred credentials that verify the authenticity of the message.
-   * @param opt send options that describe how the message is to be routed.  */
-
+   * @param opt send options that describe how the message is to be routed.  
+   */
   public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
     if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] routemsgdirect " + msg + " to " + dest);
     if (!dest.isAlive()) return false;
@@ -318,12 +318,7 @@ public abstract class PastryAppl implements MessageReceiver
    * 
    * As of FreePastry 1.4.1, replaced by PastryNode Observer pattern.
    */
-  public void notifyReady() {}
-  
-//  public void messageNotDelivered(Message msg, int errorCode) {
-//    System.out.println("messageNotDelivered("+msg+"):"+thePastryNode.getErrorString(errorCode));     
-//  }
-
+  public void notifyReady() {}  
 }
 
 
