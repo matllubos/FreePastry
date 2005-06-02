@@ -1398,7 +1398,7 @@ public class PostProxy {
   }
   
   protected Environment start(Environment env) throws Exception {
-    Parameters parameters = env.getParameters();
+//    parameters = env.getParameters();  // done in start(void)
     startLivenessMonitor(env);
     startRedirection(parameters);
     startCheckBoot(parameters);    
@@ -1456,7 +1456,7 @@ public class PostProxy {
   protected void start() {
     try {
       Environment env = new Environment(DEFAULT_PARAMS_FILES, PROXY_PARAMETERS_NAME);
-      Parameters parameters = env.getParameters();
+      parameters = env.getParameters();
       start(env);
       updateParameters(parameters);
       
