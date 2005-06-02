@@ -3,8 +3,10 @@ package rice.pastry.socket;
 import java.io.IOException;
 import java.net.*;
 import java.nio.channels.SocketChannel;
+import java.util.Enumeration;
 
 import rice.environment.Environment;
+import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
 import rice.pastry.*;
 import rice.pastry.dist.DistPastryNodeFactory;
@@ -22,17 +24,6 @@ import rice.pastry.standard.*;
  * @author Alan Mislove
  */
 public class SocketPastryNodeFactory extends DistPastryNodeFactory {
-  // max number of handles stored per routing table entry
-  public static final int DEFAULT_RT_MAX = 1;
-  
-  // leafset size
-  public static final int DEFAULT_LEAFSET_SIZE = 24;
-
-  /**
-   * Large period (in seconds) means infrequent, 0 means never.
-   */
-  private final static int DEFAULT_LEAFSET_MAINT_FREQ = 1 * 60;
-  private final static int DEFAULT_ROUTESET_MAINT_FREQ = 15 * 60;
   
   private Environment environment;
 
@@ -60,7 +51,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param nf The factory for building node ids
    * @param startPort The port to start creating nodes on
    */
-  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort) {
+  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort) throws IOException {
     this(nf, startPort, new Environment());
   }
   
@@ -75,10 +66,11 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     environment = env;
     nidFactory = nf;
     port = startPort;
-    rtMax = env.getParameters().getInt("socket.SocketPastryNoddeFactory.rtMax", DEFAULT_RT_MAX);
-    lSetSize = env.getParameters().getInt("socket.SocketPastryNoddeFactory.lSetSize", DEFAULT_LEAFSET_SIZE);
-    leafSetMaintFreq = env.getParameters().getInt("socket.SocketPastryNoddeFactory.leafSetMaintFreq", DEFAULT_LEAFSET_MAINT_FREQ);
-    routeSetMaintFreq = env.getParameters().getInt("socket.SocketPastryNoddeFactory.routeSetMaintFreq", DEFAULT_ROUTESET_MAINT_FREQ);
+    SimpleParameters sp = (SimpleParameters)env.getParameters();
+    rtMax = env.getParameters().getInt("pastry_rtMax");
+    lSetSize = env.getParameters().getInt("pastry_lSetSize");
+    leafSetMaintFreq = env.getParameters().getInt("pastry_leafSetMaintFreq");
+    routeSetMaintFreq = env.getParameters().getInt("pastry_routeSetMaintFreq");
     this.random = env.getRandomSource();
   }
   

@@ -90,7 +90,7 @@ public class PingManager extends SelectionKeyHandler {
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);
 
-      key = SelectorManager.getSelectorManager().register(channel, this, 0);
+      key = spn.getEnvironment().getSelectorManager().register(channel, this, 0);
       key.interestOps(SelectionKey.OP_READ);
     } catch (IOException e) {
       System.out.println("PANIC: Error binding datagram server to address " + localAddress + ": " + e);
@@ -249,7 +249,7 @@ public class PingManager extends SelectionKeyHandler {
           System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path);    
       }  
         
-      SelectorManager.getSelectorManager().modifyKey(key);
+      spn.getEnvironment().getSelectorManager().modifyKey(key);
     } catch (IOException e) {
       System.out.println("ERROR: Received exceptoin " + e + " while enqueuing ping " + msg);
     }
@@ -517,7 +517,7 @@ public class PingManager extends SelectionKeyHandler {
             pendingMsgs.add(new Envelope(next, packet));
           }
           
-          SelectorManager.getSelectorManager().modifyKey(key);
+          spn.getEnvironment().getSelectorManager().modifyKey(key);
         }
       } else {
         // if this is an old epoch of ours, reply with an update

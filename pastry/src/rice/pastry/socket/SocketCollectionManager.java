@@ -122,7 +122,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       channel.configureBlocking(false);
       channel.socket().bind(bindAddress.getAddress());
       
-      this.key = SelectorManager.getSelectorManager().register(channel, this, 0);
+      this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       this.key.interestOps(SelectionKey.OP_ACCEPT);
     } catch (IOException e) {
       System.out.println("ERROR creating server socket channel " + e);
@@ -745,7 +745,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           System.err.println("ERROR: Unable to shutdown output on channel; channel is null!");
 
         socketClosed(path, this);
-        SelectorManager.getSelectorManager().modifyKey(key);
+        pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
       } catch (IOException e) {
         System.err.println("ERROR: Received exception " + e + " while shutting down output.");
         close();
@@ -807,7 +807,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       writer.enqueue(message);
 
       if (key != null) 
-        SelectorManager.getSelectorManager().modifyKey(key);
+        pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
     }
 
     /**
@@ -924,7 +924,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     protected void acceptConnection(SelectionKey key) throws IOException {      
       this.channel = (SocketChannel) key.channel();
-      this.key = SelectorManager.getSelectorManager().register(key.channel(), this, 0);
+      this.key = pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, 0);
       this.key.interestOps(SelectionKey.OP_READ);
       
       debug("Accepted connection from " + channel.socket().getRemoteSocketAddress());
@@ -942,7 +942,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
       this.channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
       this.channel.configureBlocking(false);
-      this.key = SelectorManager.getSelectorManager().register(channel, this, 0);
+      this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       
       debug("Initiating socket connection to path " + path);
 
@@ -987,7 +987,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           }
         };
         
-        SelectorManager.getSelectorManager().schedule(this.timer, WRITE_WAIT_TIME);
+        pastryNode.getEnvironment().getSelectorManager().schedule(this.timer, WRITE_WAIT_TIME);
       }
     }
     
@@ -1070,12 +1070,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       String k = (channel == channel1 ? "1" : "2");
       debug(this + "   adding interest op " + op + " to key " + k);
 
-      if (SelectorManager.getSelectorManager().getKey(channel) == null) {
+      if (pastryNode.getEnvironment().getSelectorManager().getKey(channel) == null) {
         debug(this + "   key " + k + " is null - reregistering with ops " + op);
-        SelectorManager.getSelectorManager().register(channel, this, op);
+        pastryNode.getEnvironment().getSelectorManager().register(channel, this, op);
       } else {
-        SelectorManager.getSelectorManager().register(channel, this, SelectorManager.getSelectorManager().getKey(channel).interestOps() | op);
-        debug(this + "   interest ops for key " + k + " are now " + SelectorManager.getSelectorManager().getKey(channel).interestOps());
+        pastryNode.getEnvironment().getSelectorManager().register(channel, this, pastryNode.getEnvironment().getSelectorManager().getKey(channel).interestOps() | op);
+        debug(this + "   interest ops for key " + k + " are now " + pastryNode.getEnvironment().getSelectorManager().getKey(channel).interestOps());
       }
     }
     
@@ -1092,14 +1092,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       String k = (channel == channel1 ? "1" : "2");
       debug(this + "   removing interest op " + op + " from key " + k);
 
-      SelectionKey key = SelectorManager.getSelectorManager().getKey(channel);
+      SelectionKey key = pastryNode.getEnvironment().getSelectorManager().getKey(channel);
       
       if (key != null) {
         key.interestOps(key.interestOps() & ~op);
       
         if (key.interestOps() == 0) {
           debug(this + "   key " + k + " has no interest ops - cancelling");
-          SelectorManager.getSelectorManager().cancel(key);
+          pastryNode.getEnvironment().getSelectorManager().cancel(key);
         }
       }
     }
@@ -1129,7 +1129,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       
       try {
         if (channel1 != null) {
-          SelectionKey key = SelectorManager.getSelectorManager().getKey(channel1);
+          SelectionKey key = pastryNode.getEnvironment().getSelectorManager().getKey(channel1);
           
           if (key != null)
             key.cancel();
@@ -1138,7 +1138,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
         
         if (channel2 != null) {
-          SelectionKey key = SelectorManager.getSelectorManager().getKey(channel2);
+          SelectionKey key = pastryNode.getEnvironment().getSelectorManager().getKey(channel2);
           
           if (key != null)
             key.cancel();
@@ -1250,7 +1250,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
       debug("Accepted source route connection from " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
       
-      SelectorManager.getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
+      pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
       this.channel1 = (SocketChannel) key.channel();
     }
     
@@ -1273,9 +1273,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       boolean done = channel2.connect(address.getAddress());
 
       if (done)
-        SelectorManager.getSelectorManager().register(channel2, this, SelectionKey.OP_READ);
+        pastryNode.getEnvironment().getSelectorManager().register(channel2, this, SelectionKey.OP_READ);
       else 
-        SelectorManager.getSelectorManager().register(channel2, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
+        pastryNode.getEnvironment().getSelectorManager().register(channel2, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
       
       debug(this + "   setting initial ops to " + SelectionKey.OP_READ + " for key 2");
     }
@@ -1375,7 +1375,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       
       debug("Accepted incoming connection from " + channel.socket().getRemoteSocketAddress());
       
-      key = SelectorManager.getSelectorManager().register(channel, this, SelectionKey.OP_READ);
+      key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, SelectionKey.OP_READ);
     }
     
     /**
