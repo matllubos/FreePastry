@@ -190,7 +190,7 @@
     <jar destfile="pastry.jar" compress="true">
       <fileset dir="${build.dir}">
         <include name="rice/*.class"/>
-        <include name="rice/environment/**/*.java"/>
+        <include name="rice/environment/**/*.class"/>
         <include name="rice/p2p/commonapi/**/*.class"/>
         <include name="rice/p2p/glacier/*.class"/>
         <include name="rice/p2p/glacier/v2/**/*.class"/>
