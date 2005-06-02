@@ -12,6 +12,7 @@ import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
 import java.util.*;
+import java.io.IOException;
 import java.net.*;
 import java.rmi.Naming;
 import java.rmi.RMISecurityManager;
@@ -50,7 +51,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
 
     // constructor
 
-    public DistPastryRegrTest() {
+    public DistPastryRegrTest() throws IOException {
       super();
 
       // we need to wrap the TreeMap to synchronize it
@@ -184,7 +185,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
      * Usage: DistRegrPastryTest [-port p] [-protocol (wire|rmi)] [-nodes n] [-bootstrap host[:port]] [-help]
      */
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws IOException {
       doInitstuff(args);
       DistPastryRegrTest pt = new DistPastryRegrTest();
       mainfunc(pt, args, numnodes /*n*/, 1 /*d*/, 1/*k*/, 20/*m*/, 4/*conc*/);

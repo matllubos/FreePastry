@@ -3,6 +3,8 @@ package rice.post.proxy;
 import java.io.*;
 import java.net.*;
 import java.util.zip.*;
+
+import rice.environment.params.Parameters;
 import rice.proxy.*;
 import java.security.*;
 import rice.post.security.*;
@@ -27,10 +29,10 @@ public class NetworkLogManager extends LogManager {
   protected NetworkLogManagerThread thread;
   
   public NetworkLogManager(Parameters parameters) {
-    this.file = new File(parameters.getStringParameter("standard_output_redirect_filename"));
-    this.other = parameters.getStringArrayParameter("standard_output_network_other_filenames");
-    this.interval = parameters.getLongParameter("standard_output_network_interval");
-    this.buffer_size = parameters.getIntParameter("standard_output_network_buffer_size");
+    this.file = new File(parameters.getString("standard_output_redirect_filename"));
+    this.other = parameters.getStringArray("standard_output_network_other_filenames");
+    this.interval = parameters.getLong("standard_output_network_interval");
+    this.buffer_size = parameters.getInt("standard_output_network_buffer_size");
     this.pastry_port = 10001;
     
     if (file.exists()) 

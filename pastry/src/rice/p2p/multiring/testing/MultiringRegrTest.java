@@ -1,6 +1,7 @@
 
 package rice.p2p.multiring.testing;
 
+import java.io.IOException;
 import java.net.*;
 import java.util.*;
 
@@ -138,7 +139,7 @@ public class MultiringRegrTest {
    * Constructor, which takes no arguments and sets up the
    * factories in preparation for node creation.
    */
-  public MultiringRegrTest(Environment env) {
+  public MultiringRegrTest(Environment env) throws IOException {
     if (SIMULATOR == SIMULATOR_SPHERE) {
       simulator = new SphereNetwork();
     } else {
@@ -600,7 +601,7 @@ public class MultiringRegrTest {
     }
   }
   
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     parseArgs(args);
     MultiringRegrTest test = new MultiringRegrTest(new Environment());
     test.start();

@@ -11,11 +11,19 @@ import java.net.*;
  * @author Jeff Hoye
  */
 public interface Parameters {
+  // 
+  public void remove(String name);  
+  public boolean contains(String name);
+  public void store();
+  
   // getters
-  public int getInt(String paramName, int defaultVal);
-  public double getDouble(String paramName, double defaultVal);
-  public float getFloat(String paramName, float defaultVal);
-  public boolean getBoolean(String paramName, boolean defaultVal);
+  public String getString(String paramName);
+  public String[] getStringArray(String paramName);
+  public int getInt(String paramName);
+  public double getDouble(String paramName);
+  public float getFloat(String paramName);
+  public long getLong(String paramName);
+  public boolean getBoolean(String paramName);
   
   /**
    * String format is dnsname
@@ -25,8 +33,7 @@ public interface Parameters {
    * @return
    * @throws UnknownHostException
    */
-  public InetAddress getInetAddress(String paramName, String defaultVal) throws UnknownHostException;
-  public InetAddress getInetAddress(String paramName, InetAddress defaultVal) throws UnknownHostException;
+  public InetAddress getInetAddress(String paramName) throws UnknownHostException;
   
   
   /**
@@ -36,8 +43,7 @@ public interface Parameters {
    * @param defaultVal should look like "computer.school.edu:1984";
    * @return
    */
-  public InetSocketAddress getInetSokcetAddress(String paramName, String defaultVal);
-  public InetSocketAddress getInetSokcetAddress(String paramName, InetSocketAddress defaultVal);
+  public InetSocketAddress getInetSocketAddress(String paramName) throws UnknownHostException;
   
   /**
    * String format is comma seperated.
@@ -46,15 +52,17 @@ public interface Parameters {
    * @param defaultVal should look like "computer.school.edu:1984";
    * @return
    */
-  public InetSocketAddress[] getInetSokcetAddresses(String paramName, String defaultVal);
-  public InetSocketAddress[] getInetSokcetAddresses(String paramName, InetSocketAddress[] defaultVal);
+  public InetSocketAddress[] getInetSocketAddressArray(String paramName) throws UnknownHostException;
   
   // setters
+  public void setString(String paramName, String val);
+  public void setStringArray(String paramName, String[] val);
   public void setInt(String paramName, int val);
   public void setDouble(String paramName, double val);
   public void setFloat(String paramName, float val);
+  public void setLong(String paramName, long val);
   public void setBoolean(String paramName, boolean val);
   public void setInetAddress(String paramName, InetAddress val);
-  public void setInetSokcetAddress(String paramName, InetSocketAddress val);
-  public void setInetSokcetAddresses(String paramName, InetSocketAddress[] val);
+  public void setInetSocketAddress(String paramName, InetSocketAddress val);
+  public void setInetSocketAddressArray(String paramName, InetSocketAddress[] val);
 }

@@ -16,6 +16,7 @@ import rice.pastry.standard.*;
 
 import java.util.*;
 import java.net.*;
+import java.io.*;
 import java.io.Serializable;
 
 /**
@@ -46,7 +47,9 @@ public abstract class CommonAPITest {
   // the simulator, in case of direct
   protected NetworkSimulator simulator;
   
-
+  // the environment
+  protected Environment environment;
+  
   // ----- STATIC FIELDS -----
 
   // the number of nodes to create
@@ -111,7 +114,7 @@ public abstract class CommonAPITest {
    * Constructor, which takes no arguments and sets up the
    * factories in preparation for node creation.
    */
-  public CommonAPITest(Environment env) {
+  public CommonAPITest(Environment env) throws IOException {
       //idFactory = new IPNodeIdFactory(PORT); 
       idFactory = new RandomNodeIdFactory();
 

@@ -3,6 +3,7 @@ package rice.pastry.direct;
 
 import java.util.*;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -108,7 +109,10 @@ public class DirectNodeHandle extends NodeHandle {
    */
   public void receiveMessage(Message msg) {
     if (! simulator.isAlive(msg.getSenderId())) {
-	//System.out.println("DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");
+      if (localnode != null) {
+        localnode.getEnvironment().getLogManager().getLogger(DirectNodeHandle.class, "").log(Logger.WARNING, 
+            "DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");        
+      }
     } else {
       simulator.deliverMessage(msg, remoteNode);
     }

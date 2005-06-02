@@ -3,9 +3,12 @@
  */
 package rice.environment;
 
+import java.io.IOException;
+
 import rice.environment.logging.*;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
+import rice.environment.params.simple.*;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
@@ -24,7 +27,8 @@ import rice.selector.SelectorManager;
  * @author Jeff Hoye
  */
 public class Environment {
-
+  public static final String[] defaultParamFileArray = {"freepastry"};
+   
   public SelectorManager selectorManager;
   public RandomSource randomSource;
   public TimeSource time;
@@ -49,15 +53,33 @@ public class Environment {
     this.logging = lm;
     this.params = params;
     
+    if (params == null) {
+      throw new IllegalArgumentException("params cannot be null"); 
+    }
+    
     // choose defaults for all non-specified parameters
     chooseDefaults();
   }
   
   /**
    * Convienience for defaults.
+   * 
+   * @param paramFileName the file where parameters are saved
+   * @throws IOException
    */
-  public Environment() {
-    this(null,null,null,null,null);
+  public Environment(String[] orderedDefaultFiles, String paramFileName) throws IOException {
+    this(null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName));
+  }
+  
+  public Environment(String paramFileName) throws IOException {
+    this(defaultParamFileArray,paramFileName);
+  }
+
+  /**
+   * Convienience for defaults.  Has no parameter file to load/store.
+   */
+  public Environment() throws IOException {
+    this(null);
   }
 
   /**
@@ -65,11 +87,11 @@ public class Environment {
    */
   protected void chooseDefaults() {
     // choose defaults for all non-specified parameters
-    if (params == null) {
-      params = new SimpleParameters(); 
-    }    
+//    if (params == null) {      
+//      params = new SimpleParameters("temp"); 
+//    }    
     if (randomSource == null) {
-      randomSource = new SimpleRandomSource(params.getInt("PastrySeed.seedValue", PastrySeed.getSeed())); 
+      randomSource = new SimpleRandomSource(params.getInt("pastry_randseed")); 
     }    
     if (time == null) {
       time = new SimpleTimeSource(); 
@@ -79,8 +101,8 @@ public class Environment {
     // SelectorManager.getSelectorManager() should be removed when complete.
     // in the meantime, if we don't use this, then there could be two SelectorManagers floating
     // around out there which will break everything.
-      selectorManager = SelectorManager.getSelectorManager(); 
-//    selectorManager = new SelectorManager(false); 
+  //    selectorManager = SelectorManager.getSelectorManager(); 
+      selectorManager = new SelectorManager(false); 
     }
     if (logging == null) {
       logging = new SimpleLogManager(time, Logger.SEVERE); 

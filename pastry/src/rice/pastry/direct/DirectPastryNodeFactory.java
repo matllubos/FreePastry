@@ -23,21 +23,15 @@ import java.util.*;
  */
 public class DirectPastryNodeFactory extends PastryNodeFactory {
 
-  // max number of handles stored per routing table entry
-  public static final int DEFAULT_RT_MAX = 1;
-  
-  // leafset size
-  public static final int DEFAULT_LEAFSET_SIZE = 24;
-  
   private NodeIdFactory nidFactory;
   private NetworkSimulator simulator;
   private Environment environment;
 
   // max number of handles stored per routing table entry
-  private int rtMax = 1;
+  private int rtMax;
 
   // leafset size
-  private int lSetSize = 24;
+  private int lSetSize;
 
   /**
    * Convienience constructor that builds a default Environment.
@@ -45,8 +39,8 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @param nf the NodeIdFactory to use
    * @param sim the NetworkSimulator to use
    */
-  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) {    
-    this(nf,sim,new Environment(null, null, null, null, null));
+  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) throws IOException {    
+    this(nf,sim,new Environment());
   }
   
   /**
@@ -60,8 +54,8 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     nidFactory = nf;
     simulator = sim;
     environment = e;
-    rtMax = e.getParameters().getInt("direct.DirectPastryNoddeFactory.rtMax", DEFAULT_RT_MAX);
-    lSetSize = e.getParameters().getInt("direct.DirectPastryNoddeFactory.lSetSize", DEFAULT_LEAFSET_SIZE);
+    rtMax = e.getParameters().getInt("pastry_rtMax");
+    lSetSize = e.getParameters().getInt("pastry_lSetSize");
   }
 
   /**

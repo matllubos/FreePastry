@@ -13,6 +13,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.pastry.commonapi.*;
 import rice.persistence.*;
@@ -28,19 +29,19 @@ public class PersistentStorageTest extends MemoryStorageTest {
   /**
    * Builds a MemoryStorageTest
    */
-  public PersistentStorageTest(boolean store) throws IOException {
+  public PersistentStorageTest(boolean store, Environment environment) throws IOException {
     super(store);
-    storage = new PersistentStorage(FACTORY, "PersistentStorageTest" , ".", 20000000);
+    storage = new PersistentStorage(FACTORY, "PersistentStorageTest" , ".", 20000000, environment);
   }
 
   public static void main(String[] args) throws IOException {
     boolean store = true;
-
+    
     if (args.length > 0) {
       store = ! args[0].equals("-nostore");
     }
     
-    PersistentStorageTest test = new PersistentStorageTest(store);
+    PersistentStorageTest test = new PersistentStorageTest(store, new Environment());
     
     test.start();
   }

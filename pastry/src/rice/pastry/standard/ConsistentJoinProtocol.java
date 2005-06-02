@@ -76,7 +76,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     observing = new HashSet();
     ls.addObserver(this);
     ln.addObserver(this);
-    SelectorManager.getSelectorManager().addLoopObserver(this);
+    ln.getEnvironment().getSelectorManager().addLoopObserver(this);
   }
   
   /**

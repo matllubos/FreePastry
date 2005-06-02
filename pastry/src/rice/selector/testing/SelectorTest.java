@@ -23,7 +23,7 @@ public class SelectorTest {
 	public static void main(String[] args) {
     
     System.out.println("hello world <selector test>");
-    SelectorManager sman = SelectorManager.getSelectorManager();
+    SelectorManager sman = new SelectorManager(false);
     Timer timer = sman.getTimer();
     scheduleRepeated(timer,sman);
     for(int i = 0; i < 10; i++) {

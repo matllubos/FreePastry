@@ -22,12 +22,10 @@ import java.lang.*;
 
 public class DirectPastryPingTest {
 
-  private static final Environment environment = new Environment();
-  
   public DirectPastryPingTest() {
   }
 
-  private static boolean parseInput(String in) {
+  private static boolean parseInput(String in, Environment environment) {
     StringTokenizer tokened = new StringTokenizer(in);
     if (!tokened.hasMoreTokens()) {
       return false;
@@ -69,8 +67,9 @@ public class DirectPastryPingTest {
     return false;
   }
 
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     boolean quit = false;
+    Environment env = new Environment();
     BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
     String command = null;
 
@@ -83,7 +82,7 @@ public class DirectPastryPingTest {
       } catch (Exception e) {
         System.out.println(e);
       }
-      quit = parseInput(command);
+      quit = parseInput(command, env);
     }
 
   }

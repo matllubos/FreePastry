@@ -1,6 +1,8 @@
 package rice.post.proxy;
 
 import java.io.*;
+
+import rice.environment.params.Parameters;
 import rice.proxy.*;
 
 public class ConsoleLogManager extends LogManager {

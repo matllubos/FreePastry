@@ -3,6 +3,7 @@ package rice.email.proxy.pop3;
 import rice.email.*;
 import rice.email.proxy.pop3.commands.*;
 import rice.email.proxy.user.*;
+import rice.environment.Environment;
 import rice.selector.*;
 
 import java.io.*;
@@ -22,7 +23,10 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
   
   boolean acceptNonLocal = false;
   
-  public NonBlockingPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
+  Environment environment;
+  
+  public NonBlockingPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
+    this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.port = port;
     this.manager = manager;
@@ -47,10 +51,10 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
     channel.socket().bind(new InetSocketAddress(getPort()));
     
     // register interest in accepting connections
-    SelectorManager.getSelectorManager().invoke(new Runnable() {
+    environment.getSelectorManager().invoke(new Runnable() {
       public void run() {
         try {
-          SelectorManager.getSelectorManager().register(channel, NonBlockingPop3ServerImpl.this, SelectionKey.OP_ACCEPT);
+          environment.getSelectorManager().register(channel, NonBlockingPop3ServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
           System.out.println("ERROR creating POP3 server socket key " + e);
         }

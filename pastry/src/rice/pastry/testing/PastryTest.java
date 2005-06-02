@@ -6,6 +6,7 @@ import rice.pastry.direct.*;
 import rice.pastry.standard.*;
 import rice.pastry.join.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -81,7 +82,7 @@ public class PastryTest {
     return simulator.simulate();
   }
 
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     PastryTest pt = new PastryTest(new Environment());
 
     int n = 4000;

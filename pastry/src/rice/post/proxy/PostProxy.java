@@ -36,6 +36,8 @@ import rice.email.proxy.imap.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
+import rice.environment.Environment;
+import rice.environment.params.Parameters;
 
 import java.util.*;
 import java.util.zip.*;
@@ -316,9 +318,9 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startRedirection(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("standard_output_network_enable")) {
+    if (parameters.getBoolean("standard_output_network_enable")) {
       logManager = new NetworkLogManager(parameters);
-    } else if (parameters.getBooleanParameter("standard_output_redirect_enable")) {
+    } else if (parameters.getBoolean("standard_output_redirect_enable")) {
       logManager = new StandardLogManager(parameters);
     } else {
       logManager = new ConsoleLogManager(parameters);
@@ -334,9 +336,9 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startLivenessMonitor(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("proxy_liveness_monitor_enable")) {
-      LivenessThread lt = new LivenessThread(parameters);
+  protected void startLivenessMonitor(Environment env) throws Exception {
+    if (env.getParameters().getBoolean("proxy_liveness_monitor_enable")) {
+      LivenessThread lt = new LivenessThread(env);
       lt.start();
     }
   }
@@ -347,11 +349,11 @@ public class PostProxy {
    * @param parameters The parameters to use
    */
   protected void startCheckBoot(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("proxy_compatibility_check_enable")) {
+    if (parameters.getBoolean("proxy_compatibility_check_enable")) {
       String address = InetAddress.getLocalHost().getHostAddress();
       
       if (! CompatibilityCheck.testIPAddress(address)) {
-        if (parameters.getBooleanParameter("pastry_proxy_connectivity_show_message")) {
+        if (parameters.getBoolean("pastry_proxy_connectivity_show_message")) {
           int i = message("You computer appears to have the non-routable address " + address + ".\n" +
                           "This is likely because you are connected from behind a NAT - ePOST can\n" + 
                           "run from behind a NAT, but you must set up port forwarding on port 10001\n" +
@@ -416,33 +418,33 @@ public class PostProxy {
    */
   protected void startCheckNAT(Parameters parameters) throws Exception {
     System.err.println("Starting parsing...");
-    InetSocketAddress[] addresses = parameters.getInetSocketAddressArrayParameter("pastry_proxy_connectivity_hosts");
+    InetSocketAddress[] addresses = parameters.getInetSocketAddressArray("pastry_proxy_connectivity_hosts");
     System.err.println("Done parsing...");
     
     try {
-      natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/4,
-                                                            new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
+      natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/4,
+                                                            new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
                                                             randomSubset(addresses, 5)).getAddress();
     } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
       try {
-        natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout")/2,
-                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
+        natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/2,
+                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
                                                               randomSubset(addresses, 5)).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) 
       try {
-        natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getIntParameter("pastry_proxy_connectivity_timeout"),
-                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getIntParameter("pastry_proxy_connectivity_port")),
+        natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout"),
+                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
                                                               randomSubset(addresses, 5)).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
       int j = message("ePOST attempted to determine the NAT IP address, but was unable to.  This\n" +
                       "is likely caused by an incorrectly configured NAT - make sure that your NAT\n" +
-                      "is set up to forward both TCP and UDP packets on port " + parameters.getIntParameter("pastry_proxy_connectivity_port") + " to '" + InetAddress.getLocalHost() + "'.\n\n" + 
+                      "is set up to forward both TCP and UDP packets on port " + parameters.getInt("pastry_proxy_connectivity_port") + " to '" + InetAddress.getLocalHost() + "'.\n\n" + 
                       "Error: java.net.SocketTimeoutException", new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
     
       if (j == 1)
@@ -450,13 +452,13 @@ public class PostProxy {
       else
         System.exit(-1);
     } else {
-      if (parameters.getBooleanParameter("pastry_proxy_connectivity_show_message")) {
+      if (parameters.getBoolean("pastry_proxy_connectivity_show_message")) {
         message("ePOST successfully checked your connection - it appears that the IP address\n" +
                 "of your NAT is " + natAddress.getHostAddress() + ".  Please do not remove the port forwarding on\n" + 
                 "your NAT as long as you are using ePOST.", new String[] {"OK"}, "OK");
         
-        parameters.setBooleanParameter("pastry_proxy_connectivity_show_message", false);
-        parameters.writeFile();
+        parameters.setBoolean("pastry_proxy_connectivity_show_message", false);
+        parameters.store();
       }
     }
   }
@@ -469,7 +471,7 @@ public class PostProxy {
    * @param parameters The parameters to use
    */
   protected void startDialog(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("proxy_show_dialog")) {
+    if (parameters.getBoolean("proxy_show_dialog")) {
       dialog = new PostDialog(this); 
     }
   }
@@ -481,7 +483,7 @@ public class PostProxy {
    */  
   protected void startShutdownHooks(Parameters parameters) throws Exception {
     try {
-      if (parameters.getBooleanParameter("shutdown_hooks_enable")) {
+      if (parameters.getBoolean("shutdown_hooks_enable")) {
         stepStart("Installing Shutdown Hooks");
         Runtime.getRuntime().addShutdownHook(new Thread() {
           public void run() {
@@ -503,7 +505,7 @@ public class PostProxy {
    */  
   protected void startSecurityManager(Parameters parameters) throws Exception {
     try {
-      if (parameters.getBooleanParameter("security_manager_install")) {
+      if (parameters.getBoolean("security_manager_install")) {
         stepStart("Installing Custom System Security Manager");
         System.setSecurityManager(new SecurityManager() {
           public void checkPermission(java.security.Permission perm) {}
@@ -535,9 +537,9 @@ public class PostProxy {
     stepStart("Retrieving CA public key");
     InputStream fis = null;
     
-    if (parameters.getBooleanParameter("post_ca_key_is_file")) {
+    if (parameters.getBoolean("post_ca_key_is_file")) {
       try {
-        fis = new FileInputStream(parameters.getStringParameter("post_ca_key_name"));
+        fis = new FileInputStream(parameters.getString("post_ca_key_name"));
       } catch (Exception e) {
         panic(e, "There was an error locating the certificate authority's public key.", new String[] {"post_ca_key_is_file", "post_ca_key_name"});
       }
@@ -597,7 +599,7 @@ public class PostProxy {
    * @param parameters The parameters to use
    */
   protected void startRetrieveUsername(Parameters parameters) throws Exception {
-    if ((parameters.getStringParameter("post_username") == null) || (parameters.getStringParameter("post_username").equals(""))) {
+    if ((parameters.getString("post_username") == null) || (parameters.getString("post_username").equals(""))) {
       stepStart("Determining Local Username");
       String[] files = (new File(".")).list(new FilenameFilter() {
         public boolean accept(File dir, String name) {
@@ -616,7 +618,7 @@ public class PostProxy {
               "If you do not yet have a certificate, once can be created from\n" + 
               "http://www.epostmail.org/");
       } else {
-        parameters.setStringParameter("post_username", files[0].substring(0, files[0].length()-6));
+        parameters.setString("post_username", files[0].substring(0, files[0].length()-6));
         stepDone(SUCCESS);
       } 
     }
@@ -628,12 +630,12 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startRetrieveUserCertificate(Parameters parameters) throws Exception {
-    stepStart("Retrieving " + parameters.getStringParameter("post_username") + "'s certificate");
-    File file = new File(parameters.getStringParameter("post_username") + ".epost");
+    stepStart("Retrieving " + parameters.getString("post_username") + "'s certificate");
+    File file = new File(parameters.getString("post_username") + ".epost");
 
     if (! file.exists()) 
-      panic("POST could not find the certificate file for the user '" + parameters.getStringParameter("post_username") + "'.\n" +
-            "Please place the file '" + parameters.getStringParameter("post_username") + ".epost' in the root directory.");
+      panic("POST could not find the certificate file for the user '" + parameters.getString("post_username") + "'.\n" +
+            "Please place the file '" + parameters.getString("post_username") + ".epost' in the root directory.");
     
     try {
       certificate = CACertificateGenerator.readCertificate(file);
@@ -643,7 +645,7 @@ public class PostProxy {
           
       stepDone(SUCCESS);
     } catch (Exception e) {
-      panic(e, "There was an error reading the file '" + parameters.getStringParameter("post_username") + ".certificate'.", new String[] {"post_username"});
+      panic(e, "There was an error reading the file '" + parameters.getString("post_username") + ".certificate'.", new String[] {"post_username"});
     }
   }
   
@@ -653,18 +655,18 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startVerifyUserCertificate(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_certificate_verification_enable")) {
-      stepStart("Verifying " + parameters.getStringParameter("post_username") + "'s certificate");
+    if (parameters.getBoolean("post_certificate_verification_enable")) {
+      stepStart("Verifying " + parameters.getString("post_username") + "'s certificate");
       CASecurityModule module = new CASecurityModule(caPublic);
       ExternalContinuation e = new ExternalContinuation();
       module.verify(certificate, e);
       e.sleep();
       
       if (e.exceptionThrown())
-        panic(e.getException(), "Certificate for user " + parameters.getStringParameter("post_username") + " could not be verified.", new String[] {"post_username"});
+        panic(e.getException(), "Certificate for user " + parameters.getString("post_username") + " could not be verified.", new String[] {"post_username"});
       
       if (! ((Boolean) e.getResult()).booleanValue()) 
-        panic("Certificate for user " + parameters.getStringParameter("post_username") + " could not be verified.");
+        panic("Certificate for user " + parameters.getString("post_username") + " could not be verified.");
       
       stepDone(SUCCESS);
     }    
@@ -676,27 +678,27 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startRetrieveUserKey(Parameters parameters) throws Exception {
-    stepStart("Retrieving " + parameters.getStringParameter("post_username") + "'s encrypted keypair");
-    File file = new File(parameters.getStringParameter("post_username") + ".epost");
+    stepStart("Retrieving " + parameters.getString("post_username") + "'s encrypted keypair");
+    File file = new File(parameters.getString("post_username") + ".epost");
     
     if (! file.exists()) 
-      panic("ERROR: ePOST could not find the keypair for user " + parameters.getStringParameter("post_username"));
+      panic("ERROR: ePOST could not find the keypair for user " + parameters.getString("post_username"));
     
-    String password = parameters.getStringParameter("post_password");
+    String password = parameters.getString("post_password");
     
     if ((password == null) || (password.equals(""))) {
       password = new PasswordFrame(parameters).getPassword();
       
-      if (parameters.getBooleanParameter("post_password_remember"))
-        parameters.setStringParameter("post_password", password);
+      if (parameters.getBoolean("post_password_remember"))
+        parameters.setString("post_password", password);
     }
     
     try {
       pair = CACertificateGenerator.readKeyPair(file, password);
       stepDone(SUCCESS);
     } catch (SecurityException e) {
-      parameters.removeParameter("post_password");
-      parameters.writeFile();
+      parameters.remove("post_password");
+      parameters.store();
       stepDone(FAILURE);
       startRetrieveUserKey(parameters);
     }
@@ -708,10 +710,10 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startVerifyUserKey(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_keypair_verification_enable")) {
-      stepStart("Verifying " + parameters.getStringParameter("post_username") + "'s keypair");
+    if (parameters.getBoolean("post_keypair_verification_enable")) {
+      stepStart("Verifying " + parameters.getString("post_username") + "'s keypair");
       if (! pair.getPublic().equals(certificate.getKey())) 
-        panic("Keypair for user " + parameters.getStringParameter("post_username") + " did not match certificate.");
+        panic("Keypair for user " + parameters.getString("post_username") + " did not match certificate.");
 
       stepDone(SUCCESS);
     }
@@ -723,9 +725,9 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startRetrieveUserClone(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_log_clone_enable")) {
-      stepStart("Creating log for previous address " + parameters.getStringParameter("post_log_clone_username"));
-      clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory()), parameters.getStringParameter("post_log_clone_username"));
+    if (parameters.getBoolean("post_log_clone_enable")) {
+      stepStart("Creating log for previous address " + parameters.getString("post_log_clone_username"));
+      clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory()), parameters.getString("post_log_clone_username"));
       stepDone(SUCCESS);
     }
   }
@@ -736,7 +738,7 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startRetrieveUser(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_proxy_enable")) {
+    if (parameters.getBoolean("post_proxy_enable")) {
       startUpdateUser(parameters);
       startRetrieveUsername(parameters);
       startRetrieveUserCertificate(parameters);
@@ -764,7 +766,7 @@ public class PostProxy {
     
     globalCert = RingCertificate.getCertificate(generateRingId(null));
     
-    if ((globalCert == null) && (parameters.getBooleanParameter("multiring_global_enable")))
+    if ((globalCert == null) && (parameters.getBoolean("multiring_global_enable")))
         throw new RuntimeException("Could not find a ring certificate for the global ring.\n" +
                                    "Please make sure you have the latest code from www.epostmail.org.");
         
@@ -779,11 +781,11 @@ public class PostProxy {
   protected void startDeterminePorts(Parameters parameters) throws Exception {
     stepStart("Determining Local Ports");
     String parameter = "pastry_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull() + "_port";
-    port = (parameters.containsParameter(parameter) ? parameters.getIntParameter(parameter) : cert.getPort());
+    port = (parameters.contains(parameter) ? parameters.getInt(parameter) : cert.getPort());
     
-    if (parameters.getBooleanParameter("multiring_global_enable")) {
+    if (parameters.getBoolean("multiring_global_enable")) {
       parameter = "pastry_ring_" + generateRingId(null).toStringFull()+ "_port";
-      globalPort = (parameters.containsParameter(parameter) ? parameters.getIntParameter(parameter) : globalCert.getPort());
+      globalPort = (parameters.contains(parameter) ? parameters.getInt(parameter) : globalCert.getPort());
     }
     
     stepDone(SUCCESS);
@@ -797,19 +799,19 @@ public class PostProxy {
   protected void startDetermineSMTPServer(Parameters parameters) throws Exception {
     stepStart("Determining Default SMTP Server");
     String parameter = "email_ring_" + ((RingId) address.getAddress()).getRingId().toStringFull() + "_smtp_server";
-    if (parameters.getStringParameter(parameter) != null) {
-      smtpServer = parameters.getStringParameter(parameter);
+    if (parameters.getString(parameter) != null) {
+      smtpServer = parameters.getString(parameter);
     } else {
       smtpServer = "";
 
       try {
-        if (parameters.getBooleanParameter("proxy_show_dialog")) {
+        if (parameters.getBoolean("proxy_show_dialog")) {
           SMTPServerPanel panel = new SMTPServerPanel(parameters);
           smtpServer = panel.getSMTPServer();
           
           if (panel.remember()) {
-            parameters.setStringParameter(parameter, smtpServer);
-            parameters.writeFile();
+            parameters.setString(parameter, smtpServer);
+            parameters.store();
           }
         }
       } catch (Throwable t) {
@@ -836,7 +838,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startStorageManagers(Parameters parameters) throws Exception {
+  protected void startStorageManagers(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
     String hostname = "localhost";
     
     try {
@@ -844,63 +847,63 @@ public class PostProxy {
     } catch (UnknownHostException e) {}
     
     String prefix = hostname + "-" + port;
-    String location = parameters.getStringParameter("storage_root_location");
-    int diskLimit = parameters.getIntParameter("storage_disk_limit");
-    int cacheLimit = parameters.getIntParameter("storage_cache_limit");
+    String location = parameters.getString("storage_root_location");
+    int diskLimit = parameters.getInt("storage_disk_limit");
+    int cacheLimit = parameters.getInt("storage_cache_limit");
     
     stepStart("Starting Immutable Storage");
     immutableStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "-immutable", location, diskLimit),
-                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "-cache", ".", diskLimit), cacheLimit));
+                                              new PersistentStorage(FACTORY, prefix + "-immutable", location, diskLimit, env),
+                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "-cache", ".", diskLimit, env), cacheLimit));
     stepDone(SUCCESS);
     
     stepStart("Starting Mutable Storage");
     mutableStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "-mutable", location, diskLimit),
+                                            new PersistentStorage(FACTORY, prefix + "-mutable", location, diskLimit, env),
                                             new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     stepStart("Starting Pending Message Storage");
     pendingStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "-pending", location, diskLimit),
+                                            new PersistentStorage(FACTORY, prefix + "-pending", location, diskLimit, env),
                                             new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     stepStart("Starting Delivered Message Storage");
     deliveredStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "-delivered", location, diskLimit),
+                                              new PersistentStorage(FACTORY, prefix + "-delivered", location, diskLimit, env),
                                               new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
-    if (parameters.getBooleanParameter("past_garbage_collection_enable")) {
+    if (parameters.getBoolean("past_garbage_collection_enable")) {
       stepStart("Starting Trashcan Storage");
       trashStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "-trash", location, diskLimit, false),
+                                            new PersistentStorage(FACTORY, prefix + "-trash", location, diskLimit, false, env),
                                             new EmptyCache(FACTORY));
       stepDone(SUCCESS);
     }
     
-    if (parameters.getBooleanParameter("glacier_enable")) {
+    if (parameters.getBoolean("glacier_enable")) {
       FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
       PastryIdFactory PFACTORY = new PastryIdFactory();
 
       stepStart("Starting Glacier Storage");
       glacierMutableStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier-mutable", location, diskLimit),
+                                              new PersistentStorage(KFACTORY, prefix + "-glacier-mutable", location, diskLimit, env),
                                               new EmptyCache(KFACTORY));
       glacierImmutableStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier-immutable", location, diskLimit),
+                                              new PersistentStorage(KFACTORY, prefix + "-glacier-immutable", location, diskLimit, env),
                                               new EmptyCache(KFACTORY));
       glacierNeighborStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "-glacier-neighbor", location, diskLimit),
+                                              new PersistentStorage(FACTORY, prefix + "-glacier-neighbor", location, diskLimit, env),
                                               new EmptyCache(FACTORY));
       aggrWaitingStorage = new StorageManagerImpl(VFACTORY,
-                                              new PersistentStorage(VFACTORY, prefix + "-aggr-waiting", location, diskLimit),
+                                              new PersistentStorage(VFACTORY, prefix + "-aggr-waiting", location, diskLimit, env),
                                               new EmptyCache(VFACTORY));
-      if (parameters.getBooleanParameter("glacier_use_trashcan")) {
+      if (parameters.getBoolean("glacier_use_trashcan")) {
         glacierTrashStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier-trash", location, diskLimit, false),
+                                              new PersistentStorage(KFACTORY, prefix + "-glacier-trash", location, diskLimit, false, env),
                                               new EmptyCache(KFACTORY));
       } else {
         glacierTrashStorage = null;
@@ -909,19 +912,19 @@ public class PostProxy {
       stepDone(SUCCESS);
     }
     
-    if (parameters.getBooleanParameter("past_backup_cache_enable")) {
-      long backupLimit = parameters.getLongParameter("past_backup_cache_limit");
+    if (parameters.getBoolean("past_backup_cache_enable")) {
+      long backupLimit = parameters.getLong("past_backup_cache_limit");
       
       stepStart("Starting Immutable Backup Cache");
-      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-immutable-cache", ".", diskLimit), cacheLimit);
+      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-immutable-cache", ".", diskLimit, env), cacheLimit);
       stepDone(SUCCESS);
       
       stepStart("Starting Pending Backup Cache");
-      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-pending-cache", ".", diskLimit), cacheLimit);
+      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-pending-cache", ".", diskLimit, env), cacheLimit);
       stepDone(SUCCESS);
       
       stepStart("Starting Delivered Backup Cache");
-      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-delivered-cache", ".", diskLimit), cacheLimit);
+      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-delivered-cache", ".", diskLimit, env), cacheLimit);
       stepDone(SUCCESS);
     }
   }
@@ -946,7 +949,7 @@ public class PostProxy {
     
     rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(cert.getBootstraps());
     
-    if ((bootHandle == null) && (! parameters.getBooleanParameter("pastry_ring_" + prefix+ "_allow_new_ring")))
+    if ((bootHandle == null) && (! parameters.getBoolean("pastry_ring_" + prefix+ "_allow_new_ring")))
       panic(new RuntimeException(), 
             "Could not contact existing ring and not allowed to create a new ring. This\n" +
             "is likely because your computer is not properly connected to the Internet\n" +
@@ -988,7 +991,7 @@ public class PostProxy {
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
               "in both UDP and TCP on port " + port);
       }
-    } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix+ "_allow_new_ring")) &&
+    } while ((! parameters.getBoolean("pastry_ring_" + prefix+ "_allow_new_ring")) &&
              (pastryNode.getLeafSet().size() == 0));
     
     stepDone(SUCCESS);
@@ -1023,7 +1026,7 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startMultiringNode(Parameters parameters) throws Exception { 
-    if (parameters.getBooleanParameter("multiring_enable")) {
+    if (parameters.getBoolean("multiring_enable")) {
       Id ringId = ((RingId) address.getAddress()).getRingId();
 
       stepStart("Creating Multiring node in ring " + ringId);
@@ -1045,8 +1048,8 @@ public class PostProxy {
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), globalCert.getProtocol(), globalPort);
     InetSocketAddress proxyAddress = null;
     
-    if (parameters.getBooleanParameter("pastry_ring_" + prefix+ "_proxy_enable"))
-      proxyAddress = parameters.getInetSocketAddressParameter("pastry_ring_" + prefix+ "_proxy_address");
+    if (parameters.getBoolean("pastry_ring_" + prefix+ "_proxy_enable"))
+      proxyAddress = parameters.getInetSocketAddress("pastry_ring_" + prefix+ "_proxy_address");
     
     globalNode = factory.newNode(factory.getNodeHandle(globalCert.getBootstraps()), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
     globalPastryNode = (PastryNode) globalNode;
@@ -1065,7 +1068,7 @@ public class PostProxy {
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
               "in both UDP and TCP on port " + globalPort);
       }
-    } while ((! parameters.getBooleanParameter("pastry_ring_" + prefix + "_allow_new_ring")) &&
+    } while ((! parameters.getBoolean("pastry_ring_" + prefix + "_allow_new_ring")) &&
              (globalPastryNode.getLeafSet().size() == 0));
     
     
@@ -1090,7 +1093,7 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startGlobalNode(Parameters parameters) throws Exception { 
-    if (parameters.getBooleanParameter("multiring_global_enable") && (natAddress == null)) {
+    if (parameters.getBoolean("multiring_global_enable") && (natAddress == null)) {
       startGlobalPastryNode(parameters);
       startGlobalMultiringNode(parameters);
     }
@@ -1101,8 +1104,9 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startGlacier(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("glacier_enable")) {
+  protected void startGlacier(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
+    if (parameters.getBoolean("glacier_enable")) {
       stepStart("Starting Glacier service");
 
       String prefix = InetAddress.getLocalHost().getHostName() + "-" + port;
@@ -1110,28 +1114,28 @@ public class PostProxy {
 
       immutableGlacier = new GlacierImpl(
         node, glacierImmutableStorage, glacierNeighborStorage,
-        parameters.getIntParameter("glacier_num_fragments"),
-        parameters.getIntParameter("glacier_num_survivors"),
+        parameters.getInt("glacier_num_fragments"),
+        parameters.getInt("glacier_num_survivors"),
         (MultiringIdFactory)FACTORY, 
-        parameters.getStringParameter("application_instance_name") + "-glacier-immutable",
+        parameters.getString("application_instance_name") + "-glacier-immutable",
         new GlacierDefaultPolicy(
           new ErasureCodec(
-            parameters.getIntParameter("glacier_num_fragments"),
-            parameters.getIntParameter("glacier_num_survivors")
+            parameters.getInt("glacier_num_fragments"),
+            parameters.getInt("glacier_num_survivors")
           )
         )
       );
       
-      immutableGlacier.setSyncInterval(parameters.getIntParameter("glacier_sync_interval"));
-      immutableGlacier.setSyncMaxFragments(parameters.getIntParameter("glacier_sync_max_fragments"));
-      immutableGlacier.setRateLimit(parameters.getIntParameter("glacier_max_requests_per_second"));
-      immutableGlacier.setNeighborTimeout(parameters.getIntParameter("glacier_neighbor_timeout"));
-      immutableGlacier.setBandwidthLimit(1024*parameters.getIntParameter("glacier_max_kbytes_per_sec"), 1024*parameters.getIntParameter("glacier_max_kbytes_per_sec")*parameters.getIntParameter("glacier_max_burst_factor"));
-      immutableGlacier.setLogLevel(parameters.getIntParameter("glacier_log_level"));
+      immutableGlacier.setSyncInterval(parameters.getInt("glacier_sync_interval"));
+      immutableGlacier.setSyncMaxFragments(parameters.getInt("glacier_sync_max_fragments"));
+      immutableGlacier.setRateLimit(parameters.getInt("glacier_max_requests_per_second"));
+      immutableGlacier.setNeighborTimeout(parameters.getInt("glacier_neighbor_timeout"));
+      immutableGlacier.setBandwidthLimit(1024*parameters.getInt("glacier_max_kbytes_per_sec"), 1024*parameters.getInt("glacier_max_kbytes_per_sec")*parameters.getInt("glacier_max_burst_factor"));
+      immutableGlacier.setLogLevel(parameters.getInt("glacier_log_level"));
       immutableGlacier.setTrashcan(glacierTrashStorage);
 
       final Integer[] done = new Integer[1];
-      SelectorManager.getSelectorManager().invoke(new Runnable() {
+      env.getSelectorManager().invoke(new Runnable() {
         public void run() {
           immutableGlacier.startup();
           done[0] = new Integer(1);
@@ -1148,19 +1152,19 @@ public class PostProxy {
         aggrWaitingStorage,
         "aggregation.param",
         (MultiringIdFactory) FACTORY,
-        parameters.getStringParameter("application_instance_name") + "-aggr-immutable",
+        parameters.getString("application_instance_name") + "-aggr-immutable",
         new PostAggregationPolicy()
       );
 
-      immutableAggregation.setFlushInterval(parameters.getIntParameter("aggregation_flush_interval"));
-      immutableAggregation.setMaxAggregateSize(parameters.getIntParameter("aggregation_max_aggregate_size"));
-      immutableAggregation.setMaxObjectsInAggregate(parameters.getIntParameter("aggregation_max_objects_per_aggregate"));
-      immutableAggregation.setRenewThreshold(parameters.getIntParameter("aggregation_renew_threshold"));
-      immutableAggregation.setConsolidationInterval(parameters.getIntParameter("aggregation_consolidation_interval"));
-      immutableAggregation.setConsolidationThreshold(parameters.getIntParameter("aggregation_consolidation_threshold"));
-      immutableAggregation.setConsolidationMinObjectsPerAggregate(parameters.getIntParameter("aggregation_min_objects_per_aggregate"));
-      immutableAggregation.setConsolidationMinUtilization(parameters.getDoubleParameter("aggregation_min_aggregate_utilization"));
-      immutableAggregation.setLogLevel(parameters.getIntParameter("aggregation_log_level"));
+      immutableAggregation.setFlushInterval(parameters.getInt("aggregation_flush_interval"));
+      immutableAggregation.setMaxAggregateSize(parameters.getInt("aggregation_max_aggregate_size"));
+      immutableAggregation.setMaxObjectsInAggregate(parameters.getInt("aggregation_max_objects_per_aggregate"));
+      immutableAggregation.setRenewThreshold(parameters.getInt("aggregation_renew_threshold"));
+      immutableAggregation.setConsolidationInterval(parameters.getInt("aggregation_consolidation_interval"));
+      immutableAggregation.setConsolidationThreshold(parameters.getInt("aggregation_consolidation_threshold"));
+      immutableAggregation.setConsolidationMinObjectsPerAggregate(parameters.getInt("aggregation_min_objects_per_aggregate"));
+      immutableAggregation.setConsolidationMinUtilization(parameters.getDouble("aggregation_min_aggregate_utilization"));
+      immutableAggregation.setLogLevel(parameters.getInt("aggregation_log_level"));
 
       immutablePast = immutableAggregation;
 
@@ -1176,37 +1180,37 @@ public class PostProxy {
   protected void startPast(Parameters parameters) throws Exception {
     stepStart("Starting Past services");
     
-    if (parameters.getBooleanParameter("past_garbage_collection_enable")) {
+    if (parameters.getBoolean("past_garbage_collection_enable")) {
       immutablePast = new GCPastImpl(node, immutableStorage, immutableBackupCache, 
-                                     parameters.getIntParameter("past_replication_factor"), 
-                                     parameters.getStringParameter("application_instance_name") + "-immutable",
+                                     parameters.getInt("past_replication_factor"), 
+                                     parameters.getString("application_instance_name") + "-immutable",
                                      new PastPolicy.DefaultPastPolicy(),
-                                     parameters.getLongParameter("past_garbage_collection_interval"),
+                                     parameters.getLong("past_garbage_collection_interval"),
                                      trashStorage);
     } else {
       immutablePast = new PastImpl(node, immutableStorage, immutableBackupCache,
-                                   parameters.getIntParameter("past_replication_factor"), 
-                                   parameters.getStringParameter("application_instance_name") + "-immutable", 
+                                   parameters.getInt("past_replication_factor"), 
+                                   parameters.getString("application_instance_name") + "-immutable", 
                                    new PastPolicy.DefaultPastPolicy(), trashStorage);
     }
     
     realImmutablePast = immutablePast;
       
     mutablePast = new PastImpl(node, mutableStorage, null,
-                               parameters.getIntParameter("past_replication_factor"), 
-                               parameters.getStringParameter("application_instance_name") + "-mutable",
+                               parameters.getInt("past_replication_factor"), 
+                               parameters.getString("application_instance_name") + "-mutable",
                                new PostPastPolicy(), trashStorage);
     deliveredPast = new GCPastImpl(node, deliveredStorage, deliveredBackupCache,
-                                 parameters.getIntParameter("past_replication_factor"), 
-                                 parameters.getStringParameter("application_instance_name") + "-delivered",
+                                 parameters.getInt("past_replication_factor"), 
+                                 parameters.getString("application_instance_name") + "-delivered",
                                  new PastPolicy.DefaultPastPolicy(),
-                                 parameters.getLongParameter("past_garbage_collection_interval"),
+                                 parameters.getLong("past_garbage_collection_interval"),
                                  trashStorage);
     pendingPast = new DeliveryPastImpl(node, pendingStorage, pendingBackupCache,
-                                       parameters.getIntParameter("past_replication_factor"), 
-                                       parameters.getIntParameter("post_redundancy_factor"),
-                                       parameters.getStringParameter("application_instance_name") + "-pending", deliveredPast,
-                                       parameters.getLongParameter("past_garbage_collection_interval"));
+                                       parameters.getInt("past_replication_factor"), 
+                                       parameters.getInt("post_redundancy_factor"),
+                                       parameters.getString("application_instance_name") + "-pending", deliveredPast,
+                                       parameters.getLong("past_garbage_collection_interval"));
     stepDone(SUCCESS);
   }
   
@@ -1259,12 +1263,12 @@ public class PostProxy {
     
     stepStart("Starting POST service");
     post = new PostImpl(node, immutablePast, mutablePast, pendingPast, deliveredPast, address, pair, certificate, caPublic, 
-                        parameters.getStringParameter("application_instance_name"), 
-                        parameters.getBooleanParameter("post_allow_log_insert"), 
-                        parameters.getBooleanParameter("post_announce_presence"), clone,
-                        parameters.getLongParameter("post_synchronize_interval"),
-                        parameters.getLongParameter("post_object_refresh_interval"),
-                        parameters.getLongParameter("post_object_timeout_interval"));
+                        parameters.getString("application_instance_name"), 
+                        parameters.getBoolean("post_allow_log_insert"), 
+                        parameters.getBoolean("post_announce_presence"), clone,
+                        parameters.getLong("post_synchronize_interval"),
+                        parameters.getLong("post_object_refresh_interval"),
+                        parameters.getLong("post_object_timeout_interval"));
         
     stepDone(SUCCESS);
   }
@@ -1275,7 +1279,7 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startInsertLog(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_force_log_reinsert")) {
+    if (parameters.getBoolean("post_force_log_reinsert")) {
       stepStart("Manually inserting new PostLog");
       ExternalContinuation c = new ExternalContinuation();
       ((PostImpl) post).createPostLog(c);
@@ -1293,9 +1297,10 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startFetchLog(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_proxy_enable") &&
-        parameters.getBooleanParameter("post_fetch_log")) {
+  protected void startFetchLog(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
+    if (parameters.getBoolean("post_proxy_enable") &&
+        parameters.getBoolean("post_fetch_log")) {
       int retries = 0;
       
       stepStart("Fetching POST log at " + address.getAddress());
@@ -1303,7 +1308,7 @@ public class PostProxy {
       
       while (!done) {
         final ExternalContinuation c = new ExternalContinuation();
-        SelectorManager.getSelectorManager().invoke(new Runnable() {
+        env.getSelectorManager().invoke(new Runnable() {
           public void run() {
             post.getPostLog(c); 
           }
@@ -1313,10 +1318,10 @@ public class PostProxy {
         
         if (c.exceptionThrown()) { 
           stepDone(FAILURE, "Fetching POST log caused exception " + c.getException());
-          stepStart("Sleeping and then retrying to fetch POST log (" + retries + "/" + parameters.getIntParameter("post_fetch_log_retries"));
-          if (retries < parameters.getIntParameter("post_fetch_log_retries")) {
+          stepStart("Sleeping and then retrying to fetch POST log (" + retries + "/" + parameters.getInt("post_fetch_log_retries"));
+          if (retries < parameters.getInt("post_fetch_log_retries")) {
             retries++;
-            Thread.sleep(parameters.getIntParameter("post_fetch_log_retry_sleep"));
+            Thread.sleep(parameters.getInt("post_fetch_log_retry_sleep"));
           } else {
             throw c.getException(); 
           }
@@ -1338,8 +1343,8 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startFetchForwardingLog(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_proxy_enable") &&
-        parameters.getBooleanParameter("post_fetch_log")) {
+    if (parameters.getBoolean("post_proxy_enable") &&
+        parameters.getBoolean("post_fetch_log")) {
       
       stepStart("Fetching POST forwarding log");
       
@@ -1364,9 +1369,9 @@ public class PostProxy {
    * @param parameters The parameters to use
    */  
   protected void startUpdateForwardingLog(Parameters parameters) throws Exception {
-    if (parameters.getBooleanParameter("post_proxy_enable") &&
-        parameters.getBooleanParameter("post_fetch_log")) {
-      String[] addresses = parameters.getStringArrayParameter("post_forward_addresses");
+    if (parameters.getBoolean("post_proxy_enable") &&
+        parameters.getBoolean("post_fetch_log")) {
+      String[] addresses = parameters.getStringArray("post_forward_addresses");
       
       if (((forwardLog == null) && (addresses.length > 0)) ||
           ((forwardLog != null) && (! Arrays.equals(forwardLog.getAddresses(), addresses)))) {
@@ -1391,8 +1396,9 @@ public class PostProxy {
     }
   }
   
-  protected Parameters start(Parameters parameters) throws Exception {
-    startLivenessMonitor(parameters);
+  protected Environment start(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
+    startLivenessMonitor(env);
     startRedirection(parameters);
     startCheckBoot(parameters);    
     startDialog(parameters);
@@ -1414,7 +1420,7 @@ public class PostProxy {
     
     sectionStart("Initializing Disk Storage");
     startCreateIdFactory(parameters);
-    startStorageManagers(parameters);
+    startStorageManagers(env);
     sectionDone();
     
     sectionStart("Bootstrapping Local Node");
@@ -1428,28 +1434,29 @@ public class PostProxy {
     
     sectionStart("Bootstrapping Local Post Applications");
     startPast(parameters);
-    startGlacier(parameters);
+    startGlacier(env);
     startPost(parameters);
     startInsertLog(parameters);
-    startFetchLog(parameters);
+    startFetchLog(env);
     startFetchForwardingLog(parameters);
     startUpdateForwardingLog(parameters);
     
     sectionDone();
     
-    return parameters;
+    return env;
   }
   
   protected void updateParameters(Parameters parameters) {
-    if (parameters.getBooleanParameter("post_allow_log_insert") && parameters.getBooleanParameter("post_allow_log_insert_reset")) {
-      parameters.setBooleanParameter("post_allow_log_insert", false);
+    if (parameters.getBoolean("post_allow_log_insert") && parameters.getBoolean("post_allow_log_insert_reset")) {
+      parameters.setBoolean("post_allow_log_insert", false);
     }
   }
   
   protected void start() {
     try {
-      parameters = new Parameters(PROXY_PARAMETERS_NAME);
-      start(parameters);
+      Environment env = new Environment(PROXY_PARAMETERS_NAME);
+      Parameters parameters = env.getParameters();
+      start(env);
       updateParameters(parameters);
       
       if (dialog != null) 
@@ -1788,7 +1795,7 @@ public class PostProxy {
     
     protected LivenessKeyHandler handler;
     
-    public LivenessThread(Parameters parameters) throws IOException {
+    public LivenessThread(Environment env) throws IOException {
       Pipe pipeA = Pipe.open();
       Pipe pipeB = Pipe.open();
       this.in = System.in;
@@ -1800,7 +1807,7 @@ public class PostProxy {
       this.buffer1 = new byte[1];
       this.buffer2 = new byte[1];
       
-      this.handler = new LivenessKeyHandler(parameters, pipeA.source(), pipeB.sink());
+      this.handler = new LivenessKeyHandler(env, pipeA.source(), pipeB.sink());
     }
     
     public void run() {
@@ -1839,7 +1846,7 @@ public class PostProxy {
     protected SelectionKey sourceKey;
     protected SelectionKey sinkKey;
    
-    public LivenessKeyHandler(Parameters parameters, Pipe.SourceChannel source, Pipe.SinkChannel sink) throws IOException {
+    public LivenessKeyHandler(Environment env, Pipe.SourceChannel source, Pipe.SinkChannel sink) throws IOException {
       this.buffer = ByteBuffer.allocate(1);
       this.source = source;
       this.sink = sink;
@@ -1847,7 +1854,7 @@ public class PostProxy {
       this.source.configureBlocking(false);
       this.sink.configureBlocking(false);
       
-      SelectorManager manager = SelectorManager.getSelectorManager();
+      SelectorManager manager = env.getSelectorManager();
       
       this.sourceKey = manager.register(source, this, SelectionKey.OP_READ);
       this.sinkKey = manager.register(sink, this, 0);
@@ -1890,7 +1897,7 @@ public class PostProxy {
       super("Password");
       this.parameters = p;
       this.field = new JPasswordField(20);
-      this.box = new JCheckBox((javax.swing.Icon) null, parameters.getBooleanParameter("post_password_remember"));
+      this.box = new JCheckBox((javax.swing.Icon) null, parameters.getBoolean("post_password_remember"));
       GridBagLayout layout = new GridBagLayout();
       
       addWindowListener(new WindowListener() {
@@ -1962,8 +1969,8 @@ public class PostProxy {
         dispose();
         submitted = true;
 
-        parameters.setBooleanParameter("post_password_remember", box.isSelected());
-        parameters.writeFile();
+        parameters.setBoolean("post_password_remember", box.isSelected());
+        parameters.store();
     
         synchronized (parameters) {
           parameters.notifyAll();

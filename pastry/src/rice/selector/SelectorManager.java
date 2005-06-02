@@ -70,24 +70,24 @@ public class SelectorManager extends Thread implements Timer {
    *
    * @return The SelectorManager which applications should use
    */
-  public static SelectorManager getSelectorManager() {
-    if (manager != null)
-      return manager;
-
-    synchronized (SelectorManager.class) {
-      if (manager != null)
-        return manager;
-
-      String s = System.getProperty("PROFILE_SELECTOR_MANAGER");
-      if ((s != null) && (s != "")) {
-        System.out.println("Using Profile Selector");
-        manager = new ProfileSelector();        
-      } else {
-        manager = new SelectorManager(false);
-      }
-      return manager;
-    }
-  }
+//  public static SelectorManager getSelectorManager() {
+//    if (manager != null)
+//      return manager;
+//
+//    synchronized (SelectorManager.class) {
+//      if (manager != null)
+//        return manager;
+//
+//      String s = System.getProperty("PROFILE_SELECTOR_MANAGER");
+//      if ((s != null) && (s != "")) {
+//        System.out.println("Using Profile Selector");
+//        manager = new ProfileSelector();        
+//      } else {
+//        manager = new SelectorManager(false);
+//      }
+//      return manager;
+//    }
+//  }
   
   /**
    * Method which asks the Selector Manager to add the given key to the cancelled 

@@ -19,7 +19,7 @@ public class VisualizationProxy {
   
   protected Visualization visualization;
     
-  public VisualizationProxy(String[] args) {
+  public VisualizationProxy(String[] args) throws IOException {
     parseArgs(args);
   }
   
@@ -29,7 +29,7 @@ public class VisualizationProxy {
 //    visualization = new Visualization(handle);
   }
   
-  public void parseArgs(String[] args) {
+  public void parseArgs(String[] args) throws IOException {
     int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-protocol") && i+1 < args.length) {
@@ -108,7 +108,7 @@ public class VisualizationProxy {
     return -1;
   }
   
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     VisualizationProxy proxy = new VisualizationProxy(args);
     proxy.start();
   }

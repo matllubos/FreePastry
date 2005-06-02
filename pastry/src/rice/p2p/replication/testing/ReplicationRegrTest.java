@@ -1,5 +1,6 @@
 package rice.p2p.replication.testing;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.Continuation.ListenerContinuation;
@@ -46,7 +47,7 @@ public class ReplicationRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public ReplicationRegrTest(Environment env) {
+  public ReplicationRegrTest(Environment env) throws IOException {
     super(env);
     replications = new ReplicationImpl[NUM_NODES];
     clients = new TestReplicationClient[NUM_NODES];
@@ -60,7 +61,7 @@ public class ReplicationRegrTest extends CommonAPITest {
    *
    * @param args DESCRIBE THE PARAMETER
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     parseArgs(args);
     ReplicationRegrTest test = new ReplicationRegrTest(new Environment());
     test.start();

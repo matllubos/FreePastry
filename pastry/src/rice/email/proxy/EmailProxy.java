@@ -32,6 +32,8 @@ import rice.email.proxy.imap.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
+import rice.environment.Environment;
+import rice.environment.params.Parameters;
 
 import rice.proxy.*;
 
@@ -86,16 +88,16 @@ public class EmailProxy extends PostProxy {
     * @param parameters The parameters to use
     */  
    protected void startRetrieveKeystore(Parameters parameters) throws Exception {
-     String file = parameters.getStringParameter("email_ssl_keystore_filename");
+     String file = parameters.getString("email_ssl_keystore_filename");
      
      if ((! new File(file).exists()) &&
-         (parameters.getBooleanParameter("email_imap_ssl") ||
-          parameters.getBooleanParameter("email_pop3_ssl") ||
-          parameters.getBooleanParameter("email_smtp_ssl"))) {
+         (parameters.getBoolean("email_imap_ssl") ||
+          parameters.getBoolean("email_pop3_ssl") ||
+          parameters.getBoolean("email_smtp_ssl"))) {
        stepStart("Creating keypair for SSL servers");
        
-       String pass = parameters.getStringParameter("email_ssl_keystore_password");
-       int validity = parameters.getIntParameter("email_ssl_keystore_validity");
+       String pass = parameters.getString("email_ssl_keystore_password");
+       int validity = parameters.getInt("email_ssl_keystore_validity");
        
        StringBuffer command = new StringBuffer();
        command.append(System.getProperty("java.home"));
@@ -140,7 +142,7 @@ public class EmailProxy extends PostProxy {
    */  
   protected void startEmailService(Parameters parameters) throws Exception {
    stepStart("Starting Email service");
-   email = new EmailService(post, pair, parameters.getBooleanParameter("post_allow_log_insert"));
+   email = new EmailService(post, pair, parameters.getBoolean("post_allow_log_insert"));
    PostMessage.factory = FACTORY;
    stepDone(SUCCESS);
   }
@@ -151,7 +153,7 @@ public class EmailProxy extends PostProxy {
    * @param parameters The parameters to use
    */
   protected void startFetchEmailLog(Parameters parameters) throws Exception {    
-    if (parameters.getBooleanParameter("email_fetch_log")) {
+    if (parameters.getBoolean("email_fetch_log")) {
       stepStart("Fetching Email INBOX log");
       int retries = 0;
       boolean done = false;
@@ -163,10 +165,10 @@ public class EmailProxy extends PostProxy {
         
         if (c.exceptionThrown()) { 
           stepDone(FAILURE, "Fetching email log caused exception " + c.getException());
-          stepStart("Sleeping and then retrying to fetch email log (" + retries + "/" + parameters.getIntParameter("email_fetch_log_retries"));
-          if (retries < parameters.getIntParameter("email_fetch_log_retries")) {
+          stepStart("Sleeping and then retrying to fetch email log (" + retries + "/" + parameters.getInt("email_fetch_log_retries"));
+          if (retries < parameters.getInt("email_fetch_log_retries")) {
             retries++;
-            Thread.sleep(parameters.getIntParameter("email_fetch_log_retry_sleep"));
+            Thread.sleep(parameters.getInt("email_fetch_log_retry_sleep"));
           } else {
             throw c.getException(); 
           }
@@ -187,13 +189,13 @@ public class EmailProxy extends PostProxy {
   protected void startUserManager(Parameters parameters) throws Exception {    
     stepStart("Starting User Email Services");
     
-    if (parameters.getBooleanParameter("email_fetch_log"))
+    if (parameters.getBoolean("email_fetch_log"))
       manager = new UserManagerImpl(email, new PostMailboxManager(email, emailFolder));
     else 
       manager = new UserManagerImpl(email, new PostMailboxManager(email, null));
     
     String addr = address.toString();
-    manager.createUser(addr.substring(0, addr.indexOf("@")), null, parameters.getStringParameter("post_password"));
+    manager.createUser(addr.substring(0, addr.indexOf("@")), null, parameters.getString("post_password"));
     stepDone(SUCCESS);
   }
 
@@ -202,17 +204,18 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startSMTPServer(Parameters parameters) throws Exception {    
-    if (parameters.getBooleanParameter("email_smtp_enable")) {
+  protected void startSMTPServer(Environment env) throws Exception {    
+    Parameters parameters = env.getParameters();
+    if (parameters.getBoolean("email_smtp_enable")) {
       try {
-        boolean log = parameters.getBooleanParameter("email_smtp_log");
-        int port = parameters.getIntParameter("email_smtp_port");
-        boolean gateway = parameters.getBooleanParameter("email_gateway");
-        boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
-        boolean authenticate = parameters.getBooleanParameter("email_smtp_authenticate");
-        String file = parameters.getStringParameter("email_ssl_keystore_filename");
-        String pass = parameters.getStringParameter("email_ssl_keystore_password");
-        String sendersA = parameters.getStringParameter("email_allowed_senders");
+        boolean log = parameters.getBoolean("email_smtp_log");
+        int port = parameters.getInt("email_smtp_port");
+        boolean gateway = parameters.getBoolean("email_gateway");
+        boolean accept = parameters.getBoolean("email_accept_nonlocal");
+        boolean authenticate = parameters.getBoolean("email_smtp_authenticate");
+        String file = parameters.getString("email_ssl_keystore_filename");
+        String pass = parameters.getString("email_ssl_keystore_password");
+        String sendersA = parameters.getString("email_allowed_senders");
         String server = smtpServer;
         
         String[] senders = new String[0];
@@ -220,14 +223,14 @@ public class EmailProxy extends PostProxy {
         if ((sendersA != null) && (sendersA.length() > 0))
           senders = sendersA.split(",");
         
-        if (parameters.getBooleanParameter("email_smtp_ssl")) {
+        if (parameters.getBoolean("email_smtp_ssl")) {
           stepStart("Starting SSL SMTP server on port " + port);
           smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, file, pass, server, log);
           smtp.start();
           stepDone(SUCCESS);
-        } else if (parameters.getBooleanParameter("email_smtp_non_blocking")) {
+        } else if (parameters.getBoolean("email_smtp_non_blocking")) {
           stepStart("Starting Non-Blocking SMTP server on port " + port);
-          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, log);
+          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, log, env);
           smtp.start();
           stepDone(SUCCESS);
         } else {
@@ -254,24 +257,25 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startIMAPServer(Parameters parameters) throws Exception {    
-    if (parameters.getBooleanParameter("email_imap_enable")) {
+  protected void startIMAPServer(Environment env) throws Exception {    
+    Parameters parameters = env.getParameters();
+    if (parameters.getBoolean("email_imap_enable")) {
       try {
-        boolean log = parameters.getBooleanParameter("email_imap_log");
-        int port = parameters.getIntParameter("email_imap_port");
-        boolean gateway = parameters.getBooleanParameter("email_gateway");
-        boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
-        String file = parameters.getStringParameter("email_ssl_keystore_filename");
-        String pass = parameters.getStringParameter("email_ssl_keystore_password");
+        boolean log = parameters.getBoolean("email_imap_log");
+        int port = parameters.getInt("email_imap_port");
+        boolean gateway = parameters.getBoolean("email_gateway");
+        boolean accept = parameters.getBoolean("email_accept_nonlocal");
+        String file = parameters.getString("email_ssl_keystore_filename");
+        String pass = parameters.getString("email_ssl_keystore_password");
         
-        if (parameters.getBooleanParameter("email_imap_ssl")) {
+        if (parameters.getBoolean("email_imap_ssl")) {
           stepStart("Starting SSL IMAP server on port " + port);
           imap = new SSLImapServerImpl(port, email, manager, gateway, accept, file, pass, log);
           imap.start();
           stepDone(SUCCESS);
-        } else if (parameters.getBooleanParameter("email_imap_non_blocking")) {
+        } else if (parameters.getBoolean("email_imap_non_blocking")) {
           stepStart("Starting Non-Blocking IMAP server on port " + port);
-          imap = new NonBlockingImapServerImpl(port, email, manager, gateway, accept, log);
+          imap = new NonBlockingImapServerImpl(port, email, manager, gateway, accept, log, env);
           imap.start();
           stepDone(SUCCESS);
         } else {
@@ -298,24 +302,25 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startPOP3Server(Parameters parameters) throws Exception {    
-    if (parameters.getBooleanParameter("email_pop3_enable")) {
+  protected void startPOP3Server(Environment env) throws Exception {    
+    Parameters parameters = env.getParameters();
+    if (parameters.getBoolean("email_pop3_enable")) {
       try {
-        boolean log = parameters.getBooleanParameter("email_pop3_log");
-        int port = parameters.getIntParameter("email_pop3_port");
-        boolean gateway = parameters.getBooleanParameter("email_gateway");
-        boolean accept = parameters.getBooleanParameter("email_accept_nonlocal");
-        String file = parameters.getStringParameter("email_ssl_keystore_filename");
-        String pass = parameters.getStringParameter("email_ssl_keystore_password");
+        boolean log = parameters.getBoolean("email_pop3_log");
+        int port = parameters.getInt("email_pop3_port");
+        boolean gateway = parameters.getBoolean("email_gateway");
+        boolean accept = parameters.getBoolean("email_accept_nonlocal");
+        String file = parameters.getString("email_ssl_keystore_filename");
+        String pass = parameters.getString("email_ssl_keystore_password");
         
-        if (parameters.getBooleanParameter("email_pop3_ssl")) {
+        if (parameters.getBoolean("email_pop3_ssl")) {
           stepStart("Starting SSL POP3 server on port " + port);
           pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept, file, pass, log);
           pop3.start();
           stepDone(SUCCESS);
-        } else if (parameters.getBooleanParameter("email_pop3_non_blocking")) {
+        } else if (parameters.getBoolean("email_pop3_non_blocking")) {
           stepStart("Starting Non-Blocking POP3 server on port " + port);
-          pop3 = new NonBlockingPop3ServerImpl(port, email, manager, gateway, accept, log);
+          pop3 = new NonBlockingPop3ServerImpl(port, email, manager, gateway, accept, log, env);
           pop3.start();
           stepDone(SUCCESS);
         } else {
@@ -343,8 +348,8 @@ public class EmailProxy extends PostProxy {
    * @param parameters The parameters to use
    */
   protected void startWebMailServer(Parameters parameters) throws Exception {    
-    if (parameters.getBooleanParameter("email_webmail_enable")) {
-      int port = parameters.getIntParameter("email_webmail_port");
+    if (parameters.getBoolean("email_webmail_enable")) {
+      int port = parameters.getInt("email_webmail_port");
       stepStart("Starting WebMail server on port " + port);
       web = new WebServerImpl(port, email, manager);
       web.start();
@@ -352,29 +357,29 @@ public class EmailProxy extends PostProxy {
     }
   }
 
-  public Parameters start(Parameters parameters) throws Exception {
-    super.start(parameters);
+  public Environment start(Environment env) throws Exception {
+    super.start(env);
 
     if (System.getProperty("RECOVER") != null)
-      return parameters;
+      return env;
 
     sectionStart("Starting Email services");
     startMailcap(parameters);
        
-    if (parameters.getBooleanParameter("post_proxy_enable")) {
+    if (parameters.getBoolean("post_proxy_enable")) {
       startRetrieveKeystore(parameters);
       startEmailService(parameters);
       startFetchEmailLog(parameters);
       startUserManager(parameters);
-      startSMTPServer(parameters);
-      startIMAPServer(parameters);
-      startPOP3Server(parameters);
+      startSMTPServer(env);
+      startIMAPServer(env);
+      startPOP3Server(env);
       startWebMailServer(parameters);
     }
 
     sectionDone();
     
-    return parameters;
+    return env;
   }    
 
 

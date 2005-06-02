@@ -112,7 +112,7 @@ public class DirectRMRegrTest {
     return simulator.simulate();
   }
 
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     int seed;
 
     // Setting the seed helps to reproduce the results of the run and

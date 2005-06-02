@@ -6,6 +6,7 @@ import rice.pastry.standard.*;
 import rice.pastry.dist.*;
 
 import java.util.*;
+import java.io.IOException;
 import java.net.*;
 
 /**
@@ -41,7 +42,7 @@ public class DistHelloWorld {
     /**
      * Constructor
      */
-    public DistHelloWorld() {
+    public DistHelloWorld() throws IOException {
 	factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(port), protocol, port);
 	pastryNodes = new Vector();
 	helloClients = new Vector();
@@ -174,7 +175,7 @@ public class DistHelloWorld {
      * Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
      * Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).
      */
-    public static void main(String args[]) {
+    public static void main(String args[]) throws IOException {
 	Log.init(args);
 	doIinitstuff(args);
 	DistHelloWorld driver = new DistHelloWorld();

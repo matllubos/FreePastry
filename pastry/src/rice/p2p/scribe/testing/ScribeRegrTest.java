@@ -1,5 +1,6 @@
 
 package rice.p2p.scribe.testing;
+import java.io.IOException;
 import java.util.*;
 
 import rice.environment.Environment;
@@ -46,7 +47,7 @@ public class ScribeRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public ScribeRegrTest(Environment env) {
+  public ScribeRegrTest(Environment env) throws IOException {
     super(env);
     scribes = new ScribeImpl[NUM_NODES];
     policies = new TestScribePolicy[NUM_NODES];
@@ -61,7 +62,7 @@ public class ScribeRegrTest extends CommonAPITest {
    *
    * @param args DESCRIBE THE PARAMETER
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     parseArgs(args);
     ScribeRegrTest scribeTest = new ScribeRegrTest(new Environment());
     scribeTest.start();

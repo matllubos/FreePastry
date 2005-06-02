@@ -5,10 +5,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 import rice.email.proxy.EmailProxy;
+import rice.environment.Environment;
+import rice.environment.params.Parameters;
 import rice.p2p.multiring.MultiringNode;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.dist.DistPastryNode;
-import rice.proxy.Parameters;
 import rice.p2p.glacier.v2.GlacierImpl;
 import rice.p2p.past.*;
 import rice.p2p.util.DebugCommandHandler;
@@ -26,10 +27,10 @@ public class VisualizationEmailProxy extends EmailProxy {
   protected InetSocketAddress serverAddress;
   protected InetSocketAddress globalServerAddress;
   
-  public Parameters start(Parameters parameters) throws Exception { 
-    super.start(parameters);
-    
-    if (parameters.getBooleanParameter("visualization_enable")) {
+  public Environment start(Environment env) throws Exception { 
+    super.start(env);
+    Parameters parameters = env.getParameters();
+    if (parameters.getBoolean("visualization_enable")) {
       DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
       int visualizationPort = ((DistNodeHandle) pastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
       
@@ -65,7 +66,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           server.addPanelCreator(new GlacierPanelCreator((GlacierImpl) aggregateStore));
       }
       
-      server.addPanelCreator(new QueuePanelCreator(timer, DistPastryNode.QUEUE, rice.persistence.PersistentStorage.QUEUE));
+      server.addPanelCreator(new QueuePanelCreator(env, DistPastryNode.QUEUE, rice.persistence.PersistentStorage.QUEUE));
       if (smtp != null)
         server.addPanelCreator(new EmailPanelCreator(timer, smtp));
       
@@ -85,7 +86,7 @@ public class VisualizationEmailProxy extends EmailProxy {
         t.start();
         stepDone(SUCCESS);
         
-        if (parameters.getBooleanParameter("visualization_client_enable")) {
+        if (parameters.getBoolean("visualization_client_enable")) {
           stepStart("Launching Visualization Client");
           Ring[] r = new Ring[1];
           r[0] = new Ring("global", null, (DistNodeHandle) pastry.getLocalHandle());
@@ -139,7 +140,7 @@ public class VisualizationEmailProxy extends EmailProxy {
     dialogPrint("\n\nYour ePOST is now booted and ready.  You can connect your mail client\n" +
                 "with the instructions shown on the http://www.epostmail.org website.\n");
     
-    return parameters;
+    return env;
   }
   
   public static void main(String[] args) {

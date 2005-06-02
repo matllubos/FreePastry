@@ -18,7 +18,11 @@ public class SimpleRandomSource implements RandomSource {
   }
   
   public SimpleRandomSource(long seed) {
-    rnd = new Random(seed);
+    if (seed != 0) {
+      rnd = new Random(seed);
+    } else {
+      rnd = new Random(); 
+    }
   }
   
   public boolean nextBoolean() {

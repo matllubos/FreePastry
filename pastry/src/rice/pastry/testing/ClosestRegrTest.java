@@ -12,6 +12,7 @@ import rice.pastry.security.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -39,7 +40,7 @@ public class ClosestRegrTest {
   /**
    * constructor
    */
-  private ClosestRegrTest() {
+  private ClosestRegrTest() throws IOException {
     simulator = new SphereNetwork();
     factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, new Environment());
     pastryNodes = new Vector();
@@ -101,7 +102,7 @@ public class ClosestRegrTest {
   /**
    * main
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     ClosestRegrTest pt = new ClosestRegrTest();
     pt.run();
   }

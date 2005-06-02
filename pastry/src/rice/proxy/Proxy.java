@@ -8,6 +8,8 @@ import java.util.*;
 import java.awt.*;
 import javax.swing.*;
 
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.util.*;
 
 /**
@@ -21,6 +23,8 @@ import rice.p2p.util.*;
  */
 public class Proxy {
   
+  public static String[] DEFAULT_PARAM_FILES = {"freepastry","epost"};
+  
   public static String PROXY_PARAMETERS_NAME = "proxy";
   
   protected Process process;
@@ -31,15 +35,15 @@ public class Proxy {
   }
   
   public void run(String params) throws IOException, InterruptedException {
-    Parameters parameters = new Parameters(params);
+    Parameters parameters = new SimpleParameters(DEFAULT_PARAM_FILES, params);
     int count = 0;
     
-    if (parameters.getBooleanParameter("proxy_automatic_update_enable")) {
+    if (parameters.getBoolean("proxy_automatic_update_enable")) {
       AutomaticUpdater au = new AutomaticUpdater(parameters);
       au.start();
     }
     
-    if (parameters.getBooleanParameter("proxy_sleep_monitor_enable")) {
+    if (parameters.getBoolean("proxy_sleep_monitor_enable")) {
       SleepMonitor sm = new SleepMonitor(parameters);
       sm.start();
     }
@@ -53,7 +57,7 @@ public class Proxy {
       process = (environment.length > 0 ? Runtime.getRuntime().exec(command, environment) : Runtime.getRuntime().exec(command));
       lm = new LivenessMonitor(parameters, process);
 
-      if (parameters.getBooleanParameter("proxy_liveness_monitor_enable"))
+      if (parameters.getBoolean("proxy_liveness_monitor_enable"))
         lm.start();
       
       Printer error = new Printer(process.getErrorStream(), "[Error Stream ]: ");
@@ -62,15 +66,15 @@ public class Proxy {
       lm.die();
       
       // re-initialize parameters for debugging purposes
-      parameters = new Parameters(params);
+      parameters = new SimpleParameters(DEFAULT_PARAM_FILES, params);
       
       if (exit != -1) { 
         System.out.println("[Loader       ]: Child process exited with value " + exit + " - restarting client");
         count++;
         
-        if (count < parameters.getIntParameter("restart_max")) {
-          System.out.println("[Loader       ]: Waiting for " + parameters.getIntParameter("restart_delay") + " milliseconds");   
-          Thread.sleep(parameters.getIntParameter("restart_delay"));
+        if (count < parameters.getInt("restart_max")) {
+          System.out.println("[Loader       ]: Waiting for " + parameters.getInt("restart_delay") + " milliseconds");   
+          Thread.sleep(parameters.getInt("restart_delay"));
         }
       } else {
         System.out.println("[Loader       ]: Child process exited with value " + exit + " - exiting loader");   
@@ -84,10 +88,10 @@ public class Proxy {
   protected String[] buildJavaEnvironment(Parameters parameters) {
     HashSet set = new HashSet();
     
-    if (parameters.getBooleanParameter("java_profiling_enable") ||
-        parameters.getBooleanParameter("java_thread_debugger_enable"))  {
+    if (parameters.getBoolean("java_profiling_enable") ||
+        parameters.getBoolean("java_thread_debugger_enable"))  {
       if (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0) {
-        set.add("LD_LIBRARY_PATH=" + parameters.getStringParameter("java_profiling_native_library_directory"));
+        set.add("LD_LIBRARY_PATH=" + parameters.getString("java_profiling_native_library_directory"));
       } 
     }
     
@@ -97,45 +101,45 @@ public class Proxy {
   protected String buildJavaCommand(Parameters parameters) {
     StringBuffer result = new StringBuffer();
     
-    if (! ("".equals(parameters.getStringParameter("java_wrapper_command")))) {
-      result.append(parameters.getStringParameter("java_wrapper_command"));
+    if (! ("".equals(parameters.getString("java_wrapper_command")))) {
+      result.append(parameters.getString("java_wrapper_command"));
       result.append(" \"");
     }
     
-    if (((parameters.getStringParameter("java_home") == null) ||
-         (parameters.getStringParameter("java_home").equals(""))) && 
+    if (((parameters.getString("java_home") == null) ||
+         (parameters.getString("java_home").equals(""))) && 
         (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0))
-      parameters.setStringParameter("java_home", System.getProperty("java.home"));
+      parameters.setString("java_home", System.getProperty("java.home"));
     
-    if ((parameters.getStringParameter("java_home") != null) && (! ("".equals(parameters.getStringParameter("java_home"))))) {
-      result.append(parameters.getStringParameter("java_home"));
+    if ((parameters.getString("java_home") != null) && (! ("".equals(parameters.getString("java_home"))))) {
+      result.append(parameters.getString("java_home"));
       result.append(System.getProperty("file.separator"));
       result.append("bin");
       result.append(System.getProperty("file.separator"));
     }
     
-    result.append(parameters.getStringParameter("java_command"));
+    result.append(parameters.getString("java_command"));
     result.append(" -Xmx");
-    result.append(parameters.getStringParameter("java_maximum_memory"));
+    result.append(parameters.getString("java_maximum_memory"));
     result.append(" -Xss");
-    result.append(parameters.getStringParameter("java_stack_size"));
+    result.append(parameters.getString("java_stack_size"));
     if (System.getProperty("RECOVER") != null)
       result.append(" -DRECOVER=\""+System.getProperty("RECOVER")+"\"");
     
-    if (parameters.getBooleanParameter("java_memory_free_enable")) {
-      result.append(" -Xmaxf" + parameters.getDoubleParameter("java_memory_free_maximum"));
+    if (parameters.getBoolean("java_memory_free_enable")) {
+      result.append(" -Xmaxf" + parameters.getDouble("java_memory_free_maximum"));
     }
     
-    if (parameters.getBooleanParameter("java_use_server_vm")) {
+    if (parameters.getBoolean("java_use_server_vm")) {
       result.append(" -server");
     }
     
-    if (parameters.getBooleanParameter("java_interpreted_mode")) {
+    if (parameters.getBoolean("java_interpreted_mode")) {
       result.append(" -Xint");
     }
     
-    if (parameters.getBooleanParameter("java_prefer_select") ||
-        (parameters.getBooleanParameter("java_prefer_select_automatic_osx") && 
+    if (parameters.getBoolean("java_prefer_select") ||
+        (parameters.getBoolean("java_prefer_select_automatic_osx") && 
          System.getProperty("os.name").toLowerCase().indexOf("mac os x") >= 0)) {
       result.append(" -Djava.nio.preferSelect=true");
     }
@@ -144,72 +148,72 @@ public class Proxy {
       result.append(" -Xdock:name=ePOST -Xdock:icon=lib/epost.png");
     }
     
-    if (parameters.getBooleanParameter("java_debug_enable")) {
+    if (parameters.getBoolean("java_debug_enable")) {
       result.append(" -Xdebug -Djava.compiler=NONE -Xnoagent -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=");
-      result.append(parameters.getStringParameter("java_debug_port"));
+      result.append(parameters.getString("java_debug_port"));
     }
     
-    if (parameters.getBooleanParameter("java_hprof_enable")) {
+    if (parameters.getBoolean("java_hprof_enable")) {
       result.append(" -Xrunhprof");
     }
     
-    if (parameters.getStringParameter("java_other_options") != null) {
-      result.append(" " + parameters.getStringParameter("java_other_options"));
+    if (parameters.getString("java_other_options") != null) {
+      result.append(" " + parameters.getString("java_other_options"));
     }
     
-    if (parameters.getBooleanParameter("java_profiling_enable")) {
+    if (parameters.getBoolean("java_profiling_enable")) {
       if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0) {
         result.append(" -Djava.library.path=");
-        result.append(parameters.getStringParameter("java_profiling_native_library_directory"));
+        result.append(parameters.getString("java_profiling_native_library_directory"));
       }
       
       result.append(" -Xrunpri");
-      if (! parameters.getBooleanParameter("java_profiling_memory_enable"))
+      if (! parameters.getBoolean("java_profiling_memory_enable"))
           result.append(":dmp=1");
           
       result.append(" -Xbootclasspath/a:");
-      result.append(parameters.getStringParameter("java_profiling_library_directory"));
+      result.append(parameters.getString("java_profiling_library_directory"));
       result.append(System.getProperty("file.separator"));
       result.append("oibcp.jar -cp ");
-      result.append(parameters.getStringParameter("java_profiling_library_directory"));
+      result.append(parameters.getString("java_profiling_library_directory"));
       result.append(System.getProperty("file.separator"));
       result.append("optit.jar");
       result.append(System.getProperty("path.separator"));
       
-      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArrayParameter("java_classpath"));
+      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArray("java_classpath"));
       result.append(dc.getClasspath());
       
       result.append(" intuitive.audit.Audit -port ");
-      result.append(parameters.getStringParameter("java_profiling_port"));
-    } else if (parameters.getBooleanParameter("java_thread_debugger_enable"))  {
+      result.append(parameters.getString("java_profiling_port"));
+    } else if (parameters.getBoolean("java_thread_debugger_enable"))  {
       result.append(" -Xruntdi:port=");
-      result.append(parameters.getIntParameter("java_thread_debugger_port"));
+      result.append(parameters.getInt("java_thread_debugger_port"));
       result.append(",analyzer=t");
       
       result.append("-Xint -Xbootclasspath/a:");
-      result.append(parameters.getStringParameter("java_thread_debugger_library_directory"));
+      result.append(parameters.getString("java_thread_debugger_library_directory"));
       result.append(System.getProperty("file.separator"));
       result.append("oibcp.jar -cp ");
-      result.append(parameters.getStringParameter("java_thread_debugger_library_directory"));
+      result.append(parameters.getString("java_thread_debugger_library_directory"));
       result.append(System.getProperty("file.separator"));
       result.append("optit.jar");
       result.append(System.getProperty("path.separator"));
 
-      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArrayParameter("java_classpath"));
+      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArray("java_classpath"));
       result.append(dc.getClasspath());
     } else {    
       result.append(" -cp ");
         
-      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArrayParameter("java_classpath"));
+      DynamicClasspath dc = new DynamicClasspath(new File("."), parameters.getStringArray("java_classpath"));
       result.append(dc.getClasspath());
     }
     
     result.append(" ");
-    result.append(parameters.getStringParameter("java_main_class"));
+    result.append(parameters.getString("java_main_class"));
     result.append(" ");
-    result.append(parameters.getStringParameter("java_main_class_parameters"));
+    result.append(parameters.getString("java_main_class_parameters"));
     
-    if (! ("".equals(parameters.getStringParameter("java_wrapper_command")))) {
+    if (! ("".equals(parameters.getString("java_wrapper_command")))) {
       result.append(" \"");
     }
     
@@ -289,8 +293,8 @@ public class Proxy {
     public LivenessMonitor(Parameters parameters, Process process) {
       this.alive = true;
       this.process = process;
-      this.sleep = parameters.getIntParameter("proxy_liveness_monitor_sleep");
-      this.timeout = parameters.getIntParameter("proxy_liveness_monitor_timeout");
+      this.sleep = parameters.getInt("proxy_liveness_monitor_sleep");
+      this.timeout = parameters.getInt("proxy_liveness_monitor_timeout");
     }
     
     public void run() {
@@ -376,9 +380,9 @@ public class Proxy {
     protected Parameters parameters;
     
     public AutomaticUpdater(Parameters parameters) {
-      this.interval = parameters.getIntParameter("proxy_automatic_update_interval");
-      this.root = parameters.getStringParameter("proxy_automatic_update_root");
-      this.url = root + parameters.getStringParameter("proxy_automatic_update_latest_filename");
+      this.interval = parameters.getInt("proxy_automatic_update_interval");
+      this.root = parameters.getString("proxy_automatic_update_root");
+      this.url = root + parameters.getString("proxy_automatic_update_latest_filename");
       this.parameters = parameters;
     }
     
@@ -399,7 +403,7 @@ public class Proxy {
               filename = filename.substring(0, filename.indexOf("\t"));
             
             if (! new File(".", filename).exists()) {              
-              if (parameters.getBooleanParameter("proxy_show_dialog") && parameters.getBooleanParameter("proxy_automatic_update_ask_user")) {
+              if (parameters.getBoolean("proxy_show_dialog") && parameters.getBoolean("proxy_automatic_update_ask_user")) {
                 String message = "A new version of the ePOST software has been detected.\n\n" +
                 "Would you like to automatically upgrade to '" + filename + "' and restart your proxy?";
                 int i = JOptionPane.showOptionDialog(null, message, "Updated Software Detected", 
@@ -414,8 +418,8 @@ public class Proxy {
                                                         JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
                   
                   if (j == JOptionPane.YES_OPTION) {
-                    parameters.setStringParameter("proxy_automatic_update_enable", "false");
-                    parameters.writeFile();
+                    parameters.setString("proxy_automatic_update_enable", "false");
+                    parameters.store();
                     return;
                   }
                 } else if (i == 2) {
@@ -538,8 +542,8 @@ public class Proxy {
     protected long last;
         
     public SleepMonitor(Parameters parameters) {
-      this.sleep = parameters.getIntParameter("proxy_sleep_monitor_sleep");
-      this.timeout = parameters.getIntParameter("proxy_sleep_monitor_timeout");
+      this.sleep = parameters.getInt("proxy_sleep_monitor_sleep");
+      this.timeout = parameters.getInt("proxy_sleep_monitor_timeout");
     }
     
     public void run() {

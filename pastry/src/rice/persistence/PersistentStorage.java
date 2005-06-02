@@ -15,8 +15,8 @@ import java.util.zip.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
-import rice.selector.*;
 import rice.p2p.util.*;
 
 /**
@@ -142,6 +142,8 @@ public class PersistentStorage implements Storage {
   private Random rng;               // random number generator
   protected static final boolean verbose = true;
 
+  Environment environment;
+  
  /**
   * Builds a PersistentStorage given a root directory in which to
   * persist the data. Uses a default instance name.
@@ -150,8 +152,8 @@ public class PersistentStorage implements Storage {
   * @param rootDir The root directory of the persisted disk.
   * @param size the size of the storage in bytes
   */
-  public PersistentStorage(IdFactory factory, String rootDir, int size) throws IOException {
-    this(factory, "default", rootDir, size);
+  public PersistentStorage(IdFactory factory, String rootDir, int size, Environment env) throws IOException {
+    this(factory, "default", rootDir, size, env);
   }
    
  /**
@@ -163,8 +165,8 @@ public class PersistentStorage implements Storage {
   * @param rootDir The root directory of the persisted disk.
   * @param size the size of the storage in bytes
   */
-  public PersistentStorage(IdFactory factory, String name, String rootDir, int size) throws IOException {
-    this(factory, name, rootDir, size, true);
+  public PersistentStorage(IdFactory factory, String name, String rootDir, int size, Environment env) throws IOException {
+    this(factory, name, rootDir, size, true, env);
   }
   
   /**
@@ -177,7 +179,8 @@ public class PersistentStorage implements Storage {
    * @param size the size of the storage in bytes
    * @param index Whether or not to index the objects
    */
-  public PersistentStorage(IdFactory factory, String name, String rootDir, int size, boolean index) throws IOException {
+  public PersistentStorage(IdFactory factory, String name, String rootDir, int size, boolean index, Environment env) throws IOException {
+    this.environment = env;
     this.factory = factory;
     this.name = name;
     this.rootDir = rootDir;
@@ -2166,8 +2169,7 @@ public class PersistentStorage implements Storage {
        // long start = System.currentTimeMillis();
         final Object result = doWork();
        // System.out.println("PT: " + (System.currentTimeMillis() - start) + " " + toString());
-        
-        SelectorManager.getSelectorManager().invoke(new Runnable() {
+        environment.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnResult(result);
           }
@@ -2177,7 +2179,7 @@ public class PersistentStorage implements Storage {
           }
         });
       } catch (final Exception e) {
-        SelectorManager.getSelectorManager().invoke(new Runnable() {
+        environment.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnError(e);
           }

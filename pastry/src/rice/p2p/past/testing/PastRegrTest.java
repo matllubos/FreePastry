@@ -47,7 +47,7 @@ public class PastRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public PastRegrTest(Environment env) {
+  public PastRegrTest(Environment env) throws IOException {
     super(env);
     pasts = new PastImpl[NUM_NODES];
     storages = new StorageManager[NUM_NODES];
@@ -76,7 +76,7 @@ public class PastRegrTest extends CommonAPITest {
   protected void processNode(int num, Node node) {
     try {
       storages[num] = new StorageManagerImpl(FACTORY,
-                                             new PersistentStorage(FACTORY, "root-" + num, ".", 1000000),
+                                             new PersistentStorage(FACTORY, "root-" + num, ".", 1000000, environment),
                                              new LRUCache(new MemoryStorage(FACTORY), 100000));
       pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE);
     } catch (IOException e) {
@@ -727,7 +727,7 @@ public class PastRegrTest extends CommonAPITest {
   /**
    * Usage: DistPastTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (rmi|wire)] [-help]
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     parseArgs(args);
     PastRegrTest pastTest = new PastRegrTest(new Environment());
     pastTest.start();

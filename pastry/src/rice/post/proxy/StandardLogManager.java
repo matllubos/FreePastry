@@ -1,6 +1,8 @@
 package rice.post.proxy;
 
 import java.io.*;
+
+import rice.environment.params.Parameters;
 import rice.proxy.*;
 
 public class StandardLogManager extends LogManager {
@@ -9,8 +11,8 @@ public class StandardLogManager extends LogManager {
   
   public StandardLogManager(Parameters parameters) {
     try {
-      this.fos = new FileOutputStream(parameters.getStringParameter("standard_output_redirect_filename"), 
-                                      parameters.getBooleanParameter("standard_output_redirect_append"));
+      this.fos = new FileOutputStream(parameters.getString("standard_output_redirect_filename"), 
+                                      parameters.getBoolean("standard_output_redirect_append"));
     } catch (FileNotFoundException e) {
       System.err.println("ERROR: Could not find  " + e);
     }

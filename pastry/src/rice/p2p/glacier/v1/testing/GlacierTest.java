@@ -97,11 +97,11 @@ public class GlacierTest {
       pastryNodes.addElement(pn);
 
       pastStor = new StorageManagerImpl(FACTORY, new PersistentStorage(FACTORY,
-          "past-root-" + i, ".", 1000000), new LRUCache(new MemoryStorage(
+          "past-root-" + i, ".", 1000000, pn.getEnvironment()), new LRUCache(new MemoryStorage(
           FACTORY), 1000000));
 
       glacierStor = new StorageManagerImpl(FACTORY, new PersistentStorage(
-          FACTORY, "glacier-root-" + i, ".", 1000000), new LRUCache(
+          FACTORY, "glacier-root-" + i, ".", 1000000, pn.getEnvironment()), new LRUCache(
           new MemoryStorage(FACTORY), 1000000));
     } catch (IOException ioe) {
       System.out.println("makePastryNode(" + i + ") failed, " + ioe);
@@ -171,7 +171,7 @@ public class GlacierTest {
    * Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]
    * [-simultaneous_joins] [-simultaneous_msgs] [-help]
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
 
     Log.init(args);
 

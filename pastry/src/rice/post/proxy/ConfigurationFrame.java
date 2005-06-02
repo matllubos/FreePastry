@@ -6,6 +6,8 @@ import java.io.*;
 import javax.swing.*;
 import javax.swing.text.*;
 
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
 import rice.proxy.*;
 import rice.Continuation;
 
@@ -73,7 +75,7 @@ public class ConfigurationFrame extends JFrame {
     pane.addTab("Java", null, panels[2], "Java Configuration Pane");
     pane.addTab("POST", null, panels[3], "POST Configuration Pane");
     pane.addTab("Proxy", null, panels[4], "Proxy Configuration Pane");
-    if (parameters.getBooleanParameter("glacier_enable") && (proxy != null))
+    if (parameters.getBoolean("glacier_enable") && (proxy != null))
       pane.addTab("Glacier", null, panels[5], "Glacier Configuration Pane");
     pane.addTab("Other", null, panels[6], "Other Configuration Pane");
 
@@ -565,7 +567,7 @@ public class ConfigurationFrame extends JFrame {
     }
     
     protected void save() {
-      parameters.setStringParameter(parameter, getValue());
+      parameters.setString(parameter, getValue());
     }
     
     protected abstract String getValue();
@@ -604,7 +606,7 @@ public class ConfigurationFrame extends JFrame {
       layout.setConstraints(box, gbc2);      
       add(box);
       
-      box.setSelected(parameters.getBooleanParameter(parameter));
+      box.setSelected(parameters.getBoolean(parameter));
     }
     
     protected String getValue() {
@@ -642,7 +644,7 @@ public class ConfigurationFrame extends JFrame {
       layout.setConstraints(field, gbc2);      
       add(field);
       
-      field.setText(parameters.getStringParameter(parameter));
+      field.setText(parameters.getString(parameter));
     }
     
     protected String getValue() {
@@ -754,7 +756,7 @@ public class ConfigurationFrame extends JFrame {
       this.label = label; 
       this.model = new DefaultListModel();
       
-      String[] array = parameters.getStringArrayParameter(parameter);
+      String[] array = parameters.getStringArray(parameter);
       for (int i=0; i<array.length; i++)
         model.add(i, array[i]);
       
@@ -927,7 +929,7 @@ public class ConfigurationFrame extends JFrame {
       layout.setConstraints(slider, gbc2);      
       add(slider);
       
-      slider.setValue(parameters.getIntParameter(parameter));
+      slider.setValue(parameters.getInt(parameter));
 
       int tickSpacing = slider.getMaximum() - slider.getMinimum();
       slider.setMajorTickSpacing(tickSpacing);
@@ -974,7 +976,10 @@ public class ConfigurationFrame extends JFrame {
   }
   
   public static void main(String[] args) throws IOException {
-    new ConfigurationFrame(new Parameters("default"), null);
+    String[] defaults = new String[2];
+    defaults[0] = "freepastry";
+    defaults[1] = "epost";
+    new ConfigurationFrame(new SimpleParameters(defaults,"epost"), null);
   }
   
   public static JTextField buildMaskedField(String mask) {
@@ -1078,11 +1083,11 @@ public class ConfigurationFrame extends JFrame {
           String newP1 = new String(new1.getPassword());
           String newP2 = new String(new2.getPassword());
           
-          if (oldP.equals(parameters.getStringParameter("post_password"))) {
+          if (oldP.equals(parameters.getString("post_password"))) {
             if (newP1.equals(newP2)) {
               if (newP1.length() > 0) {
                 try {
-                  rice.post.security.ca.CAPasswordChanger.changePassword(parameters.getStringParameter("post_username"), oldP, newP1);
+                  rice.post.security.ca.CAPasswordChanger.changePassword(parameters.getString("post_username"), oldP, newP1);
                   JOptionPane.showMessageDialog(null, "Your password has been changed - it will not take effect until a reboot.");
                 } catch (Exception f) {
                   JOptionPane.showMessageDialog(null, "An error occurred - your password has not been changed.\n\n" + f.toString());   

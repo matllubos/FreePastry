@@ -1,6 +1,7 @@
 
 package rice.testharness;
 
+import java.io.*;
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
@@ -69,7 +70,7 @@ public class DistTestHarnessRunner {
    *
    * @param pn The PastryNode this TestHarness is running on.
    */
-  public DistTestHarnessRunner() {
+  public DistTestHarnessRunner() throws IOException {
     pastryNodes = new Vector();
     testNodes = new Vector();
     factory = DistPastryNodeFactory.getFactory(getNodeIdFactory(), PROTOCOL, START_PORT);

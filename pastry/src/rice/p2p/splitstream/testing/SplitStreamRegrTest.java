@@ -2,6 +2,7 @@
 
 package rice.p2p.splitstream.testing;
 
+import java.io.IOException;
 import java.util.Random;
 
 import rice.environment.Environment;
@@ -45,7 +46,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
   /**
    * Constructor which sets up all local variables
    */
-  public SplitStreamRegrTest(Environment env) {
+  public SplitStreamRegrTest(Environment env) throws IOException {
     super(env);
     splitstreams = new SplitStreamImpl[NUM_NODES];
     ssclients = new SplitStreamTestClient[NUM_NODES];
@@ -61,7 +62,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    *
    * @param args DESCRIBE THE PARAMETER
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
       int seed;
       seed = (int)System.currentTimeMillis();
       //seed = 1202653027;

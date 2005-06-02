@@ -28,7 +28,6 @@ import sun.misc.SignalHandler;
  * @version $Id$
  * @author Alan Mislove
  */
-
 public abstract class DistPastryNode extends PastryNode {
   public static final boolean verbose = false;
   
@@ -46,7 +45,7 @@ public abstract class DistPastryNode extends PastryNode {
   protected int leafSetMaintFreq, routeSetMaintFreq;
 
   // timer that supports scheduled messages
-  protected static final Timer timer = SelectorManager.getSelectorManager().getTimer();//new Timer(true);
+  protected Timer timer;// = SelectorManager.getSelectorManager().getTimer();//new Timer(true);
   
   // the list of network listeners
   private Vector listeners;
@@ -66,7 +65,7 @@ public abstract class DistPastryNode extends PastryNode {
   protected DistPastryNode(NodeId id, Environment e) {    
     super(id, e);
     SignalHandler s;
-    
+    timer = e.getSelectorManager().getTimer();
 //    timer = new Timer(true);
     // uses deamon thread, so it terminates once other threads have terminated
     
@@ -254,7 +253,7 @@ public abstract class DistPastryNode extends PastryNode {
    * @param command The command to return the result to once it's done
    */
   public void process(Executable task, Continuation command) {
-    QUEUE.enqueue(new ProcessingRequest(task, command));
+    QUEUE.enqueue(new ProcessingRequest(task, command, getEnvironment().getSelectorManager()));
   }
   
   private static class ProcessingThread extends Thread {
@@ -317,10 +316,12 @@ public abstract class DistPastryNode extends PastryNode {
   private static class ProcessingRequest {
     Continuation c;
     Executable r;
+    SelectorManager sm;
     
-		public ProcessingRequest(Executable r, Continuation c){
+		public ProcessingRequest(Executable r, Continuation c, SelectorManager sm){
       this.r = r;
       this.c = c;
+      this.sm = sm;
 		}
     
     public void returnResult(Object o) {
@@ -337,7 +338,7 @@ public abstract class DistPastryNode extends PastryNode {
         final Object result = r.execute();
       //  System.out.println("QT: " + (System.currentTimeMillis() - start) + " " + r.toString());
 
-        SelectorManager.getSelectorManager().invoke(new Runnable() {
+        sm.invoke(new Runnable() {
           public void run() {
             returnResult(result);
           }
@@ -346,7 +347,7 @@ public abstract class DistPastryNode extends PastryNode {
           }
         });
       } catch (final Exception e) {
-        SelectorManager.getSelectorManager().invoke(new Runnable() {
+        sm.invoke(new Runnable() {
           public void run() {
             returnError(e);
           }

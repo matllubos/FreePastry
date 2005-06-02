@@ -1,6 +1,7 @@
 package rice.visualization.server;
 
 import rice.visualization.data.*;
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
@@ -25,11 +26,14 @@ public class QueuePanelCreator implements PanelCreator {
   protected ProcessingQueue processingQ;
   protected WorkQueue persistenceQ;
   
-  public QueuePanelCreator(rice.selector.Timer timer, ProcessingQueue processingQ, WorkQueue persistenceQ) {
+  protected Environment environment;
+  
+  public QueuePanelCreator(Environment env, ProcessingQueue processingQ, WorkQueue persistenceQ) {
     this.processingQ = processingQ;
     this.persistenceQ = persistenceQ;
+    this.environment = env;
     
-    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
+    environment.getSelectorManager().getTimer().scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
         updateData();
       }
@@ -118,7 +122,7 @@ public class QueuePanelCreator implements PanelCreator {
     try {
       processing.add(new Double((double) processingQ.getLength()));
       persistence.add(new Double((double) persistenceQ.getLength()));
-      invocations.add(new Double((double) SelectorManager.getSelectorManager().getNumInvocations()));
+      invocations.add(new Double((double) environment.getSelectorManager().getNumInvocations()));
       times.add(new Long(System.currentTimeMillis()));
       
       if (processing.size() > NUM_DATA_POINTS) {

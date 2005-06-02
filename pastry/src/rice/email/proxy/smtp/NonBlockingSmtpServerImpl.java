@@ -7,6 +7,7 @@ import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.smtp.commands.*;
+import rice.environment.Environment;
 import rice.selector.*;
 
 import java.io.*;
@@ -51,7 +52,10 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   
   int connections = 0;
 
-  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log) throws Exception {
+  Environment environment;
+  
+  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log, Environment env) throws Exception {
+    this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -80,10 +84,10 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
     channel.configureBlocking(false);
     channel.socket().bind(new InetSocketAddress(getPort()));
     
-    SelectorManager.getSelectorManager().invoke(new Runnable() {
+    environment.getSelectorManager().invoke(new Runnable() {
       public void run() {
         try {
-          key = SelectorManager.getSelectorManager().register(channel, NonBlockingSmtpServerImpl.this, SelectionKey.OP_ACCEPT);
+          key = environment.getSelectorManager().register(channel, NonBlockingSmtpServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
           System.out.println("ERROR modifiying SMTP server socket key " + e);
         }
@@ -93,7 +97,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   
   protected void setAcceptable(final boolean acceptable) {
     // register interest in accepting connections
-    SelectorManager.getSelectorManager().invoke(new Runnable() {
+    environment.getSelectorManager().invoke(new Runnable() {
       public void run() {
         key.interestOps((acceptable ? SelectionKey.OP_ACCEPT : 0));
       }

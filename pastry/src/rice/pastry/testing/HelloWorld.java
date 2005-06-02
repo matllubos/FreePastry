@@ -6,6 +6,7 @@ import rice.pastry.direct.*;
 import rice.pastry.standard.*;
 import rice.pastry.join.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -110,7 +111,7 @@ public class HelloWorld {
    * Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]
    * [-simultaneous_joins] [-simultaneous_msgs] [-help]
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
 
     Log.init(args);
 

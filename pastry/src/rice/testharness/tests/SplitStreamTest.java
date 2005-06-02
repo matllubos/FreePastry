@@ -47,7 +47,11 @@ public class SplitStreamTest extends Test{
     private int base = 16;
     
     // every 1000 ms, publish data on each stripe
-    private int testFreq = 10*1000;
+    private int testFreq = /* 10* */1000;
+    
+    private int testDelay = /*10* */ 10*1000;
+    
+    private int printTreePeriod = 10*60*1000;
     
     private int OUT_BW = 16;
     
@@ -88,17 +92,21 @@ public class SplitStreamTest extends Test{
     public void startTest(NodeHandle[] nodes) {
       //System.out.println("SST.startTest()");
   	ssclient.subscribeStripes();
-    endpoint.scheduleMessage(new PrintTreeTestMessage() , 9*60*1000, 10*60*1000);
+    endpoint.scheduleMessage(new PrintTreeTestMessage() , printTreePeriod, printTreePeriod);
     
       // Trigger the periodic invokation of DistScribeRegrTest message
   // this is where the node has to be the zero node to run
-	if (ssclient.getId().equals((Id)(rice.pastry.Id.build()))){
+	if (isNearestZero(ssclient.getId())){
 	    createDataToPublish();
 	    // start publishing data after 60 seconds to allow nodes to join the trees
 	    sendDataTask = 
-        endpoint.scheduleMessage(makeSplitStreamTestMessage(), /*10* */ 60*1000 , testFreq);
+        endpoint.scheduleMessage(makeSplitStreamTestMessage(), testDelay , testFreq);
 	    _out.println("DEBUG :: Scheduling message");
 	}
+    }
+    
+    private boolean isNearestZero(Id id) {
+      return id.equals((Id)(rice.pastry.Id.build()));
     }
 
     /**
@@ -205,10 +213,10 @@ public class SplitStreamTest extends Test{
   public void handleDeliverMessage(SplitStreamTest test) {
     //System.out.println("SST.handleDeliverMessage()");
     // this is where we decide that I am the one to start the test
-      if (test.getId().equals(rice.pastry.Id.build())){
+//      if (isNearestZero(test.getId())){        
     // I am the creator of the channel
     test.sendData();
-      }
+//      }
   }
   
   

@@ -1,6 +1,7 @@
 
 package rice.pastry.dist;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
 
@@ -23,14 +24,6 @@ import rice.pastry.socket.SocketPastryNodeFactory;
 public abstract class DistPastryNodeFactory extends PastryNodeFactory {
 
   // choices of protocols
-  /**
-   * DESCRIBE THE FIELD
-   */
-//  public static int PROTOCOL_RMI = 0;
-  /**
-   * DESCRIBE THE FIELD
-   */
-//  public static int PROTOCOL_WIRE = 1;
   /**
    * DESCRIBE THE FIELD
    */
@@ -151,7 +144,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return A DistPastryNodeFactory using the given protocol and port.
    * @throws IllegalArgumentException If protocol is an unsupported port.
    */
-  public static DistPastryNodeFactory getFactory(NodeIdFactory nf, int protocol, int port) {
+  public static DistPastryNodeFactory getFactory(NodeIdFactory nf, int protocol, int port) throws IOException {
     if (protocol == PROTOCOL_SOCKET) {
       return new SocketPastryNodeFactory(nf, port, new Environment());
     }

@@ -4,6 +4,7 @@ import rice.email.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.mailbox.postbox.*;
+import rice.environment.Environment;
 import rice.selector.*;
 
 import java.io.*;
@@ -26,7 +27,10 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
   
   EmailService email;
 
-  public NonBlockingImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
+  Environment environment;
+  
+  public NonBlockingImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
+    this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -52,10 +56,10 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
     channel.socket().bind(new InetSocketAddress(getPort()));
     
     // register interest in accepting connections
-    SelectorManager.getSelectorManager().invoke(new Runnable() {
+    environment.getSelectorManager().invoke(new Runnable() {
       public void run() {
         try {
-          SelectorManager.getSelectorManager().register(channel, NonBlockingImapServerImpl.this, SelectionKey.OP_ACCEPT);
+          environment.getSelectorManager().register(channel, NonBlockingImapServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
           System.out.println("ERROR creating IMAP server socket key " + e);
         }
