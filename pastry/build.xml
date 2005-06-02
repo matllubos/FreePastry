@@ -184,8 +184,9 @@
 
   <!-- Distribution-related targets -->
   <target name="jar" depends="compile">   
-    <jar destfile="${build.dir}/pastry.jar">
+    <jar destfile="pastry.jar">
       <fileset dir="${build.dir}" includes="**/*.class"/>
+      <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
     </jar>
   </target>
 
@@ -244,6 +245,7 @@
    <!-- <include name="rice/serialization/**/*.class"/> -->
    <!-- <include name="rice/visualization/**/*.class"/> -->
       </fileset>
+      <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
     </jar>
   </target>
 
@@ -402,7 +404,8 @@
       <fileset dir="${build.dir}" includes="rice/proxy/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/selector/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/visualization/**/*.class"/>
-      <fileset dir="${jar.dir}/epost" includes="ca.publickey,default.params,ePOST_certificate.cer,ringcert.list,*.ringcert"/>
+      <fileset dir="${jar.dir}/epost" includes="ca.publickey,epost.params,ePOST_certificate.cer,ringcert.list,*.ringcert"/>
+      <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
     </jar>
   </target>
 
