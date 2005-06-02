@@ -62,6 +62,7 @@ public class PostProxy {
    */
   public static String PROXY_PARAMETERS_NAME = "proxy";
 
+  public static String[] DEFAULT_PARAMS_FILES = {"freepastry","epost"}; 
   
   // ----- DISPLAY FIELDS -----
 
@@ -1454,7 +1455,7 @@ public class PostProxy {
   
   protected void start() {
     try {
-      Environment env = new Environment(PROXY_PARAMETERS_NAME);
+      Environment env = new Environment(DEFAULT_PARAMS_FILES, PROXY_PARAMETERS_NAME);
       Parameters parameters = env.getParameters();
       start(env);
       updateParameters(parameters);
