@@ -1,0 +1,20 @@
+# this file holds the default values for pastry and it's applications
+# you do not need to modify the default.params file to override these values
+# instead you can use your own params file to set values to override the 
+# defaults.  You can specify this file by constructing your
+# rice.environment.Environment() with the filename you wish to use
+# typically, you will want to be able to pass this file name from the command 
+# line
+
+# random number generator's seed
+pastry_randseed = 0
+
+# max number of handles stored per routing table entry
+pastry_rtMax = 1
+
+# leafset size
+pastry_lSetSize = 24
+
+# maintenance frequencies
+pastry_leafSetMaintFreq = 60
+pastry_routeSetMaintFreq = 900
