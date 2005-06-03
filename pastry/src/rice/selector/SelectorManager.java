@@ -49,7 +49,9 @@ public class SelectorManager extends Thread implements Timer {
   protected long wakeupTime = 0;
   
   protected TimeSource timeSource;
-  
+
+  long lastTime = 0;
+
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
@@ -66,7 +68,7 @@ public class SelectorManager extends Thread implements Timer {
     } catch (IOException e) {
       System.out.println("SEVERE ERROR (SelectorManager): Error creating selector " + e);
     }
-
+    lastTime = timeSource.currentTimeMillis();
     start();
   }
 
@@ -235,7 +237,6 @@ public class SelectorManager extends Thread implements Timer {
     }
   }
   
-  long lastTime = timeSource.currentTimeMillis();
   protected void notifyLoopListeners() {
     long now = timeSource.currentTimeMillis();
     long diff = now - lastTime;
