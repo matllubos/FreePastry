@@ -9,6 +9,7 @@ import rice.email.proxy.mailbox.Mailbox;
 import rice.email.proxy.mailbox.MailboxException;
 
 import rice.email.proxy.util.StreamUtils;
+import rice.environment.Environment;
 
 import java.io.IOException;
 
@@ -26,6 +27,7 @@ import java.util.List;
 public class AppendCommand
     extends AbstractImapCommand
 {
+  
     public AppendCommand()
     {
         super("APPEND");
@@ -53,8 +55,8 @@ public class AppendCommand
 
             // skip CRLF
             getConn().readLine();
-          
-            long internaldate = System.currentTimeMillis();
+           
+            long internaldate = _state.getEnvironment().getTimeSource().currentTimeMillis();
             
             try {
               internaldate = MimeMessage.dateWriter.parse(_date).getTime();

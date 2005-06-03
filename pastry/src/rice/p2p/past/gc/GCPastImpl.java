@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
@@ -50,8 +51,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param policy The policy this past instance should use
    * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
-  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval) {
-    this(node, manager, null, replicas, instance, policy, collectionInterval, null);
+  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval, Environment env) {
+    this(node, manager, null, replicas, instance, policy, collectionInterval, null, env);
   }
   
   
@@ -67,8 +68,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param policy The policy this past instance should use
    * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
-  public GCPastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, long collectionInterval, StorageManager trash) {
-    super(new GCNode(node), manager, backup, replicas, instance, policy, trash);
+  public GCPastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, long collectionInterval, StorageManager trash, Environment env) {
+    super(new GCNode(node), manager, backup, replicas, instance, policy, trash, env);
     this.realFactory = node.getIdFactory();
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), collectionInterval, collectionInterval);
@@ -113,7 +114,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void insert(final PastContent obj, final long expiration, Continuation command) {
-    if (GCPastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
+    if (GCPastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
     
     doInsert(obj.getId(), new MessageBuilder() {
       public PastMessage buildMessage() {
@@ -168,7 +169,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void refresh(final Id[] array, long[] expirations, Continuation command) {
-    if (GCPastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Refreshing " + array.length + " data elements");
+    if (GCPastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Refreshing " + array.length + " data elements");
 
     GCIdSet set = new GCIdSet(realFactory);
     for (int i=0; i<array.length; i++)
@@ -396,9 +397,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof GCCollectMessage) {
         // get all ids which expiration before now
-        collect(storage.scanMetadataValuesHead(new GCPastMetadata(System.currentTimeMillis())), new ListenerContinuation("Removal of expired ids") {
+        collect(storage.scanMetadataValuesHead(new GCPastMetadata(environment.getTimeSource().currentTimeMillis())), new ListenerContinuation("Removal of expired ids") {
           public void receiveResult(Object o) {
-            if (System.currentTimeMillis() > DEFAULT_EXPIRATION) 
+            if (environment.getTimeSource().currentTimeMillis() > DEFAULT_EXPIRATION) 
               collect(storage.scanMetadataValuesNull(), new ListenerContinuation("Removal of default expired ids"));
           }
         });
@@ -485,7 +486,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
     log.finer("Sending out replication fetch request for the id " + id);
     final GCId gcid = (GCId) id;
     
-    if (gcid.getExpiration() < System.currentTimeMillis()) {
+    if (gcid.getExpiration() < environment.getTimeSource().currentTimeMillis()) {
       command.receiveResult(Boolean.TRUE);
     } else if (storage.exists(gcid.getId())) {
       GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(gcid.getId());

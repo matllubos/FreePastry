@@ -2,6 +2,7 @@
 package rice.p2p.past;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 
 /**
@@ -146,5 +147,6 @@ public interface Past {
    */
   public int getReplicationFactor();
 
+  public Environment getEnvironment();
 }
 

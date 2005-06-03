@@ -96,7 +96,6 @@ public abstract class CommonAPITest {
   // the instance name to use
   public static String INSTANCE_NAME = "DistCommonAPITest";
 
-
   // ----- ATTEMPT TO LOAD LOCAL HOSTNAME -----
   
   static {
@@ -115,6 +114,7 @@ public abstract class CommonAPITest {
    * factories in preparation for node creation.
    */
   public CommonAPITest(Environment env) throws IOException {
+    this.environment = env;
       //idFactory = new IPNodeIdFactory(PORT); 
       idFactory = new RandomNodeIdFactory();
 

@@ -3,6 +3,7 @@ package rice.email.proxy.web;
 import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.web.pages.*;
+import rice.environment.Environment;
 
 import java.io.*;
 import java.net.*;
@@ -22,11 +23,13 @@ public class WebHandler {
   protected UserManager _userManager;
   protected WebConnection _conn;
   protected WebState state;
+  protected Environment environment;
   
-  public WebHandler(UserManager userManager, Workspace workspace, WebState state) {
+  public WebHandler(UserManager userManager, Workspace workspace, WebState state, Environment env) {
     _workspace = workspace;
     _userManager = userManager;
     this.state = state;
+    this.environment = env;
   }
   
   public void handleConnection(Socket socket) throws IOException {
@@ -52,5 +55,9 @@ public class WebHandler {
     } catch (WebException e) {
       _conn.error(e.getStatus(), e.getMessage());
     } 
+  }
+  
+  public Environment getEnvironment() {
+    return environment;
   }
 }

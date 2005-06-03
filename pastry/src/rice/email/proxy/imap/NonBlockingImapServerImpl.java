@@ -78,7 +78,7 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
         Thread thread = new Thread("IMAP Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              ParserImapHandler handler = new ParserImapHandler(manager, workspace);
+              ParserImapHandler handler = new ParserImapHandler(manager, workspace, environment);
               handler.handleConnection(socket, log);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);

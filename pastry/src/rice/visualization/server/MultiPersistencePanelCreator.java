@@ -1,6 +1,7 @@
 package rice.visualization.server;
 
 import rice.visualization.data.*;
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
@@ -14,11 +15,11 @@ public class MultiPersistencePanelCreator implements PanelCreator {
   
   PersistencePanelCreator[] creators;
   
-  public MultiPersistencePanelCreator(rice.selector.Timer timer, String[] names, StorageManagerImpl[] storages) {
+  public MultiPersistencePanelCreator(Environment env, String[] names, StorageManagerImpl[] storages) {
     creators = new PersistencePanelCreator[names.length];
     
     for (int i=0; i<names.length; i++)
-      creators[i] = new PersistencePanelCreator(timer, names[i], storages[i]);
+      creators[i] = new PersistencePanelCreator(env, names[i], storages[i]);
   }
   
   public DataPanel createPanel(Object[] objects) {

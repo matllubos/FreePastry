@@ -21,6 +21,7 @@ import java.util.Arrays;
 
 import rice.Continuation;
 import rice.Executable;
+import rice.environment.Environment;
 import rice.p2p.aggregation.messaging.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.VersionKey;
@@ -111,11 +112,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private final double jitterRange = 0.1;
 
-  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) throws IOException {
-    this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy());
+  private Environment environment;
+  
+  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, Environment env) throws IOException {
+    this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy(), env);
   }
 
-  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy) throws IOException {
+  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy, Environment env) throws IOException {
+    this.environment = env;
     this.endpoint = node.registerApplication(this, instance);
     this.waitingList = waitingList;
     this.instance = instance;
@@ -124,7 +128,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.node = node;
     this.timers = new Hashtable();
     this.random = new Random();
-    this.aggregateList = new AggregateList(configFileName, getLocalNodeHandle().getId().toString(), factory, aggregateLogEnabled);
+    this.aggregateList = new AggregateList(configFileName, getLocalNodeHandle().getId().toString(), factory, aggregateLogEnabled, environment);
     this.stats = aggregateList.getStatistics(statsGranularity, statsRange, nominalReferenceCount);
     this.policy = policy;
     this.factory = factory;
@@ -157,7 +161,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private String getLogPrefix() {
-    return "COUNT: " + System.currentTimeMillis() + " " + debugID;
+    return "COUNT: " + environment.getTimeSource().currentTimeMillis() + " " + debugID;
   }
 
   private void log(int level, String str) {
@@ -239,7 +243,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         result = result + randomID.toStringFull() + "\n";
         insert(
           new DebugContent(randomID, false, 0, new byte[] {}),
-          System.currentTimeMillis() + 120*SECONDS,
+          environment.getTimeSource().currentTimeMillis() + 120*SECONDS,
           new Continuation() {
             public void receiveResult(Object o) {
             }
@@ -283,7 +287,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       StringBuffer result = new StringBuffer();
       int numAggr = 0, numObj = 0;
 
-      long now = System.currentTimeMillis();
+      long now = environment.getTimeSource().currentTimeMillis();
       if (cmd.indexOf("-r") < 0)
         now = 0;
 
@@ -424,7 +428,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     }
       
     if (cmd.startsWith("refresh all")) {
-      long expiration = System.currentTimeMillis() + Long.parseLong(cmd.substring(12));
+      long expiration = environment.getTimeSource().currentTimeMillis() + Long.parseLong(cmd.substring(12));
       TreeSet ids = new TreeSet();
       String result;
       
@@ -472,7 +476,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       String keyArg = args.substring(0, args.lastIndexOf(' '));
 
       Id id = factory.buildIdFromToString(keyArg);
-      long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
+      long expiration = environment.getTimeSource().currentTimeMillis() + Long.parseLong(expirationArg);
 
       final String[] ret = new String[] { null };
       refresh(new Id[] { id }, expiration, new Continuation() {
@@ -528,7 +532,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       if (monitorIDs.isEmpty())
         return "Add objects first!";
 
-      final long now = System.currentTimeMillis();
+      final long now = environment.getTimeSource().currentTimeMillis();
             
       Continuation c = new Continuation() {
         int currentLookup = 0;
@@ -605,7 +609,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         final double sizeSkew = Double.parseDouble(args[2]);
         final int smallSize = Integer.parseInt(args[3]);
         final int largeSize = Integer.parseInt(args[4]);
-        final long expiration = System.currentTimeMillis() + Long.parseLong(args[5]);
+        final long expiration = environment.getTimeSource().currentTimeMillis() + Long.parseLong(args[5]);
         final Random rand = new Random();
         
         Continuation c = new Continuation() {
@@ -664,7 +668,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       String keyArg = args.substring(0, args.lastIndexOf(' '));
 
       Id id = factory.buildIdFromToString(keyArg);
-      long expiration = System.currentTimeMillis() + Long.parseLong(expirationArg);
+      long expiration = environment.getTimeSource().currentTimeMillis() + Long.parseLong(expirationArg);
 
       AggregateDescriptor aggr = (AggregateDescriptor) aggregateList.getADC(id);
       if (aggr != null) {
@@ -720,7 +724,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private void removeDeadAggregates() {
     Vector toRemove = new Vector();
     Enumeration enumeration = aggregateList.elements();
-    long now = System.currentTimeMillis();
+    long now = environment.getTimeSource().currentTimeMillis();
   
     /* Note: Multiple keys are mapped to a single aggregate descriptor, so the same ADC
        may be returned multiple times - but we must delete it only once! */
@@ -754,7 +758,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       public void receiveResult(Object o) {
         if (o instanceof Id) {
           aggr.setId((Id) o);
-          log(2, "Storing aggregate, CH="+aggr.getId()+", expiration="+expiration+" (rel "+(expiration-System.currentTimeMillis())+") with "+desc.length+" objects:");
+          log(2, "Storing aggregate, CH="+aggr.getId()+", expiration="+expiration+" (rel "+(expiration-environment.getTimeSource().currentTimeMillis())+") with "+desc.length+" objects:");
           for (int j=0; j<desc.length; j++)
             log(2, "#"+j+": "+desc[j]);
 
@@ -931,7 +935,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     for (int i=0; i<aggregates.size(); i++) {
       final ObjectDescriptor[] desc = (ObjectDescriptor[]) aggregates.elementAt(i);
       final GCPastContent[] obj = new GCPastContent[desc.length];
-      final long aggrExpirationF = chooseAggregateLifetime(desc, System.currentTimeMillis(), 0);
+      final long aggrExpirationF = chooseAggregateLifetime(desc, environment.getTimeSource().currentTimeMillis(), 0);
       final Continuation thisContinuation = c.getSubContinuation(i);
       final int iF = i;
       
@@ -995,7 +999,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private void refreshAggregates() {
     Enumeration enumeration = aggregateList.elements();
-    long now = System.currentTimeMillis();
+    long now = environment.getTimeSource().currentTimeMillis();
     Vector removeList = new Vector();
     final Vector refreshAggregateList = new Vector();
     final Vector refreshLifetimeList = new Vector();
@@ -1090,7 +1094,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private void consolidateAggregates() {
-    final long now = System.currentTimeMillis();
+    final long now = environment.getTimeSource().currentTimeMillis();
     Enumeration enumeration = aggregateList.elements();
     Vector candidateList = new Vector();
 
@@ -1196,7 +1200,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               obsoleteAggregates[i] = adc[i].key;
 
             Id[] pointers = aggregateList.getSomePointers(nominalReferenceCount, maxPointersPerAggregate, obsoleteAggregates);
-            final long aggrExpirationF = chooseAggregateLifetime(desc, System.currentTimeMillis(), 0);
+            final long aggrExpirationF = chooseAggregateLifetime(desc, environment.getTimeSource().currentTimeMillis(), 0);
 
             storeAggregate(new Aggregate(components, pointers), aggrExpirationF, desc, pointers, new Continuation() {
               public void receiveResult(Object o) {
@@ -1251,7 +1255,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     log(2, "Found "+disconnected.length+" disconnected aggregates; inserting pointer array");
     storeAggregate(
       new Aggregate(new GCPastContent[] {}, disconnected), 
-      System.currentTimeMillis() + pointerArrayLifetime,
+      environment.getTimeSource().currentTimeMillis() + pointerArrayLifetime,
       new ObjectDescriptor[] {},
       disconnected,
       new Continuation() {
@@ -1313,7 +1317,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       {
         Id[] ids = (Id[]) monitorIDs.toArray(new Id[] {});
         log(2, "Monitor: Refreshing "+ids.length+" objects");
-        refresh(ids, System.currentTimeMillis() + 3 * monitorRefreshInterval, new Continuation() {
+        refresh(ids, environment.getTimeSource().currentTimeMillis() + 3 * monitorRefreshInterval, new Continuation() {
           public void receiveResult(Object o) {
             log(3, "Monitor: Refresh completed, result="+o);
           }
@@ -2153,7 +2157,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               return;
             }
           
-            if (adc.objects[objDescIndex].refreshedLifetime < System.currentTimeMillis()) {
+            if (adc.objects[objDescIndex].refreshedLifetime < environment.getTimeSource().currentTimeMillis()) {
               log(3, "Object "+id+" exists, but has expired -- ignoring");
               command.receiveResult(new PastContentHandle[] { null });
               return;
@@ -2338,6 +2342,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   
   public AggregationStatistics getStatistics() {
     return stats;
+  }
+
+  public Environment getEnvironment() {
+    return environment;
   }
 
 }

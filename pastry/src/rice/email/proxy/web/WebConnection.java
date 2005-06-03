@@ -178,7 +178,7 @@ public class WebConnection {
   
   public void send() throws IOException {
     out.write(http + " " + status + LINE_FEED);
-    out.write("Date: " + DATE.format(new Date(System.currentTimeMillis())) + LINE_FEED);
+    out.write("Date: " + DATE.format(new Date(handler.getEnvironment().getTimeSource().currentTimeMillis())) + LINE_FEED);
     out.write("Server: ePOST Webmail Server" + LINE_FEED);
     out.write("Content-Length: " + response.toString().length() + LINE_FEED);
     out.write("Connection: close" + LINE_FEED);

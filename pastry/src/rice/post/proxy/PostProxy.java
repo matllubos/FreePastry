@@ -318,9 +318,10 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startRedirection(Parameters parameters) throws Exception {
+  protected void startRedirection(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
     if (parameters.getBoolean("standard_output_network_enable")) {
-      logManager = new NetworkLogManager(parameters);
+      logManager = new NetworkLogManager(env);
     } else if (parameters.getBoolean("standard_output_redirect_enable")) {
       logManager = new StandardLogManager(parameters);
     } else {
@@ -349,7 +350,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startCheckBoot(Parameters parameters) throws Exception {
+  protected void startCheckBoot(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
     if (parameters.getBoolean("proxy_compatibility_check_enable")) {
       String address = InetAddress.getLocalHost().getHostAddress();
       
@@ -366,10 +368,10 @@ public class PostProxy {
           if (i == 0) {
             System.exit(-1);
           } else {
-            startCheckNAT(parameters);
+            startCheckNAT(env);
           }
         } else {
-          startCheckNAT(parameters);
+          startCheckNAT(env);
         }
       } 
           
@@ -417,7 +419,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startCheckNAT(Parameters parameters) throws Exception {
+  protected void startCheckNAT(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
     System.err.println("Starting parsing...");
     InetSocketAddress[] addresses = parameters.getInetSocketAddressArray("pastry_proxy_connectivity_hosts");
     System.err.println("Done parsing...");
@@ -425,21 +428,21 @@ public class PostProxy {
     try {
       natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/4,
                                                             new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                            randomSubset(addresses, 5)).getAddress();
+                                                            randomSubset(addresses, 5), env).getAddress();
     } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/2,
                                                               new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                              randomSubset(addresses, 5)).getAddress();
+                                                              randomSubset(addresses, 5), env).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout"),
                                                               new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                              randomSubset(addresses, 5)).getAddress();
+                                                              randomSubset(addresses, 5), env).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
@@ -449,7 +452,7 @@ public class PostProxy {
                       "Error: java.net.SocketTimeoutException", new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
     
       if (j == 1)
-        startCheckNAT(parameters);
+        startCheckNAT(env);
       else
         System.exit(-1);
     } else {
@@ -1124,7 +1127,8 @@ public class PostProxy {
             parameters.getInt("glacier_num_fragments"),
             parameters.getInt("glacier_num_survivors")
           )
-        )
+        ),
+        env
       );
       
       immutableGlacier.setSyncInterval(parameters.getInt("glacier_sync_interval"));
@@ -1154,7 +1158,7 @@ public class PostProxy {
         "aggregation.param",
         (MultiringIdFactory) FACTORY,
         parameters.getString("application_instance_name") + "-aggr-immutable",
-        new PostAggregationPolicy()
+        new PostAggregationPolicy(), env
       );
 
       immutableAggregation.setFlushInterval(parameters.getInt("aggregation_flush_interval"));
@@ -1178,7 +1182,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startPast(Parameters parameters) throws Exception {
+  protected void startPast(Environment env) throws Exception {
+    Parameters parameters = env.getParameters();
     stepStart("Starting Past services");
     
     if (parameters.getBoolean("past_garbage_collection_enable")) {
@@ -1187,12 +1192,12 @@ public class PostProxy {
                                      parameters.getString("application_instance_name") + "-immutable",
                                      new PastPolicy.DefaultPastPolicy(),
                                      parameters.getLong("past_garbage_collection_interval"),
-                                     trashStorage);
+                                     trashStorage, env);
     } else {
       immutablePast = new PastImpl(node, immutableStorage, immutableBackupCache,
                                    parameters.getInt("past_replication_factor"), 
                                    parameters.getString("application_instance_name") + "-immutable", 
-                                   new PastPolicy.DefaultPastPolicy(), trashStorage);
+                                   new PastPolicy.DefaultPastPolicy(), trashStorage, env);
     }
     
     realImmutablePast = immutablePast;
@@ -1200,18 +1205,18 @@ public class PostProxy {
     mutablePast = new PastImpl(node, mutableStorage, null,
                                parameters.getInt("past_replication_factor"), 
                                parameters.getString("application_instance_name") + "-mutable",
-                               new PostPastPolicy(), trashStorage);
+                               new PostPastPolicy(), trashStorage, env);
     deliveredPast = new GCPastImpl(node, deliveredStorage, deliveredBackupCache,
                                  parameters.getInt("past_replication_factor"), 
                                  parameters.getString("application_instance_name") + "-delivered",
                                  new PastPolicy.DefaultPastPolicy(),
                                  parameters.getLong("past_garbage_collection_interval"),
-                                 trashStorage);
+                                 trashStorage, env);
     pendingPast = new DeliveryPastImpl(node, pendingStorage, pendingBackupCache,
                                        parameters.getInt("past_replication_factor"), 
                                        parameters.getInt("post_redundancy_factor"),
                                        parameters.getString("application_instance_name") + "-pending", deliveredPast,
-                                       parameters.getLong("past_garbage_collection_interval"));
+                                       parameters.getLong("past_garbage_collection_interval"), env);
     stepDone(SUCCESS);
   }
   
@@ -1220,7 +1225,7 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startPost(Parameters parameters) throws Exception {
+  protected void startPost(Environment env) throws Exception {
     if (System.getProperty("RECOVER") != null) {
       stepStart("Recovering/Restoring POST Logs backup");
       ExternalContinuation d = new ExternalContinuation();
@@ -1239,9 +1244,9 @@ public class PostProxy {
         year += 2000;
         
       Calendar cal = Calendar.getInstance();
-      System.out.println("COUNT: "+System.currentTimeMillis()+" Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
+      System.out.println("COUNT: "+env.getTimeSource().currentTimeMillis()+" Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
       cal.set(year, month, day, hour, minute, 0);
-      StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d);
+      StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d, env);
       d.sleep();
       
       if (d.exceptionThrown())
@@ -1269,7 +1274,8 @@ public class PostProxy {
                         parameters.getBoolean("post_announce_presence"), clone,
                         parameters.getLong("post_synchronize_interval"),
                         parameters.getLong("post_object_refresh_interval"),
-                        parameters.getLong("post_object_timeout_interval"));
+                        parameters.getLong("post_object_timeout_interval"),
+                        env);
         
     stepDone(SUCCESS);
   }
@@ -1400,8 +1406,8 @@ public class PostProxy {
   protected Environment start(Environment env) throws Exception {
 //    parameters = env.getParameters();  // done in start(void)
     startLivenessMonitor(env);
-    startRedirection(parameters);
-    startCheckBoot(parameters);    
+    startRedirection(env);
+    startCheckBoot(env);    
     startDialog(parameters);
         
     System.out.println("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
@@ -1434,9 +1440,9 @@ public class PostProxy {
     sectionDone();
     
     sectionStart("Bootstrapping Local Post Applications");
-    startPast(parameters);
+    startPast(env);
     startGlacier(env);
-    startPost(parameters);
+    startPost(env);
     startInsertLog(parameters);
     startFetchLog(env);
     startFetchForwardingLog(parameters);

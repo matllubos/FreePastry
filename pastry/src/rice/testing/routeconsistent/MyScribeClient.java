@@ -5,6 +5,7 @@ package rice.testing.routeconsistent;
 
 import java.util.Random;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.Endpoint;
@@ -63,12 +64,14 @@ public class MyScribeClient implements ScribeClient, Application {
 
   public PastryNode node;
   
+  public Environment environment;
+  
   /**
    * @param node the PastryNode
    */
   public MyScribeClient(PastryNode node) {
     this.node = node;
-    
+    this.environment = node.getEnvironment();
     // you should recognize this from lesson 3
     this.endpoint = node.registerApplication(this, "myinstance");
     // construct Scribe
@@ -107,7 +110,7 @@ public class MyScribeClient implements ScribeClient, Application {
    * Sends the multicast message.
    */
   public void sendMulticast() {
-    System.out.println("MSC:"+System.currentTimeMillis()+" Node "+endpoint.getLocalNodeHandle()+" broadcasting "+PseqNum);
+    System.out.println("MSC:"+environment.getTimeSource().currentTimeMillis()+" Node "+endpoint.getLocalNodeHandle()+" broadcasting "+PseqNum);
     MyScribeContent myMessage = new MyScribeContent(endpoint.getLocalNodeHandle(), PseqNum, false);
     myScribe.publish(myTopic, myMessage); 
     PseqNum++;
@@ -117,7 +120,7 @@ public class MyScribeClient implements ScribeClient, Application {
    * Called whenever we receive a published message.
    */
   public void deliver(Topic topic, ScribeContent content) {
-    System.out.println("MSC:"+System.currentTimeMillis()+" MyScribeClient.deliver("+topic+","+content+")");
+    System.out.println("MSC:"+environment.getTimeSource().currentTimeMillis()+" MyScribeClient.deliver("+topic+","+content+")");
   }
 
   /**

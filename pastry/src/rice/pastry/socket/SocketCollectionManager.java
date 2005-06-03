@@ -969,9 +969,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         RouteRowRequestMessage rrMessage = (RouteRowRequestMessage) message;
         send(new RouteRowResponseMessage(pastryNode.getRoutingTable().getRow(rrMessage.getRow())));
       } else {
-        long start = System.currentTimeMillis();
+        long start = pastryNode.getEnvironment().getTimeSource().currentTimeMillis();
         pastryNode.receiveMessage(message);
-        if (SocketPastryNode.verbose) System.out.println("ST: " + (System.currentTimeMillis() - start) + " deliver of " + message);
+        if (SocketPastryNode.verbose) System.out.println("ST: " + (pastryNode.getEnvironment().getTimeSource().currentTimeMillis() - start) + " deliver of " + message);
       }
     }
     

@@ -149,13 +149,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket = new DatagramSocket(lAddress.getAddress().getPort());
       socket.setSoTimeout(5000);
 
-      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress)), lAddress);
+      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress), environment), lAddress);
       
       socket.send(new DatagramPacket(data, data.length, rAddress.getAddress()));
       
-      long start = System.currentTimeMillis();
+      long start = environment.getTimeSource().currentTimeMillis();
       socket.receive(new DatagramPacket(new byte[10000], 10000));
-      return (int) (System.currentTimeMillis() - start);
+      return (int) (environment.getTimeSource().currentTimeMillis() - start);
     } catch (IOException e) {
       return Integer.MAX_VALUE-1;
     } finally {
@@ -371,7 +371,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * If the method works, then nothing should be done and the method should return.  If
    * an error condition is detected, an exception should be thrown.
    */
-  public static InetSocketAddress verifyConnection(int timeout, InetSocketAddress local, InetSocketAddress[] existing) throws IOException {
+  public static InetSocketAddress verifyConnection(int timeout, InetSocketAddress local, InetSocketAddress[] existing, Environment env) throws IOException {
     System.err.println("Verifying connection of local node " + local + " using " + existing[0] + " and " + existing.length + " more");
     DatagramSocket socket = null;
     
@@ -380,7 +380,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket.setSoTimeout(timeout);
       
       for (int i=0; i<existing.length; i++) {
-        byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing[i])), new IPAddressRequestMessage(), new EpochInetSocketAddress(local));    
+        byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing[i])), new IPAddressRequestMessage(env), new EpochInetSocketAddress(local));    
         DatagramPacket send = new DatagramPacket(buf, buf.length, existing[i]);
         socket.send(send);
       }

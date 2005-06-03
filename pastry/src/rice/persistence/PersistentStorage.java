@@ -62,7 +62,7 @@ public class PersistentStorage implements Storage {
    */  
   private static boolean logWriteTypes = false;
   private Object statLock = new Object();
-  private long statsLastWritten = System.currentTimeMillis();
+  private long statsLastWritten;
   private long statsWriteInterval = 60 * 1000;
   private long numWrites = 0;
   private long numReads = 0;
@@ -189,7 +189,7 @@ public class PersistentStorage implements Storage {
     this.rng = new Random();
     this.directories = new HashMap();
     this.prefixes = new HashMap();
-    
+    statsLastWritten = environment.getTimeSource().currentTimeMillis();
     if (index) {
       this.dirty = new HashSet();
       this.metadata = new ReverseTreeMap();
@@ -203,7 +203,7 @@ public class PersistentStorage implements Storage {
   private void printStats() {
     if (logWriteTypes) {
       synchronized(statLock) {
-        long now = System.currentTimeMillis();
+        long now = environment.getTimeSource().currentTimeMillis();
         if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
           System.out.println("@L.PE name=" + name + " interval="+statsLastWritten+"-"+now);
           statsLastWritten = now;
@@ -315,7 +315,7 @@ public class PersistentStorage implements Storage {
         
         /* next, write out the data to a new copy of the original file */
         try {
-          writeObject(obj, metadata, id, System.currentTimeMillis(), transcFile);
+          writeObject(obj, metadata, id, environment.getTimeSource().currentTimeMillis(), transcFile);
           debug("Done writing object " + obj + " under id " + id + " in root " + appDirectory);
 
           /* abort if this will put us over quota */
@@ -327,7 +327,7 @@ public class PersistentStorage implements Storage {
           throw e;
         }
         
-        if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + transcFile.length() + " in " + name);       
+        if (PersistentStorage.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + transcFile.length() + " in " + name);       
         
         /* recalculate amount used */
         decreaseUsedSpace(getFileLength(objFile)); 
@@ -380,7 +380,7 @@ public class PersistentStorage implements Storage {
         /* first get the file */
         File objFile = getFile(id); 
         
-        if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
+        if (PersistentStorage.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
         
         /* remove id from stored list */
         if (index) {
@@ -457,7 +457,7 @@ public class PersistentStorage implements Storage {
         public Object doWork() throws Exception {
           synchronized(statLock) { numMetadataWrites++; }
           
-          if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
+          if (PersistentStorage.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Updating metadata for " + id.toStringFull() + " in " + name);
           
           /* write the metadata to the file */
           File objFile = getFile(id);
@@ -504,7 +504,7 @@ public class PersistentStorage implements Storage {
             if ((objFile == null) || (! objFile.exists())) 
               return null;
 
-            if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching data under " + id + " of size " + objFile.length() + " in " + name);
+            if (PersistentStorage.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Fetching data under " + id + " of size " + objFile.length() + " in " + name);
             return readData(objFile);
           } catch (Exception e) {
             /* remove our index for this file */
@@ -673,7 +673,7 @@ public class PersistentStorage implements Storage {
     QUEUE.enqueue(new WorkRequest(c) { 
       public String toString() { return "flush"; }
       public Object doWork() throws Exception {
-        if (PersistentStorage.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Flushing all data in " + name);
+        if (PersistentStorage.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Flushing all data in " + name);
 
         flushDirectory(appDirectory);
         return Boolean.TRUE;
@@ -2166,9 +2166,9 @@ public class PersistentStorage implements Storage {
     
     public void run() {
       try {
-       // long start = System.currentTimeMillis();
+       // long start = environment.getTimeSource().currentTimeMillis();
         final Object result = doWork();
-       // System.out.println("PT: " + (System.currentTimeMillis() - start) + " " + toString());
+       // System.out.println("PT: " + (environment.getTimeSource().currentTimeMillis() - start) + " " + toString());
         environment.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnResult(result);

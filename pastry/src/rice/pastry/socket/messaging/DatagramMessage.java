@@ -3,6 +3,7 @@ package rice.pastry.socket.messaging;
 import java.io.*;
 import java.net.*;
 
+import rice.environment.Environment;
 import rice.pastry.socket.*;
 import rice.pastry.*;
 
@@ -21,13 +22,16 @@ public abstract class DatagramMessage extends SocketMessage {
   protected SourceRoute outbound;
   
   protected SourceRoute inbound;
+
+  transient Environment environment;
   
   /**
    * Constructor
    */
-  public DatagramMessage(SourceRoute outbound, SourceRoute inbound) {
+  public DatagramMessage(SourceRoute outbound, SourceRoute inbound, Environment env) {
     this.outbound = outbound;
     this.inbound = inbound;
+    this.environment = env;
   }
   
   public long getStartTime() {
@@ -44,7 +48,7 @@ public abstract class DatagramMessage extends SocketMessage {
   
   private void writeObject(ObjectOutputStream oos) throws IOException {
     if (start == 0)
-      start = System.currentTimeMillis();
+      start = environment.getTimeSource().currentTimeMillis();
     oos.defaultWriteObject();
   }
 }

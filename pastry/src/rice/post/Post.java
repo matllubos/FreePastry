@@ -4,6 +4,7 @@ import java.security.*;
 
 import rice.*; 
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 
 import rice.post.log.*;
@@ -130,4 +131,11 @@ public interface Post {
    * @param command The command to execute once done
    */
   public void sendGroup(NotificationMessage message, Continuation command);
+  
+  /**
+   * Get the rice.environment.Environment.
+   * 
+   * @return the environment
+   */
+  public Environment getEnvironment();
 }

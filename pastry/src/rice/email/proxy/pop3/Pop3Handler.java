@@ -2,6 +2,7 @@ package rice.email.proxy.pop3;
 
 import rice.email.proxy.pop3.commands.*;
 import rice.email.proxy.user.*;
+import rice.environment.Environment;
 
 import java.io.*;
 import java.net.*;
@@ -16,10 +17,12 @@ public class Pop3Handler {
   Pop3State _state;
   boolean _quitting;
   String _currentLine;
+  Environment environment;
   
-  public Pop3Handler(Pop3CommandRegistry registry, UserManager manager) {
+  public Pop3Handler(Pop3CommandRegistry registry, UserManager manager, Environment env) {
     _registry = registry;
     _manager = manager;
+    environment = env;
   }
   
   public void handleConnection(Socket socket, boolean log) throws IOException {
@@ -50,9 +53,9 @@ public class Pop3Handler {
   }
   
   void sendGreetings() {          
-    String challenge = "<" + System.currentTimeMillis() + "@localhost>";
+    String challenge = "<" + environment.getTimeSource().currentTimeMillis() + "@localhost>";
     try {
-      challenge = "<" + System.currentTimeMillis() + "@" + InetAddress.getLocalHost().getHostName() + ">";
+      challenge = "<" + environment.getTimeSource().currentTimeMillis() + "@" + InetAddress.getLocalHost().getHostName() + ">";
     } catch (UnknownHostException e) {
     } 
 

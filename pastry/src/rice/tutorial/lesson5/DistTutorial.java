@@ -31,11 +31,13 @@ public class DistTutorial {
    */
   public DistTutorial(int bindport, InetSocketAddress bootaddress) throws Exception {
     
+    Environment env = new Environment();
+    
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory();
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
@@ -52,7 +54,7 @@ public class DistTutorial {
     System.out.println("Finished creating new node "+node);
     
     // construct a new MyApp
-    MyApp app = new MyApp(node);
+    MyApp app = new MyApp(node, env);
     
     // wait 15 seconds
     Thread.sleep(15000);

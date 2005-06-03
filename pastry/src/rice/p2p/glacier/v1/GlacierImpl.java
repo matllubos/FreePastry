@@ -7,6 +7,7 @@ import java.util.logging.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v1.*;
@@ -157,8 +158,8 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
    * @param factory Used to create IDs
    * @param instance Unique identifier for this instance of Glacier
    */
-  public GlacierImpl(Node node, String configDir, StorageManager pastManager, StorageManager glacierManager, GlacierPolicy policy, int replicas, int numFragments, int numSurvivors, MultiringIdFactory factory, String instance) {
-    super(node, pastManager, replicas, instance);
+  public GlacierImpl(Node node, String configDir, StorageManager pastManager, StorageManager glacierManager, GlacierPolicy policy, int replicas, int numFragments, int numSurvivors, MultiringIdFactory factory, String instance, Environment env) {
+    super(node, pastManager, replicas, instance, env);
 
     /*
      *  Initialize internal variables
@@ -437,7 +438,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
         InsertListEntry ile = new InsertListEntry(
           vkey, fragments, effectiveManifest,
-          System.currentTimeMillis() + insertTimeout - 100,
+          environment.getTimeSource().currentTimeMillis() + insertTimeout - 100,
           numInitialFragments, getLocalNodeHandle(), 2
         );
 
@@ -2372,7 +2373,7 @@ panic("setBit disabled");
     }
     System.out.println();
 
-    if (System.currentTimeMillis() < ile.timeout) {
+    if (environment.getTimeSource().currentTimeMillis() < ile.timeout) {
       boolean knowsAllHolders = true;
       for (int i = 0; i < numInitialFragments; i++) {
         if (!ile.holderKnown[i])
@@ -2380,7 +2381,7 @@ panic("setBit disabled");
       }
 
       if (knowsAllHolders) {
-        ile.timeout = System.currentTimeMillis() + insertTimeout - 100;
+        ile.timeout = environment.getTimeSource().currentTimeMillis() + insertTimeout - 100;
         if (!ile.insertsSent) {
           ile.insertsSent = true;
           sendInsertsFor(ile);
@@ -2405,7 +2406,7 @@ panic("setBit disabled");
       log("Timeout... "+ile.attemptsLeft+" attempts left");
      
       if (ile.attemptsLeft > 0) {
-        ile.timeout = System.currentTimeMillis() + insertTimeout - 100;
+        ile.timeout = environment.getTimeSource().currentTimeMillis() + insertTimeout - 100;
         ile.attemptsLeft --;
         
         if (!ile.insertsSent) {

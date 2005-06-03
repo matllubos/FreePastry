@@ -123,11 +123,11 @@ public class SocketChannelReader {
             return obj;
           }
         } else {
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message, but too big to deserialize on Selector thread");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message, but too big to deserialize on Selector thread");
           ((SocketPastryNode) spn).process(new Executable() {
             public String toString() { return "Deserialization of message of size " + size + " from " + path; }
             public Object execute() {
-              if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Starting deserialization on message on processing thread");
+              if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Starting deserialization on message on processing thread");
               try {
                 return deserialize(objectArray);
               } catch (Exception e) {
@@ -175,7 +175,7 @@ public class SocketChannelReader {
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
     if ((!recorded) && (SocketPastryNode.verbose)) {
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
     }
   }
 

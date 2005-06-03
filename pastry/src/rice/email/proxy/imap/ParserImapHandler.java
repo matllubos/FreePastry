@@ -11,6 +11,7 @@ import rice.email.proxy.imap.parser.antlr.ImapLineParser;
 import rice.email.proxy.user.UserManager;
 
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
 
 import java.io.IOException;
 
@@ -29,8 +30,8 @@ final class ParserImapHandler implements Quittable {
     ImapState state;
     ImapLineParser cmdParser;
 
-    public ParserImapHandler(UserManager manager, Workspace workspace) {
-        state = new ImapState(manager, workspace);
+    public ParserImapHandler(UserManager manager, Workspace workspace, Environment env) {
+      state = new ImapState(manager, workspace, env);        
     }
 
     public void handleConnection(final Socket socket, boolean log) throws IOException {

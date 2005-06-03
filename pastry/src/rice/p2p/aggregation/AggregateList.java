@@ -5,6 +5,8 @@ import java.util.Enumeration;
 import java.util.Date;
 import java.util.Vector;
 import java.io.*;
+
+import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.IdFactory;
 import rice.p2p.glacier.VersionKey;
@@ -24,8 +26,9 @@ public class AggregateList {
   protected boolean wasReadOK;
   protected long nextSerial;
   protected int loglevel = 2;
+  protected Environment environment;
 
-  public AggregateList(String configFileName, String label, IdFactory factory, boolean loggingEnabled) throws IOException {
+  public AggregateList(String configFileName, String label, IdFactory factory, boolean loggingEnabled, Environment env) throws IOException {
     this.configFileName = configFileName;
     this.aggregateList = new Hashtable();
     this.factory = factory;
@@ -35,6 +38,7 @@ public class AggregateList {
     this.wasReadOK = readFromDisk();
     this.loggingEnabled = loggingEnabled;
     this.logFileName = configFileName + ".log";
+    this.environment = env;
     
     if (loggingEnabled) {
       recoverLog();
@@ -195,7 +199,7 @@ public class AggregateList {
   public void logEntry(String entry) {
     if (loggingEnabled) {
       if (logFile != null) {
-        logFile.println("$|"+(nextSerial++)+"|"+System.currentTimeMillis()+"|"+entry+"|@");
+        logFile.println("$|"+(nextSerial++)+"|"+environment.getTimeSource().currentTimeMillis()+"|"+entry+"|@");
         logFile.flush();
       } else {
         warn("Aggregation cannot write to log: "+entry);
@@ -525,8 +529,8 @@ public class AggregateList {
 
   public AggregationStatistics getStatistics(long granularity, long range, int nominalReferenceCount) {
     final int maxHistoIndex = (int)(range/granularity);
-    final long now = System.currentTimeMillis();
-    AggregationStatistics stats = new AggregationStatistics(1+maxHistoIndex, granularity);
+    final long now = environment.getTimeSource().currentTimeMillis();
+    AggregationStatistics stats = new AggregationStatistics(1+maxHistoIndex, granularity, environment);
     Enumeration enumeration = elements();
     
     recalculateReferenceCounts(null);
@@ -573,7 +577,7 @@ public class AggregateList {
   }
 
   private String getLogPrefix() {
-    return "COUNT: " + System.currentTimeMillis() + " AL";
+    return "COUNT: " + environment.getTimeSource().currentTimeMillis() + " AL";
   }
 
   private void log(int level, String str) {

@@ -89,7 +89,7 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 			// receive a leafset from another node
 			BroadcastLeafSet bls = (BroadcastLeafSet) msg;
       
-      lastTimeReceivedBLS.put(bls.from(),new Long(System.currentTimeMillis()));
+      lastTimeReceivedBLS.put(bls.from(),new Long(localNode.getEnvironment().getTimeSource().currentTimeMillis()));
 
       // if we have now successfully joined the ring, set the local node ready
 			if (bls.type() == BroadcastLeafSet.JoinInitial) {
@@ -149,18 +149,18 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
       if (right != null) {
         Long time = (Long)lastTimeReceivedBLS.get(right);
         if (time == null || 
-            (time.longValue() < (System.currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
+            (time.longValue() < (localNode.getEnvironment().getTimeSource().currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on right neighbor
-          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on right neighbor:"+right);
+          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Checking liveness on right neighbor:"+right);
           right.checkLiveness();
         }
       }
       if (left != null) {
         Long time = (Long)lastTimeReceivedBLS.get(left);
         if (time == null || 
-            (time.longValue() < (System.currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
+            (time.longValue() < (localNode.getEnvironment().getTimeSource().currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on left neighbor
-          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Checking liveness on left neighbor:"+left);
+          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Checking liveness on left neighbor:"+left);
           left.checkLiveness();
         }
       }
@@ -192,7 +192,7 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 //    if (!nsu.wasAdded()) {
 //      if (localNode.isReady() && !leafSet.isComplete() && leafSet.size() < (leafSet.maxSize()/2)) {
 //        // kill self
-//        System.out.println("PeriodicLeafSetProtocol: "+System.currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
+//        System.out.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
 //        localNode.resign();
 //      }
 //    }

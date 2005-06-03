@@ -4,6 +4,7 @@ package rice.pastry.socket.messaging;
 import java.io.*;
 import java.net.*;
 
+import rice.environment.Environment;
 import rice.pastry.socket.*;
 import rice.pastry.*;
 
@@ -19,8 +20,8 @@ public class IPAddressRequestMessage extends DatagramMessage {
   /**
    * Constructor
    */
-  public IPAddressRequestMessage() {
-    super(null, null);
+  public IPAddressRequestMessage(Environment env) {
+    super(null, null, env);
   }
   
   public String toString() {

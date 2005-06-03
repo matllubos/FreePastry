@@ -102,7 +102,7 @@ public class Environment {
     // in the meantime, if we don't use this, then there could be two SelectorManagers floating
     // around out there which will break everything.
   //    selectorManager = SelectorManager.getSelectorManager(); 
-      selectorManager = new SelectorManager(false); 
+      selectorManager = new SelectorManager(false, time); 
     }
     if (logging == null) {
       logging = new SimpleLogManager(time, Logger.SEVERE); 

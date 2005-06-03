@@ -4,6 +4,7 @@ import rice.email.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.mailbox.postbox.*;
+import rice.environment.Environment;
 
 import java.io.*;
 
@@ -25,8 +26,11 @@ public class ImapServerImpl extends Thread implements ImapServer {
   
   EmailService email;
 
-  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
+  Environment environment;
+  
+  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
     super("IMAP Server Thread");
+    this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -58,7 +62,7 @@ public class ImapServerImpl extends Thread implements ImapServer {
           Thread thread = new Thread("IMAP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
-                ParserImapHandler handler = new ParserImapHandler(manager, workspace);
+                ParserImapHandler handler = new ParserImapHandler(manager, workspace, environment);
                 handler.handleConnection(socket, log);
               } catch (IOException e) {
                 System.out.println("IOException occurred during handling of connection - " + e);

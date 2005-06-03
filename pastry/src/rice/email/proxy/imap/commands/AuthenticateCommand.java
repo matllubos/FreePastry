@@ -7,6 +7,7 @@ import rice.p2p.util.*;
 import rice.email.proxy.imap.ImapState;
 import rice.email.proxy.user.User;
 import rice.email.proxy.user.UserException;
+import rice.environment.Environment;
 
 
 /**
@@ -35,7 +36,7 @@ public class AuthenticateCommand extends AbstractImapCommand {
       if (! type.equals("CRAM-MD5"))
         throw new IllegalArgumentException("Authentication Mechanism " + type + " not supported.");
       
-      long timestamp = System.currentTimeMillis();
+      long timestamp = _state.getEnvironment().getTimeSource().currentTimeMillis();
       String text = "<" + timestamp + "@" + InetAddress.getLocalHost().getHostName() + ">";
       getConn().println("+ " + Base64.encodeBytes(text.getBytes()));
       String response = new String(Base64.decode(getConn().readLine()));

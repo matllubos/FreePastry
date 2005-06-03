@@ -6,6 +6,7 @@ import java.util.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.email.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.log.*;
@@ -66,7 +67,7 @@ public class EmailLog extends CoalescedLog {
     super(name, location, post, pair);
 
     nextUID = DEFAULT_UID;
-    creation = System.currentTimeMillis();
+    creation = post.getEnvironment().getTimeSource().currentTimeMillis();
     numExist = 0;
     numRecent = 0;
     numEntries = 0;

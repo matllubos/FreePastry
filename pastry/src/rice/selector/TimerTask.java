@@ -3,6 +3,7 @@
  */
 package rice.selector;
 
+import rice.environment.time.TimeSource;
 import rice.p2p.commonapi.CancellableTask;
 
 /**
@@ -24,13 +25,13 @@ public abstract class TimerTask implements Comparable, CancellableTask {
    * Returns true if should re-insert.
    * @return
    */
-  boolean execute() {
+  boolean execute(TimeSource ts) {
     if (cancelled) return false;
     run();
     // often cancelled in the execution
     if (cancelled) return false;
     if (period > 0) {
-      nextExecutionTime = System.currentTimeMillis()+period;
+      nextExecutionTime = ts.currentTimeMillis()+period;
       return true;
     } else {
       return false;

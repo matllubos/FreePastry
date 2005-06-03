@@ -5,6 +5,7 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.post.*;
 import rice.post.messaging.*;
 import rice.p2p.commonapi.*;
@@ -40,8 +41,8 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public DeliveryPastImpl(Node node, StorageManager manager, Cache backup, int replicas, int redundancy, String instance, PastImpl delivered, long collectionInterval) {
-    super(node, manager, backup, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval, null);
+  public DeliveryPastImpl(Node node, StorageManager manager, Cache backup, int replicas, int redundancy, String instance, PastImpl delivered, long collectionInterval, Environment env) {
+    super(node, manager, backup, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval, null, env);
     
     this.redundancy = redundancy;
     this.delivered = delivered;

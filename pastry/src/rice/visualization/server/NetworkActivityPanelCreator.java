@@ -1,6 +1,7 @@
 package rice.visualization.server;
 
 import rice.visualization.data.*;
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -29,8 +30,11 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
   
   protected double receivedTotal = 0;
   
-  public NetworkActivityPanelCreator(rice.selector.Timer timer) {  
-    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
+  protected Environment environment;
+  
+  public NetworkActivityPanelCreator(Environment env) {
+    this.environment = env;
+    env.getSelectorManager().getTimer().scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
         updateData();
       }
@@ -123,7 +127,7 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
   protected synchronized void updateData() {
     sent.add(new Double(resetSentTotal()));
     received.add(new Double(resetReceivedTotal()));
-    times.add(new Long(System.currentTimeMillis()));
+    times.add(new Long(environment.getTimeSource().currentTimeMillis()));
     
     if (sent.size() > NUM_DATA_POINTS) {
       sent.removeElementAt(0); 

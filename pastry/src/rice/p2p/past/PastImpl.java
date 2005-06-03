@@ -7,6 +7,7 @@ import java.util.logging.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.PastPolicy.*;
 import rice.p2p.past.messaging.*;
@@ -85,6 +86,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public int fetchHandles = 0;
   public int other = 0;
   
+  protected Environment environment;
+  
   /**
    * Constructor for Past, using the default policy
    *
@@ -93,8 +96,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, int replicas, String instance) {
-    this(node, manager, replicas, instance, new DefaultPastPolicy());
+  public PastImpl(Node node, StorageManager manager, int replicas, String instance, Environment env) {
+    this(node, manager, replicas, instance, new DefaultPastPolicy(), env);
   }
   
   /**
@@ -105,8 +108,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy) {
-    this(node, manager, null, replicas, instance, policy, null);
+  public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, Environment env) {
+    this(node, manager, null, replicas, instance, policy, null, env);
   }
   
   
@@ -118,7 +121,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash) {
+  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash, Environment env) {
+    this.environment = env;
     this.log.setLevel(Level.WARNING);
     this.storage = manager;
     this.backup = backup;
@@ -137,9 +141,14 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     //   log.setLevel(Level.FINE);
     //   log.getHandlers()[0].setLevel(Level.FINE);
     
-    this.replicaManager = buildReplicationManager(node, instance);
+    this.replicaManager = buildReplicationManager(node, instance, environment);
   }
 
+  
+  public Environment getEnvironment() {
+    return environment; 
+  }
+  
   // ----- INTERNAL METHODS -----
 
   /**
@@ -149,8 +158,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param instance The instance name to use
    * @return The replication manager, ready for use
    */
-  protected ReplicationManager buildReplicationManager(Node node, String instance) {
-    return new ReplicationManagerImpl(node, this, replicationFactor, instance);
+  protected ReplicationManager buildReplicationManager(Node node, String instance, Environment env) {
+    return new ReplicationManagerImpl(node, this, replicationFactor, instance, env);
   }
   
   /**
@@ -403,7 +412,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void insert(final PastContent obj, final Continuation command) {
     log.fine("Inserting the object " + obj + " with the id " + obj.getId());
     
-    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
+    if (PastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
 
     doInsert(obj.getId(), new MessageBuilder() {
       public PastMessage buildMessage() {
@@ -455,7 +464,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param command Command to be performed when the result is received
    */
   public void lookup(final Id id, final boolean cache, final Continuation command) {
-    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Performing lookup on " + id.toStringFull());
+    if (PastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Performing lookup on " + id.toStringFull());
     
     storage.getObject(id, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -547,7 +556,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void lookupHandles(final Id id, int max, final Continuation command) {
     log.fine("Retrieving handles of up to " + max + " replicas of the object stored in Past with id " + id);
 
-    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching up to " + max + " handles of " + id.toStringFull());
+    if (PastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Fetching up to " + max + " handles of " + id.toStringFull());
     
     getHandles(id, max, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -603,7 +612,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public void fetch(PastContentHandle handle, Continuation command) {
     log.fine("Retrieving object associated with content handle " + handle);
 
-    if (PastImpl.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Fetching object under id " + handle.getId().toStringFull() +  " on " + handle.getNodeHandle());
+    if (PastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Fetching object under id " + handle.getId().toStringFull() +  " on " + handle.getNodeHandle());
     
     NodeHandle han = handle.getNodeHandle();
     sendRequest(han, new FetchMessage(getUID(), handle, getLocalNodeHandle(), han.getId()), 

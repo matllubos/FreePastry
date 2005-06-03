@@ -3,6 +3,7 @@ package rice.email.proxy.pop3;
 import rice.email.*;
 import rice.email.proxy.pop3.commands.*;
 import rice.email.proxy.user.*;
+import rice.environment.Environment;
 
 import java.io.*;
 import java.net.*;
@@ -19,9 +20,12 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
   UserManager manager;
   
   boolean acceptNonLocal = false;
+
+  Environment environment;
   
-  public Pop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log) throws IOException {
+  public Pop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
     super("POP3 Server Thread");
+    this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.port = port;
     this.manager = manager;
@@ -52,7 +56,7 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
           Thread thread = new Thread("POP3 Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
-                Pop3Handler handler = new Pop3Handler(registry, manager);
+                Pop3Handler handler = new Pop3Handler(registry, manager, environment);
                 handler.handleConnection(socket, log);
               } catch (IOException e) {
                 System.out.println("IOException occurred during handling of connection - " + e);

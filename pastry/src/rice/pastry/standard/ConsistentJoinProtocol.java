@@ -200,7 +200,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
             // hopefully this is redundant with the leafset protocol
             leafSet.remove(nh); 
           } else {
-            if (verbose) System.out.println("CJP:"+System.currentTimeMillis()+" checking liveness2 on "+nh);
+            if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" checking liveness2 on "+nh);
             nh.checkLiveness();
           }
         }
@@ -239,7 +239,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
             if (!failed.contains(nh) && nh.getLiveness() < NodeHandle.LIVENESS_DEAD) {
               addToLeafSet(nh);
               // probe
-              //if (verbose) System.out.println("CJP:"+System.currentTimeMillis()+" checking liveness1 on "+nh);
+              //if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" checking liveness1 on "+nh);
               //nh.checkLiveness(); // maybe this is automatic the first time I send a message
               sendTheMessage(nh, false);
 //            }
@@ -304,10 +304,10 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           it2.remove();
         }
       } else {
-        if (verbose) System.out.println("CJP:"+System.currentTimeMillis()+" still need to hear from:"+toHearFromStr);
+        if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" still need to hear from:"+toHearFromStr);
       }
     } else {
-      if (verbose) System.out.println("CJP:"+System.currentTimeMillis()+" LS is not complete: "+leafSet);
+      if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" LS is not complete: "+leafSet);
       // need to poll left and right neighbors
       // sendTheMessage to leftmost and rightmost?
       // send leafsetMaintenance to self?
@@ -320,7 +320,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @param reply
    */
   public void sendTheMessage(NodeHandle nh, boolean reply) {
-    if (verbose) System.out.println("CJP:"+System.currentTimeMillis()+" sendTheMessage("+nh+","+reply+")");
+    if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" sendTheMessage("+nh+","+reply+")");
     // todo, may want to repeat this message as long as the node is alive if we 
     // are worried about rare message drops
     if (localNode.isReady()) {

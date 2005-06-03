@@ -1,5 +1,7 @@
 package rice.email.proxy.smtp;
 
+import rice.environment.Environment;
+
 public interface SmtpServer {
   
   public int getPort();
@@ -11,4 +13,6 @@ public interface SmtpServer {
   
   public void incrementSuccess();
   public void incrementFail();
+
+  public Environment getEnvironment();
 }

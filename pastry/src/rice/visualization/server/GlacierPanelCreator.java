@@ -12,7 +12,7 @@ import java.util.*;
 public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListener {
 
   private static final int HISTORY = 300;
-  private final long startup = System.currentTimeMillis();
+  private final long startup;
   
   GlacierImpl glacier;
   GlacierStatistics history[] = new GlacierStatistics[HISTORY];
@@ -22,6 +22,7 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
   
   public GlacierPanelCreator(GlacierImpl glacier) {
     this.glacier = glacier;
+    startup = glacier.getEnvironment().getTimeSource().currentTimeMillis();
     glacier.addStatisticsListener(this);
     Arrays.fill(msgTotal, 0);
     for (int i=0; i<HISTORY; i++)
@@ -49,7 +50,7 @@ public class GlacierPanelCreator implements PanelCreator, GlacierStatisticsListe
       if (cwBoundary instanceof RingId)
         cwBoundary = ((RingId)cwBoundary).getId();
         
-      long uptime = System.currentTimeMillis() - startup;
+      long uptime = glacier.getEnvironment().getTimeSource().currentTimeMillis() - startup;
       long upMin = uptime / (60*1000);
       long upHours = upMin / 60;
       long upDays = upHours / 24;

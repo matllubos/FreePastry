@@ -36,7 +36,7 @@ public class SocketChannelWriter {
   private static Object statLock = new Object();
   private static HashMap msgTypes = new HashMap();
   private static HashMap msgSizes = new HashMap();
-  private static long statsLastWritten = System.currentTimeMillis();
+  private static long statsLastWritten;
   private static long statsWriteInterval = 60 * 1000;
   private static long numWrites = 0;
   
@@ -63,6 +63,7 @@ public class SocketChannelWriter {
    */
   public SocketChannelWriter(PastryNode spn, SourceRoute path) {
     this.spn = spn;
+    statsLastWritten = spn.getEnvironment().getTimeSource().currentTimeMillis();
     this.path = path;
     queue = new LinkedList();
   }
@@ -147,7 +148,7 @@ public class SocketChannelWriter {
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
     if ((!recorded) && (SocketPastryNode.verbose)) {
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }
 
@@ -227,7 +228,7 @@ public class SocketChannelWriter {
         i++;
       }
       
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
     
       queue.add(i, o);
     } else {
@@ -260,7 +261,7 @@ public class SocketChannelWriter {
    * @return A ByteBuffer containing the object prepended with its size.
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  public static ByteBuffer serialize(Object o) throws IOException {
+  public ByteBuffer serialize(Object o) throws IOException {
     if (o == null) 
       return null;
     else if (o instanceof byte[]) 
@@ -268,7 +269,7 @@ public class SocketChannelWriter {
     
     if (logWriteTypes) {
       synchronized(statLock) {
-        long now = System.currentTimeMillis();
+        long now = spn.getEnvironment().getTimeSource().currentTimeMillis();
         if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
           System.out.println("@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
           statsLastWritten = now;

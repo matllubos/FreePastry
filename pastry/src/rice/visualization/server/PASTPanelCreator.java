@@ -138,11 +138,11 @@ public class PASTPanelCreator implements PanelCreator {
   
   protected synchronized void updateData() {
     try {
-      times.add(new Long(System.currentTimeMillis()));
+      times.add(new Long(past.getEnvironment().getTimeSource().currentTimeMillis()));
       outstanding.add(new Double((double) past.getOutstandingMessages().length));
 
       if (count % REQUEST_UPDATE_OFFSET == 0) {
-        times2.add(new Long(System.currentTimeMillis()));
+        times2.add(new Long(past.getEnvironment().getTimeSource().currentTimeMillis()));
         inserts.add(new Double((double) past.inserts));
         lookups.add(new Double((double) past.lookups));
         fetchHandles.add(new Double((double) past.fetchHandles));

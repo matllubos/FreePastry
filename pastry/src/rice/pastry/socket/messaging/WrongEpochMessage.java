@@ -4,6 +4,7 @@ package rice.pastry.socket.messaging;
 import java.net.*;
 import java.io.*;
 
+import rice.environment.Environment;
 import rice.pastry.socket.*;
 import rice.pastry.*;
 
@@ -23,8 +24,8 @@ public class WrongEpochMessage extends DatagramMessage {
   /**
   * Constructor
    */
-  public WrongEpochMessage(SourceRoute outbound, SourceRoute inbound, EpochInetSocketAddress incorrect, EpochInetSocketAddress correct) {
-    super(outbound, inbound);
+  public WrongEpochMessage(SourceRoute outbound, SourceRoute inbound, EpochInetSocketAddress incorrect, EpochInetSocketAddress correct, Environment env) {
+    super(outbound, inbound, env);
     
     this.incorrect = incorrect;
     this.correct = correct;

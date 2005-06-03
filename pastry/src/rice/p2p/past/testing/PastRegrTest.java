@@ -78,7 +78,7 @@ public class PastRegrTest extends CommonAPITest {
       storages[num] = new StorageManagerImpl(FACTORY,
                                              new PersistentStorage(FACTORY, "root-" + num, ".", 1000000, environment),
                                              new LRUCache(new MemoryStorage(FACTORY), 100000));
-      pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE);
+      pasts[num] = new PastImpl(node, storages[num], REPLICATION_FACTOR, INSTANCE, environment);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

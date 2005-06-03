@@ -40,7 +40,7 @@ public class ConsistencyPLTest implements Observer {
           && leafSet.size() < (leafSet.maxSize() / 2)) {
         // kill self
         System.out.println("ConsistencyPLTest: "
-            + System.currentTimeMillis()
+            + localNode.getEnvironment().getTimeSource().currentTimeMillis()
             + " Killing self due to leafset collapse. " + leafSet);
         System.exit(24);
       }
@@ -54,7 +54,9 @@ public class ConsistencyPLTest implements Observer {
     System.setErr(ps);
     System.setOut(ps);
 
-    System.out.println("BOOTUP:"+System.currentTimeMillis());
+    final Environment env = new Environment();
+    
+    System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
     System.out.println("Ping Neighbor Period:"+PeriodicLeafSetProtocol.PING_NEIGHBOR_PERIOD);
     boolean riceNode = false;
     InetAddress localAddress = InetAddress.getLocalHost();
@@ -66,7 +68,7 @@ public class ConsistencyPLTest implements Observer {
     new Thread(new Runnable() {
       public void run() {
         while(true) {
-          System.out.println("ImALIVE:"+System.currentTimeMillis());
+          System.out.println("ImALIVE:"+env.getTimeSource().currentTimeMillis());
           try {
             Thread.sleep(1000);
           } catch (Exception e) {}
@@ -130,7 +132,7 @@ public class ConsistencyPLTest implements Observer {
     NodeIdFactory nidFactory = new RandomNodeIdFactory();
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
@@ -149,18 +151,18 @@ public class ConsistencyPLTest implements Observer {
     final PastryNode node = factory.newNode(bootHandle);
     
     Runtime.getRuntime().addShutdownHook(new Thread() {
-      public void run() { System.out.println("SHUTDOWN "+System.currentTimeMillis()+" "+node); }
+      public void run() { System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node); }
     });
     final LeafSet ls = node.getLeafSet();
     new ConsistencyPLTest(node, ls);
     
     
-    System.out.println("STARTUP "+System.currentTimeMillis()+" "+node);    
+    System.out.println("STARTUP "+env.getTimeSource().currentTimeMillis()+" "+node);    
     
     Observer preObserver = 
       new Observer() {
         public void update(Observable arg0, Object arg1) {
-          System.out.println("LEAFSET4:"+System.currentTimeMillis()+":"+ls);
+          System.out.println("LEAFSET4:"+env.getTimeSource().currentTimeMillis()+":"+ls);
         }
       };
     ls.addObserver(preObserver);  
@@ -168,19 +170,19 @@ public class ConsistencyPLTest implements Observer {
     long lastTimePrinted = 0;
     while(!node.isReady()) {
       // delay so we don't busy-wait
-      long now = System.currentTimeMillis();
+      long now = env.getTimeSource().currentTimeMillis();
       if (now-lastTimePrinted > 3*60*1000) {
-        System.out.println("LEAFSET5:"+System.currentTimeMillis()+":"+ls);
+        System.out.println("LEAFSET5:"+env.getTimeSource().currentTimeMillis()+":"+ls);
         lastTimePrinted = now;
       }
       Thread.sleep(100);
     }
-    System.out.println("SETREADY:"+System.currentTimeMillis()+" "+node);
+    System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
     ls.deleteObserver(preObserver);
 
     ls.addObserver(new Observer() {
       public void update(Observable arg0, Object arg1) {
-        System.out.println("LEAFSET1:"+System.currentTimeMillis()+":"+ls);
+        System.out.println("LEAFSET1:"+env.getTimeSource().currentTimeMillis()+":"+ls);
       }
     });
 
@@ -198,12 +200,12 @@ public class ConsistencyPLTest implements Observer {
     
     Random rng = new Random();
     while(true) {
-      System.out.println("LEAFSET2:"+System.currentTimeMillis()+":"+ls);
+      System.out.println("LEAFSET2:"+env.getTimeSource().currentTimeMillis()+":"+ls);
       Thread.sleep(1*60*1000);
       if (artificialChurn) {
         if (!riceNode) {
           if (rng.nextInt(60) == 0) {
-            System.out.println("Killing self to cause churn. "+System.currentTimeMillis()+":"+node+":"+ls);
+            System.out.println("Killing self to cause churn. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
             System.exit(25);
           }
         }

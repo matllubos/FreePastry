@@ -3,6 +3,7 @@ package rice.visualization.server;
 import java.io.*;
 import java.net.*;
 
+import rice.environment.Environment;
 import rice.p2p.multiring.*;
 import rice.p2p.util.*;
 import rice.p2p.commonapi.IdFactory;
@@ -54,8 +55,11 @@ public class VisualizationServer implements Runnable {
   protected RingCertificate cert;
   
   protected KeyPair keypair;
-    
-  public VisualizationServer(InetSocketAddress address, PastryNode node, StorageManager storage, RingCertificate cert, Object[] objects) {
+
+  protected Environment environment;
+  
+  public VisualizationServer(InetSocketAddress address, PastryNode node, StorageManager storage, RingCertificate cert, Object[] objects, Environment env) {
+    this.environment = env;
     this.address = address;
     this.objects = objects;
     this.node = node;
@@ -293,24 +297,24 @@ public class VisualizationServer implements Runnable {
   
   public class NetworkActivityChecker implements NetworkListener {
    
-    protected long lastSent = System.currentTimeMillis();
+    protected long lastSent = environment.getTimeSource().currentTimeMillis();
 
-    protected long lastReceived = System.currentTimeMillis();
+    protected long lastReceived = environment.getTimeSource().currentTimeMillis();
     
     public void dataSent(Object message, InetSocketAddress address, int size) {
-      lastSent = System.currentTimeMillis();
+      lastSent = environment.getTimeSource().currentTimeMillis();
     }
     
     public void dataReceived(Object message, InetSocketAddress address, int size) {
-      lastReceived = System.currentTimeMillis();
+      lastReceived = environment.getTimeSource().currentTimeMillis();
     }
     
     public void checkForErrors() {
-      int sent = (int) ((System.currentTimeMillis() - lastSent)/1000);
+      int sent = (int) ((environment.getTimeSource().currentTimeMillis() - lastSent)/1000);
       if (sent > 60)
         ((DistPastryNode) node).addError("WARNING: No message has been sent in over " + sent + " seconds.");
       
-      int received = (int) ((System.currentTimeMillis() - lastReceived)/1000);
+      int received = (int) ((environment.getTimeSource().currentTimeMillis() - lastReceived)/1000);
       if (received > 60)
         ((DistPastryNode) node).addError("WARNING: No message has been received in over " + received + " seconds.");
     }

@@ -17,6 +17,8 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 
+import rice.environment.time.TimeSource;
+
 /**
  * @author jeffh
  *
@@ -42,8 +44,8 @@ public class ProfileSelector extends SelectorManager {
   /**
    * 
    */
-  public ProfileSelector() {
-    super(true);
+  public ProfileSelector(TimeSource timeSource) {
+    super(true, timeSource);
     new Thread(new Runnable() {
       public void run() {
         while(true) {
@@ -63,7 +65,7 @@ public class ProfileSelector extends SelectorManager {
 //    numLoops++;
 //    if (numLoops % 100 == 0) System.out.println("Selector loops:"+numLoops);
     if (!useHeartbeat) return;  
-    long curTime = System.currentTimeMillis();
+    long curTime = timeSource.currentTimeMillis();
     if ((curTime - lastHeartBeat) > HEART_BEAT_INTERVAL) {
       System.out.println("selector heartbeat "+new Date()+" maxInvokes:"+maxInvokes+" invokesSched:"+numInvocationsScheduled+" invokesExe:"+numInvocationsExecuted+" CurrentThread:"+Thread.currentThread()+"@"+System.identityHashCode(Thread.currentThread()));
       printStats();
@@ -151,9 +153,9 @@ public class ProfileSelector extends SelectorManager {
           lastTaskClass = skh.getClass().getName();
           lastTaskToString = skh.toString();
           lastTaskHash = System.identityHashCode(skh);
-          long startTime = System.currentTimeMillis();
+          long startTime = timeSource.currentTimeMillis();
           skh.accept(keys[i]);
-          int time = (int)(System.currentTimeMillis() - startTime);
+          int time = (int)(timeSource.currentTimeMillis() - startTime);
           lastTaskType = "Accept Complete";
           addStat("accepting",time);   
         }
@@ -164,9 +166,9 @@ public class ProfileSelector extends SelectorManager {
           lastTaskClass = skh.getClass().getName();
           lastTaskToString = skh.toString();
           lastTaskHash = System.identityHashCode(skh);
-          long startTime = System.currentTimeMillis();
+          long startTime = timeSource.currentTimeMillis();
           skh.connect(keys[i]);
-          int time = (int)(System.currentTimeMillis() - startTime);
+          int time = (int)(timeSource.currentTimeMillis() - startTime);
           lastTaskType = "Connect Complete";
           addStat("connecting",time);   
         }
@@ -177,9 +179,9 @@ public class ProfileSelector extends SelectorManager {
           lastTaskClass = skh.getClass().getName();
           lastTaskToString = skh.toString();
           lastTaskHash = System.identityHashCode(skh);
-          long startTime = System.currentTimeMillis();
+          long startTime = timeSource.currentTimeMillis();
           skh.read(keys[i]);
-          int time = (int)(System.currentTimeMillis() - startTime);
+          int time = (int)(timeSource.currentTimeMillis() - startTime);
           lastTaskType = "Read Complete";
 //          if (skh instanceof PingManager) {
 //            addStat("readingUDP",time);   
@@ -195,9 +197,9 @@ public class ProfileSelector extends SelectorManager {
           lastTaskClass = skh.getClass().getName();
           lastTaskToString = skh.toString();
           lastTaskHash = System.identityHashCode(skh);
-          long startTime = System.currentTimeMillis();
+          long startTime = timeSource.currentTimeMillis();
           skh.write(keys[i]);
-          int time = (int)(System.currentTimeMillis() - startTime);
+          int time = (int)(timeSource.currentTimeMillis() - startTime);
           lastTaskType = "Write Complete";
 //          if (skh instanceof PingManager) {
 //            addStat("writingUDP",time);   
@@ -234,9 +236,9 @@ public class ProfileSelector extends SelectorManager {
         lastTaskClass = run.getClass().getName();
         lastTaskToString = run.toString();
         lastTaskHash = System.identityHashCode(run);
-        long startTime = System.currentTimeMillis();
+        long startTime = timeSource.currentTimeMillis();
         run.run();
-        int time = (int)(System.currentTimeMillis() - startTime);
+        int time = (int)(timeSource.currentTimeMillis() - startTime);
 //        if (run instanceof ConnectionManager.SenderInvokee) {
 //          ConnectionManager.SenderInvokee si = (ConnectionManager.SenderInvokee)run;
 //          addStat("sending "+si.message.getClass().getName(), time);  
@@ -277,9 +279,9 @@ public class ProfileSelector extends SelectorManager {
         lastTaskClass = run.getClass().getName();
         lastTaskToString = run.toString();
         lastTaskHash = System.identityHashCode(run);
-        long startTime = System.currentTimeMillis();
+        long startTime = timeSource.currentTimeMillis();
         run.run();
-        int time = (int)(System.currentTimeMillis() - startTime);
+        int time = (int)(timeSource.currentTimeMillis() - startTime);
         addStat(run.getClass().getName(),time);        
         lastTaskType = "Invocation Complete";
       } catch (Exception e) {

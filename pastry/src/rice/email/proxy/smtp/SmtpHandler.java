@@ -4,6 +4,7 @@ import rice.email.proxy.smtp.commands.*;
 import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
+import rice.environment.Environment;
 
 import java.io.IOException;
 
@@ -27,7 +28,10 @@ class SmtpHandler {
   String _currentLine;
   boolean authenticate;
 
-  public SmtpHandler(SmtpCommandRegistry registry, SmtpManager manager, Workspace workspace, SmtpServer server, UserManager userManager, boolean authenticate) {
+  Environment environment;
+  
+  public SmtpHandler(SmtpCommandRegistry registry, SmtpManager manager, Workspace workspace, SmtpServer server, UserManager userManager, boolean authenticate, Environment env) {
+    this.environment = env;
     _registry = registry;
     _manager = manager;
     _workspace = workspace;
@@ -38,7 +42,7 @@ class SmtpHandler {
 
   public void handleConnection(Socket socket, boolean log) throws IOException {
     _conn = new SmtpConnection(this, socket, _server, log);
-    _state = new SmtpState(_workspace, _userManager);
+    _state = new SmtpState(_workspace, _userManager, environment);
     _state.setRemote(socket.getInetAddress());
 
     try {

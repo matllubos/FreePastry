@@ -1,6 +1,7 @@
 package rice.visualization.server;
 
 import rice.visualization.data.*;
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.persistence.*;
 import rice.Continuation.*;
@@ -21,11 +22,14 @@ public class PersistencePanelCreator implements PanelCreator {
   protected StorageManagerImpl storage;
   protected String name;
   
-  public PersistencePanelCreator(rice.selector.Timer timer, String name, StorageManagerImpl storage) {
+  Environment environment;
+  
+  public PersistencePanelCreator(Environment env, String name, StorageManagerImpl storage) {
+    this.environment = env;
     this.storage = storage;
     this.name = name;
     
-    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
+    environment.getSelectorManager().getTimer().scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
         updateData();
       }
@@ -115,7 +119,7 @@ public class PersistencePanelCreator implements PanelCreator {
       data.add(new Double((double) storage.getStorage().getTotalSize()/(1024*1024)));
       cache.add(new Double((double) storage.getCache().getTotalSize()/(1024*1024)));
       keys.add(new Double((double) storage.scan().numElements()));
-      times.add(new Long(System.currentTimeMillis()));
+      times.add(new Long(environment.getTimeSource().currentTimeMillis()));
             
       if (data.size() > NUM_DATA_POINTS) {
         data.removeElementAt(0); 

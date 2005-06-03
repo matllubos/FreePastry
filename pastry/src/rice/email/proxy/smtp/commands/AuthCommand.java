@@ -34,7 +34,7 @@ public class AuthCommand extends SmtpCommand {
       conn.println("501 Required syntax: 'AUTH <mechanism>'"); 
     } else if (mechanism.toUpperCase().equals("CRAM-MD5")) {
       try {
-        long timestamp = System.currentTimeMillis();
+        long timestamp = state.getEnvironment().getTimeSource().currentTimeMillis();
         String text = "<" + timestamp + "@" + InetAddress.getLocalHost().getHostName() + ">";
         conn.println("334 " + Base64.encodeBytes(text.getBytes()));
         String response = new String(Base64.decode(conn.readLine()));

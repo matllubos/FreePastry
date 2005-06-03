@@ -5,6 +5,7 @@ import java.net.*;
 import rice.email.proxy.mail.MovingMessage;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
 
 public class SmtpState {
   UserManager userManager;
@@ -12,13 +13,19 @@ public class SmtpState {
   Workspace _workspace;
   User user;
   InetAddress remote;
+  Environment environment;
 
-  public SmtpState(Workspace workspace, UserManager manager) {
+  public SmtpState(Workspace workspace, UserManager manager, Environment env) {
     _workspace = workspace;
+    this.environment = env;
     this.userManager = manager;
     clearMessage();
   }
 
+  public Environment getEnvironment() {
+    return environment; 
+  }
+  
   public MovingMessage getMessage() {
     return currentMessage;
   }

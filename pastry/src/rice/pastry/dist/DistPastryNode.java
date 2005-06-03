@@ -253,7 +253,7 @@ public abstract class DistPastryNode extends PastryNode {
    * @param command The command to return the result to once it's done
    */
   public void process(Executable task, Continuation command) {
-    QUEUE.enqueue(new ProcessingRequest(task, command, getEnvironment().getSelectorManager()));
+    QUEUE.enqueue(new ProcessingRequest(task, command, getEnvironment()));
   }
   
   private static class ProcessingThread extends Thread {
@@ -268,9 +268,7 @@ public abstract class DistPastryNode extends PastryNode {
        while (true) {
          ProcessingRequest e = queue.dequeue();
          
-         if (DistPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Starting execution of " + e.r);
          e.run();
-         if (DistPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Done execution of " + e.r);
        }
 	   }
   }
@@ -316,12 +314,12 @@ public abstract class DistPastryNode extends PastryNode {
   private static class ProcessingRequest {
     Continuation c;
     Executable r;
-    SelectorManager sm;
+    Environment environment;
     
-		public ProcessingRequest(Executable r, Continuation c, SelectorManager sm){
+		public ProcessingRequest(Executable r, Continuation c, Environment env){
       this.r = r;
       this.c = c;
-      this.sm = sm;
+      this.environment = env;
 		}
     
     public void returnResult(Object o) {
@@ -333,12 +331,13 @@ public abstract class DistPastryNode extends PastryNode {
     }
     
     public void run() {
+      if (DistPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Starting execution of " + this);
       try {
-      //  long start = System.currentTimeMillis();
+      //  long start = environment.getTimeSource().currentTimeMillis();
         final Object result = r.execute();
-      //  System.out.println("QT: " + (System.currentTimeMillis() - start) + " " + r.toString());
+      //  System.out.println("QT: " + (environment.getTimeSource().currentTimeMillis() - start) + " " + r.toString());
 
-        sm.invoke(new Runnable() {
+        environment.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnResult(result);
           }
@@ -347,7 +346,7 @@ public abstract class DistPastryNode extends PastryNode {
           }
         });
       } catch (final Exception e) {
-        sm.invoke(new Runnable() {
+        environment.getSelectorManager().invoke(new Runnable() {
           public void run() {
             returnError(e);
           }
@@ -356,6 +355,7 @@ public abstract class DistPastryNode extends PastryNode {
           }
         });
       }
+      if (DistPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Done execution of " + this);      
     }
 	}
   

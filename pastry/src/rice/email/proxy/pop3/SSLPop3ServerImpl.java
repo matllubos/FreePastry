@@ -3,6 +3,7 @@ package rice.email.proxy.pop3;
 import rice.email.*;
 import rice.email.proxy.pop3.commands.*;
 import rice.email.proxy.user.*;
+import rice.environment.Environment;
 
 import java.io.*;
 
@@ -17,8 +18,8 @@ public class SSLPop3ServerImpl extends Pop3ServerImpl {
   
   protected String password;
   
-  public SSLPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password, boolean log) throws IOException {
-    super(port, email, manager, gateway, acceptNonLocal, log);
+  public SSLPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password, boolean log, Environment env) throws IOException {
+    super(port, email, manager, gateway, acceptNonLocal, log, env);
     this.keystore = keystore;
     this.password = password;
     initializeSSL();

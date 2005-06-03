@@ -3,6 +3,7 @@
  */
 package rice.tutorial.lesson5;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.Endpoint;
@@ -35,6 +36,8 @@ public class MyApp implements Application {
    */
   protected Endpoint endpoint;
 
+  protected Environment environment;
+  
   /**
    * NOTE: It is unsafe to send this message to 
    * anyone but the localnode.  
@@ -52,7 +55,8 @@ public class MyApp implements Application {
     }    
   }
   
-  public MyApp(Node node) {
+  public MyApp(Node node, Environment env) {
+    this.environment = env;
     // We are only going to use one instance of this application on each PastryNode
     this.endpoint = node.registerApplication(this, "myinstance");
     // Send MessageToSelf every 5 seconds, starting in 3 seconds
@@ -95,7 +99,7 @@ public class MyApp implements Application {
       // This will get called every 5 seconds, on Pastry's thread.
       // Thus now we can assume we are on Pastry's thread.
       // TODO: whatever... send messages to other nodes? print out status?
-      System.out.println("I got the MessageToSelf at time:"+System.currentTimeMillis());
+      System.out.println("I got the MessageToSelf at time:"+environment.getTimeSource().currentTimeMillis());
     }
   }
 

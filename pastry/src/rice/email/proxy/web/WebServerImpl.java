@@ -4,6 +4,7 @@ import rice.email.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.mailbox.postbox.*;
+import rice.environment.Environment;
 
 import java.io.*;
 import java.net.*;
@@ -17,11 +18,13 @@ public class WebServerImpl extends Thread implements WebServer {
   protected UserManager manager;  
   protected Workspace workspace;  
   protected EmailService email;
+  protected Environment environment;
   
   protected HashMap states;
   
-  public WebServerImpl(int port, EmailService email, UserManager manager) throws IOException {
+  public WebServerImpl(int port, EmailService email, UserManager manager, Environment env) throws IOException {
     super("Web Server Thread");
+    this.environment = env;
     this.port = port;
     this.email = email;
     this.manager = manager;
@@ -61,7 +64,7 @@ public class WebServerImpl extends Thread implements WebServer {
         Thread thread = new Thread("Web Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              WebHandler handler = new WebHandler(manager, workspace, getWebState(socket.getInetAddress()));
+              WebHandler handler = new WebHandler(manager, workspace, getWebState(socket.getInetAddress()), environment);
               handler.handleConnection(socket);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);

@@ -109,7 +109,7 @@ public class PostFolder implements MailFolder {
   }
 
   public void put(MovingMessage msg) throws MailboxException {
-    put(msg, new LinkedList(), System.currentTimeMillis());
+    put(msg, new LinkedList(), folder.getPost().getEnvironment().getTimeSource().currentTimeMillis());
   }
 
   public void put(MovingMessage msg, List lflags, long internaldate) throws MailboxException {
@@ -117,7 +117,7 @@ public class PostFolder implements MailFolder {
       Email email = msg.getEmail();
 
       if (email == null) {
-        email = PostMessage.parseEmail(null, msg.getResource());
+        email = PostMessage.parseEmail(null, msg.getResource(), folder.getPost().getEnvironment());
       }
       
       Flags flags = new Flags();
@@ -186,7 +186,7 @@ public class PostFolder implements MailFolder {
         realFlags[i].setFlag((String) j.next(), true);
       
       if (internaldates[i] == 0)
-        internaldates[i] = System.currentTimeMillis();
+        internaldates[i] = folder.getPost().getEnvironment().getTimeSource().currentTimeMillis();
     }
     
     ExternalContinuation c = new ExternalContinuation();

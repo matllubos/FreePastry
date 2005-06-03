@@ -11,6 +11,7 @@ import javax.crypto.spec.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.p2p.aggregation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
@@ -86,6 +87,8 @@ public class StorageService {
    */
   private long BACKUP_LIFETIME = 1000 * 60 * 60 * 24 * 7;
   
+  Environment environment;
+  
   /**
    * Contructs a StorageService given a PAST to run on top of.
    *
@@ -93,7 +96,8 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public StorageService(Endpoint endpoint, PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval) {
+  public StorageService(Endpoint endpoint, PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval, Environment env) {
+    this.environment = env;
     this.entity = address;
     this.immutablePast = immutablePast;
     this.mutablePast = mutablePast;
@@ -115,13 +119,13 @@ public class StorageService {
   
   /**
    * Internal method which returns what the timeout should be for an
-   * object inserted now.  Basically, does System.currentTimeMillis() +
+   * object inserted now.  Basically, does environment.getTimeSource().currentTimeMillis() +
    * timeoutInterval.
    *
    * @return The default timeout period for an object inserted now
    */
   protected long getTimeout() {
-    return System.currentTimeMillis() + timeoutInterval;
+    return environment.getTimeSource().currentTimeMillis() + timeoutInterval;
   }
 
   /**
@@ -430,8 +434,8 @@ public class StorageService {
    * @param command The command to run once done
    */
   public void backupLogs(final PostLog log, final Log[] logs, Continuation command) {
-    long time = ((long) System.currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    storeSigned(new GroupData(logs), log.getLocation(), time, System.currentTimeMillis() + BACKUP_LIFETIME, keyPair, immutablePast, command);
+    long time = ((long) environment.getTimeSource().currentTimeMillis() / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
+    storeSigned(new GroupData(logs), log.getLocation(), time, environment.getTimeSource().currentTimeMillis() + BACKUP_LIFETIME, keyPair, immutablePast, command);
   }
   
   /**
@@ -439,9 +443,9 @@ public class StorageService {
    * provided PAST store.
    *
    */
-  public static void recoverLogs(final Id location, final long timestamp, final KeyPair keyPair, final Past immutablePast, final Past mutablePast, Continuation command) {
+  public static void recoverLogs(final Id location, final long timestamp, final KeyPair keyPair, final Past immutablePast, final Past mutablePast, Continuation command, final Environment env) {
     final long version = (timestamp / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    System.out.println("COUNT: "+System.currentTimeMillis()+" Timestamp is "+timestamp+", using version "+version);
+    System.out.println("COUNT: "+env.getTimeSource().currentTimeMillis()+" Timestamp is "+timestamp+", using version "+version);
     ((VersioningPast)immutablePast).lookupHandles(location, version, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PastContentHandle[] handles = (PastContentHandle[]) o;
@@ -467,7 +471,7 @@ public class StorageService {
               if (data == null) 
                 throw new StorageException("Log backup not found!");
 
-              System.out.println("COUNT: "+System.currentTimeMillis()+" Log backup found!");
+              System.out.println("COUNT: "+env.getTimeSource().currentTimeMillis()+" Log backup found!");
 
               GroupData group = (GroupData) SecurityUtils.deserialize(data.getData());
               final Log[] logs = (Log[]) group.getData();
@@ -482,7 +486,7 @@ public class StorageService {
                       aggregate = ((PostLog) logs[i]).getAggregateHead();
                     
                     i++;                    
-                    storeSigned(logs[i-1], logs[i-1].getLocation(), System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, this);
+                    storeSigned(logs[i-1], logs[i-1].getLocation(), env.getTimeSource().currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, this);
                   } else {
                     parent.receiveResult(aggregate);
                   }
@@ -535,7 +539,7 @@ public class StorageService {
    * @param command The command to run once the store has completed.
    */
   public void storeSigned(final PostData data, final Id location, Continuation command) {
-    storeSigned(data, location, System.currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, new StandardContinuation(command) {
+    storeSigned(data, location, environment.getTimeSource().currentTimeMillis(), GCPast.INFINITY_EXPIRATION, keyPair, mutablePast, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         final SignedReference sr = (SignedReference) o;
 

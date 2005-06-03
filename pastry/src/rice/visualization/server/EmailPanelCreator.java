@@ -90,7 +90,7 @@ public class EmailPanelCreator implements PanelCreator {
       connect.add(new Double((double) server.getConnections()));
       success.add(new Double((double) server.getSuccess()));
       fail.add(new Double((double) server.getFail()));
-      times.add(new Long(System.currentTimeMillis()));
+      times.add(new Long(server.getEnvironment().getTimeSource().currentTimeMillis()));
             
       if (connect.size() > NUM_DATA_POINTS) {
         connect.removeElementAt(0); 

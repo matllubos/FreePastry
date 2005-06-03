@@ -1,6 +1,7 @@
 package rice.visualization.server;
 
 import rice.visualization.data.*;
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.selector.*;
@@ -18,8 +19,11 @@ public class OverviewPanelCreator implements PanelCreator {
   protected Vector used = new Vector();
   protected Vector total = new Vector();
   
-  public OverviewPanelCreator(rice.selector.Timer timer) {
-    timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
+  Environment environment;
+  
+  public OverviewPanelCreator(Environment env) {
+    this.environment = env;
+    env.getSelectorManager().getTimer().scheduleAtFixedRate(new rice.selector.TimerTask() {
       public void run() {
         updateData();
       }
@@ -139,7 +143,7 @@ public class OverviewPanelCreator implements PanelCreator {
     try {
       total.add(new Long(Runtime.getRuntime().totalMemory()));
       used.add(new Long(Runtime.getRuntime().freeMemory()));
-      times.add(new Long(System.currentTimeMillis()));
+      times.add(new Long(environment.getTimeSource().currentTimeMillis()));
       
       if (total.size() > NUM_DATA_POINTS) {
         total.removeElementAt(0); 

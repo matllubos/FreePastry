@@ -7,6 +7,7 @@ import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.smtp.commands.*;
+import rice.environment.Environment;
 
 import java.io.*;
 import java.net.*;
@@ -41,8 +42,11 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   
   UserManager userManager;
 
-  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log) throws Exception {
+  Environment environment;
+  
+  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log, Environment env) throws Exception {
     super("SMTP Server Thread");
+    this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -79,7 +83,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
           Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
-                SmtpHandler handler = new SmtpHandler(registry, manager, workspace, SmtpServerImpl.this, userManager, authenticate);
+                SmtpHandler handler = new SmtpHandler(registry, manager, workspace, SmtpServerImpl.this, userManager, authenticate, environment);
                 handler.handleConnection(socket, log);
                 socket.close();
               } catch (IOException e) {
@@ -105,5 +109,9 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
     } catch (IOException e) {
        System.out.println("IOException occurred during accepting of connection - " + e);
     }
+  }
+
+  public Environment getEnvironment() {
+    return environment;
   }
 }

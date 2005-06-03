@@ -7,6 +7,7 @@ import java.util.logging.*;
 import rice.*;
 import rice.Continuation.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.replication.*;
 import rice.p2p.replication.manager.messaging.*;
@@ -83,8 +84,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param replicationFactor The replication factor for this instance
    * @param instance The unique instance name of this Replication
    */
-  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance) {
-    this(node, client, replicationFactor, instance, null);
+  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, Environment env) {
+    this(node, client, replicationFactor, instance, null, env);
   }
   
   /**
@@ -96,7 +97,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param instance The unique instance name of this Replication
    * @param policy The replication policy to use
    */
-  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
+  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, ReplicationPolicy policy, Environment env) {
     this.client = client;
     this.factory = node.getIdFactory();
     this.endpoint = node.registerApplication(this, instance);
@@ -106,7 +107,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     
     log.finer(endpoint.getId() + ": Starting up ReplicationManagerImpl with client " + client);
     
-    this.replication = new ReplicationImpl(node, this, replicationFactor, instance, policy);
+    this.replication = new ReplicationImpl(node, this, replicationFactor, instance, policy, env);
   }
   
   

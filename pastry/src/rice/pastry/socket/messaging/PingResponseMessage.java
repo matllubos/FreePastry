@@ -21,7 +21,7 @@ public class PingResponseMessage extends DatagramMessage {
   * Constructor
   */
   public PingResponseMessage(SourceRoute outbound, SourceRoute inbound, long start) {
-    super(outbound, inbound);
+    super(outbound, inbound, null);
     
     this.start = start;
   }

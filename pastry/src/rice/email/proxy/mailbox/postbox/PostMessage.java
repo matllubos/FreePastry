@@ -12,6 +12,7 @@ import rice.email.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
 
 import java.io.*;
 import java.net.*;
@@ -122,7 +123,7 @@ public class PostMessage implements StoredMessage {
     }
   }
 
-  public static Email parseEmail(InetAddress remote, Resource content) throws MailboxException {
+  public static Email parseEmail(InetAddress remote, Resource content, Environment env) throws MailboxException {
     try {
       MimeParser parser = new MimeParser(content.getInputStream());
       if (parser.next() != MimeParser.START_HEADERS_PART)
@@ -139,17 +140,17 @@ public class PostMessage implements StoredMessage {
       System.arraycopy(cc, 0, recipients, to.length, cc.length);
       System.arraycopy(bcc, 0, recipients, to.length + cc.length, bcc.length);
       
-      return parseEmail(remote, recipients, content);
+      return parseEmail(remote, recipients, content, env);
     } catch (IOException e) {
       throw new MailboxException(e);
     }
   }
 
-  public static Email parseEmail(InetAddress remote, PostEntityAddress[] addresses, Resource content) throws MailboxException {
-    return parseEmail(remote, addresses, content, null);
+  public static Email parseEmail(InetAddress remote, PostEntityAddress[] addresses, Resource content, Environment env) throws MailboxException {
+    return parseEmail(remote, addresses, content, null, env);
   }
   
-  public static Email parseEmail(InetAddress remote, PostEntityAddress[] recipients, Resource content, PostEntityAddress address) throws MailboxException {    
+  public static Email parseEmail(InetAddress remote, PostEntityAddress[] recipients, Resource content, PostEntityAddress address, Environment env) throws MailboxException {    
     try {
       MimeParser parser = new MimeParser(content.getInputStream());
       if (parser.next() != MimeParser.START_HEADERS_PART)
@@ -169,7 +170,7 @@ public class PostMessage implements StoredMessage {
         extraHeaders += UNSECURE_HEADER_LINE + "\r\n";
       
       if (remote != null)
-        extraHeaders += "Received: from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(System.currentTimeMillis())) + "\r\n";
+        extraHeaders += "Received: from " + remote.getHostAddress() + " by " + InetAddress.getLocalHost().getHostAddress() + " via SMTP; " + MimeMessage.dateReader.format(new Date(env.getTimeSource().currentTimeMillis())) + "\r\n";
 
       if (address != null) 
         from = (PostUserAddress) address;

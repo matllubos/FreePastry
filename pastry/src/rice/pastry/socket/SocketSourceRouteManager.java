@@ -365,7 +365,7 @@ public class SocketSourceRouteManager {
       
       if (search) {
         getRouteManager(SourceRoute.build(address)).checkLiveness();
-        this.updated = System.currentTimeMillis();
+        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       }
     }
     
@@ -529,7 +529,7 @@ public class SocketSourceRouteManager {
       // if we're dead, we go ahead and just checkDead on the direct route
       if (liveness == SocketNodeHandle.LIVENESS_DEAD) {
         getRouteManager(SourceRoute.build(address)).checkLiveness();
-        this.updated = System.currentTimeMillis();
+        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       }
       
       // and in any case, we either send if we have a best route or add the message
@@ -541,7 +541,7 @@ public class SocketSourceRouteManager {
         
         getRouteManager(best).checkLiveness();
         this.best = null;
-        this.updated = System.currentTimeMillis();
+        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       } else {
         getRouteManager(best).send(message);
       }
@@ -551,8 +551,8 @@ public class SocketSourceRouteManager {
      * Method which suggests a ping to the remote node.
      */
     public void ping() {
-      if (System.currentTimeMillis() - updated > PING_THROTTLE) {
-        this.updated = System.currentTimeMillis();
+      if (spn.getEnvironment().getTimeSource().currentTimeMillis() - updated > PING_THROTTLE) {
+        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
         
         switch (liveness) {
           case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
@@ -579,7 +579,7 @@ public class SocketSourceRouteManager {
      * Method which suggests a ping to the remote node.
      */
     public void checkLiveness() {
-      this.updated = System.currentTimeMillis();
+      this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
@@ -614,11 +614,11 @@ public class SocketSourceRouteManager {
         case SocketNodeHandle.LIVENESS_DEAD:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
           pool.update(address, SocketNodeHandle.DECLARED_LIVE);
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be alive again.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be alive again.");
           break;
         case SocketNodeHandle.LIVENESS_SUSPECTED:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be unsuspected.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be unsuspected.");
           break;
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
           System.out.println("ERROR: Found dead-forever handle to " + address + " to be alive again!");
@@ -633,7 +633,7 @@ public class SocketSourceRouteManager {
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_ALIVE:
           liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be suspected.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be suspected.");
           break;
         case SocketNodeHandle.LIVENESS_DEAD:
           System.out.println("ERROR: Found node handle " + address + " to be suspected from dead - should not happen!");
@@ -671,7 +671,7 @@ public class SocketSourceRouteManager {
           this.liveness = SocketNodeHandle.LIVENESS_DEAD;
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);   
           manager.declaredDead(address);
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead.");
           break;
       }
       
@@ -690,13 +690,13 @@ public class SocketSourceRouteManager {
           return;
         case SocketNodeHandle.LIVENESS_DEAD:
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
           break;
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be dead forever.");
           break;
       }
       
@@ -798,8 +798,8 @@ public class SocketSourceRouteManager {
           return true;
         
         if ((this.liveness < SocketNodeHandle.LIVENESS_DEAD) || 
-            (this.updated < System.currentTimeMillis() - CHECK_DEAD_THROTTLE)) {
-          this.updated = System.currentTimeMillis();
+            (this.updated < spn.getEnvironment().getTimeSource().currentTimeMillis() - CHECK_DEAD_THROTTLE)) {
+          this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
           this.pending = true;
           manager.checkLiveness(route);
           return true;

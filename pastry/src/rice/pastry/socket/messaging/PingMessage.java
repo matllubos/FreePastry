@@ -4,6 +4,7 @@ package rice.pastry.socket.messaging;
 import java.io.*;
 import java.net.*;
 
+import rice.environment.Environment;
 import rice.pastry.socket.*;
 import rice.pastry.*;
 
@@ -20,8 +21,8 @@ public class PingMessage extends DatagramMessage {
   /**
    * Constructor
    */
-  public PingMessage(SourceRoute outbound, SourceRoute inbound) {
-    super(outbound, inbound);
+  public PingMessage(SourceRoute outbound, SourceRoute inbound, Environment env) {
+    super(outbound, inbound, env);
   }
   
   public String toString() {

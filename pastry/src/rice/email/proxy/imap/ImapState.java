@@ -6,6 +6,7 @@ import rice.email.proxy.mail.MovingMessage;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.Workspace;
+import rice.environment.Environment;
 
 /**
  * Holds current session state.
@@ -42,11 +43,17 @@ public class ImapState {
   Vector _queue;
   int _cachedExists = -1;
   int _cachedRecent = -1;
+  Environment environment;
   
-  public ImapState(UserManager man, Workspace workspace) {
+  public ImapState(UserManager man, Workspace workspace, Environment env) {
+    environment = env;
     _manager = man;
     _workspace = workspace;
     _queue = new Vector();
+  }
+  
+  public Environment getEnvironment() {
+    return environment; 
   }
   
   public MovingMessage createMovingMessage() {

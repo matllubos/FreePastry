@@ -117,7 +117,7 @@ public class PingManager extends SelectionKeyHandler {
     if (USE_SHORT_PINGS)
       sendShortPing(path);
     else
-      enqueue(path, new PingMessage(path, path.reverse(localAddress)));
+      enqueue(path, new PingMessage(path, path.reverse(localAddress), spn.getEnvironment()));
   }
   
   /**
@@ -149,7 +149,7 @@ public class PingManager extends SelectionKeyHandler {
       DataOutputStream dos = new DataOutputStream(baos);
       
       dos.write(HEADER_SHORT_PING);
-      dos.writeLong(System.currentTimeMillis());
+      dos.writeLong(spn.getEnvironment().getTimeSource().currentTimeMillis());
       
       dos.flush();
       
@@ -174,7 +174,7 @@ public class PingManager extends SelectionKeyHandler {
     DataInputStream dis = new DataInputStream(new ByteArrayInputStream(payload));
     dis.readFully(new byte[HEADER_SHORT_PING_RESPONSE.length]);
     long start = dis.readLong();
-    int ping = (int) (System.currentTimeMillis() - start);
+    int ping = (int) (spn.getEnvironment().getTimeSource().currentTimeMillis() - start);
 
     SourceRoute from = route.reverse();
     
@@ -242,11 +242,11 @@ public class PingManager extends SelectionKeyHandler {
       
       if (SocketPastryNode.verbose) {
         if (! (msg instanceof byte[]))
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
+          System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
         else if (((byte[]) msg)[3] == 0x11)
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingMessage of size " + data.length  + " to " + path);    
+          System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingMessage of size " + data.length  + " to " + path);    
         else if (((byte[]) msg)[3] == 0x12) 
-          System.out.println("COUNT: " + System.currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path);    
+          System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path);    
       }  
         
       spn.getEnvironment().getSelectorManager().modifyKey(key);
@@ -274,12 +274,12 @@ public class PingManager extends SelectionKeyHandler {
         ((SocketPastryNode) spn).broadcastReceivedListeners(dm, path.reverse().toArray(), size);
             
       if (dm instanceof PingMessage) {
-        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getInboundPath().reverse());      
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getInboundPath().reverse());      
 
         enqueue(dm.getInboundPath(), new PingResponseMessage(dm.getOutboundPath(), dm.getInboundPath(), start));        
       } else if (dm instanceof PingResponseMessage) {
-        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
-        int ping = (int) (System.currentTimeMillis() - start);
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
+        int ping = (int) (spn.getEnvironment().getTimeSource().currentTimeMillis() - start);
         
         manager.markAlive(dm.getOutboundPath());
         manager.markProximity(dm.getOutboundPath(), ping);
@@ -287,14 +287,14 @@ public class PingManager extends SelectionKeyHandler {
       } else if (dm instanceof WrongEpochMessage) {
         WrongEpochMessage wem = (WrongEpochMessage) dm;
         
-        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
 
         manager.markAlive(dm.getOutboundPath());
         manager.markDead(wem.getIncorrect());
       } else if (dm instanceof IPAddressRequestMessage) {
-        if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
+        if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message " + message.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
         
-        enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from)); 
+        enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, spn.getEnvironment())); 
       } else {
         System.out.println("ERROR: Received unknown DatagramMessage " + dm);
       }
@@ -496,10 +496,10 @@ public class PingManager extends SelectionKeyHandler {
           SourceRoute sr = decodeHeader(route).removeLastHop();
           
           if (Arrays.equals(test, HEADER_SHORT_PING)) {
-            if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
             shortPingReceived(sr, array);
           } else if (Arrays.equals(test, HEADER_SHORT_PING_RESPONSE)) {
-            if (SocketPastryNode.verbose) System.out.println("COUNT: " + System.currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
             shortPingResponseReceived(sr, array);
           } else {
             receiveMessage(deserialize(array), array.length, address);
@@ -533,7 +533,7 @@ public class PingManager extends SelectionKeyHandler {
           
           outbound = outbound.append(localAddress);
 
-          enqueue(back.reverse(), new WrongEpochMessage(outbound, back.reverse(), eisa, localAddress));
+          enqueue(back.reverse(), new WrongEpochMessage(outbound, back.reverse(), eisa, localAddress, spn.getEnvironment()));
         } else {
           System.out.println("WARNING: Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");
           throw new IOException("Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");

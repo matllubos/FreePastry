@@ -126,7 +126,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              SmtpHandler handler = new SmtpHandler(registry, manager, workspace, NonBlockingSmtpServerImpl.this, userManager, authenticate);
+              SmtpHandler handler = new SmtpHandler(registry, manager, workspace, NonBlockingSmtpServerImpl.this, userManager, authenticate, environment);
               handler.handleConnection(socket, log);
               
               synchronized (NonBlockingSmtpServerImpl.this) {
@@ -163,5 +163,9 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
     } catch (IOException e) {
       System.out.println("IOException occurred during accepting of connection - " + e);
     }
+  }
+
+  public Environment getEnvironment() {
+    return environment;
   }
 }

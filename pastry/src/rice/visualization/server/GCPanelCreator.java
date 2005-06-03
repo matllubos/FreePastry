@@ -121,7 +121,7 @@ public class GCPanelCreator implements PanelCreator {
         GCId id = (GCId) i.next();
         long expiration = id.getExpiration();
         
-        int bin = (int) ((expiration - System.currentTimeMillis()) / (1000 * 60 * 60));
+        int bin = (int) ((expiration - past.getEnvironment().getTimeSource().currentTimeMillis()) / (1000 * 60 * 60));
         
         if ((bin >= 0) && (bin < result.length))
           result[bin]++;
@@ -178,7 +178,7 @@ public class GCPanelCreator implements PanelCreator {
       try {
         collected.add(new Double((double) past.collected));
         refreshed.add(new Double((double) past.refreshed));
-        times.add(new Long(System.currentTimeMillis()));
+        times.add(new Long(past.getEnvironment().getTimeSource().currentTimeMillis()));
         
         past.collected = 0;
         past.refreshed = 0;

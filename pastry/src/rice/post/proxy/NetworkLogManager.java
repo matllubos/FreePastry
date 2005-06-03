@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.zip.*;
 
+import rice.environment.Environment;
 import rice.environment.params.Parameters;
 import rice.proxy.*;
 import java.security.*;
@@ -28,7 +29,11 @@ public class NetworkLogManager extends LogManager {
   
   protected NetworkLogManagerThread thread;
   
-  public NetworkLogManager(Parameters parameters) {
+  protected Environment environment;
+  
+  public NetworkLogManager(Environment env) {
+    this.environment = env;
+    Parameters parameters = env.getParameters();
     this.file = new File(parameters.getString("standard_output_redirect_filename"));
     this.other = parameters.getStringArray("standard_output_network_other_filenames");
     this.interval = parameters.getLong("standard_output_network_interval");
@@ -44,7 +49,7 @@ public class NetworkLogManager extends LogManager {
       System.err.println("ERROR: problem with file " + file + " - got exception " + e);
     }
         
-    this.start = System.currentTimeMillis();
+    this.start = environment.getTimeSource().currentTimeMillis();
   }
   
   protected void setInfo(int port, PublicKey key, InetSocketAddress server) {
@@ -54,7 +59,7 @@ public class NetworkLogManager extends LogManager {
   }
   
   protected File getFileName() {
-    return new File(this.file.getName() + "." + System.currentTimeMillis());
+    return new File(this.file.getName() + "." + environment.getTimeSource().currentTimeMillis());
   }
   
   public void write(int b) throws IOException {
@@ -81,13 +86,13 @@ public class NetworkLogManager extends LogManager {
   }
   
   protected synchronized void check() {
-    if (this.start+this.interval > System.currentTimeMillis()) 
+    if (this.start+this.interval > environment.getTimeSource().currentTimeMillis()) 
       return;
     
     try {
       this.fos.close();
       this.file.renameTo(getFileName());
-      this.start = System.currentTimeMillis();
+      this.start = environment.getTimeSource().currentTimeMillis();
       
       this.fos = new FileOutputStream(file);
     } catch (IOException e) {

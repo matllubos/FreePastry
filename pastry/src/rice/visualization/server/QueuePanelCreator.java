@@ -123,7 +123,7 @@ public class QueuePanelCreator implements PanelCreator {
       processing.add(new Double((double) processingQ.getLength()));
       persistence.add(new Double((double) persistenceQ.getLength()));
       invocations.add(new Double((double) environment.getSelectorManager().getNumInvocations()));
-      times.add(new Long(System.currentTimeMillis()));
+      times.add(new Long(environment.getTimeSource().currentTimeMillis()));
       
       if (processing.size() > NUM_DATA_POINTS) {
         processing.removeElementAt(0); 

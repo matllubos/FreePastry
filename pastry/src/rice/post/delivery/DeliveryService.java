@@ -6,6 +6,7 @@ import java.io.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
@@ -58,6 +59,8 @@ public class DeliveryService implements ScribeClient {
    */
   protected HashSet cache;
   
+  protected Environment environment;
+  
   /**
    * Contructs a StorageService given a PAST to run on top of.
    *
@@ -65,7 +68,8 @@ public class DeliveryService implements ScribeClient {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public DeliveryService(PostImpl post, DeliveryPast pending, Past delivered, Scribe scribe, IdFactory factory, long timeoutInterval) {
+  public DeliveryService(PostImpl post, DeliveryPast pending, Past delivered, Scribe scribe, IdFactory factory, long timeoutInterval, Environment env) {
+    this.environment = env;
     this.post = post;
     this.pending = pending;
     this.delivered = delivered;
@@ -77,13 +81,13 @@ public class DeliveryService implements ScribeClient {
   
   /**
    * Internal method which returns what the timeout should be for an
-   * object inserted now.  Basically, does System.currentTimeMillis() +
+   * object inserted now.  Basically, does Systemm.currentTimeMillis() +
    * timeoutInterval.
    *
    * @return The default timeout period for an object inserted now
    */
   protected long getTimeout() {
-    return System.currentTimeMillis() + timeoutInterval;
+    return environment.getTimeSource().currentTimeMillis() + timeoutInterval;
   }
   
   /**

@@ -8,6 +8,7 @@ import java.util.logging.* ;
 import rice.*;
 import rice.Continuation.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.replication.manager.*;
@@ -164,6 +165,10 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   private PostEntityAddress previousAddress;
   
+  /**
+   * The Environment.
+   */
+  protected Environment environment;
 
   /**
    * Builds a PostImpl to run on the given pastry node,
@@ -194,8 +199,10 @@ public class PostImpl implements Post, Application, ScribeClient {
                   PostEntityAddress previousAddress,
                   long synchronizeInterval,
                   long refreshInterval,
-                  long timeoutInterval) throws PostException 
+                  long timeoutInterval,
+                  Environment env) throws PostException 
   {
+    this.environment = env;
     this.endpoint = node.registerApplication(this, instance);
     this.address = address;
     this.keyPair = keyPair;
@@ -206,12 +213,12 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.previousAddress = previousAddress;
     
     this.scribe = new ScribeImpl(node, instance);
-    this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory(), timeoutInterval);
+    this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory(), timeoutInterval, env);
     this.deliveryBuffer = new Vector();
 
     this.security = new SecurityService();
     this.security.loadModule(new CASecurityModule(caPublicKey));
-    this.storage = new StorageService(endpoint, address, immutablePast, mutablePast, node.getIdFactory(), keyPair, timeoutInterval);
+    this.storage = new StorageService(endpoint, address, immutablePast, mutablePast, node.getIdFactory(), keyPair, timeoutInterval, env);
 
     clients = new Vector();
     clientAddresses = new Hashtable();
@@ -1137,5 +1144,9 @@ public class PostImpl implements Post, Application, ScribeClient {
   
   public String toString() {
     return "PostImpl[" + address + "]";
+  }
+
+  public Environment getEnvironment() {
+    return environment;
   }
 }

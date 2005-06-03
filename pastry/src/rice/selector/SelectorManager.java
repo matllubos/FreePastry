@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeSet;
 
+import rice.environment.time.TimeSource;
+
 /**
  * This class is the class which handles the selector, and listens for activity.
  * When activity occurs, it figures out who is interested in what has happened,
@@ -46,14 +48,17 @@ public class SelectorManager extends Thread implements Timer {
   // the next time the selector is schedeled to wake up 
   protected long wakeupTime = 0;
   
+  protected TimeSource timeSource;
+  
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
-  public SelectorManager(boolean profile) {
+  public SelectorManager(boolean profile, TimeSource timeSource) {
     super("Main Selector Thread");
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
     this.cancelledKeys = new HashSet();
+    this.timeSource = timeSource;
     
     // attempt to create selector
     try {
@@ -190,7 +195,7 @@ public class SelectorManager extends Thread implements Timer {
       //System.out.println("SelectorManager starting...");
       debug("SelectorManager starting...");
 
-      lastTime = System.currentTimeMillis();
+      lastTime = timeSource.currentTimeMillis();
       // loop while waiting for activity
       while (true) {        
         notifyLoopListeners();
@@ -205,7 +210,7 @@ public class SelectorManager extends Thread implements Timer {
           int selectTime = SelectorManager.TIMEOUT;   
           if (timerQueue.size() > 0) {
             TimerTask first = (TimerTask)timerQueue.first(); 
-            selectTime = (int)(first.nextExecutionTime - System.currentTimeMillis());
+            selectTime = (int)(first.nextExecutionTime - timeSource.currentTimeMillis());
           }
           
           select(selectTime);
@@ -230,9 +235,9 @@ public class SelectorManager extends Thread implements Timer {
     }
   }
   
-  long lastTime = System.currentTimeMillis();
+  long lastTime = timeSource.currentTimeMillis();
   protected void notifyLoopListeners() {
-    long now = System.currentTimeMillis();
+    long now = timeSource.currentTimeMillis();
     long diff = now - lastTime;
       // notify observers 
     synchronized(loopObservers) {
@@ -375,7 +380,7 @@ public class SelectorManager extends Thread implements Timer {
       if ((time <= 0) || (invocations.size() > 0) || (modifyKeys.size() > 0)) 
         return selector.selectNow();
       
-      wakeupTime = System.currentTimeMillis() + time;
+      wakeupTime = timeSource.currentTimeMillis() + time;
       return selector.select(time);
     } catch (IOException e) {
       if (e.getMessage().indexOf("Interrupted system call") >= 0) {
@@ -437,7 +442,7 @@ public class SelectorManager extends Thread implements Timer {
    * @param delay The delay
    */
   public void schedule(TimerTask task, long delay) {
-    task.nextExecutionTime = System.currentTimeMillis() + delay;    
+    task.nextExecutionTime = timeSource.currentTimeMillis() + delay;    
     addTask(task);
   }  
   
@@ -461,7 +466,7 @@ public class SelectorManager extends Thread implements Timer {
    * @param period The period with which to run
    */
   public void schedule(TimerTask task, long delay, long period) {
-    task.nextExecutionTime = System.currentTimeMillis() + delay;
+    task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
     task.period = (int) period;
     addTask(task);
   }
@@ -489,7 +494,7 @@ public class SelectorManager extends Thread implements Timer {
    * @param period The period with which to run
    */
   public void scheduleAtFixedRate(TimerTask task, long delay, long period) {
-    task.nextExecutionTime = System.currentTimeMillis() + delay;
+    task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
     task.period = (int) period;
     addTask(task);
   }
@@ -532,7 +537,7 @@ public class SelectorManager extends Thread implements Timer {
    */
   protected void executeDueTasks() {
     //System.out.println("SM.executeDueTasks()");
-    long now = System.currentTimeMillis();
+    long now = timeSource.currentTimeMillis();
     ArrayList executeNow = new ArrayList();
     
     // step 1, fetch all due timers
@@ -563,7 +568,7 @@ public class SelectorManager extends Thread implements Timer {
       TimerTask next = (TimerTask)i.next(); 
       try {
         //System.out.println("SM.Executing "+next);
-        if (next.execute()) {
+        if (next.execute(timeSource)) {
           addBack.add(next); 
         }
       } catch (Exception e) {

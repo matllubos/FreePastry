@@ -43,9 +43,9 @@ public class VisualizationEmailProxy extends EmailProxy {
         stepDone(FAILURE, e + "");
       }
       
-      server = new VisualizationServer(serverAddress, pastry, immutableStorage, cert, new Object[] {pastry, immutablePast, immutableStorage});
-      server.addPanelCreator(new OverviewPanelCreator(timer));
-      NetworkActivityPanelCreator network = new NetworkActivityPanelCreator(timer);
+      server = new VisualizationServer(serverAddress, pastry, immutableStorage, cert, new Object[] {pastry, immutablePast, immutableStorage}, env);
+      server.addPanelCreator(new OverviewPanelCreator(env));
+      NetworkActivityPanelCreator network = new NetworkActivityPanelCreator(env);
       server.addPanelCreator(network);
       MessageDistributionPanelCreator message = new MessageDistributionPanelCreator();
       server.addPanelCreator(message);
@@ -53,7 +53,7 @@ public class VisualizationEmailProxy extends EmailProxy {
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
       server.addPanelCreator(new SourceRoutePanelCreator());
-      server.addPanelCreator(new MultiPersistencePanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered", "Glacier Immutable", "Glacier Mutable", "Aggregation Waiting"},
+      server.addPanelCreator(new MultiPersistencePanelCreator(env, new String[] {"Immutable", "Mutable", "Pending", "Delivered", "Glacier Immutable", "Glacier Mutable", "Aggregation Waiting"},
                                                               new StorageManagerImpl[] {immutableStorage, mutableStorage, pendingStorage, deliveredStorage, glacierImmutableStorage, glacierMutableStorage, aggrWaitingStorage}));
       server.addPanelCreator(new MultiPASTPanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
                                                        new PastImpl[] {(PastImpl) realImmutablePast, (PastImpl) mutablePast, pendingPast, deliveredPast}));
@@ -109,9 +109,9 @@ public class VisualizationEmailProxy extends EmailProxy {
           stepDone(FAILURE, e + "");
         }
         
-        globalServer = new VisualizationServer(globalServerAddress, gpastry, null, globalCert, new Object[] {gpastry});
-        globalServer.addPanelCreator(new OverviewPanelCreator(timer));
-        NetworkActivityPanelCreator gnetwork = new NetworkActivityPanelCreator(timer);
+        globalServer = new VisualizationServer(globalServerAddress, gpastry, null, globalCert, new Object[] {gpastry}, env);
+        globalServer.addPanelCreator(new OverviewPanelCreator(env));
+        NetworkActivityPanelCreator gnetwork = new NetworkActivityPanelCreator(env);
         globalServer.addPanelCreator(gnetwork);
         MessageDistributionPanelCreator gmessage = new MessageDistributionPanelCreator();
         globalServer.addPanelCreator(gmessage);

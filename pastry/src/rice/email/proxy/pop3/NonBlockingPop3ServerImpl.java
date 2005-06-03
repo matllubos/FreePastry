@@ -73,7 +73,7 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
         Thread thread = new Thread("POP3 Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              Pop3Handler handler = new Pop3Handler(registry, manager);
+              Pop3Handler handler = new Pop3Handler(registry, manager, environment);
               handler.handleConnection(socket, log);
             } catch (IOException e) {
               System.out.println("IOException occurred during handling of connection - " + e);

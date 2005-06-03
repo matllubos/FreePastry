@@ -46,7 +46,7 @@ public class SplitStreamContent implements ScribeContent {
       String sentTime = tk.nextToken();
 //      Id stripeId = (rice.pastry.Id)(s.getStripeId().getId());
 //      String str = stripeId.toString().substring(3, 4);
-//      int recv_time = (int)System.currentTimeMillis();
+//      int recv_time = (int)Systemm.currentTimeMillis();
 //      int diff;
 ////      char [] c = str.toString().toCharArray();
 //      int stripe_int = c[0] - '0';

@@ -78,6 +78,10 @@ public class Folder {
     _log.setPost(post);
   }
     
+  public Post getPost() {
+    return _post; 
+  }
+  
   /**
    * Returns the name of this folder
    *
@@ -392,7 +396,7 @@ public class Folder {
    */
   public void addMessage(final Email email, final Continuation command) {
     _log.incrementRecent();
-    addMessage(email, new Flags(), System.currentTimeMillis(), new Continuation() {
+    addMessage(email, new Flags(), _post.getEnvironment().getTimeSource().currentTimeMillis(), new Continuation() {
       public void receiveResult(Object o) {
         command.receiveResult(o);
       }

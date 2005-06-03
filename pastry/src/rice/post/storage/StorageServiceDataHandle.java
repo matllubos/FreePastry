@@ -4,6 +4,7 @@ import java.io.*;
 import java.security.*;
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
@@ -43,10 +44,10 @@ class StorageServiceDataHandle implements GCPastContentHandle {
    * @param version The version number of the object
    * @param expiration The expiration time of the object
    */
-  public StorageServiceDataHandle(NodeHandle handle, Id id, long version, long expiration) {
+  public StorageServiceDataHandle(NodeHandle handle, Id id, long version, long expiration, Environment env) {
     this.id = id;
     this.handle = handle;
-    this.timestamp = System.currentTimeMillis();
+    this.timestamp = env.getTimeSource().currentTimeMillis();
     this.version = version;
     this.expiration = expiration;
   }

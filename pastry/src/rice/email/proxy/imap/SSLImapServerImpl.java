@@ -4,6 +4,7 @@ import rice.email.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.mailbox.postbox.*;
+import rice.environment.Environment;
 
 import java.io.*;
 import java.util.*;
@@ -19,8 +20,8 @@ public class SSLImapServerImpl extends ImapServerImpl {
   
   protected String password;
   
-  public SSLImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password, boolean log) throws IOException {
-    super(port, email, manager, gateway, acceptNonLocal, log);
+  public SSLImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password, boolean log, Environment env) throws IOException {
+    super(port, email, manager, gateway, acceptNonLocal, log, env);
     this.keystore = keystore;
     this.password = password;
     

@@ -111,9 +111,9 @@ public class SimpleManager implements SmtpManager {
     
     PostUserAddress[] recipients = (PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]);
     
-    System.out.println("COUNT: " + System.currentTimeMillis() + " Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
+    System.out.println("COUNT: " + state.getEnvironment().getTimeSource().currentTimeMillis() + " Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
-    Email email = PostMessage.parseEmail(state.getRemote(), recipients, state.getMessage().getResource(), address);
+    Email email = PostMessage.parseEmail(state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
     
     ExternalContinuation d = new ExternalContinuation();
     this.email.sendMessage(email, d);

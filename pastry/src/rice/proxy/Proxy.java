@@ -8,6 +8,7 @@ import java.util.*;
 import java.awt.*;
 import javax.swing.*;
 
+import rice.environment.Environment;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.util.*;
@@ -31,7 +32,10 @@ public class Proxy {
   
   protected LivenessMonitor lm;
     
-  public Proxy() {
+  protected Environment environment;
+  
+  public Proxy(Environment env) {
+    environment = env;
   }
   
   public void run(String params) throws IOException, InterruptedException {
@@ -243,7 +247,7 @@ public class Proxy {
   }
   
   public static void main(String[] args) throws IOException, InterruptedException {
-    Proxy proxy = new Proxy();
+    Proxy proxy = new Proxy(new Environment());
     proxy.run(PROXY_PARAMETERS_NAME);
   }
   
@@ -307,12 +311,12 @@ public class Proxy {
           LivenessMonitorTest test = new LivenessMonitorTest(this, process);
           test.start();
           
-          long start = System.currentTimeMillis();
+          long start = environment.getTimeSource().currentTimeMillis();
           
           Thread.sleep(timeout);
           
           if (! answered) {
-            System.err.println("SERIOUS ERROR: Process did not respond to liveness check - started at " + start + " now " + System.currentTimeMillis() + " - killing process");
+            System.err.println("SERIOUS ERROR: Process did not respond to liveness check - started at " + start + " now " + environment.getTimeSource().currentTimeMillis() + " - killing process");
             process.destroy();
             die();
           }
@@ -547,18 +551,18 @@ public class Proxy {
     }
     
     public void run() {
-      this.last = System.currentTimeMillis();
+      this.last = environment.getTimeSource().currentTimeMillis();
       
       while (true) {
         try {          
           Thread.sleep(sleep);
           
-          if (System.currentTimeMillis() - last > timeout) {
-            System.err.println("INFO: Sleep detected - " + (System.currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
+          if (environment.getTimeSource().currentTimeMillis() - last > timeout) {
+            System.err.println("INFO: Sleep detected - " + (environment.getTimeSource().currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
             restart();
           }
           
-          last = System.currentTimeMillis();
+          last = environment.getTimeSource().currentTimeMillis();
         } catch (InterruptedException e) {}
       }
     }
