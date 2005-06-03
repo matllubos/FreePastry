@@ -24,8 +24,9 @@ public class ConfigurationFrame extends JFrame {
   public static final Dimension LIST_BOX_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT*6);
   public static final Dimension LIST_BUTTONS_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT);
   public static final Dimension NUMERIC_BOX_SIZE = new Dimension(FRAME_WIDTH/2, DEFAULT_HEIGHT);
-  public static final Dimension SLIDER_BOX_SIZE = new Dimension(FRAME_WIDTH, DEFAULT_HEIGHT);
-  public static final Dimension SLIDER_BOX_MIN = new Dimension((int)(FRAME_WIDTH*0.75), DEFAULT_HEIGHT);
+  public static final Dimension SLIDER_BOX_SIZE = new Dimension(FRAME_WIDTH, (int)(DEFAULT_HEIGHT*1.5));
+  public static final Dimension SLIDER_BOX_MIN = new Dimension((int)(FRAME_WIDTH*0.75), (int)(DEFAULT_HEIGHT*1.5));
+  // SLIDER_BOX_* must be at least 46 tall to show up properly in MacOSX java 1.4
  
   protected Parameters parameters;
   
@@ -1101,7 +1102,7 @@ public class ConfigurationFrame extends JFrame {
               JOptionPane.showMessageDialog(null, "The passwords do not match - please try again");
             }
           } else {
-            JOptionPane.showMessageDialog(null, "The old password was incorrent - please try again."); 
+            JOptionPane.showMessageDialog(null, "The old password was incorrect - please try again."); 
           }
         }
       });
