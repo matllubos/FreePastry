@@ -7,7 +7,7 @@
 # line
 
 # random number generator's seed
-pastry_randseed = 0
+random_seed = 0
 
 # max number of handles stored per routing table entry
 pastry_rtMax = 1
