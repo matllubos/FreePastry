@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.ExponentialBackoffScheduledMessage;
 import rice.pastry.NetworkListener;
 import rice.pastry.NodeHandle;
@@ -29,7 +30,6 @@ import sun.misc.SignalHandler;
  * @author Alan Mislove
  */
 public abstract class DistPastryNode extends PastryNode {
-  public static final boolean verbose = false;
   
   // the queue used for processing requests
   public static ProcessingQueue QUEUE = new ProcessingQueue();
@@ -331,7 +331,8 @@ public abstract class DistPastryNode extends PastryNode {
     }
     
     public void run() {
-      if (DistPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Starting execution of " + this);
+      environment.getLogManager().getLogger(DistPastryNode.class, null).log(Logger.FINE,
+        "COUNT: " + environment.getTimeSource().currentTimeMillis() + " Starting execution of " + this);
       try {
       //  long start = environment.getTimeSource().currentTimeMillis();
         final Object result = r.execute();
@@ -355,7 +356,8 @@ public abstract class DistPastryNode extends PastryNode {
           }
         });
       }
-      if (DistPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Done execution of " + this);      
+      environment.getLogManager().getLogger(DistPastryNode.class, null).log(Logger.FINE,
+        "COUNT: " + environment.getTimeSource().currentTimeMillis() + " Done execution of " + this);      
     }
 	}
   

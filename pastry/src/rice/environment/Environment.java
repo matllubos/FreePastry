@@ -103,7 +103,7 @@ public class Environment {
       selectorManager = new SelectorManager(false, time); 
     }
     if (logging == null) {
-      logging = new SimpleLogManager(time, Logger.SEVERE); 
+      logging = new SimpleLogManager(time, params); 
     }
   }
   

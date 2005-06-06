@@ -6,6 +6,7 @@ import java.nio.*;
 import java.nio.channels.*;
 import java.util.*;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.messaging.*;
@@ -240,14 +241,16 @@ public class PingManager extends SelectionKeyHandler {
       if ((spn != null) && (spn instanceof SocketPastryNode))
         ((SocketPastryNode) spn).broadcastSentListeners(msg, path.toArray(), data.length);
       
-      if (SocketPastryNode.verbose) {
-        if (! (msg instanceof byte[]))
-          System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
-        else if (((byte[]) msg)[3] == 0x11)
-          System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingMessage of size " + data.length  + " to " + path);    
-        else if (((byte[]) msg)[3] == 0x12) 
-          System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path);    
-      }  
+      if (! (msg instanceof byte[])) {
+        this.spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).log(Logger.FINE,
+          "COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
+      } else if (((byte[]) msg)[3] == 0x11) {
+        this.spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).log(Logger.FINE,
+          "COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingMessage of size " + data.length  + " to " + path);    
+      } else if (((byte[]) msg)[3] == 0x12) {
+        this.spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).log(Logger.FINE,
+          "COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path); 
+      }
         
       spn.getEnvironment().getSelectorManager().modifyKey(key);
     } catch (IOException e) {

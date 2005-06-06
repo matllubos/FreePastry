@@ -80,12 +80,12 @@ public class SimpleParameters implements Parameters {
     if (result == null) 
       result = defaults.getProperty(name);
     
-//    if (result == null) { 
-      //System.err.println("WARNING: The parameter '" + name + "' was not found - this is likely going to cause an error.");
+    if (result == null) { 
+      System.err.println("WARNING: The parameter '" + name + "' was not found - this is likely going to cause an error.");
     //You " +
     //                     "can fix this by adding this parameter (and appropriate value) to the proxy.params file in your ePOST " +
     //                     "directory.");
-//    }
+    }
     
     return result;
   }
@@ -109,6 +109,7 @@ public class SimpleParameters implements Parameters {
   }
   
   public boolean contains(String name) {
+    if (defaults.containsKey(name)) return true;
     return properties.containsKey(name);
   }
 	
