@@ -57,6 +57,9 @@ public class SocketChannelWriter {
   // the address this writer is writing to
   protected SourceRoute path;
 
+  // the environment to use
+  protected Environment environment;
+  
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
    * an object to write out.
@@ -65,13 +68,15 @@ public class SocketChannelWriter {
    */
   public SocketChannelWriter(PastryNode spn, SourceRoute path) {
     this.spn = spn;
-    statsLastWritten = spn.getEnvironment().getTimeSource().currentTimeMillis();
+    this.environment = spn.getEnvironment();
+    statsLastWritten = environment.getTimeSource().currentTimeMillis();
     this.path = path;
     queue = new LinkedList();
   }
   
   public SocketChannelWriter(Environment env, SourceRoute path) {
-    statsLastWritten = env.getTimeSource().currentTimeMillis();
+    this.environment = env;
+    statsLastWritten = environment.getTimeSource().currentTimeMillis();
     this.path = path;
     queue = new LinkedList();
   }
@@ -156,7 +161,7 @@ public class SocketChannelWriter {
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
     if ((!recorded) && (SocketPastryNode.verbose)) {
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }
 
@@ -236,7 +241,7 @@ public class SocketChannelWriter {
         i++;
       }
       
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
     
       queue.add(i, o);
     } else {
@@ -277,7 +282,7 @@ public class SocketChannelWriter {
     
     if (logWriteTypes) {
       synchronized(statLock) {
-        long now = spn.getEnvironment().getTimeSource().currentTimeMillis();
+        long now = environment.getTimeSource().currentTimeMillis();
         if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
           System.out.println("@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
           statsLastWritten = now;

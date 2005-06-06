@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.zip.*;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -45,6 +46,9 @@ public class SocketChannelReader {
   // the address this reader is reading from
   protected SourceRoute path;
   
+  // the environment to use
+  protected Environment environment;
+  
   /**
    * Constructor which creates this SocketChannelReader and the WirePastryNode.
    * Once the reader has completely read a message, it deserializes the message
@@ -54,6 +58,14 @@ public class SocketChannelReader {
    */
   public SocketChannelReader(PastryNode spn, SourceRoute path) {
     this.spn = spn;
+    this.environment = spn.getEnvironment();
+    this.path = path;
+
+    sizeBuffer = ByteBuffer.allocateDirect(4);
+  }
+  
+  public SocketChannelReader(Environment env, SourceRoute path) {
+    this.environment = env;
     this.path = path;
 
     sizeBuffer = ByteBuffer.allocateDirect(4);
@@ -123,11 +135,11 @@ public class SocketChannelReader {
             return obj;
           }
         } else {
-          if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message, but too big to deserialize on Selector thread");
+          if (SocketPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Read message, but too big to deserialize on Selector thread");
           ((SocketPastryNode) spn).process(new Executable() {
             public String toString() { return "Deserialization of message of size " + size + " from " + path; }
             public Object execute() {
-              if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Starting deserialization on message on processing thread");
+              if (SocketPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Starting deserialization on message on processing thread");
               try {
                 return deserialize(objectArray);
               } catch (Exception e) {
@@ -175,7 +187,7 @@ public class SocketChannelReader {
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
     if ((!recorded) && (SocketPastryNode.verbose)) {
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
+      if (SocketPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Read message " + obj.getClass() + " of size " + size + " from " + path);
     }
   }
 
