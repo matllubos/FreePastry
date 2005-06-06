@@ -9,9 +9,11 @@ package rice.persistence.testing;
  *
  * @version $Id$
  */
+import java.io.IOException;
 import java.util.*;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.persistence.*;
 import rice.p2p.commonapi.*;
 import rice.pastry.commonapi.*;
@@ -33,7 +35,8 @@ public class LRUCacheTest extends Test {
   /**
    * Builds a MemoryStorageTest
    */
-  public LRUCacheTest() {
+  public LRUCacheTest(Environment env) {
+    super(env);
     cache = new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE);
 
     data  = new Id[500];
@@ -264,7 +267,6 @@ public class LRUCacheTest extends Test {
     
     final Continuation removeRandom = new Continuation() {
       
-      private Random random = new Random();
       private int count = LAST_NUM_REMAINING;
       private int num_deleted = 0;
 
@@ -284,7 +286,7 @@ public class LRUCacheTest extends Test {
           return;
         }
 
-        if (random.nextBoolean()) {
+        if (environment.getRandomSource().nextBoolean()) {
           num_deleted++;
           cache.uncache(data[13 + (count += SKIP)], this);
         } else {
@@ -424,7 +426,7 @@ public class LRUCacheTest extends Test {
 
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(false))) {
-          stepDone(FAILURE, "Random insert tests failed.");
+          stepDone(FAILURE, "Randon insert tests failed.");
           return;
         }
 
@@ -446,8 +448,8 @@ public class LRUCacheTest extends Test {
     testErrors();
   }
 
-  public static void main(String[] args) {
-    LRUCacheTest test = new LRUCacheTest();
+  public static void main(String[] args) throws IOException {
+    LRUCacheTest test = new LRUCacheTest(new Environment());
 
     test.start();
   }

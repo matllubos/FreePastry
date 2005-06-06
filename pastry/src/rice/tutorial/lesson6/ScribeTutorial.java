@@ -32,12 +32,12 @@ public class ScribeTutorial {
    * @param bootaddress the IP:port of the node to boot from
    * @param numNodes the number of nodes to create in this JVM
    */
-  public ScribeTutorial(int bindport, InetSocketAddress bootaddress, int numNodes) throws Exception {
+  public ScribeTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
     // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory();
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env.getRandomSource());
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
    
     // loop to construct the nodes/apps
@@ -136,6 +136,8 @@ public class ScribeTutorial {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
+    Environment env = new Environment();
+    
     try {
       // the port to use locally
       int bindport = Integer.parseInt(args[0]);
@@ -149,7 +151,7 @@ public class ScribeTutorial {
       int numNodes = Integer.parseInt(args[3]);    
       
       // launch our node!
-      ScribeTutorial dt = new ScribeTutorial(bindport, bootaddress, numNodes);
+      ScribeTutorial dt = new ScribeTutorial(bindport, bootaddress, numNodes, env);
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 

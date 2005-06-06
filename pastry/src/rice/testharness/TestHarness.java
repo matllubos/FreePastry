@@ -12,7 +12,6 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.util.Hashtable;
-import java.util.Random;
 import java.util.Vector;
 
 import rice.p2p.commonapi.Application;
@@ -74,8 +73,6 @@ public class TestHarness implements Application, ScribeClient {
    */
   private String _currentPollName;
 
-  private Random _random;
-
   private ScribeImpl scribe;
   
   private IdFactory factory = new PastryIdFactory();
@@ -97,12 +94,11 @@ public class TestHarness implements Application, ScribeClient {
     _tests = new Hashtable();
     _files = new Hashtable();
     _streams = new Hashtable();
-    _random = new Random();
     _testObjects = new Hashtable();
     _subscribedNodes = new Vector();
 
-    scribe = new ScribeImpl(pn, "monkey");
-    scribe.setPolicy(new LimitedScribePolicy(15));
+    scribe = new ScribeImpl(pn, "monkey", pn.getEnvironment());
+    scribe.setPolicy(new LimitedScribePolicy(15, pn.getEnvironment()));
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
     } catch (java.net.UnknownHostException uhe) {
@@ -253,7 +249,7 @@ public class TestHarness implements Application, ScribeClient {
    * Pauses for a random time between 2 and 5 seconds.
    */
   public void pauseRandom() {
-    int time = 6000 + (int) (_random.nextDouble() * 4000);
+    int time = 6000 + (int) (_pastryNode.getEnvironment().getRandomSource().nextDouble() * 4000);
 
     try { Thread.currentThread().sleep(time); } catch (InterruptedException e) {System.out.println(e);}
   }

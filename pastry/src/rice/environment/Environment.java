@@ -8,13 +8,11 @@ import java.io.IOException;
 import rice.environment.logging.*;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
-import rice.environment.params.simple.*;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
-import rice.pastry.PastrySeed;
 import rice.selector.SelectorManager;
 
 
@@ -91,7 +89,7 @@ public class Environment {
 //      params = new SimpleParameters("temp"); 
 //    }    
     if (randomSource == null) {
-      randomSource = new SimpleRandomSource(params.getInt("pastry_randseed")); 
+      randomSource = new SimpleRandomSource(params.getInt("random_seed")); 
     }    
     if (time == null) {
       time = new SimpleTimeSource(); 

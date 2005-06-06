@@ -1,6 +1,8 @@
 package rice.rm.testing;
 
 import rice.environment.Environment;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
 import rice.pastry.join.*;
 import rice.pastry.direct.*;
@@ -38,8 +40,6 @@ public class DirectRMRegrTest {
 
   public Hashtable nodeIdToApp;
 
-  private Random rng;
-
   private int appCount = 0;
 
   private Vector objectKeys;
@@ -72,13 +72,15 @@ public class DirectRMRegrTest {
 
   private int replicaFactor = RMRegrTestApp.rFactor;
 
+  protected Environment environment;
+  
   public DirectRMRegrTest(Environment env) {
+    environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, env);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(env.getRandomSource()), simulator, env);
     pastryNodes = new Vector();
     rmClients = new Vector();
     nodeIdToApp = new Hashtable();
-    rng = new Random(PastrySeed.getSeed());
     objectKeys = new Vector();
   }
 
@@ -113,18 +115,28 @@ public class DirectRMRegrTest {
   }
 
   public static void main(String args[]) throws IOException {
-    int seed;
 
-    // Setting the seed helps to reproduce the results of the run and
-    // thus aids debugging incase the regression test fails.
-    //seed = -1327173166 ;
-    seed = (int) System.currentTimeMillis();
-    PastrySeed.setSeed(seed);
+    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
+    
+    
+    long seed = params.getLong("random_seed");
+    if (seed == 0) {
+      seed = (int)System.currentTimeMillis();
+      // Setting the seed helps to reproduce the results of the run and
+      // thus aids debugging incase the regression test fails.
+      //seed = -1327173166 ;
+      //seed = 1202653027;
+      params.setLong("random_seed", seed);
+    }
     System.out.println("******************************");
     System.out.println("seed= " + seed);
     System.out.println("******************************");
 
-    DirectRMRegrTest mt = new DirectRMRegrTest(new Environment());
+    // by properly setting the params first, the enviornment will use
+    // the specified seed when creating a default RandomSource
+    Environment env = new Environment(null,null,null,null,params);
+    
+    DirectRMRegrTest mt = new DirectRMRegrTest(env);
     boolean ok;
 
     ok = mt.doTesting();
@@ -208,7 +220,7 @@ public class DirectRMRegrTest {
     nodesCurrentlyAlive = n;
 
     // We will now replicate 'numObjects' number of objects in the system
-    index = rng.nextInt(n);
+    index = environment.getRandomSource().nextInt(n);
     rmApp = (DirectRMRegrTestApp) rmClients.elementAt(index);
     for (i = 0; i < numObjects; i++) {
       objectKey = generateTopicId(new String("Object" + i));
@@ -219,10 +231,10 @@ public class DirectRMRegrTest {
     }
 
     // We will now remove 'numDeleted' number of objects from the system
-    index = rng.nextInt(n);
+    index = environment.getRandomSource().nextInt(n);
     rmApp = (DirectRMRegrTestApp) rmClients.elementAt(index);
     for (i = 0; i < numDeleted; i++) {
-      pos = rng.nextInt(numObjects);
+      pos = environment.getRandomSource().nextInt(numObjects);
       objectKey = (NodeId) objectKeys.elementAt(pos);
       rmApp.remove(objectKey);
       objectKeys.remove(pos);
@@ -241,7 +253,7 @@ public class DirectRMRegrTest {
     }
 
     // We will now send heartbeat messages
-    index = rng.nextInt(n);
+    index = environment.getRandomSource().nextInt(n);
     rmApp = (DirectRMRegrTestApp) rmClients.elementAt(index);
     for (i = 0; i < numObjects; i++) {
       objectKey = (NodeId) objectKeys.elementAt(i);
@@ -329,7 +341,7 @@ public class DirectRMRegrTest {
 
     System.out.println("Killing " + num + " nodes");
     for (i = 0; i < num; i++) {
-      int n = rng.nextInt(pastryNodes.size());
+      int n = environment.getRandomSource().nextInt(pastryNodes.size());
 
       PastryNode pn = (PastryNode) pastryNodes.get(n);
       pastryNodes.remove(n);

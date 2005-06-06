@@ -1,5 +1,7 @@
 package rice.p2p.util.testing;
 
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
 import rice.p2p.past.gc.*;
@@ -12,7 +14,7 @@ public class IdBloomFilterReplicationTest {
   public static int NUM = 10000;
   public static int NUM_RUNS = 100;
   
-  public static Random random = new Random();
+  public static RandomSource random = new SimpleRandomSource();
   public static IdFactory pFactory = new PastryIdFactory();
   public static IdFactory factory = new MultiringIdFactory(pFactory.buildRandomId(random), pFactory);
   public static GCIdFactory gFactory = new GCIdFactory(factory);

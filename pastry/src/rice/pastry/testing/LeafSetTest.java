@@ -1,18 +1,13 @@
 
 package rice.pastry.testing;
 
-import java.util.Arrays;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Random;
+import java.io.IOException;
+import java.util.*;
 
-import rice.pastry.IdRange;
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeId;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.NodeSetUpdate;
-import rice.pastry.leafset.LeafSet;
-import rice.pastry.leafset.SimilarSet;
+import rice.environment.Environment;
+import rice.environment.random.RandomSource;
+import rice.pastry.*;
+import rice.pastry.leafset.*;
 import rice.pastry.messaging.Message;
 import rice.pastry.standard.RandomNodeIdFactory;
 
@@ -27,11 +22,12 @@ public class LeafSetTest {
 
   protected NodeIdFactory factory;
 
-  protected Random random;
+  protected RandomSource random;
 
-  public LeafSetTest() {
-    factory = new RandomNodeIdFactory();
-    random = new Random();
+  public LeafSetTest() throws IOException {
+    Environment env = new Environment();
+    random = env.getRandomSource();
+    factory = new RandomNodeIdFactory(random);
   }
 
   public void start() {
@@ -271,7 +267,7 @@ public class LeafSetTest {
     return set;
   }
 
-  public static void main(String args[]) {
+  public static void main(String args[]) throws IOException {
     LeafSetTest test = new LeafSetTest();
     test.start();
   }

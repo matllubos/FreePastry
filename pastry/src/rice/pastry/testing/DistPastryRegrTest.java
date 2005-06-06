@@ -1,6 +1,7 @@
 
 package rice.pastry.testing;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
@@ -51,8 +52,8 @@ public class DistPastryRegrTest extends PastryRegrTest {
 
     // constructor
 
-    public DistPastryRegrTest() throws IOException {
-      super();
+    public DistPastryRegrTest(Environment env) throws IOException {
+      super(env);
 
       // we need to wrap the TreeMap to synchronize it
       // -- it is shared among multiple virtual nodes
@@ -187,7 +188,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
 
     public static void main(String args[]) throws IOException {
       doInitstuff(args);
-      DistPastryRegrTest pt = new DistPastryRegrTest();
+      DistPastryRegrTest pt = new DistPastryRegrTest(new Environment());
       mainfunc(pt, args, numnodes /*n*/, 1 /*d*/, 1/*k*/, 20/*m*/, 4/*conc*/);
     }
 }

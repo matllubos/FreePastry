@@ -2,7 +2,10 @@ package rice.p2p.glacier;
 
 import java.io.*;
 import java.util.Arrays;
-import java.util.Random;
+
+import rice.environment.Environment;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 
 /**
  * DESCRIBE THE CLASS
@@ -338,6 +341,7 @@ public class ErasureCodec {
   }
 
   public static void main(String args[]) {
+    RandomSource rng = new SimpleRandomSource();
     ErasureCodec codec = new ErasureCodec(48, 5);
     Serializable s = new String("Habe Mut, Dich Deines eigenen Verstandes zu bedienen! Aufklaerung ist der Ausgang aus Deiner selbstverschuldeten Unmuendigkeit!");
 
@@ -360,7 +364,6 @@ public class ErasureCodec {
 
     System.out.println(d);
     
-    Random rng = new Random();
     for (int i=0; i<100; i++) {
       int[] theObject = new int[rng.nextInt(100000)];
       for (int j=0; j<theObject.length; j++)

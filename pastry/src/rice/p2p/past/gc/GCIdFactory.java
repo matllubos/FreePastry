@@ -3,6 +3,7 @@ package rice.p2p.past.gc;
 
 import java.util.*;
 
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 
 /**
@@ -78,6 +79,10 @@ public class GCIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildRandomId(Random rng) {
+    throw new UnsupportedOperationException("GCIdFactory cannot be used to build Ids!");
+  }
+
+  public Id buildRandomId(RandomSource rng) {
     throw new UnsupportedOperationException("GCIdFactory cannot be used to build Ids!");
   }
 

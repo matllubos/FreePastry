@@ -3,8 +3,6 @@
  */
 package rice.tutorial.lesson6;
 
-import java.util.Random;
-
 import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.Endpoint;
@@ -28,10 +26,6 @@ import rice.pastry.commonapi.PastryIdFactory;
  */
 public class MyScribeClient implements ScribeClient, Application {
 
-  /**
-   * Used to randomly accept an anycast.
-   */
-  Random rng = new Random();
   /**
    * The message sequence number.  Will be incremented after each send.
    */
@@ -69,7 +63,7 @@ public class MyScribeClient implements ScribeClient, Application {
     // you should recognize this from lesson 3
     this.endpoint = node.registerApplication(this, "myinstance");
     // construct Scribe
-    myScribe = new ScribeImpl(node,"lesson6instance");
+    myScribe = new ScribeImpl(node,"lesson6instance", node.getEnvironment());
     // construct the topic
     myTopic = new Topic(new PastryIdFactory(), "example topic");
     System.out.println("myTopic = "+myTopic);
@@ -133,7 +127,7 @@ public class MyScribeClient implements ScribeClient, Application {
    * stops the message here.
    */
   public boolean anycast(Topic topic, ScribeContent content) {
-    boolean returnValue = rng.nextInt(3) == 0;
+    boolean returnValue = myScribe.getEnvironment().getRandomSource().nextInt(3) == 0;
     System.out.println("MyScribeClient.anycast("+topic+","+content+"):"+returnValue);
     return returnValue;
   }

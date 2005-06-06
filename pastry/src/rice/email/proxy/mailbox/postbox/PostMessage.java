@@ -37,7 +37,6 @@ import javax.mail.Session;
 import javax.activation.*;
 
 import java.awt.datatransfer.*;
-import java.util.Random;
 
 public class PostMessage implements StoredMessage {
 

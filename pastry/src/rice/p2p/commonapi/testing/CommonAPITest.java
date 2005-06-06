@@ -116,10 +116,10 @@ public abstract class CommonAPITest {
   public CommonAPITest(Environment env) throws IOException {
     this.environment = env;
       //idFactory = new IPNodeIdFactory(PORT); 
-      idFactory = new RandomNodeIdFactory();
+      idFactory = new RandomNodeIdFactory(environment.getRandomSource());
 
     if (SIMULATOR == SIMULATOR_SPHERE) {
-      simulator = new SphereNetwork();
+      simulator = new SphereNetwork(env);
     } else {
       simulator = new EuclideanNetwork(env);
     }

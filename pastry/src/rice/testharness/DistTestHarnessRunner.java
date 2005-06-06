@@ -12,6 +12,7 @@ import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.Message;
 import rice.p2p.scribe.ScribeContent;
 import rice.pastry.NodeHandle;
@@ -64,13 +65,15 @@ public class DistTestHarnessRunner {
 
   protected DistPastryNodeFactory factory;
 
+  protected Environment environment;
+  
   /**
    * Constructor which creates a TestHarness given a
    * PastryNode.
    *
    * @param pn The PastryNode this TestHarness is running on.
    */
-  public DistTestHarnessRunner() throws IOException {
+  public DistTestHarnessRunner(Environment env) throws IOException {
     pastryNodes = new Vector();
     testNodes = new Vector();
     factory = DistPastryNodeFactory.getFactory(getNodeIdFactory(), PROTOCOL, START_PORT);
@@ -78,7 +81,7 @@ public class DistTestHarnessRunner {
   }
 
   protected NodeIdFactory getNodeIdFactory() {
-    return new RandomNodeIdFactory();
+    return new RandomNodeIdFactory(environment.getRandomSource());
   }
 
   public void run() {
@@ -256,6 +259,8 @@ public class DistTestHarnessRunner {
    * Initializes the TestHarnesss are waits for input.
    */
   public static void main(String[] args) throws Exception {
+    Environment env = new Environment();
+    
     boolean std = true;
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals( "std")) std = true; 
@@ -271,7 +276,7 @@ public class DistTestHarnessRunner {
     
     processArgs(args);
 
-    DistTestHarnessRunner runner = new DistTestHarnessRunner();
+    DistTestHarnessRunner runner = new DistTestHarnessRunner(env);
 
     runner.run();
   }

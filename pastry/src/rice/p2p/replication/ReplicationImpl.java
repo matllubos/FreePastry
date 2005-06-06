@@ -118,7 +118,7 @@ public class ReplicationImpl implements Replication, Application {
     
     // inject the first reminder message, which will cause the replication to begin
     // and the next maintenance message to be scheduled
-    endpoint.scheduleMessage(new ReminderMessage(handle), new Random().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
+    endpoint.scheduleMessage(new ReminderMessage(handle), environment.getRandomSource().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
   }
   
   /**

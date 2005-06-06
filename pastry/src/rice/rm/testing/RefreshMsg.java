@@ -8,7 +8,6 @@ import rice.pastry.security.*;
 
 import rice.rm.*;
 
-import java.util.Random;
 import java.io.*;
 
 /**

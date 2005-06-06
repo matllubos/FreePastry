@@ -373,9 +373,7 @@ public class Proxy {
   }
   
   protected class AutomaticUpdater extends Thread {
-   
-    protected Random rng = new Random();
-    
+       
     protected int interval;
     
     protected String root;
@@ -393,7 +391,7 @@ public class Proxy {
     public void run() {
       while (true) {
         try {
-          Thread.sleep(rng.nextInt(interval));
+          Thread.sleep(environment.getRandomSource().nextInt(interval));
           
           try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();

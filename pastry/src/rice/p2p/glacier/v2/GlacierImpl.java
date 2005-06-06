@@ -39,7 +39,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected final Hashtable continuations;
   protected final Hashtable pendingTraffic;
   protected final String debugID;
-  protected final Random random;
   protected StorageManager trashStorage;
   protected long nextContinuationTimeout;
   protected IdRange responsibleRange;
@@ -164,7 +163,6 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     this.nextUID = 0;
     this.continuations = new Hashtable();
     this.pendingTraffic = new Hashtable();
-    this.random = new Random();
     this.timer = null;
     this.nextContinuationTimeout = -1;
     this.statistics = new GlacierStatistics(tagMax, environment);
@@ -314,7 +312,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           final IdSet keySet = fragmentStorage.scan();
           endpoint.process(new Executable() {
             public Object execute() {
-              BloomFilter bv = new BloomFilter((2*keySet.numElements()+5)*syncBloomFilterBitsPerKey, syncBloomFilterNumHashes);
+              BloomFilter bv = new BloomFilter((2*keySet.numElements()+5)*syncBloomFilterBitsPerKey, syncBloomFilterNumHashes, environment.getRandomSource());
               Iterator iter = keySet.getIterator();
 
               while (iter.hasNext()) {
@@ -372,7 +370,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           nextTimeout = environment.getTimeSource().currentTimeMillis() + jitterTerm(syncRetryInterval);
         } else {
           nextTimeout = environment.getTimeSource().currentTimeMillis() + jitterTerm(syncInterval);
-          offset = 1+random.nextInt(numFragments-1);
+          offset = 1+environment.getRandomSource().nextInt(numFragments-1);
 
           Id dest = getFragmentLocation(getLocalNodeHandle().getId(), offset, 0);
           Id ccwId = getFragmentLocation(responsibleRange.getCCWId(), offset, 0);
@@ -913,7 +911,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   }
 
   private long jitterTerm(long basis) {
-    return (long)((1-jitterRange)*basis) + random.nextInt((int)(2*jitterRange*basis));
+    return (long)((1-jitterRange)*basis) + environment.getRandomSource().nextInt((int)(2*jitterRange*basis));
   }
 
   private void deleteFragment(final Id fkey, final Continuation command) {
@@ -1332,7 +1330,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       String result = "";
       
       for (int i=0; i<numObjects; i++) {
-        final Id randomID = factory.buildRandomId(random);
+        final Id randomID = factory.buildRandomId(environment.getRandomSource());
         result = result + randomID.toStringFull() + "\n";
         pendingTraffic.put(new VersionKey(randomID, 0), new Continuation.SimpleContinuation() {
           public void receiveResult(Object o) {
@@ -1852,8 +1850,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           if (currentStage == stageProbing) {
             nextTimeout = environment.getTimeSource().currentTimeMillis() + bulkRefreshProbeInterval;
             
-            int nextProbe = random.nextInt(ids.length);
-            int nextFID = random.nextInt(numFragments);
+            int nextProbe = environment.getRandomSource().nextInt(ids.length);
+            int nextFID = environment.getRandomSource().nextInt(numFragments);
             int maxSteps = ids.length * numFragments;
             while ((maxSteps > 0) && fragmentChecked[nextProbe][nextFID]) {
               nextFID ++;
@@ -1893,14 +1891,14 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             if (!allObjectsCovered && ((retriesRemaining--) > 0)) {
               log(3, "AR Fetching manifests, "+retriesRemaining+" attempts remaining");
               while (true) {
-                int idx = random.nextInt(ids.length);
+                int idx = environment.getRandomSource().nextInt(ids.length);
                 int maxSteps = ids.length + 2;
                 while (objectCovered[idx] && ((--maxSteps)>0))
                   idx = (idx+1) % ids.length;
                 if (maxSteps <= 0)
                   break;
                 
-                int fid = random.nextInt(numFragments);
+                int fid = environment.getRandomSource().nextInt(numFragments);
                 maxSteps = numFragments + 2;
                 while ((fragmentHolder[idx][fid] == null) && ((--maxSteps)>0))
                   fid = (fid+1) % numFragments;
@@ -2498,7 +2496,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
         int nextID;
         do {
-          nextID = random.nextInt(numFragments);
+          nextID = environment.getRandomSource().nextInt(numFragments);
         } while (checkedFragment[nextID]);
      
         checkedFragment[nextID] = true;
@@ -2696,7 +2694,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         int nextID;
 
         do {
-          nextID = random.nextInt(numFragments);
+          nextID = environment.getRandomSource().nextInt(numFragments);
         } while (checkedFragment[nextID]);
      
         checkedFragment[nextID] = true;

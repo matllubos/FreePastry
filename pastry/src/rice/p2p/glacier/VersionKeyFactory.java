@@ -1,11 +1,12 @@
 package rice.p2p.glacier;
+import java.util.*;
 import java.util.StringTokenizer;
 
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.MultiringIdFactory;
 import rice.p2p.multiring.RingId;
 import rice.pastry.Id;
-import java.util.Random;
 import java.util.SortedMap;
 
 
@@ -72,6 +73,10 @@ public class VersionKeyFactory implements IdFactory {
    * @return The built Id.
    */
   public rice.p2p.commonapi.Id buildRandomId(Random rng) {
+    return new VersionKey(FACTORY.buildRandomId(rng), rng.nextLong());
+  }
+  
+  public rice.p2p.commonapi.Id buildRandomId(RandomSource rng) {
     return new VersionKey(FACTORY.buildRandomId(rng), rng.nextLong());
   }
 

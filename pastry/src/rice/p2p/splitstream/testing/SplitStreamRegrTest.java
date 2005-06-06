@@ -3,13 +3,13 @@
 package rice.p2p.splitstream.testing;
 
 import java.io.IOException;
-import java.util.Random;
 
 import rice.environment.Environment;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.splitstream.*;
-import rice.pastry.PastrySeed;
 
 /**
  * @(#) SplitStreamRegrTest.java Provides regression testing for the Scribe service using distributed
@@ -35,14 +35,6 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
   protected SplitStreamTestClient ssclients[];
 
-  // a random number generator
-  /**
-   * DESCRIBE THE FIELD
-   */
-  protected Random rng;
-
-    protected Random generateIdRng;
-
   /**
    * Constructor which sets up all local variables
    */
@@ -50,9 +42,6 @@ public class SplitStreamRegrTest extends CommonAPITest {
     super(env);
     splitstreams = new SplitStreamImpl[NUM_NODES];
     ssclients = new SplitStreamTestClient[NUM_NODES];
-    rng = new Random(PastrySeed.getSeed()+2);
-    generateIdRng = new Random(PastrySeed.getSeed()+3);
-
   }
 
 
@@ -63,13 +52,22 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-      int seed;
+    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
+    
+    long seed = params.getLong("random_seed");
+    if (seed == 0) {
       seed = (int)System.currentTimeMillis();
       //seed = 1202653027;
-      PastrySeed.setSeed(seed);
-      System.out.println("Seed= " + PastrySeed.getSeed());
-      parseArgs(args);
-    SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest(new Environment());
+      params.setLong("random_seed", seed);
+    }
+    System.out.println("Seed= " + seed);
+
+    // by properly setting the params first, the enviornment will use
+    // the specified seed when creating a default RandomSource
+    Environment env = new Environment(null,null,null,null,params);
+
+    parseArgs(args);
+    SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest(env);
     splitstreamTest.start();
   }
 
@@ -80,7 +78,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * @param num The number of this node
    */
   protected void processNode(int num, Node node) {
-    splitstreams[num] = new SplitStreamImpl(node, INSTANCE);
+    splitstreams[num] = new SplitStreamImpl(node, INSTANCE, environment);
     ssclients[num] = new SplitStreamTestClient(node, splitstreams[num]);
   }
 
@@ -174,7 +172,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
 	byte[] data = {0,1,0,1,1};
 	boolean pass = true;
 	for(int i = 0; i < 10; i++){
-	    ssclients[rng.nextInt(NUM_NODES - num) + num].publishAll(data);
+	    ssclients[environment.getRandomSource().nextInt(NUM_NODES - num) + num].publishAll(data);
 	    simulate();
 	    
 	    
@@ -209,7 +207,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
   protected void testBasic() {
      sectionStart("Basic Test");
      stepStart("Creating Channel");
-     int creator  = rng.nextInt(NUM_NODES);
+     int creator  = environment.getRandomSource().nextInt(NUM_NODES);
      ChannelId id = new ChannelId(generateId());
      ssclients[creator].createChannel(id);
      simulate();
@@ -285,7 +283,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    generateIdRng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     return FACTORY.buildId(data);
   }
  

@@ -1,6 +1,7 @@
 
 package rice.p2p.splitstream;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 
@@ -38,4 +39,6 @@ public interface SplitStream {
    */
   public Channel[] getChannels();
 
+  
+  public Environment getEnvironment();
 }

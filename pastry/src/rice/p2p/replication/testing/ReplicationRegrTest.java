@@ -40,18 +40,12 @@ public class ReplicationRegrTest extends CommonAPITest {
   protected TestReplicationClient[] clients;
 
   /**
-   * random number generator
-   */
-  protected Random rng;
-
-  /**
    * Constructor which sets up all local variables
    */
   public ReplicationRegrTest(Environment env) throws IOException {
     super(env);
     replications = new ReplicationImpl[NUM_NODES];
     clients = new TestReplicationClient[NUM_NODES];
-    rng = new Random();
   }
 
 
@@ -95,7 +89,7 @@ public class ReplicationRegrTest extends CommonAPITest {
     * Tests basic functionality
    */
   public void testBasic() {
-    int num = rng.nextInt(NUM_NODES);
+    int num = environment.getRandomSource().nextInt(NUM_NODES);
     Id id = nodes[num].getId();
     
     IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
@@ -132,7 +126,7 @@ public class ReplicationRegrTest extends CommonAPITest {
     * Tests maintenance functionality
    */
   public void testMaintenance() {
-    int num = rng.nextInt(NUM_NODES);
+    int num = environment.getRandomSource().nextInt(NUM_NODES);
     Id id = nodes[num].getId();
     
     IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
@@ -203,7 +197,7 @@ public class ReplicationRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    rng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     return FACTORY.buildId(data);
   }
 

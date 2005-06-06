@@ -1,5 +1,8 @@
 package rice.rm.testing;
 
+import rice.environment.Environment;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
 import rice.pastry.standard.*;
 import rice.pastry.join.*;
@@ -36,8 +39,6 @@ public class DistRMRegrTest {
 
   private Vector pastryNodes;
 
-  private Random rng;
-
   public Vector distClients;
 
   public Vector localNodes;
@@ -52,15 +53,14 @@ public class DistRMRegrTest {
 
   public static int protocol = DistPastryNodeFactory.PROTOCOL_DEFAULT;
 
-  public DistRMRegrTest() throws IOException {
+  public DistRMRegrTest(Environment env) throws IOException {
     int i;
     NodeId topicId;
 
-    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(),
+    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(env.getRandomSource()),
         protocol, port);
     pastryNodes = new Vector();
     distClients = new Vector();
-    rng = new Random(PastrySeed.getSeed());
     localNodes = new Vector();
   }
 
@@ -183,16 +183,27 @@ public class DistRMRegrTest {
    * -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
    */
   public static void main(String args[]) throws IOException {
-    int seed;
     PastryNode pn;
+    
+    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
+    
+    long seed = params.getLong("random_seed");
+    if (seed == 0) {
+      //seed = -532555437;
+      seed = (int)System.currentTimeMillis();
+      params.setLong("random_seed", seed);
+    }
 
+    System.out.println("seed used=" + seed);
+    
+    // by properly setting the params first, the enviornment will use
+    // the specified seed when creating a default RandomSource
+    Environment env = new Environment(null,null,null,null,params);
+    
     Log.init(args);
     doInitstuff(args);
-    seed = (int) System.currentTimeMillis();
-    //seed = -532555437;
-    PastrySeed.setSeed(seed);
-    System.out.println("seed used=" + seed);
-    DistRMRegrTest driver = new DistRMRegrTest();
+    
+    DistRMRegrTest driver = new DistRMRegrTest(env);
 
     // create first node
     pn = driver.makeRMNode();

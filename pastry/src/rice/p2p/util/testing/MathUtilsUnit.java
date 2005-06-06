@@ -4,8 +4,8 @@
  */
 package rice.p2p.util.testing;
 
-import java.util.Random;
-
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.util.MathUtils;
 
 /**
@@ -57,7 +57,7 @@ public class MathUtilsUnit {
 
     System.out.print("    Testing int->byte[]->int conversion\t\t\t");
     
-    Random r = new Random();
+    RandomSource r = new SimpleRandomSource();
     boolean passed = true;
 
   		for (int n=0; n<100000; n++) {

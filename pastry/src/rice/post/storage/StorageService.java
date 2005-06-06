@@ -73,11 +73,6 @@ public class StorageService {
   private IdFactory factory;
   
   /**
-   * The random number generator
-   */
-  private Random rng;
-  
-  /**
    * The endpoint 
    */
   private Endpoint endpoint;
@@ -106,13 +101,12 @@ public class StorageService {
     this.timeoutInterval = timeoutInterval;
     this.endpoint = endpoint;
     
-    rng = new Random();
     pendingVerification = new Hashtable();
   }
 
   public Id getRandomNodeId() {
     byte[] data = new byte[20];
-    rng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     
     return factory.buildId(data);
   }

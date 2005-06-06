@@ -33,10 +33,11 @@ public class DirectPastryRegrTest extends PastryRegrTest {
    * constructor
    */
   private DirectPastryRegrTest() throws IOException {
-    super();
-    simulator = new SphereNetwork();
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator,
-        new Environment());
+    super(new Environment());
+    simulator = new SphereNetwork(environment);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), 
+        simulator,
+        environment);
   }
 
   /**

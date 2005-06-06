@@ -234,7 +234,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    // We trigger the periodic Maintenance protocol
 	    if(getPastryNode() instanceof DistPastryNode) {
 		RMMaintenanceMsg msg;
-		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno ++); 
+		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno++, thePastryNode.getEnvironment()); 
 		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintStart * 1000, RMMaintenanceMsg.maintFreq * 1000);
 
 	    }
@@ -590,7 +590,7 @@ public class RMImpl extends CommonAPIAppl implements RM {
 	    // We trigger the periodic Maintenance protocol
 	    if(getPastryNode() instanceof DistPastryNode) {
 		RMMaintenanceMsg msg;
-		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno ++); 
+		msg  = new RMMaintenanceMsg(getNodeHandle(), getAddress(), getCredentials(), m_seqno++, thePastryNode.getEnvironment()); 
 		getPastryNode().scheduleMsgAtFixedRate(msg, RMMaintenanceMsg.maintStart * 1000, RMMaintenanceMsg.maintFreq * 1000);
 
 	    }

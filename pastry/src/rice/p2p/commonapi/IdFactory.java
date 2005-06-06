@@ -3,6 +3,8 @@ package rice.p2p.commonapi;
 
 import java.util.*;
 
+import rice.environment.random.RandomSource;
+
 /**
  * @(#) IdFactory.java This interface provides applications with a way of generating Ids in a
  * protocol-specific manner.
@@ -44,6 +46,7 @@ public interface IdFactory {
    * @return The built Id.
    */
   public Id buildRandomId(Random rng);
+  public Id buildRandomId(RandomSource rng);
   
   /**
    * Builds an Id by converting the given toString() output back to an Id.  Should

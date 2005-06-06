@@ -1201,7 +1201,6 @@ panic("setBit disabled");
    */
   private void scheduleNextStatusCast() {
     Calendar cal = Calendar.getInstance();
-    Random rand = new Random();
     long nowMS;
     long lastStatusCastMS;
     long delayMS;
@@ -1221,7 +1220,7 @@ panic("setBit disabled");
      *  synchronization effects)
      */
     delayMS = (lastStatusCastMS + statusCastInterval) - nowMS;
-    delayMS += (rand.nextInt(2 * statusCastJitter) - statusCastJitter);
+    delayMS += (environment.getRandomSource().nextInt(2 * statusCastJitter) - statusCastJitter);
 
     /*
      *  There must be a minimum delay between two status casts
@@ -1440,7 +1439,6 @@ panic("setBit disabled");
      */
     if (restoreList.size() < maxConcurrentRestores) {
       Vector restoreCandidates = new Vector();
-      Random rand = new Random();
       boolean missingFragment[] = new boolean[numFragments];
       Enumeration enu2 = state.fileList.elements();
 
@@ -1470,7 +1468,7 @@ panic("setBit disabled");
         if ((liveFragments >= numSurvivors) && (liveFragments < numFragments)) {
           int fragmentID;
           do {
-            fragmentID = rand.nextInt(numFragments);
+            fragmentID = environment.getRandomSource().nextInt(numFragments);
           } while (!missingFragment[fragmentID]);
 
           RestoreListEntry rle = new RestoreListEntry(
@@ -1489,7 +1487,7 @@ panic("setBit disabled");
        *  may already contain entries for lost replicas.
        */
       while ((restoreList.size() < maxConcurrentRestores) && (restoreCandidates.size() > 0)) {
-        int index = rand.nextInt(restoreCandidates.size());
+        int index = environment.getRandomSource().nextInt(restoreCandidates.size());
         final RestoreListEntry rle = (RestoreListEntry) restoreCandidates.elementAt(index);
         FileInfo fileInfo = rle.fileInfo;
 
@@ -1659,7 +1657,7 @@ panic("setBit disabled");
            *  If there is at least one such fragment, pick a random one...
            */
           if (numCandidates >= 1) {
-            int index = (new Random()).nextInt(numCandidates);
+            int index = environment.getRandomSource().nextInt(numCandidates);
             Id theHolder = rle.fileInfo.holderId[candidateIndex[index]][candidateSubindex[index]];
 
             rle.checkedFragment[candidateIndex[index]] = true;
@@ -2089,14 +2087,13 @@ panic("setBit disabled");
    * Audits some primary replicas
    */
   private void auditPrimaryReplicas() {
-    Random rand = new Random();
 
     /*
      *  Pick a few random entries from the fileList and them to the AuditList
      */
     if (!state.fileList.isEmpty()) {
       for (int i = 0; i < maxConcurrentAudits; i++) {
-        int index = rand.nextInt(state.fileList.size());
+        int index = environment.getRandomSource().nextInt(state.fileList.size());
         Enumeration enumeration = state.fileList.elements();
         while ((--index) > 0) {
           enumeration.nextElement();

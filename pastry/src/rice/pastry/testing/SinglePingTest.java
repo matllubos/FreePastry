@@ -32,17 +32,17 @@ public class SinglePingTest {
 
   private Vector pingClients;
 
-  private Random rng;
+  private Environment environment;
 
   public SinglePingTest(TestRecord tr, Environment env) {
+    environment = env;
     simulator = new EuclideanNetwork(env); //SphereNetwork();
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, env);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, env);
     simulator.setTestRecord(tr);
     testRecord = tr;
 
     pastryNodes = new Vector();
     pingClients = new Vector();
-    rng = new Random(PastrySeed.getSeed());
   }
 
   private NodeHandle getBootstrap() {
@@ -67,8 +67,8 @@ public class SinglePingTest {
     int n = pingClients.size();
 
     for (int i = 0; i < k; i++) {
-      int from = rng.nextInt(n);
-      int to = rng.nextInt(n);
+      int from = environment.getRandomSource().nextInt(n);
+      int to = environment.getRandomSource().nextInt(n);
 
       Ping pc = (Ping) pingClients.get(from);
       PastryNode pn = (PastryNode) pastryNodes.get(to);

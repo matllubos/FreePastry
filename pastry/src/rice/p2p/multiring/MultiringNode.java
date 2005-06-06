@@ -2,6 +2,8 @@
 package rice.p2p.multiring;
 
 import java.util.*;
+
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.messaging.*;
 import rice.p2p.scribe.*;
@@ -61,11 +63,11 @@ public class MultiringNode implements Node, ScribeClient {
    * @param node The node which this multiring node is wrapping
    * @param ringId The Id of this node's ring
    */
-  public MultiringNode(Id ringId, Node node) {
+  public MultiringNode(Id ringId, Node node, Environment env) {
     this.node = node;
     this.ringId = ringId;
     this.endpoints = new Hashtable();
-    this.scribe = new ScribeImpl(this, "Multiring");
+    this.scribe = new ScribeImpl(this, "Multiring", env);
     this.collection = new MultiringNodeCollection(this);
     this.factory = (MultiringIdFactory) getIdFactory();
   }
@@ -77,8 +79,8 @@ public class MultiringNode implements Node, ScribeClient {
    * @param ringId The Id of this node's ring
    * @param existing An existing node which this node should pair with
    */
-  public MultiringNode(Id ringId, Node node, MultiringNode existing) {
-    this(ringId, node);
+  public MultiringNode(Id ringId, Node node, MultiringNode existing, Environment env) {
+    this(ringId, node, env);
     this.collection = existing.getCollection();
     
     this.collection.addNode(this);

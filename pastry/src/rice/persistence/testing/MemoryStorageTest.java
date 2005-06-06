@@ -13,6 +13,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.pastry.commonapi.*;
 import rice.persistence.*;
@@ -34,7 +35,8 @@ public class MemoryStorageTest extends Test {
   /**
    * Builds a MemoryMemoryStorageTest
    */
-  public MemoryStorageTest(boolean store) {
+  public MemoryStorageTest(boolean store, Environment env) {
+    super(env);
     storage = new MemoryStorage(FACTORY);
     data  = new Id[500];
     metadata = new Integer[500];
@@ -508,7 +510,6 @@ public class MemoryStorageTest extends Test {
     
     final Continuation removeRandom = new Continuation() {
       
-      private Random random = new Random();
       private int count = START_NUM;
       private int num_deleted = 0;
 
@@ -528,7 +529,7 @@ public class MemoryStorageTest extends Test {
           return;
         }
 
-        if (random.nextBoolean()) { 
+        if (environment.getRandomSource().nextBoolean()) { 
           num_deleted++;
           storage.unstore(data[13 + (count += SKIP)], this);
         } else {
@@ -670,7 +671,7 @@ public class MemoryStorageTest extends Test {
 
       public void receiveResult(Object o) {
         if (o.equals(new Boolean(false))) {
-          stepDone(FAILURE, "Random insert tests failed.");
+          stepDone(FAILURE, "Randon insert tests failed.");
           return;
         }
 
@@ -694,7 +695,7 @@ public class MemoryStorageTest extends Test {
   }
 
   public static void main(String[] args) throws IOException {
-    MemoryStorageTest test = new MemoryStorageTest(true);
+    MemoryStorageTest test = new MemoryStorageTest(true, new Environment());
 
     test.start();
   }

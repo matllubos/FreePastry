@@ -41,9 +41,6 @@ public class PastRegrTest extends CommonAPITest {
   // the past impls in the ring
   protected PastImpl pasts[];
 
-  // a random number generator
-  protected Random rng;
-
   /**
    * Constructor which sets up all local variables
    */
@@ -51,7 +48,6 @@ public class PastRegrTest extends CommonAPITest {
     super(env);
     pasts = new PastImpl[NUM_NODES];
     storages = new StorageManager[NUM_NODES];
-    rng = new Random();
     
     new Thread() {
       public void run() {
@@ -104,8 +100,8 @@ public class PastRegrTest extends CommonAPITest {
    * Tests routing a Past request to a particular node.
    */
   protected void testRouteRequest() {
-    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
-    final PastImpl remote = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl local = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
+    final PastImpl remote = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
     final Id remoteId = remote.getLocalNodeHandle().getId();
     final PastContent file = new TestPastContent(remoteId);
 
@@ -179,8 +175,8 @@ public class PastRegrTest extends CommonAPITest {
     * Tests overwriting an exiting object with a new one
    */
   protected void testVersionControl() {
-    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
-    final PastImpl remote = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl local = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
+    final PastImpl remote = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
     final Id remoteId = remote.getLocalNodeHandle().getId();
     final PastContent oldFile = new VersionedTestPastContent(remoteId, 0);
     final PastContent newFile = new VersionedTestPastContent(remoteId, 1);
@@ -304,7 +300,7 @@ public class PastRegrTest extends CommonAPITest {
     * Tests the parameter checking in Past.
    *
   protected void testParameterChecks() {
-    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl local = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
     final Id localId = local.getLocalNodeHandle().getId();
     
     sectionStart("Parameter Checks Testing");
@@ -383,17 +379,17 @@ public class PastRegrTest extends CommonAPITest {
    * Tests the fetch function in Past.
    */
   protected void testFetch() {
-    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
-    final PastImpl remote1 = pasts[rng.nextInt(NUM_NODES)];
-    PastImpl tmp = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl local = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
+    final PastImpl remote1 = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
+    PastImpl tmp = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
 
     while (tmp == remote1) {
-      tmp = pasts[rng.nextInt(NUM_NODES)];
+      tmp = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
     }
 
     final PastImpl remote2 = tmp;
     
-    final Id id = pasts[rng.nextInt(NUM_NODES)].getLocalNodeHandle().getId();
+    final Id id = pasts[environment.getRandomSource().nextInt(NUM_NODES)].getLocalNodeHandle().getId();
     final PastContent file1 = new VersionedTestPastContent(id, 1);
     final PastContent file2 = new VersionedTestPastContent(id, 2);
 
@@ -489,8 +485,8 @@ public class PastRegrTest extends CommonAPITest {
    * Tests the lookup handles function in Past.
    */
   protected void testLookupHandles() {
-    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
-    final PastImpl remote = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl local = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
+    final PastImpl remote = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
     final Id remoteId = remote.getLocalNodeHandle().getId();
     final PastContent file = new TestPastContent(remoteId);
 
@@ -610,7 +606,7 @@ public class PastRegrTest extends CommonAPITest {
     * Tests the dynamic caching function in Past.
    */
   protected void testCaching() {
-    final PastImpl local = pasts[rng.nextInt(NUM_NODES)];
+    final PastImpl local = pasts[environment.getRandomSource().nextInt(NUM_NODES)];
     final Id id1 = generateId();
     final Id id2 = generateId();
     final PastContent file1 = new TestPastContent(id1);
@@ -719,7 +715,7 @@ public class PastRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    rng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     return FACTORY.buildId(data);
   }
                 

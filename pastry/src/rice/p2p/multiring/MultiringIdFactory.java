@@ -1,6 +1,7 @@
 
 package rice.p2p.multiring;
 
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 import java.util.*;
 
@@ -125,6 +126,10 @@ public class MultiringIdFactory implements IdFactory {
    * @return The built Id.
    */
   public rice.p2p.commonapi.Id buildRandomId(Random rng) {
+    return RingId.build(getRingId(), factory.buildRandomId(rng));
+  }
+
+  public rice.p2p.commonapi.Id buildRandomId(RandomSource rng) {
     return RingId.build(getRingId(), factory.buildRandomId(rng));
   }
 

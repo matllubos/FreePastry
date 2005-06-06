@@ -33,16 +33,17 @@ public class ClosestRegrTest {
   private NetworkSimulator simulator;
   private Vector pastryNodes;
   
-  Random random = new Random();
   int incorrect = 0;
   double sum = 0;
 
+  private Environment environment;
   /**
    * constructor
    */
   private ClosestRegrTest() throws IOException {
-    simulator = new SphereNetwork();
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, new Environment());
+    environment = new Environment();
+    simulator = new SphereNetwork(environment);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, environment);
     pastryNodes = new Vector();
   }
 
@@ -84,7 +85,7 @@ public class ClosestRegrTest {
   protected void test(int i, NodeHandle handle) {
     NodeId nodeId = handle.getNodeId();
     
-    PastryNode bootNode = (PastryNode) pastryNodes.elementAt(random.nextInt(i));
+    PastryNode bootNode = (PastryNode) pastryNodes.elementAt(environment.getRandomSource().nextInt(i));
     NodeHandle bootstrap = bootNode.getLocalHandle();
     
     NodeHandle closest = factory.getNearest(handle, bootstrap);

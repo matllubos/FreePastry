@@ -1,6 +1,7 @@
 
 package rice.pastry.commonapi;
 
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 
 import java.lang.Comparable;
@@ -71,6 +72,10 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public rice.p2p.commonapi.Id buildRandomId(Random rng) {
+    return rice.pastry.Id.makeRandomId(rng);
+  }
+
+  public rice.p2p.commonapi.Id buildRandomId(RandomSource rng) {
     return rice.pastry.Id.makeRandomId(rng);
   }
 

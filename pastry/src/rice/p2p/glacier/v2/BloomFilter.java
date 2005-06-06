@@ -2,7 +2,9 @@ package rice.p2p.glacier.v2;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Random;
+
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 
 public class BloomFilter implements Serializable {
   private byte bitfield[];
@@ -14,7 +16,7 @@ public class BloomFilter implements Serializable {
     this.hashParams = hashParams;
   }  
   
-  public BloomFilter(int length, int numHashes) {
+  public BloomFilter(int length, int numHashes, RandomSource rand) {
     bitfield = new byte[(length+7)/8];
     Arrays.fill(bitfield, (byte)0);
 
@@ -38,7 +40,6 @@ public class BloomFilter implements Serializable {
     }
     
     hashParams = new int[numHashes];
-    Random rand = new Random();
     for (int i=0; i<numHashes; i++) {
       int index = rand.nextInt(numPrimeCandidates);
       while (!isPrimeH[index])
@@ -123,7 +124,7 @@ System.out.println(); */
   }
 
   public static void main(String arg[]) {
-    BloomFilter b = new BloomFilter(20, 4);
+    BloomFilter b = new BloomFilter(20, 4, new SimpleRandomSource());
     
     byte[] a = new byte[1];
     a[0] = (byte)231;

@@ -10,6 +10,7 @@ import java.util.zip.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.pastry.*;
 import rice.p2p.util.*;
 
@@ -121,7 +122,7 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
     
     KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(st.sval.getBytes())));
           
-    generateCertificate(new RandomNodeIdFactory().generateNodeId(), new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME), caPair.getPrivate());
+    generateCertificate(new RandomNodeIdFactory(new SimpleRandomSource()).generateNodeId(), new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME), caPair.getPrivate());
   }
   
   public static String getArg(String[] args, String argType) {

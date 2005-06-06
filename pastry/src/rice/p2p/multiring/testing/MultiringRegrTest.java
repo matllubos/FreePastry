@@ -6,6 +6,7 @@ import java.net.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.NodeHandle;
@@ -47,10 +48,6 @@ public class MultiringRegrTest {
   // the list of ringIds for organizations
   protected Id[] ringIds;
   
-  // the random id generatoe
-  protected Random rng;
-
-
   // ----- PASTRY SPECIFIC VARIABLES -----
 
   // the factory for creating pastry nodes
@@ -132,6 +129,7 @@ public class MultiringRegrTest {
     }
   }
   
+  public Environment environment;
   
   // ----- EXTERNALLY AVAILABLE METHODS -----
   
@@ -140,16 +138,17 @@ public class MultiringRegrTest {
    * factories in preparation for node creation.
    */
   public MultiringRegrTest(Environment env) throws IOException {
+    this.environment = env;
     if (SIMULATOR == SIMULATOR_SPHERE) {
-      simulator = new SphereNetwork();
+      simulator = new SphereNetwork(env);
     } else {
       simulator = new EuclideanNetwork(env);
     }
     
     if (PROTOCOL == PROTOCOL_DIRECT) {
-      factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, env);
+      factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, env);
     } else {
-      factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(),
+      factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(environment.getRandomSource()),
                                                  PROTOCOL,
                                                  PORT);
     }
@@ -157,7 +156,6 @@ public class MultiringRegrTest {
     NUM_GATEWAY_NODES = NUM_GLOBAL_NODES / NUM_ORGANIZATIONS;
     NUM_ORGANIZATIONAL_NODES = NUM_GATEWAY_NODES + NUM_INTERNAL_NODES;
     
-    rng = new Random();
     idFactory = new PastryIdFactory();
     globalRingId = idFactory.buildId(new byte[20]);
     ringIds = new Id[NUM_ORGANIZATIONS];
@@ -172,7 +170,7 @@ public class MultiringRegrTest {
    */
   public void createNodes() {
     for (int i=0; i<NUM_GLOBAL_NODES; i++) {
-      globalNodes[i] = createNode(globalRingId, globalNodes[0]);
+      globalNodes[i] = createNode(globalRingId, globalNodes[0], environment);
     
       simulate();
     
@@ -186,7 +184,7 @@ public class MultiringRegrTest {
       ringIds[i] = generateId(16 * (i+1));
       
       for (int j=0; j<NUM_GATEWAY_NODES; j++) {
-        organizationalNodes[i][j] = createNode(globalNodes[i*NUM_GATEWAY_NODES + j], ringIds[i], organizationalNodes[i][0]);
+        organizationalNodes[i][j] = createNode(globalNodes[i*NUM_GATEWAY_NODES + j], ringIds[i], organizationalNodes[i][0], environment);
         simulate();
         
         organizationalApps[i][j] = new MultiringTestApp(organizationalNodes[i][j]);
@@ -196,7 +194,7 @@ public class MultiringRegrTest {
       }
       
       for (int j=NUM_GATEWAY_NODES; j< NUM_ORGANIZATIONAL_NODES; j++) {
-        organizationalNodes[i][j] = createNode(ringIds[i], organizationalNodes[i][0]);
+        organizationalNodes[i][j] = createNode(ringIds[i], organizationalNodes[i][0], environment);
         simulate();
         
         organizationalApps[i][j] = new MultiringTestApp(organizationalNodes[i][j]);
@@ -240,11 +238,11 @@ public class MultiringRegrTest {
    * @param num The number of creation order
    * @return The created node
    */
-  protected MultiringNode createNode(Id ringId, MultiringNode bootstrap) {
+  protected MultiringNode createNode(Id ringId, MultiringNode bootstrap, Environment env) {
     if (bootstrap == null) {
-      return new MultiringNode(ringId, factory.newNode(null));
+      return new MultiringNode(ringId, factory.newNode(null), env);
     } else {
-      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())));
+      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())), env);
     }
   }
   
@@ -255,14 +253,14 @@ public class MultiringRegrTest {
    * @param num The number of creation order
    * @return The created node
    */
-  protected MultiringNode createNode(MultiringNode existing, Id ringId, MultiringNode bootstrap) {
+  protected MultiringNode createNode(MultiringNode existing, Id ringId, MultiringNode bootstrap, Environment env) {
     if (existing == null)
       throw new IllegalArgumentException("EXISTING WAS NULL! " + ringId + " " + bootstrap);
     
     if (bootstrap == null) {
-      return new MultiringNode(ringId, factory.newNode(null, (NodeId) existing.getNodeId()), existing);
+      return new MultiringNode(ringId, factory.newNode(null, (NodeId) existing.getNodeId()), existing, env);
     } else {
-      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode()), (NodeId) existing.getNodeId()), existing);
+      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode()), (NodeId) existing.getNodeId()), existing, env);
     }
   }
 
@@ -307,7 +305,7 @@ public class MultiringRegrTest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    rng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     return idFactory.buildId(data);
   }  
   
@@ -331,6 +329,7 @@ public class MultiringRegrTest {
    * nodes have been created and are ready.
    */
   protected void runTest() {
+    RandomSource rng = environment.getRandomSource();
     for (int i=0; i<20; i++) {
       int si = rng.nextInt(NUM_ORGANIZATIONS);
       int sj = rng.nextInt(NUM_ORGANIZATIONAL_NODES);

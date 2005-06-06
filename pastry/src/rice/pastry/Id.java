@@ -6,6 +6,8 @@ import java.lang.Comparable;
 import java.lang.ref.*;
 import java.util.*;
 
+import rice.environment.random.RandomSource;
+
 /**
  * Represents a Pastry identifier for a node, object or key. A single identifier and the bit length
  * for Ids is stored in this class. Ids are stored little endian.  NOTE: Ids are immutable, and are
@@ -83,6 +85,12 @@ public class Id implements rice.p2p.commonapi.Id {
    * @return a random Id
    */
   public static Id makeRandomId(Random rng) {
+    byte material[] = new byte[IdBitLength / 8];
+    rng.nextBytes(material);
+    return build(material);
+  }
+  
+  public static Id makeRandomId(RandomSource rng) {
     byte material[] = new byte[IdBitLength / 8];
     rng.nextBytes(material);
     return build(material);

@@ -3,7 +3,6 @@ package rice.pastry.standard;
 
 import rice.pastry.*;
 
-import java.util.Random;
 import java.net.*;
 import java.security.*;
 
@@ -20,7 +19,7 @@ public class IPNodeIdFactory implements NodeIdFactory
     private static int nextInstance = 0;
     private InetAddress localIP;
     private int port;
-    //private Random rng;
+    //private Randon rng;
 
     /**
      * Constructor.
@@ -38,7 +37,7 @@ public class IPNodeIdFactory implements NodeIdFactory
 	    System.out.println("ALERT: IPNodeIdFactory cannot determine local IP address: " + e);
 	}
 
-//	rng = new Random(PastrySeed.getSeed());
+//	rng = new Randon(PastrySeed.getSeed());
     }
 
     /**

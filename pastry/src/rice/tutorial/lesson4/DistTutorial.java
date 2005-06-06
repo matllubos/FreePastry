@@ -34,13 +34,13 @@ public class DistTutorial {
    * @param bootaddress the IP:port of the node to boot from
    * @param numNodes the number of nodes to create in this JVM
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes) throws Exception {
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env, int numNodes) throws Exception {
     
     // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory();
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env.getRandomSource());
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, new Environment());
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
@@ -121,6 +121,9 @@ public class DistTutorial {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
    */
   public static void main(String[] args) throws Exception {
+    // Loads pastry settings
+    Environment env = new Environment();
+    
     try {
       // the port to use locally
       int bindport = Integer.parseInt(args[0]);
@@ -134,7 +137,7 @@ public class DistTutorial {
       int numNodes = Integer.parseInt(args[3]);    
       
       // launch our node!
-      DistTutorial dt = new DistTutorial(bindport, bootaddress, numNodes);
+      DistTutorial dt = new DistTutorial(bindport, bootaddress, env, numNodes);
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 

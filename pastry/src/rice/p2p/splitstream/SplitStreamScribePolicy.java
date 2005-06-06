@@ -6,7 +6,6 @@ import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.messaging.*;
 
-import rice.pastry.PastrySeed;
 import rice.pastry.routing.RoutingTable;
 
 /**
@@ -41,11 +40,6 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    */
   protected Hashtable policy;
 
-  /**
-   * A radom number used to introduce randomness while adding children.
-   */
-  Random rng = new Random(PastrySeed.getSeed());
-    
   /**
    * Constructor which takes a splitStream object
    *
@@ -212,13 +206,13 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 
       /* introduce randomness to child order */
       while (good.size() > 0) {
-        index = rng.nextInt(good.size());
+        index = scribe.getEnvironment().getRandomSource().nextInt(good.size());
         message.addFirst((NodeHandle)(good.elementAt(index)));
         good.remove((NodeHandle)(good.elementAt(index)));
       }
 
       while (bad.size() > 0) {
-        index = rng.nextInt(bad.size());
+        index = scribe.getEnvironment().getRandomSource().nextInt(bad.size());
         message.addLast((NodeHandle)(bad.elementAt(index)));
         bad.remove((NodeHandle)(bad.elementAt(index)));
       }
@@ -343,12 +337,12 @@ public class SplitStreamScribePolicy implements ScribePolicy {
 
     /* hopefully, there is a candidate stripe */
     if(candidateStripes.size() > 0){
-      victimStripeId = (Id)candidateStripes.elementAt(rng.nextInt(candidateStripes.size()));
+      victimStripeId = (Id)candidateStripes.elementAt(scribe.getEnvironment().getRandomSource().nextInt(candidateStripes.size()));
 
       NodeHandle[] children;
       children = this.scribe.getChildren(new Topic(victimStripeId));
 
-      NodeHandle child = children[rng.nextInt(children.length)];
+      NodeHandle child = children[scribe.getEnvironment().getRandomSource().nextInt(children.length)];
       Vector result = new Vector();
 
       result.addElement(child);
@@ -393,7 +387,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     if(victims.size() == 0)
       return newChild;
     else
-      return (NodeHandle) victims.elementAt(rng.nextInt(victims.size()));
+      return (NodeHandle) victims.elementAt(scribe.getEnvironment().getRandomSource().nextInt(victims.size()));
   }
 
   /**

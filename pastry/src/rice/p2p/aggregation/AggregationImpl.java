@@ -14,7 +14,6 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.TreeSet;
 import java.util.Vector;
 import java.util.Arrays;
@@ -51,7 +50,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected final String instance;
   protected final IdFactory factory;
   protected final String debugID;
-  protected final Random random;
   protected final Node node;
 
   private final char tiFlush = 1;
@@ -127,7 +125,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     this.objectStore = objectStore;
     this.node = node;
     this.timers = new Hashtable();
-    this.random = new Random();
     this.aggregateList = new AggregateList(configFileName, getLocalNodeHandle().getId().toString(), factory, aggregateLogEnabled, environment);
     this.stats = aggregateList.getStatistics(statsGranularity, statsRange, nominalReferenceCount);
     this.policy = policy;
@@ -157,7 +154,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private long jitterTerm(long basis) {
-    return (long)((1-jitterRange)*basis) + random.nextInt((int)(2*jitterRange*basis));
+    return (long)((1-jitterRange)*basis) + environment.getRandomSource().nextInt((int)(2*jitterRange*basis));
   }
 
   private String getLogPrefix() {
@@ -239,7 +236,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       String result = "";
       
       for (int i=0; i<numObjects; i++) {
-        Id randomID = factory.buildRandomId(new Random());
+        Id randomID = factory.buildRandomId(environment.getRandomSource());
         result = result + randomID.toStringFull() + "\n";
         insert(
           new DebugContent(randomID, false, 0, new byte[] {}),
@@ -496,15 +493,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     if (cmd.startsWith("monitor remove") && monitorEnabled) {
       String[] args = cmd.substring(15).split(" ");
-      if (args.length == 1) {
-        Random rand = new Random();
+      if (args.length == 1) {        
         int howMany = Integer.parseInt(args[0]);
         
         if (howMany > monitorIDs.size())
           howMany = monitorIDs.size();
         
         for (int i=0; i<howMany; i++)
-          monitorIDs.removeElementAt(rand.nextInt(monitorIDs.size()));
+          monitorIDs.removeElementAt(environment.getRandomSource().nextInt(monitorIDs.size()));
           
         return "Removed "+howMany+" elements; "+monitorIDs.size()+" elements left";
       } else return "Syntax: monitor remove <howMany>";
@@ -610,13 +606,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         final int smallSize = Integer.parseInt(args[3]);
         final int largeSize = Integer.parseInt(args[4]);
         final long expiration = environment.getTimeSource().currentTimeMillis() + Long.parseLong(args[5]);
-        final Random rand = new Random();
         
         Continuation c = new Continuation() {
           int remainingTotal = numFiles;
           public void receiveResult(Object o) {
             if (remainingTotal > 0) {
-              final int burstSize = Math.min((int)((avgBurstSize*0.3) + rand.nextInt((int)(1.4*avgBurstSize))), remainingTotal);
+              final int burstSize = Math.min((int)((avgBurstSize*0.3) + environment.getRandomSource().nextInt((int)(1.4*avgBurstSize))), remainingTotal);
               final Continuation outerContinuation = this;
               remainingTotal -= burstSize;
               log(3, "Inserting burst of size "+burstSize+", remaining objects: "+remainingTotal);
@@ -625,9 +620,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                 public void receiveResult(Object o) {
                   if (remainingHere > 0) {
                     log(3, "Continuing burst insert, "+remainingHere+" remaining");
-                    int thisAvgSize = ((0.001*rand.nextInt(1000)) < sizeSkew) ? smallSize : largeSize;
-                    int thisSize = (int)(0.3*thisAvgSize + rand.nextInt((int)(1.4*thisAvgSize)));
-                    Id randomID = factory.buildRandomId(rand);
+                    int thisAvgSize = ((0.001*environment.getRandomSource().nextInt(1000)) < sizeSkew) ? smallSize : largeSize;
+                    int thisSize = (int)(0.3*thisAvgSize + environment.getRandomSource().nextInt((int)(1.4*thisAvgSize)));
+                    Id randomID = factory.buildRandomId(environment.getRandomSource());
                     remainingHere --;
                     monitorIDs.add(randomID);
                     insert(new DebugContent(randomID, false, 0, new byte[thisSize]), expiration, this);
@@ -1134,12 +1129,11 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     log(3, candidateList.size() + " candidate(s) for consolidation");
     
     final Vector componentList = new Vector();
-    Random rand = new Random();
     int objectsSoFar = 0;
     int bytesSoFar = 0;
     
     while (!candidateList.isEmpty()) {
-      AggregateDescriptor adc = (AggregateDescriptor) candidateList.remove(rand.nextInt(candidateList.size()));
+      AggregateDescriptor adc = (AggregateDescriptor) candidateList.remove(environment.getRandomSource().nextInt(candidateList.size()));
       componentList.add(adc);
       log(3, "Picked candidate "+adc.key.toStringFull()+" ("+adc.objectsAliveAt(now)+"/"+adc.objects.length+" objects, "+adc.bytesAliveAt(now)+" bytes alive)");
       objectsSoFar += adc.objectsAliveAt(now);

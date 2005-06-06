@@ -36,14 +36,6 @@ public class ScribeRegrTest extends CommonAPITest {
    */
   protected TestScribePolicy policies[];
 
-  // a random number generator
-  /**
-   * DESCRIBE THE FIELD
-   */
-  protected Random rng;
-
-    protected Random generateIdRng;
-
   /**
    * Constructor which sets up all local variables
    */
@@ -51,8 +43,6 @@ public class ScribeRegrTest extends CommonAPITest {
     super(env);
     scribes = new ScribeImpl[NUM_NODES];
     policies = new TestScribePolicy[NUM_NODES];
-    rng = new Random();
-    generateIdRng = new Random();
   }
 
 
@@ -75,8 +65,8 @@ public class ScribeRegrTest extends CommonAPITest {
    * @param num The number of this node
    */
   protected void processNode(int num, Node node) {
-    scribes[num] = new ScribeImpl(node, INSTANCE);
-    policies[num] = new TestScribePolicy(scribes[num]);
+    scribes[num] = new ScribeImpl(node, INSTANCE, environment);
+    policies[num] = new TestScribePolicy(scribes[num], environment);
     scribes[num].setPolicy(policies[num]);
   }
 
@@ -134,7 +124,7 @@ public class ScribeRegrTest extends CommonAPITest {
       stepDone(SUCCESS);
 
     stepStart(name + " Publish");
-    ScribeImpl local = scribes[rng.nextInt(NUM_NODES/SKIP)];
+    ScribeImpl local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
 
     for (int i = 0; i < NUM_MESSAGES; i++) {
       local.publish(topic, new TestScribeContent(topic, i));
@@ -153,7 +143,7 @@ public class ScribeRegrTest extends CommonAPITest {
       stepDone(SUCCESS);
 
     stepStart(name + " Anycast - No Accept");
-    local = scribes[rng.nextInt(NUM_NODES)];
+    local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
     local.anycast(topic, new TestScribeContent(topic, 59));
     simulate();
@@ -170,9 +160,9 @@ public class ScribeRegrTest extends CommonAPITest {
       stepDone(SUCCESS);
 
     stepStart(name + " Anycast - 1 Accept");
-    TestScribeClient client = clients[rng.nextInt(NUM_NODES/SKIP)];
+    TestScribeClient client = clients[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
     client.acceptAnycast(true);
-    local = scribes[rng.nextInt(NUM_NODES)];
+    local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
     local.anycast(topic, new TestScribeContent(topic, 59));
     simulate();
@@ -200,7 +190,7 @@ public class ScribeRegrTest extends CommonAPITest {
       clients[i].acceptAnycast(true);
     }
 
-    local = scribes[rng.nextInt(NUM_NODES/SKIP)];
+    local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
 
     local.anycast(topic, new TestScribeContent(topic, 59));
     simulate();
@@ -221,7 +211,7 @@ public class ScribeRegrTest extends CommonAPITest {
       simulate();
     }
 
-    local = scribes[rng.nextInt(NUM_NODES)];
+    local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
     local.publish(topic, new TestScribeContent(topic, 100));
     simulate();
 
@@ -320,7 +310,7 @@ public class ScribeRegrTest extends CommonAPITest {
       scribe.removeChild(topic, child);
       simulate();
 
-      ScribeImpl local = scribes[rng.nextInt(NUM_NODES)];
+      ScribeImpl local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
       for (int i = 0; i < NUM_MESSAGES; i++) {
         local.publish(topic, new TestScribeContent(topic, i));
@@ -372,10 +362,10 @@ public class ScribeRegrTest extends CommonAPITest {
     stepDone(SUCCESS);
     
     stepStart("Subscribe Attempt");
-    int i = rng.nextInt(NUM_NODES);
+    int i = environment.getRandomSource().nextInt(NUM_NODES);
 
     while (scribes[i].isRoot(topic))
-      i = rng.nextInt(NUM_NODES);
+      i = environment.getRandomSource().nextInt(NUM_NODES);
     
     client = new TestScribeClient(scribes[i], topic, i);
     scribes[i].subscribe(topic, client);
@@ -474,7 +464,7 @@ public class ScribeRegrTest extends CommonAPITest {
     stepDone(SUCCESS);
 
     stepStart("Tree Recovery");
-    ScribeImpl local = scribes[rng.nextInt(NUM_NODES/2) + NUM_NODES/2];
+    ScribeImpl local = scribes[environment.getRandomSource().nextInt(NUM_NODES/2) + NUM_NODES/2];
 
     for (int i = 0; i < NUM_MESSAGES; i++) {
       local.publish(topic, new TestScribeContent(topic, i));
@@ -503,7 +493,7 @@ public class ScribeRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    generateIdRng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     return FACTORY.buildId(data);
   }
 
@@ -775,7 +765,8 @@ public class ScribeRegrTest extends CommonAPITest {
 
     protected boolean neverAllowSubscribe;
     
-    public TestScribePolicy(Scribe scribe) {
+    public TestScribePolicy(Scribe scribe, Environment env) {
+      super(env);
       this.scribe = scribe;
       allowSubscribe = true;
       neverAllowSubscribe = false;

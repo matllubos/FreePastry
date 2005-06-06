@@ -3,6 +3,7 @@ package rice.p2p.scribe;
 
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.messaging.*;
 
@@ -67,10 +68,10 @@ public interface ScribePolicy {
    * @author amislove
    */
   public static class DefaultScribePolicy implements ScribePolicy {
-    
-    // random number generator for directing anycasts
-    protected Random random = new Random();
-
+    protected Environment environment;
+    public DefaultScribePolicy(Environment env) {
+      environment = env;
+    }
     /**
      * This method always return true;
      *
@@ -97,8 +98,8 @@ public interface ScribePolicy {
       
       // now randomize the children list
       for (int i=0; i<children.length; i++) {
-        int j = random.nextInt(children.length);
-        int k = random.nextInt(children.length);
+        int j = environment.getRandomSource().nextInt(children.length);
+        int k = environment.getRandomSource().nextInt(children.length);
         NodeHandle tmp = children[j];
         children[j] = children[k];
         children[k] = tmp;
@@ -148,7 +149,8 @@ public interface ScribePolicy {
      *
      * @param max The maximum number of children
      */
-    public LimitedScribePolicy(int max) {
+    public LimitedScribePolicy(int max, Environment env) {
+      super(env);
       this.maxChildren = max;
     }
 

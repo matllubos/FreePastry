@@ -31,8 +31,6 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
   
   protected IdFactory factory;
   
-  protected Random rng;
-  
   /**
    * Constructor for DeliveryPastImpl
    *
@@ -47,7 +45,6 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     this.redundancy = redundancy;
     this.delivered = delivered;
     this.factory = node.getIdFactory();
-    this.rng = new Random();
   }
   
   /**

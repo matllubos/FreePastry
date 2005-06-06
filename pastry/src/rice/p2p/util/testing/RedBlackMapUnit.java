@@ -1,5 +1,7 @@
 package rice.p2p.util.testing;
 
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
 import rice.p2p.past.gc.*;
@@ -13,7 +15,7 @@ public class RedBlackMapUnit {
     int n = Integer.parseInt(args[0]);
     int t = Integer.parseInt(args[0]);
     
-    Random random = new Random();
+    RandomSource random = new SimpleRandomSource();
     PastryIdFactory pFactory = new PastryIdFactory();
     IdFactory factory = pFactory; //new MultiringIdFactory(pFactory.buildRandomId(random), pFactory);
     
@@ -85,7 +87,7 @@ public class RedBlackMapUnit {
     System.out.println();
   }
   
-  protected static void testSortedMap(int iterations, SortedMap map, IdFactory factory, Random random, int depth) {   
+  protected static void testSortedMap(int iterations, SortedMap map, IdFactory factory, RandomSource random, int depth) {   
     Id[] sorted = (Id[]) map.keySet().toArray(new Id[0]);
     Arrays.sort(sorted);
 

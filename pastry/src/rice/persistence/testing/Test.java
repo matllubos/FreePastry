@@ -12,6 +12,7 @@ package rice.persistence.testing;
 import java.util.*;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.persistence.*;
 
 /**
@@ -27,6 +28,12 @@ public abstract class Test {
 
   public abstract void start();
 
+  protected Environment environment;
+  
+  public Test(Environment env) {
+    environment = env; 
+  }
+  
   protected void sectionStart(String name) {
     System.out.println(name);
   }

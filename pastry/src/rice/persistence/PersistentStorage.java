@@ -139,7 +139,6 @@ public class PersistentStorage implements Storage {
 
   private long storageSize;         // The amount of storage allowed to be used 
   private long usedSize;            // The amount of storage currently in use
-  private Random rng;               // random number generator
   protected static final boolean verbose = true;
 
   Environment environment;
@@ -186,7 +185,6 @@ public class PersistentStorage implements Storage {
     this.rootDir = rootDir;
     this.storageSize = size; 
     this.index = index;
-    this.rng = new Random();
     this.directories = new HashMap();
     this.prefixes = new HashMap();
     statsLastWritten = environment.getTimeSource().currentTimeMillis();
@@ -236,7 +234,7 @@ public class PersistentStorage implements Storage {
             }
           });
         }
-      }, (new Random(name.hashCode())).nextInt(METADATA_SYNC_TIME), METADATA_SYNC_TIME);
+      }, environment.getRandomSource().nextInt(METADATA_SYNC_TIME), METADATA_SYNC_TIME);
     }
   }
   
@@ -1306,10 +1304,10 @@ public class PersistentStorage implements Storage {
    */
   private File makeTemporaryFile(Id id) throws IOException {    
     File directory = getDirectoryForId(id);
-    File file = new File(directory, id.toStringFull().substring(getPrefix(directory).length()) + "." + rng.nextInt() % 100);
+    File file = new File(directory, id.toStringFull().substring(getPrefix(directory).length()) + "." + environment.getRandomSource().nextInt() % 100);
     
     while (file.exists()) 
-      file = new File(directory, id.toStringFull().substring(getPrefix(directory).length()) + "." + rng.nextInt() % 100);
+      file = new File(directory, id.toStringFull().substring(getPrefix(directory).length()) + "." + environment.getRandomSource().nextInt() % 100);
     
     return file;
   }

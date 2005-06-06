@@ -1,5 +1,7 @@
 package rice.p2p.util.testing;
 
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.util.*;
 import java.io.*;
 import java.util.*;
@@ -15,7 +17,7 @@ public class StringCacheUnit {
     System.out.println("[ DONE ]");
     
     System.out.print("    Generating random number generator\t\t\t");    
-    Random rng = new Random();
+    RandomSource rng = new SimpleRandomSource();
     System.out.println("[ DONE ]");    
     
     System.out.print("    Generating test strings\t\t\t\t");    
@@ -86,7 +88,7 @@ public class StringCacheUnit {
     System.out.println("-------------------------------------------------------------");
   }
   
-  public static char[] randomize(Random rng, char[] text) {
+  public static char[] randomize(RandomSource rng, char[] text) {
     byte[] data = new byte[text.length];
     rng.nextBytes(data);
     

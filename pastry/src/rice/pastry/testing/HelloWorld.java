@@ -26,8 +26,6 @@ public class HelloWorld {
 
   private Vector helloClients;
 
-  private Random rng;
-
   private static int numnodes = 3;
 
   private static int nummsgs = 3; // total messages
@@ -36,16 +34,17 @@ public class HelloWorld {
 
   private static boolean simultaneous_msgs = false;
 
+  Environment environment;
   /**
    * Constructor
    */
   public HelloWorld(Environment env) {
+    environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator, env);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, environment);
 
     pastryNodes = new Vector();
     helloClients = new Vector();
-    rng = new Random(PastrySeed.getSeed());
   }
 
   /**
@@ -95,9 +94,9 @@ public class HelloWorld {
    */
   private void sendRandomMessage() {
     int n = helloClients.size();
-    int client = rng.nextInt(n);
+    int client = environment.getRandomSource().nextInt(n);
     HelloWorldApp app = (HelloWorldApp) helloClients.get(client);
-    app.sendRndMsg(rng);
+    app.sendRndMsg(environment.getRandomSource());
   }
 
   /**

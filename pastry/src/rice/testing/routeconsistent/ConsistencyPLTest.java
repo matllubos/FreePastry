@@ -129,7 +129,7 @@ public class ConsistencyPLTest implements Observer {
 
     
     // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory();
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env.getRandomSource());
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
@@ -198,13 +198,12 @@ public class ConsistencyPLTest implements Observer {
     // this is to cause different connections to open
     // TODO: Implement
     
-    Random rng = new Random();
     while(true) {
       System.out.println("LEAFSET2:"+env.getTimeSource().currentTimeMillis()+":"+ls);
       Thread.sleep(1*60*1000);
       if (artificialChurn) {
         if (!riceNode) {
-          if (rng.nextInt(60) == 0) {
+          if (env.getRandomSource().nextInt(60) == 0) {
             System.out.println("Killing self to cause churn. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
             System.exit(25);
           }

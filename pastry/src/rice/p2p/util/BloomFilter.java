@@ -5,6 +5,9 @@ import java.io.*;
 import java.math.*;
 import java.util.*;
 
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
+
 /**
  * @(#) BloomFilter.java
  *
@@ -57,12 +60,13 @@ public class BloomFilter implements Serializable {
    * @param length The length of the underlying bit set
    */
   public BloomFilter(int num, int length) {
+    RandomSource rand = new SimpleRandomSource();
     this.length = length;
     this.set = new BitSet(length);
     this.parameters = new int[num];
     
     for (int i=0; i<parameters.length; i++)
-      this.parameters[i] = MathUtils.randomInt();
+      this.parameters[i] = MathUtils.randomInt(rand);
   }
   
   /**

@@ -30,7 +30,7 @@ public class PersistentStorageTest extends MemoryStorageTest {
    * Builds a MemoryStorageTest
    */
   public PersistentStorageTest(boolean store, Environment environment) throws IOException {
-    super(store);
+    super(store, environment);
     storage = new PersistentStorage(FACTORY, "PersistentStorageTest" , ".", 20000000, environment);
   }
 

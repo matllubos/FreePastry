@@ -4,6 +4,7 @@ package rice.p2p.splitstream;
 import java.io.*;
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 
@@ -41,8 +42,8 @@ public class SplitStreamImpl implements SplitStream {
    * @param node the pastry node that we will use
    * @param instance The instance name for this splitstream
    */
-  public SplitStreamImpl(Node node, String instance) {
-    this.scribe = new ScribeImpl(node, instance);
+  public SplitStreamImpl(Node node, String instance, Environment env) {
+    this.scribe = new ScribeImpl(node, instance, env);
     this.node = node;
     this.channels = new Hashtable();
     scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));
@@ -106,6 +107,10 @@ public class SplitStreamImpl implements SplitStream {
    */
   public SplitStreamScribePolicy getPolicy(){
     return (SplitStreamScribePolicy)(scribe.getPolicy());
+  }
+  
+  public Environment getEnvironment() {
+    return scribe.getEnvironment();
   }
 }
 

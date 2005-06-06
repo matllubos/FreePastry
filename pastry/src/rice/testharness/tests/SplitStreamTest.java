@@ -33,9 +33,7 @@ public class SplitStreamTest extends Test {
 
   private CancellableTask sendDataTask = null;
 
-  //    private Scribe scribe;
-
-  private SplitStreamImpl splitstream;
+  private SplitStream splitstream;
 
   private SplitStreamTestClient ssclient;
 
@@ -77,7 +75,7 @@ public class SplitStreamTest extends Test {
   public SplitStreamTest(PrintStream out, PastryNode localNode,
       TestHarness harness) {
     super(out, localNode, harness, "SPLITstreaM");
-    splitstream = new SplitStreamImpl(localNode, INSTANCE);
+    splitstream = new SplitStreamImpl(localNode, INSTANCE, localNode.getEnvironment());
     ssclient = new SplitStreamTestClient(localNode, splitstream);
     CHANNEL_ID = new ChannelId(generateId());
     ssclient.attachChannel(CHANNEL_ID);
@@ -119,7 +117,8 @@ public class SplitStreamTest extends Test {
   private Id generateId() {
     byte[] data = new byte[20];
     //new Random(PastrySeed.getSeed()).nextBytes(data);
-    new Random(100).nextBytes(data);
+//    new Randon(100).nextBytes(data);
+    splitstream.getEnvironment().getRandomSource().nextBytes(data);
     return rice.pastry.Id.build(data);
   }
 

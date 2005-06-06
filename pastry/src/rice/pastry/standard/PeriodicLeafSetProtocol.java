@@ -2,7 +2,6 @@
 package rice.pastry.standard;
 
 import java.util.Hashtable;
-import java.util.Random;
 
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeSet;
@@ -34,7 +33,6 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 	protected PastrySecurityManager security;
 	protected LeafSet leafSet;
 	protected RoutingTable routeTable;
-  protected Random random;
 
 	private Address address;
 
@@ -60,7 +58,6 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 		this.security = sm;
 		this.leafSet = ls;
 		this.routeTable = rt;
-    this.random = new Random();
     this.lastTimeReceivedBLS = new Hashtable();
 
     // Removed after meeting on 5/5/2005  Don't know if this is always the appropriate policy.
@@ -128,11 +125,11 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
       NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
       
       if (set.size() > 1) {
-        NodeHandle handle = set.get(random.nextInt(set.size() - 1) + 1);
+        NodeHandle handle = set.get(localNode.getEnvironment().getRandomSource().nextInt(set.size() - 1) + 1);
         handle.receiveMessage(new RequestLeafSet(localHandle));
         handle.receiveMessage(new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update));
         
-        NodeHandle check = set.get(random.nextInt(set.size() - 1) + 1);
+        NodeHandle check = set.get(localNode.getEnvironment().getRandomSource().nextInt(set.size() - 1) + 1);
         check.checkLiveness();
       }
     } else if (msg instanceof InitiatePingNeighbor) {

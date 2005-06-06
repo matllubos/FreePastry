@@ -4,6 +4,8 @@ import java.io.*;
 import java.math.*;
 import java.util.*;
 
+import rice.environment.random.RandomSource;
+
 /**
  * This class contains a large number of static methods for performing
  * math operations.
@@ -18,11 +20,6 @@ public class MathUtils {
    */
   public final static char[] HEX_ARRAY = new char[] {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
   
-  /**
-   * The random number generate for generating random bytes
-   */
-  private static Random random = new Random();
-
   /**
    * Make the constructor private so no MathUtils is ever created.
    */
@@ -62,7 +59,7 @@ public class MathUtils {
    *
    * @param len The number of random bytes to generate
    */
-  public static byte[] randomBytes(int len) {
+  public static byte[] randomBytes(int len, RandomSource random) {
     byte[] result = new byte[len];
     random.nextBytes(result);
     
@@ -74,7 +71,7 @@ public class MathUtils {
    *
    * @param len The number of random bytes to generate
    */
-  public static int randomInt() {
+  public static int randomInt(RandomSource random) {
     return random.nextInt();
   }
   

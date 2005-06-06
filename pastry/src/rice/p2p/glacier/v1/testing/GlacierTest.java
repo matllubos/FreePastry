@@ -40,8 +40,6 @@ public class GlacierTest {
 
   private Vector glaciers;
 
-  private Random rng;
-
   private static int numnodes = 20;
 
   private static int latecomers = 10;
@@ -54,17 +52,19 @@ public class GlacierTest {
 
   private static boolean simultaneous_joins = false;
 
+  private Environment environment;
+  
   /**
    * Constructor
    */
   public GlacierTest(Environment env) {
+    environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator,
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator,
         env);
 
     pastryNodes = new Vector();
     glaciers = new Vector();
-    rng = new Random(PastrySeed.getSeed());
   }
 
   /**
@@ -130,12 +130,12 @@ public class GlacierTest {
 
   private Id generateId() {
     byte[] data = new byte[20];
-    rng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     return Id.build(data);
   }
 
   private void randomInsert() {
-    final GlacierImpl glac = (GlacierImpl) glaciers.get(rng.nextInt(glaciers
+    final GlacierImpl glac = (GlacierImpl) glaciers.get(environment.getRandomSource().nextInt(glaciers
         .size()));
     final Id fileId = generateId();
     TestContent file = new TestContent(fileId);

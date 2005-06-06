@@ -212,7 +212,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.announce = announce;
     this.previousAddress = previousAddress;
     
-    this.scribe = new ScribeImpl(node, instance);
+    this.scribe = new ScribeImpl(node, instance, environment);
     this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory(), timeoutInterval, env);
     this.deliveryBuffer = new Vector();
 
@@ -230,9 +230,9 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.setLevel(Level.FINEST);
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
     
-    endpoint.scheduleMessage(new SynchronizeMessage(), SYNCHRONIZE_WAIT + new Random().nextInt((int) synchronizeInterval), synchronizeInterval);
-    endpoint.scheduleMessage(new RefreshMessage(), new Random().nextInt((int) refreshInterval), refreshInterval);
-    endpoint.scheduleMessage(new BackupMessage(), new Random().nextInt((int) BACKUP_INTERVAL), BACKUP_INTERVAL);
+    endpoint.scheduleMessage(new SynchronizeMessage(), SYNCHRONIZE_WAIT + environment.getRandomSource().nextInt((int) synchronizeInterval), synchronizeInterval);
+    endpoint.scheduleMessage(new RefreshMessage(), environment.getRandomSource().nextInt((int) refreshInterval), refreshInterval);
+    endpoint.scheduleMessage(new BackupMessage(), environment.getRandomSource().nextInt((int) BACKUP_INTERVAL), BACKUP_INTERVAL);
     
     logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
   }

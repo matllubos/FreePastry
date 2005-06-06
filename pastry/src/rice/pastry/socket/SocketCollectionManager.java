@@ -92,9 +92,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // whether or not we've resigned
   private boolean resigned;
   
-  // the RNG
-  private Random random;
-
   /**
    * Constructs a new SocketManager.
    *
@@ -112,7 +109,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     this.sockets = new Hashtable();
     this.sourceRouteQueue = new LinkedList();
     this.resigned = false;
-    this.random = new Random();
     
     if (SocketPastryNode.verbose) System.out.println("BINDING TO ADDRESS " + bindAddress + " AND CLAIMING " + localAddress);
     
@@ -182,7 +178,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     if (! resigned) {
       if (SocketPastryNode.verbose) System.out.println("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
       DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);
-      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
+      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + pastryNode.getEnvironment().getRandomSource().nextInt(PING_JITTER), PING_DELAY + pastryNode.getEnvironment().getRandomSource().nextInt(PING_JITTER));
       pingManager.ping(path, checker);
     }
   }
@@ -560,7 +556,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     public MessageRetry(SourceRoute route, Message message) {
       this.message = message;
       this.route = route;
-      this.timeout = (long) (timeout * (0.8 + (0.4 * random.nextDouble())));
+      this.timeout = (long) (timeout * (0.8 + (0.4 * pastryNode.getEnvironment().getRandomSource().nextDouble())));
 
       pastryNode.getTimer().schedule(this, timeout);
     }
@@ -574,7 +570,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
         if (tries < BACKOFF_LIMIT) {
           tries++;
-          timeout = (long) ((2 * timeout) * (0.8 + (0.4 * random.nextDouble())));
+          timeout = (long) ((2 * timeout) * (0.8 + (0.4 * pastryNode.getEnvironment().getRandomSource().nextDouble())));
           
           pastryNode.getTimer().schedule(this, timeout);
         } else {

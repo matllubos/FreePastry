@@ -2,6 +2,7 @@
 package rice.p2p.scribe;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 
 /**
@@ -119,6 +120,11 @@ public interface Scribe {
    * @return The list of topics
    */
   public Topic[] getTopics(ScribeClient client);
+
+  /**
+   * @return
+   */
+  public Environment getEnvironment();
 
 }
 

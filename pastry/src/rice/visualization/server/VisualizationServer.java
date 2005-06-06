@@ -50,8 +50,6 @@ public class VisualizationServer implements Runnable {
   
   protected FreeDiskSpaceChecker FDSchecker;
   
-  protected Random rng = new Random();
-  
   protected RingCertificate cert;
   
   protected KeyPair keypair;
@@ -354,7 +352,7 @@ public class VisualizationServer implements Runnable {
   
   private rice.p2p.commonapi.Id generateId() {
     byte[] data = new byte[20];
-    rng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     IdFactory factory = new MultiringIdFactory(node.getId(), new PastryIdFactory());
     return factory.buildId(data);
   }

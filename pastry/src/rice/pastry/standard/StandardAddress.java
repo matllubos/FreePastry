@@ -4,7 +4,6 @@ package rice.pastry.standard;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
-import java.util.Random;
 import java.security.*;
 
 /**

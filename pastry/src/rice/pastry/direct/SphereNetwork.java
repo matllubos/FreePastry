@@ -4,6 +4,7 @@ import java.lang.*;
 
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -17,17 +18,17 @@ import rice.pastry.messaging.*;
  */
 public class SphereNetwork implements NetworkSimulator {
 
-  private Random rng;
   private HashMap nodeMap;
   private Vector msgQueue;
 
   private TestRecord testRecord;
 
+  private Environment environment;
+  
   /**
    * Constructor.
    */
-  public SphereNetwork() {
-    rng = new Random(PastrySeed.getSeed());
+  public SphereNetwork(Environment env) {
     nodeMap = new HashMap();
     msgQueue = new Vector();
   }
@@ -251,8 +252,8 @@ public class SphereNetwork implements NetworkSimulator {
      * @param nh DESCRIBE THE PARAMETER
      */
     public NodeRecord(DirectNodeHandle nh) {
-      theta = Math.asin(2.0 * rng.nextDouble() - 1.0);
-      phi = 2.0 * Math.PI * rng.nextDouble();
+      theta = Math.asin(2.0 * environment.getRandomSource().nextDouble() - 1.0);
+      phi = 2.0 * Math.PI * environment.getRandomSource().nextDouble();
 
       alive = true;
       handles = new Vector();

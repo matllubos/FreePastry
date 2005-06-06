@@ -294,11 +294,6 @@ public class PostProxy {
   protected Parameters parameters;
   
   /**
-   * The RNG
-   */
-  protected Random random = new Random();
-  
-  /**
    * The fetched POST log
    */
   protected PostLog log;
@@ -313,12 +308,15 @@ public class PostProxy {
    */
   protected String smtpServer;
   
+  protected Environment environment;
+  
   /**
    * Method which redirects standard output and error, if desired.
    *
    * @param parameters The parameters to use
    */  
   protected void startRedirection(Environment env) throws Exception {
+    environment = env;
     Parameters parameters = env.getParameters();
     if (parameters.getBoolean("standard_output_network_enable")) {
       logManager = new NetworkLogManager(env);
@@ -409,7 +407,7 @@ public class PostProxy {
     InetSocketAddress[] result = new InetSocketAddress[num];
     
     for (int i=0; i<result.length; i++)
-      result[i] = array[random.nextInt(array.length)];
+      result[i] = array[environment.getRandomSource().nextInt(array.length)];
     
     return result;
   }
@@ -1029,12 +1027,13 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startMultiringNode(Parameters parameters) throws Exception { 
+  protected void startMultiringNode(Environment env) throws Exception { 
+    Parameters parameters = env.getParameters();
     if (parameters.getBoolean("multiring_enable")) {
       Id ringId = ((RingId) address.getAddress()).getRingId();
 
       stepStart("Creating Multiring node in ring " + ringId);
-      node = new MultiringNode(ringId, node);
+      node = new MultiringNode(ringId, node, env);
       Thread.sleep(3000);
       stepDone(SUCCESS); 
     }
@@ -1084,9 +1083,10 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startGlobalMultiringNode(Parameters parameters) throws Exception { 
+  protected void startGlobalMultiringNode(Environment env) throws Exception { 
+    Parameters parameters = env.getParameters();
     stepStart("Creating Multiring node in Global ring");
-    globalNode = new MultiringNode(generateRingId(null), globalNode, (MultiringNode) node);
+    globalNode = new MultiringNode(generateRingId(null), globalNode, (MultiringNode) node, env);
     Thread.sleep(3000);
     stepDone(SUCCESS); 
   }
@@ -1096,10 +1096,11 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startGlobalNode(Parameters parameters) throws Exception { 
+  protected void startGlobalNode(Environment env) throws Exception { 
+    Parameters parameters = env.getParameters();
     if (parameters.getBoolean("multiring_global_enable") && (natAddress == null)) {
       startGlobalPastryNode(parameters);
-      startGlobalMultiringNode(parameters);
+      startGlobalMultiringNode(env);
     }
   } 
   
@@ -1435,8 +1436,8 @@ public class PostProxy {
     sectionDone();
     
     sectionStart("Bootstrapping Multiring Protocol");
-    startMultiringNode(parameters);
-    startGlobalNode(parameters);
+    startMultiringNode(env);
+    startGlobalNode(env);
     sectionDone();
     
     sectionStart("Bootstrapping Local Post Applications");

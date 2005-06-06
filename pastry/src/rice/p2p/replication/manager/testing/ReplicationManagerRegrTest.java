@@ -1,7 +1,6 @@
 package rice.p2p.replication.manager.testing;
 
 import java.io.IOException;
-import java.util.Random;
 
 import rice.Continuation;
 import rice.environment.Environment;
@@ -39,18 +38,12 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
   protected TestReplicationManagerClient[] clients;
 
   /**
-   * random number generator
-   */
-  protected Random rng;
-
-  /**
    * Constructor which sets up all local variables
    */
   public ReplicationManagerRegrTest(Environment env) throws IOException {
     super(env);
     replications = new ReplicationManagerImpl[NUM_NODES];
     clients = new TestReplicationManagerClient[NUM_NODES];
-    rng = new Random();
   }
 
 
@@ -99,7 +92,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     * Tests basic functionality
    */
   public void testBasic() {
-    int num = rng.nextInt(NUM_NODES);
+    int num = environment.getRandomSource().nextInt(NUM_NODES);
     Id id = nodes[num].getId();
     
     IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
@@ -138,7 +131,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     * Tests maintenance functionality
    */
   public void testMaintenance() {
-    int num = rng.nextInt(NUM_NODES);
+    int num = environment.getRandomSource().nextInt(NUM_NODES);
     Id id = nodes[num].getId();
     
     IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
@@ -199,7 +192,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    */
   public void testOverload() {
     int NUM_TO_INSERT = 16;
-    int num = rng.nextInt(NUM_NODES);
+    int num = environment.getRandomSource().nextInt(NUM_NODES);
     Id id = nodes[num].getId();
     
     IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
@@ -255,7 +248,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
   public void testStress() {
     int NUM_TO_INSERT = 45;
     Id[] ids = new Id[NUM_TO_INSERT];
-    int num = rng.nextInt(NUM_NODES);
+    int num = environment.getRandomSource().nextInt(NUM_NODES);
     Id id = nodes[num].getId();
     
     IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
@@ -318,7 +311,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    */
   private Id generateId() {
     byte[] data = new byte[20];
-    rng.nextBytes(data);
+    environment.getRandomSource().nextBytes(data);
     return FACTORY.buildId(data);
   }
   

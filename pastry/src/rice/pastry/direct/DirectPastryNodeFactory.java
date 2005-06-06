@@ -96,7 +96,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     StandardLeafSetProtocol lsProtocol =
       new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol =
-      new StandardRouteSetProtocol(localhandle, secureMan, routeTable);
+      new StandardRouteSetProtocol(localhandle, secureMan, routeTable, environment);
     StandardJoinProtocol jProtocol =
       new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 

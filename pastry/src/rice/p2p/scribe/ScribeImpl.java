@@ -6,6 +6,7 @@ import java.util.logging.*;
 import java.util.prefs.*;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.messaging.*;
 
@@ -66,6 +67,8 @@ public class ScribeImpl implements Scribe, Application {
    * the next unique id
    */
   private int id;
+  
+  Environment environment;
 
   /**
    * Constructor for Scribe, using the default policy.
@@ -73,8 +76,8 @@ public class ScribeImpl implements Scribe, Application {
    * @param node The node below this Scribe implementation
    * @param instance The unique instance name of this Scribe
    */
-  public ScribeImpl(Node node, String instance) {
-    this(node, new ScribePolicy.DefaultScribePolicy(), instance);
+  public ScribeImpl(Node node, String instance, Environment env) {
+    this(node, new ScribePolicy.DefaultScribePolicy(env), instance, env);
   }
 
   /**
@@ -84,7 +87,8 @@ public class ScribeImpl implements Scribe, Application {
    * @param policy The policy for this Scribe
    * @param instance The unique instance name of this Scribe
    */
-  public ScribeImpl(Node node, ScribePolicy policy, String instance) {
+  public ScribeImpl(Node node, ScribePolicy policy, String instance, Environment env) {
+    this.environment = env;
     this.endpoint = node.registerApplication(this, instance);
     this.topics = new Hashtable();
     this.outstanding = new Hashtable();
@@ -94,7 +98,7 @@ public class ScribeImpl implements Scribe, Application {
     this.id = Integer.MIN_VALUE;
     
     // schedule the period liveness checks of the parent
-    endpoint.scheduleMessage(new MaintenanceMessage(), (new Random()).nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
+    endpoint.scheduleMessage(new MaintenanceMessage(), env.getRandomSource().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
     
    // log.addHandler(new ConsoleHandler());
    // log.setLevel(Level.FINEST);
@@ -103,6 +107,10 @@ public class ScribeImpl implements Scribe, Application {
     log.finer(endpoint.getId() + ": Starting up Scribe");
   }
 
+  public Environment getEnvironment() {
+    return environment; 
+  }
+  
   /**
    * Returns the current policy for this scribe object
    *

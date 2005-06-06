@@ -28,7 +28,7 @@ public class EuclideanNetwork implements NetworkSimulator {
    * Constructor.
    */
   public EuclideanNetwork(Environment e) {
-    rng = e.getRandomSource(); //new Random(PastrySeed.getSeed());
+    rng = e.getRandomSource(); //new Randon(PastrySeed.getSeed());
     nodeMap = new HashMap();
     msgQueue = new Vector();
     testRecord = null;

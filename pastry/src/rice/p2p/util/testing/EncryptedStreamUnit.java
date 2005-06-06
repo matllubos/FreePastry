@@ -1,5 +1,7 @@
 package rice.p2p.util.testing;
 
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.util.*;
 import java.io.*;
 import java.math.*;
@@ -25,7 +27,7 @@ public class EncryptedStreamUnit {
     System.out.println("[ DONE ]");
     
     System.out.print("    Generating random number generator\t\t\t");    
-    Random r = new Random();
+    RandomSource r = new SimpleRandomSource();
     System.out.println("[ DONE ]");
 
     System.out.println("-------------------------------------------------------------");
@@ -167,7 +169,7 @@ public class EncryptedStreamUnit {
       System.out.println("[ PASSED ]");
     }
     
-    System.out.print("    Testing Random Encryption\t\t\t\t");
+    System.out.print("    Testing Randon Encryption\t\t\t\t");
     
     baos = new ByteArrayOutputStream();
     eos = new EncryptedOutputStream(pair.getPublic(), baos);

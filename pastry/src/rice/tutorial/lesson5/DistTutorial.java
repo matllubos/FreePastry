@@ -29,12 +29,10 @@ public class DistTutorial {
    * @param bindport the local port to bind to 
    * @param bootaddress the IP:port of the node to boot from
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress) throws Exception {
-    
-    Environment env = new Environment();
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
     
     // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory();
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env.getRandomSource());
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
@@ -69,6 +67,9 @@ public class DistTutorial {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
+    // Loads pastry settings
+    Environment env = new Environment();
+    
     try {
       // the port to use locally
       int bindport = Integer.parseInt(args[0]);
@@ -79,7 +80,7 @@ public class DistTutorial {
       InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
   
       // launch our node!
-      DistTutorial dt = new DistTutorial(bindport, bootaddress);
+      DistTutorial dt = new DistTutorial(bindport, bootaddress, env);
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 

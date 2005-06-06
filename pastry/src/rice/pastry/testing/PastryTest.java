@@ -29,16 +29,16 @@ public class PastryTest {
 
   private Vector pingClients;
 
-  private Random rng;
+  private Environment environment;
 
   public PastryTest(Environment env) {
+    environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(), simulator,
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(env.getRandomSource()), simulator,
         env);
 
     pastryNodes = new Vector();
     pingClients = new Vector();
-    rng = new Random(PastrySeed.getSeed());
   }
 
   private NodeHandle getBootstrap() {
@@ -63,8 +63,8 @@ public class PastryTest {
     int n = pingClients.size();
 
     for (int i = 0; i < k; i++) {
-      int from = rng.nextInt(n);
-      int to = rng.nextInt(n);
+      int from = environment.getRandomSource().nextInt(n);
+      int to = environment.getRandomSource().nextInt(n);
 
       PingClient pc = (PingClient) pingClients.get(from);
       PastryNode pn = (PastryNode) pastryNodes.get(to);

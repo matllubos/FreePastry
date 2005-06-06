@@ -279,7 +279,7 @@ public class SocketSourceRouteManager {
    */
   protected SourceRoute[] getAllRoutes(EpochInetSocketAddress destination) {
     NodeSet nodes = spn.getLeafSet().neighborSet(Integer.MAX_VALUE);
-    nodes.randomize();
+    nodes.randomize(spn.getEnvironment().getRandomSource());
     Vector result = new Vector();
     result.add(SourceRoute.build(destination));
     
