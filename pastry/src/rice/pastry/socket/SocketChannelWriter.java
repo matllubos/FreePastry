@@ -8,6 +8,8 @@ import java.nio.channels.*;
 import java.nio.charset.*;
 import java.util.*;
 import java.util.zip.*;
+
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -64,6 +66,12 @@ public class SocketChannelWriter {
   public SocketChannelWriter(PastryNode spn, SourceRoute path) {
     this.spn = spn;
     statsLastWritten = spn.getEnvironment().getTimeSource().currentTimeMillis();
+    this.path = path;
+    queue = new LinkedList();
+  }
+  
+  public SocketChannelWriter(Environment env, SourceRoute path) {
+    statsLastWritten = env.getTimeSource().currentTimeMillis();
     this.path = path;
     queue = new LinkedList();
   }

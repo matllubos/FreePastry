@@ -303,7 +303,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   protected Message getResponse(InetSocketAddress address, Message message) throws IOException {    
     // create reader and writer
-    SocketChannelWriter writer = new SocketChannelWriter(null, SourceRoute.build(new EpochInetSocketAddress(address, 0)));
+    SocketChannelWriter writer = new SocketChannelWriter(environment, SourceRoute.build(new EpochInetSocketAddress(address, 0)));
     SocketChannelReader reader = new SocketChannelReader(null, SourceRoute.build(new EpochInetSocketAddress(address, 0)));
 
     // bind to the appropriate port
