@@ -1,6 +1,7 @@
 package rice.pastry.testing;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -73,8 +74,8 @@ public class HelloWorld {
 
     HelloWorldApp app = new HelloWorldApp(pn);
     helloClients.addElement(app);
-    if (Log.ifp(5))
-      System.out.println("created " + pn);
+    pn.getEnvironment().getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
+      "created " + pn);
   }
 
   /**
@@ -83,8 +84,8 @@ public class HelloWorld {
   private void printLeafSets() {
     for (int i = 0; i < pastryNodes.size(); i++) {
       PastryNode pn = (PastryNode) pastryNodes.get(i);
-      if (Log.ifp(5))
-        System.out.println(pn.getLeafSet());
+      pn.getEnvironment().getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
+          pn.getLeafSet().toString());
     }
   }
 
@@ -112,8 +113,8 @@ public class HelloWorld {
    */
   public static void main(String args[]) throws IOException {
 
-    Log.init(args);
-
+    Environment env = new Environment();
+    
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-nodes") && i + 1 < args.length)
         numnodes = Integer.parseInt(args[i + 1]);
@@ -136,7 +137,7 @@ public class HelloWorld {
       }
     }
 
-    HelloWorld driver = new HelloWorld(new Environment());
+    HelloWorld driver = new HelloWorld(env);
 
     for (int i = 0; i < numnodes; i++) {
       driver.makePastryNode();
@@ -145,14 +146,14 @@ public class HelloWorld {
           ;
     }
     if (simultaneous_joins) {
-      if (Log.ifp(5))
-        System.out.println("let the joins begin!");
+      env.getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
+           "let the joins begin!");
       while (driver.simulate())
         ;
     }
 
-    if (Log.ifp(5))
-      System.out.println(numnodes + " nodes constructed");
+    env.getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
+        numnodes + " nodes constructed");
 
     driver.printLeafSets();
 
@@ -164,8 +165,8 @@ public class HelloWorld {
     }
 
     if (simultaneous_msgs) {
-      if (Log.ifp(5))
-        System.out.println("let the msgs begin!");
+      env.getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
+        "let the msgs begin!");
       while (driver.simulate())
         ;
     }

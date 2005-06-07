@@ -3,6 +3,7 @@ package rice.pastry.standard;
 
 import java.util.Hashtable;
 
+import rice.environment.logging.Logger;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeSet;
 import rice.pastry.PastryNode;
@@ -26,8 +27,6 @@ import rice.pastry.security.PastrySecurityManager;
  */
 public class PeriodicLeafSetProtocol implements MessageReceiver {
 
-  public static final boolean verbose = false;
-  
 	protected NodeHandle localHandle;
 	protected PastryNode localNode;
 	protected PastrySecurityManager security;
@@ -148,7 +147,8 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
         if (time == null || 
             (time.longValue() < (localNode.getEnvironment().getTimeSource().currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on right neighbor
-          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Checking liveness on right neighbor:"+right);
+          localNode.getEnvironment().getLogManager().getLogger(PeriodicLeafSetProtocol.class, null).log(Logger.FINE,
+              "PeriodicLeafSetProtocol: Checking liveness on right neighbor:"+right);
           right.checkLiveness();
         }
       }
@@ -157,7 +157,8 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
         if (time == null || 
             (time.longValue() < (localNode.getEnvironment().getTimeSource().currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on left neighbor
-          if (verbose) System.out.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Checking liveness on left neighbor:"+left);
+          localNode.getEnvironment().getLogManager().getLogger(PeriodicLeafSetProtocol.class, null).log(Logger.FINE,
+              "PeriodicLeafSetProtocol: Checking liveness on left neighbor:"+left);
           left.checkLiveness();
         }
       }
@@ -189,7 +190,7 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 //    if (!nsu.wasAdded()) {
 //      if (localNode.isReady() && !leafSet.isComplete() && leafSet.size() < (leafSet.maxSize()/2)) {
 //        // kill self
-//        System.out.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
+//        System.outt.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
 //        localNode.resign();
 //      }
 //    }

@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.zip.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -160,8 +161,8 @@ public class SocketChannelWriter {
 			} 
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
-    if ((!recorded) && (SocketPastryNode.verbose)) {
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
+    if (!recorded) {
+      log(Logger.FINER, "COUNT: " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }
 
@@ -180,7 +181,7 @@ public class SocketChannelWriter {
       synchronized (queue) {
         if (buffer == null) {
           if (! queue.isEmpty()) {
-            debug("About to serialize object " + queue.getFirst());
+            log(Logger.FINER,"(W) About to serialize object " + queue.getFirst());
             buffer = serialize(queue.getFirst());
             
             if (buffer != null) {
@@ -205,13 +206,13 @@ public class SocketChannelWriter {
                 
         record("Wrote " + i + " of " + j + " bytes of", queue.getFirst(), buffer.limit(), path);
         
-        debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+        log(Logger.FINEST,"(W) Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
         
         if (buffer.remaining() != 0) 
           return false;
         
         if (spn != null) 
-          debug("Finished writing message " + queue.getFirst() + " - queue now contains " + (queue.size() - 1) + " items");
+          log(Logger.FINER,"(W) Finished writing message " + queue.getFirst() + " - queue now contains " + (queue.size() - 1) + " items");
         
         synchronized (queue) {
           queue.removeFirst();
@@ -241,7 +242,7 @@ public class SocketChannelWriter {
         i++;
       }
       
-      if (SocketPastryNode.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
+      log(Logger.FINER,"COUNT: Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
     
       queue.add(i, o);
     } else {
@@ -249,20 +250,10 @@ public class SocketChannelWriter {
     }
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param s DESCRIBE THE PARAMETER
-   */
-  private void debug(String s) {
-    if (Log.ifp(8)) {
-      if (spn == null) {
-        System.out.println("(W): " + s);
-      } else {
-        System.out.println(spn.getNodeId() + " (W): " + s);
-      }
-    }
+  private void log(int level, String s) {
+    environment.getLogManager().getLogger(SocketChannelWriter.class, null).log(level,s);
   }
+
 
   /**
    * Method which serializes a given object into a ByteBuffer, in order to
@@ -284,13 +275,13 @@ public class SocketChannelWriter {
       synchronized(statLock) {
         long now = environment.getTimeSource().currentTimeMillis();
         if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
-          System.out.println("@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
+          log(Logger.INFO,"@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
           statsLastWritten = now;
           
           Iterator ii = msgTypes.keySet().iterator();
           while (ii.hasNext()) {
             String s = (String)ii.next();
-            System.out.println("@L.TR   "+s+":"+msgTypes.get(s)+" "+msgSizes.get(s));
+            log(Logger.INFO,"@L.TR   "+s+":"+msgTypes.get(s)+" "+msgSizes.get(s));
           }
           
           msgTypes.clear();
@@ -333,16 +324,16 @@ public class SocketChannelWriter {
 
       return ByteBuffer.wrap(baos2.toByteArray());
     } catch (InvalidClassException e) {
-      System.out.println("PANIC: Object to be serialized was an invalid class!");
+      log(Logger.SEVERE,"PANIC: Object to be serialized was an invalid class!");
       throw new IOException("Invalid class during attempt to serialize.");
     } catch (NotSerializableException e) {
-      System.out.println("PANIC: Object to be serialized was not serializable! [" + o + "]");
+      log(Logger.SEVERE,"PANIC: Object to be serialized was not serializable! [" + o + "]");
       throw new IOException("Unserializable class during attempt to serialize.");
     } catch (NullPointerException e) {
-      System.out.println("PANIC: Object to be serialized caused null pointer exception! [" + o + "]");
+      log(Logger.SEVERE,"PANIC: Object to be serialized caused null pointer exception! [" + o + "]");
       return null;
     } catch (Exception e) {
-      System.out.println("PANIC: Object to be serialized caused excception! [" + e + "]");
+      log(Logger.SEVERE,"PANIC: Object to be serialized caused excception! [" + e + "]");
       throw new IOException("Exception during attempt to serialize.");
     }
   }

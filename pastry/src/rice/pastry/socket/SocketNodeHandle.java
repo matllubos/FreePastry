@@ -5,6 +5,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
@@ -38,7 +39,7 @@ public class SocketNodeHandle extends DistNodeHandle {
   public SocketNodeHandle(EpochInetSocketAddress address, NodeId nodeId) {
     super(nodeId, address.getAddress());
     
-    this.eaddress = address;
+    this.eaddress = address;    
   }
   
   public EpochInetSocketAddress getEpochAddress() {
@@ -107,7 +108,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       //debug("Sending message " + msg + " locally");
       spn.receiveMessage(msg);
     } else {
-      debug("Passing message " + msg + " to the socket controller for writing");
+      log(Logger.FINER, "Passing message " + msg + " to the socket controller for writing");
       spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
     }
   }
@@ -234,11 +235,9 @@ public class SocketNodeHandle extends DistNodeHandle {
    *
    * @param s The message to print
    */
-  private void debug(String s) {
-    if (Log.ifp(8)) {
-      System.out.println(this + ": " + s);
-    }
-  }
+  private void log(int level, String s) {
+    localnode.getEnvironment().getLogManager().getLogger(SocketNodeHandle.class, null).log(level,s);
+  }  
 }
 
 

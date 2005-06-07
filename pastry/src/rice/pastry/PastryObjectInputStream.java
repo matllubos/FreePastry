@@ -32,12 +32,16 @@ public class PastryObjectInputStream extends ObjectInputStream {
   
 	protected Object resolveObject(Object input) throws IOException {
     if (input instanceof LocalNodeI) {
-      if (node != null)
+      
+      if (node != null) {
+        // coalesce
         input = node.getLocalNodeI((LocalNodeI)input);
-      ((LocalNodeI) input).setLocalNode(node);
+        
+        // setLocalNode
+        ((LocalNodeI) input).setLocalNode(node);
+      }
     }
     
     return input;
-	}
-
+	}  
 }

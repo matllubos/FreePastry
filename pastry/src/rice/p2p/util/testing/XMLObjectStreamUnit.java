@@ -31,7 +31,7 @@ public class XMLObjectStreamUnit {
   protected void flip() throws IOException {
     xoos.close();
     bais = new ByteArrayInputStream(baos.toByteArray());
- //   xois = new XMLObjectInputStream(new GZIPInputStream(bais));
+ //   xois = new XMLObjectInputStreamm(new GZIPInputStream(bais));
     xois = new XMLObjectInputStream(bais);
   }
   

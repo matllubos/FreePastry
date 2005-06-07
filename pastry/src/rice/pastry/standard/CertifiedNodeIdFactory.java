@@ -97,7 +97,6 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
       xoos2.write(SecurityUtils.sign(baos.toByteArray(), key));
       xoos2.close();
     } catch (IOException e) {
-      System.out.println(e);
       throw new RuntimeException(e);
     } 
   }

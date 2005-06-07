@@ -1,6 +1,7 @@
 
 package rice.pastry.client;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
@@ -141,7 +142,8 @@ public abstract class PastryAppl implements MessageReceiver
    * @param msg a message.
    */
   public final void sendMessage(Message msg) {
-    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] send " + msg);
+    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+        "[" + thePastryNode + "] send " + msg);
     thePastryNode.receiveMessage(msg);
   }
 
@@ -151,7 +153,8 @@ public abstract class PastryAppl implements MessageReceiver
    * @param msg the message that is arriving.
    */
   public void receiveMessage(Message msg) {
-    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] recv " + msg);
+    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+        "[" + thePastryNode + "] recv " + msg);
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
 
@@ -192,7 +195,8 @@ public abstract class PastryAppl implements MessageReceiver
    * @param opt send options that describe how the message is to be routed.  
    */
   public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
-    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] routemsgdirect " + msg + " to " + dest);
+    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+        "[" + thePastryNode + "] routemsgdirect " + msg + " to " + dest);
     if (!dest.isAlive()) return false;
     //RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
     //thePastryNode.receiveMessage(rm);
@@ -219,7 +223,8 @@ public abstract class PastryAppl implements MessageReceiver
    * @param opt send options that describe how the message is to be routed.
    */
   public void routeMsg(Id key, Message msg, Credentials cred, SendOptions opt) {
-    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] routemsg " + msg + " to " + key);
+    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+        "[" + thePastryNode + "] routemsg " + msg + " to " + key);
     RouteMessage rm = new RouteMessage(key, msg, cred, opt, getAddress());
     thePastryNode.receiveMessage(rm);
   }

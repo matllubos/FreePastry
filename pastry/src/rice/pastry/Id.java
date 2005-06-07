@@ -573,7 +573,7 @@ public class Id implements rice.p2p.commonapi.Id {
     }
 
     Distance d = new Distance(dist);
-    //System.out.println("Dist:" + this + nid + d);
+    //System.outt.println("Dist:" + this + nid + d);
 
     return d;
   }
@@ -592,7 +592,7 @@ public class Id implements rice.p2p.commonapi.Id {
     }
 
     Distance d = new Distance(dist);
-    //System.out.println("Diff:" + this + nid + d);
+    //System.outt.println("Diff:" + this + nid + d);
 
     return d;
   }
@@ -871,7 +871,7 @@ public class Id implements rice.p2p.commonapi.Id {
       }
     }
 
-    //System.out.println("absDist=" + new Distance(dist));
+    //System.outt.println("absDist=" + new Distance(dist));
     return dist;
   }
 

@@ -24,8 +24,6 @@ import rice.selector.*;
  */
 public class SocketPastryNode extends DistPastryNode {
 
-  public static final boolean verbose = false;
-  
   // The address (ip + port) of this pastry node
   private EpochInetSocketAddress address;
   
@@ -116,7 +114,7 @@ public class SocketPastryNode extends DistPastryNode {
     } catch (IOException e) {
       System.err.println("ERROR: Got exception " + e + " while resigning node!");
     }
-//    System.out.println("SocketPastryNode resigning at time:"+Systemm.currentTimeMillis());
+//    System.outt.println("SocketPastryNode resigning at time:"+Systemm.currentTimeMillis());
 //    System.exit(20);
   }
 }

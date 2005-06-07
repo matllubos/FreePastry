@@ -49,21 +49,8 @@ public abstract class LocalNode implements LocalNodeI {
    */
   public final void assertLocalNode() {
     if (localnode == null) {
-      System.out.println("PANIC: localnode is null in " + this);
-      (new Exception()).printStackTrace();
-    }
-  }
-
-  /**
-   * Called on deserialization. Adds itself to a pending-setLocalNode
-   * list. This list is in a static (global) hash, indexed by the
-   * ObjectInputStream. Refer to README.handles_localnode for details.
-   */
-  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-    in.defaultReadObject();
-    
-    if (! (in instanceof PastryObjectInputStream)) {
-      LocalNodeI.pending.addPending(in, this);
+      System.err.println("PANIC: localnode is null in " + this);
+      (new Exception()).printStackTrace(System.err);
     }
   }
 }

@@ -1,5 +1,6 @@
 package rice.pastry.client;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
@@ -59,8 +60,8 @@ public abstract class CommonAPIAppl extends PastryAppl {
    * @param hint the hint
    */
   public void route(Id key, Message msg, NodeHandle hint) {
-    if (Log.ifp(8))
-      System.out.println("[" + thePastryNode + "] route " + msg + " to " + key);
+    thePastryNode.getEnvironment().getLogManager().getLogger(CommonAPIAppl.class, instance).log(Logger.FINER, 
+        "[" + thePastryNode + "] route " + msg + " to " + key);
 
     RouteMessage rm = new RouteMessage(key, msg, hint, getAddress());
     thePastryNode.receiveMessage(rm);
@@ -269,8 +270,8 @@ public abstract class CommonAPIAppl extends PastryAppl {
    */
 
   public void receiveMessage(Message msg) {
-    if (Log.ifp(8))
-      System.out.println("[" + thePastryNode + "] recv " + msg);
+    thePastryNode.getEnvironment().getLogManager().getLogger(CommonAPIAppl.class, instance).log(Logger.FINER,
+        "[" + thePastryNode + "] recv " + msg);
 
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;

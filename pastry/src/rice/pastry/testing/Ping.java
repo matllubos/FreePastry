@@ -33,15 +33,15 @@ public class Ping extends PastryAppl {
     public Credentials getCredentials() { return pingCred; }
 
     public void sendPing(NodeId nid) {
-//	System.out.println("sending a trace from " + getNodeId() + " to " + nid);
+//	System.outt.println("sending a trace from " + getNodeId() + " to " + nid);
 	routeMsg(nid, new PingMessageNew(pingAddress, getNodeId(), nid),
 		 pingCred, new SendOptions());
     }
 
     public void messageForAppl(Message msg) {
 	/*
-	System.out.print( msg );
-	System.out.println(" received");
+	System.outt.print( msg );
+	System.outt.println(" received");
 	*/
 		    
 	PingMessageNew pMsg = (PingMessageNew)msg;
@@ -60,10 +60,10 @@ public class Ping extends PastryAppl {
 	    rDistance = fDistance/dDistance;
 	}
 	/*
-	System.out.println( "------------------" );
-	System.out.println( "number of hops " + nHops );
-	System.out.println( "relative distance " + rDistance );
-	System.out.println( "------------------" );
+	System.outt.println( "------------------" );
+	System.outt.println( "number of hops " + nHops );
+	System.outt.println( "relative distance " + rDistance );
+	System.outt.println( "------------------" );
 	*/
 	
 	tr.addHops( nHops );
@@ -73,8 +73,8 @@ public class Ping extends PastryAppl {
     
     public boolean enrouteMessage(Message msg, Id from, NodeId nextHop, SendOptions opt) {
 	/*
-	System.out.print(msg);
-	System.out.println(" at " + getNodeId());
+	System.outt.print(msg);
+	System.outt.println(" at " + getNodeId());
 	*/
 
 	PingMessageNew pMsg = (PingMessageNew)msg;

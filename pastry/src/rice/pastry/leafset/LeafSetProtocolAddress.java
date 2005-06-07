@@ -31,13 +31,5 @@ public class LeafSetProtocolAddress implements Address {
 	return myCode;
     }
     
-    private void readObject(ObjectInputStream in)
-	throws IOException, ClassNotFoundException 
-    {}
-
-    private void writeObject(ObjectOutputStream out)
-	throws IOException, ClassNotFoundException 
-    {}
-
     public String toString() { return "[LeafSetProtocolAddress]"; }
 }

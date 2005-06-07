@@ -26,6 +26,7 @@ public interface Logger {
   
   /**
    * INFO is a message level for informational messages.
+   * Things that only happen once per node creation.
    */
   public static final int INFO = 800;
   
@@ -36,16 +37,19 @@ public interface Logger {
   
   /**
    * FINE is a message level providing tracing information.
+   * Things that get logged once per specific message.
    */
   public static final int FINE = 500;
   
   /**
    * FINER indicates a fairly detailed tracing message. 
+   * Things that get logged once per general message.
    */
   public static final int FINER = 400;
   
   /**
    * FINEST indicates a highly detailed tracing message. 
+   * Things that happen more than once per general message.
    */
   public static final int FINEST = 300;
 

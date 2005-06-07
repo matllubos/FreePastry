@@ -1,6 +1,8 @@
 
 package rice.pastry;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.leafset.*;
@@ -21,12 +23,20 @@ import java.util.*;
  */
 public abstract class PastryNodeFactory {
 
+  
+  
   /**
    * Hashtable which keeps track of temporary ping values, which are
    * only used during the getNearest() method
    */
   private Hashtable pingCache = new Hashtable();
 
+  protected Environment environment;
+  
+  public PastryNodeFactory(Environment env) {
+    this.environment = env;
+  }
+  
   /**
    * Call this to construct a new node of the type chosen by the factory.
    *
@@ -74,6 +84,12 @@ public abstract class PastryNodeFactory {
    */
   public abstract int getProximity(NodeHandle local, NodeHandle handle);
 
+  
+  
+  public Environment getEnvironment() {
+    return environment;  
+  }
+  
   /**
    * Method which checks to see if we have a cached value of the remote ping, and
    * if not, initiates a ping and then caches the value
@@ -152,7 +168,8 @@ public abstract class PastryNodeFactory {
       // return the resulting closest node
       return nearNode;
     } catch (IOException e) {
-      System.out.println("ERROR: Exception " + e + " occured while finding best bootstrap.");
+      environment.getLogManager().getLogger(PastryNodeFactory.class, null).log(Logger.WARNING,
+        "ERROR: Exception " + e + " occured while finding best bootstrap.");
       return seed;
     }
   }

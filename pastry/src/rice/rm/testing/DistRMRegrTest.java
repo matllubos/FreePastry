@@ -1,6 +1,7 @@
 package rice.rm.testing;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
@@ -200,7 +201,6 @@ public class DistRMRegrTest {
     // the specified seed when creating a default RandomSource
     Environment env = new Environment(null,null,null,null,params);
     
-    Log.init(args);
     doInitstuff(args);
     
     DistRMRegrTest driver = new DistRMRegrTest(env);
@@ -225,8 +225,8 @@ public class DistRMRegrTest {
     for (int i = 1; i < numNodes; i++) {
       driver.makeRMNode();
     }
-    if (Log.ifp(5))
-      System.out.println(numNodes + " nodes constructed");
+    env.getLogManager().getLogger(DistRMRegrTest.class, null).log(Logger.INFO,
+        numNodes + " nodes constructed");
   }
 }
 

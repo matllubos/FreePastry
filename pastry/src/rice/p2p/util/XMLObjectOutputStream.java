@@ -1195,7 +1195,7 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
   /**
    * This class is an implementation of PutField which is compatible with 
    * the XMLObjectOutputStream.  It works in the same manner as the 
-   * ObjectInputStream.PutField.
+   * ObjectInputStreamm.PutField.
    */  
   public class PutField extends ObjectOutputStream.PutField {
 

@@ -25,7 +25,6 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
 
   private NodeIdFactory nidFactory;
   private NetworkSimulator simulator;
-  private Environment environment;
 
   // max number of handles stored per routing table entry
   private int rtMax;
@@ -34,28 +33,18 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
   private int lSetSize;
 
   /**
-   * Convienience constructor that builds a default Environment.
-   * 
-   * @param nf the NodeIdFactory to use
-   * @param sim the NetworkSimulator to use
-   */
-  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim) throws IOException {    
-    this(nf,sim,new Environment());
-  }
-  
-  /**
    * Main constructor.
    * 
    * @param nf the NodeIdFactory
    * @param sim the NetworkSimulator
    * @param e the Enviornment
    */
-  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim, Environment e) {    
+  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim, Environment env) {    
+    super(env);
     nidFactory = nf;
     simulator = sim;
-    environment = e;
-    rtMax = e.getParameters().getInt("pastry_rtMax");
-    lSetSize = e.getParameters().getInt("pastry_lSetSize");
+    rtMax = environment.getParameters().getInt("pastry_rtMax");
+    lSetSize = environment.getParameters().getInt("pastry_lSetSize");
   }
 
   /**

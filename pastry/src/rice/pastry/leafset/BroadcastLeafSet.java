@@ -1,4 +1,3 @@
-
 package rice.pastry.leafset;
 
 import rice.pastry.*;
@@ -10,113 +9,119 @@ import java.util.*;
 
 /**
  * Broadcast a leaf set to another node.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  */
 
-public class BroadcastLeafSet extends Message implements Serializable 
-{
-    public static final int Update = 0;
-    public static final int JoinInitial = 1;
-    public static final int JoinAdvertise = 2;
-    public static final int Correction = 3;
+public class BroadcastLeafSet extends Message implements Serializable {
+  public static final int Update = 0;
 
-    private NodeHandle fromNode;
-    private LeafSet theLeafSet;
-    private int theType;
+  public static final int JoinInitial = 1;
 
-    /**
-     * Constructor.
-     */
-    
-    public BroadcastLeafSet(NodeHandle from, LeafSet leafSet, int type) { 
-	super(new LeafSetProtocolAddress()); 
-	fromNode = from;
-	theLeafSet = leafSet;
-	theType = type;
-	setPriority(0);
-    }
-    
-    /**
-     * Constructor.
-     *
-     * @param cred the credentials.
-     */
+  public static final int JoinAdvertise = 2;
 
-    public BroadcastLeafSet(Credentials cred, NodeHandle from, LeafSet leafSet, int type) { 
-	super(new LeafSetProtocolAddress(), cred); 
+  public static final int Correction = 3;
 
-	fromNode = from;
-	theLeafSet = leafSet;
-	theType = type;
-	setPriority(0);
-    }
-    
-    /**
-     * Constructor.
-     *
-     * @param stamp the timestamp
-     */
+  private NodeHandle fromNode;
 
-    public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet, int type) { 
-	super(new LeafSetProtocolAddress(), stamp); 
+  private LeafSet theLeafSet;
 
-	fromNode = from;
-	theLeafSet = leafSet;
-	theType = type;
-	setPriority(0);
-    }
+  private int theType;
 
-    /**
-     * Constructor.
-     *
-     * @param cred the credentials.
-     * @param stamp the timestamp
-     */    
+  /**
+   * Constructor.
+   */
 
-    public BroadcastLeafSet(Credentials cred, Date stamp, NodeHandle from, LeafSet leafSet, int type) { 
-	super(new LeafSetProtocolAddress(), cred, stamp); 
+  public BroadcastLeafSet(NodeHandle from, LeafSet leafSet, int type) {
+    super(new LeafSetProtocolAddress());
+    fromNode = from;
+    theLeafSet = leafSet;
+    theType = type;
+    setPriority(0);
+  }
 
-	fromNode = from;
-	theLeafSet = leafSet;
-	theType = type;
-	setPriority(0);
-    }
+  /**
+   * Constructor.
+   * 
+   * @param cred the credentials.
+   */
 
-    /**
-     * Returns the node id of the node that broadcast its leaf set.
-     *
-     * @return the node id.
-     */
+  public BroadcastLeafSet(Credentials cred, NodeHandle from, LeafSet leafSet,
+      int type) {
+    super(new LeafSetProtocolAddress(), cred);
 
-    public NodeHandle from() { return fromNode; }
+    fromNode = from;
+    theLeafSet = leafSet;
+    theType = type;
+    setPriority(0);
+  }
 
-    /**
-     * Returns the leaf set that was broadcast.
-     *
-     * @return the leaf set.
-     */
+  /**
+   * Constructor.
+   * 
+   * @param stamp the timestamp
+   */
 
-    public LeafSet leafSet() { return theLeafSet; }
+  public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet, int type) {
+    super(new LeafSetProtocolAddress(), stamp);
 
-    /**
-     * Returns the type of leaf set.
-     *
-     * @return the type.
-     */
+    fromNode = from;
+    theLeafSet = leafSet;
+    theType = type;
+    setPriority(0);
+  }
 
-    public int type() { return theType; }
+  /**
+   * Constructor.
+   * 
+   * @param cred the credentials.
+   * @param stamp the timestamp
+   */
 
-    public String toString() {
-	String s = "";
+  public BroadcastLeafSet(Credentials cred, Date stamp, NodeHandle from,
+      LeafSet leafSet, int type) {
+    super(new LeafSetProtocolAddress(), cred, stamp);
 
-	if (Log.ifp(7))
-	    s+="BroadcastLeafSet(of " + fromNode.getNodeId() + ":" + theLeafSet + ")";
-	else if (Log.ifp(5))
-	    s+="BroadcastLeafSet(of " + fromNode.getNodeId() + ")";
+    fromNode = from;
+    theLeafSet = leafSet;
+    theType = type;
+    setPriority(0);
+  }
 
-	return s;
-    }
+  /**
+   * Returns the node id of the node that broadcast its leaf set.
+   * 
+   * @return the node id.
+   */
+
+  public NodeHandle from() {
+    return fromNode;
+  }
+
+  /**
+   * Returns the leaf set that was broadcast.
+   * 
+   * @return the leaf set.
+   */
+
+  public LeafSet leafSet() {
+    return theLeafSet;
+  }
+
+  /**
+   * Returns the type of leaf set.
+   * 
+   * @return the type.
+   */
+
+  public int type() {
+    return theType;
+  }
+
+  public String toString() {
+    String s = "BroadcastLeafSet(of " + fromNode.getNodeId() + ":" + theLeafSet + ")";
+    return s;
+  }
 }

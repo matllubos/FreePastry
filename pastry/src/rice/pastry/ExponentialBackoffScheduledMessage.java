@@ -51,13 +51,13 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
 
   
   private void schedule(long time) {
-    //System.out.println("EB.schedule()");
+    //System.outt.println("EB.schedule()");
     myTask = new EBTimerTask();
     timer.schedule(myTask,time);          
   }
   
   public boolean cancel() {
-    //System.out.println("EB.cancel()");
+    //System.outt.println("EB.cancel()");
 		super.cancel();
     if (myTask!=null) {
       myTask.cancel();
@@ -69,7 +69,7 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
   }
   
   public void run() {
-    //System.out.println("EB.run()");
+    //System.outt.println("EB.run()");
     if (!cancelled) {
       if (myTask!=null) {
         lastTime = myTask.scheduledExecutionTime();

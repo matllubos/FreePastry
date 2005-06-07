@@ -30,11 +30,6 @@ import rice.pastry.messaging.*;
 public interface LocalNodeI extends Serializable {
 
     /**
-     * Refer to README.handles_localnode.
-     */
-    public static PendingLocalNodesList pending = new PendingLocalNodesList();
-
-    /**
      * Accessor method.
      */
     public PastryNode getLocalNode();

@@ -94,16 +94,11 @@ public class Environment {
     if (time == null) {
       time = new SimpleTimeSource(); 
     }
-    if (selectorManager == null) {      
-    // XXX this is used until converison to using the environment is complete.  
-    // SelectorManager.getSelectorManager() should be removed when complete.
-    // in the meantime, if we don't use this, then there could be two SelectorManagers floating
-    // around out there which will break everything.
-  //    selectorManager = SelectorManager.getSelectorManager(); 
-      selectorManager = new SelectorManager(false, time); 
-    }
     if (logging == null) {
       logging = new SimpleLogManager(time, params); 
+    }
+    if (selectorManager == null) {      
+      selectorManager = new SelectorManager(false, "Default", time, logging); 
     }
   }
   

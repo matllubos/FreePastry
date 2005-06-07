@@ -4,8 +4,8 @@ package rice.pastry.commonapi;
 import java.security.InvalidParameterException;
 
 import rice.*;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
-import rice.pastry.Log;
 import rice.pastry.NodeId;
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
@@ -85,7 +85,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param hint the hint
    */
   public void route(Id key, Message msg, NodeHandle hint) {
-    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] route " + msg + " to " + key);
+    thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+      "[" + thePastryNode + "] route " + msg + " to " + key);
 
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg);
     if ((key == null) && (hint == null)) {
@@ -280,19 +281,22 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   // Upcall to Application support
 
   public final void messageForAppl(rice.pastry.messaging.Message msg) {
-    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] deliver " + msg + " from " + msg.getSenderId());
+    thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+        "[" + thePastryNode + "] deliver " + msg + " from " + msg.getSenderId());
     
     if (msg instanceof PastryEndpointMessage) {
       // null for now, when RouteMessage stuff is completed, then it will be different!
       application.deliver(null, ((PastryEndpointMessage) msg).getMessage());
     } else {
-      System.out.println("Received unknown message " + msg + " - dropping on floor");
+      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.WARNING,
+          "Received unknown message " + msg + " - dropping on floor");
     }
   }
 
   public final boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
     if (msg instanceof RouteMessage) {
-      if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] forward " + msg);
+      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+          "[" + thePastryNode + "] forward " + msg);
       return application.forward((RouteMessage) msg);
     } else {
       return true;
@@ -320,13 +324,15 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param msg the message that is arriving.
    */
   public void receiveMessage(rice.pastry.messaging.Message msg) {
-    if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] recv " + msg);
+    thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+        "[" + thePastryNode + "] recv " + msg);
       
     if (msg instanceof rice.pastry.routing.RouteMessage) {
       rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
 
       // call application
-      if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] forward " + msg);
+      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+          "[" + thePastryNode + "] forward " + msg);
       if (application.forward(rm)) {
         if (rm.nextHop != null) {
           rice.pastry.NodeHandle nextHop = rm.nextHop;
@@ -334,7 +340,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
           // if the message is for the local node, deliver it here
           if (getNodeId().equals(nextHop.getNodeId())) {
             PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap();
-            if (Log.ifp(8)) System.out.println("[" + thePastryNode + "] deliver " + pMsg + " from " + pMsg.getSenderId());
+            thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+                "[" + thePastryNode + "] deliver " + pMsg + " from " + pMsg.getSenderId());
             application.deliver(rm.getTarget(), pMsg.getMessage());
           }
           else {

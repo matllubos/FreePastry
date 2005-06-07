@@ -8,10 +8,10 @@ import java.util.*;
 import sun.reflect.*;
 
 /**
- * XMLObjectInputStream is an extension of ObjectInputStream which provides
+ * XMLObjectInputStreamm is an extension of ObjectInputStreamm which provides
  * for deserialization for objects which have been converted to XML via a
  * XMLObjectOutputStream.  This class supports all of the features of 
- * the ObjectInputStream, including serialization support for any Java 
+ * the ObjectInputStreamm, including serialization support for any Java 
  * object graph implementing the Serializable interface, support for 
  * Externalizable classes, custom deserialization via the readObject() method, 
  * class evolution via the readObjectNoData() method, alternate field
@@ -104,7 +104,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
   }
   
   
-  // ----- ObjectInputStream Overriding Methods -----
+  // ----- ObjectInputStreamm Overriding Methods -----
   
   /**
    * Method which reads the XML header off of the stream.  Usually, this is the
@@ -308,7 +308,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
   }
   
   /**
-   * Method which is called by ObjectInputStream.readObject(), and reads
+   * Method which is called by ObjectInputStreamm.readObject(), and reads
    * the next object from the stream, and returns the result.  If the object
    * (or any of it's descendents) has a readResolve() method, that object is
    * returned.
@@ -581,7 +581,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
   }
   
   
-  // ----- ObjectInputStream Referencing Methods -----
+  // ----- ObjectInputStreamm Referencing Methods -----
   
   /**
    * Method which adds a reference in the hashtable of references.
@@ -1218,8 +1218,8 @@ public class XMLObjectInputStream extends ObjectInputStream {
   
   /**
    * This class is an implementation of GetField which is compatible with 
-   * the XMLObjectInputStream.  It works in the same manner as the 
-   * ObjectInputStream.GetField.
+   * the XMLObjectInputStreamm.  It works in the same manner as the 
+   * ObjectInputStreamm.GetField.
    */
   public class GetField extends ObjectInputStream.GetField {
     

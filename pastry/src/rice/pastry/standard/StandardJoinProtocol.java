@@ -1,6 +1,7 @@
 
 package rice.pastry.standard;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.leafset.*;
@@ -84,20 +85,21 @@ public class StandardJoinProtocol implements MessageReceiver {
   					jr.acceptJoin(localHandle, leafSet);
 	  				nh.receiveMessage(jr);
           } else {
-            System.out.println("NOTE: Dropping incoming JoinRequest " + jr + " because local node is not ready!");
+            localNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.INFO,
+                "NOTE: Dropping incoming JoinRequest " + jr + " because local node is not ready!");
           }
 				} else { // this is the node that initiated the join request in the first place
 					NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
 
 					jh = security.verifyNodeHandle(jh);
 
-					//      System.out.println("SJP1:"+jh.equals(localHandle)+":"+jh.getNodeId().equals(localHandle.getNodeId()));
-					//      System.out.println("jh1:"+jh+" lh:"+localHandle);
+					//      System.outt.println("SJP1:"+jh.equals(localHandle)+":"+jh.getNodeId().equals(localHandle.getNodeId()));
+					//      System.outt.println("jh1:"+jh+" lh:"+localHandle);
 					//      if ( jh.getNodeId().equals(localHandle.getNodeId()) && !localNode.isReady() ) {
 					if (jh.equals(localHandle) && !localNode.isReady()) {
-						//        System.out.println("SJP2:"+jh.equals(localHandle)+":"+jh.getNodeId().equals(localHandle.getNodeId()));
-						//        System.out.println("jh2:"+jh+" lh:"+localHandle);
-						System.out.println(
+						//        System.outt.println("SJP2:"+jh.equals(localHandle)+":"+jh.getNodeId().equals(localHandle.getNodeId()));
+						//        System.outt.println("jh2:"+jh+" lh:"+localHandle);
+            localNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.WARNING,
 							"NodeId collision, unable to join: " + localHandle + ":" + jh);
 						//Thread.dumpStack();
 					} else if (jh.isAlive() == true) { // the join handle is alive
@@ -108,7 +110,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 						broadcastRows(jr);
 
 						// now update the local leaf set
-						//System.out.println("Join ls:" + jr.getLeafSet());
+						//System.outt.println("Join ls:" + jr.getLeafSet());
 						BroadcastLeafSet bls =
 							new BroadcastLeafSet(
 								jh,
@@ -137,18 +139,18 @@ public class StandardJoinProtocol implements MessageReceiver {
 			int msdd = localId.indexOfMSDD(nid, base);
 			int last = jr.lastRow();
 
-			//System.out.println("join from " + nid + " at " + localId + " msdd=" + msdd + " last=" + last);
+			//System.outt.println("join from " + nid + " at " + localId + " msdd=" + msdd + " last=" + last);
 
 			for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
-				//System.out.println(routeTable);
-				//System.out.print(i + " ");
+				//System.outt.println(routeTable);
+				//System.outt.print(i + " ");
 
 				RouteSet row[] = routeTable.getRow(i);
 
 				jr.pushRow(row);
 			}
 
-			//System.out.println("done");
+			//System.outt.println("done");
 
 			rm.routeMessage(localHandle);
 		} else if (msg instanceof InitiateJoin) { // request from the local node to join

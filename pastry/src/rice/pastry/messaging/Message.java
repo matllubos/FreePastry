@@ -1,4 +1,3 @@
-
 package rice.pastry.messaging;
 
 import rice.pastry.security.Credentials;
@@ -12,178 +11,175 @@ import rice.pastry.*;
  * This is an abstract implementation of a message object.
  * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  * @author Sitaram Iyer
  */
 
-public abstract class Message implements Serializable 
-{
+public abstract class Message implements Serializable {
   private static final long serialVersionUID = 8921944904321235696L;
-  
+
   public static final int DEFAULT_PRIORITY_LEVEL = 5;
-  
-    private Address destination;
-    private NodeHandle sender;
-    private boolean priority;
-    private int priorityLevel = DEFAULT_PRIORITY_LEVEL;
 
-    private transient Credentials credentials;
-    private transient Date theStamp;
-    private transient ObjectInputStream stream;
+  private Address destination;
 
-    /**
-     * Gets the address of message receiver that the message is for.
-     *
-     * @return the destination id.
-     */
-    public Address getDestination() { return destination; }
+  private NodeHandle sender;
 
-    /**
-     * Gets the credentials of the sender.
-     *
-     * @return credentials or null if the sender has no credentials.
-     */
-    public Credentials getCredentials() { return credentials; }
+  private boolean priority;
 
-    /**
-     * Gets the timestamp of the message, if it exists.
-     *
-     * @return a timestamp or null if the sender did not specify one.
-     */
-    public Date getDate() { return theStamp; }
+  private int priorityLevel = DEFAULT_PRIORITY_LEVEL;
 
-    /**
-     * Get sender Id.
-     * 
-     * @return the immediate sender's NodeId.
-     */
-    public NodeId getSenderId() { 
-      if (sender == null) return null;
-      return sender.getNodeId(); 
-    }
-    
-    /**
-     * Get sender.
-     * 
-     * @return the immediate sender's NodeId.
-     */
-    public NodeHandle getSender() { return sender; }
-      
-    /**
-     * Set sender Id. Called by NodeHandle just before dispatch, so that
-     * this Id is guaranteed to belong to the immediate sender.
-     * 
-     * @param the immediate sender's NodeId.
-     */
-    public void setSender(NodeHandle nh) { sender = nh; }
+  private transient Credentials credentials;
 
-    /**
-     * Get priority
-     * 
-     * @return the priority of this message.
-     */
-    public int getPriority() { return priorityLevel; }
-    
-    /**
-     * Set priority.
-     * 
-     * @param the new priority.
-     */
-    protected void setPriority(int prio) { priorityLevel = prio; }
+  private transient Date theStamp;
 
-    /**
-     * Get stream over which the object was deserialized. Used for indexing
-     * into the LocalNode.pending hashmap. See README.handle_localnode.
-     * 
-     * @return the object input stream
-     */
-    public ObjectInputStream getStream() { return stream; }
-    
-    /**
-     * If the message has no timestamp, this will stamp the message.
-     *
-     * @param time the timestamp.
-     *
-     * @return true if the message was stamped, false if the message already had 
-     * a timestamp.
-     */
-    public boolean stamp(Date time) {
-	if (theStamp.equals(null)) {
-	    theStamp = time;
-	    return true;
-	}
-	else return false;
-    }
+  /**
+   * Gets the address of message receiver that the message is for.
+   * 
+   * @return the destination id.
+   */
+  public Address getDestination() {
+    return destination;
+  }
 
-    /**
-     * Constructor.
-     *
-     * @param dest the destination.
-     */
+  /**
+   * Gets the credentials of the sender.
+   * 
+   * @return credentials or null if the sender has no credentials.
+   */
+  public Credentials getCredentials() {
+    return credentials;
+  }
 
-    public Message(Address dest) 
-    {
-	destination = dest;
-	sender = null;
-	credentials = null;
-	theStamp = null;
-	priority = false;
-    }
+  /**
+   * Gets the timestamp of the message, if it exists.
+   * 
+   * @return a timestamp or null if the sender did not specify one.
+   */
+  public Date getDate() {
+    return theStamp;
+  }
 
-    /**
-     * Constructor.
-     *
-     * @param dest the destination.
-     * @param cred the credentials.
-     */
+  /**
+   * Get sender Id.
+   * 
+   * @return the immediate sender's NodeId.
+   */
+  public NodeId getSenderId() {
+    if (sender == null)
+      return null;
+    return sender.getNodeId();
+  }
 
-    public Message(Address dest, Credentials cred) 
-    {
-	destination = dest;
-	sender = null;
-	credentials = cred;
-	theStamp = null;
-	priority = false;
-    }
+  /**
+   * Get sender.
+   * 
+   * @return the immediate sender's NodeId.
+   */
+  public NodeHandle getSender() {
+    return sender;
+  }
 
-    /**
-     * Constructor.
-     *
-     * @param dest the destination.
-     * @param cred the credentials.
-     * @param timestamp the timestamp
-     */
+  /**
+   * Set sender Id. Called by NodeHandle just before dispatch, so that this Id
+   * is guaranteed to belong to the immediate sender.
+   * 
+   * @param the immediate sender's NodeId.
+   */
+  public void setSender(NodeHandle nh) {
+    sender = nh;
+  }
 
-    public Message(Address dest, Credentials cred, Date timestamp) 
-    {
-	destination = dest;
-	sender = null;
-	credentials = cred;
-	this.theStamp = timestamp;
-	priority = false;
-    }
+  /**
+   * Get priority
+   * 
+   * @return the priority of this message.
+   */
+  public int getPriority() {
+    return priorityLevel;
+  }
 
-    /**
-     * Constructor.
-     *
-     * @param dest the destination.
-     * @param timestamp the timestamp
-     */
+  /**
+   * Set priority.
+   * 
+   * @param the new priority.
+   */
+  protected void setPriority(int prio) {
+    priorityLevel = prio;
+  }
 
-    public Message(Address dest, Date timestamp) 
-    {
-	destination = dest;
-	this.theStamp = timestamp;
-	sender = null;
-	priority = false;
-    }
+  /**
+   * If the message has no timestamp, this will stamp the message.
+   * 
+   * @param time the timestamp.
+   * 
+   * @return true if the message was stamped, false if the message already had a
+   *         timestamp.
+   */
+  public boolean stamp(Date time) {
+    if (theStamp.equals(null)) {
+      theStamp = time;
+      return true;
+    } else
+      return false;
+  }
 
-    private void readObject(ObjectInputStream in)
-	throws IOException, ClassNotFoundException 
-    {
-	in.defaultReadObject();
-	if (!(in instanceof PastryObjectInputStream)) 
-  	stream = in;
-    }
+  /**
+   * Constructor.
+   * 
+   * @param dest the destination.
+   */
+
+  public Message(Address dest) {
+    destination = dest;
+    sender = null;
+    credentials = null;
+    theStamp = null;
+    priority = false;
+  }
+
+  /**
+   * Constructor.
+   * 
+   * @param dest the destination.
+   * @param cred the credentials.
+   */
+
+  public Message(Address dest, Credentials cred) {
+    destination = dest;
+    sender = null;
+    credentials = cred;
+    theStamp = null;
+    priority = false;
+  }
+
+  /**
+   * Constructor.
+   * 
+   * @param dest the destination.
+   * @param cred the credentials.
+   * @param timestamp the timestamp
+   */
+
+  public Message(Address dest, Credentials cred, Date timestamp) {
+    destination = dest;
+    sender = null;
+    credentials = cred;
+    this.theStamp = timestamp;
+    priority = false;
+  }
+
+  /**
+   * Constructor.
+   * 
+   * @param dest the destination.
+   * @param timestamp the timestamp
+   */
+
+  public Message(Address dest, Date timestamp) {
+    destination = dest;
+    this.theStamp = timestamp;
+    sender = null;
+    priority = false;
+  }
 }

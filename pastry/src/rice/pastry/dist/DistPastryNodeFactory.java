@@ -34,7 +34,8 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
   /**
    * Constructor. Protected - one should use the getFactory method.
    */
-  protected DistPastryNodeFactory() {
+  protected DistPastryNodeFactory(Environment env) {
+    super(env);
   }
 
   /**

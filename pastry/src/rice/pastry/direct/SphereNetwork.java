@@ -218,8 +218,8 @@ public class SphereNetwork implements NetworkSimulator {
      * DESCRIBE THE METHOD
      */
     public void deliver() {
-      //System.out.println("delivering to " + node);
-      //System.out.println(msg);
+      //System.outt.println("delivering to " + node);
+      //System.outt.println(msg);
 
       if (isAlive(msg.getSenderId())) 
         node.receiveMessage(msg);

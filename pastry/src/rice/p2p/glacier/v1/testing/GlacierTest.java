@@ -3,6 +3,7 @@ package rice.p2p.glacier.v1.testing;
 import rice.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
@@ -67,6 +68,10 @@ public class GlacierTest {
     glaciers = new Vector();
   }
 
+  public Environment getEnvironment() {
+    return environment;
+  }
+  
   /**
    * Get a handle to a bootstrap node. This is only a simulation, so we pick the
    * most recently created node.
@@ -113,8 +118,8 @@ public class GlacierTest {
         glacierStor, new GlacierDefaultPolicy(), REPLICATION_FACTOR,
         numFragments, numSurvivors, null, INSTANCE, pn.getEnvironment());
     glaciers.addElement(glac);
-    if (Log.ifp(5))
-      System.out.println("created " + pn);
+    pn.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
+      "created " + pn);
   }
 
   /**
@@ -123,8 +128,8 @@ public class GlacierTest {
   private void printLeafSets() {
     for (int i = 0; i < pastryNodes.size(); i++) {
       PastryNode pn = (PastryNode) pastryNodes.get(i);
-      if (Log.ifp(5))
-        System.out.println(pn.getLeafSet());
+      pn.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
+        pn.getLeafSet().toString());
     }
   }
 
@@ -168,12 +173,10 @@ public class GlacierTest {
   }
 
   /**
-   * Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]
+   * Usage: HelloWorld [-msgs m] [-nodes n]
    * [-simultaneous_joins] [-simultaneous_msgs] [-help]
    */
   public static void main(String args[]) throws IOException {
-
-    Log.init(args);
 
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-nodes") && i + 1 < args.length)
@@ -202,14 +205,14 @@ public class GlacierTest {
           ;
     }
     if (simultaneous_joins) {
-      if (Log.ifp(5))
-        System.out.println("let the joins begin!");
+      driver.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
+        "let the joins begin!");
       while (driver.simulate())
         ;
     }
 
-    if (Log.ifp(5))
-      System.out.println(numnodes + " nodes constructed");
+    driver.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
+      numnodes + " nodes constructed");
 
     driver.printLeafSets();
 

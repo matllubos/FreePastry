@@ -1,6 +1,7 @@
 package rice.pastry.standard;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -80,7 +81,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
       BroadcastRouteRow brr = (BroadcastRouteRow) msg;
 
       RouteSet[] row = brr.getRow();
-      //System.out.println("BroadcastRouteRow from " + brr.from().getNodeId());
+      //System.outt.println("BroadcastRouteRow from " + brr.from().getNodeId());
 
       NodeHandle nh = brr.from();
       nh = security.verifyNodeHandle(nh);
@@ -90,7 +91,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
       for (int i = 0; i < row.length; i++) {
         RouteSet rs = row[i];
         //int n = rs.size();
-        //System.out.print(n + " ");
+        //System.outt.print(n + " ");
 
         for (int j = 0; rs != null && j < rs.size(); j++) {
           nh = rs.get(j);
@@ -101,7 +102,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
         }
       }
 
-      //System.out.println("done");
+      //System.outt.println("done");
     }
 
     else if (msg instanceof RequestRouteRow) { // a remote node request one of
@@ -112,7 +113,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
       NodeHandle nh = rrr.returnHandle();
       nh = security.verifyNodeHandle(nh);
 
-      //System.out.println("RequestRouteRow " + reqRow + " from " +
+      //System.outt.println("RequestRouteRow " + reqRow + " from " +
       // nh.getNodeId());
 
       RouteSet row[] = routeTable.getRow(reqRow);
@@ -143,8 +144,8 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
 
   private void maintainRouteSet() {
 
-    if (Log.ifp(7))
-      System.out.println("maintainRouteSet " + localHandle.getNodeId());
+    environmet.getLogManager().getLogger(StandardRouteSetProtocol.class, null).log(Logger.FINE,
+      "maintainRouteSet " + localHandle.getNodeId());
 
     // for each populated row in our routing table
     for (int i = routeTable.numRows() - 1; i >= 0; i--) {
@@ -168,7 +169,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
         NodeHandle nh;
 
         if (rs != null && (nh = rs.closestNode()) != null) {
-          //System.out.println(localHandle.getNodeId() +
+          //System.outt.println(localHandle.getNodeId() +
           //	       " swapping RT row[" + i + "," + col + "] with " + nh.getNodeId());
           nh.receiveMessage(brr);
           nh.receiveMessage(rrr);

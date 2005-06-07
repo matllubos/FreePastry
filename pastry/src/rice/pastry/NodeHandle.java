@@ -13,7 +13,8 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements MessageReceiver, LocalNodeI {
+public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements MessageReceiver, LocalNodeI 
+{
 
   public static final int LIVENESS_ALIVE = 1;
   public static final int LIVENESS_SUSPECTED = 2;
@@ -88,7 +89,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * @param pn local pastrynode
    */
   public final void setLocalNode(PastryNode pn) {
-    //System.out.println("r.p.NodeHandle.setLocalNode("+pn+")");
+    //System.outt.println("r.p.NodeHandle.setLocalNode("+pn+")");
     localnode = pn;
     if (localnode != null) {
       afterSetLocalNode();
@@ -115,8 +116,8 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    */
   public final void assertLocalNode() {
     if (localnode == null) {
-      System.out.println("PANIC: localnode is null in " + this);
-      (new Exception()).printStackTrace();
+      System.err.println("PANIC: localnode is null in " + this);
+      (new Exception()).printStackTrace(System.err);
     }
   }
 
@@ -148,18 +149,6 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    */
   public abstract int hashCode();
 
-  /**
-   * Called on deserialization. Adds itself to a pending-setLocalNode
-   * list. This list is in a static (global) hash, indexed by the
-   * ObjectInputStream. Refer to README.handles_localnode for details.
-   */
-  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-      in.defaultReadObject();
-      
-    if (! (in instanceof PastryObjectInputStream)) {
-      LocalNodeI.pending.addPending(in, this);
-    }
-  }
 }
 
 

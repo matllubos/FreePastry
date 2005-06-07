@@ -9,7 +9,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
 /**
- * XMLReader is a utility class used by XMLObjectInputStream to perform the actual
+ * XMLReader is a utility class used by XMLObjectInputStreamm to perform the actual
  * XML parsing.  This reader is based on the XML Pull-Parsing API, available online
  * at http://www.xmlpull.org.  Any of the provided parser implementations will work 
  * with this reader.

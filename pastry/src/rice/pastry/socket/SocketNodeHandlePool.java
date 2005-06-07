@@ -4,6 +4,7 @@ import java.lang.ref.*;
 import java.net.*;
 import java.util.*;
 
+import rice.environment.logging.Logger;
 import rice.pastry.dist.*;
 
 /**
@@ -88,9 +89,11 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
         if (handle != null) {
           if (!printed) {
             if (update == SocketNodeHandle.DECLARED_DEAD) {
-              System.out.println(node.getNodeId() + " found " + handle.getNodeId() + " to be dead.");
+              node.getEnvironment().getLogManager().getLogger(SocketNodeHandle.class, null).log(Logger.FINE,
+                  "found " + handle.getNodeId() + " to be dead.");
             } else if (update == SocketNodeHandle.DECLARED_LIVE) {
-              System.out.println(node.getNodeId() + " found " + handle.getNodeId() + " to be alive again.");
+              node.getEnvironment().getLogManager().getLogger(SocketNodeHandle.class, null).log(Logger.FINE,
+                  "found " + handle.getNodeId() + " to be alive again.");
             }
 
             printed = true;

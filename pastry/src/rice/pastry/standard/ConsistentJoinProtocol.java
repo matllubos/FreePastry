@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.Observable;
 import java.util.Observer;
 
+import rice.environment.logging.Logger;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeSetUpdate;
 import rice.pastry.PastryNode;
@@ -41,8 +42,6 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   protected int MAX_TIME_TO_BE_SCHEDULED = 20*1000;
 
-  
-  public static final boolean verbose = false;
   
   /**
    * Contains NodeHandles that know about us. 
@@ -200,7 +199,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
             // hopefully this is redundant with the leafset protocol
             leafSet.remove(nh); 
           } else {
-            if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" checking liveness2 on "+nh);
+            log(Logger.FINE, "CJP: checking liveness2 on "+nh);
             nh.checkLiveness();
           }
         }
@@ -239,7 +238,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
             if (!failed.contains(nh) && nh.getLiveness() < NodeHandle.LIVENESS_DEAD) {
               addToLeafSet(nh);
               // probe
-              //if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" checking liveness1 on "+nh);
+              //if (verbose) System.outt.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" checking liveness1 on "+nh);
               //nh.checkLiveness(); // maybe this is automatic the first time I send a message
               sendTheMessage(nh, false);
 //            }
@@ -290,7 +289,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       if (numToHearFrom == 0) {
         if (!localNode.isReady()) {
           // active_i = true;
-    //        System.out.println("j = "+j+"setReady() probed "+seen.size()+":"+gotResponse.size()+" nodes.");
+    //        System.outt.println("j = "+j+"setReady() probed "+seen.size()+":"+gotResponse.size()+" nodes.");
           localNode.setReady(); 
           retryTask.cancel();
         }
@@ -304,10 +303,10 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           it2.remove();
         }
       } else {
-        if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" still need to hear from:"+toHearFromStr);
+        log(Logger.FINE, "CJP: still need to hear from:"+toHearFromStr);
       }
     } else {
-      if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" LS is not complete: "+leafSet);
+      log(Logger.FINE, "CJP: LS is not complete: "+leafSet);
       // need to poll left and right neighbors
       // sendTheMessage to leftmost and rightmost?
       // send leafsetMaintenance to self?
@@ -320,7 +319,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @param reply
    */
   public void sendTheMessage(NodeHandle nh, boolean reply) {
-    if (verbose) System.out.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" sendTheMessage("+nh+","+reply+")");
+    log(Logger.FINE, "CJP:  sendTheMessage("+nh+","+reply+")");
     // todo, may want to repeat this message as long as the node is alive if we 
     // are worried about rare message drops
     if (localNode.isReady()) {
@@ -329,6 +328,12 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     nh.receiveMessage(new ConsistentJoinMsg(getAddress(),leafSet,failed,!reply));      
   }
   
+
+  private void log(int level, String s) {
+    localNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).log(level,s);
+  }
+  
+
   /**
    * Can be PastryNode updates, leafset updates, or nodehandle updates.
    */

@@ -8,6 +8,7 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.zip.*;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.*;
@@ -245,8 +246,7 @@ public class SocketChannelRepeater {
    * @param s DESCRIBE THE PARAMETER
    */
   private void debug(String s) {
-    if (Log.ifp(8)) {
-      System.out.println(spn.getNodeId() + " (SCR): " + s);
-    }
+    spn.getEnvironment().getLogManager().getLogger(SocketChannelRepeater.class, null).log(Logger.FINER,
+        "(SCR): " + s);
   }
 }

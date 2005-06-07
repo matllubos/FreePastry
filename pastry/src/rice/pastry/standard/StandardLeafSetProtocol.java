@@ -1,6 +1,7 @@
 
 package rice.pastry.standard;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
@@ -70,13 +71,13 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 			NodeHandle from = bls.from();
 			LeafSet remotels = bls.leafSet();
 
-			//System.out.println("received leafBC from " + from.getNodeId() + " at " + 
+			//System.outt.println("received leafBC from " + from.getNodeId() + " at " + 
 			//	       localHandle.getNodeId() + "type=" + type + " :" + remotels);
 
 			// first, merge the received leaf set into our own
 			boolean changed = mergeLeafSet(remotels, from);
 			//      if (changed)
-			//        System.out.println("received leafBC from " + from.getNodeId() + " at " + 
+			//        System.outt.println("received leafBC from " + from.getNodeId() + " at " + 
 			//               localHandle.getNodeId() + "type=" + type + " :" + remotels);
 
 			if (type == BroadcastLeafSet.JoinInitial) {
@@ -173,7 +174,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 			// nodes where missing, send update to "from"
 			from = security.verifyNodeHandle(from);
 			from.receiveMessage(bl);
-			//System.out.println("sending ls to src " + from.getNodeId());
+			//System.outt.println("sending ls to src " + from.getNodeId());
 
 			if (notifyMissing) {
 				// send leafset to nodes that where missing from remotels
@@ -181,13 +182,13 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 				// for now, conservatively send to everyone
 				//broadcast(BroadcastLeafSet.Correction);
 
-				//System.out.println("inserted: " + insertedHandles.size());
+				//System.outt.println("inserted: " + insertedHandles.size());
 
 				Iterator it = insertedHandles.iterator();
 				while (it.hasNext()) {
 					// send leafset to missing node
 					NodeHandle nh = (NodeHandle) it.next();
-					//System.out.println("sending ls to " + nh.getNodeId());
+					//System.outt.println("sending ls to " + nh.getNodeId());
 					nh.receiveMessage(bl);
 				}
 			}
@@ -262,7 +263,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 		int cwSize = ls.cwSize();
 		int ccwSize = ls.ccwSize();
 
-		//System.out.println("Broadcast: " + leafSet + " from=" + from.getNodeId());
+		//System.outt.println("Broadcast: " + leafSet + " from=" + from.getNodeId());
 
 		for (int i = -ccwSize; i <= cwSize; i++) {
 			NodeHandle nh;
@@ -277,7 +278,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 			nh = security.verifyNodeHandle(nh);
 
-			//System.out.println("Broadcast: from " + localHandle.getNodeId() + " to " + nh.getNodeId());
+			//System.outt.println("Broadcast: from " + localHandle.getNodeId() + " to " + nh.getNodeId());
 
 			nh.receiveMessage(bls);
 
@@ -291,8 +292,8 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	 */
 	public void maintainLeafSet() {
 
-		if (Log.ifp(7))
-			System.out.println("maintainLeafSet " + localHandle.getNodeId());
+    localNode.getEnvironment().getLogManager().getLogger(StandardLeafSetProtocol.class, null).log(Logger.FINE,
+			"maintainLeafSet " + localHandle.getNodeId());
 
 		boolean lostMembers = false;
 
@@ -335,7 +336,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
 	private void requestLeafSet() {
 
-		//System.out.println("requestLeafSet");
+		//System.outt.println("requestLeafSet");
 
 		RequestLeafSet rls = new RequestLeafSet(localHandle);
 		int cwSize = leafSet.cwSize();
@@ -353,7 +354,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 		}
 
 		if (allDead && leafSet.size() > 0)
-			System.out.println(
+      localNode.getEnvironment().getLogManager().getLogger(StandardLeafSetProtocol.class, null).log(Logger.SEVERE,
 				"Ring failure at"
 					+ localHandle.getNodeId()
 					+ "all ccw leafset entries failed");
@@ -370,7 +371,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 		}
 
 		if (allDead && leafSet.size() > 0)
-			System.out.println(
+      localNode.getEnvironment().getLogManager().getLogger(StandardLeafSetProtocol.class, null).log(Logger.SEVERE,
 				"Ring failure at"
 					+ localHandle.getNodeId()
 					+ "all cw leafset entries failed");

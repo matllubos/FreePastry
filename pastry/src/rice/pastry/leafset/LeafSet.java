@@ -206,16 +206,16 @@ public class LeafSet extends Observable implements Serializable {
    */
   public NodeHandle remove(NodeHandle nh)
   {
-    //System.out.println("Removing " + nid + " from " + this);
+    //System.outt.println("Removing " + nid + " from " + this);
 
     NodeHandle res1 = cwSet.remove(nh);
     NodeHandle res2 = ccwSet.remove(nh);
     if (res1 != null) {
-      //System.out.println("removed " + res1.getNodeId());
+      //System.outt.println("removed " + res1.getNodeId());
       return res1;
     }
     else {
-      //System.out.println("removed " + res2.getNodeId());
+      //System.outt.println("removed " + res2.getNodeId());
       return res2;
     }
   }
@@ -228,16 +228,16 @@ public class LeafSet extends Observable implements Serializable {
    */
 //  public NodeHandle remove(NodeId nid)
 //  {
-//    //System.out.println("Removing " + nid + " from " + this);
+//    //System.outt.println("Removing " + nid + " from " + this);
 //
 //    NodeHandle res1 = cwSet.remove(nid);
 //    NodeHandle res2 = ccwSet.remove(nid);
 //    if (res1 != null) {
-//      //System.out.println("removed " + res1.getNodeId());
+//      //System.outt.println("removed " + res1.getNodeId());
 //      return res1;
 //    }
 //    else {
-//      //System.out.println("removed " + res2.getNodeId());
+//      //System.outt.println("removed " + res2.getNodeId());
 //      return res2;
 //    }
 //  }
@@ -323,7 +323,7 @@ public class LeafSet extends Observable implements Serializable {
       cwMS = cwSet.mostSimilar(nid);
     }
 
-    //System.out.println("cwMS=" + cwMS + " ccwMS=" + ccwMS);
+    //System.outt.println("cwMS=" + cwMS + " ccwMS=" + ccwMS);
 
     cwMinDist = cwSet.get(cwMS).getNodeId().distance(nid);
     ccwMinDist = ccwSet.get(ccwMS).getNodeId().distance(nid);
@@ -387,8 +387,8 @@ public class LeafSet extends Observable implements Serializable {
    * @return the ordered set of nodehandles
    */
   public NodeSet replicaSet(Id key, int max) {
-    //System.out.println("replicaSet Called with max= " + max + " key= " + key);
-    //System.out.println(this);
+    //System.outt.println("replicaSet Called with max= " + max + " key= " + key);
+    //System.outt.println(this);
     NodeSet set = new NodeSet();
     if (max < 1) return set;
 
@@ -400,7 +400,7 @@ public class LeafSet extends Observable implements Serializable {
 
     // compute the nearest node
     int nearest = mostSimilar(key);
-    //System.out.println("nearest=" + nearest + " key=" + key);
+    //System.outt.println("nearest=" + nearest + " key=" + key);
 
 
     // add the key's root
@@ -563,7 +563,7 @@ public class LeafSet extends Observable implements Serializable {
 
     if (!cw) res = rr.diff(rprev);
     else     res = rprev.diff(rr);
-    //System.out.println("(" + rr + ").diff(" + rprev + ")=" + res);
+    //System.outt.println("(" + rr + ").diff(" + rprev + ")=" + res);
     return res;
   }
 
@@ -582,7 +582,7 @@ public class LeafSet extends Observable implements Serializable {
   public boolean merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable,
                        PastrySecurityManager security, boolean testOnly, Set insertedHandles) {
 
-    //System.out.println("LeafSet::merge of " + remotels + " into \n" + this);
+    //System.outt.println("LeafSet::merge of " + remotels + " into \n" + this);
     boolean changed, result = false;
     int cwSize = remotels.cwSize();
     int ccwSize = remotels.ccwSize();
@@ -610,7 +610,7 @@ public class LeafSet extends Observable implements Serializable {
           NodeId closestId = remotels.get(closest).getNodeId();
 
           if (closest == -remotels.ccwSize() || closest == remotels.cwSize()) {
-            //System.out.println("LeafSet::merge at " + this + " received an out of range leafset from " + remotels);
+            //System.outt.println("LeafSet::merge at " + this + " received an out of range leafset from " + remotels);
             // doesn't hurt to merge it anyways
             //return;
           }
@@ -673,7 +673,7 @@ public class LeafSet extends Observable implements Serializable {
       }
     }
 
-    //System.out.println("LeafSet::merge cw=" + cw + " ccw=" + ccw);
+    //System.outt.println("LeafSet::merge cw=" + cw + " ccw=" + ccw);
 
     for (int i=cw; i<=cwSize; i++) {
       NodeHandle nh;
@@ -753,7 +753,7 @@ public class LeafSet extends Observable implements Serializable {
     }
 
 
-    //System.out.println("LeafSet::merge result: " + this);
+    //System.outt.println("LeafSet::merge result: " + this);
 
     return result;
   }

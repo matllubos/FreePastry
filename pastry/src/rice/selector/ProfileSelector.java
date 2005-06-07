@@ -17,6 +17,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 
+import rice.environment.logging.LogManager;
 import rice.environment.time.TimeSource;
 
 /**
@@ -44,8 +45,8 @@ public class ProfileSelector extends SelectorManager {
   /**
    * 
    */
-  public ProfileSelector(TimeSource timeSource) {
-    super(true, timeSource);
+  public ProfileSelector(String instance, TimeSource timeSource, LogManager log) {
+    super(true, instance, timeSource, log);
     new Thread(new Runnable() {
       public void run() {
         while(true) {

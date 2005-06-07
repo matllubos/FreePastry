@@ -1,6 +1,7 @@
 package rice.pastry.testing;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.standard.*;
 import rice.pastry.dist.*;
@@ -182,8 +183,8 @@ public class DistHelloWorld {
 
     HelloWorldApp app = new HelloWorldApp(pn);
     helloClients.addElement(app);
-    if (Log.ifp(5))
-      System.out.println("created " + pn);
+    pn.getEnvironment().getLogManager().getLogger(DistHelloWorld.class, null).log(Logger.INFO, 
+        "created " + pn);
     return pn;
   }
 
@@ -197,9 +198,9 @@ public class DistHelloWorld {
    * msgs only).
    */
   public static void main(String args[]) throws IOException {
-    Log.init(args);
+    Environment env = new Environment();
     doIinitstuff(args);
-    DistHelloWorld driver = new DistHelloWorld(new Environment());
+    DistHelloWorld driver = new DistHelloWorld(env);
 
     // create first node
     PastryNode pn = driver.makePastryNode(true);
@@ -229,8 +230,8 @@ public class DistHelloWorld {
       }
     }
 
-    if (Log.ifp(5))
-      System.out.println(numnodes + " nodes constructed");
+    env.getLogManager().getLogger(DistHelloWorld.class, null).log(Logger.INFO, 
+        numnodes + " nodes constructed");
 
     for (int i = 0; i < nummsgs; i++) {
       for (int client = 0; client < driver.helloClients.size(); client++) {

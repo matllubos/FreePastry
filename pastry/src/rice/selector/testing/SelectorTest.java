@@ -28,7 +28,7 @@ public class SelectorTest {
     environment = new Environment();
     
     System.out.println("hello world <selector test>");
-    SelectorManager sman = new SelectorManager(false, environment.getTimeSource());
+    SelectorManager sman = environment.getSelectorManager();
     Timer timer = sman.getTimer();
     scheduleRepeated(timer,sman);
     for(int i = 0; i < 10; i++) {

@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeSet;
 
+import rice.environment.logging.*;
+import rice.environment.logging.LogManager;
 import rice.environment.time.TimeSource;
 
 /**
@@ -52,11 +54,17 @@ public class SelectorManager extends Thread implements Timer {
 
   long lastTime = 0;
 
+  protected LogManager log;
+  
+  protected String instance;
+  
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
-  public SelectorManager(boolean profile, TimeSource timeSource) {
-    super("Main Selector Thread");
+  public SelectorManager(boolean profile, String instance, TimeSource timeSource, LogManager log) {
+    super(instance == null?"Selector Thread":"Selector Thread -- "+instance);
+    this.instance = instance;
+    this.log = log;
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
     this.cancelledKeys = new HashSet();
@@ -72,30 +80,6 @@ public class SelectorManager extends Thread implements Timer {
     start();
   }
 
-  /**
-   * Returns the SelectorManager applications should use.
-   *
-   * @return The SelectorManager which applications should use
-   */
-//  public static SelectorManager getSelectorManager() {
-//    if (manager != null)
-//      return manager;
-//
-//    synchronized (SelectorManager.class) {
-//      if (manager != null)
-//        return manager;
-//
-//      String s = System.getProperty("PROFILE_SELECTOR_MANAGER");
-//      if ((s != null) && (s != "")) {
-//        System.out.println("Using Profile Selector");
-//        manager = new ProfileSelector();        
-//      } else {
-//        manager = new SelectorManager(false);
-//      }
-//      return manager;
-//    }
-//  }
-  
   /**
    * Method which asks the Selector Manager to add the given key to the cancelled 
    * set.  If noone calls register on this key during the rest of this select() operation,
@@ -195,7 +179,7 @@ public class SelectorManager extends Thread implements Timer {
   public void run() {
     try {
       //System.out.println("SelectorManager starting...");
-      debug("SelectorManager starting...");
+      log(Logger.INFO, "SelectorManager -- "+instance+" starting...");
 
       lastTime = timeSource.currentTimeMillis();
       // loop while waiting for activity
@@ -415,15 +399,9 @@ public class SelectorManager extends Thread implements Timer {
     return (SelectionKey[]) selector.selectedKeys().toArray(new SelectionKey[0]);
   }
 
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param s DESCRIBE THE PARAMETER
-   */
-  private void debug(String s) {
-    if (rice.pastry.Log.ifp(8)) {
-      System.out.println("(SelectorManager): " + s);
-    }
+
+  private void log(int loglevel, String s) {
+    log.getLogger(SelectorManager.class, instance).log(loglevel, s);
   }
 
   /**

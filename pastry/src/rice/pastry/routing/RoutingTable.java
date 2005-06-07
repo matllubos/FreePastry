@@ -148,7 +148,7 @@ public class RoutingTable extends Observable implements Observer {
 	
 	/*
 	if (alt != null) {
-	    System.out.println("RT:bestAlternateRoute, key=" + key +
+	    System.outt.println("RT:bestAlternateRoute, key=" + key +
 	                       " alternate=" + alt.getNodeId());
 	}
 	*/

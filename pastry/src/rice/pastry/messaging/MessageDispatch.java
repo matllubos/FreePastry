@@ -3,6 +3,7 @@ package rice.pastry.messaging;
 
 import java.util.*;
 
+import rice.environment.logging.Logger;
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 
@@ -76,7 +77,8 @@ public class MessageDispatch {
    */
   public void registerReceiver(Address address, MessageReceiver receiver) {
     if (addressBook.get(address) != null) {
-      System.out.println("ERROR - Registering receiver for already-registered address " + address);
+      localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.SEVERE,
+          "ERROR - Registering receiver for already-registered address " + address);
     }
 
     addressBook.put(address, receiver);
@@ -105,7 +107,8 @@ public class MessageDispatch {
    */
   public boolean dispatchMessage(Message msg) {
     if (msg.getDestination() == null) {
-      System.out.println("Message "+msg+","+msg.getClass().getName()+" has no destination.");
+      localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.WARNING,
+          "Message "+msg+","+msg.getClass().getName()+" has no destination.");
       Thread.dumpStack();
       return false;
     }
@@ -137,11 +140,12 @@ public class MessageDispatch {
       } else { 
         // give an excuse
         if (localNode.isReady()) {
-          System.out.println("Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown.");
+          localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.WARNING,
+              "Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown." + "Message is going to be dropped on the floor.");
         } else {
-          System.out.println("Could not dispatch message " + msg + " because the pastry node is not yet ready.");          
+          localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.WARNING,
+              "Could not dispatch message " + msg + " because the pastry node is not yet ready." + "Message is going to be dropped on the floor.");          
         }
-        System.out.println("Message is going to be dropped on the floor.");
       }    
       return false;
     }
