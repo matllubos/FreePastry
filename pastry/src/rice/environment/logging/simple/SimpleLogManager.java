@@ -41,7 +41,11 @@ public class SimpleLogManager implements LogManager {
     this.time = timeSource;
     this.params = params;
     this.loggers = new Hashtable();
-    this.defaultLogger = new SimpleLogger("",stream,time,parseVal("loglevel"));
+    this.defaultLogger = new SimpleLogger("",this,time,parseVal("loglevel"));
+  }
+  
+  public void setPrintStream(PrintStream stream) {
+    this.ps = stream; 
   }
   
   private int parseVal(String key) {
@@ -153,7 +157,7 @@ public class SimpleLogManager implements LogManager {
     
     // see if this logger should exist
     if (params.contains(searchString)) {
-      Logger logger = new SimpleLogger(clazz,ps,time,parseVal(searchString));      
+      Logger logger = new SimpleLogger(clazz,this,time,parseVal(searchString));      
       loggers.put(clazz, logger);
       return logger;
     }

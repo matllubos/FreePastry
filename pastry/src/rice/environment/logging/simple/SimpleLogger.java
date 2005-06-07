@@ -24,7 +24,7 @@ public class SimpleLogger implements Logger {
   /**
    * The stream to print to.
    */
-  PrintStream ps;
+  SimpleLogManager slm;
   
   /**
    * The timesource.
@@ -44,9 +44,9 @@ public class SimpleLogger implements Logger {
    * @param time the timesource.
    * @param minPriority the minimum priority to display.
    */
-  public SimpleLogger(String loggerName, PrintStream ps, TimeSource time, int minPriority) {
+  public SimpleLogger(String loggerName, SimpleLogManager slm, TimeSource time, int minPriority) {
     this.loggerName = loggerName;
-    this.ps = ps;
+    this.slm = slm;
     this.time = time;
     this.minPriority = minPriority;
   }
@@ -56,7 +56,7 @@ public class SimpleLogger implements Logger {
    */
   public void log(int priority, String message) {
     if (priority >= minPriority) {
-      ps.println(loggerName+":"+time.currentTimeMillis()+":"+message); 
+      slm.ps.println(loggerName+":"+time.currentTimeMillis()+":"+message); 
     }
   }
 }

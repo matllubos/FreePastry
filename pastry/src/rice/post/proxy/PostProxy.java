@@ -37,6 +37,7 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 import rice.environment.Environment;
+import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
 
 import java.util.*;
@@ -328,6 +329,7 @@ public class PostProxy {
     
     System.setOut(new PrintStream(logManager));
     System.setErr(new PrintStream(logManager));
+    ((SimpleLogManager)env.getLogManager()).setPrintStream(System.out);
   }
   
   /**
