@@ -30,6 +30,13 @@ public class SimpleParameters implements Parameters {
 	private static String FILENAME_EXTENSION = ".params";
   private static String ARRAY_SPACER = ",";
 	
+  /**
+   * 
+   * @param orderedDefaults 
+   * @param configFileName if this is null, no params are saved, if this file doesn't exist, you will
+   * get a warning printed to stdErr, then the file will be created if you ever store
+   * @throws IOException
+   */
 	public SimpleParameters(String[] orderedDefaults, String configFileName) throws IOException {
     if (configFileName != null) {
   		this.configFileName = configFileName + FILENAME_EXTENSION;
@@ -48,8 +55,11 @@ public class SimpleParameters implements Parameters {
     }
 
     if (this.configFileName != null) {
-      if (new File(this.configFileName).exists()) { 
+      File f = new File(this.configFileName);
+      if (f.exists()) { 
         properties.load(new FileInputStream(this.configFileName));
+      } else {
+        System.err.println("Could not find configuration file: "+f.getAbsolutePath()); 
       }
     }
 	}
