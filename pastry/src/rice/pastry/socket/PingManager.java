@@ -432,11 +432,11 @@ public class PingManager extends SelectionKeyHandler {
       return ois.readObject();
     } catch (ClassNotFoundException e) {
       env.getLogManager().getLogger(PingManager.class, null).log(Logger.SEVERE, 
-          "PANIC: Unknown class type in serialized message!");
+          "PANIC: Unknown class type in serialized message!"+e);
       throw new IOException("Unknown class type in message - closing channel.");
     } catch (InvalidClassException e) {
       env.getLogManager().getLogger(PingManager.class, null).log(Logger.SEVERE, 
-          "PANIC: Serialized message was an invalid class!");
+          "PANIC: Serialized message was an invalid class!"+e);
       throw new IOException("Invalid class in message - closing channel.");
     }
   }
