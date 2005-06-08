@@ -279,6 +279,9 @@ public class MimeParser {
 			if ((pos1 > 0) && (pos2 > pos1))
 				value = value.substring(pos1+9, pos2);
 		}
+    
+    // now, trim any whitespace off of the end
+    value = value.trim();
 		
 		// you're allowed to enclose your boundary in quotes too,
 		// so we need to account for that possibility
