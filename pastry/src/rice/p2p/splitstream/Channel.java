@@ -27,7 +27,7 @@ public class Channel {
   /**
    * The default number of stripes to create
    */
-  public static int STRIPE_BASE = 4;
+  private int stripeBase;// = 4;
   
   /**
    * ChannelId for this channel
@@ -52,11 +52,12 @@ public class Channel {
    * @param factory The Id factory
    * @param localId The local Id
    */
-  public Channel(ChannelId channelId, Scribe scribe, IdFactory factory, Id localId) {
+  public Channel(ChannelId channelId, Scribe scribe, IdFactory factory, Id localId, int stripeBase) {
 
     /*
      *  Initialize Member variables
      */
+    this.stripeBase = stripeBase;
     this.channelId = channelId;
     this.localId = localId;
 
@@ -109,26 +110,30 @@ public class Channel {
    */
   protected Stripe getPrimaryStripe() {
     for(int i = 0; i < stripes.length; i++) {
-      if (SplitStreamScribePolicy.getPrefixMatch(this.localId, stripes[i].getStripeId().getId()) > 0)
+      if (SplitStreamScribePolicy.getPrefixMatch(this.localId, stripes[i].getStripeId().getId(), stripeBase) > 0)
         return stripes[i];
     }
     
     return null;
   }
 
+  public int getStripeBase() {
+    return stripeBase;
+  }
+  
   /**
    * Creates and returns the Ids associated with the provided channelId
    *
    * @param channelId The id of the channel
    * @return The array of stripeIds based on this channelId
    */
-  protected static StripeId[] generateStripeIds(ChannelId id, IdFactory factory) {
-    int num = (int) Math.pow(2, STRIPE_BASE);
+  protected StripeId[] generateStripeIds(ChannelId id, IdFactory factory) {
+    int num = (int) Math.pow(2, stripeBase);
     StripeId[] stripeIds = new StripeId[num];
 
     for (int i=0; i<num; i++) {
       byte[] array = id.getId().toByteArray();
-      stripeIds[i] = new StripeId(factory.buildId(process(array, STRIPE_BASE, i)));
+      stripeIds[i] = new StripeId(factory.buildId(process(array, stripeBase, i)));
     }
 
     return stripeIds; 

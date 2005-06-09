@@ -181,7 +181,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
   public void directAnycast(AnycastMessage message, NodeHandle parent, NodeHandle[] children) {
     /* we add parent first if it shares prefix match */
     if (parent != null) {
-      if (SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), parent.getId()) > 0)
+      if (SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), parent.getId(), splitStream.getStripeBaseBitLength()) > 0)
         message.addFirst(parent);
       else
         message.addLast(parent);
@@ -196,7 +196,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
       Vector bad = new Vector();
 
       for (int i=0; i<children.length; i++) {
-        if (SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId()) > 0)
+        if (SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId(), splitStream.getStripeBaseBitLength()) > 0)
           good.add(children[i]);
         else
           bad.add(children[i]);
@@ -371,13 +371,13 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     NodeHandle[] children = scribe.getChildren(new Topic(primaryStripe.getStripeId().getId()));
 
     /* Now, select that child which doesnt share least prefix with local node */
-    int minPrefixMatch = getPrefixMatch(stripeId, newChild.getId());
+    int minPrefixMatch = getPrefixMatch(stripeId, newChild.getId(), channel.getStripeBase());
 
     /* find all potential victims */
     Vector victims = new Vector();
     for(int j = 0; j < children.length; j++){
       NodeHandle c = (NodeHandle)children[j];
-      int match = getPrefixMatch(stripeId, c.getId());
+      int match = getPrefixMatch(stripeId, c.getId(), channel.getStripeBase());
       if(match < minPrefixMatch){
         victims.addElement(c);
       }
@@ -395,8 +395,8 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    *
    * @return The number of most significant digits that match.
    */
-  public static int getPrefixMatch(Id target, Id sample){
-    int digitLength = RoutingTable.baseBitLength();
+  public static int getPrefixMatch(Id target, Id sample, int digitLength){
+//    int digitLength = RoutingTable.baseBitLength();
     int numDigits = rice.pastry.Id.IdBitLength / digitLength - 1;
 
     return (numDigits - ((rice.pastry.Id)target).indexOfMSDD((rice.pastry.Id)sample, digitLength));

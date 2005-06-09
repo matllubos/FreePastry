@@ -40,5 +40,7 @@ public interface SplitStream {
   public Channel[] getChannels();
 
   
+  public int getStripeBaseBitLength();
+  
   public Environment getEnvironment();
 }

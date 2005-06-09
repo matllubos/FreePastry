@@ -11,6 +11,7 @@ random_seed = 0
 
 # max number of handles stored per routing table entry
 pastry_rtMax = 1
+pastry_rtBaseBitLength = 4
 
 # leafset size
 pastry_lSetSize = 24
@@ -24,6 +25,9 @@ pastry_messageDispatch_bufferIfNotReady = false
 
 # number of messages to buffer while an app hasn't yet been registered
 pastry_messageDispatch_bufferSize = 32
+
+# should usually be equal to the pastry_rtBaseBitLength
+p2p_splitStream_stripeBaseBitLength = 4
 
 # logging
 loglevel = WARNING

@@ -73,7 +73,7 @@ public class Stripe implements ScribeClient {
     this.channel = channel;
     this.isPrimary = false;
     this.failed = new Hashtable();
-    if(SplitStreamScribePolicy.getPrefixMatch(this.channel.getLocalId(), stripeId.getId()) > 0)
+    if(SplitStreamScribePolicy.getPrefixMatch(this.channel.getLocalId(), stripeId.getId(), channel.getStripeBase()) > 0)
       this.isPrimary = true;
     
     this.clients = new Vector();

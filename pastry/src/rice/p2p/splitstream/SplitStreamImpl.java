@@ -35,6 +35,8 @@ public class SplitStreamImpl implements SplitStream {
    */
   protected Hashtable channels;
 
+  protected int stripeBaseBitLength;
+  
   /**
    * The constructor for building the splitStream object which internally
    * creates it's own Scribe.
@@ -44,6 +46,7 @@ public class SplitStreamImpl implements SplitStream {
    */
   public SplitStreamImpl(Node node, String instance, Environment env) {
     this.scribe = new ScribeImpl(node, instance, env);
+    this.stripeBaseBitLength = env.getParameters().getInt("p2p_splitStream_stripeBaseBitLength");
     this.node = node;
     this.channels = new Hashtable();
     scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));
@@ -82,7 +85,7 @@ public class SplitStreamImpl implements SplitStream {
     Channel channel = (Channel) channels.get(id);
 
     if (channel == null) {
-      channel = new Channel(id, scribe, node.getIdFactory(),this.node.getId());
+      channel = new Channel(id, scribe, node.getIdFactory(),this.node.getId(), stripeBaseBitLength);
       channels.put(id, channel);
     }
     
@@ -107,6 +110,10 @@ public class SplitStreamImpl implements SplitStream {
    */
   public SplitStreamScribePolicy getPolicy(){
     return (SplitStreamScribePolicy)(scribe.getPolicy());
+  }
+  
+  public int getStripeBaseBitLength() {
+    return stripeBaseBitLength;
   }
   
   public Environment getEnvironment() {
