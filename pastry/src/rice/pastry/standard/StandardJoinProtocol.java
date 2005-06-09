@@ -134,7 +134,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 
 			jh = security.verifyNodeHandle(jh);
 
-			int base = RoutingTable.baseBitLength();
+      int base = localNode.getRoutingTable().baseBitLength();
 
 			int msdd = localId.indexOfMSDD(nid, base);
 			int last = jr.lastRow();
@@ -161,7 +161,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 			nh = security.verifyNodeHandle(nh);
 
 			if (nh.isAlive() == true) {
-				JoinRequest jr = new JoinRequest(localHandle);
+				JoinRequest jr = new JoinRequest(localHandle, localNode.getRoutingTable().baseBitLength());
 
 				RouteMessage rm =
 					new RouteMessage(

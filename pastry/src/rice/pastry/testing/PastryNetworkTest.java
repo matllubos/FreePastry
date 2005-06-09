@@ -29,7 +29,10 @@ public class PastryNetworkTest {
   
   protected final int MAX_THREADS = 100;
   
-  public PastryNetworkTest(SocketPastryNodeFactory factory, InetSocketAddress bootstrap) {
+  protected Environment environment;
+  
+  public PastryNetworkTest(Environment env, SocketPastryNodeFactory factory, InetSocketAddress bootstrap) {
+    this.environment = env;
     this.factory = factory;
     this.bootstrap = bootstrap;
     this.nodes = new HashSet();
@@ -166,7 +169,7 @@ public class PastryNetworkTest {
     
     while (i.hasNext()) {
       NodeHandle node = (NodeHandle) i.next();
-      RoutingTable rt = new RoutingTable(node, 1);
+      RoutingTable rt = new RoutingTable(node, 1, environment.getParameters().getInt("pastry_rtBaseBitLength"));
       
       Iterator j = nodes.iterator();
 
@@ -199,10 +202,11 @@ public class PastryNetworkTest {
   }
   
   public static void main(String[] args) throws Exception {
-//    PrintStream ps = new PrintStream(new FileOutputStream("lses5.txt"));
-//    System.setOut(ps);
-//    System.setErr(ps);
-    PastryNetworkTest test = new PastryNetworkTest(new SocketPastryNodeFactory(null, 1, new Environment()), new InetSocketAddress(args[0], Integer.parseInt(args[1])));
+    PrintStream ps = new PrintStream(new FileOutputStream("lses.txt"));
+    System.setOut(ps);
+    System.setErr(ps);
+    Environment env = new Environment();
+    PastryNetworkTest test = new PastryNetworkTest(env, new SocketPastryNodeFactory(null, 1, env), new InetSocketAddress(args[0], Integer.parseInt(args[1])));
     test.start();
   }
 }

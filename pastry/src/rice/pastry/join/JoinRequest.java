@@ -34,10 +34,10 @@ public class JoinRequest extends Message implements Serializable {
    * @param nh a handle of the node trying to join the network.
    */
 
-  public JoinRequest(NodeHandle nh) {
+  public JoinRequest(NodeHandle nh, int rtBase) {
     super(new JoinAddress());
     handle = nh;
-    initialize();
+    initialize(rtBase);
     setPriority(0);
   }
 
@@ -48,10 +48,10 @@ public class JoinRequest extends Message implements Serializable {
    * @param stamp the timestamp
    */
 
-  public JoinRequest(NodeHandle nh, Date stamp) {
+  public JoinRequest(NodeHandle nh, Date stamp, int rtBase) {
     super(new JoinAddress(), stamp);
     handle = nh;
-    initialize();
+    initialize(rtBase);
     setPriority(0);
   }
 
@@ -62,10 +62,10 @@ public class JoinRequest extends Message implements Serializable {
    * @param cred the credentials
    */
 
-  public JoinRequest(NodeHandle nh, Credentials cred) {
+  public JoinRequest(NodeHandle nh, Credentials cred, int rtBase) {
     super(new JoinAddress(), cred);
     handle = nh;
-    initialize();
+    initialize(rtBase);
     setPriority(0);
   }
 
@@ -77,10 +77,10 @@ public class JoinRequest extends Message implements Serializable {
    * @param stamp the timestamp
    */
 
-  public JoinRequest(NodeHandle nh, Credentials cred, Date stamp) {
+  public JoinRequest(NodeHandle nh, Credentials cred, Date stamp, int rtBase) {
     super(new JoinAddress(), cred, stamp);
     handle = nh;
-    initialize();
+    initialize(rtBase);
     setPriority(0);
   }
 
@@ -175,10 +175,10 @@ public class JoinRequest extends Message implements Serializable {
     return rows.length;
   }
 
-  private void initialize() {
+  private void initialize(int rtBaseBitLength) {
     joinHandle = null;
 
-    rowCount = NodeId.nodeIdBitLength / RoutingTable.baseBitLength();
+    rowCount = NodeId.nodeIdBitLength / rtBaseBitLength;
 
     rows = new RouteSet[rowCount][];
   }

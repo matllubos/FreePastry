@@ -1,4 +1,3 @@
-
 package rice.pastry.routing;
 
 import rice.pastry.*;
@@ -8,28 +7,31 @@ import java.io.*;
 
 /**
  * The address of the router at a pastry node.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  */
 
 public class RouterAddress implements Address {
-    private static final int myCode = 0xACBDFE17;
+  private static final int myCode = 0xACBDFE17;
 
-    /**
-     * Constructor.
-     */
-    
-    public RouterAddress() {}
+  /**
+   * Constructor.
+   */
 
-    public boolean equals(Object obj) {
-	return (obj instanceof RouterAddress);
-    }
+  public RouterAddress() {
+  }
 
-    public int hashCode() {
-	return myCode;
-    }
-    
-    public String toString() { return "[RouterAddress]"; }
+  public boolean equals(Object obj) {
+    return (obj instanceof RouterAddress);
+  }
+
+  public int hashCode() {
+    return myCode;
+  }
+
+  public String toString() {
+    return "[RouterAddress]";
+  }
 }

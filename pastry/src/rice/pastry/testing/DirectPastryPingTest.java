@@ -46,7 +46,7 @@ public class DirectPastryPingTest {
 
       for (i = 0; i < 8; i++) {
         n = k = (i + 1) * 1000;
-        PingTestRecord tr = new PingTestRecord(n, k);
+        PingTestRecord tr = new PingTestRecord(n, k, environment.getParameters().getInt("pastry_rtBaseBitLength"));
         spt = new SinglePingTest(tr, environment);
         spt.test();
         System.out.println(tr.getNodeNumber() + "\t" + tr.getAveHops() + "\t"

@@ -26,12 +26,6 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
   private NodeIdFactory nidFactory;
   private NetworkSimulator simulator;
 
-  // max number of handles stored per routing table entry
-  private int rtMax;
-
-  // leafset size
-  private int lSetSize;
-
   /**
    * Main constructor.
    * 
@@ -43,8 +37,6 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     super(env);
     nidFactory = nf;
     simulator = sim;
-    rtMax = environment.getParameters().getInt("pastry_rtMax");
-    lSetSize = environment.getParameters().getInt("pastry_lSetSize");
   }
 
   /**
@@ -77,11 +69,11 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
     MessageDispatch msgDisp = new MessageDispatch(pn);
 
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router =
-      new StandardRouter(localhandle, routeTable, leafSet, secureMan);
+      new StandardRouter(pn, secureMan);
     StandardLeafSetProtocol lsProtocol =
       new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol =

@@ -16,14 +16,9 @@ import rice.pastry.security.*;
  */
 
 public class StandardRouter implements MessageReceiver {
-  private NodeId localId;
 
-  private NodeHandle localHandle;
-
-  private RoutingTable routeTable;
-
-  private LeafSet leafSet;
-
+  private PastryNode localNode;
+  
   private PastrySecurityManager security;
 
   private Address routeAddress;
@@ -35,13 +30,9 @@ public class StandardRouter implements MessageReceiver {
    * @param ls the leaf set.
    */
 
-  public StandardRouter(NodeHandle handle, RoutingTable rt, LeafSet ls,
+  public StandardRouter(PastryNode localNode,
       PastrySecurityManager sm) {
-    localHandle = handle;
-    localId = handle.getNodeId();
-
-    routeTable = rt;
-    leafSet = ls;
+    this.localNode = localNode;
     security = sm;
 
     routeAddress = new RouterAddress();
@@ -67,7 +58,7 @@ public class StandardRouter implements MessageReceiver {
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
 
-      if (rm.routeMessage(localHandle) == false)
+      if (rm.routeMessage(localNode.getLocalHandle()) == false)
         receiveRouteMessage(rm);
     } else {
       throw new Error("message " + msg + " bounced at StandardRouter");
@@ -90,27 +81,27 @@ public class StandardRouter implements MessageReceiver {
     Id target = msg.getTarget();
 
     if (target == null)
-      target = localId;
+      target = localNode.getNodeId();
 
-    int cwSize = leafSet.cwSize();
-    int ccwSize = leafSet.ccwSize();
+    int cwSize = localNode.getLeafSet().cwSize();
+    int ccwSize = localNode.getLeafSet().ccwSize();
 
-    int lsPos = leafSet.mostSimilar(target);
+    int lsPos = localNode.getLeafSet().mostSimilar(target);
 
     if (lsPos == 0) // message is for the local node so deliver it
-      msg.nextHop = localHandle;
+      msg.nextHop = localNode.getLocalHandle();
 
-    else if ((lsPos > 0 && (lsPos < cwSize || !leafSet.get(lsPos).getNodeId()
+    else if ((lsPos > 0 && (lsPos < cwSize || !localNode.getLeafSet().get(lsPos).getNodeId()
         .clockwise(target)))
-        || (lsPos < 0 && (-lsPos < ccwSize || leafSet.get(lsPos).getNodeId()
+        || (lsPos < 0 && (-lsPos < ccwSize || localNode.getLeafSet().get(lsPos).getNodeId()
             .clockwise(target))))
     // the target is within range of the leafset, deliver it directly
     {
-      NodeHandle handle = leafSet.get(lsPos);
+      NodeHandle handle = localNode.getLeafSet().get(lsPos);
 
       if (handle.isAlive() == false) {
         // node is dead - get rid of it and try again
-        leafSet.remove(handle);
+        localNode.getLeafSet().remove(handle);
         receiveRouteMessage(msg);
         return;
       } else {
@@ -119,7 +110,7 @@ public class StandardRouter implements MessageReceiver {
       }
     } else {
       // use the routing table
-      RouteSet rs = routeTable.getBestEntry(target);
+      RouteSet rs = localNode.getRoutingTable().getBestEntry(target);
       NodeHandle handle = null;
 
       // get the closest alive node
@@ -128,15 +119,15 @@ public class StandardRouter implements MessageReceiver {
 
         // no live routing table entry matching the next digit
         // get best alternate RT entry
-        handle = routeTable.bestAlternateRoute(NodeHandle.LIVENESS_ALIVE,
+        handle = localNode.getRoutingTable().bestAlternateRoute(NodeHandle.LIVENESS_ALIVE,
             target);
 
         if (handle == null) {
           // no alternate in RT, take leaf set
-          handle = leafSet.get(lsPos);
+          handle = localNode.getLeafSet().get(lsPos);
 
           if (handle.isAlive() == false) {
-            leafSet.remove(handle);
+            localNode.getLeafSet().remove(handle);
             receiveRouteMessage(msg);
             return;
           } else {
@@ -144,7 +135,7 @@ public class StandardRouter implements MessageReceiver {
           }
         } else {
           NodeId.Distance altDist = handle.getNodeId().distance(target);
-          NodeId.Distance lsDist = leafSet.get(lsPos).getNodeId().distance(
+          NodeId.Distance lsDist = localNode.getLeafSet().get(lsPos).getNodeId().distance(
               target);
 
           if (lsDist.compareTo(altDist) < 0) {
@@ -152,10 +143,10 @@ public class StandardRouter implements MessageReceiver {
             //System.outt.println("forw to edge leaf set member, alt=" +
             // handle.getNodeId() +
             //" lsm=" + leafSet.get(lsPos).getNodeId());
-            handle = leafSet.get(lsPos);
+            handle = localNode.getLeafSet().get(lsPos);
 
             if (handle.isAlive() == false) {
-              leafSet.remove(handle);
+              localNode.getLeafSet().remove(handle);
               receiveRouteMessage(msg);
               return;
             } else {
@@ -171,8 +162,8 @@ public class StandardRouter implements MessageReceiver {
       msg.nextHop = handle;
     }
 
-    msg.setPrevNode(localHandle);
-    localHandle.receiveMessage(msg);
+    msg.setPrevNode(localNode.getLocalHandle());
+    localNode.getLocalHandle().receiveMessage(msg);
   }
 
   /**
@@ -197,8 +188,8 @@ public class StandardRouter implements MessageReceiver {
 
     int diffDigit;
 
-    if ((diffDigit = prevId.indexOfMSDD(key, RoutingTable.baseBitLength())) == localId
-        .indexOfMSDD(key, RoutingTable.baseBitLength())) {
+    if ((diffDigit = prevId.indexOfMSDD(key, localNode.getRoutingTable().baseBitLength())) == 
+      localNode.getNodeId().indexOfMSDD(key, localNode.getRoutingTable().baseBitLength())) {
 
       // the previous node is missing a RT entry, send the row
       // for now, we send the entire row for simplicity
@@ -206,8 +197,8 @@ public class StandardRouter implements MessageReceiver {
       //System.outt.println("checkForRouteTableHole, sending row=" + diffDigit
       // + " to=" + prevId);
 
-      RouteSet[] row = routeTable.getRow(diffDigit);
-      BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
+      RouteSet[] row = localNode.getRoutingTable().getRow(diffDigit);
+      BroadcastRouteRow brr = new BroadcastRouteRow(localNode.getLocalHandle(), row);
 
       NodeHandle prevNode = security.verifyNodeHandle(msg.getPrevNode());
       if (prevNode.isAlive())

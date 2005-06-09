@@ -24,7 +24,15 @@ import java.util.*;
 public abstract class PastryNodeFactory {
 
   
+  // max number of handles stored per routing table entry
+  protected final int rtMax;
+
+  // leafset size
+  protected final int lSetSize;
+
+  protected final int rtBase;
   
+
   /**
    * Hashtable which keeps track of temporary ping values, which are
    * only used during the getNearest() method
@@ -35,6 +43,10 @@ public abstract class PastryNodeFactory {
   
   public PastryNodeFactory(Environment env) {
     this.environment = env;
+    rtMax = environment.getParameters().getInt("pastry_rtMax");
+    rtBase = environment.getParameters().getInt("pastry_rtBaseBitLength");
+    lSetSize = environment.getParameters().getInt("pastry_lSetSize");
+
   }
   
   /**
@@ -144,7 +156,7 @@ public abstract class PastryNodeFactory {
       // -- impact correctness, but we're going to walk up from the bottom
       // -- of the routing table, even through some of the rows are probably
       // -- unfilled.  We'll optimize this in a later iteration.
-      int depth = (NodeId.nodeIdBitLength / RoutingTable.idBaseBitLength);
+      int depth = (NodeId.nodeIdBitLength / rtBase);
       int i = (int) (3 * (depth / 4));
       
       // now, iteratively walk up the routing table, picking the closest node

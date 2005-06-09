@@ -20,7 +20,7 @@ import java.util.*;
  */
 
 public class StandardRouteSetProtocol implements Observer, MessageReceiver {
-  private static final int maxTrials = (1 << RoutingTable.baseBitLength()) / 2;
+  private final int maxTrials;
 
   private NodeHandle localHandle;
 
@@ -41,7 +41,9 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
 
   public StandardRouteSetProtocol(NodeHandle lh, PastrySecurityManager sm,
       RoutingTable rt, Environment env) {
+    
     this.environmet = env;
+    maxTrials = (1 << rt.baseBitLength()) / 2;
     localHandle = lh;
     security = sm;
     routeTable = rt;
@@ -153,7 +155,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
       BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
       RequestRouteRow rrr = new RequestRouteRow(localHandle, i);
       int myCol = localHandle.getNodeId().getDigit(i,
-          RoutingTable.baseBitLength());
+          routeTable.baseBitLength());
       int j;
 
       // try up to maxTrials times to find a column with live entries

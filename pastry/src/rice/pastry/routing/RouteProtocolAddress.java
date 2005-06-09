@@ -1,4 +1,3 @@
-
 package rice.pastry.routing;
 
 import rice.pastry.*;
@@ -8,28 +7,31 @@ import java.io.*;
 
 /**
  * The address of the route protocol at a pastry node.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  */
 
 public class RouteProtocolAddress implements Address {
-    private static final int myCode = 0x89ce110e;
+  private static final int myCode = 0x89ce110e;
 
-    /**
-     * Constructor.
-     */
-    
-    public RouteProtocolAddress() {}
+  /**
+   * Constructor.
+   */
 
-    public boolean equals(Object obj) {
-	return (obj instanceof RouteProtocolAddress);
-    }
+  public RouteProtocolAddress() {
+  }
 
-    public int hashCode() {
-	return myCode;
-    }
-    
-    public String toString() { return "[RouteProtocolAddress]"; }
+  public boolean equals(Object obj) {
+    return (obj instanceof RouteProtocolAddress);
+  }
+
+  public int hashCode() {
+    return myCode;
+  }
+
+  public String toString() {
+    return "[RouteProtocolAddress]";
+  }
 }

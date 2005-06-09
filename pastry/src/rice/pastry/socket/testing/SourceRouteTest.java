@@ -176,7 +176,7 @@ public class SourceRouteTest {
 
     System.out.println("Starting Pastry test...");
     
-    PastryNetworkTest test = new PastryNetworkTest(factory, new InetSocketAddress(InetAddress.getLocalHost(), 20002));
+    PastryNetworkTest test = new PastryNetworkTest(env, factory, new InetSocketAddress(InetAddress.getLocalHost(), 20002));
     test.start();
 
    

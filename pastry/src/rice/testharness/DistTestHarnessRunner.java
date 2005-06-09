@@ -198,14 +198,6 @@ public class DistTestHarnessRunner {
     }
 
     for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-b") && i+1 < args.length) {
-        int n = Integer.parseInt(args[i+1]);
-        if (n > 0) RoutingTable.idBaseBitLength = n;
-        break;
-      }
-    }
-
-    for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-bootstrap") && i+1 < args.length) {
         String str = args[i+1];
         int index = str.indexOf(':');

@@ -1,4 +1,3 @@
-
 package rice.pastry.routing;
 
 import rice.pastry.*;
@@ -10,106 +9,103 @@ import java.io.*;
 
 /**
  * Broadcast message for a row from a routing table.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  */
 
 public class BroadcastRouteRow extends Message implements Serializable {
-    private NodeHandle fromNode;
-    private RouteSet[] row;
+  private NodeHandle fromNode;
 
-    private static final Address addr = new RouteProtocolAddress();
+  private RouteSet[] row;
 
-    /**
-     * Constructor.
-     *
-     * @param cred the credentials
-     * @param stamp the timestamp
-     * @param from the node id
-     * @param r the row
-     */
+  private static final Address addr = new RouteProtocolAddress();
 
-    public BroadcastRouteRow(Credentials cred, Date stamp, NodeHandle from, RouteSet[] r) {
-	super(addr, cred, stamp);
+  /**
+   * Constructor.
+   * 
+   * @param cred the credentials
+   * @param stamp the timestamp
+   * @param from the node id
+   * @param r the row
+   */
+  public BroadcastRouteRow(Credentials cred, Date stamp, NodeHandle from,
+      RouteSet[] r) {
+    super(addr, cred, stamp);
 
-	fromNode = from;
-	row = r;
-	setPriority(0);
-    }
+    fromNode = from;
+    row = r;
+    setPriority(0);
+  }
 
+  /**
+   * Constructor.
+   * 
+   * @param stamp the timestamp
+   * @param from the node id
+   * @param r the row
+   */
+  public BroadcastRouteRow(Date stamp, NodeHandle from, RouteSet[] r) {
+    super(addr, stamp);
 
-    /**
-     * Constructor.
-     *
-     * @param stamp the timestamp
-     * @param from the node id
-     * @param r the row
-     */
+    fromNode = from;
+    row = r;
+    setPriority(0);
+  }
 
-    public BroadcastRouteRow(Date stamp, NodeHandle from, RouteSet[] r) {
-	super(addr, stamp);
+  /**
+   * Constructor.
+   * 
+   * @param cred the credentials
+   * @param from the node id
+   * @param r the row
+   */
+  public BroadcastRouteRow(Credentials cred, NodeHandle from, RouteSet[] r) {
+    super(addr, cred);
 
-	fromNode = from;
-	row = r;
-	setPriority(0);
-    }
+    fromNode = from;
+    row = r;
+    setPriority(0);
+  }
 
+  /**
+   * Constructor.
+   * 
+   * @param from the node id
+   * @param r the row
+   */
+  public BroadcastRouteRow(NodeHandle from, RouteSet[] r) {
+    super(addr);
 
-    /**
-     * Constructor.
-     *
-     * @param cred the credentials
-     * @param from the node id
-     * @param r the row
-     */
+    fromNode = from;
+    row = r;
+    setPriority(0);
+  }
 
-    public BroadcastRouteRow(Credentials cred, NodeHandle from, RouteSet[] r) {
-	super(addr, cred);
+  /**
+   * Gets the from node.
+   * 
+   * @return the from node.
+   */
+  public NodeHandle from() {
+    return fromNode;
+  }
 
-	fromNode = from;
-	row = r;
-	setPriority(0);
-    }
+  /**
+   * Gets the row that was sent in the message.
+   * 
+   * @return the row.
+   */
+  public RouteSet[] getRow() {
+    return row;
+  }
 
+  public String toString() {
+    String s = "";
 
-    /**
-     * Constructor.
-     *
-     * @param from the node id
-     * @param r the row
-     */
+    s += "BroadcastRouteRow(of " + fromNode.getNodeId() + ")";
 
-    public BroadcastRouteRow(NodeHandle from, RouteSet[] r) {
-	super(addr);
-
-	fromNode = from;
-	row = r;
-	setPriority(0);
-    }
-
-    /**
-     * Gets the from node.
-     *
-     * @return the from node.
-     */
-
-    public NodeHandle from() { return fromNode; }
-
-    /**
-     * Gets the row that was sent in the message.
-     *
-     * @return the row.
-     */
-
-    public RouteSet[] getRow() { return row; }
-
-    public String toString() {
-	String s = "";
-
-	s+="BroadcastRouteRow(of " + fromNode.getNodeId() + ")";
-
-	return s;
-    }
+    return s;
+  }
 }
