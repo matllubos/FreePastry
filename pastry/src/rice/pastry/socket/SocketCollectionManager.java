@@ -877,8 +877,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           }
         }
       } catch (IOException e) {
-        log(Logger.WARNING, "(SM) ERROR " + e + " reading - cancelling.");
-        e.printStackTrace();
+        log(Logger.INFO, "(SM) WARNING " + e + " reading - cancelling.");        
+        //e.printStackTrace();
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
@@ -924,7 +924,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, 0);
       this.key.interestOps(SelectionKey.OP_READ);
       
-      log(Logger.WARNING, "(SM) Accepted connection from " + channel.socket().getRemoteSocketAddress());
+      log(Logger.INFO, "(SM) Accepted connection from " + channel.socket().getRemoteSocketAddress());
     }
 
     /**
