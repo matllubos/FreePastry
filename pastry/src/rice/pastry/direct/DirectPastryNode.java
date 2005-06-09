@@ -21,7 +21,7 @@ public class DirectPastryNode extends PastryNode {
 
   public DirectPastryNode(NodeId id, NetworkSimulator sim, Environment e) {
     super(id, e);
-    timer = e.getSelectorManager().getTimer(); //new Timer(true);
+    timer = e.getSelectorManager().getTimer();
     simulator = sim;
   }
 

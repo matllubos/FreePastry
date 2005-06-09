@@ -14,6 +14,7 @@ import rice.pastry.messaging.*;
 
 public interface NetworkSimulator 
 {
+  
     /**
      * Registers a node handle with the simulator.
      *

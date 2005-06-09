@@ -1,4 +1,3 @@
-
 package rice.pastry.join;
 
 import rice.pastry.*;
@@ -10,80 +9,81 @@ import java.util.*;
 
 /**
  * Request for the join protocols on the local node to join the overlay.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  */
 
-public class InitiateJoin extends Message implements Serializable
-{    
-    private NodeHandle handle;
+public class InitiateJoin extends Message implements Serializable {
+  private NodeHandle handle;
 
-    /**
-     * Constructor.
-     *
-     * @param nh the node handle that the join will begin from.
-     */
+  /**
+   * Constructor.
+   * 
+   * @param nh the node handle that the join will begin from.
+   */
 
-    public InitiateJoin(NodeHandle nh) {
-	super(new JoinAddress());
-	
-	handle = nh;
-    }
+  public InitiateJoin(NodeHandle nh) {
+    super(new JoinAddress());
 
-    /**
-     * Constructor.
-     *
-     * @param jh a handle of the node trying to join the network.
-     * @param stamp the timestamp
-     *
-     * @param nh the node handle that the join will begin from.
-     */
+    handle = nh;
+  }
 
-    public InitiateJoin(Date stamp, NodeHandle nh) {
-	super(new JoinAddress(), stamp);
+  /**
+   * Constructor.
+   * 
+   * @param jh a handle of the node trying to join the network.
+   * @param stamp the timestamp
+   * 
+   * @param nh the node handle that the join will begin from.
+   */
 
-	handle = nh;
-    }
+  public InitiateJoin(Date stamp, NodeHandle nh) {
+    super(new JoinAddress(), stamp);
 
-    /**
-     * Constructor.
-     *
-     * @param jh a handle of the node trying to join the network.
-     * @param cred the credentials 
-     *
-     * @param nh the node handle that the join will begin from.
-     */
+    handle = nh;
+  }
 
-    public InitiateJoin(Credentials cred, NodeHandle nh) {
-	super(new JoinAddress(), cred);
+  /**
+   * Constructor.
+   * 
+   * @param jh a handle of the node trying to join the network.
+   * @param cred the credentials
+   * 
+   * @param nh the node handle that the join will begin from.
+   */
 
-	handle = nh;
-    }
+  public InitiateJoin(Credentials cred, NodeHandle nh) {
+    super(new JoinAddress(), cred);
 
-    /**
-     * Constructor.
-     *
-     * @param jh a handle of the node trying to join the network.
-     * @param cred the credentials 
-     * @param stamp the timestamp
-     *
-     * @param nh the node handle that the join will begin from.
-     */
+    handle = nh;
+  }
 
-    public InitiateJoin(Credentials cred, Date stamp, NodeHandle nh) {
-	super(new JoinAddress(), cred, stamp);
+  /**
+   * Constructor.
+   * 
+   * @param jh a handle of the node trying to join the network.
+   * @param cred the credentials
+   * @param stamp the timestamp
+   * 
+   * @param nh the node handle that the join will begin from.
+   */
 
-	handle = nh;
-    }
+  public InitiateJoin(Credentials cred, Date stamp, NodeHandle nh) {
+    super(new JoinAddress(), cred, stamp);
 
-    /**
-     * Gets the handle for the join.
-     *
-     * @return the handle.
-     */
+    handle = nh;
+  }
 
-    public NodeHandle getHandle() { return handle; }
+  /**
+   * Gets the handle for the join.
+   * 
+   * @return the handle.
+   */
+
+  public NodeHandle getHandle() {
+    return handle;
+  }
 }
 

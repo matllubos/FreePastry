@@ -1,43 +1,42 @@
-
 package rice.pastry.direct;
 
-public abstract class TestRecord{
-    protected int	nNodes;
-    protected int 	nTests;
+public abstract class TestRecord {
+  protected int nNodes;
 
-    /**
-     * Constructor.
-     *
-     * @param n number of nodes
-     * @param k number of tests
-     */
+  protected int nTests;
 
-    public TestRecord( int n, int k ){
-	nNodes = n;
-	nTests = k;
-    }
+  /**
+   * Constructor.
+   * 
+   * @param n number of nodes
+   * @param k number of tests
+   */
 
-    /**
-     * returns the number of nodes
-     *
-     * @return the number of nodes 
-     */
-    
-    public int getNodeNumber( ){
-	return nNodes;
-    }
+  public TestRecord(int n, int k) {
+    nNodes = n;
+    nTests = k;
+  }
 
-    /**
-     * returns the number of tests
-     *
-     * @return the number of tests
-     */
-    
-    public int getTestNumber(){
-	return nTests;
-    }
+  /**
+   * returns the number of nodes
+   * 
+   * @return the number of nodes
+   */
 
-    public abstract void doneTest( );
+  public int getNodeNumber() {
+    return nNodes;
+  }
+
+  /**
+   * returns the number of tests
+   * 
+   * @return the number of tests
+   */
+
+  public int getTestNumber() {
+    return nTests;
+  }
+
+  public abstract void doneTest();
 }
-
 

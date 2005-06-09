@@ -29,6 +29,7 @@ public class SphereNetwork implements NetworkSimulator {
    * Constructor.
    */
   public SphereNetwork(Environment env) {
+    this.environment = env;
     nodeMap = new HashMap();
     msgQueue = new Vector();
   }

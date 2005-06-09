@@ -40,6 +40,8 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
     public DistNodeHandle(NodeId nodeId, InetSocketAddress address) {
       this.nodeId = nodeId;
       this.address = address;
+      // note that we always want the epoch to be random, there is no reason to ever
+      // use a specifiable randomsource for this
       epoch = new Random().nextInt();
     }
 

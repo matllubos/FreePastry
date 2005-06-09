@@ -1,4 +1,3 @@
-
 package rice.pastry.join;
 
 import rice.pastry.*;
@@ -12,171 +11,181 @@ import java.util.*;
 
 /**
  * Request to join this network.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  */
 
-public class JoinRequest extends Message implements Serializable
-{
-    private NodeHandle handle;
-    private NodeHandle joinHandle;
-    private int rowCount;
-    private RouteSet rows[][];
-    private LeafSet leafSet;
+public class JoinRequest extends Message implements Serializable {
+  private NodeHandle handle;
 
-    /**
-     * Constructor.
-     *
-     * @param nh a handle of the node trying to join the network.
-     */
+  private NodeHandle joinHandle;
 
-    public JoinRequest(NodeHandle nh) {
-	super(new JoinAddress());
-	handle = nh;
-	initialize();
-	setPriority(0);
-    }
+  private int rowCount;
 
-    /**
-     * Constructor.
-     *
-     * @param nh a handle of the node trying to join the network.
-     * @param stamp the timestamp
-     */
+  private RouteSet rows[][];
 
-    public JoinRequest(NodeHandle nh, Date stamp) {
-	super(new JoinAddress(), stamp);
-	handle = nh;
-	initialize();
-	setPriority(0);
-    }
+  private LeafSet leafSet;
 
-    /**
-     * Constructor.
-     *
-     * @param nh a handle of the node trying to join the network.
-     * @param cred the credentials 
-     */
+  /**
+   * Constructor.
+   * 
+   * @param nh a handle of the node trying to join the network.
+   */
 
-    public JoinRequest(NodeHandle nh, Credentials cred) {
-	super(new JoinAddress(), cred);
-	handle = nh;
-	initialize();
-	setPriority(0);
-    }
+  public JoinRequest(NodeHandle nh) {
+    super(new JoinAddress());
+    handle = nh;
+    initialize();
+    setPriority(0);
+  }
 
-    /**
-     * Constructor.
-     *
-     * @param nh a handle of the node trying to join the network.
-     * @param cred the credentials 
-     * @param stamp the timestamp
-     */
+  /**
+   * Constructor.
+   * 
+   * @param nh a handle of the node trying to join the network.
+   * @param stamp the timestamp
+   */
 
-    public JoinRequest(NodeHandle nh, Credentials cred, Date stamp) {
-	super(new JoinAddress(), cred, stamp);
-	handle = nh;
-	initialize();
-	setPriority(0);
-    }
+  public JoinRequest(NodeHandle nh, Date stamp) {
+    super(new JoinAddress(), stamp);
+    handle = nh;
+    initialize();
+    setPriority(0);
+  }
 
+  /**
+   * Constructor.
+   * 
+   * @param nh a handle of the node trying to join the network.
+   * @param cred the credentials
+   */
 
-    /**
-     * Gets the handle of the node trying to join.
-     *
-     * @return the handle.
-     */
-    
-    public NodeHandle getHandle() { return handle; }
+  public JoinRequest(NodeHandle nh, Credentials cred) {
+    super(new JoinAddress(), cred);
+    handle = nh;
+    initialize();
+    setPriority(0);
+  }
 
+  /**
+   * Constructor.
+   * 
+   * @param nh a handle of the node trying to join the network.
+   * @param cred the credentials
+   * @param stamp the timestamp
+   */
 
-    /**
-     * Gets the handle of the node that accepted the join request;
-     *
-     * @return the handle.
-     */
-    
-    public NodeHandle getJoinHandle() { return joinHandle; }
+  public JoinRequest(NodeHandle nh, Credentials cred, Date stamp) {
+    super(new JoinAddress(), cred, stamp);
+    handle = nh;
+    initialize();
+    setPriority(0);
+  }
 
+  /**
+   * Gets the handle of the node trying to join.
+   * 
+   * @return the handle.
+   */
 
-    /**
-     * Gets the leafset of the node that accepted the join request;
-     *
-     * @return the leafset.
-     */
-    
-    public LeafSet getLeafSet() { return leafSet; }
+  public NodeHandle getHandle() {
+    return handle;
+  }
 
+  /**
+   * Gets the handle of the node that accepted the join request;
+   * 
+   * @return the handle.
+   */
 
-    /**
-     * Returns true if the request was accepted, false if it hasn't yet.
-     */
+  public NodeHandle getJoinHandle() {
+    return joinHandle;
+  }
 
-    public boolean accepted() { return joinHandle != null; }
+  /**
+   * Gets the leafset of the node that accepted the join request;
+   * 
+   * @return the leafset.
+   */
 
-    /**
-     * Accept join request.
-     *
-     * @param nh the node handle that accepts the join request.
-     */
+  public LeafSet getLeafSet() {
+    return leafSet;
+  }
 
-    public void acceptJoin(NodeHandle nh, LeafSet ls) {
-	joinHandle = nh;
-	leafSet = ls;
-    }
+  /**
+   * Returns true if the request was accepted, false if it hasn't yet.
+   */
 
-    /**
-     * Returns the number of rows left to determine (in order).
-     *
-     * @return the number of rows left.
-     */
+  public boolean accepted() {
+    return joinHandle != null;
+  }
 
-    public int lastRow() { return rowCount; }
+  /**
+   * Accept join request.
+   * 
+   * @param nh the node handle that accepts the join request.
+   */
 
-    /**
-     * Push row.
-     *
-     * @param row the row to push.
-     */
+  public void acceptJoin(NodeHandle nh, LeafSet ls) {
+    joinHandle = nh;
+    leafSet = ls;
+  }
 
-    public void pushRow(RouteSet row[]) {
-	rows[--rowCount] = row;
-    }
+  /**
+   * Returns the number of rows left to determine (in order).
+   * 
+   * @return the number of rows left.
+   */
 
-    /**
-     * Get row.
-     *
-     * @param i the row to get.
-     *
-     * @return the row.
-     */
+  public int lastRow() {
+    return rowCount;
+  }
 
-    public RouteSet[] getRow(int i) { return rows[i]; }
-    
-    /**
-     * Get the number of rows.
-     *
-     * @return the number of rows.
-     */
+  /**
+   * Push row.
+   * 
+   * @param row the row to push.
+   */
 
-    public int numRows() { return rows.length; }
-    
-    private void initialize() {
-	joinHandle = null;
-	
-	rowCount = NodeId.nodeIdBitLength / RoutingTable.baseBitLength();
+  public void pushRow(RouteSet row[]) {
+    rows[--rowCount] = row;
+  }
 
-	rows = new RouteSet[rowCount][];
-    }
+  /**
+   * Get row.
+   * 
+   * @param i the row to get.
+   * 
+   * @return the row.
+   */
 
-    public String toString() {
-	return "JoinRequest("
-	    + (handle != null ? handle.getNodeId() : null)
-	    + ","
-	    + (joinHandle != null ? joinHandle.getNodeId() : null)
-	    + ")";
-    }
+  public RouteSet[] getRow(int i) {
+    return rows[i];
+  }
+
+  /**
+   * Get the number of rows.
+   * 
+   * @return the number of rows.
+   */
+
+  public int numRows() {
+    return rows.length;
+  }
+
+  private void initialize() {
+    joinHandle = null;
+
+    rowCount = NodeId.nodeIdBitLength / RoutingTable.baseBitLength();
+
+    rows = new RouteSet[rowCount][];
+  }
+
+  public String toString() {
+    return "JoinRequest(" + (handle != null ? handle.getNodeId() : null) + ","
+        + (joinHandle != null ? joinHandle.getNodeId() : null) + ")";
+  }
 }
 

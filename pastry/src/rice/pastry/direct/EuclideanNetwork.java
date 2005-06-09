@@ -4,6 +4,7 @@ import java.lang.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -18,17 +19,18 @@ import rice.pastry.messaging.*;
  */
 public class EuclideanNetwork implements NetworkSimulator {
 
-  private RandomSource rng;
   private HashMap nodeMap;
   private Vector msgQueue;
 
   private TestRecord testRecord;
 
+  private Environment environment;
+  
   /**
    * Constructor.
    */
-  public EuclideanNetwork(Environment e) {
-    rng = e.getRandomSource(); //new Randon(PastrySeed.getSeed());
+  public EuclideanNetwork(Environment env) {
+    environment = env;
     nodeMap = new HashMap();
     msgQueue = new Vector();
     testRecord = null;
@@ -199,11 +201,14 @@ public class EuclideanNetwork implements NetworkSimulator {
     }
 
     public void deliver() {
-      //System.outt.println("delivering to " + node);
-      //System.outt.println(msg);
-      if (isAlive(msg.getSenderId()))
+      if (isAlive(msg.getSenderId())) {
+        environment.getLogManager().getLogger(EuclideanNetwork.class, null).log(Logger.FINER, 
+            "delivering "+msg+" to " + node);
         node.receiveMessage(msg);
-
+      } else {
+        environment.getLogManager().getLogger(EuclideanNetwork.class, null).log(Logger.INFO, 
+            "Cant deliver "+msg+" to " + node + "because it is not alive.");        
+      }
     } 
   }
 
@@ -229,8 +234,8 @@ public class EuclideanNetwork implements NetworkSimulator {
      * @param nh 
      */
     public NodeRecord(DirectNodeHandle nh) {
-      x = rng.nextInt() % 10000;
-      y = rng.nextInt() % 10000;
+      x = environment.getRandomSource().nextInt() % 10000;
+      y = environment.getRandomSource().nextInt() % 10000;
 
       alive = true;
       handles = new Vector();
