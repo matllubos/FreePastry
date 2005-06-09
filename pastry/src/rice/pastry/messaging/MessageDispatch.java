@@ -19,11 +19,6 @@ import rice.pastry.client.PastryAppl;
  * TODO:  We need to make it explicit which apps can receive messages before
  * PastryNode.isReady().
  * 
- * 
- * 
- * 
- * 
- *
  * @version $Id$
  *
  * @author Jeff Hoye
@@ -32,7 +27,7 @@ import rice.pastry.client.PastryAppl;
 
 public class MessageDispatch {
 
-  public static int BUFFER_SIZE = 32;
+  private int bufferSize = 32;
 
   // have modified from HashMap to HashMap to use the internal representation
   // of a LocalAddress.  Otherwise remote node cannot get its message delivered
@@ -56,13 +51,18 @@ public class MessageDispatch {
    * true will buffer the messages that should be delivered
    * false will drop them and print a message
    */
-  public static final boolean BUFFER_IF_NOT_READY = false;
+  private boolean bufferIfNotReady;
+  
+  public static final String BUFFER_IF_NOT_READY_PARAM = "pastry_messageDispatch_bufferIfNotReady";
+  public static final String BUFFER_SIZE_PARAM = "pastry_messageDispatch_bufferSize";
   
   
   /**
    * Constructor.
    */
   public MessageDispatch(PastryNode pn) {
+    bufferIfNotReady = pn.getEnvironment().getParameters().getBoolean(BUFFER_IF_NOT_READY_PARAM);
+    bufferSize = pn.getEnvironment().getParameters().getInt(BUFFER_SIZE_PARAM);
     addressBook = new HashMap();
     buffer = new Hashtable();
     bufferCount = 0;
@@ -125,8 +125,8 @@ public class MessageDispatch {
       return true;
     } else {
       // we should consider buffering the message
-      if ((bufferCount <= BUFFER_SIZE) && // we have enough memory to buffer
-          (localNode.isReady() || BUFFER_IF_NOT_READY)) { // the node is ready, or we are supposed to buffer if not ready
+      if ((bufferCount <= bufferSize) && // we have enough memory to buffer
+          (localNode.isReady() || bufferIfNotReady)) { // the node is ready, or we are supposed to buffer if not ready
         // buffer
         Vector vector = (Vector) buffer.get(msg.getDestination());
         
@@ -134,6 +134,9 @@ public class MessageDispatch {
           vector = new Vector();
           buffer.put(msg.getDestination(), vector);
         }
+        
+        localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.INFO,
+            "Buffering message " + msg + " because the application address " + msg.getDestination() + " is unknown." + "Message will be delivered when the an application with that address is registered.");
         
         vector.add(msg);
         bufferCount++;
