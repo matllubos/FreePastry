@@ -19,5 +19,11 @@ pastry_lSetSize = 24
 pastry_leafSetMaintFreq = 60
 pastry_routeSetMaintFreq = 900
 
+# drop the message if pastry is not ready
+pastry_messageDispatch_bufferIfNotReady = false
+
+# number of messages to buffer while an app hasn't yet been registered
+pastry_messageDispatch_bufferSize = 32
+
 # logging
 loglevel = WARNING
