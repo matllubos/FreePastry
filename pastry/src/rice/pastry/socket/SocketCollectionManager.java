@@ -924,7 +924,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, 0);
       this.key.interestOps(SelectionKey.OP_READ);
       
-      log(Logger.INFO, "(SM) Accepted connection from " + channel.socket().getRemoteSocketAddress());
+      log(Logger.FINE, "(SM) Accepted connection from " + channel.socket().getRemoteSocketAddress());
     }
 
     /**
