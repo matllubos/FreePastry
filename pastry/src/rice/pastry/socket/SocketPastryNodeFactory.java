@@ -7,6 +7,7 @@ import java.util.Enumeration;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
 import rice.pastry.*;
@@ -31,12 +32,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   private NodeIdFactory nidFactory;
 
   private int port;
-
-  // max number of handles stored per routing table entry
-  private int rtMax;
-
-  // leafset size
-  private int lSetSize;
   
   /**
    * Large period (in seconds) means infrequent, 0 means never.
@@ -59,8 +54,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     nidFactory = nf;
     port = startPort;
     SimpleParameters sp = (SimpleParameters)env.getParameters();
-    rtMax = env.getParameters().getInt("pastry_rtMax");
-    lSetSize = env.getParameters().getInt("pastry_lSetSize");
     leafSetMaintFreq = env.getParameters().getInt("pastry_leafSetMaintFreq");
     routeSetMaintFreq = env.getParameters().getInt("pastry_routeSetMaintFreq");
     this.random = env.getRandomSource();
@@ -226,6 +219,23 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
+    // this code builds a different environment for each PastryNode
+    Environment environment;
+    if (this.environment.getLogManager() instanceof SimpleLogManager) {
+      environment = new Environment(
+        this.environment.getSelectorManager(),
+        this.environment.getRandomSource(),
+        this.environment.getTimeSource(),
+        new SimpleLogManager(
+            ((SimpleLogManager)this.environment.getLogManager()).getPrintStream(),
+            ((SimpleLogManager)this.environment.getLogManager()).getTimeSource(),
+            ((SimpleLogManager)this.environment.getLogManager()).getParameters(),
+            nodeId.toString()),
+        this.environment.getParameters());
+    } else {
+      environment = this.environment;
+    }
+    
     final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
 
     SocketSourceRouteManager srManager = null;
@@ -249,10 +259,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     final SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
     SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle, pool);
     MessageDispatch msgDisp = new MessageDispatch(pn);
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax);
+    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
-    StandardRouter router = new StandardRouter(localhandle, routeTable, leafSet, secureMan);
+    StandardRouter router = new StandardRouter(pn, secureMan);
     PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable, environment);
 //    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
