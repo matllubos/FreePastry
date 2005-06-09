@@ -29,6 +29,8 @@ public class SimpleLogManager implements LogManager {
 
   Logger defaultLogger;
   
+  String prefix;
+  
   /**
    * Constructor.
    * 
@@ -37,11 +39,28 @@ public class SimpleLogManager implements LogManager {
    * @param minPriority the minimum priority to print
    */
   public SimpleLogManager(PrintStream stream, TimeSource timeSource, Parameters params) {
+    this(stream, timeSource, params, "");  
+  }
+  
+  public SimpleLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix) {
     this.ps = stream;
     this.time = timeSource;
     this.params = params;
     this.loggers = new Hashtable();
+    this.prefix = prefix;
     this.defaultLogger = new SimpleLogger("",this,time,parseVal("loglevel"));
+  }
+  
+  public PrintStream getPrintStream() {
+    return ps;
+  }
+  
+  public Parameters getParameters() {
+    return params;
+  }
+  
+  public TimeSource getTimeSource() {
+    return time;
   }
   
   public void setPrintStream(PrintStream stream) {

@@ -56,7 +56,7 @@ public class SimpleLogger implements Logger {
    */
   public void log(int priority, String message) {
     if (priority >= minPriority) {
-      slm.ps.println(loggerName+":"+time.currentTimeMillis()+":"+message); 
+      slm.ps.println(slm.prefix+loggerName+":"+time.currentTimeMillis()+":"+message); 
     }
   }
 }
