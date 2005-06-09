@@ -878,6 +878,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         log(Logger.WARNING, "(SM) ERROR " + e + " reading - cancelling.");
+        e.printStackTrace();
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket

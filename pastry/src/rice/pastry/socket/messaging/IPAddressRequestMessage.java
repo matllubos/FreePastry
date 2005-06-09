@@ -20,8 +20,8 @@ public class IPAddressRequestMessage extends DatagramMessage {
   /**
    * Constructor
    */
-  public IPAddressRequestMessage(Environment env) {
-    super(null, null, env);
+  public IPAddressRequestMessage(long start) {
+    super(null, null, start);
   }
   
   public String toString() {

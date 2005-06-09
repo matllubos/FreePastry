@@ -120,7 +120,7 @@ public class PingManager extends SelectionKeyHandler {
     if (USE_SHORT_PINGS)
       sendShortPing(path);
     else
-      enqueue(path, new PingMessage(path, path.reverse(localAddress), spn.getEnvironment()));
+      enqueue(path, new PingMessage(path, path.reverse(localAddress), spn.getEnvironment().getTimeSource().currentTimeMillis()));
   }
   
   /**
@@ -309,7 +309,7 @@ public class PingManager extends SelectionKeyHandler {
         log(Logger.FINER,
             "COUNT: Read message " + message.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
         
-        enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, spn.getEnvironment())); 
+        enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, spn.getEnvironment().getTimeSource().currentTimeMillis())); 
       } else {
         log(Logger.WARNING,
             "ERROR: Received unknown DatagramMessage " + dm);
@@ -554,7 +554,7 @@ public class PingManager extends SelectionKeyHandler {
           
           outbound = outbound.append(localAddress);
 
-          enqueue(back.reverse(), new WrongEpochMessage(outbound, back.reverse(), eisa, localAddress, spn.getEnvironment()));
+          enqueue(back.reverse(), new WrongEpochMessage(outbound, back.reverse(), eisa, localAddress, spn.getEnvironment().getTimeSource().currentTimeMillis()));
         } else {
           log(Logger.WARNING,"WARNING: Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");
           throw new IOException("Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");

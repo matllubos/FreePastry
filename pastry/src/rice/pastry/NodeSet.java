@@ -15,6 +15,8 @@ import rice.environment.random.RandomSource;
 
 public class NodeSet implements NodeSetI, Serializable {
 
+  static final long serialVersionUID = 4410658508346287677L;
+  
   private Vector set;
 
   /**

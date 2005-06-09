@@ -17,21 +17,21 @@ import rice.pastry.*;
  */
 public abstract class DatagramMessage extends SocketMessage {
   
+  static final long serialVersionUID = 5928529749829923541L;
+  
   protected long start;
   
   protected SourceRoute outbound;
   
   protected SourceRoute inbound;
 
-  transient Environment environment;
-  
   /**
    * Constructor
    */
-  public DatagramMessage(SourceRoute outbound, SourceRoute inbound, Environment env) {
+  public DatagramMessage(SourceRoute outbound, SourceRoute inbound, long start) {
     this.outbound = outbound;
     this.inbound = inbound;
-    this.environment = env;
+    this.start = start;
   }
   
   public long getStartTime() {
@@ -44,11 +44,5 @@ public abstract class DatagramMessage extends SocketMessage {
   
   public SourceRoute getInboundPath() {
     return inbound;
-  }
-  
-  private void writeObject(ObjectOutputStream oos) throws IOException {
-    if (start == 0)
-      start = environment.getTimeSource().currentTimeMillis();
-    oos.defaultWriteObject();
   }
 }

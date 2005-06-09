@@ -22,8 +22,8 @@ public class IPAddressResponseMessage extends DatagramMessage {
   /**
    * Constructor
    */
-  public IPAddressResponseMessage(InetSocketAddress address, Environment env) {
-    super(null, null, env);
+  public IPAddressResponseMessage(InetSocketAddress address, long start) {
+    super(null, null, start);
     
     this.address = address;
   }

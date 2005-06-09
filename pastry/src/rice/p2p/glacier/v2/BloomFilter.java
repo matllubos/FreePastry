@@ -7,6 +7,9 @@ import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 
 public class BloomFilter implements Serializable {
+  
+  long serialVersionUID = -3938913031743354080L;
+  
   private byte bitfield[];
   private int hashParams[];
   

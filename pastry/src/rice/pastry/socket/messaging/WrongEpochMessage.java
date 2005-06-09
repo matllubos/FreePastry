@@ -24,8 +24,8 @@ public class WrongEpochMessage extends DatagramMessage {
   /**
   * Constructor
    */
-  public WrongEpochMessage(SourceRoute outbound, SourceRoute inbound, EpochInetSocketAddress incorrect, EpochInetSocketAddress correct, Environment env) {
-    super(outbound, inbound, env);
+  public WrongEpochMessage(SourceRoute outbound, SourceRoute inbound, EpochInetSocketAddress incorrect, EpochInetSocketAddress correct, long start) {
+    super(outbound, inbound, start);
     
     this.incorrect = incorrect;
     this.correct = correct;

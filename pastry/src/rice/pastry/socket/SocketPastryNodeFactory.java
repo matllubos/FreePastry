@@ -141,7 +141,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket = new DatagramSocket(lAddress.getAddress().getPort());
       socket.setSoTimeout(5000);
 
-      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress), environment), lAddress, environment);
+      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress), environment.getTimeSource().currentTimeMillis()), lAddress, environment);
       
       socket.send(new DatagramPacket(data, data.length, rAddress.getAddress()));
       
@@ -374,7 +374,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket.setSoTimeout(timeout);
       
       for (int i=0; i<existing.length; i++) {
-        byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing[i])), new IPAddressRequestMessage(env), new EpochInetSocketAddress(local), env);    
+        byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing[i])), new IPAddressRequestMessage(env.getTimeSource().currentTimeMillis()), new EpochInetSocketAddress(local), env);    
         DatagramPacket send = new DatagramPacket(buf, buf.length, existing[i]);
         socket.send(send);
       }

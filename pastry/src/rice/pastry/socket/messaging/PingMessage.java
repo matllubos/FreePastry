@@ -17,12 +17,14 @@ import rice.pastry.*;
  * @author Alan Mislove
  */
 public class PingMessage extends DatagramMessage {
-
+  
+  static final long serialVersionUID = -1831848738223899227L;
+  
   /**
    * Constructor
    */
-  public PingMessage(SourceRoute outbound, SourceRoute inbound, Environment env) {
-    super(outbound, inbound, env);
+  public PingMessage(SourceRoute outbound, SourceRoute inbound, long start) {
+    super(outbound, inbound, start);
   }
   
   public String toString() {
