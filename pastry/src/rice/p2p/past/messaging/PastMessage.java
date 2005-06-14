@@ -2,6 +2,7 @@
 package rice.p2p.past.messaging;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
@@ -113,8 +114,8 @@ public abstract class PastMessage implements Message {
    *
    * @param c The continuation to return the reponse to.
    */
-  public abstract void returnResponse(Continuation c);
-
+  public abstract void returnResponse(Continuation c, Environment env, String instance);
+  
   /**
    * Method which is designed to be overridden by subclasses if they need
    * to keep track of where they've been.

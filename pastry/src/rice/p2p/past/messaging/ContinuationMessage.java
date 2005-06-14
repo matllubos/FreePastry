@@ -2,6 +2,7 @@
 package rice.p2p.past.messaging;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
@@ -64,7 +65,7 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
    *
    * @param c The continuation to return the reponse to.
    */
-  public void returnResponse(Continuation c) {
+  public void returnResponse(Continuation c, Environment env, String instance) {
     if (exception == null)
       c.receiveResult(response);
     else

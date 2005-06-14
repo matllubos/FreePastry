@@ -289,7 +289,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     Continuation command = removePending(message.getUID());
 
     if (command != null) {
-      message.returnResponse(command);
+      message.returnResponse(command, environment, instance);
     } 
   }
   

@@ -2,6 +2,7 @@
 package rice.p2p.past.messaging;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
@@ -47,7 +48,7 @@ public class CacheMessage extends PastMessage {
    *
    * @param c The continuation to return the reponse to.
    */
-  public void returnResponse(Continuation c) {
+  public void returnResponse(Continuation c, Environment env, String instance) {
     throw new RuntimeException("ERROR: returnResponse should not be called on cacheMessage!");
   }
 

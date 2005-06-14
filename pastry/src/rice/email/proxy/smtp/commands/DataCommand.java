@@ -6,6 +6,7 @@ import rice.email.proxy.smtp.*;
 import rice.email.proxy.util.*;
 
 import rice.email.proxy.smtp.manager.SmtpManager;
+import rice.environment.logging.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -68,8 +69,11 @@ public class DataCommand extends SmtpCommand {
     } catch (Exception je) {
       conn.println("451 Requested action aborted: local error in processing");
       conn.getServer().incrementFail();
-      je.printStackTrace();
-      rice.pastry.dist.DistPastryNode.addError("SEVERE: Exception " + je + " occurred while attempting to send message to " + msg.getRecipientIterator().next());
+      Logger logger = state.getEnvironment().getLogManager().getLogger(getClass(), null);
+
+      logger.logException(Logger.SEVERE, je);
+      logger.log(Logger.SEVERE,
+          "SEVERE: Exception " + je + " occurred while attempting to send message to " + msg.getRecipientIterator().next());
     }
     
     state.clearMessage();

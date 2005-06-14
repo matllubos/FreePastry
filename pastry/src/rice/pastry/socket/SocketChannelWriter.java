@@ -40,11 +40,11 @@ public class SocketChannelWriter {
   private static HashMap msgTypes = new HashMap();
   private static HashMap msgSizes = new HashMap();
   private static long statsLastWritten;
-  private static long statsWriteInterval = 60 * 1000;
+  private final long statsWriteInterval;
   private static long numWrites = 0;
   
   // the maximum length of the queue
-  public static int MAXIMUM_QUEUE_LENGTH = 128;
+  private final int MAXIMUM_QUEUE_LENGTH;
   
   // the pastry node
   private PastryNode spn;
@@ -68,11 +68,8 @@ public class SocketChannelWriter {
    * @param spn The spn the SocketChannelWriter servers
    */
   public SocketChannelWriter(PastryNode spn, SourceRoute path) {
+    this(spn.getEnvironment(),path);
     this.spn = spn;
-    this.environment = spn.getEnvironment();
-    statsLastWritten = environment.getTimeSource().currentTimeMillis();
-    this.path = path;
-    queue = new LinkedList();
   }
   
   public SocketChannelWriter(Environment env, SourceRoute path) {
@@ -80,6 +77,8 @@ public class SocketChannelWriter {
     statsLastWritten = environment.getTimeSource().currentTimeMillis();
     this.path = path;
     queue = new LinkedList();
+    MAXIMUM_QUEUE_LENGTH = environment.getParameters().getInt("pastry_socket_writer_max_queue_length");
+    statsWriteInterval = environment.getParameters().getLong("pastry_socket_writer_status_interval");
   }
   
   /**
@@ -125,11 +124,10 @@ public class SocketChannelWriter {
 
       if (queue.size() > MAXIMUM_QUEUE_LENGTH) {
         Object remove = queue.removeLast();
-        System.err.println(spn.getNodeId() + " (W): Maximum TCP queue length reached to " + path + " - message " + remove + " will be dropped.");
+        log(Logger.WARNING, "(W): Maximum TCP queue length reached to " + path + " - message " + remove + " will be dropped.");
         return false;
       } else if (queue.size() > 20) {
-        System.err.println(spn.getNodeId() + "  ERROR: Queue to " + path + " has more than 20 elements - probably a bad sign - enqueue of " + o);
-        rice.pastry.dist.DistPastryNode.addError("WARNING: Outgoing queue has " + queue.size() + " elements, enqueuing " + o);
+        log(Logger.WARNING,"ERROR: Queue to " + path + " has more than 20 elements - probably a bad sign - enqueue of " + o);
       }        
     }
 

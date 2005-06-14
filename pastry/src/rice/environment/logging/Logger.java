@@ -69,4 +69,15 @@ public interface Logger {
    * @param message the message to print
    */
   public void log(int priority, String message);
+
+  /**
+   * Prints the stack trace of the exception.  If you only want to print the 
+   * exception's string, use the log() method.
+   * 
+   * This is necessary because Exception doesn't have a convienient way of printing the stack trace as a string.
+   * 
+   * @param priority the priority of this log message
+   * @param exception the exception to print
+   */
+  public void logException(int priority, Throwable exception);
 }

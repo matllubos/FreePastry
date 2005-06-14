@@ -4,6 +4,7 @@ import rice.email.proxy.imap.ImapConnection;
 import rice.email.proxy.imap.ImapState;
 
 import rice.email.proxy.mailbox.MailboxException;
+import rice.environment.logging.Logger;
 
 public abstract class AbstractImapCommand
 {
@@ -46,8 +47,10 @@ public abstract class AbstractImapCommand
     protected void taggedExceptionFailure(Throwable exception)
     {
       _conn.println(_tag + " BAD " + exception.getMessage());
-      exception.printStackTrace();
-      rice.pastry.dist.DistPastryNode.addError("SEVERE: Exception " + exception + " occurred while attempting to perform IMAP task " + _tag + " " + _cmdName);
+      Logger logger = _state.getEnvironment().getLogManager().getLogger(getClass(), null);
+      logger.logException(Logger.SEVERE, exception);
+      logger.log(Logger.SEVERE,
+          "SEVERE: Exception " + exception + " occurred while attempting to perform IMAP task " + _tag + " " + _cmdName);
     }
 
     protected void untaggedResponse(String s)

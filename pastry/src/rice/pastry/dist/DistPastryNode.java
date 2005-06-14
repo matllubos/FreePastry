@@ -98,20 +98,6 @@ public abstract class DistPastryNode extends PastryNode {
       listeners[i].dataReceived(message, path[path.length-1], size);
   }
 
-  public static String[] getErrors() {
-    String[] result = (String[]) errors.toArray(new String[0]);
-    errors.clear();
-    
-    return result;
-  }
-  
-  public static void addError(String error) {
-    if (errors.size() > 20)
-      errors.removeElementAt(0);
-    
-    errors.add(error);
-  }
-
   /**
    * Method which returns the Dist for this Pastry node.
    *

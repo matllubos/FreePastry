@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.multiring.*;
 import rice.p2p.util.*;
 import rice.p2p.commonapi.IdFactory;
@@ -245,10 +246,6 @@ public class VisualizationServer implements Runnable {
     }
   }
   
-  protected String[] getErrors() {
-    return ((DistPastryNode) node).getErrors();
-  }
-  
   protected Data getData() {
     Data data = new Data();
     
@@ -309,12 +306,16 @@ public class VisualizationServer implements Runnable {
     
     public void checkForErrors() {
       int sent = (int) ((environment.getTimeSource().currentTimeMillis() - lastSent)/1000);
-      if (sent > 60)
-        ((DistPastryNode) node).addError("WARNING: No message has been sent in over " + sent + " seconds.");
+      if (sent > 60) {
+        environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.WARNING,
+            "WARNING: No message has been sent in over " + sent + " seconds.");
+      }
       
       int received = (int) ((environment.getTimeSource().currentTimeMillis() - lastReceived)/1000);
-      if (received > 60)
-        ((DistPastryNode) node).addError("WARNING: No message has been received in over " + received + " seconds.");
+      if (received > 60) {
+        environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.WARNING,
+            "WARNING: No message has been received in over " + received + " seconds.");
+      }
     }
   
   }
@@ -328,23 +329,28 @@ public class VisualizationServer implements Runnable {
       
       storage.store(id, null, data, new Continuation() {
         public void receiveResult(Object o) {
-          if (! (o.equals(new Boolean(true)))) 
-            ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + o);
-          else
+          if (! (o.equals(new Boolean(true)))) { 
+            environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+                "SEVERE: Attempt to store data under " + id + " failed with " + o);
+          } else {
             storage.unstore(id, new Continuation() {
               public void receiveResult(Object o) {
                 if (! (o.equals(new Boolean(true)))) 
-                  ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + o);
+                  environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+                      "SEVERE: Attempt to store data under " + id + " failed with " + o);
               }
               
               public void receiveException(Exception e) {
-                ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + e);
+                environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+                    "SEVERE: Attempt to store data under " + id + " failed with " + e);
               }
             });
+          }
         }
         
         public void receiveException(Exception e) {
-          ((DistPastryNode) node).addError("SEVERE: Attempt to store data under " + id + " failed with " + e);
+          environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+              "SEVERE: Attempt to store data under " + id + " failed with " + e);
         }
       });
     }

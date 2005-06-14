@@ -2,6 +2,8 @@
 package rice.p2p.past.messaging;
 
 import rice.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
@@ -50,9 +52,13 @@ public class MessageLostMessage extends PastMessage {
    *
    * @param c The continuation to return the reponse to.
    */
-  public void returnResponse(Continuation c) {
-    rice.pastry.dist.DistPastryNode.addError("ERROR: Outgoing PAST message " + message + " with UID " + id + " was lost");
-    c.receiveException(new PastException("Outgoing message '" + message + "' to " + id + "/" + hint + " was lost - please try again."));
+  public void returnResponse(Continuation c, Environment env, String instance) {
+    Logger logger = env.getLogManager().getLogger(getClass(), instance);
+    logger.log(Logger.WARNING, 
+        "ERROR: Outgoing PAST message " + message + " with UID " + id + " was lost");
+    Exception e = new PastException("Outgoing message '" + message + "' to " + id + "/" + hint + " was lost - please try again.");
+    logger.logException(Logger.WARNING, e);
+    c.receiveException(e);
   }
 
   /**

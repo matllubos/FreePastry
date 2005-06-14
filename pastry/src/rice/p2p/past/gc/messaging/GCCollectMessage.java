@@ -2,6 +2,7 @@
 package rice.p2p.past.gc.messaging;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
@@ -36,7 +37,7 @@ public class GCCollectMessage extends PastMessage {
    *
    * @param c The continuation to return the reponse to.
    */
-  public void returnResponse(Continuation c) {
+  public void returnResponse(Continuation c, Environment env, String instance) {
     c.receiveException(new PastException("Should not be called!"));
   }
   
