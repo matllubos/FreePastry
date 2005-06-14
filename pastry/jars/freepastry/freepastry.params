@@ -26,6 +26,10 @@ pastry_messageDispatch_bufferIfNotReady = false
 # number of messages to buffer while an app hasn't yet been registered
 pastry_messageDispatch_bufferSize = 32
 
+pastry_socket_writer_max_queue_length = 128
+pastry_socket_writer_status_interval = 60000
+
+
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
 
