@@ -71,16 +71,10 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 			NodeHandle from = bls.from();
 			LeafSet remotels = bls.leafSet();
 
-			//System.outt.println("received leafBC from " + from.getNodeId() + " at " + 
-			//	       localHandle.getNodeId() + "type=" + type + " :" + remotels);
-
 			// first, merge the received leaf set into our own
 			boolean changed = mergeLeafSet(remotels, from);
-			//      if (changed)
-			//        System.outt.println("received leafBC from " + from.getNodeId() + " at " + 
-			//               localHandle.getNodeId() + "type=" + type + " :" + remotels);
 
-			if (type == BroadcastLeafSet.JoinInitial) {
+      if (type == BroadcastLeafSet.JoinInitial) {
 				// we have now successfully joined the ring, set the local node ready
 				//localNode.setReady();
 			}
@@ -174,7 +168,6 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 			// nodes where missing, send update to "from"
 			from = security.verifyNodeHandle(from);
 			from.receiveMessage(bl);
-			//System.outt.println("sending ls to src " + from.getNodeId());
 
 			if (notifyMissing) {
 				// send leafset to nodes that where missing from remotels
@@ -182,13 +175,11 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 				// for now, conservatively send to everyone
 				//broadcast(BroadcastLeafSet.Correction);
 
-				//System.outt.println("inserted: " + insertedHandles.size());
 
 				Iterator it = insertedHandles.iterator();
 				while (it.hasNext()) {
 					// send leafset to missing node
 					NodeHandle nh = (NodeHandle) it.next();
-					//System.outt.println("sending ls to " + nh.getNodeId());
 					nh.receiveMessage(bl);
 				}
 			}
@@ -263,8 +254,6 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 		int cwSize = ls.cwSize();
 		int ccwSize = ls.ccwSize();
 
-		//System.outt.println("Broadcast: " + leafSet + " from=" + from.getNodeId());
-
 		for (int i = -ccwSize; i <= cwSize; i++) {
 			NodeHandle nh;
 
@@ -277,8 +266,6 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 				continue;
 
 			nh = security.verifyNodeHandle(nh);
-
-			//System.outt.println("Broadcast: from " + localHandle.getNodeId() + " to " + nh.getNodeId());
 
 			nh.receiveMessage(bls);
 
@@ -335,8 +322,6 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 	 */
 
 	private void requestLeafSet() {
-
-		//System.outt.println("requestLeafSet");
 
 		RequestLeafSet rls = new RequestLeafSet(localHandle);
 		int cwSize = leafSet.cwSize();

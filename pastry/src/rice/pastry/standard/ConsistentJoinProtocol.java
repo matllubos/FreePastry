@@ -232,17 +232,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       Iterator it2 = addThese.iterator();
       while(it2.hasNext()) {
         NodeHandle nh = (NodeHandle)it2.next();
-//        if (!leafSet.member(nh)) {
-//          if (leafSet.test(nh)) {
-            // he's not a member, but he could be
-            if (!failed.contains(nh) && nh.getLiveness() < NodeHandle.LIVENESS_DEAD) {
-              addToLeafSet(nh);
-              // probe
-              //if (verbose) System.outt.println("CJP:"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" checking liveness1 on "+nh);
-              //nh.checkLiveness(); // maybe this is automatic the first time I send a message
-              sendTheMessage(nh, false);
-//            }
-//          }
+        // he's not a member, but he could be
+        if (!failed.contains(nh) && nh.getLiveness() < NodeHandle.LIVENESS_DEAD) {
+          addToLeafSet(nh);
+          // probe
+          sendTheMessage(nh, false);
         }
       } 
       
@@ -289,7 +283,6 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       if (numToHearFrom == 0) {
         if (!localNode.isReady()) {
           // active_i = true;
-    //        System.outt.println("j = "+j+"setReady() probed "+seen.size()+":"+gotResponse.size()+" nodes.");
           localNode.setReady(); 
           retryTask.cancel();
         }

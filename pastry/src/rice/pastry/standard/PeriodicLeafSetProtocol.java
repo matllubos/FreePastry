@@ -190,7 +190,8 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 //    if (!nsu.wasAdded()) {
 //      if (localNode.isReady() && !leafSet.isComplete() && leafSet.size() < (leafSet.maxSize()/2)) {
 //        // kill self
-//        System.outt.println("PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
+//            localNode.getEnvironment().getLogManager().getLogger(PeriodicLeafSetProtocol.class, null).log(Logger.SEVERE,
+//               "PeriodicLeafSetProtocol: "+localNode.getEnvironment().getTimeSource().currentTimeMillis()+" Killing self due to leafset collapse. "+leafSet);
 //        localNode.resign();
 //      }
 //    }

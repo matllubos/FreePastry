@@ -331,7 +331,7 @@ public class PingManager extends SelectionKeyHandler {
         
  /*       if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
           buffer.clear();
-          System.outt.println("Dropping packet");
+          log(Logger.INFO,"Dropping packet");
           return;
         }  */
         

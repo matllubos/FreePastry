@@ -174,11 +174,9 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable,
   public void update(Observable o, Object arg) {
     // if the node is declared dead, remove it immediately
     if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
-      //System.outt.println("SimilarSet:update(), removing dead node");
       remove((NodeHandle) o);
     }
     if (((Integer) arg) == NodeHandle.DECLARED_LIVE) {
-      //System.outt.println("SimilarSet:update(), removing dead node");
       leafSet.put((NodeHandle) o);
     }
 

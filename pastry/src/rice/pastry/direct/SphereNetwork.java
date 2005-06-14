@@ -5,6 +5,7 @@ import java.lang.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -219,11 +220,14 @@ public class SphereNetwork implements NetworkSimulator {
      * DESCRIBE THE METHOD
      */
     public void deliver() {
-      //System.outt.println("delivering to " + node);
-      //System.outt.println(msg);
-
-      if (isAlive(msg.getSenderId())) 
+      if (isAlive(msg.getSenderId())) {
+        environment.getLogManager().getLogger(SphereNetwork.class, null).log(Logger.FINER, 
+            "delivering "+msg+" to " + node);
         node.receiveMessage(msg);
+      } else {
+        environment.getLogManager().getLogger(SphereNetwork.class, null).log(Logger.INFO, 
+            "Cant deliver "+msg+" to " + node + "because it is not alive.");        
+      }
     } 
   }
 

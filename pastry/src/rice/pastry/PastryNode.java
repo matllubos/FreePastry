@@ -5,6 +5,7 @@ import java.util.*;
 
 import rice.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
@@ -172,7 +173,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
       return;
     //Thread.dumpStack();
     //      if (r == false)
-    //        System.outt.println("PastryNode "+localhandle+".setReady("+r+")");
+    getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.INFO, "PastryNode.setReady("+r+")");
 
     //System.outt.println("setready() called on pastry node" + getNodeId());
     ready = r;

@@ -140,9 +140,6 @@ public class StandardRouter implements MessageReceiver {
 
           if (lsDist.compareTo(altDist) < 0) {
             // closest leaf set member is closer
-            //System.outt.println("forw to edge leaf set member, alt=" +
-            // handle.getNodeId() +
-            //" lsm=" + leafSet.get(lsPos).getNodeId());
             handle = localNode.getLeafSet().get(lsPos);
 
             if (handle.isAlive() == false) {
@@ -182,10 +179,6 @@ public class StandardRouter implements MessageReceiver {
     NodeId prevId = msg.getPrevNode().getNodeId();
     Id key = msg.getTarget();
 
-    //System.outt.println("checkForRouteTableHole, prevNode=" + prevId +
-    //	   " localId=" + localId + " key=" + msg.getTarget() +
-    //	   " nextHop=" + handle.getNodeId());
-
     int diffDigit;
 
     if ((diffDigit = prevId.indexOfMSDD(key, localNode.getRoutingTable().baseBitLength())) == 
@@ -193,9 +186,6 @@ public class StandardRouter implements MessageReceiver {
 
       // the previous node is missing a RT entry, send the row
       // for now, we send the entire row for simplicity
-
-      //System.outt.println("checkForRouteTableHole, sending row=" + diffDigit
-      // + " to=" + prevId);
 
       RouteSet[] row = localNode.getRoutingTable().getRow(diffDigit);
       BroadcastRouteRow brr = new BroadcastRouteRow(localNode.getLocalHandle(), row);

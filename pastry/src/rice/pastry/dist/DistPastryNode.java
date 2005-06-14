@@ -112,13 +112,8 @@ public abstract class DistPastryNode extends PastryNode {
    * @param bootstrap Node handle to bootstrap with.
    */
   public final void initiateJoin(NodeHandle bootstrap) {
-    //System.outt.println("DistPN.initiateJoin()");
+    getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.INFO,"DistPN.initiateJoin()");
     if (bootstrap != null) {
-      //this.receiveMessage(new InitiateJoin(bootstrap));
-
-      // schedule (re-)transmission of the join message, every 5s
-      //joinEvent = scheduleMsg(new InitiateJoin(bootstrap), 0, 5000);
-
       // schedule (re-)transmission of the join message at an exponential backoff
       joinEvent = scheduleMsgExpBackoff(new InitiateJoin(bootstrap), 0, 15000, 2);
 
@@ -153,13 +148,15 @@ public abstract class DistPastryNode extends PastryNode {
       // schedule the routeset maintenance event
       routeSetRoutineMaintenance = scheduleMsgAtFixedRate(new InitiateRouteSetMaintenance(),
         routeSetMaintFreq * 1000, routeSetMaintFreq * 1000);
-//        System.outt.println("Scheduling routeSetMaint for "+routeSetMaintFreq * 1000+","+routeSetMaintFreq * 1000);
+      getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.INFO,
+          "Scheduling routeSetMaint for "+routeSetMaintFreq * 1000+","+routeSetMaintFreq * 1000);
     }
     if (leafSetMaintFreq > 0) {
       // schedule the leafset maintenance event
       leafSetRoutineMaintenance = scheduleMsgAtFixedRate(new InitiateLeafSetMaintenance(),
         leafSetMaintFreq * 1000, leafSetMaintFreq * 1000);
-//        System.outt.println("Scheduling leafSetMaint for "+leafSetMaintFreq * 1000+","+leafSetMaintFreq * 1000);
+      getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.INFO,
+          "Scheduling leafSetMaint for "+leafSetMaintFreq * 1000+","+leafSetMaintFreq * 1000);
     }
   }
 
@@ -320,9 +317,9 @@ public abstract class DistPastryNode extends PastryNode {
       environment.getLogManager().getLogger(DistPastryNode.class, null).log(Logger.FINER,
         "COUNT: Starting execution of " + this);
       try {
-      //  long start = environment.getTimeSource().currentTimeMillis();
+      long start = environment.getTimeSource().currentTimeMillis();
         final Object result = r.execute();
-      //  System.outt.println("QT: " + (environment.getTimeSource().currentTimeMillis() - start) + " " + r.toString());
+        environment.getLogManager().getLogger(getClass(), null).log(Logger.FINEST,"QT: " + (environment.getTimeSource().currentTimeMillis() - start) + " " + r.toString());
 
         environment.getSelectorManager().invoke(new Runnable() {
           public void run() {

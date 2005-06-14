@@ -99,16 +99,6 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
    * 
    * @return true if the node is alive, false otherwise.
    */
-  /*
-   * public final boolean isAlive() { verify();
-   * 
-   * if (redirect != null) { return redirect.isAlive(); }
-   * 
-   * if (isLocal && !alive) System.outt.println("panic; local node dead");
-   * 
-   * return alive; }
-   */
-
   public final int getLiveness() {
     verify();
 

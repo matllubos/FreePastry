@@ -1,4 +1,3 @@
-
 package rice.pastry.testing;
 
 import rice.pastry.*;
@@ -12,82 +11,75 @@ import java.util.*;
 
 /**
  * Ping
- *
+ * 
  * A performance test suite for pastry. This is the per-node app object.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Rongmei Zhang
  */
 
 public class Ping extends PastryAppl {
-    private static Address pingAddress = new PingAddress();
-    private Credentials pingCred = new PermissiveCredentials();
+  private static Address pingAddress = new PingAddress();
 
-    public Ping(PastryNode pn) {
-	super(pn);
+  private Credentials pingCred = new PermissiveCredentials();
+
+  public Ping(PastryNode pn) {
+    super(pn);
+  }
+
+  public Address getAddress() {
+    return pingAddress;
+  }
+
+  public Credentials getCredentials() {
+    return pingCred;
+  }
+
+  public void sendPing(NodeId nid) {
+    routeMsg(nid, new PingMessageNew(pingAddress, getNodeId(), nid), pingCred,
+        new SendOptions());
+  }
+
+  public void messageForAppl(Message msg) {
+
+    PingMessageNew pMsg = (PingMessageNew) msg;
+    int nHops = pMsg.getHops() - 1;
+    double fDistance = pMsg.getDistance();
+    double rDistance;
+
+    NetworkSimulator sim = ((DirectNodeHandle) ((DirectPastryNode) thePastryNode)
+        .getLocalHandle()).getSimulator();
+    PingTestRecord tr = (PingTestRecord) (sim.getTestRecord());
+
+    double dDistance = sim.proximity(thePastryNode.getNodeId(), pMsg
+        .getSource());
+    if (dDistance == 0) {
+      rDistance = 0;
+    } else {
+      rDistance = fDistance / dDistance;
     }
+    tr.addHops(nHops);
+    tr.addDistance(rDistance);
 
-    public Address getAddress() { return pingAddress; }
+  }
 
-    public Credentials getCredentials() { return pingCred; }
+  public boolean enrouteMessage(Message msg, Id from, NodeId nextHop,
+      SendOptions opt) {
 
-    public void sendPing(NodeId nid) {
-//	System.outt.println("sending a trace from " + getNodeId() + " to " + nid);
-	routeMsg(nid, new PingMessageNew(pingAddress, getNodeId(), nid),
-		 pingCred, new SendOptions());
-    }
+    PingMessageNew pMsg = (PingMessageNew) msg;
+    pMsg.incrHops();
+    pMsg.incrDistance(((DirectNodeHandle) ((DirectPastryNode) thePastryNode)
+        .getLocalHandle()).getSimulator().proximity(thePastryNode.getNodeId(),
+        nextHop));
 
-    public void messageForAppl(Message msg) {
-	/*
-	System.outt.print( msg );
-	System.outt.println(" received");
-	*/
-		    
-	PingMessageNew pMsg = (PingMessageNew)msg;
-        int nHops = pMsg.getHops() - 1;
-	double fDistance = pMsg.getDistance();
-	double rDistance;
+    return true;
+  }
 
-	NetworkSimulator sim = ((DirectNodeHandle)((DirectPastryNode)thePastryNode).getLocalHandle()).getSimulator();
-	PingTestRecord tr = (PingTestRecord)(sim.getTestRecord());
+  public void leafSetChange(NodeHandle nh, boolean wasAdded) {
+  }
 
-	double dDistance = sim.proximity(thePastryNode.getNodeId(),pMsg.getSource());
-	if ( dDistance == 0 ) {
-	    rDistance = 0;
-	}
-	else{
-	    rDistance = fDistance/dDistance;
-	}
-	/*
-	System.outt.println( "------------------" );
-	System.outt.println( "number of hops " + nHops );
-	System.outt.println( "relative distance " + rDistance );
-	System.outt.println( "------------------" );
-	*/
-	
-	tr.addHops( nHops );
-	tr.addDistance( rDistance );
-
-    }
-    
-    public boolean enrouteMessage(Message msg, Id from, NodeId nextHop, SendOptions opt) {
-	/*
-	System.outt.print(msg);
-	System.outt.println(" at " + getNodeId());
-	*/
-
-	PingMessageNew pMsg = (PingMessageNew)msg;
-	pMsg.incrHops();
-	pMsg.incrDistance( ((DirectNodeHandle)((DirectPastryNode)thePastryNode).getLocalHandle()).getSimulator().proximity(thePastryNode.getNodeId(), nextHop) );
-
-	return true;
-    }
-
-    public void leafSetChange(NodeHandle nh, boolean wasAdded) {
-    }
-
-    public void routeSetChange(NodeHandle nh, boolean wasAdded) {
-    }
+  public void routeSetChange(NodeHandle nh, boolean wasAdded) {
+  }
 }
 

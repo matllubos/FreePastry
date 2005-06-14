@@ -89,7 +89,6 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * @param pn local pastrynode
    */
   public final void setLocalNode(PastryNode pn) {
-    //System.outt.println("r.p.NodeHandle.setLocalNode("+pn+")");
     localnode = pn;
     if (localnode != null) {
       afterSetLocalNode();
