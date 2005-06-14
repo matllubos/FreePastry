@@ -359,7 +359,7 @@ public class VisualizationServer implements Runnable {
   private rice.p2p.commonapi.Id generateId() {
     byte[] data = new byte[20];
     environment.getRandomSource().nextBytes(data);
-    IdFactory factory = new MultiringIdFactory(node.getId(), new PastryIdFactory());
+    IdFactory factory = new MultiringIdFactory(node.getId(), new PastryIdFactory(environment));
     return factory.buildId(data);
   }
 

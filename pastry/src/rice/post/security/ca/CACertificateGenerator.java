@@ -7,6 +7,7 @@ import java.security.*;
 
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
 
@@ -64,7 +65,8 @@ public class CACertificateGenerator {
    *
    * @param args The command line arguments
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
+    Environment env = new Environment();
     String base_address = getArg(args,"-baseaddr");
     String userid = getArg(args,"-username");
     String password = getArg(args,"-password");
@@ -148,7 +150,7 @@ public class CACertificateGenerator {
         KeyPair pair = SecurityUtils.generateKeyAsymmetric();
         println(web, "[ DONE ]");
   
-        IdFactory realFactory = new PastryIdFactory();
+        IdFactory realFactory = new PastryIdFactory(env);
         Id ringId = realFactory.buildId(ring);
         byte[] ringData = ringId.toByteArray();
         

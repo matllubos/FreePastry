@@ -56,7 +56,7 @@ public abstract class CommonAPITest {
   public static int NUM_NODES = 10;
 
   // the factory which creates pastry ids
-  public static IdFactory FACTORY = new PastryIdFactory();
+  public final IdFactory FACTORY; //= new PastryIdFactory();
 
 
   // ----- TESTING SPECIFIC FIELDS -----
@@ -115,6 +115,7 @@ public abstract class CommonAPITest {
    */
   public CommonAPITest(Environment env) throws IOException {
     this.environment = env;
+      FACTORY = new PastryIdFactory(env);
       //idFactory = new IPNodeIdFactory(PORT); 
       idFactory = new RandomNodeIdFactory(environment);
 

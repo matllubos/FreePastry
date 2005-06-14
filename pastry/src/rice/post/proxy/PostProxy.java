@@ -731,7 +731,7 @@ public class PostProxy {
   protected void startRetrieveUserClone(Parameters parameters) throws Exception {
     if (parameters.getBoolean("post_log_clone_enable")) {
       stepStart("Creating log for previous address " + parameters.getString("post_log_clone_username"));
-      clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory()), parameters.getString("post_log_clone_username"));
+      clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory(environment)), parameters.getString("post_log_clone_username"));
       stepDone(SUCCESS);
     }
   }
@@ -833,7 +833,7 @@ public class PostProxy {
    */  
   protected void startCreateIdFactory(Parameters parameters) throws Exception {
     stepStart("Creating Id Factory");
-    FACTORY = new MultiringIdFactory(ringId, new PastryIdFactory());
+    FACTORY = new MultiringIdFactory(ringId, new PastryIdFactory(environment));
     stepDone(SUCCESS);
   }
     
@@ -890,7 +890,7 @@ public class PostProxy {
     if (parameters.getBoolean("glacier_enable")) {
       FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
-      PastryIdFactory PFACTORY = new PastryIdFactory();
+      PastryIdFactory PFACTORY = new PastryIdFactory(env);
 
       stepStart("Starting Glacier Storage");
       glacierMutableStorage = new StorageManagerImpl(KFACTORY,
@@ -1009,7 +1009,7 @@ public class PostProxy {
    * @return The ringId
    */
   protected rice.p2p.commonapi.Id generateRingId(String name) {
-    IdFactory factory = new PastryIdFactory();
+    IdFactory factory = new PastryIdFactory(environment);
 
     if (name != null) {
       rice.p2p.commonapi.Id ringId = factory.buildId(name);

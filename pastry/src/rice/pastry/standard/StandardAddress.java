@@ -1,6 +1,8 @@
 
 package rice.pastry.standard;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -26,13 +28,13 @@ public class StandardAddress implements Address {
     this.myCode = port;
   }
   
-  public StandardAddress(Class c, String instance) {
+  public StandardAddress(Class c, String instance, Environment env) {
     MessageDigest md = null;
     
     try {
       md = MessageDigest.getInstance("SHA");
     } catch ( NoSuchAlgorithmException e ) {
-      System.err.println( "No SHA support!" );
+      env.getLogManager().getLogger(getClass(), instance).log(Logger.SEVERE, "No SHA support!" );
     }
     
     name = c.toString() + "-" + instance;

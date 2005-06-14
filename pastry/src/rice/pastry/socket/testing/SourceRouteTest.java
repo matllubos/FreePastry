@@ -12,8 +12,8 @@ import rice.pastry.testing.*;
 public class SourceRouteTest {
   
   public static class TestMessage extends Message {
-    public TestMessage() {
-      super(new StandardAddress(TestMessage.class, "monkey"));
+    public TestMessage(Environment env) {
+      super(new StandardAddress(TestMessage.class, "monkey", env));
     }
   }
  

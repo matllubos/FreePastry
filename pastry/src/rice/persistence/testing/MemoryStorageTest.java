@@ -24,7 +24,7 @@ import rice.persistence.*;
  */
 public class MemoryStorageTest extends Test {
 
-  private static IdFactory FACTORY = new PastryIdFactory();
+  private IdFactory FACTORY;// = new PastryIdFactory();
   
   protected Storage storage;
 
@@ -37,6 +37,7 @@ public class MemoryStorageTest extends Test {
    */
   public MemoryStorageTest(boolean store, Environment env) {
     super(env);
+    FACTORY = new PastryIdFactory(env);
     storage = new MemoryStorage(FACTORY);
     data  = new Id[500];
     metadata = new Integer[500];

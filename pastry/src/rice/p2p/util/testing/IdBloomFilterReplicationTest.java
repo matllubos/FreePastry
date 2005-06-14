@@ -1,5 +1,6 @@
 package rice.p2p.util.testing;
 
+import rice.environment.Environment;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.commonapi.*;
@@ -7,6 +8,8 @@ import rice.p2p.multiring.*;
 import rice.p2p.past.gc.*;
 import rice.pastry.commonapi.*;
 import rice.p2p.util.*;
+
+import java.io.IOException;
 import java.util.*;
 
 public class IdBloomFilterReplicationTest {
@@ -14,17 +17,22 @@ public class IdBloomFilterReplicationTest {
   public static int NUM = 10000;
   public static int NUM_RUNS = 100;
   
-  public static RandomSource random = new SimpleRandomSource();
-  public static IdFactory pFactory = new PastryIdFactory();
-  public static IdFactory factory = new MultiringIdFactory(pFactory.buildRandomId(random), pFactory);
-  public static GCIdFactory gFactory = new GCIdFactory(factory);
+  public static RandomSource random = null; //new SimpleRandomSource();
+  public static IdFactory pFactory = null;// = new PastryIdFactory();
+  public static IdFactory factory = null;// = new MultiringIdFactory(pFactory.buildRandomId(random), pFactory);
+  public static GCIdFactory gFactory = null; //new GCIdFactory(factory);
   
   public static Id[] SHARED = new Id[NUM];
   public static Id[] EXTRA = new Id[2 * NUM];
   
   public static IdSet remote;
   
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
+    Environment env = new Environment();
+    random = env.getRandomSource();
+    pFactory = new PastryIdFactory(env);
+    factory = new MultiringIdFactory(pFactory.buildRandomId(random), pFactory);
+    gFactory = new GCIdFactory(factory);
  //   for (int bpk=7; bpk<10; bpk++) {
  //     for (int hash=2; hash<5; hash++) {
  //       IdBloomFilter.NUM_BITS_PER_KEY = bpk;

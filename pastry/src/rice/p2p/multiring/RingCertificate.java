@@ -7,6 +7,7 @@ import java.security.*;
 import java.util.*;
 import java.util.zip.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
 import rice.p2p.util.*;
@@ -309,6 +310,7 @@ public class RingCertificate implements Serializable {
    *
    */
   public static void main(String[] args) throws Exception {
+    Environment env = new Environment();
     BufferedReader r = new BufferedReader(new InputStreamReader(System.in));
     BufferedWriter w = new BufferedWriter(new OutputStreamWriter(System.out));
     
@@ -338,7 +340,7 @@ public class RingCertificate implements Serializable {
     } 
     
     // build the id
-    Id id = generateId(ring);
+    Id id = generateId(ring, env);
     
     // translate the InetSocketAddresses
     InetSocketAddress log = toInetSocketAddress(logServer);
@@ -393,10 +395,10 @@ public class RingCertificate implements Serializable {
    *
    * @param string THe string
    */
-  private static Id generateId(String s) {
+  private static Id generateId(String s, Environment env) {
     String ring = s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
     
-    PastryIdFactory pif = new PastryIdFactory();
+    PastryIdFactory pif = new PastryIdFactory(env);
     
     Id ringId = pif.buildId(ring);
     byte[] ringData = ringId.toByteArray();

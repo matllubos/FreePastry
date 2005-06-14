@@ -1,5 +1,6 @@
 package rice.p2p.util.testing;
 
+import rice.environment.Environment;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.commonapi.*;
@@ -7,14 +8,17 @@ import rice.p2p.multiring.*;
 import rice.p2p.past.gc.*;
 import rice.pastry.commonapi.*;
 import rice.p2p.util.*;
+
+import java.io.IOException;
 import java.util.*;
 
 public class IdBloomFilterUnit {
   
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     int n = Integer.parseInt(args[0]);
-    RandomSource random = new SimpleRandomSource();
-    PastryIdFactory pFactory = new PastryIdFactory();
+    Environment env = new Environment();
+    RandomSource random = env.getRandomSource();
+    PastryIdFactory pFactory = new PastryIdFactory(env);
     IdFactory factory = new MultiringIdFactory(pFactory.buildRandomId(random), pFactory);
     GCIdFactory gFactory = new GCIdFactory(factory);
     

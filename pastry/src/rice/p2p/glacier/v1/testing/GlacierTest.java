@@ -31,7 +31,7 @@ public class GlacierTest {
 
   public static int REPLICATION_FACTOR = 3;
 
-  public static IdFactory FACTORY = new PastryIdFactory();
+  public final IdFactory FACTORY; //= new PastryIdFactory();
 
   private PastryNodeFactory factory;
 
@@ -60,6 +60,7 @@ public class GlacierTest {
    */
   public GlacierTest(Environment env) {
     environment = env;
+    FACTORY = new PastryIdFactory(env);
     simulator = new EuclideanNetwork(env);
     factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator,
         env);

@@ -1,6 +1,8 @@
 
 package rice.pastry.commonapi;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 
@@ -26,11 +28,11 @@ public class PastryIdFactory implements IdFactory {
   /**
    * Constructor
    */
-  public PastryIdFactory() {
+  public PastryIdFactory(Environment env) {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch ( NoSuchAlgorithmException e ) {
-      System.err.println( "No SHA support!" );
+      env.getLogManager().getLogger(PastryIdFactory.class, null).log(Logger.SEVERE, "No SHA support!" );
     }
   }
       

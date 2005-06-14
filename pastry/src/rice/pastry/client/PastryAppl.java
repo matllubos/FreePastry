@@ -79,7 +79,7 @@ public abstract class PastryAppl implements MessageReceiver
    */
   public PastryAppl(PastryNode pn, String instance) {
     this.instance = instance;
-    this.address = new StandardAddress(this.getClass(), instance);
+    this.address = new StandardAddress(this.getClass(), instance, pn.getEnvironment());
 
     thePastryNode = pn;
     thePastryNode.registerReceiver(getCredentials(), getAddress(), this);

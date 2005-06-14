@@ -24,13 +24,14 @@ import rice.persistence.*;
  */
 public class PersistentStorageTest extends MemoryStorageTest {
 
-  private static IdFactory FACTORY = new PastryIdFactory();
+  private static IdFactory FACTORY;// = new PastryIdFactory();
 
   /**
    * Builds a MemoryStorageTest
    */
   public PersistentStorageTest(boolean store, Environment environment) throws IOException {
     super(store, environment);
+    FACTORY = new PastryIdFactory(this.environment);
     storage = new PersistentStorage(FACTORY, "PersistentStorageTest" , ".", 20000000, environment);
   }
 

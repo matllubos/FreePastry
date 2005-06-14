@@ -77,10 +77,6 @@ public class MultiringRegrTest {
   // the number of nodes in each organization
   public static int NUM_ORGANIZATIONAL_NODES = NUM_GATEWAY_NODES + NUM_INTERNAL_NODES;
 
-  // the factory which creates pastry ids
-  public static IdFactory FACTORY = new PastryIdFactory();
-
-
   // ----- TESTING SPECIFIC FIELDS -----
 
   // the text to print to the screen
@@ -157,7 +153,7 @@ public class MultiringRegrTest {
     NUM_GATEWAY_NODES = NUM_GLOBAL_NODES / NUM_ORGANIZATIONS;
     NUM_ORGANIZATIONAL_NODES = NUM_GATEWAY_NODES + NUM_INTERNAL_NODES;
     
-    idFactory = new PastryIdFactory();
+    idFactory = new PastryIdFactory(env);
     globalRingId = idFactory.buildId(new byte[20]);
     ringIds = new Id[NUM_ORGANIZATIONS];
     globalNodes = new MultiringNode[NUM_GLOBAL_NODES];

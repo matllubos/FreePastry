@@ -431,7 +431,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    * @return A factory for creating Ids.
    */
   public rice.p2p.commonapi.IdFactory getIdFactory() {
-    return new rice.pastry.commonapi.PastryIdFactory();
+    return new rice.pastry.commonapi.PastryIdFactory(getEnvironment());
   }
 
   /**

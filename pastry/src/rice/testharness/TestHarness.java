@@ -75,7 +75,7 @@ public class TestHarness implements Application, ScribeClient {
 
   private ScribeImpl scribe;
   
-  private IdFactory factory = new PastryIdFactory();
+  private IdFactory factory;// = new PastryIdFactory();
   
   private Endpoint endpoint;
 
@@ -89,6 +89,7 @@ public class TestHarness implements Application, ScribeClient {
    * @param pn The PastryNode this TestHarness is running on.
    */
   public TestHarness(PastryNode pn) {
+    factory = new PastryIdFactory(pn.getEnvironment());
     endpoint = pn.registerApplication(this, "monkey");
     _pastryNode = pn;
     _tests = new Hashtable();

@@ -86,8 +86,7 @@ public class SocketChannelRepeater {
       
       return baos.toByteArray();
     } catch (IOException canthappen) {
-      System.err.println("PANIC: SHOULDN'T HAPPEN " + canthappen);
-      return null;
+      throw new RuntimeException("PANIC: SHOULDN'T HAPPEN " + canthappen, canthappen);
     }
   }
   

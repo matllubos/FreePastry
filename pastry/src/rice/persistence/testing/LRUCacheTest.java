@@ -26,7 +26,7 @@ public class LRUCacheTest extends Test {
 
   protected static final int CACHE_SIZE = 100;
 
-  private static IdFactory FACTORY = new PastryIdFactory();
+  private IdFactory FACTORY;
   
   private Cache cache;
 
@@ -38,7 +38,8 @@ public class LRUCacheTest extends Test {
   public LRUCacheTest(Environment env) {
     super(env);
     cache = new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE);
-
+    FACTORY = new PastryIdFactory(env);
+    
     data  = new Id[500];
     int[] x = new int[5];
 

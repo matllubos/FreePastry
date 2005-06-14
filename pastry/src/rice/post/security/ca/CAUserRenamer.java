@@ -7,6 +7,7 @@ import java.security.*;
 
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
 
@@ -47,8 +48,9 @@ public class CAUserRenamer {
    *
    * @param args The command line arguments
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException{
     boolean done = false;
+    Environment env = new Environment();
     try {
       System.out.println("POST User Renamer");
       
@@ -87,7 +89,7 @@ public class CAUserRenamer {
         
         default_ring = ring;
         
-        IdFactory realFactory = new PastryIdFactory();
+        IdFactory realFactory = new PastryIdFactory(env);
         Id ringId = realFactory.buildId(ring);
         byte[] ringData = ringId.toByteArray();
         
