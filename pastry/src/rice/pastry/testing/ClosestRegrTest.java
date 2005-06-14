@@ -43,7 +43,7 @@ public class ClosestRegrTest {
   private ClosestRegrTest() throws IOException {
     environment = new Environment();
     simulator = new SphereNetwork(environment);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, environment);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator, environment);
     pastryNodes = new Vector();
   }
 

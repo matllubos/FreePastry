@@ -27,7 +27,7 @@ public class LeafSetTest {
   public LeafSetTest() throws IOException {
     Environment env = new Environment();
     random = env.getRandomSource();
-    factory = new RandomNodeIdFactory(random);
+    factory = new RandomNodeIdFactory(env);
   }
 
   public void start() {

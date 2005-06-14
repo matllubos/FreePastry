@@ -85,6 +85,10 @@ public class SocketChannelReader {
     environment.getLogManager().getLogger(SocketChannelReader.class, null).log(level,s);
   }
 
+  private void logException(int level, Exception e) {
+    environment.getLogManager().getLogger(SocketChannelReader.class, null).logException(level, e);
+  }
+
 
   /**
    * Method which is to be called when there is data available on the specified
@@ -166,8 +170,8 @@ public class SocketChannelReader {
             }
             
             public void receiveException(Exception e) {
-              System.err.println("Processing deserialization of message caused exception " + e);
-              e.printStackTrace();
+              log(Logger.WARNING, "Processing deserialization of message caused exception " + e);
+              logException(Logger.WARNING, e);
             }
           });
         }

@@ -945,7 +945,7 @@ public class PostProxy {
     if (logManager instanceof NetworkLogManager)
       ((NetworkLogManager) logManager).setInfo(port, cert.getKey(), cert.getLogServer());
     
-    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), cert.getProtocol(), port);
+    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port, environment), cert.getProtocol(), port, environment);
     InetSocketAddress proxyAddress = null;
         
     if (natAddress != null)
@@ -1050,7 +1050,8 @@ public class PostProxy {
     stepStart("Creating Global Pastry node");
     String prefix = generateRingId(null).toStringFull();
         
-    DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port), globalCert.getProtocol(), globalPort);
+    DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(
+        new CertifiedNodeIdFactory(port,environment), globalCert.getProtocol(), globalPort, environment);
     InetSocketAddress proxyAddress = null;
     
     if (parameters.getBoolean("pastry_ring_" + prefix+ "_proxy_enable"))

@@ -76,12 +76,12 @@ public class DistTestHarnessRunner {
   public DistTestHarnessRunner(Environment env) throws IOException {
     pastryNodes = new Vector();
     testNodes = new Vector();
-    factory = DistPastryNodeFactory.getFactory(getNodeIdFactory(), PROTOCOL, START_PORT);
+    factory = DistPastryNodeFactory.getFactory(getNodeIdFactory(), PROTOCOL, START_PORT, env);
     //System.out.println(factory.getClass().getName());
   }
 
   protected NodeIdFactory getNodeIdFactory() {
-    return new RandomNodeIdFactory(environment.getRandomSource());
+    return new RandomNodeIdFactory(environment);
   }
 
   public void run() {

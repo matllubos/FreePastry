@@ -49,8 +49,7 @@ public abstract class LocalNode implements LocalNodeI {
    */
   public final void assertLocalNode() {
     if (localnode == null) {
-      System.err.println("PANIC: localnode is null in " + this);
-      (new Exception()).printStackTrace(System.err);
+      throw new RuntimeException("PANIC: localnode is null in " + this);
     }
   }
 }

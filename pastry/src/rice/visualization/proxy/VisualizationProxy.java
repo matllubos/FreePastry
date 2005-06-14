@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.security.*;
+
+import rice.environment.Environment;
 import rice.p2p.multiring.*;
 
 import rice.pastry.dist.DistNodeHandle;
@@ -30,6 +32,7 @@ public class VisualizationProxy {
   }
   
   public void parseArgs(String[] args) throws IOException {
+    Environment env = new Environment();
     int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-protocol") && i+1 < args.length) {
@@ -49,7 +52,7 @@ public class VisualizationProxy {
       }
     } 
     
-    factory = DistPastryNodeFactory.getFactory(null, protocol, 0);
+    factory = DistPastryNodeFactory.getFactory(null, protocol, 0, env);
     
     String bootstrap_host = "localhost";
     int bootstrap_port = 5009;

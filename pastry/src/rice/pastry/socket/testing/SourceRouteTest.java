@@ -19,7 +19,7 @@ public class SourceRouteTest {
  
   public static void main2(String[] args) throws Exception {
     Environment env = new Environment();
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(env.getRandomSource()), 20001, env);
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(env), 20001, env);
     /*
     InetSocketAddress bind = new InetSocketAddress(InetAddress.getLocalHost(), 10001);
     InetSocketAddress local = new InetSocketAddress(InetAddress.getLocalHost(), 10001);
@@ -49,7 +49,7 @@ public class SourceRouteTest {
   
   public static void main(String[] args) throws Exception {
     Environment env = new Environment();
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(env.getRandomSource()), 20001, env);
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(env), 20001, env);
     
     new Thread() {
       int k=0;

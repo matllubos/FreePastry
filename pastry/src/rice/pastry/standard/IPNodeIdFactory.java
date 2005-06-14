@@ -1,5 +1,7 @@
 package rice.pastry.standard;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 
 import java.net.*;
@@ -21,14 +23,17 @@ public class IPNodeIdFactory implements NodeIdFactory {
 
   private int port;
 
+  Environment environment;
+  
   /**
    * Constructor.
    * 
    * @param port the port number on which this Java VM listens
    */
 
-  public IPNodeIdFactory(int port) {
+  public IPNodeIdFactory(int port, Environment env) {
     this.port = port;
+    this.environment = env;
 
     try {
       localIP = InetAddress.getLocalHost();
@@ -70,7 +75,8 @@ public class IPNodeIdFactory implements NodeIdFactory {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      System.err.println("No SHA support!");
+      environment.getLogManager().getLogger(IPNodeIdFactory.class, null).log(Logger.SEVERE, "No SHA support!");
+      throw new RuntimeException("No SHA support!",e);
     }
 
     md.update(rawIP);

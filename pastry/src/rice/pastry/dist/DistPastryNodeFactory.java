@@ -145,9 +145,9 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return A DistPastryNodeFactory using the given protocol and port.
    * @throws IllegalArgumentException If protocol is an unsupported port.
    */
-  public static DistPastryNodeFactory getFactory(NodeIdFactory nf, int protocol, int port) throws IOException {
+  public static DistPastryNodeFactory getFactory(NodeIdFactory nf, int protocol, int port, Environment env) throws IOException {
     if (protocol == PROTOCOL_SOCKET) {
-      return new SocketPastryNodeFactory(nf, port, new Environment());
+      return new SocketPastryNodeFactory(nf, port, env);
     }
 
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);

@@ -37,7 +37,7 @@ public class SinglePingTest {
   public SinglePingTest(TestRecord tr, Environment env) {
     environment = env;
     simulator = new EuclideanNetwork(env); //SphereNetwork();
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, env);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator, env);
     simulator.setTestRecord(tr);
     testRecord = tr;
 

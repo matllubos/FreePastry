@@ -42,7 +42,7 @@ public class HelloWorld {
   public HelloWorld(Environment env) {
     environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, environment);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator, environment);
 
     pastryNodes = new Vector();
     helloClients = new Vector();

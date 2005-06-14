@@ -77,7 +77,7 @@ public class DirectRMRegrTest {
   public DirectRMRegrTest(Environment env) {
     environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(env.getRandomSource()), simulator, env);
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(env), simulator, env);
     pastryNodes = new Vector();
     rmClients = new Vector();
     nodeIdToApp = new Hashtable();

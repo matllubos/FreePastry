@@ -61,7 +61,7 @@ public class GlacierTest {
   public GlacierTest(Environment env) {
     environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator,
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator,
         env);
 
     pastryNodes = new Vector();

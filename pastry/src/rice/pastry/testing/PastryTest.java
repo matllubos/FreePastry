@@ -34,7 +34,7 @@ public class PastryTest {
   public PastryTest(Environment env) {
     environment = env;
     simulator = new EuclideanNetwork(env);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(env.getRandomSource()), simulator,
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(env), simulator,
         env);
 
     pastryNodes = new Vector();

@@ -5,6 +5,7 @@ import java.net.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
@@ -91,7 +92,8 @@ public class PastryNetworkTest {
               } catch (java.net.SocketTimeoutException e) {
                 unknown.add(handle);
               } catch (IOException e) {
-                System.err.println("GOT OTHER ERROR CONNECTING TO " + handle + " - " + e);
+                environment.getLogManager().getLogger(PastryNetworkTest.class, null).log(Logger.WARNING,
+                    "GOT OTHER ERROR CONNECTING TO " + handle + " - " + e);
               } finally {
                 synchronized (unseen) {
                   numThreads--;
@@ -129,9 +131,11 @@ public class PastryNetworkTest {
           NodeHandle node = (NodeHandle) nodes.next();
           
           if (dead.contains(node) && set.member(node)) {
-            System.err.println("LEAFSET ERROR: Leafset for " + set.get(0) + " contains dead node " + node);
+            environment.getLogManager().getLogger(PastryNetworkTest.class, null).log(Logger.WARNING,
+                "LEAFSET ERROR: Leafset for " + set.get(0) + " contains dead node " + node);
           } else if ((! dead.contains(node)) && set.isComplete() && set.test(node)) {
-            System.err.println("LEAFSET ERROR: Leafset for " + set.get(0) + " is missing " + node);
+            environment.getLogManager().getLogger(PastryNetworkTest.class, null).log(Logger.WARNING,
+                "LEAFSET ERROR: Leafset for " + set.get(0) + " is missing " + node);
           }
         }
       }
@@ -181,10 +185,12 @@ public class PastryNetworkTest {
       
       for (int k=0; k<ideal.length; k++) {
         if (((actual[k] == null) || (actual[k].size() == 0)) && ((ideal[k] != null) && (ideal[k].size() > 0)))
-          System.err.println("ROUTING TABLE ERROR: " + node + " has no entry in row " + row + " column " + k + " but " + ideal[k].get(0) + " exists");
+          environment.getLogManager().getLogger(PastryNetworkTest.class, null).log(Logger.WARNING,
+              "ROUTING TABLE ERROR: " + node + " has no entry in row " + row + " column " + k + " but " + ideal[k].get(0) + " exists");
 
         if (((actual[k] != null) && (actual[k].size() > 0)) && ((ideal[k] == null) || (ideal[k].size() == 0)))
-          System.err.println("ROUTING TABLE ERROR: " + node + " has no non-existent entry in row " + row + " column " + k + " entry " + actual[k].get(0) + " exists");
+          environment.getLogManager().getLogger(PastryNetworkTest.class, null).log(Logger.WARNING,
+              "ROUTING TABLE ERROR: " + node + " has no non-existent entry in row " + row + " column " + k + " entry " + actual[k].get(0) + " exists");
       }
     }
     

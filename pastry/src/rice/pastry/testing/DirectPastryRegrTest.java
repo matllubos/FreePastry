@@ -35,7 +35,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
   private DirectPastryRegrTest() throws IOException {
     super(new Environment());
     simulator = new SphereNetwork(environment);
-    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), 
+    factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), 
         simulator,
         environment);
   }

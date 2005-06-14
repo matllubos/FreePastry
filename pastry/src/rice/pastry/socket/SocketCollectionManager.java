@@ -1101,7 +1101,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         channel.socket().shutdownOutput();
         sourceRouteClosed(this);
       } catch (IOException e) {
-        System.err.println("ERROR: Received exception " + e + " while shutting down SR output.");
+        log(Logger.SEVERE, "ERROR: Received exception " + e + " while shutting down SR output.");
         close();
       }
     }

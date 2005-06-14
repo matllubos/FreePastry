@@ -1,6 +1,7 @@
 
 package rice.pastry;
 
+import rice.environment.logging.Logger;
 import rice.pastry.messaging.Message;
 import rice.selector.TimerTask;
 
@@ -48,8 +49,9 @@ public class ScheduledMessage extends TimerTask {
     	if (m != null)
         localNode.receiveMessage(msg);
     } catch (Exception e) {
-      System.err.println("Delivering " + this + " caused exception " + e);
-      e.printStackTrace();
+      Logger logger = localNode.getEnvironment().getLogManager().getLogger(getClass(), null);
+      logger.log(Logger.WARNING, "Delivering " + this + " caused exception " + e);
+      logger.logException(Logger.WARNING, e);
     }
   }
 

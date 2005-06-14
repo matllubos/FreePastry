@@ -25,7 +25,7 @@ public class DistTutorial {
   public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
     
     // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory(env.getRandomSource());
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);

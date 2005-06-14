@@ -116,8 +116,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    */
   public final void assertLocalNode() {
     if (localnode == null) {
-      System.err.println("PANIC: localnode is null in " + this);
-      (new Exception()).printStackTrace(System.err);
+      throw new RuntimeException("PANIC: localnode is null in " + this);
     }
   }
 

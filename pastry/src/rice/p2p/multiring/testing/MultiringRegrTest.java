@@ -146,11 +146,12 @@ public class MultiringRegrTest {
     }
     
     if (PROTOCOL == PROTOCOL_DIRECT) {
-      factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment.getRandomSource()), simulator, env);
+      factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator, env);
     } else {
-      factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(environment.getRandomSource()),
+      factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(environment),
                                                  PROTOCOL,
-                                                 PORT);
+                                                 PORT,
+                                                 env);
     }
     
     NUM_GATEWAY_NODES = NUM_GLOBAL_NODES / NUM_ORGANIZATIONS;

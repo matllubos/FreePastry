@@ -371,7 +371,7 @@ public class PingManager extends SelectionKeyHandler {
         }
       }
     } catch (IOException e) {
-      System.err.println("ERROR (datagrammanager:write): " + e);
+      log(Logger.WARNING, "ERROR (datagrammanager:write): " + e);
     } finally {
       if (pendingMsgs.isEmpty()) 
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);

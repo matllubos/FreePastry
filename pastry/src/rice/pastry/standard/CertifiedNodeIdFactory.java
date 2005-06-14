@@ -10,6 +10,8 @@ import java.util.zip.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.pastry.*;
 import rice.p2p.util.*;
@@ -30,12 +32,14 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
   protected int port;
   protected IPNodeIdFactory realFactory;
 
+  protected Environment environment;
   /**
    * Constructor.
    */
-  public CertifiedNodeIdFactory(int port) {
+  public CertifiedNodeIdFactory(int port, Environment env) {
+    this.environment = env;
     this.port = port;
-    this.realFactory = new IPNodeIdFactory(port);
+    this.realFactory = new IPNodeIdFactory(port, env);
   }
   
   /**
@@ -59,14 +63,15 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
         xois = new XMLObjectInputStream(new FileInputStream(f));
         return (NodeId) xois.readObject();
       } else {
-        System.err.println("Unable to find NodeID certificate - exiting.");
+        environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).log(Logger.WARNING,
+          "Unable to find NodeID certificate - exiting.");
         throw new RuntimeException("Unable to find NodeID certificate - make sure that the NodeID certificate file '" + NODE_ID_FILENAME + "' exists in your ePOST directory.");
       }
     } catch (IOException e) {
-      System.err.println(e);
+      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,e);
       throw new RuntimeException(e);
     } catch (ClassNotFoundException e) {
-      System.err.println(e);
+      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,e);
       throw new RuntimeException(e);
     } finally {
       try {
@@ -121,7 +126,7 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
     
     KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(st.sval.getBytes())));
           
-    generateCertificate(new RandomNodeIdFactory(new SimpleRandomSource()).generateNodeId(), new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME), caPair.getPrivate());
+    generateCertificate(new RandomNodeIdFactory(new Environment()).generateNodeId(), new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME), caPair.getPrivate());
   }
   
   public static String getArg(String[] args, String argType) {

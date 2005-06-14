@@ -376,7 +376,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * an error condition is detected, an exception should be thrown.
    */
   public static InetSocketAddress verifyConnection(int timeout, InetSocketAddress local, InetSocketAddress[] existing, Environment env) throws IOException {
-    System.err.println("Verifying connection of local node " + local + " using " + existing[0] + " and " + existing.length + " more");
+    env.getLogManager().getLogger(SocketPastryNodeFactory.class, null).log(Logger.INFO, 
+        "Verifying connection of local node " + local + " using " + existing[0] + " and " + existing.length + " more");
     DatagramSocket socket = null;
     
     try {

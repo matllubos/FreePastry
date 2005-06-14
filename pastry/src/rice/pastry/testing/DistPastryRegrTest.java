@@ -62,8 +62,8 @@ public class DistPastryRegrTest extends PastryRegrTest {
     // -- it is shared among multiple virtual nodes
     pastryNodesSorted = Collections.synchronizedSortedMap(pastryNodesSorted);
 
-    factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(port),
-        protocol, port);
+    factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(port, env),
+        protocol, port, env);
 
     try {
       bsaddress = new InetSocketAddress(bshost, bsport);

@@ -112,9 +112,8 @@ public class SocketPastryNode extends DistPastryNode {
       super.resign();
       srManager.resign();
     } catch (IOException e) {
-      System.err.println("ERROR: Got exception " + e + " while resigning node!");
+      getEnvironment().getLogManager().getLogger(SocketPastryNode.class, 
+          "ERROR: Got exception " + e + " while resigning node!");
     }
-//    System.outt.println("SocketPastryNode resigning at time:"+Systemm.currentTimeMillis());
-//    System.exit(20);
   }
 }

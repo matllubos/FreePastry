@@ -116,7 +116,7 @@ public abstract class CommonAPITest {
   public CommonAPITest(Environment env) throws IOException {
     this.environment = env;
       //idFactory = new IPNodeIdFactory(PORT); 
-      idFactory = new RandomNodeIdFactory(environment.getRandomSource());
+      idFactory = new RandomNodeIdFactory(environment);
 
     if (SIMULATOR == SIMULATOR_SPHERE) {
       simulator = new SphereNetwork(env);
@@ -129,7 +129,8 @@ public abstract class CommonAPITest {
     } else {
       factory = DistPastryNodeFactory.getFactory(idFactory,
                                                  PROTOCOL,
-                                                 PORT);
+                                                 PORT,
+                                                 env);
     }
 
     nodes = new Node[NUM_NODES];

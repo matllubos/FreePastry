@@ -58,8 +58,8 @@ public class DistRMRegrTest {
     int i;
     NodeId topicId;
 
-    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(env.getRandomSource()),
-        protocol, port);
+    factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(env),
+        protocol, port, env);
     pastryNodes = new Vector();
     distClients = new Vector();
     localNodes = new Vector();

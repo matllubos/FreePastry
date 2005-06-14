@@ -1,5 +1,7 @@
 package rice.pastry.standard;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.pastry.*;
 
@@ -18,15 +20,15 @@ import java.security.*;
 public class RandomNodeIdFactory implements NodeIdFactory {
   private long next;
 
-  RandomSource rng;
+  Environment environment;
 
   /**
    * Constructor.
    */
 
-  public RandomNodeIdFactory(RandomSource rng) {
-    this.rng = rng;
-    next = rng.nextLong();
+  public RandomNodeIdFactory(Environment env) {
+    this.environment = env;
+    next = env.getRandomSource().nextLong();
   }
 
   /**
@@ -51,7 +53,8 @@ public class RandomNodeIdFactory implements NodeIdFactory {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      System.err.println("No SHA support!");
+      environment.getLogManager().getLogger(RandomNodeIdFactory.class, null).log(Logger.SEVERE, "No SHA support!");
+      throw new RuntimeException("No SHA support!",e);
     }
 
     md.update(raw);

@@ -163,8 +163,8 @@ public class IdSet implements rice.p2p.commonapi.IdSet {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch ( NoSuchAlgorithmException e ) {
-      System.err.println( "No SHA support!" );
-      return null;
+      throw new RuntimeException("No SHA support!",e);
+      //return null;
     }
 
     Iterator it = getIterator();
