@@ -92,8 +92,6 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
     localnode = pn;
     if (localnode != null) {
       afterSetLocalNode();
-    } else {
-      //Thread.dumpStack(); 
     }
   }
 

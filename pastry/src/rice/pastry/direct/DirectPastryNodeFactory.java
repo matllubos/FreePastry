@@ -2,6 +2,7 @@
 package rice.pastry.direct;
 
 import rice.environment.Environment;
+import rice.environment.logging.CloneableLogManager;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
@@ -61,6 +62,19 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return a new PastryNode
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
+    // this code builds a different environment for each PastryNode
+    Environment environment = this.environment;
+    if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
+      if (this.environment.getLogManager() instanceof CloneableLogManager) {
+        environment = new Environment(
+          this.environment.getSelectorManager(),
+          this.environment.getRandomSource(),
+          this.environment.getTimeSource(),
+          ((CloneableLogManager)this.environment.getLogManager()).clone(nodeId.toString()),
+          this.environment.getParameters());
+      }
+    }    
+
     DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment);
 
     DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);

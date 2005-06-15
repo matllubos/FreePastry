@@ -123,7 +123,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key.interestOps(SelectionKey.OP_ACCEPT);
     } catch (IOException e) {
       log(Logger.WARNING, "ERROR creating server socket channel " + e);
-      e.printStackTrace();
+      logException(Logger.WARNING,e);
     }
   }  
   
@@ -279,7 +279,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       }
     } catch (IOException e) {
       log(Logger.WARNING, "GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!");
-      e.printStackTrace();
+      logException(Logger.WARNING,e);
       closeSocket(path);
       manager.markDead(path);
     }
@@ -473,6 +473,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    */
   private void log(int level, String s) {
     pastryNode.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null).log(level,s);
+  }
+  
+  private void logException(int level, Exception e) {
+    pastryNode.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null).logException(level,e);
   }
   
   /**
@@ -842,7 +846,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       } catch (Exception e) {
         log(Logger.FINE, "(SM) Got exception " + e + " on connect - marking as dead");
         log(Logger.FINE, "Unable to connect to path " + path + " (" + e + ") marking as dead.");
-        e.printStackTrace();
+        logException(Logger.FINE,e);
         manager.markDead(path);
 
         close();
@@ -878,7 +882,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         log(Logger.INFO, "(SM) WARNING " + e + " reading - cancelling.");        
-        //e.printStackTrace();
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
@@ -1198,7 +1201,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } catch (IOException e) {
         log(Logger.FINE, "(SRM) ERROR " + e + " reading source route - cancelling.");
-        e.printStackTrace();
+        logException(Logger.FINE,e);
         close();
       }
     }

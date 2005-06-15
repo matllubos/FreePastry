@@ -17,7 +17,7 @@ import rice.environment.time.simple.SimpleTimeSource;
  * 
  * @author Jeff Hoye
  */
-public class SimpleLogManager implements LogManager {
+public class SimpleLogManager implements CloneableLogManager {
 
   /**
    * Hashtable of loggers stored by full.class.name[instance]
@@ -181,6 +181,13 @@ public class SimpleLogManager implements LogManager {
       return logger;
     }
     return null;
+  }
+
+  /* (non-Javadoc)
+   * @see rice.environment.logging.CloneableLogManager#clone(java.lang.String)
+   */
+  public LogManager clone(String detail) {
+    return new SimpleLogManager(ps, time, params, detail);
   }
   
 }

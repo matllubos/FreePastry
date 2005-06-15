@@ -96,7 +96,6 @@ public class StandardJoinProtocol implements MessageReceiver {
 					if (jh.equals(localHandle) && !localNode.isReady()) {
             localNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.WARNING,
 							"NodeId collision, unable to join: " + localHandle + ":" + jh);
-						//Thread.dumpStack();
 					} else if (jh.isAlive() == true) { // the join handle is alive
 						routeTable.put(jh);
 						// add the num. closest node to the routing table

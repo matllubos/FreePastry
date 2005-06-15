@@ -3,11 +3,10 @@ package rice.pastry.socket;
 import java.io.IOException;
 import java.net.*;
 import java.nio.channels.SocketChannel;
-import java.util.Enumeration;
 
 import rice.environment.Environment;
+import rice.environment.logging.*;
 import rice.environment.logging.Logger;
-import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
 import rice.pastry.*;
@@ -220,21 +219,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
     // this code builds a different environment for each PastryNode
-    Environment environment;
-    if (this.environment.getLogManager() instanceof SimpleLogManager) {
-      environment = new Environment(
-        this.environment.getSelectorManager(),
-        this.environment.getRandomSource(),
-        this.environment.getTimeSource(),
-        new SimpleLogManager(
-            ((SimpleLogManager)this.environment.getLogManager()).getPrintStream(),
-            ((SimpleLogManager)this.environment.getLogManager()).getTimeSource(),
-            ((SimpleLogManager)this.environment.getLogManager()).getParameters(),
-            nodeId.toString()),
-        this.environment.getParameters());
-    } else {
-      environment = this.environment;
-    }
+    Environment environment = this.environment;
+    if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
+      if (this.environment.getLogManager() instanceof CloneableLogManager) {
+        environment = new Environment(
+          this.environment.getSelectorManager(),
+          this.environment.getRandomSource(),
+          this.environment.getTimeSource(),
+          ((CloneableLogManager)this.environment.getLogManager()).clone(nodeId.toString()),
+          this.environment.getParameters());
+      }
+    }    
     
     final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
 

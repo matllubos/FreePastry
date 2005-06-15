@@ -41,9 +41,8 @@ public class IPNodeIdFactory implements NodeIdFactory {
         throw new Exception(
             "got loopback address: nodeIds will not be unique across computers!");
     } catch (Exception e) {
-      System.err
-          .println("ALERT: IPNodeIdFactory cannot determine local IP address: "
-              + e);
+      env.getLogManager().getLogger(IPNodeIdFactory.class, null).log(Logger.SEVERE,
+          "ALERT: IPNodeIdFactory cannot determine local IP address: "+ e);
     }
   }
 

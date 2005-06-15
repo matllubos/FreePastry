@@ -171,11 +171,9 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
     // denoting the termination of join protocol is duplicated.
     if (ready == r)
       return;
-    //Thread.dumpStack();
     //      if (r == false)
     getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.INFO, "PastryNode.setReady("+r+")");
 
-    //System.outt.println("setready() called on pastry node" + getNodeId());
     ready = r;
 
     if (ready) {
