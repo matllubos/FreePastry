@@ -34,4 +34,9 @@ pastry_socket_writer_status_interval = 60000
 p2p_splitStream_stripeBaseBitLength = 4
 
 # logging
+#default log level
 loglevel = WARNING
+
+# tells the factory you intend to use multiple nodes
+# this causes the logger to prepend all entries with the nodeid
+pastry_factory_multipleNodes = true
