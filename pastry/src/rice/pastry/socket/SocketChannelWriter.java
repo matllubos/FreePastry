@@ -11,6 +11,7 @@ import java.util.zip.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -35,7 +36,7 @@ public class SocketChannelWriter {
    * Static fields for logging based on the messages we are writing.
    * Enable logWriteTypes to turn on this output.
    */  
-  private static boolean logWriteTypes = false;
+  private boolean logWriteTypes;
   private static Object statLock = new Object();
   private static HashMap msgTypes = new HashMap();
   private static HashMap msgSizes = new HashMap();
@@ -77,8 +78,10 @@ public class SocketChannelWriter {
     statsLastWritten = environment.getTimeSource().currentTimeMillis();
     this.path = path;
     queue = new LinkedList();
-    MAXIMUM_QUEUE_LENGTH = environment.getParameters().getInt("pastry_socket_writer_max_queue_length");
-    statsWriteInterval = environment.getParameters().getLong("pastry_socket_writer_status_interval");
+    Parameters p = environment.getParameters();
+    MAXIMUM_QUEUE_LENGTH = p.getInt("pastry_socket_writer_max_queue_length");
+    statsWriteInterval = p.getLong("pastry_socket_writer_status_interval");
+    logWriteTypes = p.getBoolean("pastry_socket_writer_logWriteTypes");
   }
   
   /**

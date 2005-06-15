@@ -91,6 +91,7 @@ pastry_proxy_connectivity_hosts=planetlab2.eecs.umich.edu:10003,planetlab1.csail
 pastry_proxy_connectivity_port=10001
 pastry_proxy_connectivity_show_message=true
 pastry_proxy_connectivity_timeout=10000
+pastry_socket_pingmanager_smallPings=false
 post_allow_log_insert=true
 post_allow_log_insert_reset=true
 post_announce_presence=true

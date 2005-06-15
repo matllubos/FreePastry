@@ -29,7 +29,8 @@ import rice.pastry.socket.SocketCollectionManager.*;
 public class SocketChannelRepeater {
   
   // the default size of the transfer array
-  protected static int REPEATER_BUFFER_SIZE = 65536;
+  protected int REPEATER_BUFFER_SIZE;
+  // 4 for the ip, 4 for the port (int), 8 for the epoch (long)
   protected static int HEADER_BUFFER_SIZE = 16;
   
   // whether or not this repeater has been connected to the other side
@@ -63,6 +64,7 @@ public class SocketChannelRepeater {
   public SocketChannelRepeater(PastryNode spn, SourceRouteManager manager) {
     this.spn = spn;
     this.manager = manager;
+    REPEATER_BUFFER_SIZE = spn.getEnvironment().getParameters().getInt("pastry_socket_repeater_buffer_size");
     this.headerBuffer = ByteBuffer.allocateDirect(HEADER_BUFFER_SIZE);
     this.buffer1 = ByteBuffer.allocateDirect(REPEATER_BUFFER_SIZE);
     this.buffer2 = ByteBuffer.allocateDirect(REPEATER_BUFFER_SIZE);

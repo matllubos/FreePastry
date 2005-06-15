@@ -7,6 +7,7 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -23,10 +24,10 @@ import rice.selector.*;
 public class SocketSourceRouteManager {
   
   // the minimum amount of time between check dead checks on dead routes
-  public static long CHECK_DEAD_THROTTLE = 1000 * 60 * 5;
+  public long CHECK_DEAD_THROTTLE;
   
   // the minimum amount of time between pings
-  public static long PING_THROTTLE = 1000 * 60 * 5;
+  public long PING_THROTTLE;
   
   // the local pastry node
   private SocketPastryNode spn;
@@ -53,6 +54,10 @@ public class SocketSourceRouteManager {
    */
   protected SocketSourceRouteManager(SocketPastryNode node, SocketNodeHandlePool pool, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.spn = node;
+    Parameters p = node.getEnvironment().getParameters();
+    CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");
+    PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
+    
     this.pool = pool;
     this.managers = new Hashtable();
     this.manager = new SocketCollectionManager(node, pool, this, bindAddress, proxyAddress);

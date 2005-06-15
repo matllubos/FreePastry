@@ -60,8 +60,8 @@ public class SourceRoutePanelCreator implements PanelCreator {
     KeyValueListView overView = new KeyValueListView("Route Overview", 310, 200, cons2);
     overView.add("Total", "" + routes.size());
     overView.add("Indirect", "" + indirect);
-    overView.add("Intermediate", node.getSocketSourceRouteManager().getManager().getNumSourceRoutes() + " / " + SocketCollectionManager.MAX_OPEN_SOURCE_ROUTES);
-    overView.add("Sockets", node.getSocketSourceRouteManager().getManager().getNumSockets() + " / " + SocketCollectionManager.MAX_OPEN_SOCKETS);
+    overView.add("Intermediate", node.getSocketSourceRouteManager().getManager().getNumSourceRoutes() + " / " + node.getSocketSourceRouteManager().getManager().MAX_OPEN_SOURCE_ROUTES);
+    overView.add("Sockets", node.getSocketSourceRouteManager().getManager().getNumSockets() + " / " + node.getSocketSourceRouteManager().getManager().MAX_OPEN_SOCKETS);
     
     pastryPanel.addDataView(overView);
     pastryPanel.addDataView(endpointView);

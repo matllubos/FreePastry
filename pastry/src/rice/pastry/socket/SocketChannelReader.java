@@ -30,7 +30,7 @@ import rice.pastry.messaging.*;
 public class SocketChannelReader {
   
   // the maximal message size to be deserialized on the selector thread
-  public static final int SELECTOR_DESERIALIZATION_MAX_SIZE = 1000000;
+  public int SELECTOR_DESERIALIZATION_MAX_SIZE;
 
   // the pastry node
   private PastryNode spn;
@@ -58,18 +58,16 @@ public class SocketChannelReader {
    * @param spn The PastryNode the SocketChannelReader serves.
    */
   public SocketChannelReader(PastryNode spn, SourceRoute path) {
+    this(spn.getEnvironment(), path);
     this.spn = spn;
-    this.environment = spn.getEnvironment();
-    this.path = path;
-
-    sizeBuffer = ByteBuffer.allocateDirect(4);
   }
   
   public SocketChannelReader(Environment env, SourceRoute path) {
     this.environment = env;
     this.path = path;
-
     sizeBuffer = ByteBuffer.allocateDirect(4);
+    SELECTOR_DESERIALIZATION_MAX_SIZE = environment.getParameters().getInt(
+        "pastry_socket_reader_selector_deserialization_max_size");
   }
   
   /**

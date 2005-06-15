@@ -8,6 +8,7 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.messaging.*;
@@ -21,7 +22,7 @@ import rice.selector.*;
 public class PingManager extends SelectionKeyHandler {
   
   // whether or not we should use short pings
-  public static boolean USE_SHORT_PINGS = false;
+  public boolean USE_SHORT_PINGS;// = false;
   
   // the header which signifies a normal socket
   protected static byte[] HEADER_PING = new byte[] {0x49, 0x3A, 0x09, 0x5C};
@@ -37,15 +38,12 @@ public class PingManager extends SelectionKeyHandler {
 
   // the size of the buffer used to read incoming datagrams must be big enough
   // to encompass multiple datagram packets
-  public static int DATAGRAM_RECEIVE_BUFFER_SIZE = 131072;
+  public int DATAGRAM_RECEIVE_BUFFER_SIZE;
   
   // the size of the buffer used to send outgoing datagrams this is also the
   // largest message size than can be sent via UDP
-  public static int DATAGRAM_SEND_BUFFER_SIZE = 65536;
+  public int DATAGRAM_SEND_BUFFER_SIZE;
   
-  // the ping throttle, or how often to actually ping a remote node
-  public static int PING_THROTTLE = 600000;
-
   // InetSocketAddress -> ArrayList of PingResponseListener
   protected Hashtable pingListeners = new Hashtable();
 
@@ -80,7 +78,11 @@ public class PingManager extends SelectionKeyHandler {
     this.manager = manager;
     this.pendingMsgs = new ArrayList();
     this.localAddress = proxyAddress;
-    
+    Parameters p = spn.getEnvironment().getParameters();
+    USE_SHORT_PINGS = p.getBoolean("pastry_socket_pingmanager_smallPings"); 
+    DATAGRAM_RECEIVE_BUFFER_SIZE = p.getInt("pastry_socket_pingmanager_datagram_receive_buffer_size");
+    DATAGRAM_SEND_BUFFER_SIZE = p.getInt("pastry_socket_pingmanager_datagram_send_buffer_size");
+
     // allocate enought bytes to read data
     this.buffer = ByteBuffer.allocateDirect(DATAGRAM_SEND_BUFFER_SIZE);
 

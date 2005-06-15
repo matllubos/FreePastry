@@ -26,9 +26,26 @@ pastry_messageDispatch_bufferIfNotReady = false
 # number of messages to buffer while an app hasn't yet been registered
 pastry_messageDispatch_bufferSize = 32
 
+# rice.pastry.socket parameters
+pastry_socket_reader_selector_deserialization_max_size = 1000000
 pastry_socket_writer_max_queue_length = 128
 pastry_socket_writer_status_interval = 60000
-
+pastry_socket_writer_logWriteTypes = false;
+pastry_socket_repeater_buffer_size = 65536
+pastry_socket_pingmanager_smallPings=true
+pastry_socket_pingmanager_datagram_receive_buffer_size = 131072
+pastry_socket_pingmanager_datagram_send_buffer_size = 65536
+pastry_socket_srm_check_dead_throttle = 300000
+pastry_socket_srm_ping_throttle = 300000
+pastry_socket_scm_max_open_sockets = 40
+pastry_socket_scm_max_open_source_routes = 20
+pastry_socket_scm_socket_buffer_size = 32768
+pastry_socket_scm_ping_delay = 2500
+pastry_socket_scm_ping_jitter = 1000
+pastry_socket_scm_num_ping_tries = 3
+pastry_socket_scm_write_wait_time = 30000
+pastry_socket_scm_backoff_initial = 250
+pastry_socket_scm_backoff_limit = 5
 
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4

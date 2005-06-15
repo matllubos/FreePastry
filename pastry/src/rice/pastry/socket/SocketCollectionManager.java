@@ -7,6 +7,7 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -28,34 +29,31 @@ import rice.selector.*;
 public class SocketCollectionManager extends SelectionKeyHandler {
   
   // the number of sockets where we start closing other sockets
-  public static int MAX_OPEN_SOCKETS = 40;
+  public int MAX_OPEN_SOCKETS;
   
   // the number of source routes through this node (note, each has 2 sockets)
-  public static int MAX_OPEN_SOURCE_ROUTES = 20;
+  public int MAX_OPEN_SOURCE_ROUTES;
   
   // the size of the buffers for the socket
-  public static int SOCKET_BUFFER_SIZE = 32768;
+  public int SOCKET_BUFFER_SIZE;
   
   // how long to wait for a ping response to come back before declaring lost
-  public static int PING_DELAY = 2500;
+  public int PING_DELAY;
   
   // how much jitter to add to the ping waits - we may wait up to this time before giving up
-  public static int PING_JITTER = 1000;
+  public int PING_JITTER;
   
   // how many tries to ping before giving up
-  public static int NUM_PING_TRIES = 3;
+  public int NUM_PING_TRIES;
   
   // the maximal amount of time to wait for write to be called before checking liveness
-  public static int WRITE_WAIT_TIME = 30000;
-  
-  // the fake port for booting
-  public static int BOOTSTRAP_PORT = 1;
+  public int WRITE_WAIT_TIME;
   
   // the initial timeout for exponential backoff
-  public static long BACKOFF_INITIAL = 250;
+  public long BACKOFF_INITIAL;
   
   // the limit on the number of times for exponential backoff
-  public static int BACKOFF_LIMIT = 5;
+  public int BACKOFF_LIMIT;
   
   // the header which signifies a normal socket
   protected static byte[] HEADER_DIRECT = new byte[] {0x06, 0x1B, 0x49, 0x74};
@@ -110,6 +108,18 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     this.sockets = new Hashtable();
     this.sourceRouteQueue = new LinkedList();
     this.resigned = false;
+    
+    Parameters p = pastryNode.getEnvironment().getParameters();
+    MAX_OPEN_SOCKETS = p.getInt("pastry_socket_scm_max_open_sockets");
+    MAX_OPEN_SOURCE_ROUTES = p.getInt("pastry_socket_scm_max_open_sockets");
+    SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size");
+    PING_DELAY = p.getInt("pastry_socket_scm_ping_delay");
+    PING_JITTER = p.getInt("pastry_socket_scm_ping_jitter");
+    NUM_PING_TRIES = p.getInt("pastry_socket_scm_num_ping_tries");
+    WRITE_WAIT_TIME = p.getInt("pastry_socket_scm_write_wait_time");
+    BACKOFF_INITIAL = p.getInt("pastry_socket_scm_backoff_initial");
+    BACKOFF_LIMIT = p.getInt("pastry_socket_scm_backoff_limit");
+
     
     log(Logger.FINE, "BINDING TO ADDRESS " + bindAddress + " AND CLAIMING " + localAddress);
     
@@ -885,7 +895,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
-        if ((path != null) && (path.getFirstHop().getAddress().getPort() != BOOTSTRAP_PORT) && 
+        if ((path != null) && 
             (! ((SocketChannel) key.channel()).socket().isOutputShutdown()))
           checkLiveness(path);
         
