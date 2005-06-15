@@ -27,7 +27,7 @@ import rice.pastry.client.PastryAppl;
 
 public class MessageDispatch {
 
-  private int bufferSize = 32;
+  private int bufferSize;
 
   // have modified from HashMap to HashMap to use the internal representation
   // of a LocalAddress.  Otherwise remote node cannot get its message delivered

@@ -237,7 +237,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
     EpochInetSocketAddress localAddress = null;
     EpochInetSocketAddress proxyAddress = null;
-    long epoch = random.nextLong();
+    // NOTE: We _don't_ want to use the environment RandomSource because this will cause
+    // problems if we run the same node twice quickly with the same seed.  Epochs should really
+    // be different every time.  
+    long epoch = random.nextLong();   
 
     synchronized (this) {
       localAddress = getEpochAddress(port, epoch);
@@ -302,8 +305,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     // create reader and writer
     SocketChannelWriter writer;
     SocketChannelReader reader; 
-    writer = new SocketChannelWriter(environment, SourceRoute.build(new EpochInetSocketAddress(address, 0)));
-    reader = new SocketChannelReader(environment, SourceRoute.build(new EpochInetSocketAddress(address, 0)));
+    writer = new SocketChannelWriter(environment, SourceRoute.build(new EpochInetSocketAddress(address, EpochInetSocketAddress.EPOCH_UNKNOWN)));
+    reader = new SocketChannelReader(environment, SourceRoute.build(new EpochInetSocketAddress(address, EpochInetSocketAddress.EPOCH_UNKNOWN)));
  
     // bind to the appropriate port
     SocketChannel channel = SocketChannel.open();
