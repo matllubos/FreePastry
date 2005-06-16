@@ -176,6 +176,54 @@
     </javadoc>
   </target>
 
+	  <!-- todo add *.html, *.htm -->
+	  <target name="epost-javadoc" depends="init" unless="dontjavadoc">
+	    <javadoc destdir="${javadoc.dir}"
+	             classpathref="project.classpath"
+	             windowtitle="ePOST - API Specifications"
+	             use="true">
+	      <fileset dir="${src.dir}">
+	        <include name="rice/*.java"/>
+	        <include name="rice/environment/**/*.java"/>
+	        <include name="rice/p2p/commonapi/**/*.java"/>
+	        <include name="rice/p2p/glacier/*.java"/>
+	        <include name="rice/p2p/glacier/v2/**/*.java"/>
+	        <include name="rice/p2p/aggregation/**/*.java"/>
+	        <include name="rice/p2p/multiring/**/*.java"/>
+	        <include name="rice/p2p/past/**/*.java"/>
+	        <include name="rice/p2p/replication/**/*.java"/>
+	        <include name="rice/p2p/scribe/**/*.java"/>
+	        <include name="rice/p2p/splitstream/**/*.java"/>
+	        <include name="rice/p2p/util/**/*.java"/> 
+	        <include name="rice/pastry/*.java"/>
+	        <include name="rice/pastry/client/**/*.java"/>
+	        <include name="rice/pastry/commonapi/**/*.java"/>
+	        <include name="rice/pastry/direct/**/*.java"/>
+	        <include name="rice/pastry/dist/**/*.java"/>
+	        <include name="rice/pastry/join/**/*.java"/>
+	        <include name="rice/pastry/leafset/**/*.java"/>
+	        <include name="rice/pastry/messaging/**/*.java"/>
+	        <include name="rice/pastry/routing/**/*.java"/>
+	        <include name="rice/pastry/security/**/*.java"/>
+	        <include name="rice/pastry/socket/**/*.java"/>
+	        <exclude name="rice/pastry/socket/testing/*.java"/>
+	        <include name="rice/pastry/standard/**/*.java"/>
+	        <include name="rice/pastry/testing/**/*.java"/>
+	        <include name="rice/persistence/**/*.java"/>
+	        <include name="rice/selector/**/*.java"/>
+	        <include name="rice/tutorial/**/*.java"/>
+	        <include name="rice/email/**/*.java"/>
+	        <include name="rice/post/**/*.java"/>
+	        <include name="rice/proxy/**/*.java"/>
+	        <include name="rice/visualization/**/*.java"/>
+	      </fileset>
+	       <doctitle>ePOST API</doctitle>
+	       <header>ePOST API</header>
+	       <bottom><![CDATA[<i>Copyright &#169; 2001-2005 - Rice Pastry.</i>]]></bottom>
+	    </javadoc>
+	  </target>
+
+	
   <!-- Distribution-related targets -->
   <target name="jar" depends="compile">   
     <jar destfile="pastry.jar">
