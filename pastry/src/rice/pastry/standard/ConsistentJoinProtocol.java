@@ -10,6 +10,7 @@ import java.util.Observable;
 import java.util.Observer;
 
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeSetUpdate;
 import rice.pastry.PastryNode;
@@ -40,7 +41,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * This variable is set to prevent the process from going to sleep or not
    * being scheduled for too long.
    */
-  protected int MAX_TIME_TO_BE_SCHEDULED = 20*1000;
+  protected final int MAX_TIME_TO_BE_SCHEDULED;
 
   
   /**
@@ -62,7 +63,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * Will retry sending ConsistentJoinMsg to all neighbors who have not responded 
    * on this interval.  Only necessary if somehow the message was dropped.
    */
-  public static final int RETRY_INTERVAL = 30000;
+  public final int RETRY_INTERVAL;
   
   /**
    * Constructor takes in the usual suspects.
@@ -75,6 +76,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     observing = new HashSet();
     ls.addObserver(this);
     ln.addObserver(this);
+    Parameters p = ln.getEnvironment().getParameters();
+    MAX_TIME_TO_BE_SCHEDULED = p.getInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled");
+    RETRY_INTERVAL = p.getInt("pastry_protocol_consistentJoin_retry_interval");
     ln.getEnvironment().getSelectorManager().addLoopObserver(this);
   }
   

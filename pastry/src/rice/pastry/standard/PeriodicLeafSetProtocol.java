@@ -4,6 +4,7 @@ package rice.pastry.standard;
 import java.util.Hashtable;
 
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeSet;
 import rice.pastry.PastryNode;
@@ -44,8 +45,8 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
   /**
    * Related to rapidly determining direct neighbor liveness.
    */
-  public static final int PING_NEIGHBOR_PERIOD = 20*1000;
-  public static final int CHECK_LIVENESS_PERIOD = PING_NEIGHBOR_PERIOD+(10*1000);//30*1000;
+  public final int PING_NEIGHBOR_PERIOD;
+  public final int CHECK_LIVENESS_PERIOD;
   
   /**
    * Builds a periodic leafset protocol
@@ -58,7 +59,10 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 		this.leafSet = ls;
 		this.routeTable = rt;
     this.lastTimeReceivedBLS = new Hashtable();
-
+    Parameters p = ln.getEnvironment().getParameters();
+    PING_NEIGHBOR_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period");
+    CHECK_LIVENESS_PERIOD = PING_NEIGHBOR_PERIOD+p.getInt("pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod");
+    
     // Removed after meeting on 5/5/2005  Don't know if this is always the appropriate policy.
     //leafSet.addObserver(this);
 		address = new LeafSetProtocolAddress();

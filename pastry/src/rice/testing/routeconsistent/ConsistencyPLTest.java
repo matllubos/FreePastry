@@ -57,7 +57,7 @@ public class ConsistencyPLTest implements Observer {
     final Environment env = new Environment();
     
     System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
-    System.out.println("Ping Neighbor Period:"+PeriodicLeafSetProtocol.PING_NEIGHBOR_PERIOD);
+    System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
     boolean riceNode = false;
     InetAddress localAddress = InetAddress.getLocalHost();
     if (localAddress.getHostName().startsWith("ricepl-1")) {

@@ -47,8 +47,30 @@ pastry_socket_scm_write_wait_time = 30000
 pastry_socket_scm_backoff_initial = 250
 pastry_socket_scm_backoff_limit = 5
 
+# if we are not scheduled for time on cpu in this time, we setReady(false)
+# otherwise there could be message inconsistency, because
+# neighbors may believe us to be dead.  Note that it is critical
+# to consider the amount of time it takes the transport layer to find a 
+# node faulty before setting this parameter, this parameter should be
+# less than the minimum time required to find a node faulty
+pastry_protocol_consistentJoin_max_time_to_be_scheduled = 20000
+
+# in case messages are dropped or something, how often it will retry to 
+# send the consistent join message, to get verification from the entire
+# leafset
+pastry_protocol_consistentJoin_retry_interval = 30000
+
+# how often we send/expect to be sent updates
+pastry_protocol_periodicLeafSet_ping_neighbor_period = 20000
+
+# what the grace period is to receive a periodic update, before checking 
+# liveness
+pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
+
+
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
+
 
 # logging
 #default log level

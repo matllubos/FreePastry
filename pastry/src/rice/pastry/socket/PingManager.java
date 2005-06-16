@@ -22,7 +22,7 @@ import rice.selector.*;
 public class PingManager extends SelectionKeyHandler {
   
   // whether or not we should use short pings
-  public boolean USE_SHORT_PINGS;// = false;
+  public final boolean USE_SHORT_PINGS;// = false;
   
   // the header which signifies a normal socket
   protected static byte[] HEADER_PING = new byte[] {0x49, 0x3A, 0x09, 0x5C};
@@ -38,11 +38,11 @@ public class PingManager extends SelectionKeyHandler {
 
   // the size of the buffer used to read incoming datagrams must be big enough
   // to encompass multiple datagram packets
-  public int DATAGRAM_RECEIVE_BUFFER_SIZE;
+  public final int DATAGRAM_RECEIVE_BUFFER_SIZE;
   
   // the size of the buffer used to send outgoing datagrams this is also the
   // largest message size than can be sent via UDP
-  public int DATAGRAM_SEND_BUFFER_SIZE;
+  public final int DATAGRAM_SEND_BUFFER_SIZE;
   
   // InetSocketAddress -> ArrayList of PingResponseListener
   protected Hashtable pingListeners = new Hashtable();

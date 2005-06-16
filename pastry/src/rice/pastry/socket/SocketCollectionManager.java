@@ -29,31 +29,31 @@ import rice.selector.*;
 public class SocketCollectionManager extends SelectionKeyHandler {
   
   // the number of sockets where we start closing other sockets
-  public int MAX_OPEN_SOCKETS;
+  public final int MAX_OPEN_SOCKETS;
   
   // the number of source routes through this node (note, each has 2 sockets)
-  public int MAX_OPEN_SOURCE_ROUTES;
+  public final int MAX_OPEN_SOURCE_ROUTES;
   
   // the size of the buffers for the socket
-  public int SOCKET_BUFFER_SIZE;
+  public final int SOCKET_BUFFER_SIZE;
   
   // how long to wait for a ping response to come back before declaring lost
-  public int PING_DELAY;
+  public final int PING_DELAY;
   
   // how much jitter to add to the ping waits - we may wait up to this time before giving up
-  public int PING_JITTER;
+  public final int PING_JITTER;
   
   // how many tries to ping before giving up
-  public int NUM_PING_TRIES;
+  public final int NUM_PING_TRIES;
   
   // the maximal amount of time to wait for write to be called before checking liveness
-  public int WRITE_WAIT_TIME;
+  public final int WRITE_WAIT_TIME;
   
   // the initial timeout for exponential backoff
-  public long BACKOFF_INITIAL;
+  public final long BACKOFF_INITIAL;
   
   // the limit on the number of times for exponential backoff
-  public int BACKOFF_LIMIT;
+  public final int BACKOFF_LIMIT;
   
   // the header which signifies a normal socket
   protected static byte[] HEADER_DIRECT = new byte[] {0x06, 0x1B, 0x49, 0x74};
