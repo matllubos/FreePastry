@@ -7,6 +7,6 @@ public class AggregationDefaultPolicy implements AggregationPolicy {
   public boolean shouldBeAggregated(PastContent obj, int size) {
     return true;
   }
-    
+
 }
 

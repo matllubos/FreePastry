@@ -7,13 +7,12 @@ import java.util.Vector;
 import java.io.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.IdFactory;
 import rice.p2p.glacier.VersionKey;
 
 public class AggregateList {
-
-  public static final boolean verbose = false;
 
   protected final Hashtable aggregateList;
   protected final String configFileName;
@@ -25,10 +24,11 @@ public class AggregateList {
   protected Id rootKey;
   protected boolean wasReadOK;
   protected long nextSerial;
-  protected int loglevel = 2;
+  protected String instance;
   protected Environment environment;
 
-  public AggregateList(String configFileName, String label, IdFactory factory, boolean loggingEnabled, Environment env) throws IOException {
+  public AggregateList(String configFileName, String label, IdFactory factory, boolean loggingEnabled, String instance, Environment env) throws IOException {
+    this.instance = instance;
     this.configFileName = configFileName;
     this.aggregateList = new Hashtable();
     this.factory = factory;
@@ -89,16 +89,16 @@ public class AggregateList {
           throw new AggregationException("Entries "+nextSerial+".."+(thisSerial-1)+" missing from log... cannot recover!");
         
         if (thisSerial == nextSerial) {
-          log(3, "Replaying log entry #"+thisSerial);
+          log(Logger.FINE, "Replaying log entry #"+thisSerial);
           entriesReplayed ++;
         
           if (parts[3].equals("setRoot")) {
             if (parts[4].equals("null")) {
               rootKey = null;
-              log(4, "  - rootKey = null");
+              log(Logger.FINER, "  - rootKey = null");
             } else {
               rootKey = factory.buildIdFromToString(parts[4]);
-              log(4, "  - rootKey = "+rootKey.toStringFull());
+              log(Logger.FINER, "  - rootKey = "+rootKey.toStringFull());
             }
             
           } else if (parts[3].equals("setAL")) {
@@ -108,7 +108,7 @@ public class AggregateList {
             if (adc == null)
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
             adc.currentLifetime = lifetime;
-            log(4, "  - lifetime="+lifetime+" in ADC "+adcKey.toStringFull());
+            log(Logger.FINER, "  - lifetime="+lifetime+" in ADC "+adcKey.toStringFull());
             
           } else if (parts[3].equals("setOCL")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -120,7 +120,7 @@ public class AggregateList {
             if (adc.objects.length <= index)
               throw new AggregationException("Object index mismatch ("+index+"/"+adc.objects.length+"): "+line);
             adc.objects[index].currentLifetime = lifetime;
-            log(4, "  - currentLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
+            log(Logger.FINER, "  - currentLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
             
           } else if (parts[3].equals("setORL")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -132,7 +132,7 @@ public class AggregateList {
             if (adc.objects.length <= index)
               throw new AggregationException("Object index mismatch ("+index+"/"+adc.objects.length+"): "+line);
             adc.objects[index].refreshedLifetime = lifetime;
-            log(4, "  - refreshedLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
+            log(Logger.FINER, "  - refreshedLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
             
           } else if (parts[3].equals("refresh")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -144,7 +144,7 @@ public class AggregateList {
             adc.currentLifetime = lifetime;
             for (int i=0; i<adc.objects.length; i++) 
               adc.objects[i].currentLifetime = adc.objects[i].refreshedLifetime;
-            log(4, " - refresh="+lifetime+" in ADC "+adcKey.toStringFull());
+            log(Logger.FINER, " - refresh="+lifetime+" in ADC "+adcKey.toStringFull());
           
           } else if (parts[3].equals("removeAggregate")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -153,7 +153,7 @@ public class AggregateList {
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
             
             removeAggregateDescriptor(adc, false);
-            log(4, " - remove ADC "+adcKey.toStringFull());
+            log(Logger.FINER, " - remove ADC "+adcKey.toStringFull());
           
           } else if (parts[3].equals("addAggregate")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -163,7 +163,7 @@ public class AggregateList {
             
             adc = readAggregate(logFile, adcKey);
             addAggregateDescriptor(adc, false);
-            log(4, " - add ADC "+adcKey.toStringFull());
+            log(Logger.FINER, " - add ADC "+adcKey.toStringFull());
           } else {
             throw new AggregationException("Unknown command ("+parts[3]+"): "+line);
           } 
@@ -581,17 +581,10 @@ public class AggregateList {
   }
 
   private void log(int level, String str) {
-    if (level <= loglevel)
-      if (AggregateList.verbose) 
-        System.out.println(getLogPrefix() + level + " " + str);
+    environment.getLogManager().getLogger(AggregateList.class, instance).log(level, getLogPrefix() + " " + str);
   }
 
   private void warn(String str) {
-    if (AggregateList.verbose) 
-      System.out.println(getLogPrefix() + " *** WARNING *** " + str);
-  }
-
-  public void setLogLevel(int newLevel) {
-    this.loglevel = newLevel;
+    log(Logger.WARNING, str);
   }
 }

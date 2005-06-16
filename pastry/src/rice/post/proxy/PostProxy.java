@@ -1140,7 +1140,6 @@ public class PostProxy {
       immutableGlacier.setRateLimit(parameters.getInt("glacier_max_requests_per_second"));
       immutableGlacier.setNeighborTimeout(parameters.getInt("glacier_neighbor_timeout"));
       immutableGlacier.setBandwidthLimit(1024*parameters.getInt("glacier_max_kbytes_per_sec"), 1024*parameters.getInt("glacier_max_kbytes_per_sec")*parameters.getInt("glacier_max_burst_factor"));
-      immutableGlacier.setLogLevel(parameters.getInt("glacier_log_level"));
       immutableGlacier.setTrashcan(glacierTrashStorage);
 
       final Integer[] done = new Integer[1];
@@ -1173,7 +1172,6 @@ public class PostProxy {
       immutableAggregation.setConsolidationThreshold(parameters.getInt("aggregation_consolidation_threshold"));
       immutableAggregation.setConsolidationMinObjectsPerAggregate(parameters.getInt("aggregation_min_objects_per_aggregate"));
       immutableAggregation.setConsolidationMinUtilization(parameters.getDouble("aggregation_min_aggregate_utilization"));
-      immutableAggregation.setLogLevel(parameters.getInt("aggregation_log_level"));
 
       immutablePast = immutableAggregation;
 

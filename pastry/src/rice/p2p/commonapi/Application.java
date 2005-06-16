@@ -47,15 +47,6 @@ public interface Application {
    */
   public void update(NodeHandle handle, boolean joined);
   
-  /**
-   * This method is invoked to inform the application that the given message
-   * was not properly delivered
-   *
-   * @param msg The undelivered message.
-   * @param reason The reason it wasn't delivered.
-   */
-//  public void messageNotDelivered(Message msg, String reason);
-  
 }
 
 
