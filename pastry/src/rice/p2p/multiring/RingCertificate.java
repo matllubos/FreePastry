@@ -403,7 +403,7 @@ public class RingCertificate implements Serializable {
     Id ringId = pif.buildId(ring);
     byte[] ringData = ringId.toByteArray();
     
-    for (int i=0; i<ringData.length - MultiringNodeCollection.BASE; i++) 
+    for (int i=0; i<ringData.length - env.getParameters().getInt("p2p_multiring_base"); i++) 
       ringData[i] = 0;
     
     

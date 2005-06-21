@@ -87,7 +87,7 @@ public class SimpleManager implements SmtpManager {
       MailAddress addr = (MailAddress) i.next();
 
       if (isPostAddress(addr)) {
-        postRecps.add(new PostUserAddress(PostMessage.factory, addr.toString()));
+        postRecps.add(new PostUserAddress(PostMessage.factory, addr.toString(), state.getEnvironment()));
       } else {
         nonPostRecps.add(addr);
       }

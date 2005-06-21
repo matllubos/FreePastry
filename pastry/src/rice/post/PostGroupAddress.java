@@ -1,5 +1,6 @@
 package rice.post;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 
@@ -16,8 +17,8 @@ public class PostGroupAddress extends PostEntityAddress {
   /**
    * Constructor
    */
-  public PostGroupAddress(IdFactory factory, String name) {
-    id = getId(factory, name);
+  public PostGroupAddress(IdFactory factory, String name, Environment env) {
+    id = getId(factory, name, env);
   }
 
   /**

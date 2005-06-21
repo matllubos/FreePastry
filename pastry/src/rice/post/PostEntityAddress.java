@@ -3,6 +3,7 @@ package rice.post;
 import java.security.*;
 import java.io.*;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
 
@@ -34,7 +35,7 @@ public abstract class PostEntityAddress implements Serializable {
    * @param string The string
    * @returns The corresponding nodeId.
    */
-  protected static Id getId(IdFactory factory, String string) {
+  protected static Id getId(IdFactory factory, String string, Environment env) {
     MultiringIdFactory mFactory = (MultiringIdFactory) factory;
     Id ringId = mFactory.getRingId();
     
@@ -45,7 +46,7 @@ public abstract class PostEntityAddress implements Serializable {
       ringId = mFactory.buildNormalId(ring);
       byte[] ringData = ringId.toByteArray();
       
-      for (int i=0; i<ringData.length - MultiringNodeCollection.BASE; i++) 
+      for (int i=0; i<ringData.length - env.getParameters().getInt("p2p_multiring_base"); i++) 
         ringData[i] = 0;
       
       ringId = mFactory.buildNormalId(ringData);

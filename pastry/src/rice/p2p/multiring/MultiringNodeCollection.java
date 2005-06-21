@@ -19,7 +19,7 @@ public class MultiringNodeCollection {
   /**
    * The routing base for ring ids, in bytes
    */
-  public static int BASE = 2;
+  public int BASE;
   
   /**
    * The list of nodes in the collection
@@ -31,9 +31,10 @@ public class MultiringNodeCollection {
    *
    * @param node The node to base this node off of
    */
-  public MultiringNodeCollection(MultiringNode node) {
+  public MultiringNodeCollection(MultiringNode node, int BASE) {
     this.nodes = new Vector();
     this.nodes.add(node);
+    this.BASE = BASE;
   }
   
   /**

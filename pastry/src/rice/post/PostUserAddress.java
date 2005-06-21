@@ -1,5 +1,6 @@
 package rice.post;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 
 /**
@@ -22,9 +23,9 @@ public class PostUserAddress extends PostEntityAddress {
   /**
    * Constructor
    */
-  public PostUserAddress(IdFactory factory, String name) {
+  public PostUserAddress(IdFactory factory, String name, Environment env) {
     this.name = name;
-    address = getId(factory, name);
+    address = getId(factory, name, env);
   }
   
   /**

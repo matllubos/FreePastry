@@ -93,12 +93,12 @@ public class CAUserRenamer {
         Id ringId = realFactory.buildId(ring);
         byte[] ringData = ringId.toByteArray();
         
-        for (int i=0; i<ringData.length - MultiringNodeCollection.BASE; i++) 
+        for (int i=0; i<ringData.length - env.getParameters().getInt("p2p_multiring_base"); i++) 
           ringData[i] = 0;
         
         ringId = realFactory.buildId(ringData);
         
-        PostUserAddress address = new PostUserAddress(new MultiringIdFactory(ringId, realFactory), userid + "@"+base_address);
+        PostUserAddress address = new PostUserAddress(new MultiringIdFactory(ringId, realFactory), userid + "@"+base_address, env);
         System.out.print("    Generating the certificate " + address.getAddress() + "\t");
         PostCertificate certificate = CASecurityModule.generate(address, pair.getPublic(), caPair.getPrivate());
         System.out.println("[ DONE ]");

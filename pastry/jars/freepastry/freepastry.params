@@ -71,6 +71,9 @@ pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
 
+#multiring
+p2p_multiring_base = 2
+
 #aggregation
 p2p_aggregation_logStatistics = true
 p2p_aggregation_flushDelayAfterJoin = 30000

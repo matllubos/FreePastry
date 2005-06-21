@@ -209,7 +209,7 @@ public class EmailService extends PostClient {
                       if (addresses != null) {
                         for (int j=0; j<addresses.length; j++) {
                           if (manager.isPostAddress(addresses[j])) {
-                            PostUserAddress pua = new PostUserAddress(rice.email.proxy.mailbox.postbox.PostMessage.factory, addresses[j]);
+                            PostUserAddress pua = new PostUserAddress(rice.email.proxy.mailbox.postbox.PostMessage.factory, addresses[j], post.getEnvironment());
                             if (! expanded.contains(pua))
                               toExpand.add(pua);
                           } else {

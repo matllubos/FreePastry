@@ -731,7 +731,7 @@ public class PostProxy {
   protected void startRetrieveUserClone(Parameters parameters) throws Exception {
     if (parameters.getBoolean("post_log_clone_enable")) {
       stepStart("Creating log for previous address " + parameters.getString("post_log_clone_username"));
-      clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory(environment)), parameters.getString("post_log_clone_username"));
+      clone = new PostUserAddress(new MultiringIdFactory(generateRingId("Rice"), new PastryIdFactory(environment)), parameters.getString("post_log_clone_username"), environment);
       stepDone(SUCCESS);
     }
   }
@@ -1015,7 +1015,7 @@ public class PostProxy {
       rice.p2p.commonapi.Id ringId = factory.buildId(name);
       byte[] ringData = ringId.toByteArray();
     
-      for (int i=0; i<ringData.length - MultiringNodeCollection.BASE; i++) 
+      for (int i=0; i<ringData.length - environment.getParameters().getInt("p2p_multiring_base"); i++) 
         ringData[i] = 0;
     
       return factory.buildId(ringData);

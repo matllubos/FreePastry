@@ -68,7 +68,7 @@ public class MultiringNode implements Node, ScribeClient {
     this.ringId = ringId;
     this.endpoints = new Hashtable();
     this.scribe = new ScribeImpl(this, "Multiring", env);
-    this.collection = new MultiringNodeCollection(this);
+    this.collection = new MultiringNodeCollection(this, env.getParameters().getInt("p2p_multiring_base"));
     this.factory = (MultiringIdFactory) getIdFactory();
   }
   

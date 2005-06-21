@@ -98,7 +98,7 @@ public class PostMessage implements StoredMessage {
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
   }
   
-  protected static PostUserAddress[] getAddresses(MimeParser parser, String field) throws MailboxException {
+  protected static PostUserAddress[] getAddresses(MimeParser parser, String field, Environment env) throws MailboxException {
     try {
       String value = parser.getHeaderValue(field);
       Vector result = new Vector();
@@ -111,7 +111,7 @@ public class PostMessage implements StoredMessage {
         value = value.substring(0, value.indexOf("<") + 1);
         
         if (value.indexOf(">") < 0) break;
-        result.add(new PostUserAddress(factory, value.substring(0, value.indexOf(">"))));
+        result.add(new PostUserAddress(factory, value.substring(0, value.indexOf(">")), env));
         
         value = value.substring(value.indexOf(">"));
       }
@@ -128,10 +128,10 @@ public class PostMessage implements StoredMessage {
       if (parser.next() != MimeParser.START_HEADERS_PART)
         throw new MailboxException("ERROR: Parsing Mime message initially returned " + parser.getEventType());
       
-      PostUserAddress[] froms = getAddresses(parser, "from");
-      PostUserAddress[] to = getAddresses(parser, "to");
-      PostUserAddress[] cc = getAddresses(parser, "cc");
-      PostUserAddress[] bcc = getAddresses(parser, "bcc");
+      PostUserAddress[] froms = getAddresses(parser, "from", env);
+      PostUserAddress[] to = getAddresses(parser, "to", env);
+      PostUserAddress[] cc = getAddresses(parser, "cc", env);
+      PostUserAddress[] bcc = getAddresses(parser, "bcc", env);
 
       PostUserAddress[] recipients = new PostUserAddress[to.length + cc.length + bcc.length];
  
@@ -155,8 +155,8 @@ public class PostMessage implements StoredMessage {
       if (parser.next() != MimeParser.START_HEADERS_PART)
         throw new MailboxException("ERROR: Parsing Mime message initially returned " + parser.getEventType());      
       
-      PostUserAddress[] froms = getAddresses(parser, "from");
-      PostUserAddress from = new PostUserAddress(factory, "Unknown");
+      PostUserAddress[] froms = getAddresses(parser, "from", env);
+      PostUserAddress from = new PostUserAddress(factory, "Unknown", env);
       
       if ((froms != null) && (froms.length > 0)) 
         from = froms[0];
