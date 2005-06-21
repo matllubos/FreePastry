@@ -71,6 +71,58 @@ pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
 
+# glacier
+p2p_glacier_logStatistics = true
+p2p_glacier_faultInjectionEnabled = false
+p2p_glacier_insertTimeout = 30000
+p2p_glacier_minFragmentsAfterInsert = 3.0
+p2p_glacier_refreshTimeout = 30000
+p2p_glacier_expireNeighborsDelayAfterJoin = 30000
+p2p_glacier_expireNeighborsInterval = 300000 #5 MINS
+p2p_glacier_neighborTimeout = 432000000 #5 DAYS
+p2p_glacier_syncDelayAfterJoin = 30000
+p2p_glacier_syncMinRemainingLifetime = 300000 #5 MINS
+p2p_glacier_syncMinQuietTime = 30000 #insertTimeout
+p2p_glacier_syncBloomFilterNumHashes = 3
+p2p_glacier_syncBloomFilterBitsPerKey = 4
+p2p_glacier_syncPartnersPerTrial = 1
+p2p_glacier_syncInterval = 3600000 #1 HOUR
+p2p_glacier_syncRetryInterval = 180000 #3 MINUTES
+p2p_glacier_syncMaxFragments = 100
+p2p_glacier_fragmentRequestMaxAttempts = 0
+p2p_glacier_fragmentRequestTimeoutDefault = 10000
+p2p_glacier_fragmentRequestTimeoutMin = 10000
+p2p_glacier_fragmentRequestTimeoutMax = 60000
+p2p_glacier_fragmentRequestTimeoutDecrement = 1000
+p2p_glacier_manifestRequestTimeout = 10000
+p2p_glacier_manifestRequestInitialBurst = 3
+p2p_glacier_manifestRequestRetryBurst = 5
+p2p_glacier_manifestAggregationFactor = 5
+p2p_glacier_overallRestoreTimeout = 180000 #3 MINUTES
+p2p_glacier_handoffDelayAfterJoin = 45000
+p2p_glacier_handoffInterval = 240000 #4 MINUTES
+p2p_glacier_handoffMaxFragments = 10
+p2p_glacier_garbageCollectionInterval = 600000 #10 MINUTES
+p2p_glacier_garbageCollectionMaxFragmentsPerRun = 100
+p2p_glacier_localScanInterval = 600000 #10 MINUTES
+p2p_glacier_localScanMaxFragmentsPerRun = 20
+p2p_glacier_restoreMaxRequestFactor = 4.0
+p2p_glacier_restoreMaxBoosts = 2
+p2p_glacier_rateLimitedCheckInterval = 30000
+p2p_glacier_rateLimitedRequestsPerSecond = 3
+p2p_glacier_enableBulkRefresh = true
+p2p_glacier_bulkRefreshProbeInterval = 3000
+p2p_glacier_bulkRefreshMaxProbeFactor = 3.0
+p2p_glacier_bulkRefreshManifestInterval = 30000
+p2p_glacier_bulkRefreshManifestAggregationFactor = 20
+p2p_glacier_bulkRefreshPatchAggregationFactor = 50
+p2p_glacier_bulkRefreshPatchInterval = 180000 #3 MINUTES
+p2p_glacier_bulkRefreshPatchRetries = 2
+p2p_glacier_bucketTokensPerSecond = 100000
+p2p_glacier_bucketMaxBurstSize = 200000
+p2p_glacier_jitterRange = 0.1
+p2p_glacier_statisticsReportInterval = 60000 #1 MINUTE
+p2p_glacier_maxActiveRestores = 3
 
 # logging
 #default log level

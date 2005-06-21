@@ -8,6 +8,7 @@ import rice.Continuation;
 import rice.Executable;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v2.messaging.*;
@@ -51,81 +52,81 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   protected long bucketMax;
   protected long bucketConsumed;
 
-  private final boolean logStatistics = true;
-  private final boolean faultInjectionEnabled = false;
-
   private final long SECONDS = 1000;
   private final long MINUTES = 60 * SECONDS;
   private final long HOURS = 60 * MINUTES;
   private final long DAYS = 24 * HOURS;
   private final long WEEKS = 7 * DAYS;
 
-  private final long insertTimeout = 30 * SECONDS;
-  private final double minFragmentsAfterInsert = 3.0;
+  private final boolean logStatistics;
+  private final boolean faultInjectionEnabled;
 
-  private final long refreshTimeout = 30 * SECONDS;
+  private final long insertTimeout;
+  private final double minFragmentsAfterInsert;
 
-  private final long expireNeighborsDelayAfterJoin = 30 * SECONDS;
-  private final long expireNeighborsInterval = 5 * MINUTES;
-  private long neighborTimeout = 5 * DAYS;
+  private final long refreshTimeout;
+
+  private final long expireNeighborsDelayAfterJoin;
+  private final long expireNeighborsInterval;
+  private long neighborTimeout;
   
-  private final long syncDelayAfterJoin = 30 * SECONDS;
-  private final long syncMinRemainingLifetime = 5 * MINUTES;
-  private final long syncMinQuietTime = insertTimeout;
-  private final int syncBloomFilterNumHashes = 3;
-  private final int syncBloomFilterBitsPerKey = 4;
-  private final int syncPartnersPerTrial = 1;
-  private long syncInterval = 1 * HOURS;
-  private final long syncRetryInterval = 3 * MINUTES;
-  private int syncMaxFragments = 100;
+  private final long syncDelayAfterJoin;
+  private final long syncMinRemainingLifetime;
+  private final long syncMinQuietTime;
+  private final int syncBloomFilterNumHashes;
+  private final int syncBloomFilterBitsPerKey;
+  private final int syncPartnersPerTrial;
+  private long syncInterval;
+  private final long syncRetryInterval;
+  private int syncMaxFragments;
   
 //  private final int fragmentRequestMaxAttempts = 3;
-  private final int fragmentRequestMaxAttempts = 0;
-  private final long fragmentRequestTimeoutDefault = 10 * SECONDS;
-  private final long fragmentRequestTimeoutMin = 10 * SECONDS;
-  private final long fragmentRequestTimeoutMax = 60 * SECONDS;
-  private final long fragmentRequestTimeoutDecrement = 1 * SECONDS;
+  private final int fragmentRequestMaxAttempts;
+  private final long fragmentRequestTimeoutDefault;
+  private final long fragmentRequestTimeoutMin;
+  private final long fragmentRequestTimeoutMax;
+  private final long fragmentRequestTimeoutDecrement;
 
-  private final long manifestRequestTimeout = 10 * SECONDS;
-  private final long manifestRequestInitialBurst = 3;
-  private final long manifestRequestRetryBurst = 5;
-  private final int manifestAggregationFactor = 5;
+  private final long manifestRequestTimeout;
+  private final long manifestRequestInitialBurst;
+  private final long manifestRequestRetryBurst;
+  private final int manifestAggregationFactor;
 
-  private final long overallRestoreTimeout = 3 * MINUTES;
+  private final long overallRestoreTimeout;
   
-  private final long handoffDelayAfterJoin = 45 * SECONDS;
-  private final long handoffInterval = 4 * MINUTES;
-  private final int handoffMaxFragments = 10;
+  private final long handoffDelayAfterJoin;
+  private final long handoffInterval;
+  private final int handoffMaxFragments;
 
-  private final long garbageCollectionInterval = 10 * MINUTES;
-  private final int garbageCollectionMaxFragmentsPerRun = 100;
+  private final long garbageCollectionInterval;
+  private final int garbageCollectionMaxFragmentsPerRun;
 
-  private final long localScanInterval = 10 * MINUTES;
-  private final int localScanMaxFragmentsPerRun = 20;
+  private final long localScanInterval;
+  private final int localScanMaxFragmentsPerRun;
 
-  private final double restoreMaxRequestFactor = 4.0;
-  private final int restoreMaxBoosts = 2;
+  private final double restoreMaxRequestFactor;
+  private final int restoreMaxBoosts;
 
-  private final long rateLimitedCheckInterval = 30 * SECONDS;
-  private int rateLimitedRequestsPerSecond = 3;
+  private final long rateLimitedCheckInterval;
+  private int rateLimitedRequestsPerSecond;
 
-  private final boolean enableBulkRefresh = true;
-  private final long bulkRefreshProbeInterval = 3 * SECONDS;
-  private final double bulkRefreshMaxProbeFactor = 3.0;
-  private final long bulkRefreshManifestInterval = 30 * SECONDS;
-  private final int bulkRefreshManifestAggregationFactor = 20;
-  private final int bulkRefreshPatchAggregationFactor = 50;
-  private final long bulkRefreshPatchInterval = 3 * MINUTES;
-  private final int bulkRefreshPatchRetries = 2;
+  private final boolean enableBulkRefresh;
+  private final long bulkRefreshProbeInterval;
+  private final double bulkRefreshMaxProbeFactor;
+  private final long bulkRefreshManifestInterval;
+  private final int bulkRefreshManifestAggregationFactor;
+  private final int bulkRefreshPatchAggregationFactor;
+  private final long bulkRefreshPatchInterval;
+  private final int bulkRefreshPatchRetries;
 
-  private long bucketTokensPerSecond = 100000;
-  private long bucketMaxBurstSize = 2*100000;
+  private long bucketTokensPerSecond;
+  private long bucketMaxBurstSize;
 
-  private final double jitterRange = 0.1;
+  private final double jitterRange;
 
-  private final long statisticsReportInterval = 1 * MINUTES;
+  private final long statisticsReportInterval;
 
-  private final int maxActiveRestores = 3;
+  private final int maxActiveRestores;
   private int[] numActiveRestores;
 
   private final char tagNeighbor = 1;
@@ -146,6 +147,80 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   
   public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg, Environment env) {
     this.environment = env;
+
+    Parameters p = environment.getParameters();
+    
+    logStatistics = p.getBoolean("p2p_glacier_logStatistics");
+    faultInjectionEnabled = p.getBoolean("p2p_glacier_faultInjectionEnabled");
+
+    insertTimeout = p.getLong("p2p_glacier_faultInjectionEnabled");
+    minFragmentsAfterInsert = p.getDouble("p2p_glacier_minFragmentsAfterInsert");
+
+    refreshTimeout = p.getLong("p2p_glacier_refreshTimeout");
+
+    expireNeighborsDelayAfterJoin = p.getLong("p2p_glacier_expireNeighborsDelayAfterJoin");
+    expireNeighborsInterval = p.getLong("p2p_glacier_expireNeighborsInterval");
+    neighborTimeout = p.getLong("p2p_glacier_neighborTimeout");
+    
+    syncDelayAfterJoin = p.getLong("p2p_glacier_syncDelayAfterJoin");
+    syncMinRemainingLifetime = p.getLong("p2p_glacier_syncMinRemainingLifetime");
+    syncMinQuietTime = p.getLong("p2p_glacier_syncMinQuietTime");
+    syncBloomFilterNumHashes = p.getInt("p2p_glacier_syncBloomFilterNumHashes");
+    syncBloomFilterBitsPerKey = p.getInt("p2p_glacier_syncBloomFilterBitsPerKey");
+    syncPartnersPerTrial = p.getInt("p2p_glacier_syncPartnersPerTrial");
+    syncInterval = p.getLong("p2p_glacier_syncInterval");
+    syncRetryInterval = p.getLong("p2p_glacier_syncRetryInterval");
+    syncMaxFragments = p.getInt("p2p_glacier_syncMaxFragments");
+    
+    fragmentRequestMaxAttempts = p.getInt("p2p_glacier_fragmentRequestMaxAttempts");
+    fragmentRequestTimeoutDefault = p.getLong("p2p_glacier_fragmentRequestTimeoutDefault");
+    fragmentRequestTimeoutMin = p.getLong("p2p_glacier_fragmentRequestTimeoutMin");
+    fragmentRequestTimeoutMax = p.getLong("p2p_glacier_fragmentRequestTimeoutMax");
+    fragmentRequestTimeoutDecrement = p.getLong("p2p_glacier_fragmentRequestTimeoutDecrement");
+
+    manifestRequestTimeout = p.getLong("p2p_glacier_manifestRequestTimeout");
+    manifestRequestInitialBurst = p.getLong("p2p_glacier_manifestRequestInitialBurst");
+    manifestRequestRetryBurst = p.getLong("p2p_glacier_manifestRequestRetryBurst");
+    manifestAggregationFactor = p.getInt("p2p_glacier_manifestAggregationFactor");
+
+    overallRestoreTimeout = p.getLong("p2p_glacier_overallRestoreTimeout");
+    
+    handoffDelayAfterJoin = p.getLong("p2p_glacier_handoffDelayAfterJoin");
+    handoffInterval = p.getLong("p2p_glacier_handoffInterval");
+    handoffMaxFragments = p.getInt("p2p_glacier_handoffMaxFragments");
+
+    garbageCollectionInterval = p.getLong("p2p_glacier_garbageCollectionInterval");
+    garbageCollectionMaxFragmentsPerRun = p.getInt("p2p_glacier_garbageCollectionMaxFragmentsPerRun");
+
+    localScanInterval = p.getLong("p2p_glacier_localScanInterval");
+    localScanMaxFragmentsPerRun = p.getInt("p2p_glacier_localScanMaxFragmentsPerRun");
+
+    restoreMaxRequestFactor = p.getDouble("p2p_glacier_restoreMaxRequestFactor");
+    restoreMaxBoosts = p.getInt("p2p_glacier_restoreMaxBoosts");
+
+    rateLimitedCheckInterval = p.getLong("p2p_glacier_rateLimitedCheckInterval");
+    rateLimitedRequestsPerSecond = p.getInt("p2p_glacier_rateLimitedRequestsPerSecond");
+
+    enableBulkRefresh = p.getBoolean("p2p_glacier_enableBulkRefresh");
+    bulkRefreshProbeInterval = p.getLong("p2p_glacier_bulkRefreshProbeInterval");
+    bulkRefreshMaxProbeFactor = p.getDouble("p2p_glacier_bulkRefreshMaxProbeFactor");
+    bulkRefreshManifestInterval = p.getLong("p2p_glacier_bulkRefreshManifestInterval");
+    bulkRefreshManifestAggregationFactor = p.getInt("p2p_glacier_bulkRefreshManifestAggregationFactor");
+    bulkRefreshPatchAggregationFactor = p.getInt("p2p_glacier_bulkRefreshPatchAggregationFactor");
+    bulkRefreshPatchInterval = p.getLong("p2p_glacier_bulkRefreshPatchInterval");
+    bulkRefreshPatchRetries = p.getInt("p2p_glacier_bulkRefreshPatchRetries");
+
+    bucketTokensPerSecond = p.getLong("p2p_glacier_bucketTokensPerSecond");
+    bucketMaxBurstSize = p.getLong("p2p_glacier_bucketMaxBurstSize");
+
+    jitterRange = p.getDouble("p2p_glacier_jitterRange");
+
+    statisticsReportInterval = p.getLong("p2p_glacier_statisticsReportInterval");
+
+    maxActiveRestores = p.getInt("p2p_glacier_maxActiveRestores");
+
+    
+    
     this.fragmentStorage = fragmentStorageArg;
     this.neighborStorage = neighborStorageArg;
     this.trashStorage = null;
