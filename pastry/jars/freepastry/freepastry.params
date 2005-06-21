@@ -71,6 +71,37 @@ pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
 
+#aggregation
+p2p_aggregation_logStatistics = true
+p2p_aggregation_flushDelayAfterJoin = 30000
+p2p_aggregation_flushStressInterval = 300000 #5 MINS
+p2p_aggregation_flushInterval = 300000 #5 MINS
+p2p_aggregation_maxAggregateSize = 1048576 #1024*1024
+p2p_aggregation_maxObjectsInAggregate = 25
+p2p_aggregation_maxAggregatesPerRun = 2
+p2p_aggregation_addMissingAfterRefresh = true
+p2p_aggregation_maxReaggregationPerRefresh = 100
+p2p_aggregation_nominalReferenceCount = 2
+p2p_aggregation_maxPointersPerAggregate = 100
+p2p_aggregation_pointerArrayLifetime = 1209600000 #14 DAYS
+p2p_aggregation_aggregateGracePeriod = 86400000 #1 DAY
+p2p_aggregation_aggrRefreshInterval = 900000 #15 MINS
+p2p_aggregation_aggrRefreshDelayAfterJoin = 70000
+p2p_aggregation_expirationRenewThreshold = 259200000 #3 DAYS
+p2p_aggregation_monitorEnabled = false
+p2p_aggregation_monitorRefreshInterval = 900000 #15 MINS
+p2p_aggregation_consolidationDelayAfterJoin = 300000 #5 MINS
+p2p_aggregation_consolidationInterval = 900000 #15 MINS
+p2p_aggregation_consolidationThreshold = 1209600000 #14 DAYS
+p2p_aggregation_consolidationMinObjectsInAggregate = 20
+p2p_aggregation_consolidationMinComponentsAlive = 0.8
+p2p_aggregation_reconstructionMaxConcurrentLookups = 10
+p2p_aggregation_aggregateLogEnabled = true
+p2p_aggregation_statsGranularity = 3600000 #1 HOUR
+p2p_aggregation_statsRange = 1814400000 #3 WEEKS
+p2p_aggregation_statsInterval = 60000
+p2p_aggregation_jitterRange = 0.1
+
 # glacier
 p2p_glacier_logStatistics = true
 p2p_glacier_faultInjectionEnabled = false

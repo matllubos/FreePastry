@@ -22,6 +22,7 @@ import rice.Continuation;
 import rice.Executable;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.p2p.aggregation.messaging.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.VersionKey;
@@ -61,51 +62,51 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   protected Vector monitorIDs;
   protected AggregationStatistics stats;
 
-  private final boolean logStatistics = true;
-
   private static final long SECONDS = 1000;
   private static final long MINUTES = 60 * SECONDS;
   private static final long HOURS = 60 * MINUTES;
   private static final long DAYS = 24 * HOURS;
   private static final long WEEKS = 7 * DAYS;
 
-  private static final long flushDelayAfterJoin = 30 * SECONDS;
-  private static final long flushStressInterval = 5 * MINUTES;
-  private static long flushInterval = 5 * MINUTES;
+  private final boolean logStatistics;
 
-  private static int maxAggregateSize = 1024*1024;
-  private static int maxObjectsInAggregate = 25;
-  private static int maxAggregatesPerRun = 2;
+  private final long flushDelayAfterJoin; 
+  private final long flushStressInterval;
+  private long flushInterval;
+
+  private int maxAggregateSize;
+  private int maxObjectsInAggregate;
+  private int maxAggregatesPerRun;
   
-  private static final boolean addMissingAfterRefresh = true;
-  private static final int maxReaggregationPerRefresh = 100;
-  private static final int nominalReferenceCount = 2;
-  private static final int maxPointersPerAggregate = 100;
-  private static final long pointerArrayLifetime = 2 * WEEKS;
-  private static final long aggregateGracePeriod = 1 * DAYS;
+  private final boolean addMissingAfterRefresh;
+  private final int maxReaggregationPerRefresh;
+  private final int nominalReferenceCount;
+  private final int maxPointersPerAggregate;
+  private final long pointerArrayLifetime;
+  private final long aggregateGracePeriod;
 
-  private static final long aggrRefreshInterval = 15 * MINUTES;
-  private static final long aggrRefreshDelayAfterJoin = 70 * SECONDS;
-  private static long expirationRenewThreshold = 3 * DAYS;
+  private final long aggrRefreshInterval;
+  private final long aggrRefreshDelayAfterJoin;
+  private long expirationRenewThreshold;
 
-  private static final boolean monitorEnabled = false;
-  private static final long monitorRefreshInterval = 15 * MINUTES;
+  private final boolean monitorEnabled;
+  private final long monitorRefreshInterval;
 
-  private static final long consolidationDelayAfterJoin = 5 * MINUTES;
-  private static long consolidationInterval = 15 * MINUTES;
-  private static long consolidationThreshold = 14 * DAYS;
-  private static int consolidationMinObjectsInAggregate = 20;
-  private static double consolidationMinComponentsAlive = 0.8;
+  private final long consolidationDelayAfterJoin;
+  private long consolidationInterval;
+  private long consolidationThreshold;
+  private int consolidationMinObjectsInAggregate;
+  private double consolidationMinComponentsAlive;
 
-  private static int reconstructionMaxConcurrentLookups = 10;
+  private int reconstructionMaxConcurrentLookups;
 
-  private static final boolean aggregateLogEnabled = true;
+  private final boolean aggregateLogEnabled;
 
-  private static final long statsGranularity = 1 * HOURS;
-  private static final long statsRange = 3 * WEEKS;
-  private static final long statsInterval = 60 * SECONDS;
+  private final long statsGranularity;
+  private final long statsRange;
+  private final long statsInterval;
 
-  private final double jitterRange = 0.1;
+  private final double jitterRange;
 
   private Environment environment;
   
@@ -115,6 +116,50 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy, Environment env) throws IOException {
     this.environment = env;
+    
+    Parameters p = environment.getParameters();
+    
+    logStatistics = p.getBoolean("p2p_aggregation_logStatistics");
+
+    flushDelayAfterJoin = p.getLong("p2p_aggregation_flushDelayAfterJoin");
+    flushStressInterval = p.getLong("p2p_aggregation_flushStressInterval");
+    flushInterval = p.getLong("p2p_aggregation_flushInterval");
+
+    maxAggregateSize = p.getInt("p2p_aggregation_maxAggregateSize");
+    maxObjectsInAggregate = p.getInt("p2p_aggregation_maxObjectsInAggregate");
+    maxAggregatesPerRun = p.getInt("p2p_aggregation_maxAggregatesPerRun");
+    
+    addMissingAfterRefresh = p.getBoolean("p2p_aggregation_addMissingAfterRefresh");
+    maxReaggregationPerRefresh = p.getInt("p2p_aggregation_maxReaggregationPerRefresh");
+    nominalReferenceCount = p.getInt("p2p_aggregation_nominalReferenceCount");
+    maxPointersPerAggregate = p.getInt("p2p_aggregation_maxPointersPerAggregate");
+    pointerArrayLifetime = p.getLong("p2p_aggregation_pointerArrayLifetime");
+    aggregateGracePeriod = p.getLong("p2p_aggregation_aggregateGracePeriod");
+
+    aggrRefreshInterval = p.getLong("p2p_aggregation_aggrRefreshInterval");
+    aggrRefreshDelayAfterJoin = p.getLong("p2p_aggregation_aggrRefreshDelayAfterJoin");
+    expirationRenewThreshold = p.getLong("p2p_aggregation_expirationRenewThreshold");
+
+    monitorEnabled = p.getBoolean("p2p_aggregation_monitorEnabled");
+    monitorRefreshInterval = p.getLong("p2p_aggregation_monitorRefreshInterval");
+
+    consolidationDelayAfterJoin = p.getLong("p2p_aggregation_consolidationDelayAfterJoin");
+    consolidationInterval = p.getLong("p2p_aggregation_consolidationInterval");
+    consolidationThreshold = p.getLong("p2p_aggregation_consolidationThreshold");
+    consolidationMinObjectsInAggregate = p.getInt("p2p_aggregation_consolidationMinObjectsInAggregate");
+    consolidationMinComponentsAlive = p.getDouble("p2p_aggregation_consolidationMinComponentsAlive");
+
+    reconstructionMaxConcurrentLookups = p.getInt("p2p_aggregation_reconstructionMaxConcurrentLookups");
+
+    aggregateLogEnabled = p.getBoolean("p2p_aggregation_aggregateLogEnabled");
+
+    statsGranularity = p.getLong("p2p_aggregation_statsGranularity");
+    statsRange = p.getLong("p2p_aggregation_statsRange");
+    statsInterval = p.getLong("p2p_aggregation_statsInterval");
+
+    jitterRange = p.getDouble("p2p_aggregation_jitterRange");
+
+
     this.endpoint = node.registerApplication(this, instance);
     this.waitingList = waitingList;
     this.instance = instance;
