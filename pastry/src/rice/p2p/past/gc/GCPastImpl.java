@@ -7,6 +7,7 @@ import java.util.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
@@ -24,8 +25,6 @@ import rice.persistence.*;
  * @author Andreas Haeberlen
  */
 public class GCPastImpl extends PastImpl implements GCPast {
-
-  public static final boolean verbose = false;
 
   /**
    * The default expiration, or when objects inserted with no timeout will expire
@@ -114,7 +113,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void insert(final PastContent obj, final long expiration, Continuation command) {
-    if (GCPastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
+    log(Logger.FINE, "Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
     
     doInsert(obj.getId(), new MessageBuilder() {
       public PastMessage buildMessage() {
@@ -169,7 +168,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void refresh(final Id[] array, long[] expirations, Continuation command) {
-    if (GCPastImpl.verbose) System.out.println("COUNT: " + environment.getTimeSource().currentTimeMillis() + " Refreshing " + array.length + " data elements");
+    log(Logger.FINE, "Refreshing " + array.length + " data elements");
 
     GCIdSet set = new GCIdSet(realFactory);
     for (int i=0; i<array.length; i++)
@@ -393,7 +392,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
         set.removeHandle(getLocalNodeHandle().getId());
         set.putHandle(getLocalNodeHandle());
         
-        log.finer("Returning neighbor set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
+        log(Logger.FINER, "Returning neighbor set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof GCCollectMessage) {
         // get all ids which expiration before now
@@ -412,7 +411,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
             GCPastContent content = (GCPastContent) o;
             
             if (content != null) {
-              log.fine("Retrieved data for fetch handles of id " + fmsg.getId());
+              log(Logger.FINE, "Retrieved data for fetch handles of id " + fmsg.getId());
               GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(fmsg.getId());
               
               if (metadata != null) 
@@ -483,7 +482,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param id The id to fetch
    */
   public void fetch(final Id id, NodeHandle hint, Continuation command) {
-    log.finer("Sending out replication fetch request for the id " + id);
+    log(Logger.FINER, "Sending out replication fetch request for the id " + id);
     final GCId gcid = (GCId) id;
     
     if (gcid.getExpiration() < environment.getTimeSource().currentTimeMillis()) {
@@ -507,11 +506,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
       policy.fetch(gcid.getId(), hint, backup, this, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           if (o == null) {
-            log.warning("Could not fetch id " + id + " - policy returned null in namespace " + instance);
+            log(Logger.WARNING, "Could not fetch id " + id + " - policy returned null in namespace " + instance);
             parent.receiveResult(new Boolean(false));
           } else {
             GCPastContent content = (GCPastContent) o;
-            log.finest("inserting replica of id " + id);
+            log(Logger.FINEST, "inserting replica of id " + id);
             
             storage.getStorage().store(gcid.getId(), content.getMetadata(gcid.getExpiration()), content, parent);
           }

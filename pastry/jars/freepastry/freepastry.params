@@ -74,6 +74,10 @@ p2p_splitStream_stripeBaseBitLength = 4
 #multiring
 p2p_multiring_base = 2
 
+#past
+p2p_past_messageTimeout = 30000
+p2p_past_successfulInsertThreshold = 0.5
+
 #aggregation
 p2p_aggregation_logStatistics = true
 p2p_aggregation_flushDelayAfterJoin = 30000
