@@ -37,6 +37,7 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
 
@@ -1979,8 +1980,12 @@ public class PostProxy {
         submitted = true;
 
         parameters.setBoolean("post_password_remember", box.isSelected());
-        parameters.store();
-    
+        try {
+          parameters.store();
+        } catch (IOException ioe) {
+          environment.getLogManager().getLogger(getClass(), null).logException(Logger.WARNING, ioe);
+          JOptionPane.showMessageDialog(this, "Cannot store password: "+ioe); 
+        }
         synchronized (parameters) {
           parameters.notifyAll();
         } 
