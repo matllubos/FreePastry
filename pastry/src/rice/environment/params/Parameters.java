@@ -3,6 +3,7 @@
  */
 package rice.environment.params;
 
+import java.io.IOException;
 import java.net.*;
 
 /**
@@ -14,7 +15,7 @@ public interface Parameters {
   // 
   public void remove(String name);  
   public boolean contains(String name);
-  public void store();
+  public void store() throws IOException;
   
   // getters
   public String getString(String paramName);
