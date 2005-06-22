@@ -33,11 +33,11 @@ public class SimpleParameters implements Parameters {
   /**
    * 
    * @param orderedDefaults 
-   * @param configFileName if this is null, no params are saved, if this file doesn't exist, you will
+   * @param mutableConfigFileName if this is null, no params are saved, if this file doesn't exist, you will
    * get a warning printed to stdErr, then the file will be created if you ever store
    * @throws IOException
    */
-	public SimpleParameters(String[] orderedDefaults, String configFileName) throws IOException {
+	public SimpleParameters(String[] orderedDefaults, String mutableConfigFileName) {
     if (configFileName != null) {
   		this.configFileName = configFileName + FILENAME_EXTENSION;
     }
@@ -50,16 +50,20 @@ public class SimpleParameters implements Parameters {
       } catch (Exception ioe) {
         System.err.println("Warning, couldn't load param file:"+(orderedDefaults[ctr]+FILENAME_EXTENSION));
         ioe.printStackTrace(System.err);        
-//        throw new DefaultParamsNotPresentException(ioe); 
+        throw new ParamsNotPresentException(ioe); 
       }
     }
 
     if (this.configFileName != null) {
       File f = new File(this.configFileName);
       if (f.exists()) { 
-        properties.load(new FileInputStream(this.configFileName));
+        try {
+          properties.load(new FileInputStream(this.configFileName));
+        } catch (Exception e) {
+          throw new ParamsNotPresentException(e); 
+        }
       } else {
-        System.err.println("Could not find configuration file: "+f.getAbsolutePath()); 
+        System.err.println("Configuration file "+f.getAbsolutePath()+" not present.  Using defaults."); 
       }
     }
 	}
@@ -100,16 +104,19 @@ public class SimpleParameters implements Parameters {
     return result;
   }
   
+  /**
+   * Note, this method does not implicitly call store() @see #store()
+   * @param name
+   * @param value
+   */
   protected void setProperty(String name, String value) {
     if ((defaults.getProperty(name) != null) && (defaults.getProperty(name).equals(value))) {
       if (properties.getProperty(name) != null) {
         properties.remove(name);
-        store();
       }
     } else {
       if ((properties.getProperty(name) == null) || (! properties.getProperty(name).equals(value))) {
         properties.setProperty(name, value);
-        store();
       }
     }
   }
@@ -235,12 +242,13 @@ public class SimpleParameters implements Parameters {
     setProperty(name, buffer.toString());
   }
   
-  public void store() {
+  public void store() throws IOException {
     if (configFileName == null) return;
     try {
       properties.store(new FileOutputStream(configFileName), null);
     } catch(IOException ioe) {
       System.err.println("[Loader       ]: Unable to store properties file " + configFileName + ", got error " + ioe);
+      throw ioe;
     }
 	}
   
