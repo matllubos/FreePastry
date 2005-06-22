@@ -36,16 +36,28 @@ public class RingCertificate implements Serializable {
   static {
     try {
       // first load the CA public key
-      ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(ClassLoader.getSystemResource("ca.publickey").openStream())));
+      URL a = ClassLoader.getSystemResource("ca.publickey");
+//      System.out.println(a.getPath());
+      InputStream b = a.openStream();
+      GZIPInputStream c = new GZIPInputStream(b);
+      BufferedInputStream d = new BufferedInputStream(c);
+      ObjectInputStream ois = new XMLObjectInputStream(d);
+//      ObjectInputStream ois = new XMLObjectInputStream(new BufferedInputStream(new GZIPInputStream(ClassLoader.getSystemResource("ca.publickey").openStream())));
       PublicKey caPublic = (PublicKey) ois.readObject();
       ois.close();
       
       // and finally load and verify the certs
-      BufferedReader r = new BufferedReader(new InputStreamReader(ClassLoader.getSystemResource("ringcert.list").openStream()));
+      URL a1 = ClassLoader.getSystemResource("ringcert.list");
+      InputStream b1 = a1.openStream();
+      InputStreamReader c1 = new InputStreamReader(b1);
+      BufferedReader r = new BufferedReader(c1);
       String filename = null;
       
       while ((filename = r.readLine()) != null) {
-        RingCertificate cert = readFromStream(ClassLoader.getSystemResource(filename).openStream());
+//        System.out.println(filename);
+        URL a2 = ClassLoader.getSystemResource(filename);
+        InputStream b2 = a2.openStream();
+        RingCertificate cert = readFromStream(b2);
         
         if (cert.verify(caPublic)) {
           if ((getCertificate(cert.getId()) == null) || 
