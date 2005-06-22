@@ -129,9 +129,13 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       return; 
     }
     
-    Iterator i = whoDoWeNeedAResponseFrom().iterator();
+    Collection c = whoDoWeNeedAResponseFrom();
+    log(Logger.INFO, "CJP: timeout1, still waiting to hear from "+c.size()+" nodes.");
+    
+    Iterator i = c.iterator();
     while(i.hasNext()) {
       NodeHandle nh = (NodeHandle)i.next(); 
+      log(Logger.FINE, "CJP: timeout2, still waiting to hear from "+nh);
       //nh.checkLiveness();
       sendTheMessage(nh, false);
     }
