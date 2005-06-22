@@ -93,6 +93,7 @@ public class VisualizationProxy {
 //          System.out.println(handles[i]);
 //        }        
       } catch (Exception e) {
+        e.printStackTrace();
         System.out.println("Usage of -bootstrap is now:");  
         System.out.println("  -bootstrap ringName1 nodeAddress1:port1 ringName2 nodeAddress2:port2 ...");  
         System.out.println("  -bootstrap [list] must be the last args given");  
