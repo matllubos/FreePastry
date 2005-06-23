@@ -7,6 +7,7 @@ import java.util.prefs.*;
 
 import rice.*;
 import rice.environment.Environment;
+import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.messaging.*;
 
@@ -21,12 +22,12 @@ public class ScribeImpl implements Scribe, Application {
   /**
    * The interval with which to perform maintenance
    */
-  public static int MAINTENANCE_INTERVAL = 180000;
+  public final int MAINTENANCE_INTERVAL;
 
   /**
    * the timeout for a subscribe message
    */
-  public static int MESSAGE_TIMEOUT = 15000;
+  public final int MESSAGE_TIMEOUT;
 
   /**
    * the hashtable of topic -> TopicManager
@@ -89,6 +90,11 @@ public class ScribeImpl implements Scribe, Application {
    */
   public ScribeImpl(Node node, ScribePolicy policy, String instance, Environment env) {
     this.environment = env;
+    
+    Parameters p = environment.getParameters();
+    MAINTENANCE_INTERVAL = p.getInt("p2p_scribe_maintenance_interval");
+    MESSAGE_TIMEOUT = p.getInt("p2p_scribe_message_timeout");
+    
     this.endpoint = node.registerApplication(this, instance);
     this.topics = new Hashtable();
     this.outstanding = new Hashtable();

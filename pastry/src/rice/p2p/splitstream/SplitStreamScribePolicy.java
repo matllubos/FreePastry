@@ -23,7 +23,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
   /**
    * The default maximum number of children per channel
    */
-  public static int DEFAULT_MAXIMUM_CHILDREN = 24;
+  public final int DEFAULT_MAXIMUM_CHILDREN;// = 24;
 
   /**
    * A reference to this policy's splitstream object
@@ -46,6 +46,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @param splitStream The local splitstream
    */
   public SplitStreamScribePolicy(Scribe scribe, SplitStream splitStream) {
+    DEFAULT_MAXIMUM_CHILDREN = scribe.getEnvironment().getParameters().getInt("p2p_splitStream_policy_default_maximum_children");
     this.scribe = scribe;
     this.splitStream = splitStream;
     this.policy = new Hashtable();

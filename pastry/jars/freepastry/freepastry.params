@@ -70,6 +70,8 @@ pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
 
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
+p2p_splitStream_policy_default_maximum_children = 24
+p2p_splitStream_stripe_max_failed_subscription = 5
 
 #multiring
 p2p_multiring_base = 2
@@ -77,6 +79,18 @@ p2p_multiring_base = 2
 #past
 p2p_past_messageTimeout = 30000
 p2p_past_successfulInsertThreshold = 0.5
+
+#replication
+p2p_replication_manager_fetch_delay = 500
+p2p_replication_manager_timeout_delay = 20000
+p2p_replication_manager_num_delete_at_once = 100
+p2p_replication_maintenance_interval = 600000 # 10 mins
+p2p_replication_max_keys_in_message = 1000
+
+#scribe
+p2p_scribe_maintenance_interval = 180000
+p2p_scribe_message_timeout = 15000
+
 
 #aggregation
 p2p_aggregation_logStatistics = true

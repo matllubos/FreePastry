@@ -215,7 +215,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
   
     for (int i=0; i<NUM_TO_INSERT+1; i++) {
       try {
-        Thread.sleep(ReplicationManagerImpl.FETCH_DELAY);
+        Thread.sleep(replications[0].FETCH_DELAY);
       } catch (InterruptedException e) {
         System.out.println(e.toString());
       }

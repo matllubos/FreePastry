@@ -24,7 +24,7 @@ public class Stripe implements ScribeClient {
   /**
    * The maximum number of failed subscriptions
    */
-  public static int MAX_FAILED_SUBSCRIPTION = 5;
+  public final int MAX_FAILED_SUBSCRIPTION;// = 5;
 
   /**
    * The stripeId for this stripe
@@ -67,7 +67,8 @@ public class Stripe implements ScribeClient {
    * @param stripeId the stripeId that this stripe will be rooted at
    * @param scribe the scribe the stripe is running on top of
    */
-  public Stripe(StripeId stripeId, Scribe scribe, Channel channel) {
+  public Stripe(StripeId stripeId, Scribe scribe, Channel channel, int maxFailedSubscriptions) {
+    this.MAX_FAILED_SUBSCRIPTION = maxFailedSubscriptions;
     this.stripeId = stripeId;
     this.scribe = scribe;
     this.channel = channel;

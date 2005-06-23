@@ -5,6 +5,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 
@@ -35,7 +36,9 @@ public class SplitStreamImpl implements SplitStream {
    */
   protected Hashtable channels;
 
-  protected int stripeBaseBitLength;
+  protected final int stripeBaseBitLength;  
+  protected final int maxFailedSubscriptions;
+  protected final int defaultMaxChildren;
   
   /**
    * The constructor for building the splitStream object which internally
@@ -45,8 +48,11 @@ public class SplitStreamImpl implements SplitStream {
    * @param instance The instance name for this splitstream
    */
   public SplitStreamImpl(Node node, String instance, Environment env) {
+    Parameters p = env.getParameters();
+    defaultMaxChildren = p.getInt("p2p_splitStream_policy_default_maximum_children");
+    maxFailedSubscriptions = p.getInt("p2p_splitStream_policy_default_maximum_children");
+    stripeBaseBitLength = p.getInt("p2p_splitStream_stripeBaseBitLength");
     this.scribe = new ScribeImpl(node, instance, env);
-    this.stripeBaseBitLength = env.getParameters().getInt("p2p_splitStream_stripeBaseBitLength");
     this.node = node;
     this.channels = new Hashtable();
     scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));
@@ -85,11 +91,13 @@ public class SplitStreamImpl implements SplitStream {
     Channel channel = (Channel) channels.get(id);
 
     if (channel == null) {
-      channel = new Channel(id, scribe, node.getIdFactory(),this.node.getId(), stripeBaseBitLength);
+      channel = new Channel(id, scribe, node.getIdFactory(),this.node.getId(), 
+          stripeBaseBitLength, maxFailedSubscriptions);
       channels.put(id, channel);
     }
     
-    ((SplitStreamScribePolicy)scribe.getPolicy()).setMaxChildren(id, SplitStreamScribePolicy.DEFAULT_MAXIMUM_CHILDREN);
+    ((SplitStreamScribePolicy)scribe.getPolicy()).setMaxChildren(id, 
+        defaultMaxChildren);
     return channel;
   }
 

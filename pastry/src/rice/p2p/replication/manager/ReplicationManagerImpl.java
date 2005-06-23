@@ -8,6 +8,8 @@ import rice.*;
 import rice.Continuation.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.replication.*;
 import rice.p2p.replication.manager.messaging.*;
@@ -27,17 +29,17 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   /**
    * The amount of time to wait between fetch calls to the client
    */
-  public static int FETCH_DELAY = 500;
+  public final int FETCH_DELAY;
   
   /**
    * The amount of time to wait before giving up on a client fetch
    */
-  public static int TIMEOUT_DELAY = 20000;
+  public final int TIMEOUT_DELAY;
   
   /**
    * The number of ids to delete at a given time - others will be deleted later 
    */
-  public static int NUM_DELETE_AT_ONCE = 100;
+  public final int NUM_DELETE_AT_ONCE;
   
   /**
    * The id factory used for manipulating ids
@@ -68,13 +70,10 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * The deleter, for managing ids to delete
    */
   protected ReplicationManagerDeleter deleter;
-  
-  /**
-   * the logger which we will use
-   */
-  protected Logger log = Logger.getLogger(this.getClass().getName());
-  
+    
   protected String instance;
+  
+  protected Environment environment;
   
   /**
     * Constructor
@@ -98,6 +97,13 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param policy The replication policy to use
    */
   public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, ReplicationPolicy policy, Environment env) {
+    this.environment = env;
+    Parameters p = environment.getParameters();
+    
+    FETCH_DELAY = p.getInt("p2p_replication_manager_fetch_delay");
+    TIMEOUT_DELAY = p.getInt("p2p_replication_manager_timeout_delay");
+    NUM_DELETE_AT_ONCE = p.getInt("p2p_replication_manager_num_delete_at_once");
+    
     this.client = client;
     this.factory = node.getIdFactory();
     this.endpoint = node.registerApplication(this, instance);
@@ -105,7 +111,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     this.deleter = new ReplicationManagerDeleter();
     this.instance = instance;
     
-    log.finer(endpoint.getId() + ": Starting up ReplicationManagerImpl with client " + client);
+    log(Logger.FINE, "Starting up ReplicationManagerImpl with client " + client);
     
     this.replication = new ReplicationImpl(node, this, replicationFactor, instance, policy, env);
   }
@@ -137,17 +143,17 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param hint The hint where the id may be
    */
   protected void informClient(final Id id, NodeHandle hint) {
-    log.fine(endpoint.getId() + ": Telling client to fetch id " + id);
+    log(Logger.FINE, "Telling client to fetch id " + id);
   
     final CancellableTask timer = endpoint.scheduleMessage(new TimeoutMessage(id), TIMEOUT_DELAY);
     
     client.fetch(id, hint, new Continuation() {
       public void receiveResult(Object o) {
         if (! (new Boolean(true)).equals(o)) {
-          log.warning(endpoint.getId() + ": Fetching of id " + id + " failed with " + o);
+          log(Logger.WARNING, "Fetching of id " + id + " failed with " + o);
         }
         
-        log.fine(endpoint.getId() + ": Successfully fetched id " + id);
+        log(Logger.FINE, "Successfully fetched id " + id);
         
         timer.cancel();
         helper.message(id);
@@ -164,7 +170,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * or simply resets the active flag if there's nothing to be fetched.
    */
   protected void scheduleNext() {
-    log.finer(endpoint.getId() + ": Scheduling next fetch in " + FETCH_DELAY + " milliseconds");
+    log(Logger.FINER, "Scheduling next fetch in " + FETCH_DELAY + " milliseconds");
     
     endpoint.scheduleMessage(new ReminderMessage(), FETCH_DELAY);
   }
@@ -195,7 +201,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    *              responsible  
    */
   public void setRange(final IdRange range) {
-    log.finest(endpoint.getId() + ": Removing range " + range + " from the list of pending ids");
+    log(Logger.FINEST, "Removing range " + range + " from the list of pending ids");
 
     helper.setRange(range);
     deleter.setRange(range);
@@ -243,13 +249,13 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    */
   public void deliver(Id id, Message message) {
     if (message instanceof ReminderMessage) {
-      log.finest(endpoint.getId() + ": Received reminder message");
+      log(Logger.FINEST, "Received reminder message");
       helper.wakeup();
     } else if (message instanceof TimeoutMessage) {
-      log.finest(endpoint.getId() + ": Received timeout message");
+      log(Logger.FINEST, "Received timeout message");
       helper.message(((TimeoutMessage) message).getId());
     } else {
-      log.warning(endpoint.getId() + ": Received unknown message " + message);
+      log(Logger.WARNING, "Received unknown message " + message);
     }
   }
   
@@ -275,6 +281,10 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   public Replication getReplication() {
     return replication;
   }
+  
+  private void log(int level, String str) {
+    environment.getLogManager().getLogger(ReplicationImpl.class, instance).log(level, str); 
+  }  
   
   /**
    * Inner class which keeps track of the state we're in- waiting, sleeping, or with
@@ -399,14 +409,14 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      */
     protected synchronized Id getNextId() {      
       if (set.numElements() == 0) {
-        log.warning(endpoint.getId() + ": GetNextId called without any ids available - aborting");
+        log(Logger.WARNING, "GetNextId called without any ids available - aborting");
         return null;
       }
       
       current = (Id) set.getIterator().next();  
       set.removeId(current);
       
-      log.finer(endpoint.getId() + ": Returing next id to fetch " + current);
+      log(Logger.FINER, "Returing next id to fetch " + current);
       
       if (! client.exists(current))
         return current;
@@ -488,7 +498,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         id = (Id) set.getIterator().next();
         set.removeId(id);
         
-        log.finer(endpoint.getId() + ": Telling client to delete id " + id);
+        log(Logger.FINER, "Telling client to delete id " + id);
         System.out.println("RMImpl.go " + instance + ": removing id " + id);
         
         client.remove(id, this);

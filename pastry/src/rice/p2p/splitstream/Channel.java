@@ -52,7 +52,7 @@ public class Channel {
    * @param factory The Id factory
    * @param localId The local Id
    */
-  public Channel(ChannelId channelId, Scribe scribe, IdFactory factory, Id localId, int stripeBase) {
+  public Channel(ChannelId channelId, Scribe scribe, IdFactory factory, Id localId, int stripeBase, int maxFailedSubscriptions) {
 
     /*
      *  Initialize Member variables
@@ -71,7 +71,7 @@ public class Channel {
      *  Create the stripes
      */
     for (int i = 0; i < stripeIds.length; i++) {
-      stripes[i] = new Stripe(stripeIds[i], scribe, this);
+      stripes[i] = new Stripe(stripeIds[i], scribe, this, maxFailedSubscriptions);
     }
   }
 
