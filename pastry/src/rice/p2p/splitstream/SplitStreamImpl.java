@@ -40,6 +40,8 @@ public class SplitStreamImpl implements SplitStream {
   protected final int maxFailedSubscriptions;
   protected final int defaultMaxChildren;
   
+  protected String instance;
+  
   /**
    * The constructor for building the splitStream object which internally
    * creates it's own Scribe.
@@ -48,6 +50,7 @@ public class SplitStreamImpl implements SplitStream {
    * @param instance The instance name for this splitstream
    */
   public SplitStreamImpl(Node node, String instance, Environment env) {
+    this.instance = instance;
     Parameters p = env.getParameters();
     defaultMaxChildren = p.getInt("p2p_splitStream_policy_default_maximum_children");
     maxFailedSubscriptions = p.getInt("p2p_splitStream_policy_default_maximum_children");
@@ -91,7 +94,7 @@ public class SplitStreamImpl implements SplitStream {
     Channel channel = (Channel) channels.get(id);
 
     if (channel == null) {
-      channel = new Channel(id, scribe, node.getIdFactory(),this.node.getId(), 
+      channel = new Channel(id, scribe, instance, node.getIdFactory(),this.node.getId(), 
           stripeBaseBitLength, maxFailedSubscriptions);
       channels.put(id, channel);
     }

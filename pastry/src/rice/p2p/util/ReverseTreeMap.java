@@ -100,7 +100,6 @@ public class ReverseTreeMap implements Serializable {
       o.remove(key);
       
       if (o.size() == 0) {
-        System.out.println("REMOVING " + value);
         reverse.remove(value);
       }
     } else {

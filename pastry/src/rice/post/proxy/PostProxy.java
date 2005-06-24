@@ -1121,17 +1121,22 @@ public class PostProxy {
       String prefix = InetAddress.getLocalHost().getHostName() + "-" + port;
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
 
+      String instance = parameters.getString("application_instance_name") + "-glacier-immutable";
+      
       immutableGlacier = new GlacierImpl(
         node, glacierImmutableStorage, glacierNeighborStorage,
         parameters.getInt("glacier_num_fragments"),
         parameters.getInt("glacier_num_survivors"),
         (MultiringIdFactory)FACTORY, 
-        parameters.getString("application_instance_name") + "-glacier-immutable",
+        instance,
         new GlacierDefaultPolicy(
           new ErasureCodec(
             parameters.getInt("glacier_num_fragments"),
-            parameters.getInt("glacier_num_survivors")
-          )
+            parameters.getInt("glacier_num_survivors"),
+            env
+          ), 
+          instance,
+          env
         ),
         env
       );

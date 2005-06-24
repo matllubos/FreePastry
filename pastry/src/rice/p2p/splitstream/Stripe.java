@@ -4,6 +4,7 @@ package rice.p2p.splitstream;
 import java.io.*;
 import java.util.*;
 
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
 
@@ -61,13 +62,16 @@ public class Stripe implements ScribeClient {
    */
   protected Hashtable failed;
 
+  protected String instance;
+  
   /**
    * The constructor used when creating a stripe from scratch.
    *
    * @param stripeId the stripeId that this stripe will be rooted at
    * @param scribe the scribe the stripe is running on top of
    */
-  public Stripe(StripeId stripeId, Scribe scribe, Channel channel, int maxFailedSubscriptions) {
+  public Stripe(StripeId stripeId, Scribe scribe, String instance, Channel channel, int maxFailedSubscriptions) {
+    this.instance = instance;
     this.MAX_FAILED_SUBSCRIPTION = maxFailedSubscriptions;
     this.stripeId = stripeId;
     this.scribe = scribe;
@@ -176,10 +180,10 @@ public class Stripe implements ScribeClient {
           clients[i].deliver(this, data);
         }
       } else {
-        System.out.println("Received unexpected content " + content);
+        scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance).log(Logger.WARNING, "Received unexpected content " + content);
       }
     } else {
-      System.out.println("Received update for unexcpected topic " + topic + " content " + content);
+      scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance).log(Logger.WARNING, "Received update for unexcpected topic " + topic + " content " + content);
     }
   }
 
@@ -217,7 +221,8 @@ public class Stripe implements ScribeClient {
     if (count.intValue() < MAX_FAILED_SUBSCRIPTION) {
       count = new Integer(count.intValue() + 1);
 
-      System.out.println("DEBUG :: Subscription failed at " + channel.getLocalId() + " for topic " + topic + " - retrying.");
+      scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance).log(Logger.WARNING, 
+          "DEBUG :: Subscription failed at " + channel.getLocalId() + " for topic " + topic + " - retrying.");
       scribe.subscribe(topic, this);
 
       failed.put(topic, count);

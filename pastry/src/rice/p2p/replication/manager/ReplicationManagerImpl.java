@@ -286,6 +286,10 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     environment.getLogManager().getLogger(ReplicationImpl.class, instance).log(level, str); 
   }  
   
+  private void logException(int level, Exception e) {
+    environment.getLogManager().getLogger(ReplicationImpl.class, instance).logException(level, e); 
+  }  
+  
   /**
    * Inner class which keeps track of the state we're in- waiting, sleeping, or with
    * nothing to do.
@@ -499,7 +503,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         set.removeId(id);
         
         log(Logger.FINER, "Telling client to delete id " + id);
-        System.out.println("RMImpl.go " + instance + ": removing id " + id);
+        log(Logger.FINER, "RMImpl.go " + instance + ": removing id " + id);
         
         client.remove(id, this);
       }
@@ -512,10 +516,10 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      */
     public synchronized void receiveResult(Object o) {
       if (id == null) 
-        System.out.println("ERROR: RMImpl.deleter Received result " + o + " unexpectedly!");
+        log(Logger.SEVERE, "ERROR: RMImpl.deleter Received result " + o + " unexpectedly!");
       
       if (! Boolean.TRUE.equals(o)) 
-        System.out.println("ERROR: RMImpl.deleter Unstore of " + id + " did not succeed '" + o + "'!");
+        log(Logger.SEVERE, "ERROR: RMImpl.deleter Unstore of " + id + " did not succeed '" + o + "'!");
       
       id = null;
       go();
@@ -527,8 +531,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      * @param o The result
      */
     public synchronized void receiveException(Exception e) {
-      System.out.println("ERROR: RMImpl.deleter Unstore of " + id + " caused exception '" + e + "'!");
-      e.printStackTrace();
+      log(Logger.SEVERE, "ERROR: RMImpl.deleter Unstore of " + id + " caused exception '" + e + "'!");
+      logException(Logger.SEVERE, e);
       
       id = null;
       go();

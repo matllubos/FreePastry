@@ -193,7 +193,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command The command to return the result to
    */
   protected void refresh(final GCIdSet ids, Continuation command) {
-    System.out.println("REFRESH: CALLED WITH "+ ids.numElements() + " ELEMENTS");
+    final Logger logger = environment.getLogManager().getLogger(GCPastImpl.class, instance);
+    logger.log(Logger.FINE, "REFRESH: CALLED WITH "+ ids.numElements() + " ELEMENTS");
 
     if (ids.numElements() == 0) {
       command.receiveResult(new Object[0]);
@@ -202,7 +203,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
     
     final Id[] array = ids.asArray();
     GCId start = (GCId) array[0];
-    System.out.println("REFRESH: GETTINGS ALL HANDLES OF " + start);
+    logger.log(Logger.FINE, "REFRESH: GETTINGS ALL HANDLES OF " + start);
 
     
     sendRequest(start.getId(), new GCLookupHandlesMessage(getUID(), start.getId(), getLocalNodeHandle(), start.getId()), 
@@ -211,11 +212,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
         final NodeHandleSet set = (NodeHandleSet) o;
         final ReplicaMap map = new ReplicaMap();
 
-        System.out.println("REFRESH: GOT " + set + " SET OF HANDLES!");
+        logger.log(Logger.FINE, "REFRESH: GOT " + set + " SET OF HANDLES!");
         
         endpoint.process(new Executable() {
           public Object execute() {
-            System.out.println("REFRESH: ON PROCESSING THREAD!");
+            logger.log(Logger.FINE, "REFRESH: ON PROCESSING THREAD!");
 
             for (int i=0; i<array.length; i++) {
               GCId id = (GCId) array[i];
@@ -232,13 +233,13 @@ public class GCPastImpl extends PastImpl implements GCPast {
               }
             }
             
-            System.out.println("REFRESH: DONE WITH PROCESSING THREAD - MOVING TO NORMAL THREAD!");
+            logger.log(Logger.FINE, "REFRESH: DONE WITH PROCESSING THREAD - MOVING TO NORMAL THREAD!");
             
             return null;
           }
         }, new StandardContinuation(parent) {
           public void receiveResult(Object o) {
-            System.out.println("REFRESH: BACK ON NORMAL THREAD!");
+            logger.log(Logger.FINE, "REFRESH: BACK ON NORMAL THREAD!");
 
             final Iterator iterator = map.getReplicas();
             
@@ -247,20 +248,20 @@ public class GCPastImpl extends PastImpl implements GCPast {
                 if (iterator.hasNext()) {
                   NodeHandle next = (NodeHandle) iterator.next();
                   GCIdSet ids = map.getIds(next);
-                  System.out.println("REFRESH: SENDING REQUEST TO " + next + " FOR IDSET " + ids);
+                  logger.log(Logger.FINE, "REFRESH: SENDING REQUEST TO " + next + " FOR IDSET " + ids);
                   
                   
                   sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), 
                               new NamedContinuation("GCRefresh to " + next, this));
                 } else {
-                  System.out.println("REFRESH: DONE SENDING REQUESTS, RECURSING");
+                  logger.log(Logger.FINE, "REFRESH: DONE SENDING REQUESTS, RECURSING");
                   
                   refresh(ids, parent);
                 }
               }
               
               public void receiveException(Exception e) {
-                System.out.println("GOT EXCEPTION " + e + " REFRESHING ITEMS - CONTINUING");
+                logger.log(Logger.FINE, "GOT EXCEPTION " + e + " REFRESHING ITEMS - CONTINUING");
                 receiveResult(null);
               }
             };
@@ -362,7 +363,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
                   trash.getObject(id.getId(), new StandardContinuation(this) {
                     public void receiveResult(Object o) {
                       if ((o != null) && (o instanceof GCPastContent)) {
-                        System.out.println("GCREFRESH: Restoring object " + id + " from trash!");
+                        environment.getLogManager().getLogger(GCPastImpl.class, instance).log(Logger.FINE, 
+                            "GCREFRESH: Restoring object " + id + " from trash!");
                         GCPastContent content = (GCPastContent) o;
                         
                         storage.store(id.getId(), content.getMetadata(id.getExpiration()), content, new StandardContinuation(parent) {
