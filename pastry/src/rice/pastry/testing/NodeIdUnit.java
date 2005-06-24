@@ -278,7 +278,7 @@ public class NodeIdUnit {
     System.out.println("--------------------------");
   }
 
-  public NodeIdUnit() throws IOException {
+  public NodeIdUnit() {
     Environment env = new Environment();
     rng = env.getRandomSource();
 
@@ -293,7 +293,7 @@ public class NodeIdUnit {
     domainPrefixTest();
   }
 
-  public static void main(String args[]) throws IOException {
+  public static void main(String args[]) {
     NodeIdUnit niu = new NodeIdUnit();
   }
 }

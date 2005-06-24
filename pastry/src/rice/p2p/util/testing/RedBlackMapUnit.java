@@ -14,7 +14,7 @@ import java.util.*;
 
 public class RedBlackMapUnit {
   
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     int n = Integer.parseInt(args[0]);
     int t = Integer.parseInt(args[0]);
     

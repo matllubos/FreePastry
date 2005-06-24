@@ -65,7 +65,7 @@ public class CACertificateGenerator {
    *
    * @param args The command line arguments
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     Environment env = new Environment();
     String base_address = getArg(args,"-baseaddr");
     String userid = getArg(args,"-username");

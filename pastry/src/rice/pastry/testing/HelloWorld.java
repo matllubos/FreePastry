@@ -111,7 +111,7 @@ public class HelloWorld {
    * Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]
    * [-simultaneous_joins] [-simultaneous_msgs] [-help]
    */
-  public static void main(String args[]) throws IOException {
+  public static void main(String args[]) {
 
     Environment env = new Environment();
     

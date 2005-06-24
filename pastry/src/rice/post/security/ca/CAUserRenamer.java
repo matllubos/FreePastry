@@ -48,7 +48,7 @@ public class CAUserRenamer {
    *
    * @param args The command line arguments
    */
-  public static void main(String[] args) throws IOException{
+  public static void main(String[] args) {
     boolean done = false;
     Environment env = new Environment();
     try {
