@@ -4,6 +4,8 @@ import java.io.*;
 import java.util.Arrays;
 
 import rice.environment.Environment;
+import rice.environment.logging.*;
+import rice.environment.logging.LogManager;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 
@@ -25,13 +27,16 @@ public class ErasureCodec {
   static int[] FieldEltToExp;
   static boolean isEltInitialized = false;
 
+  Environment environment;
+  
   /**
    * Constructor for ErasureCodec.
    *
    * @param _numFragments DESCRIBE THE PARAMETER
    * @param _numSurvivors DESCRIBE THE PARAMETER
    */
-  public ErasureCodec(int _numFragments, int _numSurvivors) {
+  public ErasureCodec(int _numFragments, int _numSurvivors, Environment env) {
+    environment = env;
     numFragments = _numFragments;
     numSurvivors = _numSurvivors;
 
@@ -39,8 +44,9 @@ public class ErasureCodec {
       initElt();
   }
 
-  public void dump(byte[] data) {
+  public void dump(byte[] data, Logger logger) {
     String hex = "0123456789ABCDEF";
+    String s = "";
     for (int i=0; i<data.length; i++) {
       int d = data[i];
       if (d<0)
@@ -48,12 +54,13 @@ public class ErasureCodec {
       int hi = (d>>4);
       int lo = (d&15);
         
-      System.out.print(hex.charAt(hi)+""+hex.charAt(lo));
+      s+=hex.charAt(hi)+""+hex.charAt(lo);
       if (((i%16)==15) || (i==(data.length-1)))
-        System.out.println();
+        s+="\n";
       else
-        System.out.print(" ");
+        s+=" ";
     }
+    logger.log(Logger.INFO,s);
   }
 
   public Fragment[] encodeObject(Serializable obj, boolean[] generateFragment) {
@@ -68,8 +75,9 @@ public class ErasureCodec {
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
-      System.out.println("encodeObject: "+ioe);
-      ioe.printStackTrace();
+      Logger log = environment.getLogManager().getLogger(ErasureCodec.class, null);
+      log.log(Logger.WARNING, "encodeObject: "+ioe);
+      log.logException(Logger.WARNING, ioe);
       return null;
     }
 
@@ -98,7 +106,7 @@ public class ErasureCodec {
       if (generateFragment[i])
         wantFragments ++;
         
-    // System.out.println(Systemm.currentTimeMillis()+" XXX before encode("+bytes.length+" bytes, "+wantFragments+" fragments) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
+    // System.outt.println(Systemm.currentTimeMillis()+" XXX before encode("+bytes.length+" bytes, "+wantFragments+" fragments) free="+Runtime.getRuntime().freeMemory()+" total="+Runtime.getRuntime().totalMemory());
     
     int numWords = (bytes.length + 3) / 4;
     int wordsPerGroup = (numSurvivors * Lfield);
@@ -114,7 +122,7 @@ public class ErasureCodec {
         frag[i] = null;
     }
 
-    //System.out.println(bytes.length+" bytes => "+numFragments+" fragments with "+wordsPerFragment+" words ("+numGroups+" groups)");
+    //System.outt.println(bytes.length+" bytes => "+numFragments+" fragments with "+wordsPerFragment+" words ("+numGroups+" groups)");
     
     for (int g=0; g<numGroups; g++) {
       int offset = g * wordsPerGroup * 4;
@@ -341,8 +349,9 @@ public class ErasureCodec {
   }
 
   public static void main(String args[]) {
-    RandomSource rng = new SimpleRandomSource();
-    ErasureCodec codec = new ErasureCodec(48, 5);
+    Environment env = new Environment();
+    RandomSource rng = env.getRandomSource();
+    ErasureCodec codec = new ErasureCodec(48, 5, env);
     Serializable s = new String("Habe Mut, Dich Deines eigenen Verstandes zu bedienen! Aufklaerung ist der Ausgang aus Deiner selbstverschuldeten Unmuendigkeit!");
 
     System.out.println("Encoding...");
