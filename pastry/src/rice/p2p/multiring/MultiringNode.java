@@ -4,6 +4,7 @@ package rice.p2p.multiring;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.messaging.*;
 import rice.p2p.scribe.*;
@@ -58,6 +59,11 @@ public class MultiringNode implements Node, ScribeClient {
   protected MultiringIdFactory factory;
   
   /**
+   * The environment
+   */
+  protected Environment environment;
+  
+  /**
    * Constructor
    *
    * @param node The node which this multiring node is wrapping
@@ -65,6 +71,7 @@ public class MultiringNode implements Node, ScribeClient {
    */
   public MultiringNode(Id ringId, Node node, Environment env) {
     this.node = node;
+    this.environment = env;
     this.ringId = ringId;
     this.endpoints = new Hashtable();
     this.scribe = new ScribeImpl(this, "Multiring", env);
@@ -194,7 +201,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @param id The Id of the newly added ring
    */
   protected void nodeAdded(Id otherRingId) {
-    //System.out.println("JOINING SCRIBE GROUP " + otherRingId + " AT NODE " + getId());
+    //System.outt.println("JOINING SCRIBE GROUP " + otherRingId + " AT NODE " + getId());
     scribe.subscribe(new Topic(RingId.build(ringId, otherRingId)), this);
   }
   
@@ -213,7 +220,7 @@ public class MultiringNode implements Node, ScribeClient {
       MultiringEndpoint endpoint = (MultiringEndpoint) endpoints.get(application);
       endpoint.route(id, message, null);
     } else {
-      //System.out.println("ANYCASTING TO SCRIBE GROUP " + getTarget(id) + " AT NODE " + getId() + " FOR APPLICATION " + application);
+      //System.outt.println("ANYCASTING TO SCRIBE GROUP " + getTarget(id) + " AT NODE " + getId() + " FOR APPLICATION " + application);
       scribe.anycast(new Topic(RingId.build(ringId, getTarget(id))), new RingMessage(id, message, application));
     }
   }
@@ -267,12 +274,12 @@ public class MultiringNode implements Node, ScribeClient {
   public boolean anycast(Topic topic, ScribeContent content) {
     if (content instanceof RingMessage) {
       RingMessage rm = (RingMessage) content;
-      //System.out.println("RECEIVED ANYCAST TO " + rm.getId() + " AT NODE " + getId());
+      //System.outt.println("RECEIVED ANYCAST TO " + rm.getId() + " AT NODE " + getId());
       collection.route(rm.getId(), rm.getMessage(), rm.getApplication());
     } else {
-      System.out.println("Received unrecognized message " + content);
+      environment.getLogManager().getLogger(MultiringNode.class, null).log(Logger.WARNING,
+          "Received unrecognized message " + content);
     }
-    
     return true;
   }
   
@@ -284,7 +291,8 @@ public class MultiringNode implements Node, ScribeClient {
    * @param content The content which was published
    */
   public void deliver(Topic topic, ScribeContent content) {
-    System.out.println("Received unexpected delivery on topic " + topic + " of " + content);
+    environment.getLogManager().getLogger(MultiringNode.class, null).log(Logger.FINER,
+        "Received unexpected delivery on topic " + topic + " of " + content);
   }
   
   /**
@@ -315,7 +323,8 @@ public class MultiringNode implements Node, ScribeClient {
    * @param topic The topic which the subscribe failed on
    */
   public void subscribeFailed(Topic topic) {
-    System.out.println(getId() + ": Received error joining ringId topic " + topic + " - trying again.");
+    environment.getLogManager().getLogger(MultiringNode.class, null).log(Logger.WARNING,
+        getId() + ": Received error joining ringId topic " + topic + " - trying again.");
     nodeAdded(((RingId) topic.getId()).getId());
   }
   

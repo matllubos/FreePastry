@@ -540,7 +540,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 continue;
               }   
           
-              if (!thisManifest.validatesFragment(thisFragment, thisKey.getFragmentID())) {
+              if (!thisManifest.validatesFragment(thisFragment, thisKey.getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance))) {
                 warn("Handoff: Manifest does not validate this fragment");
                 continue;
               }
@@ -950,7 +950,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             statistics.trashStorageSize = ((PersistentStorage)storageT).getTotalSize();
 
           if (logStatistics)
-            statistics.dump();
+            statistics.dump(environment.getLogManager().getLogger(GlacierStatistics.class, instance));
           
           Enumeration enumeration = listeners.elements();
           while (enumeration.hasMoreElements()) {
@@ -1221,7 +1221,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
    * @exception Error Terminates the program
    */
   private void panic(String s) throws Error {
-    System.out.println("PANIC: " + s);
+    log(Logger.SEVERE, "PANIC: " + s);
     throw new Error("Panic");
   }
 
@@ -1536,7 +1536,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           md.update(fam.fragment.getPayload());
 
           ret[0] = "OK\n\nFragment: "+fam.fragment.getPayload().length+" bytes, Hash=["+dump(md.digest(), false)+"], ID="+id.getFragmentID()+"\n\nValidation: " +
-                   (fam.manifest.validatesFragment(fam.fragment, id.getFragmentID()) ? "OK" : "FAIL") + "\n\n" + 
+                   (fam.manifest.validatesFragment(fam.fragment, id.getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance)) ? "OK" : "FAIL") + "\n\n" + 
                    fam.manifest.toStringFull()+"\n\nMetadata:\n - Stored since: "+metadata.getStoredSince()+
                    "\n - Current expiration: "+metadata.getCurrentExpiration()+"\n - Previous expiration: "+metadata.getPreviousExpiration()+"\n";
         }
@@ -1566,7 +1566,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           int totalChecks = 1, totalFailures = 0;
           public void receiveResult(Object o) {
             FragmentAndManifest fam = (FragmentAndManifest) o;
-            boolean success = fam.manifest.validatesFragment(fam.fragment, currentKey.getFragmentID());
+            boolean success = fam.manifest.validatesFragment(fam.fragment, currentKey.getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance));
             if (!success)
               totalFailures ++;
             result.append(currentKey.toStringFull()+" "+ (success ? "OK" : "FAIL") + "\n");
@@ -1635,7 +1635,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
             ret[0] = "\n\nResponse: "+gdm.getKey(0).toStringFull()+" ("+gdm.numKeys()+" keys)\n" +  "Holder: "+gdm.getSource()+"\n" +
                      "Fragment: "+gdm.getFragment(0).getPayload().length+" bytes, Hash=["+dump(md.digest(), false)+"]\n\nValidation: " +
-                     (gdm.getManifest(0).validatesFragment(gdm.getFragment(0), gdm.getKey(0).getFragmentID()) ? "OK" : "FAIL") + "\n\n" + 
+                     (gdm.getManifest(0).validatesFragment(gdm.getFragment(0), gdm.getKey(0).getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance)) ? "OK" : "FAIL") + "\n\n" + 
                      gdm.getManifest(0).toStringFull();
                      
             terminate();
@@ -2693,7 +2693,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             return;
           }
             
-          if ((manifest!=null) && !manifest.validatesFragment(thisFragment, fragmentID)) {
+          if ((manifest!=null) && !manifest.validatesFragment(thisFragment, fragmentID, environment.getLogManager().getLogger(Manifest.class, instance))) {
             warn("Got invalid fragment #"+fragmentID+" -- discarded");
             return;
           }
@@ -2808,7 +2808,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         if (o != null) {
           if (o instanceof FragmentAndManifest) {
             Fragment thisFragment = ((FragmentAndManifest)o).fragment;
-            if (manifest.validatesFragment(thisFragment, key.getFragmentID())) {
+            if (manifest.validatesFragment(thisFragment, key.getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance))) {
               log(Logger.FINE, "retrieveFragment: Found in trash: "+key.toStringFull());
               c.receiveResult(thisFragment);
               return;
@@ -2865,7 +2865,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 return;
               }
           
-              if (!manifest.validatesFragment(thisFragment, gdm.getKey(0).getFragmentID())) {
+              if (!manifest.validatesFragment(thisFragment, gdm.getKey(0).getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance))) {
                 warn("Invalid fragment "+gdm.getKey(0)+" returned by primary -- ignored");
                 return;
               }
@@ -2923,7 +2923,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     public void receiveResult(Object o) {
                       Fragment[] frag = (Fragment[]) o;
                   
-                      if (!manifest.validatesFragment(frag[key.getFragmentID()], key.getFragmentID())) {
+                      if (!manifest.validatesFragment(frag[key.getFragmentID()], key.getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance))) {
                         warn("Reconstructed fragment #"+key.getFragmentID()+" does not match manifest ??!?");
                         c.receiveException(new GlacierException("Recovered object, but cannot re-encode it (strange!) -- try again later!"));
                         return;
@@ -3565,7 +3565,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             continue;
           }
           
-          if (!thisManifest.validatesFragment(thisFragment, thisKey.getFragmentID())) {
+          if (!thisManifest.validatesFragment(thisFragment, thisKey.getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance))) {
             warn("Manifest does not validate this fragment");
             continue;
           }
@@ -3625,7 +3625,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     
                     String fault = null;
                     
-                    if (!thisManifest.validatesFragment(fam.fragment, thisKey.getFragmentID()))
+                    if (!thisManifest.validatesFragment(fam.fragment, thisKey.getFragmentID(), environment.getLogManager().getLogger(Manifest.class, instance)))
                       fault = "Update: Manifest does not validate this fragment";
                     if (!policy.checkSignature(thisManifest, thisKey.getVersionKey()))
                       fault = "Update: Manifest is not signed properly";

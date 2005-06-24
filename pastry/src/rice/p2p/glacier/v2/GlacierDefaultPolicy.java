@@ -1,5 +1,8 @@
 package rice.p2p.glacier.v2;
 
+import rice.environment.Environment;
+import rice.environment.logging.*;
+import rice.environment.logging.LogManager;
 import rice.p2p.glacier.*;
 import rice.Continuation;
 import java.io.*;
@@ -9,8 +12,10 @@ import java.security.*;
 public class GlacierDefaultPolicy implements GlacierPolicy {
 
   protected ErasureCodec codec;
+  protected String instance;
+  protected Environment environment;
   
-  public GlacierDefaultPolicy(ErasureCodec codec) {
+  public GlacierDefaultPolicy(ErasureCodec codec, String instance, Environment env) {
     this.codec = codec;
   }
 
@@ -44,7 +49,8 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
-      System.out.println("Cannot serialize object: "+ioe);
+      environment.getLogManager().getLogger(GlacierDefaultPolicy.class, instance).log(Logger.WARNING, 
+          "Cannot serialize object: "+ioe);
       return null;
     }
 
@@ -54,7 +60,8 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      System.out.println("No SHA support!");
+      environment.getLogManager().getLogger(GlacierDefaultPolicy.class, instance).log(Logger.WARNING, 
+          "No SHA support!");
       return null;
     }
 
@@ -84,7 +91,8 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
   }
   
   public Fragment[] encodeObject(Serializable obj, boolean[] generateFragment) {
-    System.out.println("Serialize object: " + obj);
+    environment.getLogManager().getLogger(GlacierDefaultPolicy.class, instance).log(Logger.FINER, 
+        "Serialize object: " + obj);
 
     byte bytes[] = null;
     try {
@@ -96,13 +104,16 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
-      System.out.println("Cannot serialize object: "+ioe);
+      environment.getLogManager().getLogger(GlacierDefaultPolicy.class, instance).log(Logger.WARNING, 
+          "Cannot serialize object: "+ioe);
       return null;
     }
 
-    System.out.println("Create fragments: " + obj);
+    environment.getLogManager().getLogger(GlacierDefaultPolicy.class, instance).log(Logger.FINER, 
+        "Create fragments: " + obj);
     Fragment[] fragments = codec.encode(bytes, generateFragment);
-    System.out.println("Completed: " + obj);
+    environment.getLogManager().getLogger(GlacierDefaultPolicy.class, instance).log(Logger.FINER, 
+        "Completed: " + obj);
     
     return fragments;
   }

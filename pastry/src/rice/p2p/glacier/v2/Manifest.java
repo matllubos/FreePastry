@@ -2,6 +2,8 @@ package rice.p2p.glacier.v2;
 
 import java.security.*;
 import java.io.*;
+
+import rice.environment.logging.Logger;
 import rice.p2p.glacier.Fragment;
 
 public class Manifest implements Serializable {
@@ -46,7 +48,7 @@ public class Manifest implements Serializable {
     signature = newSignature;
   }
   
-  public boolean validatesFragment(Fragment fragment, int fragmentID) {
+  public boolean validatesFragment(Fragment fragment, int fragmentID, Logger logger) {
     if ((fragmentID < 0) || (fragmentID >= fragmentHash.length))
       return false;
       
@@ -54,8 +56,7 @@ public class Manifest implements Serializable {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      System.out.println("*** SHA-1 not supported ***");
-      System.out.println(toStringFull());
+      logger.log(Logger.SEVERE, "*** SHA-1 not supported ***"+toStringFull());
       return false;
     }
 
@@ -65,19 +66,18 @@ public class Manifest implements Serializable {
     byte[] thisHash = md.digest();
     
     if (thisHash.length != fragmentHash[fragmentID].length) {
-      System.out.println("*** LENGTH MISMATCH: "+thisHash.length+" != "+fragmentHash[fragmentID].length+" ***");
-      System.out.println(toStringFull());
+      logger.log(Logger.WARNING, "*** LENGTH MISMATCH: "+thisHash.length+" != "+fragmentHash[fragmentID].length+" ***"+toStringFull());
       return false;
     }
       
     for (int i=0; i<thisHash.length; i++) {
       if (thisHash[i] != fragmentHash[fragmentID][i]) {
-        System.out.println("*** HASH MISMATCH: POS#"+i+", "+thisHash[i]+" != "+fragmentHash[fragmentID][i]+" ***");
-        System.out.print("Hash: ");
+        String s= "*** HASH MISMATCH: POS#"+i+", "+thisHash[i]+" != "+fragmentHash[fragmentID][i]+" ***\n";
+        s+="Hash: ";
         for (int j=0; j<thisHash.length; j++)
-          System.out.print(thisHash[j]);
-        System.out.println();
-        System.out.println(toStringFull());
+          s+=thisHash[j];
+        s+="\n"+toStringFull();
+        logger.log(Logger.WARNING, s);
         return false;
       }
     }

@@ -65,11 +65,11 @@ public class RingCertificate implements Serializable {
             CERTIFICATES.put(cert.getId(), cert);
           } 
         } else {
-          System.out.println("RINGCERT: Could not verify ring certificate " + cert + " ignoring.");
+          System.err.println("RINGCERT: Could not verify ring certificate " + cert + " ignoring.");
         }
       }
     } catch (Exception e) {
-      System.out.println("RINGCERT: ERROR: Found exception " + e + " while reading in ring certificates!");
+      System.err.println("RINGCERT: ERROR: Found exception " + e + " while reading in ring certificates!");
       e.printStackTrace();
     }
   }

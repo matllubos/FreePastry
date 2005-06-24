@@ -3,6 +3,7 @@ package rice.p2p.glacier.v2;
 import java.io.Serializable;
 import java.util.Arrays;
 
+import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 
@@ -74,26 +75,28 @@ public class BloomFilter implements Serializable {
     return hash;
   }
   
-  private void dump() {
+  private void dump(Logger logger) {
+    String s = "";
     for (int i=0; i<bitfield.length*8; i++)
       if ((bitfield[i/8] & (1<<(i&7))) == 0)
-        System.out.print("0");
+        s+="0";
       else
-        System.out.print("1");
-    System.out.println();
+        s+="1";
+    s+="\n";
+    logger.log(Logger.INFO,s);
   }
   
   public void add(byte[] data) {
     int[] hash = getHashes(data);
 
-/*System.out.print("Adding ");
+/*System.outt.print("Adding ");
 for (int i=0; i<data.length; i++)
-  System.out.print(data[i]+" ");
-System.out.println();
-System.out.print("  => ");
+  System.outt.print(data[i]+" ");
+System.outt.println();
+System.outt.print("  => ");
 for (int i=0; i<hash.length; i++)
-  System.out.print(hash[i]+" ");
-System.out.println(); */
+  System.outt.print(hash[i]+" ");
+System.outt.println(); */
   
     for (int i=0; i<hashParams.length; i++)
       bitfield[hash[i]/8] |= (1<<(hash[i]&7));
@@ -102,14 +105,14 @@ System.out.println(); */
   public boolean contains(byte[] data) {
     int[] hash = getHashes(data);
 
-/* System.out.print("Checking ");
+/* System.outt.print("Checking ");
 for (int i=0; i<data.length; i++)
-  System.out.print(data[i]+" ");
-System.out.println();
-System.out.print("  => ");
+  System.outt.print(data[i]+" ");
+System.outt.println();
+System.outt.print("  => ");
 for (int i=0; i<hash.length; i++)
-  System.out.print(hash[i]+" ");
-System.out.println(); */
+  System.outt.print(hash[i]+" ");
+System.outt.println(); */
     
     for (int i=0; i<hashParams.length; i++)
       if ((bitfield[hash[i]/8] & (1<<(hash[i]&7))) == 0)

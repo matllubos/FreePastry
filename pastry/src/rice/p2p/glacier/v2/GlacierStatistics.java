@@ -1,6 +1,7 @@
 package rice.p2p.glacier.v2;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.IdRange;
 
 public class GlacierStatistics {
@@ -39,17 +40,19 @@ public class GlacierStatistics {
     this.bucketConsumed = 0;
   };
   
-  public void dump() {
-    System.out.println("@L.ME free="+Runtime.getRuntime().freeMemory()+" max="+Runtime.getRuntime().maxMemory()+" total="+Runtime.getRuntime().totalMemory());
-    System.out.println("@L.GL interval="+tbegin+"-"+environment.getTimeSource().currentTimeMillis()+" range="+responsibleRange);
-    System.out.println("@L.GL   neighbors="+numNeighbors+" fragments="+numFragments+" trash="+numObjectsInTrash);
-    System.out.println("@L.GL   continuations="+numContinuations+" pending="+pendingRequests);
-    System.out.println("@L.GL   fragSizeBytes="+fragmentStorageSize+" trashSizeBytes="+trashStorageSize);
-    System.out.println("@L.GL   activeFetches="+activeFetches+" bucketMin="+bucketMin+" bucketMax="+bucketMax);
-    System.out.println("@L.GL   bucketConsumed="+bucketConsumed);
-    System.out.print("@L.GL   byTag=");
+  public void dump(Logger logger) {
+    String s = "";
+    s+="@L.ME free="+Runtime.getRuntime().freeMemory()+" max="+Runtime.getRuntime().maxMemory()+" total="+Runtime.getRuntime().totalMemory()+"\n";
+    s+="@L.GL interval="+tbegin+"-"+environment.getTimeSource().currentTimeMillis()+" range="+responsibleRange+"\n";
+    s+="@L.GL   neighbors="+numNeighbors+" fragments="+numFragments+" trash="+numObjectsInTrash+"\n";
+    s+="@L.GL   continuations="+numContinuations+" pending="+pendingRequests+"\n";
+    s+="@L.GL   fragSizeBytes="+fragmentStorageSize+" trashSizeBytes="+trashStorageSize+"\n";
+    s+="@L.GL   activeFetches="+activeFetches+" bucketMin="+bucketMin+" bucketMax="+bucketMax+"\n";
+    s+="@L.GL   bucketConsumed="+bucketConsumed+"\n";
+    s+="@L.GL   byTag=";
     for (int i=0; i<messagesSentByTag.length; i++)
-      System.out.print(messagesSentByTag[i]+" ");
-    System.out.println();
+      s+=messagesSentByTag[i]+" ";
+    s+="\n";
+    logger.log(Logger.INFO, s);
   }
 };
