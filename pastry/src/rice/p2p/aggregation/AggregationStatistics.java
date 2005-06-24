@@ -3,6 +3,7 @@ package rice.p2p.aggregation;
 import java.util.Arrays;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 public class AggregationStatistics {
   public final long granularity;
@@ -17,7 +18,7 @@ public class AggregationStatistics {
   public long totalObjectsSize;
   public long liveObjectsSize;
   public long time;
-  public Environment environment;
+  private Environment environment;
   
   public AggregationStatistics(int histoLength, long granularityArg, Environment env) {
     this.environment = env;
@@ -35,10 +36,11 @@ public class AggregationStatistics {
     time = environment.getTimeSource().currentTimeMillis();
   }
   
-  public void dump() {
-    System.out.println("@L.AG interval="+time+"-"+environment.getTimeSource().currentTimeMillis()+" granularity="+granularity);
-    System.out.println("@L.AG   objsTotal="+numObjectsTotal+" objsAlive="+numObjectsAlive);
-    System.out.println("@L.AG   objBytesTotal="+totalObjectsSize+" objBytesAlive="+liveObjectsSize);
-    System.out.println("@L.AG   aggrTotal="+numAggregatesTotal+" ptrArrays="+numPointerArrays+" critical="+criticalAggregates+" orphaned="+orphanedAggregates);
+  public void dump(Logger logger) {
+    String s = "@L.AG interval="+time+"-"+environment.getTimeSource().currentTimeMillis()+" granularity="+granularity+"\n";
+    s+="@L.AG   objsTotal="+numObjectsTotal+" objsAlive="+numObjectsAlive+"\n";
+    s+="@L.AG   objBytesTotal="+totalObjectsSize+" objBytesAlive="+liveObjectsSize+"\n";
+    s+="@L.AG   aggrTotal="+numAggregatesTotal+" ptrArrays="+numPointerArrays+" critical="+criticalAggregates+" orphaned="+orphanedAggregates;
+    logger.log(Logger.INFO, s);
   }
 }

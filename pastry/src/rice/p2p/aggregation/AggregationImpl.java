@@ -1358,7 +1358,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       case tiStatistics :
       {
         stats = aggregateList.getStatistics(statsGranularity, statsRange, nominalReferenceCount);
-        stats.dump();
+        stats.dump(environment.getLogManager().getLogger(AggregationStatistics.class, instance));
         addTimer(statsInterval, tiStatistics);
         break;
       }
