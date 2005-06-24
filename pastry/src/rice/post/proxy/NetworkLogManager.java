@@ -184,7 +184,8 @@ public class NetworkLogManager extends LogManager {
         in = new FileInputStream(file);
 
         socket.connect(host);      
-        out = new GZIPOutputStream(new EncryptedOutputStream(key, socket.getOutputStream()));
+        out = new GZIPOutputStream(new EncryptedOutputStream(key, socket.getOutputStream(),
+            environment.getParameters().getInt("p2p_util_encryptedOutputStream_buffer")));
         
         byte[] header = getHeader(file);
         

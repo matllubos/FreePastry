@@ -91,6 +91,8 @@ p2p_replication_max_keys_in_message = 1000
 p2p_scribe_maintenance_interval = 180000
 p2p_scribe_message_timeout = 15000
 
+#util
+p2p_util_encryptedOutputStream_buffer = 32678
 
 #aggregation
 p2p_aggregation_logStatistics = true

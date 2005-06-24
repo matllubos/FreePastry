@@ -32,6 +32,7 @@ import rice.environment.random.simple.SimpleRandomSource;
  */
 public class BloomFilter implements Serializable {
   
+  // cant parameterize, because object is serializable
   /**
    * The length of the random byte arrays which are generated
    */

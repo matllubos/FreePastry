@@ -118,7 +118,8 @@ public class VisualizationServer implements Runnable {
         oos = new ObjectOutputStream(socket.getOutputStream());
         ois = new ObjectInputStream(socket.getInputStream());
       } else {
-        oos = new ObjectOutputStream(new EncryptedOutputStream(cert.getKey(), socket.getOutputStream()));
+        oos = new ObjectOutputStream(new EncryptedOutputStream(cert.getKey(), socket.getOutputStream(), 
+            environment.getParameters().getInt("p2p_util_encryptedOutputStream_buffer")));
         oos.writeObject(keypair.getPublic());
         oos.flush();
         ois = new ObjectInputStream(new EncryptedInputStream(keypair.getPrivate(), socket.getInputStream()));

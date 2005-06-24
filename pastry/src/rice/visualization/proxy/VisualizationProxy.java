@@ -21,12 +21,15 @@ public class VisualizationProxy {
   
   protected Visualization visualization;
     
-  public VisualizationProxy(String[] args) {
+  protected Environment environment;
+  
+  public VisualizationProxy(String[] args, Environment env) {
+    this.environment = env;
     parseArgs(args);
   }
   
   public void start() {
-    visualization = new Visualization(handles);
+    visualization = new Visualization(handles, environment);
 
 //    visualization = new Visualization(handle);
   }
@@ -113,7 +116,8 @@ public class VisualizationProxy {
   }
   
   public static void main(String[] args) {
-    VisualizationProxy proxy = new VisualizationProxy(args);
+    Environment env = new Environment();
+    VisualizationProxy proxy = new VisualizationProxy(args, env);
     proxy.start();
   }
   

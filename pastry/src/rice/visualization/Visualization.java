@@ -9,6 +9,7 @@ import java.util.Vector;
 import java.security.*;
 
 
+import rice.environment.Environment;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.UpdateJarResponse;
@@ -47,8 +48,10 @@ public class Visualization implements DataProvider {
   
   protected Data data;
     
+  protected Environment environment;
 
-  public Visualization(Ring[] bootstrapNodes) {
+  public Visualization(Ring[] bootstrapNodes, Environment env) {
+    this.environment = env;
     for (int i = 0; i < bootstrapNodes.length; i++) {
       System.out.println(bootstrapNodes[i]);
     }        
@@ -291,7 +294,7 @@ public class Visualization implements DataProvider {
       
       if (client == null) {
         InetSocketAddress address = new InetSocketAddress(handle.handle.getAddress().getAddress(), handle.handle.getAddress().getPort() + PORT_OFFSET);
-        client = new VisualizationClient(r.getKeyPair().getPrivate(), address);
+        client = new VisualizationClient(r.getKeyPair().getPrivate(), address, environment);
         r.clients.put(handle.handle.getId(), client);
         client.connect();
       }

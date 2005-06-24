@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import rice.environment.Environment;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.*;
@@ -25,7 +26,10 @@ public class LocalVisualization implements DataProvider {
 
   protected boolean die = false;
   
-  public LocalVisualization(DistNodeHandle handle) {
+  protected Environment environment;
+  
+  public LocalVisualization(DistNodeHandle handle, Environment env) {
+    this.environment = env;
     this.handle = handle;
     this.frame = new LocalVisualizationFrame(this);
     
@@ -62,7 +66,7 @@ public class LocalVisualization implements DataProvider {
   protected void updateData() throws IOException {
     if (client == null) {
       InetSocketAddress address = new InetSocketAddress(handle.getAddress().getAddress(), handle.getAddress().getPort() + PORT_OFFSET);
-      client = new VisualizationClient(null, address);
+      client = new VisualizationClient(null, address, environment);
       client.connect();
       frame.nodeSelected(new Node(null, null), client.getData());
     }

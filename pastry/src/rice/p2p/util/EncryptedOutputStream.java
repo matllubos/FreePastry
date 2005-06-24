@@ -26,7 +26,7 @@ import java.util.*;
 public class EncryptedOutputStream extends OutputStream {
   
   // the maximal amount of data to buffer
-  public static final int BUFFER_SIZE = 32678;
+  public final int BUFFER_SIZE;// = 32678;
   
   // the public key
   protected PublicKey publicKey;
@@ -50,7 +50,8 @@ public class EncryptedOutputStream extends OutputStream {
    * @param key The key
    * @param stream The underlying stream
    */
-  public EncryptedOutputStream(PublicKey publicKey, OutputStream stream) throws IOException {
+  public EncryptedOutputStream(PublicKey publicKey, OutputStream stream, int bufferSize) throws IOException {
+    BUFFER_SIZE = bufferSize;
     this.publicKey = publicKey;
     this.stream = new DataOutputStream(stream);
     this.key = SecurityUtils.generateKeySymmetric();

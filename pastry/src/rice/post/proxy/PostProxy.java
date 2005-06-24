@@ -1735,10 +1735,10 @@ public class PostProxy {
         public void actionPerformed(ActionEvent e) {
           try {
             if (natAddress == null) {
-              LocalVisualization vis = new LocalVisualization((DistNodeHandle) pastryNode.getLocalNodeHandle());
+              LocalVisualization vis = new LocalVisualization((DistNodeHandle) pastryNode.getLocalNodeHandle(), environment);
             } else {
               DistNodeHandle handle = (DistNodeHandle) factory.getNodeHandle(new InetSocketAddress(InetAddress.getLocalHost(), 10001));
-              LocalVisualization vis = new LocalVisualization(handle);
+              LocalVisualization vis = new LocalVisualization(handle, environment);
             }
           } catch (Exception f) {
             System.err.println("Got Error launching Vis: " + f);

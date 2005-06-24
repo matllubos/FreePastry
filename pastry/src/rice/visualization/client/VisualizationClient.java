@@ -6,6 +6,7 @@ import java.security.*;
 
 import rice.visualization.*;
 import rice.visualization.data.*;
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.p2p.util.*;
@@ -31,7 +32,10 @@ public class VisualizationClient {
   
   protected ObjectInputStream ois;
   
-  public VisualizationClient(PrivateKey key, InetSocketAddress address) {
+  protected Environment environment;
+  
+  public VisualizationClient(PrivateKey key, InetSocketAddress address, Environment env) {
+    environment = env;
     this.address = address;
     this.state = STATE_ALIVE;
     this.socket = new Socket();
@@ -51,7 +55,8 @@ public class VisualizationClient {
         if (privateKey != null) {        
           ois = new ObjectInputStream(new EncryptedInputStream(privateKey, socket.getInputStream()));
           publicKey = (PublicKey) ois.readObject();        
-          oos = new ObjectOutputStream(new EncryptedOutputStream(publicKey, socket.getOutputStream()));
+          oos = new ObjectOutputStream(new EncryptedOutputStream(publicKey, socket.getOutputStream(),
+              environment.getParameters().getInt("p2p_util_encryptedOutputStream_buffer")));
         } else {
           ois = new ObjectInputStream(socket.getInputStream());
           oos = new ObjectOutputStream(socket.getOutputStream());

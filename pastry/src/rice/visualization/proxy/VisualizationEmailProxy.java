@@ -90,7 +90,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           stepStart("Launching Visualization Client");
           Ring[] r = new Ring[1];
           r[0] = new Ring("global", null, (DistNodeHandle) pastry.getLocalHandle());
-          Visualization visualization = new Visualization(r);
+          Visualization visualization = new Visualization(r, environment);
           stepDone(SUCCESS);
         }
       } catch (Exception e) {

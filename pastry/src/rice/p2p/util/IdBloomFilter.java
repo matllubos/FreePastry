@@ -23,6 +23,7 @@ public class IdBloomFilter implements Serializable {
   // serialver for backwards compatibility
   private static final long serialVersionUID = -9122948172786936161L;
   
+  // note cannot configure these because Serializable
   /**
    * The number of bits per key in bloom filters
    */
