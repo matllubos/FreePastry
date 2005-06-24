@@ -8,6 +8,7 @@ import java.util.logging.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v1.*;
@@ -179,7 +180,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     this.state = null;
     this.numInitialFragments = 2 * numSurvivors;
     this.insertTimeoutActive = false;
-    this.codec = new ErasureCodec(numFragments, numSurvivors);
+    this.codec = new ErasureCodec(numFragments, numSurvivors, env);
     this.factory = factory;
 
     /*
@@ -523,8 +524,8 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       try {
         super.deliver(id, message);
       } catch (Exception e) {
-        System.out.println("PAST reports Exception in deliver(): "+e);
-        e.printStackTrace();
+        unusual("PAST reports Exception in deliver(): "+e);
+        unusualException(e);
       }
       return;
     }
@@ -1302,12 +1303,7 @@ panic("setBit disabled");
    * @param str The entry to be appended
    */
   private void log(String str) {
-    Calendar c = Calendar.getInstance();
-    c.setTime(new Date());
-    int h = c.get(Calendar.HOUR);
-    int m = c.get(Calendar.MINUTE);
-    int s = c.get(Calendar.SECOND);
-    System.out.println(h + ":" + m + ":" + s + " @" + node.getId() + " " + str);
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.INFO, str);
   }
 
   /**
@@ -1316,12 +1312,7 @@ panic("setBit disabled");
    * @param str The warning to be appended
    */
   private void warn(String str) {
-    Calendar c = Calendar.getInstance();
-    c.setTime(new Date());
-    int h = c.get(Calendar.HOUR);
-    int m = c.get(Calendar.MINUTE);
-    int s = c.get(Calendar.SECOND);
-    System.out.println(h + ":" + m + ":" + s + " @" + node.getId() + " *** WARNING *** " + str);
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.WARNING, str);
   }
 
   /**
@@ -1331,12 +1322,11 @@ panic("setBit disabled");
    * @param str The entry to be appended
    */
   private void unusual(String str) {
-    Calendar c = Calendar.getInstance();
-    c.setTime(new Date());
-    int h = c.get(Calendar.HOUR);
-    int m = c.get(Calendar.MINUTE);
-    int s = c.get(Calendar.SECOND);
-    System.out.println(h + ":" + m + ":" + s + " @" + node.getId() + " *** UNUSUAL *** " + str);
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.SEVERE, str);
+  }
+
+  private void unusualException(Exception e) {
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(Logger.SEVERE, e);
   }
 
   /**
@@ -2357,19 +2347,20 @@ panic("setBit disabled");
    * @param ile DESCRIBE THE PARAMETER
    */
   private synchronized boolean insertStep(InsertListEntry ile) {
-    System.out.print(ile.key + " knows ");
+    String s = ile.key + " knows ";
     for (int i = 0; i < numInitialFragments; i++) {
       if (ile.holderKnown[i]) {
-        System.out.print(i);
+        s+=i;
 
         if (ile.receiptReceived[i])
-          System.out.print("R");
+          s+="R";
 
-        System.out.print(" ");
+        s+=" ";
       }
     }
-    System.out.println();
-
+    s+="\n";
+    log(s);
+    
     if (environment.getTimeSource().currentTimeMillis() < ile.timeout) {
       boolean knowsAllHolders = true;
       for (int i = 0; i < numInitialFragments; i++) {

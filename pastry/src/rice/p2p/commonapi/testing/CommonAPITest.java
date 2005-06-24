@@ -102,7 +102,7 @@ public abstract class CommonAPITest {
     try {
       BOOTSTRAP_HOST = InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {
-      System.out.println("Error determining local host: " + e);
+      System.err.println("Error determining local host: " + e);
     }
   }
   
