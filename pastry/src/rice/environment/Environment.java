@@ -65,18 +65,18 @@ public class Environment {
    * @param paramFileName the file where parameters are saved
    * @throws IOException
    */
-  public Environment(String[] orderedDefaultFiles, String paramFileName) throws IOException {
+  public Environment(String[] orderedDefaultFiles, String paramFileName) {
     this(null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName));
   }
   
-  public Environment(String paramFileName) throws IOException {
+  public Environment(String paramFileName) {
     this(defaultParamFileArray,paramFileName);
   }
 
   /**
    * Convienience for defaults.  Has no parameter file to load/store.
    */
-  public Environment() throws IOException {
+  public Environment() {
     this(null);
   }
 
