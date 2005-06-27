@@ -30,7 +30,6 @@ public interface Parameters {
    * String format is dnsname
    * ex: "computer.school.edu"
    * @param paramName
-   * @param defaultVal should look like "computer.school.edu";
    * @return
    * @throws UnknownHostException
    */
@@ -41,7 +40,6 @@ public interface Parameters {
    * String format is name:port
    * ex: "computer.school.edu:1984"
    * @param paramName
-   * @param defaultVal should look like "computer.school.edu:1984";
    * @return
    */
   public InetSocketAddress getInetSocketAddress(String paramName) throws UnknownHostException;
@@ -50,7 +48,6 @@ public interface Parameters {
    * String format is comma seperated.
    * ex: "computer.school.edu:1984,computer2.school.edu:1984,computer.school.edu:1985"
    * @param paramName
-   * @param defaultVal should look like "computer.school.edu:1984";
    * @return
    */
   public InetSocketAddress[] getInetSocketAddressArray(String paramName) throws UnknownHostException;
