@@ -5,6 +5,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import rice.environment.params.ParameterChangeListener;
 import rice.environment.params.Parameters;
 
 /**
@@ -21,7 +22,9 @@ public class SimpleParameters implements Parameters {
   private MyProperties properties;
   
   private MyProperties defaults;
-		
+	
+  private Set changeListeners;
+  
   /**
    * Where items are written out.
    */
@@ -43,6 +46,7 @@ public class SimpleParameters implements Parameters {
     }
     this.properties = new MyProperties();
     this.defaults = new MyProperties();
+    this.changeListeners = new HashSet();
 
     for (int ctr = 0; ctr < orderedDefaults.length; ctr++) {
       try {
@@ -111,17 +115,21 @@ public class SimpleParameters implements Parameters {
    */
   protected void setProperty(String name, String value) {
     if ((defaults.getProperty(name) != null) && (defaults.getProperty(name).equals(value))) {
+      // setting property back to default, remove override property if any
       if (properties.getProperty(name) != null) {
         properties.remove(name);
+        fireChangeEvent(name, value);
       }
     } else {
       if ((properties.getProperty(name) == null) || (! properties.getProperty(name).equals(value))) {
         properties.setProperty(name, value);
+        fireChangeEvent(name, value);
       }
     }
   }
   
   public void remove(String name) {
+    fireChangeEvent(name, null);
     properties.remove(name); 
   }
   
@@ -251,6 +259,22 @@ public class SimpleParameters implements Parameters {
       throw ioe;
     }
 	}
+  
+  public void addChangeListener(ParameterChangeListener p) {
+    changeListeners.add(p);
+  }
+  
+  public void removeChangeListener(ParameterChangeListener p) {
+    changeListeners.remove(p);
+  }
+  
+  private void fireChangeEvent(String name, String val) {
+    Iterator i = changeListeners.iterator();
+    while (i.hasNext()) {
+      ParameterChangeListener p = (ParameterChangeListener)i.next();
+      p.parameterChange(name, val);
+    }
+  }
   
   protected class MyProperties extends Properties {
     public Enumeration keys() {

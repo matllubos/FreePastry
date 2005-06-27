@@ -8,6 +8,7 @@ import java.util.Hashtable;
 
 import rice.environment.logging.*;
 import rice.environment.logging.LogManager;
+import rice.environment.params.ParameterChangeListener;
 import rice.environment.params.Parameters;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
@@ -49,6 +50,18 @@ public class SimpleLogManager implements CloneableLogManager {
     this.loggers = new Hashtable();
     this.prefix = prefix;
     this.defaultLogger = new SimpleLogger("",this,time,parseVal("loglevel"));
+    
+    params.addChangeListener(new ParameterChangeListener() {
+	    public void parameterChange(String paramName, String newVal) {
+	      if (paramName.equals("loglevel")) {
+	        ((SimpleLogger)defaultLogger).minPriority = parseVal(paramName);
+	      } else if (paramName.endsWith("_loglevel")) {
+	        if (loggers.contains(paramName)) {
+	          ((SimpleLogger)loggers.get(paramName)).minPriority = parseVal(paramName);
+	        }
+	      }
+	    }
+    });
   }
   
   public PrintStream getPrintStream() {
