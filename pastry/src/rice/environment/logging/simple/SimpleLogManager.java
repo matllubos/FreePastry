@@ -18,20 +18,8 @@ import rice.environment.time.simple.SimpleTimeSource;
  * 
  * @author Jeff Hoye
  */
-public class SimpleLogManager implements CloneableLogManager {
+public class SimpleLogManager extends AbstractLogManager implements CloneableLogManager {
 
-  /**
-   * Hashtable of loggers stored by full.class.name[instance]
-   */
-  Hashtable loggers;
-  PrintStream ps;
-  TimeSource time;
-  Parameters params;
-
-  Logger defaultLogger;
-  
-  String prefix;
-  
   /**
    * Constructor.
    * 
@@ -44,24 +32,7 @@ public class SimpleLogManager implements CloneableLogManager {
   }
   
   public SimpleLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix) {
-    this.ps = stream;
-    this.time = timeSource;
-    this.params = params;
-    this.loggers = new Hashtable();
-    this.prefix = prefix;
-    this.defaultLogger = new SimpleLogger("",this,time,parseVal("loglevel"));
-    
-    params.addChangeListener(new ParameterChangeListener() {
-	    public void parameterChange(String paramName, String newVal) {
-	      if (paramName.equals("loglevel")) {
-	        ((SimpleLogger)defaultLogger).minPriority = parseVal(paramName);
-	      } else if (paramName.endsWith("_loglevel")) {
-	        if (loggers.contains(paramName)) {
-	          ((SimpleLogger)loggers.get(paramName)).minPriority = parseVal(paramName);
-	        }
-	      }
-	    }
-    });
+    super(stream, timeSource, params, prefix);
   }
   
   public PrintStream getPrintStream() {
@@ -74,29 +45,6 @@ public class SimpleLogManager implements CloneableLogManager {
   
   public TimeSource getTimeSource() {
     return time;
-  }
-  
-  public void setPrintStream(PrintStream stream) {
-    this.ps = stream; 
-  }
-  
-  private int parseVal(String key) {
-    try {
-      return params.getInt(key);
-    } catch (NumberFormatException nfe) {
-      String val = params.getString(key);
-
-      if (val.equalsIgnoreCase("ALL")) return Logger.ALL;
-      if (val.equalsIgnoreCase("OFF")) return Logger.OFF;
-      if (val.equalsIgnoreCase("SEVERE")) return Logger.SEVERE; 
-      if (val.equalsIgnoreCase("WARNING")) return Logger.WARNING; 
-      if (val.equalsIgnoreCase("INFO")) return Logger.INFO; 
-      if (val.equalsIgnoreCase("CONFIG")) return Logger.CONFIG; 
-      if (val.equalsIgnoreCase("FINE")) return Logger.FINE; 
-      if (val.equalsIgnoreCase("FINER")) return Logger.FINER; 
-      if (val.equalsIgnoreCase("FINEST")) return Logger.FINEST; 
-      throw new InvalidLogLevelException(key,val);
-    }
   }
   
   
@@ -135,65 +83,8 @@ public class SimpleLogManager implements CloneableLogManager {
     this(System.out, timeSource, params);
   }
   
-  /**
-   * 
-   */
-  public Logger getLogger(Class clazz, String instance) {
-    Logger temp; 
-    String baseStr;
-    String className = clazz.getName();
-    String[] parts = className.split("\\.");
-    
-    // Ex: if clazz.getName() == rice.pastry.socket.PingManager, try:
-    // 1) rice.pastry.socket.PingManager
-    // 2) rice.pastry.socket
-    // 3) rice.pastry
-    // 4) rice
-    
-    // numParts is how much of the prefix we want to use, start with the full name    
-    for (int numParts = parts.length; numParts >= 0; numParts--) {     
-      // build baseStr which is the prefix of the clazz up to numParts
-      baseStr = parts[0];
-      for (int curPart = 1; curPart < numParts; curPart++) {
-        baseStr+="."+parts[curPart];   
-      }
-      
-      // try to find one matching a specific instance
-      if (instance != null) {            
-        temp = getLoggerHelper(baseStr+":"+instance);
-        if (temp != null) return temp;
-      }
-      
-      // try to find one without the instance
-      temp = getLoggerHelper(baseStr);
-      if (temp != null) return temp;
-    }
-    return defaultLogger;
-  }
-
-  /**
-   * Searches the loggers HT for the searchString, then searches
-   * the params for the search string.
-   * 
-   * @param clazz
-   * @param instance
-   * @return
-   */
-  private Logger getLoggerHelper(String clazz) {
-    String searchString = clazz+"_loglevel";
-    
-    // see if this logger exists
-    if (loggers.contains(searchString)) {
-      return (Logger)loggers.get(searchString);
-    }
-    
-    // see if this logger should exist
-    if (params.contains(searchString)) {
-      Logger logger = new SimpleLogger(clazz,this,time,parseVal(searchString));      
-      loggers.put(clazz, logger);
-      return logger;
-    }
-    return null;
+  protected Logger constructLogger(String clazz, int level) {
+    return new SimpleLogger(clazz,this,level);
   }
 
   /* (non-Javadoc)

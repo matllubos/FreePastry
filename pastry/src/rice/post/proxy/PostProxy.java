@@ -37,9 +37,14 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 import rice.environment.Environment;
+import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
+import rice.environment.logging.file.RotatingLogManager;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
+import rice.environment.random.RandomSource;
+import rice.environment.time.TimeSource;
 
 import java.util.*;
 import java.util.zip.*;
@@ -311,27 +316,6 @@ public class PostProxy {
   protected String smtpServer;
   
   protected Environment environment;
-  
-  /**
-   * Method which redirects standard output and error, if desired.
-   *
-   * @param parameters The parameters to use
-   */  
-  protected void startRedirection(Environment env) throws Exception {
-    environment = env;
-    Parameters parameters = env.getParameters();
-    if (parameters.getBoolean("standard_output_network_enable")) {
-      logManager = new NetworkLogManager(env);
-    } else if (parameters.getBoolean("standard_output_redirect_enable")) {
-      logManager = new StandardLogManager(parameters);
-    } else {
-      logManager = new ConsoleLogManager(parameters);
-    }
-    
-    System.setOut(new PrintStream(logManager));
-    System.setErr(new PrintStream(logManager));
-    ((SimpleLogManager)env.getLogManager()).setPrintStream(System.out);
-  }
   
   /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
@@ -942,9 +926,13 @@ public class PostProxy {
   protected void startPastryNode(Parameters parameters) throws Exception {    
     stepStart("Creating Pastry node");
     String prefix = ((RingId) address.getAddress()).getRingId().toStringFull();
-    
-    if (logManager instanceof NetworkLogManager)
-      ((NetworkLogManager) logManager).setInfo(port, cert.getKey(), cert.getLogServer());
+
+    if (parameters.getBoolean("log_network_upload_enable")) {
+      environment.getSelectorManager().getTimer().schedule(
+          new NetworkLogUploadTask(environment, port, cert.getKey(), cert.getLogServer()), 
+          parameters.getInt("log_network_upload_interval"),
+          parameters.getInt("log_network_upload_interval"));
+    }
     
     factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port, environment), cert.getProtocol(), port, environment);
     InetSocketAddress proxyAddress = null;
@@ -1414,7 +1402,6 @@ public class PostProxy {
   protected Environment start(Environment env) throws Exception {
 //    parameters = env.getParameters();  // done in start(void)
     startLivenessMonitor(env);
-    startRedirection(env);
     startCheckBoot(env);    
     startDialog(parameters);
         
@@ -1469,8 +1456,13 @@ public class PostProxy {
   
   protected void start() {
     try {
-      Environment env = new Environment(DEFAULT_PARAMS_FILES, PROXY_PARAMETERS_NAME);
-      parameters = env.getParameters();
+      parameters = new SimpleParameters(DEFAULT_PARAMS_FILES, PROXY_PARAMETERS_NAME);
+      TimeSource timeSource = Environment.generateDefaultTimeSource();
+      RandomSource randomSource = Environment.generateDefaultRandomSource(parameters);
+      RotatingLogManager logManager = new RotatingLogManager(timeSource, parameters);
+      SelectorManager selectorManager = Environment.generateDefaultSelectorManager(timeSource, logManager);
+      logManager.startRotateTask(selectorManager);
+      Environment env = new Environment(selectorManager, randomSource, timeSource, logManager, parameters);
       start(env);
       updateParameters(parameters);
       

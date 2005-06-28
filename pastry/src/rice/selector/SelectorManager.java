@@ -424,7 +424,7 @@ public class SelectorManager extends Thread implements Timer {
    * Method which schedules a task to run after a specified number of millis
    * 
    * @param task The task to run
-   * @param delay The delay
+   * @param delay The delay before running, in milliseconds
    */
   public void schedule(TimerTask task, long delay) {
     task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
@@ -447,8 +447,8 @@ public class SelectorManager extends Thread implements Timer {
    * period
    * 
    * @param task The task to run
-   * @param delay The delay
-   * @param period The period with which to run
+   * @param delay The delay before first running, in milliseconds
+   * @param period The period with which to run in milliseconds
    */
   public void schedule(TimerTask task, long delay, long period) {
     task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
@@ -462,7 +462,7 @@ public class SelectorManager extends Thread implements Timer {
    * 
    * @param task The task to run
    * @param firstTime The first time
-   * @param period The period with which to run
+   * @param period The period with which to run in milliseconds
    */
   public void schedule(TimerTask task, Date firstTime, long period) {
     task.nextExecutionTime = firstTime.getTime();
@@ -475,8 +475,8 @@ public class SelectorManager extends Thread implements Timer {
    * specified delay and period
    * 
    * @param task The task to run
-   * @param delay The delay
-   * @param period The period with which to run
+   * @param delay The delay before first running in milliseconds
+   * @param period The period with which to run in milliseconds
    */
   public void scheduleAtFixedRate(TimerTask task, long delay, long period) {
     task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
@@ -489,8 +489,8 @@ public class SelectorManager extends Thread implements Timer {
    * specified delay and period
    * 
    * @param task The task to run
-   * @param delay The delay
-   * @param period The period with which to run
+   * @param firstTime The first time
+   * @param period The period with which to run in milliseconds
    */
   public void scheduleAtFixedRate(TimerTask task, Date firstTime, long period) {
     task.nextExecutionTime = firstTime.getTime();

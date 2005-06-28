@@ -207,6 +207,9 @@ p2p_glacier_maxActiveRestores = 3
 # logging
 #default log level
 loglevel = WARNING
+log_rotate_interval = 86400000
+# 24 hours
+
 
 # tells the factory you intend to use multiple nodes
 # this causes the logger to prepend all entries with the nodeid

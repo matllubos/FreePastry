@@ -27,11 +27,11 @@ import rice.selector.SelectorManager;
 public class Environment {
   public static final String[] defaultParamFileArray = {"freepastry"};
    
-  public SelectorManager selectorManager;
-  public RandomSource randomSource;
-  public TimeSource time;
-  public LogManager logging;
-  public Parameters params;
+  private SelectorManager selectorManager;
+  private RandomSource randomSource;
+  private TimeSource time;
+  private LogManager logging;
+  private Parameters params;
   
   /**
    * Constructor.  You can provide null values for all/any paramenters, which will result
@@ -89,17 +89,33 @@ public class Environment {
 //      params = new SimpleParameters("temp"); 
 //    }    
     if (randomSource == null) {
-      randomSource = new SimpleRandomSource(params.getInt("random_seed")); 
+      randomSource = generateDefaultRandomSource(params);
     }    
     if (time == null) {
-      time = new SimpleTimeSource(); 
+      time = generateDefaultTimeSource(); 
     }
     if (logging == null) {
-      logging = new SimpleLogManager(time, params); 
+      logging = generateDefaultLogManager(time, params);
     }
     if (selectorManager == null) {      
-      selectorManager = new SelectorManager(false, "Default", time, logging); 
+      selectorManager = generateDefaultSelectorManager(time, logging); 
     }
+  }
+  
+  public static RandomSource generateDefaultRandomSource(Parameters params) {
+    return new SimpleRandomSource(params.getInt("random_seed"));
+  }
+  
+  public static TimeSource generateDefaultTimeSource() {
+    return new SimpleTimeSource();
+  }
+  
+  public static LogManager generateDefaultLogManager(TimeSource time, Parameters params) {
+    return new SimpleLogManager(time, params); 
+  }
+  
+  public static SelectorManager generateDefaultSelectorManager(TimeSource time, LogManager logging) {
+    return new SelectorManager(false, "Default", time, logging);
   }
   
   // Accessors
