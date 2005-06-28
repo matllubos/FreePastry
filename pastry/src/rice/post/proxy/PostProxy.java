@@ -1469,10 +1469,9 @@ public class PostProxy {
       if (dialog != null) 
         dialog.append("\n-- Your node is now up and running --\n");
     } catch (Exception e) {
-      System.err.println("ERROR: Found Exception while start proxy - exiting - " + e);
+      logException(Logger.SEVERE, "ERROR: Found Exception while start proxy - exiting - " , e);
       if (dialog != null)
         dialog.append("\n-- ERROR: Found Exception while start proxy - exiting - " + e + " --\n");
-      e.printStackTrace();
       
       panic("An error occurred while starting the proxy - the proxy is now exiting.\n" + e.toString());
       
@@ -1587,8 +1586,6 @@ public class PostProxy {
     log(Logger.INFO,"");
 
     logException(Logger.WARNING,"Exception " + e + " occurred during testing.",e);
-
-    e.printStackTrace();
     System.exit(0);
   }
   
@@ -1838,7 +1835,6 @@ public class PostProxy {
         }
       } catch (IOException e) {
         logException(Logger.SEVERE,"Got IOException " + e + " while monitoring liveness - exiting!",e);
-        e.printStackTrace();
       }
     }
   }
