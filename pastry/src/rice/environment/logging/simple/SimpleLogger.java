@@ -5,6 +5,8 @@ package rice.environment.logging.simple;
 
 import java.io.PrintStream;
 
+import rice.environment.logging.AbstractLogManager;
+import rice.environment.logging.LogLevelSetter;
 import rice.environment.logging.Logger;
 import rice.environment.time.TimeSource;
 
@@ -14,7 +16,7 @@ import rice.environment.time.TimeSource;
  * 
  * @author Jeff Hoye
  */
-public class SimpleLogger implements Logger {
+public class SimpleLogger implements Logger, LogLevelSetter {
 
   /**
    * The name of this logger.
@@ -24,12 +26,7 @@ public class SimpleLogger implements Logger {
   /**
    * The stream to print to.
    */
-  SimpleLogManager slm;
-  
-  /**
-   * The timesource.
-   */
-  TimeSource time;
+  AbstractLogManager alm;
   
   /**
    * The minimum priority to display.
@@ -44,10 +41,9 @@ public class SimpleLogger implements Logger {
    * @param time the timesource.
    * @param minPriority the minimum priority to display.
    */
-  public SimpleLogger(String loggerName, SimpleLogManager slm, TimeSource time, int minPriority) {
+  public SimpleLogger(String loggerName, AbstractLogManager alm, int minPriority) {
     this.loggerName = loggerName;
-    this.slm = slm;
-    this.time = time;
+    this.alm = alm;
     this.minPriority = minPriority;
   }
 
@@ -56,7 +52,9 @@ public class SimpleLogger implements Logger {
    */
   public void log(int priority, String message) {
     if (priority >= minPriority) {
-      slm.ps.println(slm.prefix+loggerName+":"+time.currentTimeMillis()+":"+message); 
+      synchronized(alm) {
+        alm.getPrintStream().println(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
+      }
     }
   }
   
@@ -65,11 +63,18 @@ public class SimpleLogger implements Logger {
    */
   public void logException(int priority, String message, Throwable exception) {
     if (priority >= minPriority) {
-      synchronized(slm.ps) {
-        slm.ps.println(slm.prefix+loggerName+":"+time.currentTimeMillis()+":"+message); 
-        slm.ps.print(slm.prefix+loggerName+":"+time.currentTimeMillis()+":");
-        exception.printStackTrace(slm.ps);
+      synchronized(alm) {
+        alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
+        exception.printStackTrace(alm.getPrintStream());
       }
     }
+  }
+
+  public void setMinLogLevel(int logLevel) {
+    minPriority = logLevel;
+  }
+
+  public int getMinLogLevel() {
+    return minPriority;
   }
 }
