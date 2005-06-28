@@ -2,6 +2,7 @@ package rice.visualization.server;
 
 import rice.visualization.data.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.selector.*;
@@ -151,7 +152,8 @@ public class OverviewPanelCreator implements PanelCreator {
         times.removeElementAt(0); 
       }
     } catch (Exception e) {
-      System.out.println("Ecception " + e + " thrown.");
+      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Ecception " + e + " thrown.",e);
     }
   }
   

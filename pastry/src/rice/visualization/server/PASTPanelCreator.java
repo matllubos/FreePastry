@@ -2,6 +2,7 @@ package rice.visualization.server;
 
 import rice.*;
 import rice.visualization.data.*;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
@@ -70,8 +71,8 @@ public class PASTPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      System.out.println("Exceptoin " + e + " thrown.");
-      e.printStackTrace();
+      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Exceptoin " + e + " thrown.",e);
     }
     
     try {      
@@ -88,8 +89,8 @@ public class PASTPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      System.out.println("Exceptoin " + e + " thrown.");
-      e.printStackTrace();
+      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Exceptoin " + e + " thrown.",e);
     }
         
     return pastPanel;
@@ -170,8 +171,8 @@ public class PASTPanelCreator implements PanelCreator {
         others.removeElementAt(0);
       }
     } catch (Exception e) {
-      System.out.println("Ecception " + e + " thrown.");
-      e.printStackTrace();
+      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Ecception " + e + " thrown.",e);
     }
   }
 }

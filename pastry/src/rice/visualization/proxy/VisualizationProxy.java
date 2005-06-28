@@ -93,7 +93,7 @@ public class VisualizationProxy {
         }
         handles = (Ring[]) rings.toArray(new Ring[0]);
 //        for (int i = 0; i < handles.length; i++) {
-//          System.out.println(handles[i]);
+//          System.outt.println(handles[i]);
 //        }        
       } catch (Exception e) {
         e.printStackTrace();

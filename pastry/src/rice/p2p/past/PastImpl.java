@@ -910,4 +910,10 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public interface MessageBuilder {
     public PastMessage buildMessage();
   }
+  
+  public String getInstance() {
+    return instance;
+  }
+  
+
 }

@@ -5,6 +5,7 @@ import java.security.*;
 import java.util.Arrays;
 
 import rice.*;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.storage.*;
@@ -35,7 +36,7 @@ public abstract class LogEntry implements PostData {
   private transient SoftReference previousEntry;
 
   // the local Post service
-  private transient Post post;
+  protected transient Post post;
 
   // this logentry's "parent" logentry (if it is, say, wrapped in an encLogEntry)
   private transient LogEntry parent;
@@ -69,8 +70,7 @@ public abstract class LogEntry implements PostData {
     if (this.user == null) {
       this.user = user;
     } else {
-      System.out.println("ERROR - Trying to set user on already-set log.");
-      (new Exception()).printStackTrace();
+      logException(Logger.SEVERE, "ERROR - Trying to set user on already-set log.",new Exception("Stack Trace"));
     }
   }
   
@@ -85,8 +85,7 @@ public abstract class LogEntry implements PostData {
         Arrays.equals(ref,previousEntryReferences)) {
       previousEntryReferences = ref;
     } else {
-      System.out.println("ERROR - Trying to set previous ref on already-set log.");
-      (new Exception()).printStackTrace();
+      logException(Logger.SEVERE, "ERROR - Trying to set previous ref on already-set log.",new Exception("Stack Trace"));
     }
   }
   
@@ -204,7 +203,7 @@ public abstract class LogEntry implements PostData {
     if (previousEntry == null) {
       previousEntry = new SoftReference(entry);
     } else {
-      System.out.println("ERROR - Attempting to set a previous entry with an existing one in LogEntry!");
+      log(Logger.SEVERE,"ERROR - Attempting to set a previous entry with an existing one in LogEntry!");
     }
   }
 
@@ -241,6 +240,16 @@ public abstract class LogEntry implements PostData {
    */
   public SecureReference buildSecureReference(Id location, byte[] key) {
     throw new IllegalArgumentException("Log entries are only stored as content-hash blocks.");
-  }  
+  }
+  
+  private void log(int level, String m) {
+    post.getEnvironment().getLogManager().getLogger(LogEntry.class, null).log(level,m);
+  }
+  
+  private void logException(int level, String m, Throwable t) {
+    post.getEnvironment().getLogManager().getLogger(LogEntry.class, null).logException(level,m,t);
+  }
+  
+  
 }
 

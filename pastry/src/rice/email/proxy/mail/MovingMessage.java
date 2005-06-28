@@ -5,6 +5,8 @@ import rice.email.proxy.util.Resource;
 import rice.email.proxy.util.StreamUtils;
 import rice.email.proxy.util.Workspace;
 import rice.email.proxy.smtp.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import rice.post.*;
 
@@ -128,7 +130,7 @@ public class MovingMessage
      * it hardly seems worth 30 seconds of effort.
      * </p>
      */
-    public void readDotTerminatedContent(SmtpConnection conn) throws IOException {
+    public void readDotTerminatedContent(SmtpConnection conn, Environment env) throws IOException {
       _content = _workspace.getTmpFile();
       Writer data = _content.getWriter();
       dataWriter = new PrintWriter(data);
@@ -136,7 +138,8 @@ public class MovingMessage
       while (true) {
         String line = conn.readLine();
         if (line == null) {
-          System.out.println("Did not receive <CRLF>.<CRLF> - Accepting anyway...");
+          env.getLogManager().getLogger(MovingMessage.class, null).log(Logger.WARNING, 
+              "Did not receive <CRLF>.<CRLF> - Accepting anyway...");
           dataWriter.close();
           break;
         }
@@ -150,14 +153,15 @@ public class MovingMessage
       }
     }
     
-    public boolean readDotTerminatedContent(String line) throws IOException {
+    public boolean readDotTerminatedContent(String line, Environment env) throws IOException {
       if (_content == null) {
         _content = _workspace.getTmpFile();
         dataWriter = new PrintWriter(_content.getWriter());
       }
       
       if (line == null) {
-        System.out.println("Did not receive <CRLF>.<CRLF> - Accepting anyway...");
+        env.getLogManager().getLogger(MovingMessage.class, null).log(Logger.WARNING, 
+            "Did not receive <CRLF>.<CRLF> - Accepting anyway...");
         dataWriter.close();
         return true;
       }

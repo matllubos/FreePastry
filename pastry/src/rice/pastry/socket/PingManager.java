@@ -268,8 +268,8 @@ public class PingManager extends SelectionKeyHandler {
     spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).log(level,s);
   }
   
-  private void logException(int level, Exception e) {
-    spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).logException(level,e);
+  private void logException(int level, String s, Exception e) {
+    spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).logException(level,s, e);
   }
   
   /**
@@ -349,9 +349,7 @@ public class PingManager extends SelectionKeyHandler {
         }
       }
     } catch (IOException e) {
-      log(Logger.WARNING,
-          "ERROR (datagrammanager:read): " + e);
-      logException(Logger.WARNING,e);
+      logException(Logger.WARNING, "ERROR (datagrammanager:read): ", e);
     } finally {
       buffer.clear();
     }

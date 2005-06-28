@@ -244,7 +244,7 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
     
     BigDecimal divBig = idBig.divide(maxBig, 10, BigDecimal.ROUND_HALF_UP);
     
-    //System.out.println("CONVERTING " + id + " TO " + idBig + " AND COMPARING TO " + maxBig + " GIVES " + divBig);
+    //System.outt.println("CONVERTING " + id + " TO " + idBig + " AND COMPARING TO " + maxBig + " GIVES " + divBig);
     
     double frac = divBig.doubleValue() * 2 * Math.PI;
     
@@ -327,7 +327,6 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
       ringIndex = 0;
     Ring r = visualization.getRingByIndex(ringIndex);
     visualization.selectRing(r);
-    System.out.println("Selected ring "+r);
   }
   
   public void mouseMoved(MouseEvent e) {

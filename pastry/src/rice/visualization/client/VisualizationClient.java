@@ -7,6 +7,7 @@ import java.security.*;
 import rice.visualization.*;
 import rice.visualization.data.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.p2p.util.*;
@@ -47,7 +48,7 @@ public class VisualizationClient {
   }
 
   public void connect() {
-    //System.out.println(this+".connect()");
+    //System.outt.println(this+".connect()");
     if (! socket.isConnected()) {
       try {
         socket.connect(address);
@@ -89,18 +90,18 @@ public class VisualizationClient {
       return result;
     } catch (IOException e) {
       this.state = STATE_DEAD;
-      System.out.println("Client ("+address+"): Exception " + e + " thrown.");
+      logException("Client ("+address+"): Exception " + e + " thrown.",e);
       //e.printStackTrace();
       try {
         socket.close();
       } catch (IOException f) {
-        System.out.println("Client: Exception " + f + " thrown closing.");
+        logException("Client: Exception " + f + " thrown closing.",f);
       }
       
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
-      System.out.println("Client: Exception " + e + " thrown.");
+      logException("Client: Exception " + e + " thrown.",e);
       
       return null;
     }
@@ -116,18 +117,18 @@ public class VisualizationClient {
       return result;
     } catch (IOException e) {
       this.state = STATE_DEAD;
-      System.out.println("Client: Exception " + e + " thrown.");
+      logException("Client: Exception " + e + " thrown.",e);
 
       try {
         socket.close();
       } catch (IOException f) {
-        System.out.println("Client: Exception " + f + " thrown closing.");
+        logException("Client: Exception " + f + " thrown closing.",f);
       }
       
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
-      System.out.println("Client: Exception " + e + " thrown.");
+      logException("Client: Exception " + e + " thrown.",e);
 
       return null;
     }
@@ -145,7 +146,7 @@ public class VisualizationClient {
   
   public synchronized UpdateJarResponse updateJar(File[] files, String executionString) {
     try {
-      UpdateJarRequest ujr = new UpdateJarRequest(files);
+      UpdateJarRequest ujr = new UpdateJarRequest(files, environment);
       if (executionString != null) {
         ujr.executeCommand = executionString;
       }
@@ -157,15 +158,18 @@ public class VisualizationClient {
       return result;
     } catch (IOException e) {
       this.state = STATE_DEAD;
-      System.out.println("Client: Exception " + e + " thrown.");
+      logException("Client: Exception " + e + " thrown.",e);
 
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
-      System.out.println("Client: Exception " + e + " thrown.");
+      logException("Client: Exception " + e + " thrown.",e);
 
       return null;
     }    
   }
-  
+
+  private void logException(String s, Throwable t) {
+    environment.getLogManager().getLogger(VisualizationClient.class, null).logException(Logger.SEVERE,s,t);
+  }  
 }

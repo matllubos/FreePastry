@@ -12,6 +12,7 @@ import javax.crypto.spec.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.aggregation.*;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
@@ -184,7 +185,7 @@ public class StorageService {
    * @param array the array
    * @return Splitted shaat
    */
-  public static byte[][] partition(byte[] array) {
+  public byte[][] partition(byte[] array) {
     Vector result = new Vector();
     int offset = 0;
     
@@ -195,7 +196,7 @@ public class StorageService {
       offset += next.length;
     }
     
-    System.out.println("PARTITION: Split " + array.length + " bytes into " + result.size() + " groups...");
+    log(Logger.FINE,"PARTITION: Split " + array.length + " bytes into " + result.size() + " groups...");
     
     return (byte[][]) result.toArray(new byte[0][]);
   }
@@ -258,12 +259,12 @@ public class StorageService {
                   }
                   
                   public void receiveException(Exception e) {
-                    System.out.println("******* CRYPTO ERROR (storeContentHashEntry) *******");
-                    System.out.println("Received exception " + e + " while verifying inserted data!");
-                    System.out.println("plaintext: " + MathUtils.toHex(plainText));
-                    System.out.println("location: " + location);
-                    System.out.println("key: "  +MathUtils.toHex(key));
-                    System.out.println("ciphertext: " + MathUtils.toHex(cipherText));
+                    log(Logger.WARNING,"******* CRYPTO ERROR (storeContentHashEntry) *******");
+                    log(Logger.WARNING,"Received exception " + e + " while verifying inserted data!");
+                    log(Logger.WARNING,"plaintext: " + MathUtils.toHex(plainText));
+                    log(Logger.WARNING,"location: " + location);
+                    log(Logger.WARNING,"key: "  +MathUtils.toHex(key));
+                    logException(Logger.WARNING,"ciphertext: " + MathUtils.toHex(cipherText),e);
                     
                     parent.receiveException(new IOException("Storage of content hash data into PAST failed - could not decrypt after encryption"));                    
                   }
@@ -409,7 +410,7 @@ public class StorageService {
       
       Id[] ids = (Id[]) idset.toArray(new Id[0]);
       
-      System.out.println("CALLING REFRESH WITH " + ids.length + " OBJECTS!");
+      log(Logger.FINE,"CALLING REFRESH WITH " + ids.length + " OBJECTS!");
       ((GCPast) immutablePast).refresh(ids, getTimeout(), new StandardContinuation(command) {
         public void receiveResult(Object o) {
           parent.receiveResult(Boolean.TRUE);
@@ -439,7 +440,8 @@ public class StorageService {
    */
   public static void recoverLogs(final Id location, final long timestamp, final KeyPair keyPair, final Past immutablePast, final Past mutablePast, Continuation command, final Environment env) {
     final long version = (timestamp / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    System.out.println("COUNT: "+env.getTimeSource().currentTimeMillis()+" Timestamp is "+timestamp+", using version "+version);
+    env.getLogManager().getLogger(StorageService.class, null).log(Logger.FINE,
+        "COUNT: Timestamp is "+timestamp+", using version "+version);
     ((VersioningPast)immutablePast).lookupHandles(location, version, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PastContentHandle[] handles = (PastContentHandle[]) o;
@@ -465,7 +467,8 @@ public class StorageService {
               if (data == null) 
                 throw new StorageException("Log backup not found!");
 
-              System.out.println("COUNT: "+env.getTimeSource().currentTimeMillis()+" Log backup found!");
+              env.getLogManager().getLogger(StorageService.class, null).log(Logger.FINE,
+                  "COUNT: Log backup found!");
 
               GroupData group = (GroupData) SecurityUtils.deserialize(data.getData());
               final Log[] logs = (Log[]) group.getData();
@@ -553,14 +556,13 @@ public class StorageService {
                 // do nothing
               }
               
-              System.out.println("******* CRYPTO ERROR (storeSigned) *******");
-              System.out.println("data: "+MathUtils.toHex(xxx.toByteArray()));
-              System.out.println("location: "+location);
-              System.out.println("public key: "+keyPair.getPublic());
-              System.out.println("private key: "+keyPair.getPrivate());
-              System.out.println("signed referece: "+sr);
-              System.out.print("stack trace:");
-              e.printStackTrace();
+              log(Logger.WARNING,"******* CRYPTO ERROR (storeSigned) *******");
+              log(Logger.WARNING,"data: "+MathUtils.toHex(xxx.toByteArray()));
+              log(Logger.WARNING,"location: "+location);
+              log(Logger.WARNING,"public key: "+keyPair.getPublic());
+              log(Logger.WARNING,"private key: "+keyPair.getPrivate());
+              log(Logger.WARNING,"signed referece: "+sr);
+              logException(Logger.WARNING,"stack trace:",e);
               parent.receiveException(new IOException("Storage of singed data into PAST failed - could not verify"));
             } else {
               parent.receiveException(e);
@@ -782,12 +784,12 @@ public class StorageService {
             public void receiveException(Exception e) {
               // XXX this is kind of stupid; retrieveSecure just deserialized it
               // and we reserialze just to compare
-              System.out.println("******* CRYPTO ERROR (storeSecure) *******");
-              System.out.println("Received exception " + e + " verifying inserted data.");
-              System.out.println("plaintext: " + MathUtils.toHex(plainText));
-              System.out.println("location: " + location);
-              System.out.println("key: "+ MathUtils.toHex(key));
-              System.out.println("ciphertext: " + MathUtils.toHex(cipherText));
+              log(Logger.WARNING,"******* CRYPTO ERROR (storeSecure) *******");
+              log(Logger.WARNING,"Received exception " + e + " verifying inserted data.");
+              log(Logger.WARNING,"plaintext: " + MathUtils.toHex(plainText));
+              log(Logger.WARNING,"location: " + location);
+              log(Logger.WARNING,"key: "+ MathUtils.toHex(key));
+              logException(Logger.WARNING,"ciphertext: " + MathUtils.toHex(cipherText),e);
               
               parent.receiveException(new IOException("Storage of secure data into PAST failed - could not recover data"));
             }
@@ -868,5 +870,13 @@ public class StorageService {
     } else {
       command.receiveResult(Boolean.TRUE);
     }
+  }
+  
+  private void log(int level, String msg) {
+    environment.getLogManager().getLogger(StorageService.class, null).log(level,msg);
+  }
+  
+  private void logException(int level, String msg, Throwable t) {
+    environment.getLogManager().getLogger(StorageService.class, null).logException(level, msg, t);
   }
 }

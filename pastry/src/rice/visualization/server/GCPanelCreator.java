@@ -1,6 +1,7 @@
 package rice.visualization.server;
 
 import rice.visualization.data.*;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
@@ -66,8 +67,8 @@ public class GCPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      System.out.println("Exceptoin " + e + " thrown.");
-      e.printStackTrace();
+      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Exceptoin " + e + " thrown.", e);
     }
     
     try {      
@@ -81,8 +82,8 @@ public class GCPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      System.out.println("Exceptoin " + e + " thrown.");
-      e.printStackTrace();
+      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Exceptoin " + e + " thrown.",e);
     }
     
     try {      
@@ -96,8 +97,8 @@ public class GCPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(cacheView);
     } catch (Exception e) {
-      System.out.println("Exceptoin " + e + " thrown.");
-      e.printStackTrace();
+      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Exceptoin " + e + " thrown.",e);
     } 
     
     return pastPanel;
@@ -189,7 +190,8 @@ public class GCPanelCreator implements PanelCreator {
           times.removeElementAt(0);
         }
       } catch (Exception e) {
-        System.out.println("Ecception " + e + " thrown.");
+        past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+            "Ecception " + e + " thrown.",e);
       }
     }
   }

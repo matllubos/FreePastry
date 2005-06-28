@@ -25,6 +25,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.filechooser.FileFilter;
 
+import rice.environment.logging.Logger;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.UpdateJarResponse;
 import rice.visualization.data.*;
@@ -170,7 +171,7 @@ public class ControlPanel extends JPanel implements ActionListener {
   }
 
   public void actionPerformed(ActionEvent arg0) {
-//    System.out.println(arg0.getSource());
+//    System.outt.println(arg0.getSource());
     if (arg0.getSource() == selectJarsButton) {
       int returnVal = chooser.showOpenDialog(this);
       if(returnVal == JFileChooser.APPROVE_OPTION) {
@@ -180,7 +181,8 @@ public class ControlPanel extends JPanel implements ActionListener {
 
     if (arg0.getSource() == removeJarsButton) {
       Object[] o = fileList.getSelectedValues();
-      System.out.println("o.length"+o.length);
+      visualization.getEnvironment().getLogManager().getLogger(ControlPanel.class, null).log(Logger.INFO,
+          "o.length"+o.length);
       if (o.length > 0) {
         removeFiles(o);
       } else {
@@ -235,7 +237,8 @@ public class ControlPanel extends JPanel implements ActionListener {
   }
 
   public void removeFiles(Object[] newFiles) {
-    System.out.println("removeFiles()");
+    visualization.getEnvironment().getLogManager().getLogger(ControlPanel.class, null).log(Logger.INFO,
+        "removeFiles()");
     if (newFiles == null) return;
     for (int i = 0; i < newFiles.length; i++) {
       selectedFiles.removeElement((File)newFiles[i]);    

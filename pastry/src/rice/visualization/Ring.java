@@ -394,7 +394,7 @@ public class Ring {
     
     BigDecimal divBig = idBig.divide(maxBig, 10, BigDecimal.ROUND_HALF_UP);
     
-    //System.out.println("CONVERTING " + id + " TO " + idBig + " AND COMPARING TO " + maxBig + " GIVES " + divBig);
+    //System.outt.println("CONVERTING " + id + " TO " + idBig + " AND COMPARING TO " + maxBig + " GIVES " + divBig);
     
     double frac = divBig.doubleValue() * 2 * Math.PI;
     
@@ -646,24 +646,24 @@ public class Ring {
         boolean touchedAll = false;
         HashSet touched = new HashSet();
         while(touchNodes && !touchedAll) {
-          //System.out.println("touchAllNodes()");
+          //System.outt.println("touchAllNodes()");
           Node[] nds = getNodes();
           touchedAll = true;
 //          for (int i = 0; i < nds.length; i++) {
           for (int i = nds.length-1; i >= 0; i--) {
             if (!touched.contains(nds[i])) {
               touchedAll = false;
-//              System.out.println("getting data from "+nds[i]);
+//              System.outt.println("getting data from "+nds[i]);
               touched.add(nds[i]);
               visualization.getData(nds[i], true); 
-              //System.out.println(touched.size()+" got data from "+nds[i]+" @"+System.identityHashCode(nds[i]));
+              //System.outt.println(touched.size()+" got data from "+nds[i]+" @"+System.identityHashCode(nds[i]));
               visualization.frame.repaint();
               Thread.yield();
               break;
             }
           }
         }
-//        System.out.println("touchAllNodes() complete");
+//        System.outt.println("touchAllNodes() complete");
       }
     },"TouchAllNodesThread");
     touchThread.start();

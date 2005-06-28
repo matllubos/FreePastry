@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 import rice.post.*;
@@ -129,7 +130,7 @@ public class CoalescedLog extends EncryptedLog {
       byte[] data = SecurityUtils.serialize(pending);
       cipherPending = SecurityUtils.encryptSymmetric(data, key);
     } catch (IOException e) {
-      System.out.println("Exception " + e + " thrown while serializing/encrypting pending " + pending);
+      logException(Logger.WARNING, "Exception " + e + " thrown while serializing/encrypting pending " + pending,e);
     }
   }
   
@@ -144,12 +145,12 @@ public class CoalescedLog extends EncryptedLog {
         pending = (CoalescedLogEntry) SecurityUtils.deserialize(data);
         pending.setParent(new PhantomLogEntry());
       } catch (IOException e) {
-        System.out.println("Exception " + e + " thrown while deserializing/decrypting pending " + pending);
+        logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting pending " + pending,e);
       } catch (ClassNotFoundException e) {
-        System.out.println("Exception " + e + " thrown while deserializing/decrypting pending " + pending);
+        logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting pending " + pending,e);
       }
     } else {
-      System.out.println("Found null cipher pending - resetting pending on log " + this);
+      log(Logger.WARNING, "Found null cipher pending - resetting pending on log " + this);
       resetPending();
     }
   }
@@ -333,5 +334,14 @@ public class CoalescedLog extends EncryptedLog {
         task.go();
     }      
   }
+  
+  private void log(int level, String m) {
+    post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null).log(level,m);
+  }
+  
+  private void logException(int level, String m, Throwable t) {
+    post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null).logException(level,m,t);
+  }
+  
 }
 

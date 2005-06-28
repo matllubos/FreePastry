@@ -3,6 +3,7 @@ package rice.post.storage;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
@@ -33,7 +34,8 @@ public class PostPastPolicy implements PastPolicy {
         PastContentHandle[] handles = (PastContentHandle[]) o;
       
         if ((handles == null) || (handles.length == 0)) {
-          System.out.println("ERROR: Unable to fetch replica of id " + id + " - handles:" + handles);
+          past.getEnvironment().getLogManager().getLogger(PostPastPolicy.class, past.getInstance()).log(Logger.SEVERE,
+              "ERROR: Unable to fetch replica of id " + id + " - handles:" + handles);
           parent.receiveException(new PostException("Unable to fetch data - returned unexpected null."));
           return;
         }

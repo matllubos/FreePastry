@@ -5,6 +5,7 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.mailbox.postbox.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 
@@ -12,7 +13,6 @@ import java.net.*;
 
 public class ImapServerImpl extends Thread implements ImapServer {
   
-  boolean log;
   boolean quit = false;
   int port;
   ServerSocket server;
@@ -28,7 +28,7 @@ public class ImapServerImpl extends Thread implements ImapServer {
 
   Environment environment;
   
-  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
+  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
     super("IMAP Server Thread");
     this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
@@ -37,7 +37,6 @@ public class ImapServerImpl extends Thread implements ImapServer {
     this.email = email;
     this.manager = manager;
     this.workspace = new InMemoryWorkspace();
-    this.log = log;
 
     initialize();
   }
@@ -55,7 +54,7 @@ public class ImapServerImpl extends Thread implements ImapServer {
       while (! quit) {
         final Socket socket = server.accept();
 
-        System.out.println("Accepted connection from " + socket.getInetAddress());
+        log(Logger.INFO, "Accepted connection from " + socket.getInetAddress());
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
             (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
@@ -63,16 +62,16 @@ public class ImapServerImpl extends Thread implements ImapServer {
             public void run() {
               try {
                 ParserImapHandler handler = new ParserImapHandler(manager, workspace, environment);
-                handler.handleConnection(socket, log);
+                handler.handleConnection(socket, environment);
               } catch (IOException e) {
-                System.out.println("IOException occurred during handling of connection - " + e);
+                logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);
               }
             }
           };
 
           thread.start();
         } else {
-          System.out.println("Connection not local - aborting");
+          log(Logger.WARNING, "Connection not local - aborting");
 
           OutputStream o = socket.getOutputStream();
           PrintWriter out = new PrintWriter(o, true);
@@ -83,7 +82,15 @@ public class ImapServerImpl extends Thread implements ImapServer {
         }
       }
     } catch (IOException e) {
-      System.out.println("IOException occurred during accepting of connection - " + e);
+      logException(Logger.WARNING, "IOException occurred during accepting of connection - " , e);
     }
   }
+  private void log(int level, String message) {
+    environment.getLogManager().getLogger(ImapServerImpl.class, null).log(level, message);
+  }
+  private void logException(int level, String message, Throwable t) {
+    environment.getLogManager().getLogger(ImapServerImpl.class, null).logException(level, message, t);
+  }
+  
+  
 }

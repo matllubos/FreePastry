@@ -10,6 +10,7 @@ import java.security.*;
 
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.UpdateJarResponse;
@@ -52,8 +53,9 @@ public class Visualization implements DataProvider {
 
   public Visualization(Ring[] bootstrapNodes, Environment env) {
     this.environment = env;
+    Logger logger = environment.getLogManager().getLogger(Visualization.class,null);
     for (int i = 0; i < bootstrapNodes.length; i++) {
-      System.out.println(bootstrapNodes[i]);
+      logger.log(Logger.INFO,bootstrapNodes[i].toString());
     }        
     ringArray = bootstrapNodes;
 
@@ -73,11 +75,11 @@ public class Visualization implements DataProvider {
       public void run() {
         try {
           while (true) {
-            Thread.currentThread().sleep(REFRESH_TIME);
+            Thread.sleep(REFRESH_TIME);
             refreshData();
           }
         } catch (Exception e) {
-          System.out.println(e);
+          environment.getLogManager().getLogger(Visualization.class,null).logException(Logger.SEVERE,"",e);
         }
       }
     };
@@ -142,7 +144,8 @@ public class Visualization implements DataProvider {
       try {
         frame.nodeHighlighted(node);
       } catch (NullPointerException npe) {
-        System.out.println("ERROR: Visualization.setHighlighted() frame == null!!!");
+        environment.getLogManager().getLogger(Visualization.class,null).logException(Logger.SEVERE,
+            "ERROR: Visualization.setHighlighted() frame == null!!!", npe);
       }
     }
   }
@@ -315,5 +318,9 @@ public class Visualization implements DataProvider {
       
         return data;
       }
+  }
+  
+  public Environment getEnvironment() {
+    return environment;
   }
 }

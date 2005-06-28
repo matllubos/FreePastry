@@ -63,9 +63,10 @@ public class SimpleLogger implements Logger {
   /**
    * Prints out logger:currentTime:exception.stackTrace();
    */
-  public void logException(int priority, Throwable exception) {
+  public void logException(int priority, String message, Throwable exception) {
     if (priority >= minPriority) {
       synchronized(slm.ps) {
+        slm.ps.println(slm.prefix+loggerName+":"+time.currentTimeMillis()+":"+message); 
         slm.ps.print(slm.prefix+loggerName+":"+time.currentTimeMillis()+":");
         exception.printStackTrace(slm.ps);
       }

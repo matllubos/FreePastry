@@ -8,6 +8,7 @@ import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.smtp.commands.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.selector.*;
 
 import java.io.*;
@@ -34,7 +35,6 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   boolean quit = false;
   boolean authenticate = false;
   int port;
-  boolean log;
 
   SmtpManager manager;
 
@@ -54,7 +54,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
 
   Environment environment;
   
-  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log, Environment env) throws Exception {
+  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
     this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
@@ -62,11 +62,10 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
     this.authenticate = authenticate;
     this.email = email;
     this.userManager = userManager;
-    this.manager = new SimpleManager(email, gateway, address, server);
+    this.manager = new SimpleManager(email, gateway, address, server, environment);
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();
-    this.log = log;
 
     initialize();
   }
@@ -89,7 +88,8 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         try {
           key = environment.getSelectorManager().register(channel, NonBlockingSmtpServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
-          System.out.println("ERROR modifiying SMTP server socket key " + e);
+          environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+              "ERROR modifiying SMTP server socket key " , e);
         }
       }
     });
@@ -119,7 +119,8 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
       final Socket socket = ((SocketChannel) ((ServerSocketChannel) key.channel()).accept()).socket();
       connections1++;
       
-      System.out.println("Accepted connection " + connections + " of " + MAX_CONNECTIONS + " from " + socket.getInetAddress());
+      environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.INFO,
+          "Accepted connection " + connections + " of " + MAX_CONNECTIONS + " from " + socket.getInetAddress());
       
       if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
           (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
@@ -127,7 +128,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
           public void run() {
             try {
               SmtpHandler handler = new SmtpHandler(registry, manager, workspace, NonBlockingSmtpServerImpl.this, userManager, authenticate, environment);
-              handler.handleConnection(socket, log);
+              handler.handleConnection(socket);
               
               synchronized (NonBlockingSmtpServerImpl.this) {
                 connections--; 
@@ -135,9 +136,11 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
               }
               
               setAcceptable(true);
-              System.out.println("Done with connection - now at " + connections + " of " + MAX_CONNECTIONS);
+              environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.INFO,
+                  "Done with connection - now at " + connections + " of " + MAX_CONNECTIONS);
             } catch (IOException e) {
-              System.out.println("IOException occurred during handling of connection - " + e);
+              environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+                  "IOException occurred during handling of connection - " , e);
             } finally {
               try {
                 socket.close();
@@ -151,7 +154,8 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         
         thread.start();
       } else {
-        System.out.println("Connection not local - aborting");
+        environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.WARNING,
+          "Connection not local - aborting");
         
         OutputStream o = socket.getOutputStream();
         PrintWriter out = new PrintWriter(o, true);
@@ -161,7 +165,8 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         socket.close();
       }
     } catch (IOException e) {
-      System.out.println("IOException occurred during accepting of connection - " + e);
+      environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+          "IOException occurred during accepting of connection - " , e);
     }
   }
 

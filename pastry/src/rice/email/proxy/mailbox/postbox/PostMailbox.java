@@ -20,6 +20,8 @@ import rice.Continuation.*;
 
 import rice.email.EmailService;
 import rice.email.Folder;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 /**
  * This class serves as the main "glue" code between foedus and
@@ -42,7 +44,7 @@ public class PostMailbox implements Mailbox {
    *
    * @param email The email service on the local pastry node.
    */
-  public PostMailbox(EmailService email, Folder root) throws MailboxException {
+  public PostMailbox(EmailService email, Folder root, Environment env) throws MailboxException {
     if (email == null)
       throw new IllegalArgumentException("EmailService cannot be null in PostMailbox.");
 
@@ -51,7 +53,8 @@ public class PostMailbox implements Mailbox {
     if (root != null)
       this.root = new PostFolder(root, null, email);
     else
-      System.out.println("INFO: Root folder is null - folder operations will likely cause a NPE");
+      env.getLogManager().getLogger(MovingMessage.class, null).log(Logger.INFO, 
+        "Root folder is null - folder operations will likely cause a NPE");
   }
   
   /**

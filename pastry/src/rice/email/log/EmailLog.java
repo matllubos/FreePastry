@@ -7,6 +7,7 @@ import rice.*;
 import rice.Continuation.*;
 import rice.email.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.log.*;
@@ -236,7 +237,8 @@ public class EmailLog extends CoalescedLog {
         }
 
         public void receiveException(Exception e) {
-          System.out.println("WARNING: Received exception " + e + " while reading snapshots - skipping for now.  This is bad.");
+          Logger logger = post.getEnvironment().getLogManager().getLogger(EmailLog.class, null);
+          logger.logException(Logger.WARNING,"WARNING: Received exception " + e + " while reading snapshots - skipping for now.  This is bad.",e);
           receiveResult(new SnapShot(new StoredEmail[0], null));
         }
       });

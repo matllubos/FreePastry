@@ -83,8 +83,8 @@ public class SocketChannelReader {
     environment.getLogManager().getLogger(SocketChannelReader.class, null).log(level,s);
   }
 
-  private void logException(int level, Exception e) {
-    environment.getLogManager().getLogger(SocketChannelReader.class, null).logException(level, e);
+  private void logException(int level, String s, Exception e) {
+    environment.getLogManager().getLogger(SocketChannelReader.class, null).logException(level, s, e);
   }
 
 
@@ -168,8 +168,7 @@ public class SocketChannelReader {
             }
             
             public void receiveException(Exception e) {
-              log(Logger.WARNING, "Processing deserialization of message caused exception " + e);
-              logException(Logger.WARNING, e);
+              logException(Logger.WARNING, "Processing deserialization of message caused exception ", e);
             }
           });
         }

@@ -5,6 +5,7 @@ import rice.email.proxy.smtp.manager.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.IOException;
 
@@ -40,8 +41,8 @@ class SmtpHandler {
     this.authenticate = authenticate;
   }
 
-  public void handleConnection(Socket socket, boolean log) throws IOException {
-    _conn = new SmtpConnection(this, socket, _server, log);
+  public void handleConnection(Socket socket) throws IOException {
+    _conn = new SmtpConnection(this, socket, _server);
     _state = new SmtpState(_workspace, _userManager, environment);
     _state.setRemote(socket.getInetAddress());
 
@@ -57,7 +58,8 @@ class SmtpHandler {
     } catch (SocketTimeoutException ste) {
       _conn.println("421 Service shutting down and closing transmission channel");
     } catch (IOException e) {
-      System.out.println("Detected connection error " + e + " - closing.");
+      environment.getLogManager().getLogger(SmtpHandler.class, null).logException(Logger.WARNING,
+          "Detected connection error " + e + " - closing.", e);
     } finally {
       _state.clearMessage();
     }

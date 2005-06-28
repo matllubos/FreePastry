@@ -7,6 +7,7 @@ import java.io.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
@@ -99,8 +100,7 @@ public class DeliveryService implements ScribeClient {
    * @param command The command to run once finished
    */
   public void deliver(SignedPostMessage message, Continuation command) {
-    post.getLogger().finer(post.getEndpoint().getId() + ": Delivering message " + message);
-    
+    log(Logger.FINER, post.getEndpoint().getId() + ": Delivering message " + message);    
     pending.insert(new Delivery(message, factory), getTimeout(), command);
   }
   
@@ -112,7 +112,7 @@ public class DeliveryService implements ScribeClient {
    * @param command The command to call with the message to send, if there is one
    */
   public void presence(PresenceMessage message, Continuation command) {
-    post.getLogger().finer(post.getEndpoint().getId() + ": Responding to presence message " + message);
+    log(Logger.FINER, "Responding to presence message " + message);
     
     pending.getMessage(message.getSender(), new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -128,7 +128,7 @@ public class DeliveryService implements ScribeClient {
    * @param command The command to run once finished
    */
   public void check(SignedPostMessage message, Continuation command) {
-    post.getLogger().finer(post.getEndpoint().getId() + ": Checking for existence of message " + message);
+    log(Logger.FINER, "Checking for existence of message " + message);
     Id id = (new Delivery(message, factory)).getId();
     
     if (cache.contains(id)) {
@@ -152,7 +152,7 @@ public class DeliveryService implements ScribeClient {
    * @param command The command to run once finished
    */
   public void delivered(SignedPostMessage message, byte[] signature, Continuation command) { 
-    post.getLogger().finer(post.getEndpoint().getId() + ": Inserting receipt for " + message);
+    log(Logger.FINER, "Inserting receipt for " + message);
     final Receipt receipt = new Receipt(message, factory, signature);
     
     cache.add(receipt.getId());
@@ -182,7 +182,7 @@ public class DeliveryService implements ScribeClient {
    * @param command The command to run once finished
    */
   public void undeliverable(SignedPostMessage message, Continuation command) { 
-    post.getLogger().finer(post.getEndpoint().getId() + ": Inserting undeliverable for " + message);
+    log(Logger.FINER, "Inserting undeliverable for " + message);
     final Undeliverable receipt = new Undeliverable(message, factory);
     
     cache.add(receipt.getId());
@@ -293,4 +293,9 @@ public class DeliveryService implements ScribeClient {
   public void subscribeFailed(Topic topic) {
     post.subscribeFailed(topic);
   }
+
+  private void log(int level, String m) {
+    post.getEnvironment().getLogManager().getLogger(DeliveryService.class, post.getInstance()).log(level,m);
+  }
+  
 }

@@ -76,8 +76,7 @@ public class ErasureCodec {
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
       Logger log = environment.getLogManager().getLogger(ErasureCodec.class, null);
-      log.log(Logger.WARNING, "encodeObject: "+ioe);
-      log.logException(Logger.WARNING, ioe);
+      log.logException(Logger.WARNING, "encodeObject: ", ioe);
       return null;
     }
 

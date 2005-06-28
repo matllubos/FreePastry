@@ -108,9 +108,7 @@ public class MessageDispatch {
   public boolean dispatchMessage(Message msg) {
     if (msg.getDestination() == null) {
       Logger logger = localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null);
-      logger.log(Logger.WARNING,
-          "Message "+msg+","+msg.getClass().getName()+" has no destination.");
-      logger.logException(Logger.WARNING, new Exception("Stack Trace"));
+      logger.logException(Logger.WARNING, "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
       return false;
     }
     // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 

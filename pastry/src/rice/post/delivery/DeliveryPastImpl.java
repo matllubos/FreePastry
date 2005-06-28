@@ -177,7 +177,8 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
       }
     }      
      
-    System.out.println("Could not find any messages for user " + address + " - not tragic, but strange...");
+    environment.getLogManager().getLogger(DeliveryPastImpl.class, instance).log(Logger.WARNING,
+        "Could not find any messages for user " + address + " - not tragic, but strange...");
       
     command.receiveResult(null);
   }

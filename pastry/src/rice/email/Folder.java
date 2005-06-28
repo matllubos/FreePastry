@@ -8,6 +8,7 @@ import rice.Continuation.*;
 import rice.email.*;
 import rice.email.messaging.*;
 import rice.email.log.*;
+import rice.environment.logging.Logger;
 import rice.post.*;
 import rice.post.log.*;
 import rice.post.storage.*;
@@ -216,7 +217,7 @@ public class Folder {
    
   protected void getLogReferences(final Set set, Continuation command) {
     if (_log.getTopEntryReference() != null) {
-      System.out.println("Adding top ref " + _log.getTopEntryReference());
+      log(Logger.FINE,"Adding top ref " + _log.getTopEntryReference());
       set.add(_log.getTopEntryReference());
     }
     
@@ -260,7 +261,7 @@ public class Folder {
           } 
           
           if (entry.getPreviousEntryReference() != null) {
-            System.out.println("Adding next ref " + entry.getPreviousEntryReference());
+            log(Logger.FINE, "Adding next ref " + entry.getPreviousEntryReference());
             set.add(entry.getPreviousEntryReference());
           }
 
@@ -675,13 +676,15 @@ public class Folder {
               if (_log.getEntries() == entries) {
                 _log.setSnapshot(splitEmails((StoredEmail[]) o, entry), parent);
               } else {
-                System.out.println("INFO: Was unable to create snapshot - other log entry in progress.  Not bad, but a little unexpected.");
+                log(Logger.INFO,"Was unable to create snapshot - other log entry in progress.  Not bad, but a little unexpected.");
                 parent.receiveResult(Boolean.TRUE);
               }
             }
             
             public void receiveException(Exception e) {
-              System.out.println("WARNING: Was unable to create snapshot - received exception " + e + ".  Allowing message to be inserted anyway.");
+              logException(Logger.WARNING,
+                  "Was unable to create snapshot - received exception " + e + ".  Allowing message to be inserted anyway.",
+                  e);
               parent.receiveResult(Boolean.TRUE);
             }
           });
@@ -728,7 +731,7 @@ public class Folder {
    * @return the stored Emails
    */
   public void getMessages(final SnapShot[] snapshots, Continuation command) {
-    System.out.println("GET MESSAGES: " + snapshots + " TOP IS " + (snapshots == null ? null : snapshots[0].getTopEntry()));
+    log(Logger.FINE,"GET MESSAGES: " + snapshots + " TOP IS " + (snapshots == null ? null : snapshots[0].getTopEntry()));
     
     _log.getTopEntry(new StandardContinuation(command) {
       private Vector emails = new Vector();
@@ -833,10 +836,19 @@ public class Folder {
       }
       
       public void receiveException(Exception e) {
-        System.out.println("WARNING: Was unable to fetch the next log entry due to exception " + e + " - this is a bad sign.  For now, we're just going to ignore it.");
+        logException(Logger.WARNING,
+            "Was unable to fetch the next log entry due to exception " + e + " - this is a bad sign.  For now, we're just going to ignore it.", e);
         receiveResult(null);
       }
     });
+  }
+  
+  private void log(int level, String message) {
+    _post.getEnvironment().getLogManager().getLogger(Folder.class, null).log(level, message);    
+  }
+  
+  private void logException(int level, String message, Throwable t) {
+    _post.getEnvironment().getLogManager().getLogger(Folder.class, null).logException(level, message, t);
   }
   
   public String toString() {

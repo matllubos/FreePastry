@@ -8,6 +8,7 @@ import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.smtp.commands.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 import java.net.*;
@@ -44,7 +45,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
   Environment environment;
   
-  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, boolean log, Environment env) throws Exception {
+  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
     super("SMTP Server Thread");
     this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
@@ -53,7 +54,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
     this.authenticate = authenticate;
     this.email = email;
     this.userManager = userManager;
-    this.manager = new SimpleManager(email, gateway, address, server);
+    this.manager = new SimpleManager(email, gateway, address, server, env);
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();
@@ -76,7 +77,8 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
         final Socket socket = server.accept();
         connections++;
 
-        System.out.println("Accepted connection from " + socket.getInetAddress());
+        environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.INFO,
+            "Accepted connection from " + socket.getInetAddress());
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
             (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
@@ -84,10 +86,11 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
             public void run() {
               try {
                 SmtpHandler handler = new SmtpHandler(registry, manager, workspace, SmtpServerImpl.this, userManager, authenticate, environment);
-                handler.handleConnection(socket, log);
+                handler.handleConnection(socket);
                 socket.close();
               } catch (IOException e) {
-                System.out.println("IOException occurred during handling of connection - " + e);
+                environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+                    "IOException occurred during handling of connection - " , e);
               }
               
               connections--;
@@ -96,7 +99,8 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
           thread.start();
         } else {
-          System.out.println("Connection not local - aborting");
+          environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.WARNING,
+            "Connection not local - aborting");
           
           OutputStream o = socket.getOutputStream();
           PrintWriter out = new PrintWriter(o, true);
@@ -107,7 +111,8 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
         }
       }
     } catch (IOException e) {
-       System.out.println("IOException occurred during accepting of connection - " + e);
+      environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+          "IOException occurred during accepting of connection - " , e);
     }
   }
 

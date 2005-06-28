@@ -524,8 +524,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       try {
         super.deliver(id, message);
       } catch (Exception e) {
-        unusual("PAST reports Exception in deliver(): "+e);
-        unusualException(e);
+        unusualException("PAST reports Exception in deliver(): ",e);
       }
       return;
     }
@@ -1325,8 +1324,8 @@ panic("setBit disabled");
     environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.SEVERE, str);
   }
 
-  private void unusualException(Exception e) {
-    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(Logger.SEVERE, e);
+  private void unusualException(String str, Exception e) {
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(Logger.SEVERE, str, e);
   }
 
   /**

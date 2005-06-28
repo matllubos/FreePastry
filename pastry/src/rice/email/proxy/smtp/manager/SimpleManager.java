@@ -12,10 +12,12 @@ import rice.email.proxy.smtp.client.*;
 import rice.email.proxy.smtp.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.postbox.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 public class SimpleManager implements SmtpManager {
 
-  public static String[] POST_HOST = new String[] {"dosa.cs.rice.edu", "thor05.cs.rice.edu", ".epostmail.org"};
+  public final String[] POST_HOST;// = new String[] {"dosa.cs.rice.edu", "thor05.cs.rice.edu", ".epostmail.org"};
 
   private boolean gateway;
 
@@ -27,18 +29,22 @@ public class SimpleManager implements SmtpManager {
   
   private String server;
  
-  static {
-    String s = System.getProperty("POST_HOST");
-    
-    if ((s != null) && (s.length() > 2)) {
-      System.out.println("Using alternative POST_HOST:" + s);
-      POST_HOST = new String[] {s};
-    }
-  }
+  protected Environment environment;
+  
+//  static {
+//    String s = System.getProperty("POST_HOST");
+//    
+//    if ((s != null) && (s.length() > 2)) {
+//      System.outt.println("Using alternative POST_HOST:" + s);
+//      POST_HOST = new String[] {s};
+//    }
+//  }
 
-  public SimpleManager(EmailService email, boolean gateway, PostEntityAddress address, String server) throws Exception {
+  public SimpleManager(EmailService email, boolean gateway, PostEntityAddress address, String server, Environment env) throws Exception {
+    this.environment = env;
+    POST_HOST = environment.getParameters().getStringArray("email_smtp_manager_simpleManager_post_host");
     this.email = email;
-    this.dns = new DnsServiceImpl();
+    this.dns = new DnsServiceImpl(env);
     this.gateway = gateway;
     this.address = address;
     this.server = server;
@@ -111,7 +117,7 @@ public class SimpleManager implements SmtpManager {
     
     PostUserAddress[] recipients = (PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]);
     
-    System.out.println("COUNT: " + state.getEnvironment().getTimeSource().currentTimeMillis() + " Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
+    log(Logger.FINER, "Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
     Email email = PostMessage.parseEmail(state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
     
@@ -132,7 +138,7 @@ public class SimpleManager implements SmtpManager {
       String host = server;
       
       if ((host == null) || (host.equals(""))) {
-        System.out.println("WARNING: No default SMTP server specified - using DNS MX records for " + addr.getHost() + " to send email.");
+        log(Logger.WARNING, "WARNING: No default SMTP server specified - using DNS MX records for " + addr.getHost() + " to send email.");
         String[] hosts = dns.lookup(addr.getHost());
         
         if (hosts.length == 0)
@@ -141,11 +147,11 @@ public class SimpleManager implements SmtpManager {
         host = hosts[0];
       } 
       
-      System.out.println("A message is headed to " + addr + " using SMTP server at " + host);
+      log(Logger.FINER, "A message is headed to " + addr + " using SMTP server at " + host);
       
       try {
         Reader content = state.getMessage().getContent();
-        SmtpClient client = new SmtpClient(host);
+        SmtpClient client = new SmtpClient(host, environment);
         client.connect();
         client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content);
         client.close();
@@ -153,5 +159,9 @@ public class SimpleManager implements SmtpManager {
         throw new IOException("Couldn't send a message to " + addr + " due to " + e);
       }
     }
+  }
+  
+  private void log(int level, String m) {
+    environment.getLogManager().getLogger(SimpleManager.class, null).log(level, m); 
   }
 }

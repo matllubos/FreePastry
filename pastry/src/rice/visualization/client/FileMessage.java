@@ -1,8 +1,6 @@
 /*
  * Created on Mar 11, 2004
  *
- * To change the template for this generated file go to
- * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
  */
 package rice.visualization.client;
 
@@ -13,11 +11,14 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Properties;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+
 /**
- * @author jeffh
+ * @author Jeff Hoye
  *
- * To change the template for this generated type comment go to
- * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ * Sends a file.
+ * 
  */
 public class FileMessage implements Serializable {
 
@@ -35,7 +36,7 @@ public class FileMessage implements Serializable {
     file = f;
   }
 
-  public void readFile() throws IOException {
+  public void readFile(Environment env) throws IOException {
     fileName = file.getName();
     FileInputStream reader = new FileInputStream(file);
     bytes = new byte[(int)file.length()];
@@ -47,15 +48,18 @@ public class FileMessage implements Serializable {
     while(reading) {
       int num = reader.read(bytes, pos, bytes.length-pos);
       int sum = num+pos;
-      System.out.println("num:"+num+" pos:"+pos+" bytes.length:"+bytes.length+" sum:"+sum);
+      env.getLogManager().getLogger(FileMessage.class, null).log(Logger.INFO, 
+          "num:"+num+" pos:"+pos+" bytes.length:"+bytes.length+" sum:"+sum);
       if (num == -1) {
         reading = false;
-        System.out.println("Error reading file "+file);
+        env.getLogManager().getLogger(FileMessage.class, null).log(Logger.SEVERE, 
+            "Error reading file "+file);
       }
       pos+=num;
       if (pos == bytes.length) {
         reading = false;
-        System.out.println("Done reading file "+file);
+        env.getLogManager().getLogger(FileMessage.class, null).log(Logger.SEVERE, 
+            "Done reading file "+file);
       }              
     }
     
@@ -78,7 +82,7 @@ public class FileMessage implements Serializable {
   
   public static void main(String[] args) throws IOException {
     FileMessage fm = new FileMessage(args[0]);
-    fm.readFile();
+    fm.readFile(new Environment());
     fm.fileName = args[1];
     fm.writeFile();    
   }

@@ -186,13 +186,14 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startUserManager(Parameters parameters) throws Exception {    
+  protected void startUserManager(Environment env) throws Exception {    
+    Parameters parameters = env.getParameters();
     stepStart("Starting User Email Services");
     
     if (parameters.getBoolean("email_fetch_log"))
-      manager = new UserManagerImpl(email, new PostMailboxManager(email, emailFolder));
+      manager = new UserManagerImpl(email, new PostMailboxManager(email, emailFolder, env));
     else 
-      manager = new UserManagerImpl(email, new PostMailboxManager(email, null));
+      manager = new UserManagerImpl(email, new PostMailboxManager(email, null, env));
     
     String addr = address.toString();
     manager.createUser(addr.substring(0, addr.indexOf("@")), null, parameters.getString("post_password"));
@@ -208,7 +209,6 @@ public class EmailProxy extends PostProxy {
     Parameters parameters = env.getParameters();
     if (parameters.getBoolean("email_smtp_enable")) {
       try {
-        boolean log = parameters.getBoolean("email_smtp_log");
         int port = parameters.getInt("email_smtp_port");
         boolean gateway = parameters.getBoolean("email_gateway");
         boolean accept = parameters.getBoolean("email_accept_nonlocal");
@@ -225,17 +225,17 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBoolean("email_smtp_ssl")) {
           stepStart("Starting SSL SMTP server on port " + port);
-          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, file, pass, server, log, env);
+          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, file, pass, server, env);
           smtp.start();
           stepDone(SUCCESS);
         } else if (parameters.getBoolean("email_smtp_non_blocking")) {
           stepStart("Starting Non-Blocking SMTP server on port " + port);
-          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, log, env);
+          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, env);
           smtp.start();
           stepDone(SUCCESS);
         } else {
           stepStart("Starting SMTP server on port " + port);
-          smtp = new SmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, log, env);
+          smtp = new SmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, env);
           smtp.start();
           stepDone(SUCCESS);
         }
@@ -280,7 +280,7 @@ public class EmailProxy extends PostProxy {
           stepDone(SUCCESS);
         } else {
           stepStart("Starting IMAP server on port " + port);
-          imap = new ImapServerImpl(port, email, manager, gateway, accept, log, env);
+          imap = new ImapServerImpl(port, email, manager, gateway, accept, env);
           imap.start();
           stepDone(SUCCESS);
         }
@@ -306,7 +306,6 @@ public class EmailProxy extends PostProxy {
     Parameters parameters = env.getParameters();
     if (parameters.getBoolean("email_pop3_enable")) {
       try {
-        boolean log = parameters.getBoolean("email_pop3_log");
         int port = parameters.getInt("email_pop3_port");
         boolean gateway = parameters.getBoolean("email_gateway");
         boolean accept = parameters.getBoolean("email_accept_nonlocal");
@@ -315,17 +314,17 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBoolean("email_pop3_ssl")) {
           stepStart("Starting SSL POP3 server on port " + port);
-          pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept, file, pass, log, env);
+          pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept, file, pass, env);
           pop3.start();
           stepDone(SUCCESS);
         } else if (parameters.getBoolean("email_pop3_non_blocking")) {
           stepStart("Starting Non-Blocking POP3 server on port " + port);
-          pop3 = new NonBlockingPop3ServerImpl(port, email, manager, gateway, accept, log, env);
+          pop3 = new NonBlockingPop3ServerImpl(port, email, manager, gateway, accept, env);
           pop3.start();
           stepDone(SUCCESS);
         } else {
           stepStart("Starting POP3 server on port " + port);
-          pop3 = new Pop3ServerImpl(port, email, manager, gateway, accept, log, env);
+          pop3 = new Pop3ServerImpl(port, email, manager, gateway, accept, env);
           pop3.start();
           stepDone(SUCCESS);
         }
@@ -371,7 +370,7 @@ public class EmailProxy extends PostProxy {
       startRetrieveKeystore(parameters);
       startEmailService(parameters);
       startFetchEmailLog(parameters);
-      startUserManager(parameters);
+      startUserManager(env);
       startSMTPServer(env);
       startIMAPServer(env);
       startPOP3Server(env);

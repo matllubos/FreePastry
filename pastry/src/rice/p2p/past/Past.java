@@ -148,5 +148,10 @@ public interface Past {
   public int getReplicationFactor();
 
   public Environment getEnvironment();
+
+  /**
+   * @return
+   */
+  public String getInstance();
 }
 

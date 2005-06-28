@@ -286,8 +286,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     environment.getLogManager().getLogger(ReplicationImpl.class, instance).log(level, str); 
   }  
   
-  private void logException(int level, Exception e) {
-    environment.getLogManager().getLogger(ReplicationImpl.class, instance).logException(level, e); 
+  private void logException(int level, String str, Exception e) {
+    environment.getLogManager().getLogger(ReplicationImpl.class, instance).logException(level,str, e); 
   }  
   
   /**
@@ -531,8 +531,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      * @param o The result
      */
     public synchronized void receiveException(Exception e) {
-      log(Logger.SEVERE, "ERROR: RMImpl.deleter Unstore of " + id + " caused exception '" + e + "'!");
-      logException(Logger.SEVERE, e);
+      logException(Logger.SEVERE, "RMImpl.deleter Unstore of " + id + " caused exception '" + e + "'!", e);
       
       id = null;
       go();

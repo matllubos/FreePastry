@@ -1,6 +1,8 @@
 package rice.email.proxy.pop3;
 
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,13 +27,14 @@ public class Pop3Connection {
   // IO stuff
   BufferedReader _in;
   PrintWriter _out;
-  boolean log;
   
   Pop3Handler handler;
+
+  Environment environment;
   
-  public Pop3Connection(Pop3Handler handler, Socket socket, boolean log) throws IOException {
+  public Pop3Connection(Pop3Handler handler, Socket socket, Environment env) throws IOException {
     this.handler = handler;
-    this.log = log;
+    this.environment = env;
     configureSocket(socket);
     configureStreams();
   }
@@ -62,18 +65,18 @@ public class Pop3Connection {
   }
   
   public void println(String line) {
-    if (log) System.out.println("S: " + line);
+    log(Logger.FINEST, "S: " + line);
     _out.print(line);
     println();
   }
   
   public void print(String line) {
-    if (log) System.out.print(line);
+    log(Logger.FINEST, line);
     _out.print(line);
   }
   
   public void println() {
-    if (log) System.out.println();
+    log(Logger.FINEST, "");
     _out.print("\r\n");
     _out.flush();
   }
@@ -85,10 +88,20 @@ public class Pop3Connection {
   
   public String readLine() throws IOException {
     String line = _in.readLine();
-    if (log) System.out.println("C: " + line);
+    log(Logger.FINEST, "C: " + line);
     
     return line;
   }
+  
+  private void log(int level, String message) {
+    environment.getLogManager().getLogger(Pop3Connection.class, null).log(level, message);    
+  }
+  
+  private void logException(int level, String message, Throwable t) {
+    environment.getLogManager().getLogger(Pop3Connection.class, null).logException(level, message, t);
+  }
+  
+
   
   public String getClientAddress() {
     return _clientAddress.toString();

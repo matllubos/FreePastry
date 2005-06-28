@@ -10,6 +10,8 @@ import rice.Continuation.*;
 import rice.selector.*;
 import rice.pastry.dist.DistPastryNode.*;
 import rice.email.proxy.smtp.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.util.*;
 
@@ -24,7 +26,7 @@ public class EmailPanelCreator implements PanelCreator {
   Vector times = new Vector();
   
   SmtpServer server;
-  
+    
   public EmailPanelCreator(rice.selector.Timer timer, SmtpServer server) {
     this.server = server;
     
@@ -51,8 +53,8 @@ public class EmailPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      System.out.println("Exceptoin " + e + " thrown.");
-      e.printStackTrace();
+      server.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Exception " + e + " thrown.",e);
     }
     
     return pastPanel;
@@ -99,8 +101,8 @@ public class EmailPanelCreator implements PanelCreator {
         fail.removeElementAt(0);
       }
     } catch (Exception e) {
-      System.out.println("Exception " + e + " thrown.");
-      e.printStackTrace();
+      server.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Exception " + e + " thrown.",e);
     }
   }
 }

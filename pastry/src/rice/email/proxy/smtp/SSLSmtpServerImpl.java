@@ -21,8 +21,8 @@ public class SSLSmtpServerImpl extends SmtpServerImpl {
   
   protected String password;
   
-  public SSLSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String keystore, String password, String server, boolean log, Environment env) throws Exception {
-    super(port, email, gateway, address, acceptNonLocal, authenticate, userManager, server, log, env);    
+  public SSLSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String keystore, String password, String server, Environment env) throws Exception {
+    super(port, email, gateway, address, acceptNonLocal, authenticate, userManager, server, env);    
     this.keystore = keystore;
     this.password = password;
     initializeSSL();

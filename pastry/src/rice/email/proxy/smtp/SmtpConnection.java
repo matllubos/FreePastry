@@ -3,6 +3,8 @@ package rice.email.proxy.smtp;
 import java.io.*;
 import java.net.*;
 
+import rice.environment.logging.Logger;
+
 public class SmtpConnection {
 
     // TODO: clean up getting localhost name
@@ -29,9 +31,8 @@ public class SmtpConnection {
     public StreamTokenizer in;
     SmtpHandler handler;
     String heloName;
-    boolean log;
 
-    public SmtpConnection(SmtpHandler handler, Socket sock, SmtpServer server, boolean log) throws IOException {
+    public SmtpConnection(SmtpHandler handler, Socket sock, SmtpServer server) throws IOException {
         if (sock != null) {
           this.sock = sock;
           sock.setSoTimeout(TIMEOUT_MILLIS);
@@ -49,7 +50,6 @@ public class SmtpConnection {
           
       this.server = server;
         this.handler = handler;
-        this.log = log;
     }
     
     public SmtpServer getServer() {
@@ -61,7 +61,8 @@ public class SmtpConnection {
     }
 
     public void println(String line) {
-        if (log) System.out.println("S: " + line);
+        server.getEnvironment().getLogManager().getLogger(SmtpConnection.class, null).log(Logger.FINEST,
+            "S: " + line);
         out.print(line + "\r\n");
         out.flush();
     }
@@ -70,10 +71,12 @@ public class SmtpConnection {
       int result = in.nextToken();
       
       if (result == in.TT_WORD) {
-        if (log)  System.out.println("C: " + in.sval);
+        server.getEnvironment().getLogManager().getLogger(SmtpConnection.class, null).log(Logger.FINEST,
+            "C: " + in.sval);
         return in.sval;
       } else if (result == in.TT_NUMBER) {
-        if (log) System.out.println("C*:" + in.nval);
+        server.getEnvironment().getLogManager().getLogger(SmtpConnection.class, null).log(Logger.FINEST,
+            "C*:" + in.nval);
         return "" + in.nval;
       } else {
         return null;

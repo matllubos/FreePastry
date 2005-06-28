@@ -12,6 +12,7 @@ import rice.email.proxy.user.UserManager;
 
 import rice.email.proxy.util.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.IOException;
 
@@ -34,8 +35,8 @@ final class ParserImapHandler implements Quittable {
       state = new ImapState(manager, workspace, env);        
     }
 
-    public void handleConnection(final Socket socket, boolean log) throws IOException {
-        conn = new ImapConnection(this, socket, log);
+    public void handleConnection(final Socket socket, Environment env) throws IOException {
+        conn = new ImapConnection(this, socket, env);
         cmdParser = new ImapLineParser();
 
         try {
@@ -58,7 +59,8 @@ final class ParserImapHandler implements Quittable {
             try {
                 conn.close();
             } catch (final IOException ioe) {
-              System.out.println("PANIC: Got error " + ioe + " while closing connection!");
+              env.getLogManager().getLogger(ParserImapHandler.class, null).logException(Logger.WARNING,
+                  "PANIC: Got error " + ioe + " while closing connection!", ioe);
             }
         }
 

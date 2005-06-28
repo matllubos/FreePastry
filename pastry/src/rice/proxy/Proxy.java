@@ -9,6 +9,7 @@ import java.awt.*;
 import javax.swing.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.util.*;
@@ -56,7 +57,7 @@ public class Proxy {
       String command = buildJavaCommand(parameters);
       String[] environment = buildJavaEnvironment(parameters);
 
-      System.out.println("[Loader       ]: Launching command " + command);
+      log(Logger.INFO,"[Loader       ]: Launching command " + command);
       
       process = (environment.length > 0 ? Runtime.getRuntime().exec(command, environment) : Runtime.getRuntime().exec(command));
       lm = new LivenessMonitor(parameters, process);
@@ -73,15 +74,15 @@ public class Proxy {
       parameters = new SimpleParameters(DEFAULT_PARAM_FILES, params);
       
       if (exit != -1) { 
-        System.out.println("[Loader       ]: Child process exited with value " + exit + " - restarting client");
+        log(Logger.INFO,"[Loader       ]: Child process exited with value " + exit + " - restarting client");
         count++;
         
         if (count < parameters.getInt("restart_max")) {
-          System.out.println("[Loader       ]: Waiting for " + parameters.getInt("restart_delay") + " milliseconds");   
+          log(Logger.INFO,"[Loader       ]: Waiting for " + parameters.getInt("restart_delay") + " milliseconds");   
           Thread.sleep(parameters.getInt("restart_delay"));
         }
       } else {
-        System.out.println("[Loader       ]: Child process exited with value " + exit + " - exiting loader");   
+        log(Logger.INFO,"[Loader       ]: Child process exited with value " + exit + " - exiting loader");   
         break;
       }
     }
@@ -277,13 +278,12 @@ public class Proxy {
           String line = reader.readLine();
 
           if (line != null) 
-            System.out.println(prefix + line);
+            log(Logger.INFO,prefix + line);
           else
             done = true;
         }
       } catch (IOException e) {
-        System.err.println(e);
-        e.printStackTrace();
+        logException(Logger.WARNING,"",e);
       }
     }
   }
@@ -372,8 +372,7 @@ public class Proxy {
         e.printStackTrace();
         System.exit(-1);
       } catch (NullPointerException e) {
-        System.out.println("Liveness test ended in NullPointerExceptin " + e);
-        e.printStackTrace();
+        logException(Logger.SEVERE, "Liveness test ended in NullPointerExceptin " , e);
       }
     }
   }
@@ -570,5 +569,12 @@ public class Proxy {
         } catch (InterruptedException e) {}
       }
     }
-  }  
+  } 
+  
+  private void log(int level, String s) {
+    environment.getLogManager().getLogger(Proxy.class, null).log(level,s);
+  }
+  private void logException(int level, String s, Throwable t) {
+    environment.getLogManager().getLogger(Proxy.class, null).logException(level,s,t);
+  }
 }

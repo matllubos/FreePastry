@@ -18,8 +18,8 @@ public class SSLPop3ServerImpl extends Pop3ServerImpl {
   
   protected String password;
   
-  public SSLPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password, boolean log, Environment env) throws IOException {
-    super(port, email, manager, gateway, acceptNonLocal, log, env);
+  public SSLPop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, String keystore, String password, Environment env) throws IOException {
+    super(port, email, manager, gateway, acceptNonLocal, env);
     this.keystore = keystore;
     this.password = password;
     initializeSSL();

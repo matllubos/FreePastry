@@ -9,6 +9,7 @@ import rice.*;
 import rice.Continuation.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
 import rice.p2p.replication.manager.*;
@@ -59,11 +60,6 @@ public class PostImpl implements Post, Application, ScribeClient {
    * The address of the local user.
    */
   protected PostEntityAddress address;
-  
-  /**
-   * The logger which we will use
-   */
-  protected Logger logger = Logger.getLogger(this.getClass().getName());
   
   // --- CLIENT SUPPORT ---
   
@@ -171,6 +167,11 @@ public class PostImpl implements Post, Application, ScribeClient {
   protected Environment environment;
 
   /**
+   * The instance.
+   */
+  protected final String instance;
+  
+  /**
    * Builds a PostImpl to run on the given pastry node,
    * using the provided PAST and Scribe services.
    *
@@ -203,6 +204,7 @@ public class PostImpl implements Post, Application, ScribeClient {
                   Environment env) throws PostException 
   {
     this.environment = env;
+    this.instance = instance;
     this.endpoint = node.registerApplication(this, instance);
     this.address = address;
     this.keyPair = keyPair;
@@ -234,14 +236,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     endpoint.scheduleMessage(new RefreshMessage(), environment.getRandomSource().nextInt((int) refreshInterval), refreshInterval);
     endpoint.scheduleMessage(new BackupMessage(), environment.getRandomSource().nextInt((int) BACKUP_INTERVAL), BACKUP_INTERVAL);
     
-    logger.fine(endpoint.getId() + ": Constructed new Post with user " + address + " and instance " + instance);
-  }
-  
-  /**
-   * @return The logger, used to log messages
-   */
-  public Logger getLogger() {
-    return logger;
+    log(Logger.FINE,"Constructed new Post with user " + address + " and instance " + instance);
   }
   
   /**
@@ -271,7 +266,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    * @param message The message which has arrived
    */
   public void deliver(Id id, Message message) {
-    logger.finest(endpoint.getId() + ": Received message " + message + " with target " + id);
+    log(Logger.FINEST,"Received message " + message + " with target " + id);
     if (message instanceof SignedPostMessageWrapper) {
       if (((SignedPostMessageWrapper) message).getMessage().getMessage() instanceof DeliveryMessage)
         processDeliveryMessage((DeliveryMessage) ((SignedPostMessageWrapper) message).getMessage().getMessage(), 
@@ -285,7 +280,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     } else if (message instanceof BackupMessage) {
       processBackupMessage((BackupMessage) message);
     } else {
-      logger.warning(endpoint.getId() + ": Found unknown message " + message + " - dropping on floor.");
+      log(Logger.WARNING,"Found unknown message " + message + " - dropping on floor.");
     }
   }
   
@@ -322,11 +317,11 @@ public class PostImpl implements Post, Application, ScribeClient {
    * @param msg The incoming message.
    */
   public void deliver(Topic topic, ScribeContent content) {
-    logger.finest(endpoint.getId() + ": Received scribe content " + content + " for topic " + topic);
+    log(Logger.FINEST,"Received scribe content " + content + " for topic " + topic);
     if (content instanceof SignedPostMessageWrapper) {
       processSignedPostMessage(((SignedPostMessageWrapper) content).getMessage(), new ListenerContinuation("Processing of Scribe POST message"));
     } else {
-      logger.warning(endpoint.getId() + ": Found unknown Scribe message " + content + " - dropping on floor.");
+      log(Logger.WARNING,"Found unknown Scribe message " + content + " - dropping on floor.");
     }
   }
   
@@ -383,7 +378,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   private void processSignedPostMessage(final SignedPostMessage signedMessage, Continuation command) {
     final PostEntityAddress sender = signedMessage.getMessage().getSender();
-    logger.finer(endpoint.getId() + ": Processing signed message " + signedMessage + " from sender " + sender + " with address " + sender.getAddress());
+    log(Logger.FINER,"Processing signed message " + signedMessage + " from sender " + sender + " with address " + sender.getAddress());
     
     getPostLog(sender, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -391,7 +386,7 @@ public class PostImpl implements Post, Application, ScribeClient {
 
         // look up sender
         if (senderLog == null) {
-          logger.warning(endpoint.getId() + ": Found PostMessage from non-existent sender " + sender + " - dropping on floor.");
+          log(Logger.WARNING,"Found PostMessage from non-existent sender " + sender + " - dropping on floor.");
           parent.receiveException(new PostException("Found PostMessage from non-existent sender " + sender + " - dropping on floor."));
           return;
         }
@@ -400,7 +395,7 @@ public class PostImpl implements Post, Application, ScribeClient {
 
         // verify message is signed
         if (! verifySignedPostMessage(signedMessage, senderLog.getPublicKey())) {
-          logger.warning(endpoint.getId() + ": Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor.");
+          log(Logger.WARNING,"Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor.");
           parent.receiveException(new PostException("Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor. (ourkey: " + keyPair.getPublic() + " senderkey: " + senderLog.getPublicKey() + ")"));
           return;
         }
@@ -412,7 +407,7 @@ public class PostImpl implements Post, Application, ScribeClient {
         } else if (message instanceof GroupNotificationMessage) {
           processGroupMessage((GroupNotificationMessage) message, parent);
         } else {
-          logger.warning(endpoint.getId() + ": Found unknown Postmessage " + message + " - dropping on floor.");
+          log(Logger.WARNING,"Found unknown Postmessage " + message + " - dropping on floor.");
           parent.receiveException(new PostException("Found unknown Postmessage " + message + " - dropping on floor."));
         }
       }
@@ -427,7 +422,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    * @param message The incoming message
    */
   private void processPresenceMessage(final PresenceMessage message, Continuation command) {
-    logger.fine(endpoint.getId() + ": Presence message from : " + message.getSender() + " at " + message.getHandle());
+    log(Logger.FINE,"Presence message from : " + message.getSender() + " at " + message.getHandle());
 
     delivery.presence(message, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -447,10 +442,10 @@ public class PostImpl implements Post, Application, ScribeClient {
    * @param message The incoming message.
    */
   private void processDeliveryMessage(final DeliveryMessage message, final Continuation command) {
-    logger.fine(endpoint.getId() + ": Delivery message from : " + message.getSender());
+    log(Logger.FINE,"Delivery message from : " + message.getSender());
 
     if (! message.getDestination().equals(address)) {
-      logger.finer(endpoint.getId() + ": Received delivery message at "  + address + " for " + message.getDestination());
+      log(Logger.FINER,"Received delivery message at "  + address + " for " + message.getDestination());
       command.receiveResult(new Boolean(false));
       return;
     }
@@ -477,7 +472,7 @@ public class PostImpl implements Post, Application, ScribeClient {
         delivery.check(message.getEncryptedMessage(), new StandardContinuation(command) {
           public void receiveResult(Object o) {
             if (((Boolean) o).booleanValue()) {
-              logger.fine(endpoint.getId() + ": Haven't seen message " + message + " before - accepting");
+              log(Logger.FINE,"Haven't seen message " + message + " before - accepting");
               
               processSignedPostMessage(message.getEncryptedMessage(), new StandardContinuation(parent) {
                 public void receiveResult(Object o) {
@@ -495,14 +490,14 @@ public class PostImpl implements Post, Application, ScribeClient {
                       }
                     });
                   } else {
-                    System.out.println("Was told not to accept Notification message " + message.getEncryptedMessage() + " - skipping (val " + o + ")");
+                    log(Logger.INFO,"Was told not to accept Notification message " + message.getEncryptedMessage() + " - skipping (val " + o + ")");
                     next();
                   }
                 }
                 
                 public void receiveException(final Exception e) {
                   if (e instanceof PostException) {
-                    System.out.println("ERROR: Marking message " + message + " as undeliverable due to exception " + e);
+                    log(Logger.WARNING,"Marking message " + message + " as undeliverable due to exception " + e);
                     delivery.undeliverable(message.getEncryptedMessage(), new StandardContinuation(parent) {
                       public void receiveResult(Object o) {
                         parent.receiveException(e);
@@ -515,14 +510,14 @@ public class PostImpl implements Post, Application, ScribeClient {
                       }
                     });
                   } else {
-                    System.out.println("ERROR: Received exception " + e + " processing delivery " + message + " - ignoring.");
+                    log(Logger.WARNING,"Received exception " + e + " processing delivery " + message + " - ignoring.");
                     parent.receiveException(e);
                     next();
                   }
                 }
               });
             } else {
-              logger.fine(endpoint.getId() + ": Seen message " + message + " before - ignoring");
+              log(Logger.FINE,"Seen message " + message + " before - ignoring");
               parent.receiveResult(new Boolean(true));
               next();
             }   
@@ -556,7 +551,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   private void processRefreshMessage(RefreshMessage message) {
     final Iterator i = clients.iterator();
-    System.out.println("BEGINNING REFRESH!");
+    log(Logger.INFO,"BEGINNING REFRESH!");
     
     Continuation c = new ListenerContinuation("Retrieval of ContentHashReferences") {
       protected HashSet set = new HashSet();
@@ -571,7 +566,7 @@ public class PostImpl implements Post, Application, ScribeClient {
         if (i.hasNext()) {
           ((PostClient) i.next()).getContentHashReferences(this);
         } else {
-          System.out.println("REFRESHING " + set.size() + " OBJECTS!");
+          log(Logger.INFO,"REFRESHING " + set.size() + " OBJECTS!");
           storage.refreshContentHash((ContentHashReference[]) set.toArray(new ContentHashReference[0]), new ListenerContinuation("Refreshing of objects"));
         }
       }
@@ -638,7 +633,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    * @param message The incoming message.
    */
   private void processEncryptedNotificationMessage(EncryptedNotificationMessage message, Continuation command) {
-    logger.fine(endpoint.getId() + ": Encrypted notification message from : " + message.getSender());
+    log(Logger.FINE,"Encrypted notification message from : " + message.getSender());
     NotificationMessage nm = null;
 
     // decrypt and verify notification message
@@ -646,15 +641,15 @@ public class PostImpl implements Post, Application, ScribeClient {
       byte[] key = SecurityUtils.decryptAsymmetric(message.getKey(), keyPair.getPrivate());
       nm = (NotificationMessage) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(message.getData(), key));
     } catch (Exception e) {
-      logger.warning(endpoint.getId() + ": Exception occured which decrypting NotificationMessage " + e + " - dropping on floor.");
+      log(Logger.WARNING,"Exception occured which decrypting NotificationMessage " + e + " - dropping on floor.");
       command.receiveException(new PostException("Exception occured which decrypting NotificationMessage " + e + " - dropping on floor."));
       return;
     }
 
-    logger.finer(endpoint.getId() + ": Successfully deserialized notification message from : " + nm.getSender());
+    log(Logger.FINER,"Successfully deserialized notification message from : " + nm.getSender());
 
     if (! (nm.getDestination().equals(getEntityAddress()))) {
-      logger.warning(endpoint.getId() + ": Found ENM at " + getEntityAddress() + " destined for different user " +
+      log(Logger.WARNING,"Found ENM at " + getEntityAddress() + " destined for different user " +
                      nm.getDestination() + " - dropping on floor.");
       command.receiveException(new PostException("Found ENM at " + getEntityAddress() + " destined for different user " +
                                                  nm.getDestination() + " - dropping on floor."));
@@ -663,14 +658,14 @@ public class PostImpl implements Post, Application, ScribeClient {
     
     
     if (! (nm.getSender().equals(message.getSender()))) {
-      logger.warning(endpoint.getId() + ": Found ENM from " + message.getSender() + " with internal NM from different sender " +
+      log(Logger.WARNING,"Found ENM from " + message.getSender() + " with internal NM from different sender " +
                      nm.getSender() + " - dropping on floor.");
       command.receiveException(new PostException("Found ENM from " + message.getSender() + " with internal NM from different sender " +
                                                  nm.getSender() + " - dropping on floor."));
       return;
     }
 
-    logger.finer(endpoint.getId() + ": DEBUG: successfully verified ENM with NM: " + nm);
+    log(Logger.FINER,"DEBUG: successfully verified ENM with NM: " + nm);
 
     // deliver notification messag
     PostClient client = (PostClient) clientAddresses.get(nm.getClientAddress());
@@ -678,7 +673,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     if (client != null) {
       client.notificationReceived(nm, command);
     } else {
-      logger.warning(endpoint.getId() + ": Found notification message for unknown client " + client + " - dropping on floor.");
+      log(Logger.WARNING,"Found notification message for unknown client " + client + " - dropping on floor.");
       command.receiveException(new PostException("Found notification message for unknown client " + client + " - dropping on floor."));
     }
   }
@@ -691,11 +686,11 @@ public class PostImpl implements Post, Application, ScribeClient {
   private void processGroupMessage(GroupNotificationMessage message, Continuation command) {
     PostGroupAddress destination = (PostGroupAddress) message.getGroup();
 
-    logger.fine(endpoint.getId() + ": Received group message from: " + destination);
+    log(Logger.FINE,"Received group message from: " + destination);
 
     byte[] key = (byte[]) keys.get(destination);
 
-    logger.finer(endpoint.getId() + ": Using group key " + key + " for decryption.");
+    log(Logger.FINER,"Using group key " + key + " for decryption.");
 
     try {
       byte[] plainText = null;
@@ -714,11 +709,11 @@ public class PostImpl implements Post, Application, ScribeClient {
       if (client != null) {
         client.notificationReceived(nm, command);
       } else {
-        logger.warning(endpoint.getId() + ": Found notification message for unknown client " + client + " - dropping on floor.");
+        log(Logger.WARNING,"Found notification message for unknown client " + client + " - dropping on floor.");
         command.receiveException(new PostException("Found notification message for unknown client " + client + " - dropping on floor."));
       }
     } catch (Exception e) {
-      logger.warning(endpoint.getId() + ": Exception occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      log(Logger.WARNING,"Exception occured while decrypting GroupNotificationMessage " + e + " - dropping on floor.");
       command.receiveException(new PostException("Exception occured while decrypting GroupNotificationMessage " + e + " - dropping on floor."));
     } 
   }
@@ -737,7 +732,7 @@ public class PostImpl implements Post, Application, ScribeClient {
           PostLog previous = (PostLog) o;
           
           if (previous != null) {
-            logger.info(endpoint.getId() + ": Creating new log at " + getEntityAddress() + " based off of address at " + previousAddress);
+            log(Logger.INFO,"Creating new log at " + getEntityAddress() + " based off of address at " + previousAddress);
             
             log = new PostLog(getEntityAddress(), keyPair.getPublic(), certificate, PostImpl.this, previous, parent);
             parent.receiveResult(new Boolean(true));
@@ -782,21 +777,21 @@ public class PostImpl implements Post, Application, ScribeClient {
       }
     }
 
-    logger.fine(endpoint.getId() + ": Looking up postlog for : " + entity);
+    log(Logger.FINE,"Looking up postlog for : " + entity);
 
     storage.retrieveSigned(new SignedReference(entity.getAddress()), new StandardContinuation(command) {
       public void receiveResult(Object o) {
         final PostLog log = (PostLog) o;
 
-        logger.fine(endpoint.getId() + ": Got response log " + log +  " for entity " + entity);
+        log(Logger.FINE,"Got response log " + log +  " for entity " + entity);
 
         
         if (log == null) {
-          logger.info(endpoint.getId() + ": Could not find postlog for: " + entity);
+          log(Logger.INFO,"Could not find postlog for: " + entity);
 
           if (entity.equals(getEntityAddress())) {
             if (logRewrite) {
-              logger.warning(endpoint.getId() + ": Reinserting log head for entity " + entity);
+              log(Logger.WARNING,"Reinserting log head for entity " + entity);
               createPostLog(new StandardContinuation(parent) {
                 public void receiveResult(Object o) {
                   passResult(PostImpl.this.log, parent);
@@ -805,12 +800,12 @@ public class PostImpl implements Post, Application, ScribeClient {
               
               return;
             } else {
-              logger.warning(endpoint.getId() + ": Unable to fetch local POST log - aborting");
+              log(Logger.WARNING,"Unable to fetch local POST log - aborting");
               passException(new PostException("Unable to locate POST log"), parent);
               return;
             }
           } else {
-            logger.warning(endpoint.getId() + ": PostLog lookup for user " + entity + " failed.");
+            log(Logger.WARNING,"PostLog lookup for user " + entity + " failed.");
             passResult(null, parent);
             return;
           }
@@ -844,11 +839,11 @@ public class PostImpl implements Post, Application, ScribeClient {
                 postLogs.put(entity, log);
               }
 
-              logger.fine(endpoint.getId() + ": Successfully retrieved postlog for: " + entity);
+              log(Logger.FINE,"Successfully retrieved postlog for: " + entity);
 
               passResult(log, parent);
             } else {
-              logger.warning(endpoint.getId() + ": Ceritficate of PostLog could not be verified for entity " + entity);
+              log(Logger.WARNING,"Ceritficate of PostLog could not be verified for entity " + entity);
               passException(new PostException("Certificate of PostLog could not verified for entity: " + entity), parent);
             }
           }
@@ -919,7 +914,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    * This method announce's our presence via our scribe tree
    */
   public void announcePresence() {
-    logger.finer(endpoint.getId() + ": Publishing presence to the group " + address.getAddress());
+    log(Logger.FINER,"Publishing presence to the group " + address.getAddress());
 
     final PresenceMessage pm = new PresenceMessage(address, endpoint.getLocalNodeHandle());
     endpoint.process(new Executable() {
@@ -959,19 +954,19 @@ public class PostImpl implements Post, Application, ScribeClient {
   public void sendNotification(final NotificationMessage message, Continuation command) {
     final PostUserAddress destination = (PostUserAddress) message.getDestination();
 
-    System.out.println("POST: " + endpoint.getId() + ": Sending notification message " + message + " to: " + destination + " addr: " + destination.getAddress());
+    log(Logger.FINER, "POST: Sending notification message " + message + " to: " + destination + " addr: " + destination.getAddress());
 
     getPostLog(destination, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PostLog destinationLog = (PostLog) o;
 
         if (destinationLog == null) {
-          logger.warning(endpoint.getId() + ": Could not send notification message to non-existant user " + destination);
+          log(Logger.WARNING,"Could not send notification message to non-existant user " + destination);
           parent.receiveException(new RuntimeException("Could not send notification, because destination user '" + destination + "' could not be found!"));
           return;
         }
 
-        logger.finer(endpoint.getId() + ": Received destination log " + destinationLog);
+        log(Logger.FINER,"Received destination log " + destinationLog);
 
         try {
           byte[] key = SecurityUtils.generateKeySymmetric();
@@ -986,7 +981,7 @@ public class PostImpl implements Post, Application, ScribeClient {
             }
           });
         } catch (Exception e) {
-          logger.warning(endpoint.getId() + ": Exception occured which encrypting NotificationMessage " + e + " - aborting.");
+          log(Logger.WARNING,"Exception occured which encrypting NotificationMessage " + e + " - aborting.");
           parent.receiveException(e);
         }
       }
@@ -1011,19 +1006,19 @@ public class PostImpl implements Post, Application, ScribeClient {
   public void sendNotificationDirect(final NodeHandle handle, final NotificationMessage message, Continuation command) {
     final PostUserAddress destination = (PostUserAddress) message.getDestination();
 
-    logger.fine(endpoint.getId() + ": Sending notification message " + message + " directly to " + destination + " via " + handle);
+    log(Logger.FINE,"Sending notification message " + message + " directly to " + destination + " via " + handle);
 
     getPostLog(destination, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         PostLog destinationLog = (PostLog) o;
 
         if (destinationLog == null) {
-          logger.warning(endpoint.getId() + ": Could not send notification message to non-existant user " + destination);
+          log(Logger.WARNING,"Could not send notification message to non-existant user " + destination);
           parent.receiveException(new RuntimeException("Could not send notification, because destination user '" + destination + "' could not be found!"));
           return;
         }
 
-        logger.finer(endpoint.getId() + ": Received destination log " + destinationLog);
+        log(Logger.FINER,"Received destination log " + destinationLog);
 
         try {
           byte[] key = SecurityUtils.generateKeySymmetric();
@@ -1031,12 +1026,12 @@ public class PostImpl implements Post, Application, ScribeClient {
           byte[] cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
           EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, destination, keyCipherText, cipherText);
 
-          logger.finer(endpoint.getId() + ": Sending notification message directly to : " + handle);
+          log(Logger.FINER,"Sending notification message directly to : " + handle);
 
           endpoint.route(handle.getId(), new PostPastryMessage(signPostMessage(enm)), handle);
           parent.receiveResult(Boolean.TRUE);
         } catch (Exception e) {
-          logger.warning(endpoint.getId() + ": Exception occured which encrypting NotificationMessage " + e + " - dropping on floor.");
+          log(Logger.WARNING,"Exception occured which encrypting NotificationMessage " + e + " - dropping on floor.");
           parent.receiveException(e);
         } 
       }
@@ -1070,7 +1065,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     PostGroupAddress destination = (PostGroupAddress) message.getDestination();
     byte[] key = (byte[]) keys.get(destination);
 
-    logger.fine(endpoint.getId() + ": Sending message " + message + " to group " + destination + " using key " + key);
+    log(Logger.FINE,"Sending message " + message + " to group " + destination + " using key " + key);
     
     try {
       byte[] cipherText = null;
@@ -1083,12 +1078,12 @@ public class PostImpl implements Post, Application, ScribeClient {
 
       GroupNotificationMessage gnm = new GroupNotificationMessage(address, destination, cipherText);
 
-      logger.finer(endpoint.getId() + ": Built encrypted notfn msg " + gnm + " for destination " + destination);
+      log(Logger.FINER,"Built encrypted notfn msg " + gnm + " for destination " + destination);
 
       scribe.publish(new Topic(destination.getAddress()), new PostScribeMessage(signPostMessage(gnm)));
       command.receiveResult(Boolean.TRUE);
     } catch (Exception e) {
-      logger.warning(endpoint.getId() + ": Exception occured while encrypting GroupNotificationMessage " + e + " - dropping on floor.");
+      log(Logger.WARNING,"Exception occured while encrypting GroupNotificationMessage " + e + " - dropping on floor.");
       command.receiveException(e);
     } 
   }  
@@ -1107,10 +1102,10 @@ public class PostImpl implements Post, Application, ScribeClient {
       
       return new SignedPostMessage(message, sig);
     } catch (SecurityException e) {
-      logger.warning(endpoint.getId() + ": SecurityException " + e + " occured while siging PostMessage " + message + " - aborting.");
+      logException(Logger.WARNING,"SecurityException " + e + " occured while siging PostMessage " + message + " - aborting.",e);
       return null;
     } catch (IOException e) {
-      logger.warning(endpoint.getId() + ": IOException " + e + " occured while siging PostMessage " + message + " - aborting.");
+      logException(Logger.WARNING,"IOException " + e + " occured while siging PostMessage " + message + " - aborting.",e);
       return null;
     } 
   }
@@ -1125,7 +1120,7 @@ public class PostImpl implements Post, Application, ScribeClient {
   private boolean verifySignedPostMessage(SignedPostMessage message, PublicKey key) {
     try {
       if (key == null) {
-        logger.warning(endpoint.getId() + ": Cannot verify PostMessage with null key!" + message + " " + key);
+        log(Logger.WARNING,"Cannot verify PostMessage with null key!" + message + " " + key);
         return false;
       } 
       
@@ -1134,10 +1129,10 @@ public class PostImpl implements Post, Application, ScribeClient {
 
       return SecurityUtils.verify(plainText, sig, key);
     } catch (SecurityException e) {
-      logger.warning(endpoint.getId() + ": SecurityException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
+      logException(Logger.WARNING,"SecurityException " + e + " occured while verifiying PostMessage " + message + " - aborting.",e);
       return false;
     } catch (IOException e) {
-      logger.warning(endpoint.getId() + ": IOException " + e + " occured while verifiying PostMessage " + message + " - aborting.");
+      logException(Logger.WARNING,"IOException " + e + " occured while verifiying PostMessage " + message + " - aborting.",e);
       return false;
     }
   }
@@ -1148,5 +1143,19 @@ public class PostImpl implements Post, Application, ScribeClient {
 
   public Environment getEnvironment() {
     return environment;
+  }
+  
+  private void log(int level, String s) {
+    environment.getLogManager().getLogger(PostImpl.class, instance).log(level, s);    
+  }
+  private void logException(int level, String s, Throwable t) {
+    environment.getLogManager().getLogger(PostImpl.class, instance).logException(level, s, t);    
+  }
+
+  /**
+   * @return the instance of post
+   */
+  public String getInstance() {
+    return instance;
   }
 }

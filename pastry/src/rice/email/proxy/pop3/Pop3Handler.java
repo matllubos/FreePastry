@@ -25,9 +25,9 @@ public class Pop3Handler {
     environment = env;
   }
   
-  public void handleConnection(Socket socket, boolean log) throws IOException {
+  public void handleConnection(Socket socket) throws IOException {
     try {
-      _conn = new Pop3Connection(this, socket, log);
+      _conn = new Pop3Connection(this, socket, environment);
       _state = new Pop3State(_manager);
       _quitting = false;
       

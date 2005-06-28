@@ -54,10 +54,8 @@ public class MessageLostMessage extends PastMessage {
    */
   public void returnResponse(Continuation c, Environment env, String instance) {
     Logger logger = env.getLogManager().getLogger(getClass(), instance);
-    logger.log(Logger.WARNING, 
-        "ERROR: Outgoing PAST message " + message + " with UID " + id + " was lost");
     Exception e = new PastException("Outgoing message '" + message + "' to " + id + "/" + hint + " was lost - please try again.");
-    logger.logException(Logger.WARNING, e);
+    logger.logException(Logger.WARNING, "ERROR: Outgoing PAST message " + message + " with UID " + id + " was lost", e);
     c.receiveException(e);
   }
 

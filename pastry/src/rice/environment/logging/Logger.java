@@ -79,5 +79,5 @@ public interface Logger {
    * @param priority the priority of this log message
    * @param exception the exception to print
    */
-  public void logException(int priority, Throwable exception);
+  public void logException(int priority, String message, Throwable exception);
 }

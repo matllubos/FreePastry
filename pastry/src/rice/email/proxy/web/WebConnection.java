@@ -5,6 +5,9 @@ import java.net.*;
 import java.text.*;
 import java.util.*;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+
 public class WebConnection {
   
   // the statuses
@@ -46,7 +49,10 @@ public class WebConnection {
   protected String redirect;
   protected StringBuffer response;
   
-  public WebConnection(WebHandler handler, Socket socket) throws IOException {
+  protected Environment environment;
+  
+  public WebConnection(WebHandler handler, Socket socket, Environment env) throws IOException {
+    this.environment = env;
     this.socket = socket;
     this.socket.setSoTimeout(TIMEOUT_MILLIS);
     this.out = new OutputStreamWriter(socket.getOutputStream());
@@ -76,7 +82,8 @@ public class WebConnection {
       
       if (pair.length == 2) {
         this.parameters.put(cleanse(pair[0]), cleanse(pair[1]));
-        System.out.println("READ IN " + cleanse(pair[0]) + "->" + cleanse(pair[1]));
+        environment.getLogManager().getLogger(WebConnection.class, null).log(Logger.FINE,
+            "READ IN " + cleanse(pair[0]) + "->" + cleanse(pair[1]));
       }
     }
   }
@@ -165,14 +172,16 @@ public class WebConnection {
   }
   
   public void print(String line) {
-    System.out.println("S: " + line);
+    environment.getLogManager().getLogger(WebConnection.class, null).log(Logger.FINE,
+        "S: " + line);
 
     response.append(line);
   }
   
   private String readLine() throws IOException {
     in.nextToken();
-    System.out.println("C: " + in.sval);
+    environment.getLogManager().getLogger(WebConnection.class, null).log(Logger.FINE,
+        "C: " + in.sval);
     return in.sval;
   }
   
@@ -199,4 +208,10 @@ public class WebConnection {
   public void quit() {
     //handler.quit();
   }
+  
+  
+  public Environment getEnvironment() {
+    return environment; 
+  }
+  
 }

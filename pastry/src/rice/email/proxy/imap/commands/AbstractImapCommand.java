@@ -48,9 +48,8 @@ public abstract class AbstractImapCommand
     {
       _conn.println(_tag + " BAD " + exception.getMessage());
       Logger logger = _state.getEnvironment().getLogManager().getLogger(getClass(), null);
-      logger.logException(Logger.SEVERE, exception);
-      logger.log(Logger.SEVERE,
-          "SEVERE: Exception " + exception + " occurred while attempting to perform IMAP task " + _tag + " " + _cmdName);
+      logger.logException(Logger.SEVERE,
+          "SEVERE: Exception " + exception + " occurred while attempting to perform IMAP task " + _tag + " " + _cmdName, exception);
     }
 
     protected void untaggedResponse(String s)

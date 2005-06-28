@@ -5,6 +5,7 @@ import java.net.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.*;
@@ -37,7 +38,7 @@ public class LocalVisualization implements DataProvider {
       public void run() {
         try {
           while (! die) {
-            Thread.currentThread().sleep(REFRESH_TIME);
+            Thread.sleep(REFRESH_TIME);
             updateData();
             frame.repaint();
           }
@@ -45,9 +46,10 @@ public class LocalVisualization implements DataProvider {
           if (client != null)
             client.close();
           
-          System.out.println("Visualization Thread now dying...");
+          environment.getLogManager().getLogger(ControlPanel.class, null).log(Logger.INFO,
+              "Visualization Thread now dying...");
         } catch (Exception e) {
-          System.out.println(e);
+          environment.getLogManager().getLogger(ControlPanel.class, null).logException(Logger.WARNING,"",e);
         }
       }
     };

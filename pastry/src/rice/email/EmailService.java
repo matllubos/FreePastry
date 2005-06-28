@@ -9,6 +9,7 @@ import rice.Continuation.*;
 import rice.email.log.*;
 import rice.email.messaging.*;
 import rice.email.proxy.smtp.manager.*;
+import rice.environment.logging.Logger;
 import rice.post.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
@@ -284,7 +285,8 @@ public class EmailService extends PostClient {
       
       // in case we've already received it, just say ok
       if (received.contains(enm.getEmail())) {
-        System.out.println("Received duplicate email from " + enm.getEmail().getSender() + " - silently accepting");
+        post.getEnvironment().getLogManager().getLogger(EmailService.class, null).log(Logger.WARNING,
+            "Received duplicate email from " + enm.getEmail().getSender() + " - silently accepting");
         command.receiveResult(Boolean.TRUE);
         return;
       }
@@ -296,7 +298,8 @@ public class EmailService extends PostClient {
         return;
       }
 
-      System.out.println("Received email from " + enm.getEmail().getSender());
+      post.getEnvironment().getLogManager().getLogger(EmailService.class, null).log(Logger.FINE,
+          "Received email from " + enm.getEmail().getSender());
 
       // notify the observers that an email has been received.
       this.setChanged();
@@ -318,11 +321,13 @@ public class EmailService extends PostClient {
           }
         });
       } else {
-        System.out.println("Recieved message, but was unable to insert due to null inbox...");
+        post.getEnvironment().getLogManager().getLogger(EmailService.class, null).log(Logger.WARNING,
+            "Recieved message, but was unable to insert due to null inbox...");
         command.receiveResult(Boolean.FALSE);
       }
     } else {
-      System.out.println("EmailService received unknown notification " + nm + " - dropping on floor.");
+      post.getEnvironment().getLogManager().getLogger(EmailService.class, null).log(Logger.WARNING,
+          "EmailService received unknown notification " + nm + " - dropping on floor.");
       command.receiveException(new PostException("EmailService received unknown notification " + nm + " - dropping on floor."));
     }
   }

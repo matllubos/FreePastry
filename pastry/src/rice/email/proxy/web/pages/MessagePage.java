@@ -29,7 +29,6 @@ public class MessagePage extends WebPage {
       if (state.getCurrentMessageUID() < 0) {
         conn.print("<i>No message is selected</i>");
       } else { 
-        System.out.println("MONKEY6!");
 
         List list = state.getCurrentFolder().getMessages(new MsgFilter() {
           public boolean includes(StoredMessage msg) {

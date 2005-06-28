@@ -13,6 +13,7 @@ import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 import java.net.*;
@@ -174,13 +175,13 @@ public class PostMessage implements StoredMessage {
       if (address != null) 
         from = (PostUserAddress) address;
       
-      return new Email(from, recipients, processMessage(parser, extraHeaders));
+      return new Email(from, recipients, processMessage(parser, extraHeaders, env));
     } catch (IOException ioe) {
       throw new MailboxException(ioe);
     }
   }
   
-  private static EmailMessagePart processMessage(MimeParser parser, String extraHeaders) throws MailboxException {
+  private static EmailMessagePart processMessage(MimeParser parser, String extraHeaders, Environment env) throws MailboxException {
     try {
       byte[] headers = parser.getHeader();
       
@@ -193,19 +194,19 @@ public class PostMessage implements StoredMessage {
         headers = tmp;
       }
       
-      return new EmailMessagePart(new EmailData(headers), process(parser));
+      return new EmailMessagePart(new EmailData(headers), process(parser, env));
     } catch (MimeException e) {
       throw new MailboxException(e);
     }
   }
   
-  private static EmailContentPart process(MimeParser parser) throws MailboxException {
+  private static EmailContentPart process(MimeParser parser, Environment env) throws MailboxException {
     try {
       switch (parser.next()) {
         case MimeParser.START_HEADERS_PART:
-          return processMessage(parser, null);
+          return processMessage(parser, null, env);
         case MimeParser.START_MULTIPART:
-          return processMultipart(parser);
+          return processMultipart(parser, env);
         case MimeParser.SINGLE_PART:
           return processSinglePart(parser);
         default:
@@ -216,17 +217,18 @@ public class PostMessage implements StoredMessage {
     }
   }
   
-  private static EmailMultiPart processMultipart(MimeParser parser) throws MailboxException {
+  private static EmailMultiPart processMultipart(MimeParser parser, Environment env) throws MailboxException {
     try {
       Vector parts = new Vector();
       String boundary = "boundary=" + parser.getBoundary();
-      
-      System.out.println("PROCESSING MIME MESSAGE WITH BOUNDARY " + boundary);
+            
+      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
+          "PROCESSING MIME MESSAGE WITH BOUNDARY " + boundary);
       
       while (true) {
         switch (parser.next()) {
           case MimeParser.START_HEADERS_PART:
-            parts.add(new EmailHeadersPart(new EmailData(parser.getHeader()), process(parser)));
+            parts.add(new EmailHeadersPart(new EmailData(parser.getHeader()), process(parser, env)));
             break;
           case MimeParser.END_MULTIPART:
             return new EmailMultiPart((EmailHeadersPart[]) parts.toArray(new EmailHeadersPart[0]), boundary);
@@ -247,20 +249,24 @@ public class PostMessage implements StoredMessage {
     }
   }
   
-  private static void walker(EmailContentPart part, String indent) {
+  private static void walker(EmailContentPart part, String indent, Environment env) {
     if (part instanceof EmailMultiPart) {
       EmailMultiPart multi = (EmailMultiPart) part;
-      System.out.println(indent + "EmailMultiPart");
+      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
+          indent + "EmailMultiPart");
       for (int i=0; i<multi.content.length; i++) 
-        walker(multi.content[i], indent + "  ");
+        walker(multi.content[i], indent + "  ", env);
     } else if (part instanceof EmailSinglePart) {
-      System.out.println(indent + "EmailSinglePart");
+      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
+          indent + "EmailSinglePart");
     } else if (part instanceof EmailMessagePart)  {
-      System.out.println(indent + "EmailMessagePart");
-      walker(((EmailHeadersPart) part).content, indent + "  ");
+      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
+          indent + "EmailMessagePart");
+      walker(((EmailHeadersPart) part).content, indent + "  ", env);
     } else if (part instanceof EmailHeadersPart) {
-      System.out.println(indent + "EmailHeadersPart");
-      walker(((EmailHeadersPart) part).content, indent + "  ");
+      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
+          indent + "EmailHeadersPart");
+      walker(((EmailHeadersPart) part).content, indent + "  ", env);
     } 
   }
 

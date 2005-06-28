@@ -100,7 +100,8 @@ public class VisualizationServer implements Runnable {
         t.start();
       }
     } catch (IOException e) {
-      System.out.println("Server: Exception " + e + " thrown.");
+      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Server: Exception " + e + " thrown.",e);
     }
   }
   
@@ -160,16 +161,20 @@ public class VisualizationServer implements Runnable {
         oos.flush();
       }
     } catch (IOException e) {
-      System.out.println("Server: Exception " + e + " thrown.");
+      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Server: Exception " + e + " thrown.",e);
     } catch (ClassNotFoundException e) {
-      System.out.println("Server: Exception " + e + " thrown.");
+      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Server: Exception " + e + " thrown.",e);
     } catch (SecurityException e) {
-      System.out.println("Server: Exception " + e + " thrown.");
+      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+          "Server: Exception " + e + " thrown.",e);
     } finally {
       try {
         socket.close();
       } catch (IOException e) {
-        System.out.println("Server: Exception " + e + " thrown closing.");
+        environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+            "Server: Exception " + e + " thrown closing.",e);
       }
     }
   }
@@ -219,10 +224,10 @@ public class VisualizationServer implements Runnable {
       ie.printStackTrace();
     }    
     
-//    System.out.println("restarting with command:\""+restartCommand+"\"");
+//    System.outt.println("restarting with command:\""+restartCommand+"\"");
           
 //    Process p = Runtime.getRuntime().exec(restartCommand);
-//    System.out.println("Process:"+p);
+//    System.outt.println("Process:"+p);
     System.exit(2);
     
     

@@ -1,6 +1,8 @@
 package rice.email.proxy.imap;
 
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,15 +36,15 @@ public class ImapConnection
     public BufferedReader _in;
     InetAddress _clientAddress;
     SpyInputStream _spy;
-    boolean log;
+    Environment environment;
 
     // see quit()
     Quittable _handler;
 
-    public ImapConnection(Quittable handler, Socket sock, boolean log)
+    public ImapConnection(Quittable handler, Socket sock, Environment env)
                    throws IOException
     {
-      this.log = log;
+      this.environment = env;
       
         // networking
         if (sock != null) {
@@ -77,7 +79,7 @@ public class ImapConnection
      */
     public void println(String line)
     {
-        if (log) System.out.println("S: " + line);
+        log(Logger.FINEST, "S: " + line);
         _out.print(line);
         _out.print("\r\n");
         _out.flush();
@@ -95,7 +97,7 @@ public class ImapConnection
      */
     public void print(String string)
     {
-        if (log) System.out.print(string);
+        log(Logger.FINEST, string);
         _out.print(string);
     }
 
@@ -153,13 +155,13 @@ public class ImapConnection
 
         /* if client has disconnected, make sure socket is closed and throw exception */
         if (line == null) {
-            if (log) System.out.println("C: <disconnected>");
+            log(Logger.FINEST, "C: <disconnected>");
 
             close();
             throw new DisconnectedException();
         } else {
             /* more crude debug logging */
-            if (log) System.out.println("C: " + line);
+            log(Logger.FINEST, "C: " + line);
 
             return line;
         }
@@ -170,6 +172,10 @@ public class ImapConnection
       }
     }
 
+    private void log(int level, String message) {
+      environment.getLogManager().getLogger(ImapConnection.class, null).log(level, message);
+    }
+    
     /**
      * Specifies that no more commands should be processed after the
      * current on finishes.
@@ -198,6 +204,13 @@ public class ImapConnection
      */
     public String getClientAddress() {
         return _clientAddress.toString();
+    }
+
+    /**
+     * returns the environment
+     */
+    public Environment getEnvironment() {
+      return environment;
     }
 }
 

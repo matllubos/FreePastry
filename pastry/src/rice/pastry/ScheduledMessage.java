@@ -50,8 +50,7 @@ public class ScheduledMessage extends TimerTask {
         localNode.receiveMessage(msg);
     } catch (Exception e) {
       Logger logger = localNode.getEnvironment().getLogManager().getLogger(getClass(), null);
-      logger.log(Logger.WARNING, "Delivering " + this + " caused exception " + e);
-      logger.logException(Logger.WARNING, e);
+      logger.logException(Logger.WARNING, "Delivering " + this + " caused exception ", e);
     }
   }
 

@@ -48,7 +48,7 @@ public class DataCommand extends SmtpCommand {
       new java.util.Date() + "\r\n";
     
     try {
-      msg.readDotTerminatedContent(conn);
+      msg.readDotTerminatedContent(conn, state.getEnvironment());
     } catch (StringWriterOverflowException e) {
       conn.println("554 Error: Requested action not taken: message too large");
       conn.quit();
@@ -71,9 +71,9 @@ public class DataCommand extends SmtpCommand {
       conn.getServer().incrementFail();
       Logger logger = state.getEnvironment().getLogManager().getLogger(getClass(), null);
 
-      logger.logException(Logger.SEVERE, je);
-      logger.log(Logger.SEVERE,
-          "SEVERE: Exception " + je + " occurred while attempting to send message to " + msg.getRecipientIterator().next());
+      logger.logException(Logger.SEVERE,
+          "SEVERE: Exception " + je + " occurred while attempting to send message to " + msg.getRecipientIterator().next(), 
+          je);
     }
     
     state.clearMessage();

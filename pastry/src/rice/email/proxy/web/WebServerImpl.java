@@ -5,6 +5,7 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.util.*;
 import rice.email.proxy.mailbox.postbox.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 import java.net.*;
@@ -58,7 +59,7 @@ public class WebServerImpl extends Thread implements WebServer {
       while (! quit) {
         final Socket socket = server.accept();
         
-        System.out.println("Accepted web connection from " + socket.getInetAddress());
+        log(Logger.INFO, "Accepted web connection from " + socket.getInetAddress());
         
         
         Thread thread = new Thread("Web Server Thread for " + socket.getInetAddress()) {
@@ -67,7 +68,7 @@ public class WebServerImpl extends Thread implements WebServer {
               WebHandler handler = new WebHandler(manager, workspace, getWebState(socket.getInetAddress()), environment);
               handler.handleConnection(socket);
             } catch (IOException e) {
-              System.out.println("IOException occurred during handling of connection - " + e);
+              logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);
             }
           }
         };
@@ -75,7 +76,14 @@ public class WebServerImpl extends Thread implements WebServer {
         thread.start();
       }
     } catch (IOException e) {
-      System.out.println("IOException occurred during accepting of connection - " + e);
+      logException(Logger.WARNING, "IOException occurred during accepting of connection - " , e);
     }
+  }
+  
+  private void log(int level, String m) {
+    environment.getLogManager().getLogger(WebServerImpl.class, null).log(level, m);
+  }
+  private void logException(int level, String m, Throwable t) {
+    environment.getLogManager().getLogger(WebServerImpl.class, null).logException(level, m, t);    
   }
 }

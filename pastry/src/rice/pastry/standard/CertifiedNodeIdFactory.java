@@ -68,10 +68,10 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
         throw new RuntimeException("Unable to find NodeID certificate - make sure that the NodeID certificate file '" + NODE_ID_FILENAME + "' exists in your ePOST directory.");
       }
     } catch (IOException e) {
-      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,e);
+      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,"",e);
       throw new RuntimeException(e);
     } catch (ClassNotFoundException e) {
-      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,e);
+      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,"",e);
       throw new RuntimeException(e);
     } finally {
       try {

@@ -6,6 +6,8 @@ import java.io.*;
 import javax.swing.*;
 import javax.swing.text.*;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.proxy.*;
@@ -30,14 +32,16 @@ public class ConfigurationFrame extends JFrame {
  
   protected Parameters parameters;
   
+  protected Environment environment;
+  
   protected PostProxy proxy;
   
   protected SaveablePanel[] panels;
     
-  public ConfigurationFrame(Parameters parameters, PostProxy proxy) {
+  public ConfigurationFrame(Environment env, PostProxy proxy) {
     super("ePOST Configuration");
     this.proxy = proxy;
-    
+    this.environment = env;
     addWindowListener(new WindowListener() {
       public void windowActivated(WindowEvent e) {}      
       public void windowClosed(WindowEvent e) {
@@ -56,7 +60,7 @@ public class ConfigurationFrame extends JFrame {
       public void windowOpened(WindowEvent e) {}
     });
     
-    this.parameters = parameters;
+    this.parameters = environment.getParameters();
     this.panels = new ControlPanel[7];
     this.panels[0] = new EmailConfiguration();
     this.panels[1] = new ForwardingConfiguration();
@@ -980,10 +984,11 @@ public class ConfigurationFrame extends JFrame {
     String[] defaults = new String[2];
     defaults[0] = "freepastry";
     defaults[1] = "epost";
-    new ConfigurationFrame(new SimpleParameters(defaults,"epost"), null);
+    
+    new ConfigurationFrame(new Environment(defaults,"epost"), null);
   }
   
-  public static JTextField buildMaskedField(String mask) {
+  public JTextField buildMaskedField(String mask) {
     try {
       MaskFormatter format = new MaskFormatter(mask);
       format.setPlaceholder(" ");
@@ -992,7 +997,9 @@ public class ConfigurationFrame extends JFrame {
       JTextField result =  new JFormattedTextField(format);
       result.setColumns(5);
       return result;
-    } catch (Exception e) { System.out.println("ERROR: " + e); }
+    } catch (Exception e) { 
+      environment.getLogManager().getLogger(ConfigurationFrame.class, null).logException(Logger.WARNING,"ERROR: " , e); 
+    }
     
     return null;
   }

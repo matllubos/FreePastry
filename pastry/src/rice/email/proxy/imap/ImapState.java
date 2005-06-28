@@ -7,6 +7,7 @@ import rice.email.proxy.mailbox.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.util.Workspace;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 /**
  * Holds current session state.
@@ -182,7 +183,8 @@ public class ImapState {
     Vector v = (Vector) folderMap.get(folder);
     
     if (v == null) {
-      System.out.println("ERROR: ImapState folder maintenance is wrong!");
+      environment.getLogManager().getLogger(ImapState.class, null).log(Logger.SEVERE,
+          "ERROR: ImapState folder maintenance is wrong!");
       return;
     }
     

@@ -493,7 +493,7 @@ public class PostProxy {
         Runtime.getRuntime().addShutdownHook(new Thread() {
           public void run() {
             int num = Thread.currentThread().getThreadGroup().activeCount();
-            System.out.println("ePOST System shutting down with " + num + " active threads");
+            log(Logger.INFO,"ePOST System shutting down with " + num + " active threads");
           }
         });
         stepDone(SUCCESS);
@@ -521,8 +521,8 @@ public class PostProxy {
           public void checkWrite(FileDescriptor fd) {}
           public void checkWrite(String file) {}
           public void checkExit(int status) {
-            System.out.println("System.exit() called with status " + status + " - dumping stack!");
-            Thread.dumpStack();
+            logException(Logger.INFO,"System.exit() called with status " + status + " - dumping stack!", 
+                new Exception("Stack Trace"));
             super.checkExit(status);
           }
         }); 
@@ -820,7 +820,7 @@ public class PostProxy {
           }
         }
       } catch (Throwable t) {
-        System.out.println("Determining SMTP server causing error " + t);
+        logException(Logger.WARNING,"Determining SMTP server causing error " , t);
       }
     }
     
@@ -985,7 +985,7 @@ public class PostProxy {
     int count = 0;
     
     do {
-      System.out.println("Sleeping to allow node to boot into the ring");
+      log(Logger.INFO,"Sleeping to allow node to boot into the ring");
       Thread.sleep(3000);
       count++;
       
@@ -1064,7 +1064,7 @@ public class PostProxy {
     int count = 0;
     
     do {
-      System.out.println("Sleeping to allow global node to boot into the ring");
+      log(Logger.INFO,"Sleeping to allow global node to boot into the ring");
       Thread.sleep(3000);
       count++;
       
@@ -1252,7 +1252,7 @@ public class PostProxy {
         year += 2000;
         
       Calendar cal = Calendar.getInstance();
-      System.out.println("COUNT: "+env.getTimeSource().currentTimeMillis()+" Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
+      log(Logger.INFO,"COUNT: Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
       cal.set(year, month, day, hour, minute, 0);
       StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d, env);
       d.sleep();
@@ -1342,7 +1342,7 @@ public class PostProxy {
           }
         } else {
           done = true;
-          System.out.println("LOG IS A " + c.getResult() + " " + c.getResult().getClass().getName());
+          log(Logger.FINE,"LOG IS A " + c.getResult() + " " + c.getResult().getClass().getName());
           log = (PostLog) c.getResult();
         }
       }
@@ -1418,7 +1418,7 @@ public class PostProxy {
     startCheckBoot(env);    
     startDialog(parameters);
         
-    System.out.println("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
+    log(Logger.INFO,"-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
     
     if (dialog != null) 
       dialog.append("\n-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --\n");
@@ -1564,37 +1564,37 @@ public class PostProxy {
   }
 
   protected void sectionStart(String name) {
-    System.out.println(name);
+    log(Logger.INFO,name);
     
     if (dialog != null) dialog.append(name + "\n");
   }
 
   protected void sectionDone() {
-    System.out.println();
+    log(Logger.INFO,"");
     if (dialog != null) dialog.append("\n");
   }
 
   protected void stepStart(String name) {
-    System.out.print(pad("  " + name));
+    log(Logger.INFO,pad("  " + name));
     if (dialog != null) dialog.append(pad("  " + name));
   }
 
   protected void stepDone(String status) {
-    System.out.println("[" + status + "]"); 
+    log(Logger.INFO,"[" + status + "]"); 
     if (dialog != null) dialog.append("[" + status + "]\n");
   }
 
   protected void stepDone(String status, String message) {
-    System.out.println("[" + status + "]");
-    System.out.println("    " + message);
+    log(Logger.INFO,"[" + status + "]");
+    log(Logger.INFO,"    " + message);
     
     if (dialog != null) dialog.append("[" + status + "]\n" + message + "\n");
   }
 
   protected void stepException(Exception e) {
-    System.out.println();
+    log(Logger.INFO,"");
 
-    System.out.println("Exception " + e + " occurred during testing.");
+    logException(Logger.WARNING,"Exception " + e + " occurred during testing.",e);
 
     e.printStackTrace();
     System.exit(0);
@@ -1748,7 +1748,7 @@ public class PostProxy {
       
       configuration.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          final ConfigurationFrame frame = new ConfigurationFrame(parameters, proxy);
+          final ConfigurationFrame frame = new ConfigurationFrame(environment, proxy);
           
           Thread t = new Thread() {
             public void run() {
@@ -1840,12 +1840,12 @@ public class PostProxy {
             out.write(buffer2);
             out.flush();
           } else {
-            System.err.println("ERROR: Liveness thread read " + i + " bytes - exiting!");
+            log(Logger.SEVERE,"ERROR: Liveness thread read " + i + " bytes - exiting!");
             return;
           }
         }
       } catch (IOException e) {
-        System.err.println("Got IOException " + e + " while monitoring liveness - exiting!");
+        logException(Logger.SEVERE,"Got IOException " + e + " while monitoring liveness - exiting!",e);
         e.printStackTrace();
       }
     }
@@ -1881,8 +1881,7 @@ public class PostProxy {
         source.read(buffer);
         sinkKey.interestOps(SelectionKey.OP_WRITE);
       } catch (IOException e) {
-        System.out.println("IOException while reading liveness monitor! " + e);
-        e.printStackTrace();
+        logException(Logger.SEVERE, "IOException while reading liveness monitor! " , e);
       }
     }
     
@@ -1892,8 +1891,7 @@ public class PostProxy {
         sink.write(buffer);
         sinkKey.interestOps(0);
       } catch (IOException e) {
-        System.out.println("IOException while reading liveness monitor! " + e);
-        e.printStackTrace();
+        logException(Logger.SEVERE, "IOException while reading liveness monitor! " , e);
       }
     }
   }
@@ -1988,7 +1986,7 @@ public class PostProxy {
         try {
           parameters.store();
         } catch (IOException ioe) {
-          environment.getLogManager().getLogger(getClass(), null).logException(Logger.WARNING, ioe);
+          logException(Logger.WARNING, "", ioe);
           JOptionPane.showMessageDialog(this, "Cannot store password: "+ioe); 
         }
         synchronized (parameters) {
@@ -2113,5 +2111,12 @@ public class PostProxy {
     }
   }
   
+  private void log(int level, String msg) {
+    environment.getLogManager().getLogger(PostProxy.class, null).log(level,msg);
+  }
+
+  private void logException(int level, String msg, Throwable t) {
+    environment.getLogManager().getLogger(PostProxy.class, null).logException(level,msg,t);
+  }
 
 }

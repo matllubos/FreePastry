@@ -2363,6 +2363,10 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     return stats;
   }
 
+  public String getInstance() {
+    return instance;
+  }
+  
   public Environment getEnvironment() {
     return environment;
   }

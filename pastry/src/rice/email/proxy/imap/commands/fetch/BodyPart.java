@@ -8,6 +8,7 @@ import rice.email.proxy.mail.*;
 import rice.email.proxy.imap.commands.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 
@@ -199,7 +200,8 @@ public class BodyPart extends FetchPart {
       }
     }
 
-    System.out.println("DIDN'T KNOW WHAT TO DO WITH " + part.getClass().getName() + " " + content.getClass().getName() + " " + type);
+    _conn.getEnvironment().getLogManager().getLogger(BodyPart.class, null).log(Logger.WARNING,
+        "DIDN'T KNOW WHAT TO DO WITH " + part.getClass().getName() + " " + content.getClass().getName() + " " + type);
 
     return "\"\"";
   }

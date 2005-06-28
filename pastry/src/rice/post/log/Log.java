@@ -6,6 +6,7 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.post.*;
 import rice.post.storage.*;
@@ -401,7 +402,7 @@ public class Log implements PostData {
           LogEntry thisEntry = (LogEntry) o;
           
           if (thisEntry == null) {
-            System.out.println("Log entry was unexpectedly null - returning prematurely...");
+            log(Logger.WARNING,"Log entry was unexpectedly null - returning prematurely...");
             parent.receiveResult(Boolean.TRUE);
           } else if (((entry != null) && (thisEntry.contains(entry))) ||
                      (thisEntry.getPreviousEntryReference() == null)) {
@@ -506,7 +507,7 @@ public class Log implements PostData {
       state = STATE_1;
       entry.setPost(post);
       entry.setUser(post.getEntityAddress());
-      System.out.println("setting PreviousEntryReferences on entry with: "+topEntryReferencesToString());
+      log(Logger.INFO,"setting PreviousEntryReferences on entry with: "+topEntryReferencesToString());
       entry.setPreviousEntryReferences(previousTopReferences);
       entry.setPreviousEntry(topEntry);
       post.getStorageService().storeContentHash(entry, this);
@@ -581,6 +582,15 @@ public class Log implements PostData {
     
     return result.toString();
   }
+  
+  private void log(int level, String m) {
+    post.getEnvironment().getLogManager().getLogger(Log.class, null).log(level,m);
+  }
+  
+  private void logException(int level, String m, Throwable t) {
+    post.getEnvironment().getLogManager().getLogger(Log.class, null).logException(level,m,t);
+  }
+  
   
   public String toString() {
     return "Log[" + name + "]";

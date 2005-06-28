@@ -8,10 +8,15 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+
 public class DnsServiceImpl implements DnsService {
   DirContext ictx;
-
-  public DnsServiceImpl() throws IOException {
+  Environment environment;
+  
+  public DnsServiceImpl(Environment env) throws IOException {
+    this.environment = env;
     try {
       ictx = new InitialDirContext();
     } catch (NamingException e) {
@@ -48,7 +53,8 @@ public class DnsServiceImpl implements DnsService {
 
       return hosts;
     } catch (NamingException e) {
-      System.out.println("Error looking up MX record for " + host + " due to " + e);
+      environment.getLogManager().getLogger(DnsServiceImpl.class, null).logException(Logger.WARNING, 
+          "Error looking up MX record for " + host + " due to ", e);
 
       return new String[0];
     }

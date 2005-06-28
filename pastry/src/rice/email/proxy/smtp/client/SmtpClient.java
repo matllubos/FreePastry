@@ -1,6 +1,8 @@
 package rice.email.proxy.smtp.client;
 
 import rice.email.proxy.util.StreamUtils;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 import java.net.*;
@@ -13,11 +15,14 @@ public class SmtpClient {
   private static final int SMTP_PORT = 25;
   private static final int TIMEOUT   = 1000 * 5;
 
-  public SmtpClient(String host) {
+  private Environment environment;
+  
+  public SmtpClient(String host, Environment env) {
     if (host == null)
       throw new NullPointerException();
 
     _host = host;
+    this.environment = env;
   }
 
   public void connect() throws IOException, SmtpProtocolException {
@@ -37,13 +42,15 @@ public class SmtpClient {
   }
 
   private String sendCommand(String cmd) throws IOException, SmtpProtocolException {
-    System.out.println("C: " + cmd);
+    environment.getLogManager().getLogger(SmtpClient.class, null).log(Logger.FINEST, 
+        "C: " + cmd);
     _out.write(cmd);
     _out.write("\r\n");
     _out.flush();
 
     String response = _in.readLine();
-    System.out.println("S: " + response);
+    environment.getLogManager().getLogger(SmtpClient.class, null).log(Logger.FINEST, 
+        "S: " + response);
     if (response == null)
       throw new SmtpProtocolException("Connection unexpectedly closed");
 

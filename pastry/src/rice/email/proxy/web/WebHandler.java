@@ -4,6 +4,7 @@ import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.email.proxy.web.pages.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 import java.net.*;
@@ -33,7 +34,7 @@ public class WebHandler {
   }
   
   public void handleConnection(Socket socket) throws IOException {
-    _conn = new WebConnection(this, socket);
+    _conn = new WebConnection(this, socket, environment);
     
     try {
       String request = _conn.readRequest();
@@ -51,7 +52,8 @@ public class WebHandler {
     } catch (SocketTimeoutException ste) {
       _conn.println("421 Service shutting down and closing transmission channel");
     } catch (IOException e) {
-      System.out.println("Detected connection error " + e + " - closing.");
+      environment.getLogManager().getLogger(WebHandler.class, null).logException(Logger.WARNING,
+          "Detected connection error " + e + " - closing.",e);
     } catch (WebException e) {
       _conn.error(e.getStatus(), e.getMessage());
     } 

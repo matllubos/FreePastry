@@ -132,8 +132,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       this.key.interestOps(SelectionKey.OP_ACCEPT);
     } catch (IOException e) {
-      log(Logger.WARNING, "ERROR creating server socket channel " + e);
-      logException(Logger.WARNING,e);
+      logException(Logger.WARNING,"ERROR creating server socket channel ",e);
     }
   }  
   
@@ -288,8 +287,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           socketOpened(path, new SocketManager(path, bootstrap));
       }
     } catch (IOException e) {
-      log(Logger.WARNING, "GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!");
-      logException(Logger.WARNING,e);
+      logException(Logger.WARNING,"GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!",e);
       closeSocket(path);
       manager.markDead(path);
     }
@@ -485,8 +483,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     pastryNode.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null).log(level,s);
   }
   
-  private void logException(int level, Exception e) {
-    pastryNode.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null).logException(level,e);
+  private void logException(int level, String s, Exception e) {
+    pastryNode.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null).logException(level,s,e);
   }
   
   /**
@@ -854,9 +852,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
         log(Logger.FINE, "(SM) Found connectable channel - completed connection");
       } catch (Exception e) {
-        log(Logger.FINE, "(SM) Got exception " + e + " on connect - marking as dead");
-        log(Logger.FINE, "Unable to connect to path " + path + " (" + e + ") marking as dead.");
-        logException(Logger.FINE,e);
+        logException(Logger.FINE,"(SM) Unable to connect to path " + path + " (" + e + ") marking as dead.",e);
         manager.markDead(path);
 
         close();
@@ -1210,8 +1206,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           }
         }
       } catch (IOException e) {
-        log(Logger.FINE, "(SRM) ERROR " + e + " reading source route - cancelling.");
-        logException(Logger.FINE,e);
+        logException(Logger.FINE,"(SRM) ERROR " + e + " reading source route - cancelling.",e);
         close();
       }
     }

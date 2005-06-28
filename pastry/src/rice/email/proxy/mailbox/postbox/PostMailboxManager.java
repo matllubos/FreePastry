@@ -15,6 +15,7 @@ import rice.Continuation;
 
 import rice.email.EmailService;
 import rice.email.Folder;
+import rice.environment.Environment;
 
 /**
 * This class serves as the main "glue" code between foedus and
@@ -34,12 +35,12 @@ public class PostMailboxManager implements MailboxManager {
    *
    * @param email The email service on the local pastry node.
    */
-  public PostMailboxManager(EmailService email, Folder folder) throws MailboxException {
+  public PostMailboxManager(EmailService email, Folder folder, Environment env) throws MailboxException {
     if (email == null)
       throw new IllegalArgumentException("EmailService cannot be null in PostMailbox.");
 
     this.email = email;
-    this.mailbox = new PostMailbox(email, folder);
+    this.mailbox = new PostMailbox(email, folder, env);
   }
 
   public String getMailboxType() {

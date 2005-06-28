@@ -3800,4 +3800,10 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   public Environment getEnvironment() {
     return environment;
   }
+  
+  public String getInstance() {
+    return instance;
+  }
+  
+
 }

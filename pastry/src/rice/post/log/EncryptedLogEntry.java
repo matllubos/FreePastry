@@ -4,6 +4,7 @@ import java.io.*;
 import java.security.*;
 
 import rice.*;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 import rice.post.*;
@@ -61,7 +62,7 @@ final class EncryptedLogEntry extends LogEntry {
       byte[] data = SecurityUtils.serialize(entry);
       cipherEntry = SecurityUtils.encryptSymmetric(data, key);
     } catch (IOException e) {
-      System.out.println("Exception " + e + " thrown while serializing/encrypting entry " + entry);
+      logException(Logger.WARNING, "Exception " + e + " thrown while serializing/encrypting entry " + entry,e);
     }
   }
 
@@ -74,9 +75,9 @@ final class EncryptedLogEntry extends LogEntry {
       entry = (LogEntry) SecurityUtils.deserialize(data);
       entry.setParent(this);
     } catch (IOException e) {
-      System.out.println("Exception " + e + " thrown while deserializing/decrypting entry " + entry);
+      logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting entry " + entry,e);
     } catch (ClassNotFoundException e) {
-      System.out.println("Exception " + e + " thrown while deserializing/decrypting entry " + entry);
+      logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting entry " + entry,e);
     }
   }
   
@@ -169,5 +170,14 @@ final class EncryptedLogEntry extends LogEntry {
       ois.readFully(cipherEntry, 0, cipherEntry.length);
     }
   }
+  
+  private void log(int level, String m) {
+    post.getEnvironment().getLogManager().getLogger(EncryptedLogEntry.class, null).log(level,m);
+  }
+  
+  private void logException(int level, String m, Throwable t) {
+    post.getEnvironment().getLogManager().getLogger(EncryptedLogEntry.class, null).logException(level,m,t);
+  }
+
 }
 

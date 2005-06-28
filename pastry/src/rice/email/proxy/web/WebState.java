@@ -12,6 +12,7 @@ public class WebState {
   protected int currentMessageUID;
   protected UserManager userManager;
   
+  
   public WebState(UserManager userManager) {
     this.userManager = userManager;
     this.currentMessageUID = -1;

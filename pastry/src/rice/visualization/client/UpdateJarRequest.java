@@ -9,6 +9,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import rice.environment.Environment;
+
 /**
  * @author jeffh
  *
@@ -19,11 +21,11 @@ public class UpdateJarRequest implements Serializable {
   ArrayList jars;
   public long waitTime = 10000;
 
-  public UpdateJarRequest(File[] files) throws IOException {    
+  public UpdateJarRequest(File[] files, Environment env) throws IOException {    
     jars = new ArrayList();
     for (int i = 0; i < files.length; i++) {
       FileMessage fm = new FileMessage(files[i]);
-      fm.readFile();
+      fm.readFile(env);
       jars.add(fm);
     }
   }
