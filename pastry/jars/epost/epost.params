@@ -37,6 +37,7 @@ email_smtp_log=false
 email_smtp_non_blocking=false
 email_smtp_port=2025
 email_smtp_ssl=false
+email_smtp_manager_simpleManager_post_host = dosa.cs.rice.edu,thor05.cs.rice.edu,.epostmail.org
 email_webmail_enable=false
 email_webmail_port=1080
 glacier_enable=true
