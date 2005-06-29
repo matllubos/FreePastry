@@ -153,7 +153,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     logStatistics = p.getBoolean("p2p_glacier_logStatistics");
     faultInjectionEnabled = p.getBoolean("p2p_glacier_faultInjectionEnabled");
 
-    insertTimeout = p.getLong("p2p_glacier_faultInjectionEnabled");
+    insertTimeout = p.getLong("p2p_glacier_insertTimeout");
     minFragmentsAfterInsert = p.getDouble("p2p_glacier_minFragmentsAfterInsert");
 
     refreshTimeout = p.getLong("p2p_glacier_refreshTimeout");

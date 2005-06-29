@@ -1463,6 +1463,7 @@ public class PostProxy {
       SelectorManager selectorManager = Environment.generateDefaultSelectorManager(timeSource, logManager);
       logManager.startRotateTask(selectorManager);
       Environment env = new Environment(selectorManager, randomSource, timeSource, logManager, parameters);
+      environment = env;
       start(env);
       updateParameters(parameters);
       
@@ -1511,7 +1512,9 @@ public class PostProxy {
     try {
       if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
       JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
-    } catch (Throwable f) {}
+    } catch (Throwable t) {
+      logException(Logger.SEVERE, "cause of panic: ", t);
+    }
     
     System.exit(-1);
   }
@@ -1523,7 +1526,9 @@ public class PostProxy {
     try {
       if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
         JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
-    } catch (Throwable f) {}
+    } catch (Throwable t) {
+      logException(Logger.SEVERE, "cause of panic: ", t);
+    }
     
     System.exit(-1);
   }
@@ -1537,14 +1542,16 @@ public class PostProxy {
   }
 
   public int message(String m, String[] options, String def) {
-    System.err.println("MESSAGE : " + m);
+    log(Logger.INFO, "MESSAGE : " + m);
     
     try {
       if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
         return JOptionPane.showOptionDialog(null, m, "ePOST Message", 
                                              0, JOptionPane.INFORMATION_MESSAGE, null, 
                                              options, def);
-    } catch (Throwable f) {}
+    } catch (Throwable f) {
+      logException(Logger.SEVERE, "cause of panic: ", f);
+    }
     
     return 0;
   }
@@ -1585,7 +1592,7 @@ public class PostProxy {
   protected void stepException(Exception e) {
     log(Logger.INFO,"");
 
-    logException(Logger.WARNING,"Exception " + e + " occurred during testing.",e);
+    logException(Logger.SEVERE,"Exception " + e + " occurred during testing.",e);
     System.exit(0);
   }
   
@@ -2104,7 +2111,9 @@ public class PostProxy {
   }
 
   private void logException(int level, String msg, Throwable t) {
-    environment.getLogManager().getLogger(PostProxy.class, null).logException(level,msg,t);
+    LogManager lm = environment.getLogManager();
+    Logger l = lm.getLogger(PostProxy.class, null);
+    l.logException(level,msg,t);
   }
 
 }

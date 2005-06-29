@@ -18,6 +18,9 @@ import java.util.*;
  */
 
 public class JoinRequest extends Message implements Serializable {
+
+  static final long serialVersionUID = 231671018732832563L;
+  
   private NodeHandle handle;
 
   private NodeHandle joinHandle;

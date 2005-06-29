@@ -7,6 +7,9 @@ import rice.environment.logging.Logger;
 import rice.p2p.glacier.Fragment;
 
 public class Manifest implements Serializable {
+  
+  static final long serialVersionUID = -436805143199825662L;
+  
   protected transient byte[] objectHash;
   protected transient byte[][] fragmentHash;
   protected transient byte[] signature;
