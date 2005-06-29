@@ -1402,6 +1402,10 @@ public class PostProxy {
   protected Environment start(Environment env) throws Exception {
 //    parameters = env.getParameters();  // done in start(void)
     startLivenessMonitor(env);
+    // XXX make this cooler in production code
+    System.setErr(new PSCatcher(env, System.err));
+    System.setOut(System.err);
+    
     startCheckBoot(env);    
     startDialog(parameters);
         

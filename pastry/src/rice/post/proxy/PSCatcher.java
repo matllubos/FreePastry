@@ -22,13 +22,13 @@ public class PSCatcher extends PrintStream {
    * @throws FileNotFoundException
    */
   public PSCatcher(Environment env, PrintStream out) throws FileNotFoundException {
-    super(new FileOutputStream("out.txt"));
+    super(new FileOutputStream("out.txt"), true);
     this.environment = env;
     this.out = out;
   }
 
   public void println(String arg0) {
-    out.println(arg0);
+//    out.println(arg0);
     environment.getLogManager().getLogger(PSCatcher.class, null).logException(Logger.INFO, arg0, 
       new Exception("System.x.println() called"));
   }
@@ -37,6 +37,7 @@ public class PSCatcher extends PrintStream {
   public void print(String arg0) {
     println(arg0);
   }
+
   public void println() {
     println("");
   }

@@ -17,6 +17,8 @@ import rice.p2p.multiring.*;
  */
 public abstract class PostEntityAddress implements Serializable {
 
+  	static final long serialVersionUID = -7860373480614864296L;
+  
   /**
    * Constructor
    */

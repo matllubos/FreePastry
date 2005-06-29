@@ -17,6 +17,8 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
   
   public GlacierDefaultPolicy(ErasureCodec codec, String instance, Environment env) {
     this.codec = codec;
+    this.instance = instance;
+    this.environment = env;
   }
 
   public boolean checkSignature(Manifest manifest, VersionKey key) {
