@@ -516,7 +516,7 @@ public class MimeParser {
         long endTime = System.currentTimeMillis();
         System.out.println(String.valueOf(endTime - startTime) + " ms");
       }
-    } catch (Exception e) {
+    } catch (Exception e) {      
       e.printStackTrace();
     } 
   }

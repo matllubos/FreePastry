@@ -1,6 +1,9 @@
 
 package rice;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+
 /**
  * Asynchronously receives the result to a given method call, using
  * the command pattern.
@@ -114,14 +117,17 @@ public interface Continuation {
      */
     protected String name;
     
+    protected Environment environment;
+    
     /**
      * Constructor which takes in a name
      *
      * @param name A name which uniquely identifies this contiuation for
      *   debugging purposes
      */
-    public ListenerContinuation(String name) {
+    public ListenerContinuation(String name, Environment env) {
       this.name = name;
+      this.environment = env;
     }
     
     /**
@@ -140,8 +146,8 @@ public interface Continuation {
      * @param result The exception which was caused.
      */
     public void receiveException(Exception result) {
-      System.out.println("ERROR - Received exception " + result + " during task " + name);
-      result.printStackTrace();
+      environment.getLogManager().getLogger(Continuation.class, null).logException(Logger.WARNING, 
+          "ERROR - Received exception " + result + " during task " + name, result);
     }
   }
   

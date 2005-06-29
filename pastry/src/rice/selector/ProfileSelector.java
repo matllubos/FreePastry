@@ -17,6 +17,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 
+import rice.environment.logging.*;
 import rice.environment.logging.LogManager;
 import rice.environment.time.TimeSource;
 
@@ -248,8 +249,8 @@ public class ProfileSelector extends SelectorManager {
 //        }
         lastTaskType = "Invocation Complete";
       } catch (Exception e) {
-        System.err.println("Invoking runnable caused exception " + e + " - continuing");
-        e.printStackTrace();
+        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+            "Invoking runnable caused exception " + e + " - continuing",e);
       }
     }
 
@@ -286,8 +287,8 @@ public class ProfileSelector extends SelectorManager {
         addStat(run.getClass().getName(),time);        
         lastTaskType = "Invocation Complete";
       } catch (Exception e) {
-        System.err.println("Invoking runnable caused exception " + e + " - continuing");
-        e.printStackTrace();
+        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+            "Invoking runnable caused exception " + e + " - continuing",e);
       }
       
       run = getInvocation();

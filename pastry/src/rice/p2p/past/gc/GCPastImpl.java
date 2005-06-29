@@ -398,10 +398,10 @@ public class GCPastImpl extends PastImpl implements GCPast {
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof GCCollectMessage) {
         // get all ids which expiration before now
-        collect(storage.scanMetadataValuesHead(new GCPastMetadata(environment.getTimeSource().currentTimeMillis())), new ListenerContinuation("Removal of expired ids") {
+        collect(storage.scanMetadataValuesHead(new GCPastMetadata(environment.getTimeSource().currentTimeMillis())), new ListenerContinuation("Removal of expired ids", environment) {
           public void receiveResult(Object o) {
             if (environment.getTimeSource().currentTimeMillis() > DEFAULT_EXPIRATION) 
-              collect(storage.scanMetadataValuesNull(), new ListenerContinuation("Removal of default expired ids"));
+              collect(storage.scanMetadataValuesNull(), new ListenerContinuation("Removal of default expired ids", environment));
           }
         });
       } else if (msg instanceof FetchHandleMessage) {

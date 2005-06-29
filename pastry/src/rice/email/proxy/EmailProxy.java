@@ -33,6 +33,7 @@ import rice.email.proxy.user.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.mailbox.postbox.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 
 import rice.proxy.*;
@@ -241,7 +242,8 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch SMTP server - continuing - " + e);
-        e.printStackTrace();
+        env.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+            "ERROR: Unable to launch SMTP server - continuing - ",e);
         
         int i = message("The SMTP server failed to launch due to an exception.\n\n" + 
                         e + " - " + e.getMessage(), new String[] {"Continue", "Kill ePOST Proxy"}, "Continue");
@@ -286,7 +288,8 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
-        e.printStackTrace();
+        env.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+            "ERROR: Unable to launch IMAP server - continuing - ",e);
         
         int i = message("The IMAP server failed to launch due to an exception.\n\n" + 
                         e + " - " + e.getMessage(), new String[] {"Continue", "Kill ePOST Proxy"}, "Continue");
@@ -330,7 +333,9 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
-        e.printStackTrace();
+        env.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+            "ERROR: Unable to launch IMAP server - continuing - ",
+            e);
         
         int i = message("The POP3 server failed to launch due to an exception.\n\n" + 
                         e + " - " + e.getMessage(), new String[] {"Continue", "Kill ePOST Proxy"}, "Continue");

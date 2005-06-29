@@ -3,12 +3,15 @@ package rice.email.proxy.mailbox.filebox;
 import java.io.File;
 
 import rice.email.proxy.mailbox.*;
+import rice.environment.Environment;
 
 public class FileMailboxManager implements MailboxManager {
   File base;
-
-  public FileMailboxManager(File base) {
+  Environment environment;
+  
+  public FileMailboxManager(File base, Environment env) {
     this.base = base;
+    this.environment = env;
   }
 
   public String getMailboxType() {
@@ -50,7 +53,7 @@ public class FileMailboxManager implements MailboxManager {
     if (!isValidMailboxName(username))
       throw new NoSuchMailboxException("Invalid username");
 
-    return new FileMailbox(new File(base, username));
+    return new FileMailbox(new File(base, username), environment);
   }
 
   private void createMailbox(File fold) throws MailboxException {
@@ -62,7 +65,7 @@ public class FileMailboxManager implements MailboxManager {
       throw new MailboxException("Couldn't create " + fold.toString());
     }
 
-    FileMailbox maildir = new FileMailbox(fold);
+    FileMailbox maildir = new FileMailbox(fold, environment);
 
     FileFolder.createFolder(maildir, "INBOX");
   }

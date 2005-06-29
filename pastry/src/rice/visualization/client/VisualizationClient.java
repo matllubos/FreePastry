@@ -91,7 +91,7 @@ public class VisualizationClient {
     } catch (IOException e) {
       this.state = STATE_DEAD;
       logException("Client ("+address+"): Exception " + e + " thrown.",e);
-      //e.printStackTrace();
+      //e.printStackTracee();
       try {
         socket.close();
       } catch (IOException f) {

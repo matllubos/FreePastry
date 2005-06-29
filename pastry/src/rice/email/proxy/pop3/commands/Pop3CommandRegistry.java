@@ -3,6 +3,9 @@ package rice.email.proxy.pop3.commands;
 import java.util.HashMap;
 import java.util.Map;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+
 public class Pop3CommandRegistry {
   
   private static Map commands        = new HashMap();
@@ -14,7 +17,7 @@ public class Pop3CommandRegistry {
   {"RETR", RetrCommand.class}, {"DELE", DeleCommand.class},
   {"NOOP", NoopCommand.class}, {"CAPA", CapaCommand.class} };
   
-  public void load() {
+  public void load(Environment env) {
     for (int i = 0; i < COMMANDS.length; i++) {
       String name = COMMANDS[i][0].toString();
       
@@ -26,7 +29,7 @@ public class Pop3CommandRegistry {
         Pop3Command command = (Pop3Command) type.newInstance();
         registerCommand(name, command);
       } catch (Exception e) {
-        e.printStackTrace();
+        env.getLogManager().getLogger(Pop3CommandRegistry.class, null).logException(Logger.WARNING, "", e);
       }
     }
   }

@@ -20,6 +20,7 @@ import java.security.PublicKey;
 import java.util.zip.GZIPOutputStream;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.util.EncryptedOutputStream;
 import rice.p2p.util.MathUtils;
@@ -143,8 +144,8 @@ public class NetworkLogUploadTask extends TimerTask {
       if (done < 0)
         throw new IOException("Log file was not correctly received - skipping...");
     } catch (IOException e) {
-      System.err.println("ERROR: Got exception " + e + " while sending file - aborting!");
-      e.printStackTrace();
+      environment.getLogManager().getLogger(NetworkLogUploadTask.class, null).logException(Logger.WARNING,
+          "ERROR: Got exception " + e + " while sending file - aborting!",e);
       return;
     } finally {
       try {

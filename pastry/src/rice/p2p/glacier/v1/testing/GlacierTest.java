@@ -104,11 +104,11 @@ public class GlacierTest {
 
       pastStor = new StorageManagerImpl(FACTORY, new PersistentStorage(FACTORY,
           "past-root-" + i, ".", 1000000, pn.getEnvironment()), new LRUCache(new MemoryStorage(
-          FACTORY), 1000000));
+          FACTORY), 1000000, pn.getEnvironment()));
 
       glacierStor = new StorageManagerImpl(FACTORY, new PersistentStorage(
           FACTORY, "glacier-root-" + i, ".", 1000000, pn.getEnvironment()), new LRUCache(
-          new MemoryStorage(FACTORY), 1000000));
+          new MemoryStorage(FACTORY), 1000000, pn.getEnvironment()));
     } catch (IOException ioe) {
       System.out.println("makePastryNode(" + i + ") failed, " + ioe);
       ioe.printStackTrace();

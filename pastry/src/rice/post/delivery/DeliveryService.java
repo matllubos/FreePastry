@@ -211,7 +211,7 @@ public class DeliveryService implements ScribeClient {
    * the correct Scribe groups by looking at the messages we are responsible for.
    */
   public void synchronize() { 
-    pending.synchronize(new ListenerContinuation("Synchronization of Delivery Service") {
+    pending.synchronize(new ListenerContinuation("Synchronization of Delivery Service", environment) {
       public void receiveResult(Object o) {
         pending.getGroups(new StandardContinuation(this) {
           public void receiveResult(Object o) {

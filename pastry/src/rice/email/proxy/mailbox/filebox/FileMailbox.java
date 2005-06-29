@@ -6,15 +6,19 @@ import java.util.regex.*;
 import rice.email.proxy.imap.*;
 import rice.email.proxy.mail.*;
 import rice.email.proxy.mailbox.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 public class FileMailbox implements Mailbox {
   File _folder;
-
-  public FileMailbox(File folder) throws NoSuchMailboxException {
+  Environment environment;
+  
+  public FileMailbox(File folder, Environment env) throws NoSuchMailboxException {
     if (!folder.isDirectory())
       throw new NoSuchMailboxException(folder + " is not a directory");
-
+    
     _folder = folder;
+    this.environment = env;
   }
   
   public String getHierarchyDelimiter() {
@@ -68,7 +72,8 @@ public class FileMailbox implements Mailbox {
 
       return folders;
     } catch (PatternSyntaxException pse) {
-      pse.printStackTrace();
+      environment.getLogManager().getLogger(FileMailbox.class, null).logException(Logger.WARNING,
+          "Pattern syntax", pse);
       throw new MailboxException("Pattern syntax", pse);
     }
   }
@@ -109,7 +114,8 @@ public class FileMailbox implements Mailbox {
 
       return subscriptions;
     } catch (PatternSyntaxException pse) {
-      pse.printStackTrace();
+      environment.getLogManager().getLogger(FileMailbox.class, null).logException(Logger.WARNING,
+          "Pattern syntax", pse);
       throw new MailboxException("Pattern syntax", pse);
     }
   }

@@ -56,7 +56,7 @@ public class Pop3Connection {
     try {
       close();
     } catch (IOException e) {
-      e.printStackTrace();
+      logException(Logger.WARNING,"",e);
     }
   }
   

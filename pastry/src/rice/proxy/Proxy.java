@@ -368,8 +368,9 @@ public class Proxy {
         if (j >= 0)
           monitor.answered();
       } catch (IOException e) {
-        System.err.println("ERROR: Got IOException while checking liveness!" + e + " This is usually an unrecoverable JVM crash - we're going to exit now.");
-        e.printStackTrace();
+        logException(Logger.SEVERE, 
+            "ERROR: Got IOException while checking liveness!" + e + " This is usually an unrecoverable JVM crash - we're going to exit now.",
+            e);
         System.exit(-1);
       } catch (NullPointerException e) {
         logException(Logger.SEVERE, "Liveness test ended in NullPointerExceptin " , e);
@@ -473,8 +474,9 @@ public class Proxy {
               }
             }
           } catch (Exception e) {
-            System.err.println("ERROR: Got exception " + e + " while running automatic update - ignoring");
-            e.printStackTrace();
+            logException(Logger.SEVERE, 
+                "ERROR: Got exception " + e + " while running automatic update - ignoring",
+                e);
           }
         } catch (InterruptedException e) {
         }

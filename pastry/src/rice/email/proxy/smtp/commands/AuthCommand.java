@@ -8,6 +8,7 @@ import rice.email.proxy.smtp.SmtpConnection;
 import rice.email.proxy.smtp.SmtpState;
 import rice.email.proxy.smtp.manager.SmtpManager;
 import rice.email.proxy.user.*;
+import rice.environment.logging.Logger;
 
 /**
  * AUTH command.
@@ -66,7 +67,8 @@ public class AuthCommand extends SmtpCommand {
         conn.println("535 User error - please try again.");
       } catch (NullPointerException e) {
         conn.println("535 Internal error " + e + " - please try again.");
-        e.printStackTrace();
+        state.getEnvironment().getLogManager().getLogger(AuthCommand.class, null).logException(Logger.WARNING, 
+            "535 Internal error " + e + " - please try again.", e);
       }
     } else if (mechanism.toUpperCase().equals("LOGIN")) {
       try {
@@ -91,7 +93,8 @@ public class AuthCommand extends SmtpCommand {
         conn.println("535 User error - please try again.");
       } catch (NullPointerException e) {
         conn.println("535 Internal error " + e + " - please try again.");
-        e.printStackTrace();
+        state.getEnvironment().getLogManager().getLogger(AuthCommand.class, null).logException(Logger.WARNING, 
+            "535 Internal error " + e + " - please try again.", e);
       }
     } else {
       conn.println("504 Unrecognized authentication type '" + mechanism + "'"); 

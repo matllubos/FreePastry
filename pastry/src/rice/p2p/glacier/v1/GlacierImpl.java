@@ -202,8 +202,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
         state = (GlacierState) ois.readObject();
         ois.close();
       } catch (Exception e) {
-        System.err.println("GlacierImpl cannot read configuration file: " + configFilePath);
-        e.printStackTrace();
+        logException(Logger.SEVERE, "GlacierImpl cannot read configuration file: " + configFilePath, e);
         System.exit(1);
       }
     }
@@ -1018,8 +1017,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
                   }
 
                   public void receiveException(Exception e) {
-                    warn("storage.getObject(" + gfm.getKey() + ") returned exception " + e);
-                    e.printStackTrace();
+                    warn("storage.getObject(" + gfm.getKey() + ") returned exception " , e);
                   }
                 });
             }
@@ -1254,8 +1252,7 @@ panic("setBit disabled");
       oos.writeObject(state);
       oos.close();
     } catch (IOException ioe) {
-      System.err.println("GlacerImpl cannot write to its configuration file: " + configFilePath + " (" + ioe + ")");
-      ioe.printStackTrace();
+      logException(Logger.SEVERE, "GlacerImpl cannot write to its configuration file: " + configFilePath + " (" + ioe + ")",ioe);
       System.exit(1);
     }
 
@@ -1290,8 +1287,7 @@ panic("setBit disabled");
         }
       }
     } catch (IOException ioe) {
-      System.err.println("GlacerImpl cannot write to its dump file: " + dumpFileName + " (" + ioe + ")");
-      ioe.printStackTrace();
+      logException(Logger.SEVERE,"GlacerImpl cannot write to its dump file: " + dumpFileName + " (" + ioe + ")",ioe);
       System.exit(1);
     }
   }
@@ -1305,6 +1301,10 @@ panic("setBit disabled");
     environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.INFO, str);
   }
 
+  private void logException(int level, String str, Exception e) {
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(level, str, e);
+  }
+
   /**
    * Appends a warning to the log file
    *
@@ -1312,6 +1312,10 @@ panic("setBit disabled");
    */
   private void warn(String str) {
     environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.WARNING, str);
+  }
+
+  private void warn(String str, Exception e) {
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(Logger.WARNING, str,e);
   }
 
   /**
@@ -1406,8 +1410,7 @@ panic("setBit disabled");
                 }
 
                 public void receiveException(Exception e) {
-                  warn("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " + e);
-                  e.printStackTrace();
+                  warn("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " , e);
                 }
               });
           }
@@ -1504,8 +1507,7 @@ panic("setBit disabled");
                   }
 
                   public void receiveException(Exception e) {
-                    warn("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " + e);
-                    e.printStackTrace();
+                    warn("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " , e);
                   }
                 });
             }
@@ -1865,8 +1867,7 @@ panic("setBit disabled");
               }
 
               public void receiveException(Exception e) {
-                warn("Cannot read fragment: " + skey + ", exception " + e);
-                e.printStackTrace();
+                warn("Cannot read fragment: " + skey + ", exception " , e);
               }
             });
           break;

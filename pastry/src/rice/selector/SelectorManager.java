@@ -222,8 +222,8 @@ public class SelectorManager extends Thread implements Timer {
         }
       }
     } catch (Throwable t) {
-      System.out.println("ERROR (SelectorManager.run): " + t);
-      t.printStackTrace(System.out);
+      log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+          "ERROR (SelectorManager.run): " , t);
       System.exit(-1);
     }
   }
@@ -311,9 +311,8 @@ public class SelectorManager extends Thread implements Timer {
       try {
         run.run();
       } catch (Exception e) {
-        System.err.println("Invoking runnable caused exception " + e
-            + " - continuing");
-        e.printStackTrace();
+        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+            "Invoking runnable caused exception " + e + " - continuing",e);
       }
     }
 
@@ -557,7 +556,7 @@ public class SelectorManager extends Thread implements Timer {
           addBack.add(next);
         }
       } catch (Exception e) {
-        e.printStackTrace();
+        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE,"",e);
       }
     }
 

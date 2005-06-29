@@ -181,8 +181,7 @@ public class AggregateList {
     } catch (FileNotFoundException fnfe) {
       warn("No aggregate log found; using configuration file only");
     } catch (Exception e) {
-      warn("Exception while recovering aggregate log: "+e);
-      e.printStackTrace();
+      warn("Exception while recovering aggregate log: ",e);      
       System.exit(1);
     }
     
@@ -427,8 +426,7 @@ public class AggregateList {
         addAggregateDescriptor(adc, false);
       }
     } catch (Exception e) {
-      warn("Cannot read configuration file: "+configFileName+" (e="+e+")");
-      e.printStackTrace();
+      warn("Cannot read configuration file: "+configFileName+" (e="+e+")",e);
     }
 
     if (configFile != null) {
@@ -492,8 +490,7 @@ public class AggregateList {
       (new File(configFileName)).delete();
       (new File(configFileName + ".new")).renameTo(new File(configFileName));
     } catch (IOException ioe) {
-      warn("AggregationImpl cannot write to its aggregate list: " + configFileName + " (" + ioe + ")");
-      ioe.printStackTrace();
+      warn("AggregationImpl cannot write to its aggregate list: " + configFileName + " (" + ioe + ")",ioe);
     }
   }
 
@@ -586,5 +583,8 @@ public class AggregateList {
 
   private void warn(String str) {
     log(Logger.WARNING, str);
+  }
+  private void warn(String str, Throwable t) {
+    environment.getLogManager().getLogger(AggregateList.class, instance).logException(Logger.WARNING, str,t);
   }
 }

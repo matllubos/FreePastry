@@ -202,10 +202,18 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     environment.getLogManager().getLogger(AggregationImpl.class, instance).log(level,str);
   }
 
+  private void logException(int level, String str, Throwable t) {
+    environment.getLogManager().getLogger(AggregationImpl.class, instance).logException(level,str,t);
+  }
+
   private void warn(String str) {
     log(Logger.WARNING, str);
   }
 
+  private void warn(String str, Throwable t) {
+    environment.getLogManager().getLogger(AggregationImpl.class, instance).logException(Logger.WARNING, str,t);
+  }
+  
   /**
    * Schedule a timer event
    *
@@ -615,8 +623,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           }
         }
         public void receiveException(Exception e) {
-          warn("Montior: Failed, e="+e);
-          e.printStackTrace();
+          warn("Montior: Failed, e=",e);
           ret[0] = "done";
         }
       };
@@ -663,8 +670,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                   }
                 }
                 public void receiveException(Exception e) {
-                  warn("Monitor.add component insertion failed: "+e);
-                  e.printStackTrace();
+                  warn("Monitor.add component insertion failed: ",e);
                   receiveResult(e);
                 }
               };
@@ -675,8 +681,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             }            
           }
           public void receiveException(Exception e) {
-            warn("Monitor.add aggregate insertion failed: "+e);
-            e.printStackTrace();
+            warn("Monitor.add aggregate insertion failed: ",e);
             receiveResult(e);
           }
         };
@@ -823,8 +828,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       }
       public void receiveException(Exception e) {
-        warn("storeAggregate() cannot determine content hash, exception "+e);
-        e.printStackTrace();
+        warn("storeAggregate() cannot determine content hash, exception ",e);
         command.receiveException(e);
       }
     });
@@ -943,8 +947,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           log(Logger.FINE, "Successfully deleted: "+thisId);
         }
         public void receiveException(Exception e) {
-          warn("Cannot delete: "+thisId+", e="+e);
-          e.printStackTrace();
+          warn("Cannot delete: "+thisId+", e=",e);
         }
       });
     }
@@ -986,16 +989,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                         c2s.receiveResult(o);
                       }
                       public void receiveException(Exception e) {
-                        warn("Exception while unstoring aggregate component: "+e);
-                        e.printStackTrace();
+                        warn("Exception while unstoring aggregate component: ",e);
                         c2s.receiveException(e);
                       }
                     });
                   }
                 }
                 public void receiveException(Exception e) {
-                  warn("Exception while storing new aggregate: "+e);
-                  e.printStackTrace();
+                  warn("Exception while storing new aggregate: ",e);
                   thisContinuation.receiveException(e);
                 }
               });
@@ -1095,8 +1096,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               } else {
                 AggregateDescriptor aggr = (AggregateDescriptor) refreshAggregateList.elementAt(i);
                 Exception e = (Exception) results[i];
-                warn("Aggregate #"+i+" ("+aggr.key.toStringFull()+"): Refresh failed, e="+e);
-                e.printStackTrace();
+                warn("Aggregate #"+i+" ("+aggr.key.toStringFull()+"): Refresh failed, e=",e);
               }
             }
             
@@ -1104,8 +1104,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             log(Logger.INFO, "Refresh complete, "+numOk+"/"+results.length+" aggregates refreshed OK");
           }
           public void receiveException(Exception e) {
-            warn("Interface contract broken; exception "+e+" returned directly");
-            e.printStackTrace();
+            warn("Interface contract broken; exception "+e+" returned directly",e);
           }
         });
       } else {
@@ -1239,8 +1238,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                 log(Logger.INFO, "Consolidation completed, "+objectsTotal+" objects from "+aggr.length+" aggregates consolidated");
               }
               public void receiveException(Exception e) {
-                warn("Exception during consolidation store: e="+e+" -- aborting");
-                e.printStackTrace();
+                warn("Exception during consolidation store: e="+e+" -- aborting",e);
               }
             });
           } else {
@@ -1250,8 +1248,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       }
       public void receiveException(Exception e) {
-        warn("Exception during consolidation lookup "+adc[currentLookup].key.toStringFull()+": "+e+" -- aborting");
-        e.printStackTrace();
+        warn("Exception during consolidation lookup "+adc[currentLookup].key.toStringFull()+": "+e+" -- aborting",e);
       }
     });
   }
@@ -1288,8 +1285,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           log(Logger.FINE, "Successfully inserted pointer array");
         }
         public void receiveException(Exception e) {
-          warn("Error while inserting pointer array: "+e);
-          e.printStackTrace();
+          warn("Error while inserting pointer array: ",e);
         }
       }
     );
@@ -1308,8 +1304,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             log(Logger.FINE, "Scheduled flush: Success (o="+o+")");
           }
           public void receiveException(Exception e) {
-            warn("Scheduled flush: Failure (e="+e+")");
-            e.printStackTrace();
+            warn("Scheduled flush: Failure (e="+e+")",e);
           }
         });
         
@@ -1347,8 +1342,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             log(Logger.FINE, "Monitor: Refresh completed, result="+o);
           }
           public void receiveException(Exception e) {
-            log(Logger.FINE, "Monitor: Refresh failed, exception="+e);
-            e.printStackTrace();
+            logException(Logger.FINE, "Monitor: Refresh failed, exception=",e);
           }
         });
       
@@ -1410,7 +1404,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         result = new Object[ids.length];
         for (int i=0; i<ids.length; i++)
           result[i] = e;
-        e.printStackTrace();
+        logException(Logger.WARNING, "", e);
         refreshInAggregates();
       }
       private void refreshInAggregates() {
@@ -1420,7 +1414,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             command.receiveResult(o);
           }
           public void receiveException(Exception e) {
-            e.printStackTrace();
+            logException(Logger.WARNING, "", e);
             command.receiveException(e);
           }
         };
@@ -1558,8 +1552,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                       myParent.receiveResult(new AggregationException("Object in waiting list, but broken: "+vkey.toStringFull()));
                     }
                     public void receiveException(Exception e) {
-                      warn("Cannot remove broken object "+vkey.toStringFull()+" from waiting list (exception: "+e+")");
-                      e.printStackTrace();
+                      warn("Cannot remove broken object "+vkey.toStringFull()+" from waiting list (exception: "+e+")",e);
                       myParent.receiveResult(new AggregationException("Object broken, in waiting list, and cannot remove: "+vkey.toStringFull()+" (e="+e+")"));
                     }
                   });
@@ -1579,8 +1572,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                       myParent.receiveResult(new Boolean(true));
                     }
                     public void receiveException(Exception e) {
-                      warn("Cannot refresh waiting object "+vkey.toStringFull()+", e="+e);
-                      e.printStackTrace();
+                      warn("Cannot refresh waiting object "+vkey.toStringFull()+", e=",e);
                       myParent.receiveResult(new AggregationException("Cannot refresh waiting object "+vkey.toStringFull()+", setMetadata() failed (e="+e+")"));
                     }
                   });
@@ -1630,15 +1622,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                                   myParent.receiveResult(new Boolean(true));
                                 }
                                 public void receiveException(Exception e) {
-                                  warn("Refresh: Exception while precaching object: "+id.toStringFull()+" (e="+e+")");
-                                  e.printStackTrace();
+                                  warn("Refresh: Exception while precaching object: "+id.toStringFull()+" (e="+e+")",e);
                                   myParent.receiveResult(new Boolean(true));
                                 }
                               });
                             }
                             public void receiveException(Exception e) { 
-                              warn("Refresh: Exception while refreshing aggregate: "+id.toStringFull()+" (e="+e+")");
-                              e.printStackTrace();
+                              warn("Refresh: Exception while refreshing aggregate: "+id.toStringFull()+" (e="+e+")",e);
                               myParent.receiveResult(new AggregationException("Cannot store reaggregated object in waiting list: "+id.toStringFull()));
                             }
                           });
@@ -1681,8 +1671,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       }
       public void receiveException(Exception e) {
-        warn("Exception while refreshing "+ids[currentIndex].toStringFull()+", e="+e);
-        e.printStackTrace();
+        warn("Exception while refreshing "+ids[currentIndex].toStringFull()+", e=",e);
         receiveResult(e);
       }
     };
@@ -1798,15 +1787,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                               log(Logger.FINE, "Reinsert "+objData.getId()+"v"+objData.getVersion()+" ok, result="+o);
                             }
                             public void receiveException(Exception e) {
-                              log(Logger.FINE, "Reinsert "+objData.getId()+"v"+objData.getVersion()+" failed, exception="+e);
-                              e.printStackTrace();
+                              logException(Logger.FINE, "Reinsert "+objData.getId()+"v"+objData.getVersion()+" failed, exception=",e);
                             }
                           });
                         }
                       }
                       public void receiveException(Exception e) {
-                        log(Logger.FINE, "Cannot retrieve handles for object "+objData.getId()+"v"+objData.getVersion()+" to be restored; e="+e);
-                        e.printStackTrace();
+                        logException(Logger.FINE, "Cannot retrieve handles for object "+objData.getId()+"v"+objData.getVersion()+" to be restored; e=",e);
                       }
                     });
                   }
@@ -1864,8 +1851,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       }
       public void receiveException(Exception e) {
-        warn("Rebuild: Exception "+e);
-        e.printStackTrace();
+        warn("Rebuild: Exception ",e);
         keysInProgress.remove(fromKey);
         keysDone.add(fromKey);
         
@@ -1934,8 +1920,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         public void receiveResult(Object o) {
         }
         public void receiveException(Exception e) { 
-          warn("Exception while storing aggregate: "+obj.getId()+" (e="+e+")");
-          e.printStackTrace();
+          warn("Exception while storing aggregate: "+obj.getId()+" (e="+e+")",e);
         }
       });
     } else {
@@ -2010,8 +1995,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               }
             }
             public void receiveException(Exception e) {
-              warn("retrieveObjectFromAggregate cannot determine content hash, exception "+e);
-              e.printStackTrace();
+              warn("retrieveObjectFromAggregate cannot determine content hash, exception ",e);
               command.receiveException(e);
             }
           });
@@ -2021,8 +2005,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         }
       }
       public void receiveException(Exception e) {
-        warn("retrieveObjectFromAggregate failed; receiveException("+e+")");
-        e.printStackTrace();
+        warn("retrieveObjectFromAggregate failed; receiveException("+e+")",e);
         command.receiveException(e);
       }
     });
@@ -2111,8 +2094,8 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             }
           }
           public void receiveException(Exception e) {
+            warn("Aggregate.VersioningPAST returned exception for "+id+"v"+version+": ",e);
             command.receiveException(new AggregationException("Aggregate.VersioningPAST returned exception for "+id+"v"+version+": "+e));
-            e.printStackTrace();
           }
         });
       } else {

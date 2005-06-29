@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.util.DebugCommandHandler;
 import rice.post.proxy.PostProxy;
 
@@ -23,6 +25,15 @@ public class FileCommandHandler implements DebugCommandHandler {
 
   public static final String GET_PROPS_COMMAND = "pastry.getproperties";
   public static final String GET_MANIFEST_COMMAND = "pastry.getmanifest";
+
+  Environment environment;
+  
+  /**
+   * @param environment
+   */
+  public FileCommandHandler(Environment env) {
+    this.environment = env;
+  }
 
   public String handleDebugCommand(String command) {
     
@@ -56,8 +67,9 @@ public class FileCommandHandler implements DebugCommandHandler {
       }
       ret+="FileSize:"+f.length()+" Last Modified:"+new Date(f.lastModified());
       return ret;
-    } catch (Throwable t) {
-      t.printStackTrace();
+    } catch (Throwable t) {     
+      environment.getLogManager().getLogger(FileCommandHandler.class, null).logException(Logger.WARNING, 
+          "ERROR: opening \""+filename+"\":"+t.getMessage(), t);
       return "ERROR: opening \""+filename+"\":"+t.getMessage();
     }      
   }
@@ -81,7 +93,9 @@ public class FileCommandHandler implements DebugCommandHandler {
       } 
       return ret;
     } catch (Throwable t) {
-      t.printStackTrace();
+      environment.getLogManager().getLogger(FileCommandHandler.class, null).logException(Logger.WARNING, 
+          "ERROR: opening \""+filename+"\":"+t.getMessage(),
+          t);
       return "ERROR: opening \""+filename+"\":"+t.getMessage();
     }
   }

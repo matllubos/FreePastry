@@ -301,8 +301,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
       }
       public void receiveException(Exception e) {
-        warn("Exception in neighbor continuation: "+e);
-        e.printStackTrace();
+        warn("Exception in neighbor continuation: ",e);
         terminate();
       }
       public void timeoutExpired() {
@@ -422,8 +421,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
               }
             }
             public void receiveException(Exception e) {
-              warn("Exception while processing range response: "+e+" -- discarding request");
-              e.printStackTrace();
+              warn("Exception while processing range response: "+e+" -- discarding request",e);
             }
           });
         } else {
@@ -431,8 +429,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
       }
       public void receiveException(Exception e) {
-        warn("Exception in sync continuation: "+e);
-        e.printStackTrace();
+        warn("Exception in sync continuation: ",e);
         terminate();
       }
       public void timeoutExpired() {
@@ -488,8 +485,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                       log(Logger.FINE, "Handed off fragment deleted: "+thisKey+" (o="+o+")");
                     }
                     public void receiveException(Exception e) {
-                      warn("Delete failed during handoff: "+thisKey+", returned "+e);
-                      e.printStackTrace();
+                      warn("Delete failed during handoff: "+thisKey+", returned ",e);
                     }
                   });
                 } else {
@@ -511,8 +507,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                     }
                   }
                   public void receiveException(Exception e) {
-                    warn("Handoff failed; exception while fetching "+thisKey+", e="+e);
-                    e.printStackTrace();
+                    warn("Handoff failed; exception while fetching "+thisKey+", e=",e);
                   }
                 });
               }
@@ -589,8 +584,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }  
       }
       public void receiveException(Exception e) {
-        warn("Exception in handoff continuation: "+e);
-        e.printStackTrace();
+        warn("Exception in handoff continuation: ",e);
       }
       public void timeoutExpired() {
         nextTimeout = environment.getTimeSource().currentTimeMillis() + jitterTerm(handoffInterval);
@@ -654,8 +648,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         warn("GC received object: "+o);
       }
       public void receiveException(Exception e) {
-        warn("GC received exception: "+e);
-        e.printStackTrace();
+        warn("GC received exception: ",e);
       }
       public long getTimeout() {
         return nextTimeout;
@@ -712,8 +705,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         warn("Local scan received object: "+o);
       }
       public void receiveException(Exception e) {
-        warn("Local scan received exception: "+e);
-        e.printStackTrace();
+        warn("Local scan received exception: ",e);
       }
       public long getTimeout() {
         return nextTimeout;
@@ -814,8 +806,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                             }
                           }
                           public void receiveException(Exception e) {
-                            warn("Local scan: Exception while recovering synced fragment "+thisKey+": "+e);
-                            e.printStackTrace();
+                            warn("Local scan: Exception while recovering synced fragment "+thisKey+": ",e);
                             terminate();
                           }
                           public void timeoutExpired() {
@@ -834,8 +825,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 }
               }
               public void receiveException(Exception e) {
-                warn("Local scan: Cannot retrieve "+thisVKey+" from local store, exception e="+e);
-                e.printStackTrace();
+                warn("Local scan: Cannot retrieve "+thisVKey+" from local store, exception e=",e);
               }
             });
           }
@@ -862,8 +852,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         warn("TS received object: "+o);
       }
       public void receiveException(Exception e) {
-        warn("TS received exception: "+e);
-        e.printStackTrace();
+        warn("TS received exception: ",e);
       }
       public long getTimeout() {
         return nextTimeout;
@@ -915,8 +904,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         warn("STAT received object: "+o);
       }
       public void receiveException(Exception e) {
-        warn("STAT received exception: "+e);
-        e.printStackTrace();
+        warn("STAT received exception: ",e);
       }
       public long getTimeout() {
         return nextTimeout;
@@ -998,8 +986,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 fragmentStorage.unstore(fkey, command);
               }
               public void receiveException(Exception e) {
-                warn("Cannot store in trash: "+fkey.toStringFull()+", e="+e);
-                e.printStackTrace();
+                warn("Cannot store in trash: "+fkey.toStringFull()+", e=",e);
                 command.receiveException(e);
               }
             });
@@ -1008,8 +995,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           }
         }
         public void receiveException(Exception e) {
-          warn("Cannot retrieve fragment "+fkey+" for deletion: e="+e);
-          e.printStackTrace();
+          warn("Cannot retrieve fragment "+fkey+" for deletion: e=",e);
           command.receiveException(new GlacierException("Cannot retrieve fragment "+fkey+" for deletion"));
         }
       });
@@ -1148,8 +1134,16 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     environment.getLogManager().getLogger(GlacierImpl.class, instance).log(level,str);
   }
 
+  private void logException(int level, String str, Exception e) {
+    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(level,str,e);
+  }
+
   private void warn(String str) {
     log(Logger.WARNING,str);
+  }
+
+  private void warn(String str, Exception e) {
+    logException(Logger.WARNING,str,e);
   }
 
   protected int getUID() {
@@ -1718,8 +1712,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 }
               }
               public void receiveException(Exception e) {
-                warn("refresh("+thisId+"v"+thisVersion+"): Exception while retrieving manifest: "+e);
-                e.printStackTrace();
+                warn("refresh("+thisId+"v"+thisVersion+"): Exception while retrieving manifest: ",e);
                 thisContinuation.receiveException(e);
               }
             });
@@ -1892,8 +1885,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           }
         }
         public void receiveException(Exception e) {
-          warn("Exception during AggregateRefresh: "+e);
-          e.printStackTrace();
+          warn("Exception during AggregateRefresh: ",e);
           terminate();
           
           if (!answered) {
@@ -2258,8 +2250,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
       }
       public void receiveException(Exception e) {
-        warn("Exception during "+whoAmI()+"("+key+"): "+e);
-        e.printStackTrace();
+        warn("Exception during "+whoAmI()+"("+key+"): ",e);
         if (!answered) {
           answered = true;
           command.receiveException(new GlacierException("Exception while inserting/refreshing: "+e));
@@ -2339,14 +2330,13 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           }
           public void receiveException(Exception e) {
             warn("insert(" + vkey.toStringFull() + ") cannot create manifests - exception e="+e);
-            e.printStackTrace();
             command.receiveException(e);
           }
         });
       }
       public void receiveException(Exception e) {
+        logException(Logger.SEVERE, "EncodeObject failed: e=",e);
         command.receiveException(new GlacierException("EncodeObject failed: e="+e));
-        e.printStackTrace();
       }
     });
   }
@@ -2492,8 +2482,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
       }
       public void receiveException(Exception e) {
-        warn("lookupHandles("+id+"): Exception "+e);
-        e.printStackTrace();
+        warn("lookupHandles("+id+"): Exception ",e);
         haveAnswered = true;
         command.receiveException(e);
       }
@@ -2597,8 +2586,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
       }
       public void receiveException(Exception e) {
-        warn("retrieveManifest("+key+") received exception: "+e);
-        e.printStackTrace();
+        warn("retrieveManifest("+key+") received exception: ",e);
       }
       public void timeoutExpired() {
         log(Logger.FINE, "retrieveManifest("+key+"): Timeout ("+numCheckedFragments()+" fragments checked)");
@@ -2746,8 +2734,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         return;
       }
       public void receiveException(Exception e) {
-        warn("retrieveObject: Exception "+e);
-        e.printStackTrace();
+        warn("retrieveObject: Exception ",e);
         c.receiveException(e);
         localTerminate();
       }
@@ -2878,8 +2865,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             warn("retrieveFragment: Unknown result "+o+" (key="+key+")");
           }
           public void receiveException(Exception e) {
-            warn("retrieveFragment: Exception "+e);
-            e.printStackTrace();
+            warn("retrieveFragment: Exception ",e);
             c.receiveException(e);
             terminate();
           }
@@ -2932,8 +2918,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                       c.receiveResult(frag[key.getFragmentID()]);
                     }
                     public void receiveException(Exception e) {
+                      logException(Logger.SEVERE,"Recovered object, but re-encode failed: ",e);
                       c.receiveException(new GlacierException("Recovered object, but re-encode failed: "+e));
-                      e.printStackTrace();
                     }
                   });
                 }
@@ -3196,8 +3182,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         }
         
         public void receiveException(Exception e) {
-          warn("Problem while retrieving neighbors in range "+gnrm.getRequestedRange()+" for "+gnrm.getSource()+" -- canceled");
-          e.printStackTrace();
+          warn("Problem while retrieving neighbors in range "+gnrm.getRequestedRange()+" for "+gnrm.getSource()+" -- canceled",e);
         }
       });
           
@@ -3433,8 +3418,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
           );
         }
         public void receiveException(Exception e) {
-          warn("Exception while processing AR patch (key "+currentKey+", phase "+currentPhase+"): "+e);
-          e.printStackTrace();
+          warn("Exception while processing AR patch (key "+currentKey+", phase "+currentPhase+"): ",e);
           currentPhase = phaseAdvance;
           receiveResult(null);
         }
@@ -3538,8 +3522,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             fragmentStorage.getObject(gfm.getKey(currentLookup), this);
         }
         public void receiveException(Exception e) { 
-          warn("Exception while retrieving fragment "+gfm.getKey(currentLookup)+" (lookup #"+currentLookup+"), e="+e);
-          e.printStackTrace();
+          warn("Exception while retrieving fragment "+gfm.getKey(currentLookup)+" (lookup #"+currentLookup+"), e=",e);
           fragment[currentLookup] = null;
           manifest[currentLookup] = null;
           nextLookup();
@@ -3648,8 +3631,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                             );
                           }
                           public void receiveException(Exception e) {
-                            warn("Cannot store refreshed manifest: "+e);
-                            e.printStackTrace();
+                            warn("Cannot store refreshed manifest: ",e);
                           }
                         }
                       );
@@ -3661,8 +3643,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                   }
                 }
                 public void receiveException(Exception e) {
-                  warn("Cannot retrieve FAM for "+thisKey+": "+e);
-                  e.printStackTrace();
+                  warn("Cannot retrieve FAM for "+thisKey+": ",e);
                 }
               });
             } else {
@@ -3708,8 +3689,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
                 GlacierNotEnoughFragmentsException gnf = (GlacierNotEnoughFragmentsException) e;
                 log(Logger.INFO, "Not enough fragments to reconstruct "+thisKey+": "+gnf.checked+"/"+numFragments+" checked, "+gnf.found+" found, "+numSurvivors+" needed");
               } else {
-                warn("Exception while recovering synced fragment "+thisKey+": "+e);
-                e.printStackTrace();
+                warn("Exception while recovering synced fragment "+thisKey+": ",e);
               }
               
               terminate();

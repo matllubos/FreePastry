@@ -11,6 +11,7 @@ import rice.email.proxy.mail.StoredMessage;
 import rice.email.proxy.mailbox.MailFolder;
 import rice.email.proxy.mailbox.MailboxException;
 import rice.email.proxy.mailbox.MsgFilter;
+import rice.environment.logging.Logger;
 
 
 /**
@@ -81,8 +82,8 @@ public class FetchCommand extends AbstractImapCommand {
       
       return result.toString() +")\r\n";
     } catch (MailboxException e) {
-      System.err.println("Got exception " + e + " while fetching data - not returning anything.");
-      e.printStackTrace();
+      _state.getEnvironment().getLogManager().getLogger(FetchCommand.class, null).logException(Logger.WARNING,
+          "Got exception " + e + " while fetching data - not returning anything.",e);
       return "";
     }
   }

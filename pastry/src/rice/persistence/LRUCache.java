@@ -15,6 +15,8 @@ import java.util.zip.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 
@@ -35,6 +37,8 @@ public class LRUCache implements Cache {
   // the list of keys, in MRU -> LRU order
   private LinkedList order;
 
+  protected Environment environment;
+  
   /**
    * Builds a LRU cache given a storage object to store the cached
    * data in and a maximum cache size.
@@ -42,7 +46,8 @@ public class LRUCache implements Cache {
    * @param storage The storage service to use as a back-end storage
    * @param maximumSize The maximum size, in bytes, of storage to use
    */
-  public LRUCache(Storage storage, int maximumSize) {
+  public LRUCache(Storage storage, int maximumSize, Environment env) {
+    this.environment = env;
     this.storage = storage;
     this.maximumSize = maximumSize;
 
@@ -387,7 +392,7 @@ public class LRUCache implements Cache {
 
       return baos.toByteArray().length;
     } catch (IOException e) {
-      e.printStackTrace();
+      environment.getLogManager().getLogger(LRUCache.class, null).logException(Logger.WARNING, "", e);
       // returns maximum value here, so it won't be cached
       return Integer.MAX_VALUE;
     }

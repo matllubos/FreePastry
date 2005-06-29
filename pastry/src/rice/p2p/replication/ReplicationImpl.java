@@ -176,7 +176,7 @@ public class ReplicationImpl implements Replication, Application {
     final NodeHandleSet handles = endpoint.neighborSet(Integer.MAX_VALUE);
     final IdRange ourRange = endpoint.range(handle, 0, handle.getId());  
     
-    endpoint.process(new BloomFilterExecutable(ourRange), new ListenerContinuation("Creation of our bloom filter") {
+    endpoint.process(new BloomFilterExecutable(ourRange), new ListenerContinuation("Creation of our bloom filter", environment) {
       int total = 0;
 
       public void receiveResult(Object o) {
@@ -241,7 +241,7 @@ public class ReplicationImpl implements Replication, Application {
     if (message instanceof RequestMessage) {
       final RequestMessage rm = (RequestMessage) message;
       
-      MultiContinuation continuation = new MultiContinuation(new ListenerContinuation("Processing of RequestMessage") {
+      MultiContinuation continuation = new MultiContinuation(new ListenerContinuation("Processing of RequestMessage", environment) {
         public void receiveResult(Object o) {
           Object[] array = (Object[]) o;
           IdSet[] result = new IdSet[array.length];

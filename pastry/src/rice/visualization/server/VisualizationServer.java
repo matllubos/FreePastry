@@ -70,7 +70,7 @@ public class VisualizationServer implements Runnable {
     
     ((DistPastryNode) node).addNetworkListener(NAchecker);
     this.debugCommandHandlers = new Vector();
-    addDebugCommandHandler(new FileCommandHandler());  
+    addDebugCommandHandler(new FileCommandHandler(environment));  
     
     this.keypair = SecurityUtils.generateKeyAsymmetric();
   }
@@ -195,8 +195,7 @@ public class VisualizationServer implements Runnable {
     try {
       req.writeFiles();
     } catch (Exception e1) {
-      e = e1;
-      e.printStackTrace(); 
+      environment.getLogManager().getLogger(VisualizationServer.class, null).logException(Logger.WARNING,"",e1);
     }          
     
     UpdateJarResponse ujr;
@@ -221,7 +220,7 @@ public class VisualizationServer implements Runnable {
     try {
       Thread.sleep(req.getWaitTime());
     } catch (InterruptedException ie) {
-      ie.printStackTrace();
+      environment.getLogManager().getLogger(VisualizationServer.class, null).logException(Logger.WARNING,"",ie);
     }    
     
 //    System.outt.println("restarting with command:\""+restartCommand+"\"");

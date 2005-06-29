@@ -16,6 +16,7 @@ import java.util.zip.*;
 import rice.*;
 import rice.Continuation.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 
@@ -226,7 +227,7 @@ public class PersistentStorage implements Storage {
       timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
         public String toString() { return "persistence dirty purge enqueue"; }
         public void run() {
-          QUEUE.enqueue(new WorkRequest(new ListenerContinuation("Enqueue of writeMetadataFile")) {
+          QUEUE.enqueue(new WorkRequest(new ListenerContinuation("Enqueue of writeMetadataFile", environment)) {
             public String toString() { return "persistence dirty purge"; }
             public Object doWork() throws Exception {
               writeDirty();
@@ -869,8 +870,8 @@ public class PersistentStorage implements Storage {
           }
         }
       } catch (Exception e) {
-        System.err.println("ERROR: Received Exception " + e + " while initing file " + files[i] + " - moving to lost+found.");
-        e.printStackTrace();
+        environment.getLogManager().getLogger(PersistentStorage.class, null).logException(Logger.WARNING,
+            "ERROR: Received Exception " + e + " while initing file " + files[i] + " - moving to lost+found.",e);
         moveToLost(files[i]);
       }
     }
@@ -1555,8 +1556,8 @@ public class PersistentStorage implements Storage {
         }
       } catch (IOException e) {
         try {
-          System.err.println("ERROR: Got error " + e + " while writing out metadata in '" + files[i].getCanonicalPath() + "' - aborting!");
-          e.printStackTrace();
+          environment.getLogManager().getLogger(PersistentStorage.class, null).logException(Logger.WARNING,
+              "ERROR: Got error " + e + " while writing out metadata in '" + files[i].getCanonicalPath() + "' - aborting!",e);
         } catch (IOException f) {
           System.err.println("PANIC: Got IOException " + f+ " trying to detail exception " + e + " while writing out file " + files[i]);
         }

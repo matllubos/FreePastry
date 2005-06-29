@@ -3,6 +3,7 @@ package rice.email.proxy.pop3;
 import rice.email.proxy.pop3.commands.*;
 import rice.email.proxy.user.*;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 
 import java.io.*;
 import java.net.*;
@@ -42,12 +43,12 @@ public class Pop3Handler {
       _conn.println("421 Service shutting down and closing transmission channel");
     }
     catch (Exception e) {
-      e.printStackTrace();
+      environment.getLogManager().getLogger(Pop3Handler.class, null).logException(Logger.WARNING, "", e);
     } finally {
       try {
         socket.close();
       } catch (IOException ioe) {
-        ioe.printStackTrace();
+        environment.getLogManager().getLogger(Pop3Handler.class, null).logException(Logger.WARNING, "", ioe);
       }
     }
   }

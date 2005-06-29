@@ -37,7 +37,7 @@ public class LRUCacheTest extends Test {
    */
   public LRUCacheTest(Environment env) {
     super(env);
-    cache = new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE);
+    cache = new LRUCache(new MemoryStorage(FACTORY), CACHE_SIZE, env);
     FACTORY = new PastryIdFactory(env);
     
     data  = new Id[500];

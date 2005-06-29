@@ -31,7 +31,7 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
     this.port = port;
     this.manager = manager;
     this.registry = new Pop3CommandRegistry();
-    this.registry.load();
+    this.registry.load(environment);
     
     initialize();
   }

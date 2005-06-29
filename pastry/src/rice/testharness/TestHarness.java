@@ -14,6 +14,7 @@ import java.net.InetAddress;
 import java.util.Hashtable;
 import java.util.Vector;
 
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.Id;
@@ -103,7 +104,7 @@ public class TestHarness implements Application, ScribeClient {
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
     } catch (java.net.UnknownHostException uhe) {
-      uhe.printStackTrace();
+      pn.getEnvironment().getLogManager().getLogger(TestHarness.class, "monkey").logException(Logger.WARNING, "", uhe);
     }
   }
   String hostname;
@@ -178,11 +179,11 @@ public class TestHarness implements Application, ScribeClient {
         _streams.put(itm.getRunName(), fw);
 
       } catch (InvocationTargetException e) {
-        System.out.println("InvocationTargetException occurred during initing of test: " + e.getTargetException());
-        e.getTargetException().printStackTrace();
+        _pastryNode.getEnvironment().getLogManager().getLogger(TestHarness.class, "monkey").logException(Logger.WARNING, 
+            "InvocationTargetException occurred during initing of test: " , e.getTargetException());
       } catch (Exception e) {
-        System.out.println("Exception occurred during initing of test: " + e);
-        e.printStackTrace();
+        _pastryNode.getEnvironment().getLogManager().getLogger(TestHarness.class, "monkey").logException(Logger.WARNING, 
+            "Exception occurred during initing of test: " , e);
       }
     } else if (msg instanceof StartTestMessage) {
       StartTestMessage stm = (StartTestMessage) msg;

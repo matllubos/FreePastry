@@ -145,8 +145,8 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
               try {
                 socket.close();
               } catch (IOException e) {
-                System.err.println("ERROR!!!! - Got exception " + e + " while closing socket!");
-                e.printStackTrace();
+                environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.SEVERE,
+                    "ERROR!!!! - Got exception " + e + " while closing socket!",e);
               }
             }
           }

@@ -270,9 +270,9 @@ public class PostImpl implements Post, Application, ScribeClient {
     if (message instanceof SignedPostMessageWrapper) {
       if (((SignedPostMessageWrapper) message).getMessage().getMessage() instanceof DeliveryMessage)
         processDeliveryMessage((DeliveryMessage) ((SignedPostMessageWrapper) message).getMessage().getMessage(), 
-                               new ListenerContinuation("Processing of Pastry Delivery POST Message"));
+                               new ListenerContinuation("Processing of Pastry Delivery POST Message", environment));
       else  
-        processSignedPostMessage(((SignedPostMessageWrapper) message).getMessage(), new ListenerContinuation("Processing of Pastry POST Message"));
+        processSignedPostMessage(((SignedPostMessageWrapper) message).getMessage(), new ListenerContinuation("Processing of Pastry POST Message", environment));
     } else if (message instanceof SynchronizeMessage) {
       processSynchronizeMessage((SynchronizeMessage) message);
     } else if (message instanceof RefreshMessage) {
@@ -319,7 +319,7 @@ public class PostImpl implements Post, Application, ScribeClient {
   public void deliver(Topic topic, ScribeContent content) {
     log(Logger.FINEST,"Received scribe content " + content + " for topic " + topic);
     if (content instanceof SignedPostMessageWrapper) {
-      processSignedPostMessage(((SignedPostMessageWrapper) content).getMessage(), new ListenerContinuation("Processing of Scribe POST message"));
+      processSignedPostMessage(((SignedPostMessageWrapper) content).getMessage(), new ListenerContinuation("Processing of Scribe POST message", environment));
     } else {
       log(Logger.WARNING,"Found unknown Scribe message " + content + " - dropping on floor.");
     }
@@ -553,7 +553,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     final Iterator i = clients.iterator();
     log(Logger.INFO,"BEGINNING REFRESH!");
     
-    Continuation c = new ListenerContinuation("Retrieval of ContentHashReferences") {
+    Continuation c = new ListenerContinuation("Retrieval of ContentHashReferences", environment) {
       protected HashSet set = new HashSet();
       
       public void receiveResult(Object o) {
@@ -567,7 +567,8 @@ public class PostImpl implements Post, Application, ScribeClient {
           ((PostClient) i.next()).getContentHashReferences(this);
         } else {
           log(Logger.INFO,"REFRESHING " + set.size() + " OBJECTS!");
-          storage.refreshContentHash((ContentHashReference[]) set.toArray(new ContentHashReference[0]), new ListenerContinuation("Refreshing of objects"));
+          storage.refreshContentHash((ContentHashReference[]) set.toArray(new ContentHashReference[0]), 
+              new ListenerContinuation("Refreshing of objects", environment));
         }
       }
     };
@@ -581,13 +582,13 @@ public class PostImpl implements Post, Application, ScribeClient {
    * @param message The incoming message.
    */
   private void processBackupMessage(BackupMessage message) {
-    storage.setAggregate(log, new ListenerContinuation("Setting of Aggregate Head") {
+    storage.setAggregate(log, new ListenerContinuation("Setting of Aggregate Head", environment) {
       public void receiveResult(Object o) {
         final Iterator j = clients.iterator();
         final HashSet set = new HashSet();
         set.add(log);
         
-        Continuation d = new ListenerContinuation("Retrieval of Mutable Data") {
+        Continuation d = new ListenerContinuation("Retrieval of Mutable Data", environment) {
           public void receiveResult(Object o) {
             if (o != null) {
               Object[] a = (Object[]) o;
@@ -598,7 +599,7 @@ public class PostImpl implements Post, Application, ScribeClient {
             if (j.hasNext()) 
               ((PostClient) j.next()).getLogs(this);
             else 
-              storage.backupLogs(log, (Log[]) set.toArray(new Log[0]), new ListenerContinuation("Backing up of mutable objects"));
+              storage.backupLogs(log, (Log[]) set.toArray(new Log[0]), new ListenerContinuation("Backing up of mutable objects", environment));
           }
         };
         
@@ -921,7 +922,7 @@ public class PostImpl implements Post, Application, ScribeClient {
       public Object execute() {
         return signPostMessage(pm);
       }
-    }, new ListenerContinuation("Sending of PresnceMessage") {
+    }, new ListenerContinuation("Sending of PresnceMessage", environment) {
       public void receiveResult(Object o) {
         scribe.publish(new Topic(address.getAddress()), new PostScribeMessage((SignedPostMessage) o));
       }

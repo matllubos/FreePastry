@@ -334,7 +334,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param content The content to cache
    */
   private void cache(final PastContent content) {
-    cache(content, new ListenerContinuation("Caching of " + content));
+    cache(content, new ListenerContinuation("Caching of " + content, environment));
   }
   
   /**

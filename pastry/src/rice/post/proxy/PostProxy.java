@@ -843,7 +843,7 @@ public class PostProxy {
     stepStart("Starting Immutable Storage");
     immutableStorage = new StorageManagerImpl(FACTORY,
                                               new PersistentStorage(FACTORY, prefix + "-immutable", location, diskLimit, env),
-                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "-cache", ".", diskLimit, env), cacheLimit));
+                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "-cache", ".", diskLimit, env), cacheLimit, env));
     stepDone(SUCCESS);
     
     stepStart("Starting Mutable Storage");
@@ -905,15 +905,15 @@ public class PostProxy {
       long backupLimit = parameters.getLong("past_backup_cache_limit");
       
       stepStart("Starting Immutable Backup Cache");
-      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-immutable-cache", ".", diskLimit, env), cacheLimit);
+      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-immutable-cache", ".", diskLimit, env), cacheLimit, env);
       stepDone(SUCCESS);
       
       stepStart("Starting Pending Backup Cache");
-      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-pending-cache", ".", diskLimit, env), cacheLimit);
+      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-pending-cache", ".", diskLimit, env), cacheLimit, env);
       stepDone(SUCCESS);
       
       stepStart("Starting Delivered Backup Cache");
-      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-delivered-cache", ".", diskLimit, env), cacheLimit);
+      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-delivered-cache", ".", diskLimit, env), cacheLimit, env);
       stepDone(SUCCESS);
     }
   }
@@ -1517,7 +1517,7 @@ public class PostProxy {
   }
   
   public void panic(String m) {
-    System.err.println("PANIC : " + m);
+    log(Logger.SEVERE, "PANIC : " + m);
     resign();
 
     try {

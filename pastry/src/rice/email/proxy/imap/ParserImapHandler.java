@@ -54,7 +54,8 @@ final class ParserImapHandler implements Quittable {
             conn.println("* BYE Autologout; idle for too long");
         } catch (DisconnectedException de) {
         } catch (final Exception e) {
-          e.printStackTrace();
+          env.getLogManager().getLogger(ParserImapHandler.class, null).logException(Logger.SEVERE,
+              "",e);
         } finally {
             try {
                 conn.close();
@@ -96,7 +97,8 @@ final class ParserImapHandler implements Quittable {
             cmd.execute();
         } catch (RuntimeException re) {
           conn.println(cmd.getTag() + " NO internal error " + re);
-          re.printStackTrace();
+          state.getEnvironment().getLogManager().getLogger(ParserImapHandler.class, null).logException(Logger.SEVERE,
+              " NO internal error ", re);
         }
     }
 
