@@ -18,6 +18,8 @@ import rice.pastry.*;
  */
 public class WrongEpochMessage extends DatagramMessage {
   
+  static final long serialVersionUID = 2838948342952784682L;
+  
   protected EpochInetSocketAddress incorrect;
   protected EpochInetSocketAddress correct;
   

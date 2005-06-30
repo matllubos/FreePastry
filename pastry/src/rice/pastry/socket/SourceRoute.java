@@ -123,7 +123,15 @@ public class SourceRoute implements Serializable {
     result.append("{");
     
     for (int i=0; i<path.length; i++) {
-      result.append(path[i].getAddress().getAddress().getHostAddress() + ":" + path[i].getAddress().getPort());
+      EpochInetSocketAddress thePath = path[i];
+      InetSocketAddress theAddr = thePath.getAddress();
+      InetAddress theAddr2 = theAddr.getAddress();
+      if (theAddr2 == null) {
+        result.append(theAddr.toString());
+      } else {
+        String ha = theAddr2.getHostAddress();
+        result.append(ha + ":" + theAddr.getPort());
+      }
       if (i < path.length - 1) result.append(" -> ");
     }
     
