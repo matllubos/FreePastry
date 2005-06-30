@@ -1,6 +1,7 @@
 
 package rice.p2p.past.gc;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 
 /**
@@ -99,6 +100,13 @@ public class GCNode implements Node {
    */
   public String toString() {
     return "{GCNode " + node + "}";
+  }
+
+  /* (non-Javadoc)
+   * @see rice.p2p.commonapi.Node#getEnvironment()
+   */
+  public Environment getEnvironment() {
+    return node.getEnvironment();
   }
 }
 

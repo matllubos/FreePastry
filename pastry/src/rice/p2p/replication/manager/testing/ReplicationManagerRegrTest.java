@@ -67,7 +67,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    */
   protected void processNode(int num, Node node) {
     clients[num] = new TestReplicationManagerClient(node);
-    replications[num] = new ReplicationManagerImpl(node, clients[num], REPLICATION_FACTOR, INSTANCE, environment);
+    replications[num] = new ReplicationManagerImpl(node, clients[num], REPLICATION_FACTOR, INSTANCE);
   }
 
   /**

@@ -200,10 +200,9 @@ public class PostImpl implements Post, Application, ScribeClient {
                   PostEntityAddress previousAddress,
                   long synchronizeInterval,
                   long refreshInterval,
-                  long timeoutInterval,
-                  Environment env) throws PostException 
+                  long timeoutInterval) throws PostException 
   {
-    this.environment = env;
+    this.environment = node.getEnvironment();
     this.instance = instance;
     this.endpoint = node.registerApplication(this, instance);
     this.address = address;
@@ -214,13 +213,13 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.announce = announce;
     this.previousAddress = previousAddress;
     
-    this.scribe = new ScribeImpl(node, instance, environment);
-    this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory(), timeoutInterval, env);
+    this.scribe = new ScribeImpl(node, instance);
+    this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory(), timeoutInterval);
     this.deliveryBuffer = new Vector();
 
     this.security = new SecurityService();
     this.security.loadModule(new CASecurityModule(caPublicKey));
-    this.storage = new StorageService(endpoint, address, immutablePast, mutablePast, node.getIdFactory(), keyPair, timeoutInterval, env);
+    this.storage = new StorageService(endpoint, address, immutablePast, mutablePast, node.getIdFactory(), keyPair, timeoutInterval);
 
     clients = new Vector();
     clientAddresses = new Hashtable();

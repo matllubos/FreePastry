@@ -65,8 +65,8 @@ public class ScribeRegrTest extends CommonAPITest {
    * @param num The number of this node
    */
   protected void processNode(int num, Node node) {
-    scribes[num] = new ScribeImpl(node, INSTANCE, environment);
-    policies[num] = new TestScribePolicy(scribes[num], environment);
+    scribes[num] = new ScribeImpl(node, INSTANCE);
+    policies[num] = new TestScribePolicy(scribes[num]);
     scribes[num].setPolicy(policies[num]);
   }
 
@@ -765,8 +765,8 @@ public class ScribeRegrTest extends CommonAPITest {
 
     protected boolean neverAllowSubscribe;
     
-    public TestScribePolicy(Scribe scribe, Environment env) {
-      super(env);
+    public TestScribePolicy(Scribe scribe) {
+      super(scribe.getEnvironment());
       this.scribe = scribe;
       allowSubscribe = true;
       neverAllowSubscribe = false;

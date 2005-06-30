@@ -55,8 +55,8 @@ public class MyApp implements Application {
     }    
   }
   
-  public MyApp(Node node, Environment env) {
-    this.environment = env;
+  public MyApp(Node node) {
+    this.environment = node.getEnvironment();
     // We are only going to use one instance of this application on each PastryNode
     this.endpoint = node.registerApplication(this, "myinstance");
     // Send MessageToSelf every 5 seconds, starting in 3 seconds

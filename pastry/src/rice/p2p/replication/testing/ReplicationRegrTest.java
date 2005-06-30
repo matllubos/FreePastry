@@ -69,7 +69,7 @@ public class ReplicationRegrTest extends CommonAPITest {
    */
   protected void processNode(int num, Node node) {
     clients[num] = new TestReplicationClient(node);
-    replications[num] = new ReplicationImpl(node, clients[num], REPLICATION_FACTOR, INSTANCE, environment);
+    replications[num] = new ReplicationImpl(node, clients[num], REPLICATION_FACTOR, INSTANCE);
   }
 
   /**

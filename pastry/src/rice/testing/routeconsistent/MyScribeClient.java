@@ -69,7 +69,7 @@ public class MyScribeClient implements ScribeClient, Application {
     // you should recognize this from lesson 3
     this.endpoint = node.registerApplication(this, "myinstance");
     // construct Scribe
-    myScribe = new ScribeImpl(node,"lesson6instance",node.getEnvironment());
+    myScribe = new ScribeImpl(node,"lesson6instance");
     // construct the topic
     myTopic = new Topic(new PastryIdFactory(node.getEnvironment()), "example topic");
     System.out.println("myTopic = "+myTopic);

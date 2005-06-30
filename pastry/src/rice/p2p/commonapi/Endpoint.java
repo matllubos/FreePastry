@@ -2,6 +2,7 @@
 package rice.p2p.commonapi;
 
 import rice.*;
+import rice.environment.Environment;
 
 /**
  * @(#) Endpoint.java
@@ -164,6 +165,11 @@ public interface Endpoint {
    */
   public String getInstance();
   
+  /**
+   * Returns the environment.  This allows the nodes to be virtualized within the JVM
+   * @return the environment for this node/app.
+   */
+  public Environment getEnvironment();
 }
 
 

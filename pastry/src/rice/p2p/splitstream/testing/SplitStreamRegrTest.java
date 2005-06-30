@@ -77,7 +77,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * @param num The number of this node
    */
   protected void processNode(int num, Node node) {
-    splitstreams[num] = new SplitStreamImpl(node, INSTANCE, environment);
+    splitstreams[num] = new SplitStreamImpl(node, INSTANCE);
     ssclients[num] = new SplitStreamTestClient(node, splitstreams[num]);
   }
 

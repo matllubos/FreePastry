@@ -117,7 +117,7 @@ public class GlacierTest {
 
     GlacierImpl glac = new GlacierImpl(pn, "glacier-" + i, pastStor,
         glacierStor, new GlacierDefaultPolicy(), REPLICATION_FACTOR,
-        numFragments, numSurvivors, null, INSTANCE, pn.getEnvironment());
+        numFragments, numSurvivors, null, INSTANCE);
     glaciers.addElement(glac);
     pn.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
       "created " + pn);

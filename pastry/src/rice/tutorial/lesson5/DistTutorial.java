@@ -52,7 +52,7 @@ public class DistTutorial {
     System.out.println("Finished creating new node "+node);
     
     // construct a new MyApp
-    MyApp app = new MyApp(node, env);
+    MyApp app = new MyApp(node);
     
     // wait 15 seconds
     Thread.sleep(15000);

@@ -69,13 +69,13 @@ public class MultiringNode implements Node, ScribeClient {
    * @param node The node which this multiring node is wrapping
    * @param ringId The Id of this node's ring
    */
-  public MultiringNode(Id ringId, Node node, Environment env) {
+  public MultiringNode(Id ringId, Node node) {
     this.node = node;
-    this.environment = env;
+    this.environment = node.getEnvironment();
     this.ringId = ringId;
     this.endpoints = new Hashtable();
-    this.scribe = new ScribeImpl(this, "Multiring", env);
-    this.collection = new MultiringNodeCollection(this, env.getParameters().getInt("p2p_multiring_base"));
+    this.scribe = new ScribeImpl(this, "Multiring");
+    this.collection = new MultiringNodeCollection(this, environment.getParameters().getInt("p2p_multiring_base"));
     this.factory = (MultiringIdFactory) getIdFactory();
   }
   
@@ -86,8 +86,8 @@ public class MultiringNode implements Node, ScribeClient {
    * @param ringId The Id of this node's ring
    * @param existing An existing node which this node should pair with
    */
-  public MultiringNode(Id ringId, Node node, MultiringNode existing, Environment env) {
-    this(ringId, node, env);
+  public MultiringNode(Id ringId, Node node, MultiringNode existing) {
+    this(ringId, node);
     this.collection = existing.getCollection();
     
     this.collection.addNode(this);
@@ -335,6 +335,15 @@ public class MultiringNode implements Node, ScribeClient {
    */
   public String toString() {
     return "{MultiringNode " + getId() + "}";
+  }
+
+  /**
+   * Getter for the environment.
+   * 
+   * @return the environment
+   */
+  public Environment getEnvironment() {
+    return environment;
   }
 }
 

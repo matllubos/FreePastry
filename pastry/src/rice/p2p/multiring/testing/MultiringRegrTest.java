@@ -167,7 +167,7 @@ public class MultiringRegrTest {
    */
   public void createNodes() {
     for (int i=0; i<NUM_GLOBAL_NODES; i++) {
-      globalNodes[i] = createNode(globalRingId, globalNodes[0], environment);
+      globalNodes[i] = createNode(globalRingId, globalNodes[0]);
     
       simulate();
     
@@ -181,7 +181,7 @@ public class MultiringRegrTest {
       ringIds[i] = generateId(16 * (i+1));
       
       for (int j=0; j<NUM_GATEWAY_NODES; j++) {
-        organizationalNodes[i][j] = createNode(globalNodes[i*NUM_GATEWAY_NODES + j], ringIds[i], organizationalNodes[i][0], environment);
+        organizationalNodes[i][j] = createNode(globalNodes[i*NUM_GATEWAY_NODES + j], ringIds[i], organizationalNodes[i][0]);
         simulate();
         
         organizationalApps[i][j] = new MultiringTestApp(organizationalNodes[i][j]);
@@ -191,7 +191,7 @@ public class MultiringRegrTest {
       }
       
       for (int j=NUM_GATEWAY_NODES; j< NUM_ORGANIZATIONAL_NODES; j++) {
-        organizationalNodes[i][j] = createNode(ringIds[i], organizationalNodes[i][0], environment);
+        organizationalNodes[i][j] = createNode(ringIds[i], organizationalNodes[i][0]);
         simulate();
         
         organizationalApps[i][j] = new MultiringTestApp(organizationalNodes[i][j]);
@@ -235,11 +235,11 @@ public class MultiringRegrTest {
    * @param num The number of creation order
    * @return The created node
    */
-  protected MultiringNode createNode(Id ringId, MultiringNode bootstrap, Environment env) {
+  protected MultiringNode createNode(Id ringId, MultiringNode bootstrap) {
     if (bootstrap == null) {
-      return new MultiringNode(ringId, factory.newNode(null), env);
+      return new MultiringNode(ringId, factory.newNode(null));
     } else {
-      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())), env);
+      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())));
     }
   }
   
@@ -250,14 +250,14 @@ public class MultiringRegrTest {
    * @param num The number of creation order
    * @return The created node
    */
-  protected MultiringNode createNode(MultiringNode existing, Id ringId, MultiringNode bootstrap, Environment env) {
+  protected MultiringNode createNode(MultiringNode existing, Id ringId, MultiringNode bootstrap) {
     if (existing == null)
       throw new IllegalArgumentException("EXISTING WAS NULL! " + ringId + " " + bootstrap);
     
     if (bootstrap == null) {
-      return new MultiringNode(ringId, factory.newNode(null, (NodeId) existing.getNodeId()), existing, env);
+      return new MultiringNode(ringId, factory.newNode(null, (NodeId) existing.getNodeId()), existing);
     } else {
-      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode()), (NodeId) existing.getNodeId()), existing, env);
+      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode()), (NodeId) existing.getNodeId()), existing);
     }
   }
 

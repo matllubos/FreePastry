@@ -95,8 +95,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, int replicas, String instance, Environment env) {
-    this(node, manager, replicas, instance, new DefaultPastPolicy(), env);
+  public PastImpl(Node node, StorageManager manager, int replicas, String instance) {
+    this(node, manager, replicas, instance, new DefaultPastPolicy());
   }
   
   /**
@@ -107,8 +107,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, Environment env) {
-    this(node, manager, null, replicas, instance, policy, null, env);
+  public PastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy) {
+    this(node, manager, null, replicas, instance, policy, null);
   }
   
   
@@ -120,8 +120,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash, Environment env) {
-    this.environment = env;
+  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash) {
+    this.environment = node.getEnvironment();
     
     Parameters p = environment.getParameters();
     MESSAGE_TIMEOUT = p.getInt("p2p_past_messageTimeout");// = 30000;
@@ -143,7 +143,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     //   log.setLevel(Level.FINE);
     //   log.getHandlers()[0].setLevel(Level.FINE);
     
-    this.replicaManager = buildReplicationManager(node, instance, environment);
+    this.replicaManager = buildReplicationManager(node, instance);
   }
 
   
@@ -160,8 +160,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param instance The instance name to use
    * @return The replication manager, ready for use
    */
-  protected ReplicationManager buildReplicationManager(Node node, String instance, Environment env) {
-    return new ReplicationManagerImpl(node, this, replicationFactor, instance, env);
+  protected ReplicationManager buildReplicationManager(Node node, String instance) {
+    return new ReplicationManagerImpl(node, this, replicationFactor, instance);
   }
   
   /**

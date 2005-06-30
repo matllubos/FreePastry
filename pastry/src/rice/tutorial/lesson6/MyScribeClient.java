@@ -3,6 +3,7 @@
  */
 package rice.tutorial.lesson6;
 
+import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.Endpoint;
@@ -15,7 +16,6 @@ import rice.p2p.scribe.ScribeClient;
 import rice.p2p.scribe.ScribeContent;
 import rice.p2p.scribe.ScribeImpl;
 import rice.p2p.scribe.Topic;
-import rice.pastry.PastryNode;
 import rice.pastry.commonapi.PastryIdFactory;
 
 /**
@@ -59,11 +59,11 @@ public class MyScribeClient implements ScribeClient, Application {
    * 
    * @param node the PastryNode
    */
-  public MyScribeClient(PastryNode node) {
+  public MyScribeClient(Node node) {
     // you should recognize this from lesson 3
     this.endpoint = node.registerApplication(this, "myinstance");
     // construct Scribe
-    myScribe = new ScribeImpl(node,"lesson6instance", node.getEnvironment());
+    myScribe = new ScribeImpl(node,"lesson6instance");
     // construct the topic
     myTopic = new Topic(new PastryIdFactory(node.getEnvironment()), "example topic");
     System.out.println("myTopic = "+myTopic);

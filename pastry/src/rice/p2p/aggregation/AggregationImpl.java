@@ -110,12 +110,12 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private Environment environment;
   
-  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, Environment env) throws IOException {
-    this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy(), env);
+  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) throws IOException {
+    this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy());
   }
 
-  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy, Environment env) throws IOException {
-    this.environment = env;
+  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy) throws IOException {
+    this.environment = node.getEnvironment();
     
     Parameters p = environment.getParameters();
     

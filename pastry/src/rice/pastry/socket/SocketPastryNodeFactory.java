@@ -166,7 +166,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       return new SocketNodeHandle(new EpochInetSocketAddress(address, rm.getEpoch()), rm.getNodeId());
     } catch (IOException e) {
       log(Logger.WARNING, "Error connecting to address " + address + ": " + e);
-      log(Logger.WARNING, "Couldn't find a bootstrap node, starting a new ring...");
       return null;
     }
   }
@@ -218,6 +217,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
+    log(Logger.WARNING, "No bootstrap node provided, starting a new ring...");
+
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
     if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {

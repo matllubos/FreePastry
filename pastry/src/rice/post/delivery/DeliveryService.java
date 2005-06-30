@@ -69,8 +69,8 @@ public class DeliveryService implements ScribeClient {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public DeliveryService(PostImpl post, DeliveryPast pending, Past delivered, Scribe scribe, IdFactory factory, long timeoutInterval, Environment env) {
-    this.environment = env;
+  public DeliveryService(PostImpl post, DeliveryPast pending, Past delivered, Scribe scribe, IdFactory factory, long timeoutInterval) {
+    this.environment = post.getEnvironment();
     this.post = post;
     this.pending = pending;
     this.delivered = delivered;

@@ -4,6 +4,7 @@ package rice.pastry.commonapi;
 import java.security.InvalidParameterException;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.pastry.NodeId;
@@ -377,6 +378,13 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    */
   public String getInstance() {
     return instance;
+  }
+
+  /* (non-Javadoc)
+   * @see rice.p2p.commonapi.Endpoint#getEnvironment()
+   */
+  public Environment getEnvironment() {
+    return thePastryNode.getEnvironment();
   }
 
 }

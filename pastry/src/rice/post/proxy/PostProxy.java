@@ -3,8 +3,10 @@ package rice.post.proxy;
 import rice.*;
 import rice.Continuation.*;
 
+import rice.pastry.*;
 import rice.pastry.PastryNode;
 import rice.pastry.dist.*;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.standard.*;
@@ -1021,10 +1023,10 @@ public class PostProxy {
   protected void startMultiringNode(Environment env) throws Exception { 
     Parameters parameters = env.getParameters();
     if (parameters.getBoolean("multiring_enable")) {
-      Id ringId = ((RingId) address.getAddress()).getRingId();
+      rice.p2p.commonapi.Id ringId = ((RingId) address.getAddress()).getRingId();
 
       stepStart("Creating Multiring node in ring " + ringId);
-      node = new MultiringNode(ringId, node, env);
+      node = new MultiringNode(ringId, node);
       Thread.sleep(3000);
       stepDone(SUCCESS); 
     }
@@ -1078,7 +1080,7 @@ public class PostProxy {
   protected void startGlobalMultiringNode(Environment env) throws Exception { 
     Parameters parameters = env.getParameters();
     stepStart("Creating Multiring node in Global ring");
-    globalNode = new MultiringNode(generateRingId(null), globalNode, (MultiringNode) node, env);
+    globalNode = new MultiringNode(generateRingId(null), globalNode, (MultiringNode) node);
     Thread.sleep(3000);
     stepDone(SUCCESS); 
   }
@@ -1123,10 +1125,9 @@ public class PostProxy {
             parameters.getInt("glacier_num_survivors"),
             env
           ), 
-          instance,
+          instance, 
           env
-        ),
-        env
+        )
       );
       
       immutableGlacier.setSyncInterval(parameters.getInt("glacier_sync_interval"));
@@ -1155,7 +1156,7 @@ public class PostProxy {
         "aggregation.param",
         (MultiringIdFactory) FACTORY,
         parameters.getString("application_instance_name") + "-aggr-immutable",
-        new PostAggregationPolicy(), env
+        new PostAggregationPolicy()
       );
 
       immutableAggregation.setFlushInterval(parameters.getInt("aggregation_flush_interval"));
@@ -1188,12 +1189,12 @@ public class PostProxy {
                                      parameters.getString("application_instance_name") + "-immutable",
                                      new PastPolicy.DefaultPastPolicy(),
                                      parameters.getLong("past_garbage_collection_interval"),
-                                     trashStorage, env);
+                                     trashStorage);
     } else {
       immutablePast = new PastImpl(node, immutableStorage, immutableBackupCache,
                                    parameters.getInt("past_replication_factor"), 
                                    parameters.getString("application_instance_name") + "-immutable", 
-                                   new PastPolicy.DefaultPastPolicy(), trashStorage, env);
+                                   new PastPolicy.DefaultPastPolicy(), trashStorage);
     }
     
     realImmutablePast = immutablePast;
@@ -1201,18 +1202,18 @@ public class PostProxy {
     mutablePast = new PastImpl(node, mutableStorage, null,
                                parameters.getInt("past_replication_factor"), 
                                parameters.getString("application_instance_name") + "-mutable",
-                               new PostPastPolicy(), trashStorage, env);
+                               new PostPastPolicy(), trashStorage);
     deliveredPast = new GCPastImpl(node, deliveredStorage, deliveredBackupCache,
                                  parameters.getInt("past_replication_factor"), 
                                  parameters.getString("application_instance_name") + "-delivered",
                                  new PastPolicy.DefaultPastPolicy(),
                                  parameters.getLong("past_garbage_collection_interval"),
-                                 trashStorage, env);
+                                 trashStorage);
     pendingPast = new DeliveryPastImpl(node, pendingStorage, pendingBackupCache,
                                        parameters.getInt("past_replication_factor"), 
                                        parameters.getInt("post_redundancy_factor"),
                                        parameters.getString("application_instance_name") + "-pending", deliveredPast,
-                                       parameters.getLong("past_garbage_collection_interval"), env);
+                                       parameters.getLong("past_garbage_collection_interval"));
     stepDone(SUCCESS);
   }
   
@@ -1270,8 +1271,7 @@ public class PostProxy {
                         parameters.getBoolean("post_announce_presence"), clone,
                         parameters.getLong("post_synchronize_interval"),
                         parameters.getLong("post_object_refresh_interval"),
-                        parameters.getLong("post_object_timeout_interval"),
-                        env);
+                        parameters.getLong("post_object_timeout_interval"));
         
     stepDone(SUCCESS);
   }
@@ -1449,9 +1449,36 @@ public class PostProxy {
     
     sectionDone();
     
+    sectionStart("Installing Partition Handler");
+    startPartitionHandler();
+    sectionDone();
+    
     return env;
   }
   
+  /**
+   * 
+   */
+  private void startPartitionHandler() {
+    final LeafSet leafSet = pastryNode.getLeafSet();
+    leafSet.addObserver(new Observer() {
+      public void update(Observable arg0, Object arg1) {
+        NodeSetUpdate nsu = (NodeSetUpdate) arg1;
+        if (!nsu.wasAdded()) {
+          if (pastryNode.isReady() && !leafSet.isComplete()
+              && leafSet.size() < (leafSet.maxSize() / 2)) {
+            // kill self
+            log(Logger.SEVERE,
+                "PostProxy: "
+                    + environment.getTimeSource().currentTimeMillis()
+                    + " Killing self due to leafset collapse. " + leafSet);
+            System.exit(20);
+          }
+        }
+      }
+    });
+  }
+
   protected void updateParameters(Parameters parameters) {
     if (parameters.getBoolean("post_allow_log_insert") && parameters.getBoolean("post_allow_log_insert_reset")) {
       parameters.setBoolean("post_allow_log_insert", false);

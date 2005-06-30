@@ -79,8 +79,8 @@ public class ReplicationImpl implements Replication, Application {
    * @param replicationFactor The replication factor for this instance
    * @param instance The unique instance name of this Replication
    */
-  public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance, Environment env) {
-    this(node, client, replicationFactor, instance, new DefaultReplicationPolicy(), env);
+  public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance) {
+    this(node, client, replicationFactor, instance, new DefaultReplicationPolicy());
   }
   
   /**
@@ -91,8 +91,8 @@ public class ReplicationImpl implements Replication, Application {
    * @param replicationFactor The replication factor for this instance
    * @param instance The unique instance name of this Replication
    */
-  public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance, ReplicationPolicy policy, Environment env) {
-    this.environment = env;
+  public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
+    this.environment = node.getEnvironment();
     
     Parameters p = environment.getParameters();
 

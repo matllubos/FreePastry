@@ -2,6 +2,7 @@
 package rice.pastry.direct;
 
 import rice.environment.Environment;
+import rice.environment.logging.*;
 import rice.environment.logging.CloneableLogManager;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -62,6 +63,9 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return a new PastryNode
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
+    environment.getLogManager().getLogger(DirectPastryNodeFactory.class, null).log(Logger.WARNING, 
+        "No bootstrap node provided, starting a new ring...");
+    
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
     if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {

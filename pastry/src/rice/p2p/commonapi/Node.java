@@ -1,6 +1,8 @@
 
 package rice.p2p.commonapi;
 
+import rice.environment.Environment;
+
 /**
  * @(#) Node.java
  *
@@ -74,6 +76,11 @@ public interface Node {
    * @return A NodeHandle referring to the local node.
    */
   public NodeHandle getLocalNodeHandle();
-
+  
+  /**
+   * Returns the environment.  This allows the nodes to be virtualized within the JVM
+   * @return the environment for this node/app.
+   */
+  public Environment getEnvironment();
 }
 

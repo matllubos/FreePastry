@@ -50,8 +50,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param policy The policy this past instance should use
    * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
-  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval, Environment env) {
-    this(node, manager, null, replicas, instance, policy, collectionInterval, null, env);
+  public GCPastImpl(Node node, StorageManager manager, int replicas, String instance, PastPolicy policy, long collectionInterval) {
+    this(node, manager, null, replicas, instance, policy, collectionInterval, null);
   }
   
   
@@ -67,8 +67,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param policy The policy this past instance should use
    * @param collectionInterval The frequency with which GCPast should collection local expired objects
    */
-  public GCPastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, long collectionInterval, StorageManager trash, Environment env) {
-    super(new GCNode(node), manager, backup, replicas, instance, policy, trash, env);
+  public GCPastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, long collectionInterval, StorageManager trash) {
+    super(new GCNode(node), manager, backup, replicas, instance, policy, trash);
     this.realFactory = node.getIdFactory();
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), collectionInterval, collectionInterval);

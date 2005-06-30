@@ -83,8 +83,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param replicationFactor The replication factor for this instance
    * @param instance The unique instance name of this Replication
    */
-  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, Environment env) {
-    this(node, client, replicationFactor, instance, null, env);
+  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance) {
+    this(node, client, replicationFactor, instance, null);
   }
   
   /**
@@ -96,8 +96,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param instance The unique instance name of this Replication
    * @param policy The replication policy to use
    */
-  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, ReplicationPolicy policy, Environment env) {
-    this.environment = env;
+  public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
+    this.environment = node.getEnvironment();
     Parameters p = environment.getParameters();
     
     FETCH_DELAY = p.getInt("p2p_replication_manager_fetch_delay");
@@ -113,7 +113,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     
     log(Logger.FINE, "Starting up ReplicationManagerImpl with client " + client);
     
-    this.replication = new ReplicationImpl(node, this, replicationFactor, instance, policy, env);
+    this.replication = new ReplicationImpl(node, this, replicationFactor, instance, policy);
   }
   
   

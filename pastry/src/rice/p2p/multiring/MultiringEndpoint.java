@@ -3,6 +3,8 @@ package rice.p2p.multiring;
 
 import rice.*;
 import java.util.*;
+
+import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 
 /**
@@ -264,6 +266,13 @@ public class MultiringEndpoint implements Endpoint {
    */
   public String getInstance() {
     return "multiring" + endpoint.getInstance();
+  }
+
+  /* (non-Javadoc)
+   * @see rice.p2p.commonapi.Endpoint#getEnvironment()
+   */
+  public Environment getEnvironment() {
+    return node.getEnvironment();
   }
 
 }

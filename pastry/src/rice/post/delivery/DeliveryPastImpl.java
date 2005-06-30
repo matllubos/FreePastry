@@ -40,8 +40,8 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public DeliveryPastImpl(Node node, StorageManager manager, Cache backup, int replicas, int redundancy, String instance, PastImpl delivered, long collectionInterval, Environment env) {
-    super(node, manager, backup, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval, null, env);
+  public DeliveryPastImpl(Node node, StorageManager manager, Cache backup, int replicas, int redundancy, String instance, PastImpl delivered, long collectionInterval) {
+    super(node, manager, backup, replicas, instance + "-delivery", new PastPolicy.DefaultPastPolicy(), collectionInterval, null);
     
     this.redundancy = redundancy;
     this.delivered = delivered;

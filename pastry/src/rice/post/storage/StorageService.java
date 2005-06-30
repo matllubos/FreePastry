@@ -92,8 +92,8 @@ public class StorageService {
    * @param credentials Credentials to use to store data.
    * @param keyPair The keypair to sign/verify data with
    */
-  public StorageService(Endpoint endpoint, PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval, Environment env) {
-    this.environment = env;
+  public StorageService(Endpoint endpoint, PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval) {
+    this.environment = endpoint.getEnvironment();
     this.entity = address;
     this.immutablePast = immutablePast;
     this.mutablePast = mutablePast;

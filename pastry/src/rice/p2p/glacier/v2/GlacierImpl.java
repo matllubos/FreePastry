@@ -145,8 +145,8 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
 
   private Environment environment;
   
-  public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg, Environment env) {
-    this.environment = env;
+  public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg) {
+    this.environment = nodeArg.getEnvironment();
 
     Parameters p = environment.getParameters();
     

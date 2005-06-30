@@ -75,7 +75,7 @@ public class SplitStreamTest extends Test {
   public SplitStreamTest(PrintStream out, PastryNode localNode,
       TestHarness harness) {
     super(out, localNode, harness, "SPLITstreaM");
-    splitstream = new SplitStreamImpl(localNode, INSTANCE, localNode.getEnvironment());
+    splitstream = new SplitStreamImpl(localNode, INSTANCE);
     ssclient = new SplitStreamTestClient(localNode, splitstream);
     CHANNEL_ID = new ChannelId(generateId());
     ssclient.attachChannel(CHANNEL_ID);

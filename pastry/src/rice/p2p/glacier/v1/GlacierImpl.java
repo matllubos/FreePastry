@@ -159,8 +159,8 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
    * @param factory Used to create IDs
    * @param instance Unique identifier for this instance of Glacier
    */
-  public GlacierImpl(Node node, String configDir, StorageManager pastManager, StorageManager glacierManager, GlacierPolicy policy, int replicas, int numFragments, int numSurvivors, MultiringIdFactory factory, String instance, Environment env) {
-    super(node, pastManager, replicas, instance, env);
+  public GlacierImpl(Node node, String configDir, StorageManager pastManager, StorageManager glacierManager, GlacierPolicy policy, int replicas, int numFragments, int numSurvivors, MultiringIdFactory factory, String instance) {
+    super(node, pastManager, replicas, instance);
 
     /*
      *  Initialize internal variables
@@ -180,7 +180,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     this.state = null;
     this.numInitialFragments = 2 * numSurvivors;
     this.insertTimeoutActive = false;
-    this.codec = new ErasureCodec(numFragments, numSurvivors, env);
+    this.codec = new ErasureCodec(numFragments, numSurvivors, environment);
     this.factory = factory;
 
     /*

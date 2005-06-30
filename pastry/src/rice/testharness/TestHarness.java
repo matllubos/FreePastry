@@ -99,7 +99,7 @@ public class TestHarness implements Application, ScribeClient {
     _testObjects = new Hashtable();
     _subscribedNodes = new Vector();
 
-    scribe = new ScribeImpl(pn, "monkey", pn.getEnvironment());
+    scribe = new ScribeImpl(pn, "monkey");
     scribe.setPolicy(new LimitedScribePolicy(15, pn.getEnvironment()));
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();

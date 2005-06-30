@@ -49,13 +49,14 @@ public class SplitStreamImpl implements SplitStream {
    * @param node the pastry node that we will use
    * @param instance The instance name for this splitstream
    */
-  public SplitStreamImpl(Node node, String instance, Environment env) {
+  public SplitStreamImpl(Node node, String instance) {
     this.instance = instance;
-    Parameters p = env.getParameters();
+    Environment environment = node.getEnvironment();
+    Parameters p = environment.getParameters();
     defaultMaxChildren = p.getInt("p2p_splitStream_policy_default_maximum_children");
     maxFailedSubscriptions = p.getInt("p2p_splitStream_policy_default_maximum_children");
     stripeBaseBitLength = p.getInt("p2p_splitStream_stripeBaseBitLength");
-    this.scribe = new ScribeImpl(node, instance, env);
+    this.scribe = new ScribeImpl(node, instance);
     this.node = node;
     this.channels = new Hashtable();
     scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));

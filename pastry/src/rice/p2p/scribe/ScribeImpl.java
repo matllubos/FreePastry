@@ -77,8 +77,8 @@ public class ScribeImpl implements Scribe, Application {
    * @param node The node below this Scribe implementation
    * @param instance The unique instance name of this Scribe
    */
-  public ScribeImpl(Node node, String instance, Environment env) {
-    this(node, new ScribePolicy.DefaultScribePolicy(env), instance, env);
+  public ScribeImpl(Node node, String instance) {
+    this(node, new ScribePolicy.DefaultScribePolicy(node.getEnvironment()), instance);
   }
 
   /**
@@ -88,8 +88,8 @@ public class ScribeImpl implements Scribe, Application {
    * @param policy The policy for this Scribe
    * @param instance The unique instance name of this Scribe
    */
-  public ScribeImpl(Node node, ScribePolicy policy, String instance, Environment env) {
-    this.environment = env;
+  public ScribeImpl(Node node, ScribePolicy policy, String instance) {
+    this.environment = node.getEnvironment();
     
     Parameters p = environment.getParameters();
     MAINTENANCE_INTERVAL = p.getInt("p2p_scribe_maintenance_interval");
@@ -104,7 +104,7 @@ public class ScribeImpl implements Scribe, Application {
     this.id = Integer.MIN_VALUE;
     
     // schedule the period liveness checks of the parent
-    endpoint.scheduleMessage(new MaintenanceMessage(), env.getRandomSource().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
+    endpoint.scheduleMessage(new MaintenanceMessage(), environment.getRandomSource().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
     
    // log.addHandler(new ConsoleHandler());
    // log.setLevel(Level.FINEST);
