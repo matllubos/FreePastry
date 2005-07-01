@@ -57,6 +57,8 @@ public class SelectorManager extends Thread implements Timer {
 
   protected String instance;
 
+  protected boolean running = true;
+  
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
@@ -187,7 +189,7 @@ public class SelectorManager extends Thread implements Timer {
 
       lastTime = timeSource.currentTimeMillis();
       // loop while waiting for activity
-      while (true) {
+      while (running) {
         notifyLoopListeners();
 
         // NOTE: This is so we aren't always holding the selector lock when we
@@ -222,12 +224,19 @@ public class SelectorManager extends Thread implements Timer {
         }
       }
     } catch (Throwable t) {
-      log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+      log.getLogger(SelectorManager.class, instance).logException(Logger.SEVERE, 
           "ERROR (SelectorManager.run): " , t);
       System.exit(-1);
     }
+    log.getLogger(SelectorManager.class, instance).log(Logger.WARNING, "Selector "+instance+" shutting down.");
+
   }
 
+  
+  public void resign() {
+    running = false; 
+  }
+  
   protected void notifyLoopListeners() {
     long now = timeSource.currentTimeMillis();
     long diff = now - lastTime;
