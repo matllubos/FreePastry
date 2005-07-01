@@ -2,6 +2,7 @@ package rice.post.proxy;
 
 import java.io.*;
 import java.net.*;
+import java.util.Date;
 import java.util.zip.*;
 import rice.proxy.*;
 import rice.post.security.*;
@@ -25,6 +26,7 @@ public class NetworkLogServer {
   
   public void start() {
     try {
+      System.out.println("Starting server on port "+port);
       ServerSocket server = new ServerSocket(port);
       
       while (true) 
@@ -38,7 +40,10 @@ public class NetworkLogServer {
     // add cert stuff here
     String ring = args[0];
     String pass = args[1];
+   
+    System.out.println("Starting "+new Date());
     KeyPair pair = RingCertificate.readKeyPair(ring.toLowerCase(), pass);
+    System.out.println("Got keypair "+new Date());
     new NetworkLogServer(pair.getPrivate(), Integer.parseInt(args[2])).start();
   }
     
@@ -57,6 +62,7 @@ public class NetworkLogServer {
     public NetworkLogClient(Socket socket, int id) {      
       this.socket = socket;
       this.id = id;
+      System.out.println("Got connection from "+socket+ " at "+new Date());
     }
     
     protected void readHeader(DataInputStream in) {
