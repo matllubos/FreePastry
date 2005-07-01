@@ -60,7 +60,7 @@ public class SelectorManager extends Thread implements Timer {
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
-  public SelectorManager(boolean profile, String instance,
+  public SelectorManager(String instance,
       TimeSource timeSource, LogManager log) {
     super(instance == null ? "Selector Thread" : "Selector Thread -- "
         + instance);

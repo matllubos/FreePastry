@@ -115,7 +115,7 @@ public class Environment {
   }
   
   public static SelectorManager generateDefaultSelectorManager(TimeSource time, LogManager logging) {
-    return new SelectorManager(false, "Default", time, logging);
+    return new SelectorManager("Default", time, logging);
   }
   
   // Accessors

@@ -16,6 +16,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
 import rice.pastry.standard.*;
+import rice.selector.SelectorManager;
 
 /**
  * Pastry node factory for Socket-linked nodes.
@@ -223,11 +224,19 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     Environment environment = this.environment;
     if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
       if (this.environment.getLogManager() instanceof CloneableLogManager) {
+        LogManager lman = ((CloneableLogManager)this.environment.getLogManager()).clone(nodeId.toString());
+        SelectorManager sman = this.environment.getSelectorManager();
+        if (this.environment.getParameters().getBoolean("pastry_factory_selectorPerNode")) 
+          sman = new SelectorManager(
+              nodeId.toString()+" Selector",
+              this.environment.getTimeSource(),
+              lman);
+        
         environment = new Environment(
-          this.environment.getSelectorManager(),
+          sman,
           this.environment.getRandomSource(),
           this.environment.getTimeSource(),
-          ((CloneableLogManager)this.environment.getLogManager()).clone(nodeId.toString()),
+          lman,
           this.environment.getParameters());
       }
     }    

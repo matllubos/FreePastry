@@ -47,7 +47,7 @@ public class ProfileSelector extends SelectorManager {
    * 
    */
   public ProfileSelector(String instance, TimeSource timeSource, LogManager log) {
-    super(true, instance, timeSource, log);
+    super(instance, timeSource, log);
     new Thread(new Runnable() {
       public void run() {
         while(true) {
