@@ -9,7 +9,7 @@ import rice.pastry.socket.*;
 import rice.pastry.*;
 
 /**
-* Class which represents a "ping" message sent through the
+ * Class which represents a "ping" message sent through the
  * socket pastry system.
  *
  * @version $Id$
