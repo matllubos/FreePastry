@@ -94,7 +94,10 @@ public class NetworkLogServer {
         
         System.out.println(id + " Writing to file " + filename);
         
-        out = new GZIPOutputStream(new FileOutputStream(new File(".", filename + ".gz")));
+        File outFile = new File("./"+socket.getInetAddress().getHostAddress()+":"+socket.getPort(), filename + ".gz");        
+        outFile.mkdirs();
+        
+        out = new GZIPOutputStream(new FileOutputStream(outFile));
         length = ois.readLong();
         ois.close();
       } catch (Exception e) {
