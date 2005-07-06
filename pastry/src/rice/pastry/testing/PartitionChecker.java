@@ -274,7 +274,7 @@ public class PartitionChecker {
   }
   
   public static void main(String[] args) throws Exception {
-    new PartitionChecker("boots");
+    new PartitionChecker(args[0]);
     System.exit(0);
   }
 }
