@@ -18,6 +18,12 @@ public class NetworkLogServer {
   
   protected PrivateKey key;
   
+  public static final int MAX_CLIENTS = 60;
+
+  public int numClients = 0;
+  
+  public Object lock = new Object();
+  
   public NetworkLogServer(PrivateKey key, int port) {
     this.port = port;
     this.key = key;
@@ -27,10 +33,18 @@ public class NetworkLogServer {
   public void start() {
     try {
       System.out.println("Starting server on port "+port);
-      ServerSocket server = new ServerSocket(port);
+      ServerSocket server = new ServerSocket(port,5);
       
-      while (true) 
-        new NetworkLogClient(server.accept(), count++).start();
+      while (true) {
+        if (numClients < MAX_CLIENTS) {
+          new NetworkLogClient(server.accept(), count++).start();
+          numClients++;
+        } else {
+          synchronized(lock) {
+            lock.wait(5000); 
+          }
+        }
+      }
     } catch (Exception e) {
       System.err.println("Got error " + e);
     }
@@ -41,9 +55,9 @@ public class NetworkLogServer {
     String ring = args[0];
     String pass = args[1];
    
-    System.out.println("Starting "+new Date());
+//    System.out.println("Starting "+new Date());
     KeyPair pair = RingCertificate.readKeyPair(ring.toLowerCase(), pass);
-    System.out.println("Got keypair "+new Date());
+//    System.out.println("Got keypair "+new Date());
     new NetworkLogServer(pair.getPrivate(), Integer.parseInt(args[2])).start();
   }
     
@@ -120,6 +134,11 @@ public class NetworkLogServer {
           if (socket != null) socket.close();
         } catch (IOException e) {
           System.err.println("PANIC: Got exception " + e + " while closing streams!");
+        } finally {
+          numClients--;
+          synchronized(lock) {
+            lock.notifyAll(); 
+          }
         }
       }
     }
