@@ -1,64 +1,48 @@
 package rice.post.proxy;
 
-import rice.*;
-import rice.Continuation.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.security.*;
+import java.util.*;
+import java.util.List;
+import java.util.zip.GZIPInputStream;
 
-import rice.pastry.*;
-import rice.pastry.PastryNode;
-import rice.pastry.dist.*;
-import rice.pastry.leafset.LeafSet;
-import rice.pastry.socket.*;
-import rice.pastry.commonapi.*;
-import rice.pastry.standard.*;
+import javax.swing.*;
 
-import rice.p2p.commonapi.*;
-import rice.p2p.glacier.*;
-import rice.p2p.glacier.v2.*;
-import rice.p2p.past.*;
-import rice.p2p.past.gc.*;
-import rice.p2p.aggregation.*;
-import rice.p2p.multiring.*;
-import rice.p2p.util.*;
-
-import rice.persistence.*;
-import rice.visualization.LocalVisualization;
-
-import rice.post.*;
-import rice.post.delivery.*;
-import rice.post.security.*;
-import rice.post.security.ca.*;
-import rice.post.storage.*;
-
-import rice.selector.*;
-import rice.proxy.*;
-
-import rice.email.*;
-import rice.email.proxy.smtp.*;
-import rice.email.proxy.imap.*;
-import rice.email.proxy.user.*;
-import rice.email.proxy.mailbox.*;
-import rice.email.proxy.mailbox.postbox.*;
+import rice.Continuation.ExternalContinuation;
 import rice.environment.Environment;
-import rice.environment.logging.LogManager;
-import rice.environment.logging.Logger;
+import rice.environment.logging.*;
 import rice.environment.logging.file.RotatingLogManager;
-import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
 import rice.environment.time.TimeSource;
-
-import java.util.*;
-import java.util.zip.*;
-import java.io.*;
-import java.net.*;
-import java.security.*;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-
-import java.nio.*;
-import java.nio.channels.*;
+import rice.p2p.aggregation.*;
+import rice.p2p.commonapi.*;
+import rice.p2p.glacier.*;
+import rice.p2p.glacier.v2.*;
+import rice.p2p.multiring.*;
+import rice.p2p.past.*;
+import rice.p2p.past.gc.GCPastImpl;
+import rice.p2p.util.XMLObjectInputStream;
+import rice.pastry.*;
+import rice.pastry.commonapi.PastryIdFactory;
+import rice.pastry.dist.*;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.standard.CertifiedNodeIdFactory;
+import rice.persistence.*;
+import rice.post.*;
+import rice.post.delivery.DeliveryPastImpl;
+import rice.post.security.PostCertificate;
+import rice.post.security.ca.*;
+import rice.post.storage.*;
+import rice.selector.*;
+import rice.visualization.LocalVisualization;
 
 /**
  * This class starts up everything on the Pastry side, and then
@@ -942,7 +926,9 @@ public class PostProxy {
     if (natAddress != null)
       proxyAddress = new InetSocketAddress(natAddress, port);
     
-    rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(cert.getBootstraps());
+    InetSocketAddress[] bootsNotMe = getBootstrapsThatAreNotMe(cert.getBootstraps(),port);
+    
+    rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootsNotMe);
     
     if ((bootHandle == null) && (! parameters.getBoolean("pastry_ring_" + prefix+ "_allow_new_ring")))
       panic(new RuntimeException(), 
@@ -1048,7 +1034,9 @@ public class PostProxy {
     if (parameters.getBoolean("pastry_ring_" + prefix+ "_proxy_enable"))
       proxyAddress = parameters.getInetSocketAddress("pastry_ring_" + prefix+ "_proxy_address");
     
-    globalNode = factory.newNode(factory.getNodeHandle(globalCert.getBootstraps()), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
+    InetSocketAddress[] bootsNotMe = getBootstrapsThatAreNotMe(globalCert.getBootstraps(),globalPort);
+    
+    globalNode = factory.newNode(factory.getNodeHandle(bootsNotMe), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
     globalPastryNode = (PastryNode) globalNode;
 
     int count = 0;
@@ -1071,6 +1059,22 @@ public class PostProxy {
     
     stepDone(SUCCESS);
   }     
+  
+  /**
+   * Pulls the 
+   * @param addrs
+   * @param port
+   * @return
+   */
+  protected InetSocketAddress[] getBootstrapsThatAreNotMe(InetSocketAddress[] addrs, int port) throws IOException {
+    InetSocketAddress localAddress = new InetSocketAddress(InetAddress.getLocalHost(),port);
+    ArrayList list = new ArrayList(Arrays.asList(addrs));
+    // removes all copies
+    while(list.remove(localAddress));
+    
+    return (InetSocketAddress[])list.toArray(new InetSocketAddress[0]);
+    
+  }
   
   /**
    * Method which starts up the global multiring node service
