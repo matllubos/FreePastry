@@ -768,6 +768,21 @@ public class Id implements rice.p2p.commonapi.Id {
   }
 
   /**
+   * Similar to toString(), but not wrapped by <0x ..>
+   * @return
+   */
+  public String toStringBare() {
+    StringBuffer buffer = new StringBuffer();
+    
+    int n = IdBitLength / 4;
+    for (int i = n-1; i >= n-6; i--) 
+      buffer.append(tran[getDigit(i, 4)]);
+    
+    
+    return buffer.toString();    
+  }
+  
+  /**
    * Returns the complete represntation of this Id, in hex.
    *
    * @return The complete representation of this Id, in hexadecimal

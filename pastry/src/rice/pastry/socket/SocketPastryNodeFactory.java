@@ -218,13 +218,14 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
-    log(Logger.WARNING, "No bootstrap node provided, starting a new ring...");
+    if (bootstrap == null)
+      log(Logger.WARNING, "No bootstrap node provided, starting a new ring...");
 
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
     if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
       if (this.environment.getLogManager() instanceof CloneableLogManager) {
-        LogManager lman = ((CloneableLogManager)this.environment.getLogManager()).clone(nodeId.toString());
+        LogManager lman = ((CloneableLogManager)this.environment.getLogManager()).clone("0x"+nodeId.toStringBare());
         SelectorManager sman = this.environment.getSelectorManager();
         if (this.environment.getParameters().getBoolean("pastry_factory_selectorPerNode")) 
           sman = new SelectorManager(

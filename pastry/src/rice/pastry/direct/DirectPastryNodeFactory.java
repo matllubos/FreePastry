@@ -63,7 +63,8 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return a new PastryNode
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
-    environment.getLogManager().getLogger(DirectPastryNodeFactory.class, null).log(Logger.WARNING, 
+    if (bootstrap == null)
+      environment.getLogManager().getLogger(DirectPastryNodeFactory.class, null).log(Logger.WARNING, 
         "No bootstrap node provided, starting a new ring...");
     
     // this code builds a different environment for each PastryNode
@@ -74,7 +75,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
           this.environment.getSelectorManager(),
           this.environment.getRandomSource(),
           this.environment.getTimeSource(),
-          ((CloneableLogManager)this.environment.getLogManager()).clone(nodeId.toString()),
+          ((CloneableLogManager)this.environment.getLogManager()).clone("0x"+nodeId.toStringBare()),
           this.environment.getParameters());
       }
     }    

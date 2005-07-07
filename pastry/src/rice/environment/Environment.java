@@ -6,6 +6,7 @@ package rice.environment;
 import java.io.IOException;
 
 import rice.environment.logging.*;
+import rice.environment.logging.file.FileLogManager;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
@@ -111,6 +112,9 @@ public class Environment {
   }
   
   public static LogManager generateDefaultLogManager(TimeSource time, Parameters params) {
+    if (params.getBoolean("environment_logToFile")) {
+      return new FileLogManager(time, params); 
+    }
     return new SimpleLogManager(time, params); 
   }
   
