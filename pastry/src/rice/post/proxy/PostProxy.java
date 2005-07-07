@@ -620,7 +620,7 @@ public class PostProxy {
           
       stepDone(SUCCESS);
     } catch (Exception e) {
-      panic(e, "There was an error reading the file '" + parameters.getString("post_username") + ".certificate'.", new String[] {"post_username"});
+      panic(e, "There was an error reading the file '" + parameters.getString("post_username") + ".epost'.", new String[] {"post_username"});
     }
   }
   
