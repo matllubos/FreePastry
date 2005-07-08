@@ -30,7 +30,7 @@ import rice.selector.TimerTask;
  * @author jstewart
  *
  */
-public class NetworkLogUploadTask extends TimerTask {
+public class NetworkLogUploadThread extends Thread {
 
   protected InetSocketAddress host;
   
@@ -43,7 +43,8 @@ public class NetworkLogUploadTask extends TimerTask {
   private Environment environment;
   private Parameters params;
   
-  public NetworkLogUploadTask(Environment env, int port, PublicKey key, InetSocketAddress server) {      
+  public NetworkLogUploadThread(Environment env, int port, PublicKey key, InetSocketAddress server) {      
+    super("NetworkLogUploadThread");
     this.host = server;
     this.key = key;
     this.pastry_port = port;
@@ -55,10 +56,35 @@ public class NetworkLogUploadTask extends TimerTask {
  
   
   public void run() {
-    sendFiles();
+    try {
+      int interval = params.getInt("log_network_upload_interval");
+      int init_interval = environment.getRandomSource().nextInt(interval / 2) + interval / 2;
+
+      Thread.sleep(init_interval);
+    } catch (InterruptedException e) {}
+    
+    while (true) {
+      log(Logger.INFO, "NetworkLogUploadThread Waking up...");
+      try {
+        sendFiles();
+      } catch (IOException e) {
+        // should have been logged higher up
+      }
+      sleep();
+    }
   }
   
-  protected void sendFiles() {
+
+  protected void sleep() {
+    try {
+      Thread.sleep(params.getInt("log_network_upload_interval"));
+    } catch (InterruptedException e) {
+      logException(Logger.WARNING, "Unexpected IE in NetworkLogUploadThread",e);
+      throw new RuntimeException("Unexpected InterruptedException",e);
+    }
+  }
+  
+  protected void sendFiles() throws IOException {
     String file;
     
     if (params.contains("log_network_upload_filename")) {
@@ -73,6 +99,15 @@ public class NetworkLogUploadTask extends TimerTask {
         return file.startsWith(file + ".");
       }
     });
+
+    // try not to upload too many files in any shot
+    // if we generate more than 30 logs between uploads then
+    // we'll never catch up, but that should be an exception condition
+    int nfiles = 30;
+    
+    // make sure we don't go past end of the array
+    if (files.length < nfiles) 
+      nfiles = files.length;
     
     for (int i=0; i<files.length; i++) 
       sendFile(files[i], true);
@@ -99,18 +134,19 @@ public class NetworkLogUploadTask extends TimerTask {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);
-      
+
+      log(Logger.INFO, "writing header for "+file.getName());
       oos.writeObject(InetAddress.getLocalHost().getHostAddress() + ":" + pastry_port + "." + file.getName());
       oos.writeLong(file.length());
       oos.close();
       return baos.toByteArray();
     } catch (Exception e) {
-      System.out.println("ERROR: Could not create header... " + e);
+      logException(Logger.WARNING, "ERROR: Could not create header... ", e);
       throw new RuntimeException(e);
     }
   }
   
-  protected void sendFile(File file, boolean delete) {
+  protected void sendFile(File file, boolean delete) throws IOException {
     Socket socket = new Socket();
     InputStream in = null;
     GZIPOutputStream out = null;
@@ -124,8 +160,6 @@ public class NetworkLogUploadTask extends TimerTask {
       
       byte[] header = getHeader(file);
       
-      System.out.println("Writing length " + header.length);
-      
       out.write(MathUtils.longToByteArray(header.length));
       out.write(header);
 
@@ -136,30 +170,38 @@ public class NetworkLogUploadTask extends TimerTask {
       
       out.finish();
       out.flush();
-      System.out.println("Done writing...");
+      log(Logger.FINE,"Done writing... "+file.getName());
       
       int done = socket.getInputStream().read(new byte[1]);
-      System.out.println("Done reading... (" + done + ")");
+      log(Logger.FINE,"Done reading... (" + done + ")" + " for "+file.getName());
       
       if (done < 0)
         throw new IOException("Log file was not correctly received - skipping...");
     } catch (IOException e) {
-      environment.getLogManager().getLogger(NetworkLogUploadTask.class, null).logException(Logger.WARNING,
+      logException(Logger.WARNING,
           "ERROR: Got exception " + e + " while sending file - aborting!",e);
-      return;
+      throw e;
     } finally {
       try {
         if (socket != null) socket.close();
         if (in != null) in.close();
       } catch (IOException e) {
-        System.err.println("PANIC: Got exception " + e + " while closing streams!");
+        logException(Logger.SEVERE, "PANIC: Got exception " + e + " while closing streams!",e);
       }
     }
     
     if (delete) {
       boolean result = file.delete();
       if (! result)
-        System.out.println("WARNING: Error deleting log file " + file + " " + file.exists() + " " + result);
+        log(Logger.WARNING,"WARNING: Error deleting log file " + file + " " + file.exists() + " " + result);
     }
+  }
+  
+  private void log(int level, String msg) {
+    environment.getLogManager().getLogger(getClass(), "").log(level, msg);
+  }
+
+  private void logException(int level, String msg, Throwable t) {
+    environment.getLogManager().getLogger(getClass(), "").logException(level, msg, t);
   }
 }

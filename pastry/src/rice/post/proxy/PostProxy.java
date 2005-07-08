@@ -919,14 +919,9 @@ public class PostProxy {
     String prefix = ((RingId) address.getAddress()).getRingId().toStringFull();
 
     if (parameters.getBoolean("log_network_upload_enable")) {
-      int interval = parameters.getInt("log_network_upload_interval");
-      int init_interval = environment.getRandomSource().nextInt(interval / 2) + interval / 2;
-      environment.getSelectorManager().getTimer().schedule(
-          new NetworkLogUploadTask(environment, port, cert.getKey(), cert.getLogServer()), 
-          init_interval,
-          interval);
+      (new NetworkLogUploadThread(environment, port, cert.getKey(), cert.getLogServer())).start(); 
     }
-    
+
     factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port, environment), cert.getProtocol(), port, environment);
     InetSocketAddress proxyAddress = null;
         
@@ -1574,7 +1569,7 @@ public class PostProxy {
     
     System.exit(-1);
   }
-  
+
   public void resign() {
     if (pastryNode != null)
       pastryNode.resign();
