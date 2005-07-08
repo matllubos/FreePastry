@@ -821,39 +821,44 @@ public class PostProxy {
       hostname = InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {}
     
-    String prefix = hostname + "-" + port;
+    String prefix = hostname + "-" + port + "-";
+    
     String location = parameters.getString("storage_root_location");
     int diskLimit = parameters.getInt("storage_disk_limit");
     int cacheLimit = parameters.getInt("storage_cache_limit");
     
+    if (!(new File(new File(location,PersistentStorage.BACKUP_DIRECTORY),prefix + "immutable")).exists()) {
+      prefix="";
+    }
+      
     stepStart("Starting Immutable Storage");
     immutableStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "-immutable", location, diskLimit, env),
-                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "-cache", ".", diskLimit, env), cacheLimit, env));
+                                              new PersistentStorage(FACTORY, prefix + "immutable", location, diskLimit, env),
+                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "cache", ".", diskLimit, env), cacheLimit, env));
     stepDone(SUCCESS);
     
     stepStart("Starting Mutable Storage");
     mutableStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "-mutable", location, diskLimit, env),
+                                            new PersistentStorage(FACTORY, prefix + "mutable", location, diskLimit, env),
                                             new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     stepStart("Starting Pending Message Storage");
     pendingStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "-pending", location, diskLimit, env),
+                                            new PersistentStorage(FACTORY, prefix + "pending", location, diskLimit, env),
                                             new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     stepStart("Starting Delivered Message Storage");
     deliveredStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "-delivered", location, diskLimit, env),
+                                              new PersistentStorage(FACTORY, prefix + "delivered", location, diskLimit, env),
                                               new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     if (parameters.getBoolean("past_garbage_collection_enable")) {
       stepStart("Starting Trashcan Storage");
       trashStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "-trash", location, diskLimit, false, env),
+                                            new PersistentStorage(FACTORY, prefix + "trash", location, diskLimit, false, env),
                                             new EmptyCache(FACTORY));
       stepDone(SUCCESS);
     }
@@ -865,20 +870,20 @@ public class PostProxy {
 
       stepStart("Starting Glacier Storage");
       glacierMutableStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier-mutable", location, diskLimit, env),
+                                              new PersistentStorage(KFACTORY, prefix + "glacier-mutable", location, diskLimit, env),
                                               new EmptyCache(KFACTORY));
       glacierImmutableStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier-immutable", location, diskLimit, env),
+                                              new PersistentStorage(KFACTORY, prefix + "glacier-immutable", location, diskLimit, env),
                                               new EmptyCache(KFACTORY));
       glacierNeighborStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "-glacier-neighbor", location, diskLimit, env),
+                                              new PersistentStorage(FACTORY, prefix + "glacier-neighbor", location, diskLimit, env),
                                               new EmptyCache(FACTORY));
       aggrWaitingStorage = new StorageManagerImpl(VFACTORY,
-                                              new PersistentStorage(VFACTORY, prefix + "-aggr-waiting", location, diskLimit, env),
+                                              new PersistentStorage(VFACTORY, prefix + "aggr-waiting", location, diskLimit, env),
                                               new EmptyCache(VFACTORY));
       if (parameters.getBoolean("glacier_use_trashcan")) {
         glacierTrashStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "-glacier-trash", location, diskLimit, false, env),
+                                              new PersistentStorage(KFACTORY, prefix + "glacier-trash", location, diskLimit, false, env),
                                               new EmptyCache(KFACTORY));
       } else {
         glacierTrashStorage = null;
@@ -891,15 +896,15 @@ public class PostProxy {
       long backupLimit = parameters.getLong("past_backup_cache_limit");
       
       stepStart("Starting Immutable Backup Cache");
-      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-immutable-cache", ".", diskLimit, env), cacheLimit, env);
+      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "immutable-cache", ".", diskLimit, env), cacheLimit, env);
       stepDone(SUCCESS);
       
       stepStart("Starting Pending Backup Cache");
-      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-pending-cache", ".", diskLimit, env), cacheLimit, env);
+      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "pending-cache", ".", diskLimit, env), cacheLimit, env);
       stepDone(SUCCESS);
       
       stepStart("Starting Delivered Backup Cache");
-      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "-delivered-cache", ".", diskLimit, env), cacheLimit, env);
+      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "delivered-cache", ".", diskLimit, env), cacheLimit, env);
       stepDone(SUCCESS);
     }
   }
@@ -914,10 +919,12 @@ public class PostProxy {
     String prefix = ((RingId) address.getAddress()).getRingId().toStringFull();
 
     if (parameters.getBoolean("log_network_upload_enable")) {
+      int interval = parameters.getInt("log_network_upload_interval");
+      int init_interval = environment.getRandomSource().nextInt(interval / 2) + interval / 2;
       environment.getSelectorManager().getTimer().schedule(
           new NetworkLogUploadTask(environment, port, cert.getKey(), cert.getLogServer()), 
-          parameters.getInt("log_network_upload_interval"),
-          parameters.getInt("log_network_upload_interval"));
+          init_interval,
+          interval);
     }
     
     factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port, environment), cert.getProtocol(), port, environment);
