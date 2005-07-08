@@ -212,6 +212,7 @@ p2p_glacier_maxActiveRestores = 3
 # logging
 #default log level
 loglevel = WARNING
+environment_logToFile=false
 log_rotate_interval = 86400000
 # 24 hours
 
