@@ -3,6 +3,7 @@ package rice.post.proxy;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+
 import javax.swing.*;
 import javax.swing.text.*;
 
@@ -102,6 +103,12 @@ public class ConfigurationFrame extends JFrame {
   protected void save() {
     for (int i=0; i<panels.length; i++) 
       panels[i].save();
+    try {
+      parameters.store();
+    } catch (IOException e) {
+      JOptionPane.showMessageDialog(this, "Could not save configuration due to an error: "+e);
+      environment.getLogManager().getLogger(this.getClass(), "").logException(Logger.WARNING, "could not save user configuration", e);
+    }
   }
   
   protected class ButtonPane extends JPanel {
