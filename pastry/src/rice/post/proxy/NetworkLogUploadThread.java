@@ -85,30 +85,21 @@ public class NetworkLogUploadThread extends Thread {
   }
   
   protected void sendFiles() throws IOException {
-    String file;
+    final String filename;
     
     if (params.contains("log_network_upload_filename")) {
-      file = params.getString("log_network_upload_filename");
+      filename = params.getString("log_network_upload_filename");
     } else {
       // these two parameters should always have the same value anyway
-      file = params.getString("log_rotate_filename");
+      filename = params.getString("log_rotate_filename");
     }
     
     File[] files = new File(".").listFiles(new FilenameFilter() {
       public boolean accept(File parent, String file) {
-        return file.startsWith(file + ".");
+        return file.startsWith(filename + ".");
       }
     });
 
-    // try not to upload too many files in any shot
-    // if we generate more than 30 logs between uploads then
-    // we'll never catch up, but that should be an exception condition
-    int nfiles = 30;
-    
-    // make sure we don't go past end of the array
-    if (files.length < nfiles) 
-      nfiles = files.length;
-    
     for (int i=0; i<files.length; i++) 
       sendFile(files[i], true);
     
