@@ -1,6 +1,7 @@
 
 package rice.pastry;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.messaging.*;
@@ -74,6 +75,16 @@ public abstract class PastryNodeFactory {
    * @return The leafset of the remote node
    */
   public abstract LeafSet getLeafSet(NodeHandle handle) throws IOException;
+  
+  /**
+   * Non-blocking version.
+   * 
+   * @param handle
+   * @param c
+   * @return
+   * @throws IOException
+   */
+  public abstract void getLeafSet(NodeHandle handle, Continuation c);
 
   /**
    * This method returns the remote route row of the provided handle
@@ -85,6 +96,17 @@ public abstract class PastryNodeFactory {
    * @return The route row of the remote node
    */
   public abstract RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException;
+  
+  /**
+   * Non-blocking version.
+   * 
+   * @param handle
+   * @param row
+   * @param c
+   * @return
+   * @throws IOException
+   */
+  public abstract void getRouteRow(NodeHandle handle, int row, Continuation c);
 
   /**
    * This method determines and returns the proximity of the current local

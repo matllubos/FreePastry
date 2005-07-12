@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
 
+import rice.Continuation;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
 
@@ -52,6 +54,10 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     return generateNodeHandle(address);
   }
   
+  public final void getNodeHandle(InetSocketAddress address, Continuation c) {
+    generateNodeHandle(address, c);
+  }
+  
   /**
    * Method which a client should use in order to get a bootstrap node from the
    * factory. In the wire protocol, this method will generate a node handle
@@ -83,6 +89,81 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
   }
 
   /**
+   * Implements non-blocking multiple address selection, in parallel.  
+   *  
+   * @author Jeff Hoye
+   */
+  class GNHContinuation implements Continuation {
+    /**
+     * Points to next address to try
+     */
+    int index;
+    int numInParallel;
+    int outstandingRequests;
+    InetSocketAddress[] addresses;
+    Continuation subContinuation;
+    /**
+     * Set to true when complete.
+     */
+    boolean found = false;
+    
+    public GNHContinuation(InetSocketAddress[] addresses, Continuation subContinuation, int numInParallel) {
+      this.addresses = addresses;
+      this.subContinuation = subContinuation;
+      // must request at least one in parallel (this is serial)
+      if (numInParallel < 1) numInParallel = 1;
+      this.numInParallel = numInParallel;      
+      index = 0;
+    }
+    
+    
+    public synchronized void receiveResult(Object result) {
+      if (found) return;
+      outstandingRequests--;
+      if (result != null) {
+        found = true;
+        subContinuation.receiveResult(result);
+        return;
+      } else {
+        tryNext();
+      }
+    }
+
+    public synchronized void receiveException(Exception result) {
+      if (found) return;
+      environment.getLogManager().getLogger(DistPastryNodeFactory.class, null).logException(Logger.WARNING, 
+          "Received exception while booting, trying next bootstap address",result);
+      outstandingRequests--;
+      tryNext();      
+    }
+    
+    private synchronized void tryNext() {
+      while(outstandingRequests < numInParallel &&
+          index < addresses.length) {
+        outstandingRequests++; 
+        index++; // do this in case call comes back on same thread, in same stack
+        getNodeHandle(addresses[index-1], this);
+      }
+      if (outstandingRequests == 0) {
+        subContinuation.receiveResult(null);
+      }
+    }    
+  }
+  
+  public final void getNodeHandle(InetSocketAddress[] addresses, Continuation c) {
+    // first, randomize the addresses
+    Random r = new Random();
+    for (int i=0; i<addresses.length; i++) {
+      int j = r.nextInt(addresses.length);
+      InetSocketAddress tmp = addresses[j];
+      addresses[j] = addresses[i];
+      addresses[i] = tmp;
+    }     
+
+    new GNHContinuation(addresses,c,environment.getParameters().getInt("pastry_factory_bootsInParallel")).tryNext();
+  }
+
+  /**
    * Method which all subclasses should implement allowing the client to
    * generate a node handle given the address of a node. This is designed to
    * allow the client to get their hands on a bootstrap node during the
@@ -92,6 +173,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return DESCRIBE THE RETURN VALUE
    */
   public abstract NodeHandle generateNodeHandle(InetSocketAddress address);
+  public abstract void generateNodeHandle(InetSocketAddress address, Continuation c);
   
   /**
    * Generates a new pastry node with a random NodeId using the bootstrap

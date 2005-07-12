@@ -2,8 +2,10 @@ package rice.pastry.socket;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.channels.*;
 import java.nio.channels.SocketChannel;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.environment.logging.Logger;
@@ -16,6 +18,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
 import rice.pastry.standard.*;
+import rice.selector.*;
 import rice.selector.SelectorManager;
 
 /**
@@ -89,6 +92,21 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return lm.getLeafSet();
   }
 
+  public void getLeafSet(NodeHandle handle, final Continuation c) {
+    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
+
+    getResponse(wHandle.getAddress(), new LeafSetRequestMessage(), new Continuation() {
+      public void receiveResult(Object result) {
+        LeafSetResponseMessage lm = (LeafSetResponseMessage)result; 
+        c.receiveResult(lm.getLeafSet());
+      }
+
+      public void receiveException(Exception result) {
+        c.receiveException(result);
+      }
+    });    
+  }
+  
   /**
    * This method returns the remote route row of the provided handle to the
    * caller, in a protocol-dependent fashion. Note that this method may block
@@ -106,6 +124,21 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return rm.getRouteRow();
   }
 
+  public void getRouteRow(NodeHandle handle, int row, final Continuation c) {
+    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
+
+    getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row), new Continuation() {
+      public void receiveResult(Object result) {
+        RouteRowResponseMessage rm = (RouteRowResponseMessage) result; 
+        c.receiveResult(rm.getRouteRow());
+      }
+
+      public void receiveException(Exception result) {
+        c.receiveException(result);
+      }
+    });    
+  }
+  
   /**
    * This method determines and returns the proximity of the current local node
    * the provided NodeHandle. This will need to be done in a protocol- dependent
@@ -171,6 +204,23 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
+  public void generateNodeHandle(final InetSocketAddress address, final Continuation c) {
+    log(Logger.FINE, "Socket: Contacting bootstrap node " + address);
+
+    getResponse(address, new NodeIdRequestMessage(), new Continuation() {
+      public void receiveResult(Object result) {
+        NodeIdResponseMessage rm = (NodeIdResponseMessage) result; 
+        c.receiveResult(new SocketNodeHandle(new EpochInetSocketAddress(address, rm.getEpoch()), rm.getNodeId()));
+      }
+
+      public void receiveException(Exception result) {
+        log(Logger.WARNING, "Error connecting to address " + address + ": " + result);
+        c.receiveException(result);
+      }
+    });    
+  }
+
+  
   /**
    * Method which creates a Pastry node from the next port with a randomly
    * generated NodeId.
@@ -340,6 +390,89 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return (Message) o;
   }
 
+  protected void getResponse(final InetSocketAddress address, final Message message, final Continuation c) {    
+    // create reader and writer
+    final SocketChannelWriter writer;
+    final SocketChannelReader reader; 
+    writer = new SocketChannelWriter(environment, SourceRoute.build(new EpochInetSocketAddress(address, EpochInetSocketAddress.EPOCH_UNKNOWN)));
+    reader = new SocketChannelReader(environment, SourceRoute.build(new EpochInetSocketAddress(address, EpochInetSocketAddress.EPOCH_UNKNOWN)));
+    writer.enqueue(SocketCollectionManager.HEADER_DIRECT);
+    writer.enqueue(message);
+ 
+    // bind to the appropriate port
+    try {
+      final SocketChannel channel = SocketChannel.open();
+      channel.configureBlocking(false);
+      SelectionKey key = environment.getSelectorManager().register(channel, 
+          new SelectionKeyHandler() {
+            public void connect(SelectionKey key) {
+              log(Logger.FINE,"SPNF.getResponse("+address+","+message+").connect()");
+              try {
+                if (channel.finishConnect()) 
+                  key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
+
+              log(Logger.FINE, "(SPNF) Found connectable channel - completed connection");
+//                channel.socket().connect(address, 20000);
+//                channel.socket().setSoTimeout(20000);
+              } catch (IOException ioe) {
+                handleException(ioe);
+              }
+            }
+  
+            public void read(SelectionKey key) {
+              log(Logger.FINE,"SPNF.getResponse("+address+","+message+").read()");
+              try {
+                Object o = null;
+    
+                while (o == null) {
+                  o = reader.read(channel);
+                }
+                channel.socket().close();
+                channel.close();
+                key.cancel();
+                c.receiveResult(o);
+              } catch (IOException ioe) {
+                handleException(ioe);
+              }
+            }
+  
+            public void write(SelectionKey key) {
+              log(Logger.FINE,"SPNF.getResponse("+address+","+message+").write()");
+              try {
+                if (writer.write(channel)) {
+                  key.interestOps(SelectionKey.OP_READ);
+                }
+              } catch (IOException ioe) {
+                handleException(ioe);
+              }
+            }
+            
+            public void handleException(Exception e) {
+              try {
+                channel.socket().close();
+                channel.close();
+                channel.keyFor(environment.getSelectorManager().getSelector()).cancel();
+              } catch (IOException ioe) {
+                logException(Logger.WARNING,"Error while trying requesting "+message+" from "+address,e);
+              } finally {
+                c.receiveException(e);               
+              }
+            }
+          }, 
+          0);
+      
+      log(Logger.FINE, "(SPNF) Initiating socket connection to address " + address);
+
+      if (channel.connect(address)) 
+        key.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+      else 
+        key.interestOps(SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+
+    } catch (IOException ioe) {
+      c.receiveException(ioe); 
+    }
+  }
+
   /**
    * Method which constructs an InetSocketAddres for the local host with the
    * specifed port number.
@@ -418,6 +551,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param s DESCRIBE THE PARAMETER
    */
   private void log(int level, String s) {
-    environment.getLogManager().getLogger(PingManager.class, null).log(level,s);
+    environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null).log(level,s);
+  }
+  private void logException(int level, String s, Throwable t) {
+    environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null).logException(level,s,t);
   }
 }

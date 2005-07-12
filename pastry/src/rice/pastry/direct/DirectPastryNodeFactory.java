@@ -1,6 +1,7 @@
 
 package rice.pastry.direct;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.environment.logging.CloneableLogManager;
@@ -130,6 +131,11 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     return dHandle.getRemote().getLeafSet();
   }
 
+  public void getLeafSet(NodeHandle handle, Continuation c) {
+    DirectNodeHandle dHandle = (DirectNodeHandle) handle;
+    c.receiveResult(dHandle.getRemote().getLeafSet());
+  }
+
   /**
    * This method returns the remote route row of the provided handle
    * to the caller, in a protocol-dependent fashion.  Note that this method
@@ -145,6 +151,11 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     return dHandle.getRemote().getRoutingTable().getRow(row);
   }
 
+  public void getRouteRow(NodeHandle handle, int row, Continuation c) {
+    DirectNodeHandle dHandle = (DirectNodeHandle) handle;
+    c.receiveResult(dHandle.getRemote().getRoutingTable().getRow(row));
+  }
+  
   /**
    * This method determines and returns the proximity of the current local
    * node the provided NodeHandle.  This will need to be done in a protocol-
@@ -156,4 +167,5 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
   public int getProximity(NodeHandle local, NodeHandle remote) {
     return simulator.proximity(local.getNodeId(), remote.getNodeId());
   }
+
 }
