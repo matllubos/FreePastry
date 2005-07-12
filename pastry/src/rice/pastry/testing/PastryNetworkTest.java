@@ -66,9 +66,11 @@ public class PastryNetworkTest {
           
           Thread t = new Thread() {
             public void run() {  
+              boolean gotResponse = false;
               try {
                 LeafSet ls = factory.getLeafSet(handle);
                 System.out.println("Response:"+handle+" "+ls);
+                gotResponse = true;
                 ps.println(handle.getEpochAddress().getAddress().getAddress().getHostAddress()+":"+handle.getEpochAddress().getAddress().getPort());
         //        SourceRoute[] routes = factory.getRoutes(handle);
                 
@@ -98,6 +100,9 @@ public class PastryNetworkTest {
                 environment.getLogManager().getLogger(PastryNetworkTest.class, null).log(Logger.WARNING,
                     "GOT OTHER ERROR CONNECTING TO " + handle + " - " + e);
               } finally {
+                if (!gotResponse) {
+                  System.out.println("Did not hear from "+handle); 
+                }
                 synchronized (unseen) {
                   numThreads--;
                   unseen.notifyAll();
@@ -208,6 +213,7 @@ public class PastryNetworkTest {
   public void start() throws Exception {
     testLeafSets();
     //testRoutingTables();
+    System.exit(0);
   }
   
   public static void main(String[] args) throws Exception {
