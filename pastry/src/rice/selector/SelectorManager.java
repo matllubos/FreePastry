@@ -589,4 +589,8 @@ public class SelectorManager extends Thread implements Timer {
   public Timer getTimer() {
     return this;
   }
+  
+  public Selector getSelector() {
+    return selector; 
+  }
 }
