@@ -31,6 +31,8 @@ pastry_messageDispatch_bufferSize = 32
 # this causes the logger to prepend all entries with the nodeid
 pastry_factory_multipleNodes = true
 pastry_factory_selectorPerNode = false
+# number of bootstap nodehandles to fetch in parallel
+pastry_factory_bootsInParallel = 1
 
 pastry_socket_reader_selector_deserialization_max_size = 1000000
 pastry_socket_writer_max_queue_length = 128
@@ -212,8 +214,12 @@ p2p_glacier_maxActiveRestores = 3
 # logging
 #default log level
 loglevel = WARNING
-environment_logToFile=false
-log_rotate_interval = 86400000
+
+environment_logToFile = false
+fileLogManager_filePrefix = 
+fileLogManager_fileSuffix = .log
+
 # 24 hours
+log_rotate_interval = 86400000
 
 
