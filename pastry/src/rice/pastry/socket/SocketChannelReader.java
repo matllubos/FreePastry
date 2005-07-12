@@ -83,7 +83,7 @@ public class SocketChannelReader {
     environment.getLogManager().getLogger(SocketChannelReader.class, null).log(level,s);
   }
 
-  private void logException(int level, String s, Exception e) {
+  private void logException(int level, String s, Throwable e) {
     environment.getLogManager().getLogger(SocketChannelReader.class, null).logException(level, s, e);
   }
 
@@ -107,7 +107,7 @@ public class SocketChannelReader {
         throw new IOException("Error on read - the channel has been closed.");
 
       if (sizeBuffer.remaining() == 0)
-        initializeObjectBuffer();
+        initializeObjectBuffer(sc);
       else
         return null;
     }
@@ -215,7 +215,7 @@ public class SocketChannelReader {
    *
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  private void initializeObjectBuffer() throws IOException {
+  private void initializeObjectBuffer(SocketChannel sc) throws IOException {
     // flip the buffer
     sizeBuffer.flip();
 
@@ -230,10 +230,15 @@ public class SocketChannelReader {
     if (objectSize <= 0) 
       throw new IOException("Found message of improper number of bytes - " + objectSize + " bytes");
     
-    log(Logger.FINER, "(R) Found object of " + objectSize + " bytes");
+    log(Logger.FINER, "(R) Found object of " + objectSize + " bytes from "+sc.socket().getRemoteSocketAddress());
     
     // allocate the appropriate space
-    buffer = ByteBuffer.allocateDirect(objectSize);
+    try {
+      buffer = ByteBuffer.allocateDirect(objectSize);
+    } catch (OutOfMemoryError oome) {
+      logException(Logger.SEVERE, "SCR ran out of memory allocating an object of size "+objectSize+" from "+path, oome);
+      throw oome; 
+    }
   }
 
   /**
@@ -272,4 +277,6 @@ public class SocketChannelReader {
   }
 
 
+  
+  
 }
