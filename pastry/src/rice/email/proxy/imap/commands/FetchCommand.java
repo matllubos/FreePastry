@@ -29,7 +29,7 @@ import rice.environment.logging.Logger;
  */
 public class FetchCommand extends AbstractImapCommand {
   
-  public static FetchOptionRegistry regestry = new FetchOptionRegistry();
+  public static FetchOptionRegistry registry = new FetchOptionRegistry();
 
   public FetchCommand(boolean isUID) {
     super("FETCH");
@@ -73,7 +73,7 @@ public class FetchCommand extends AbstractImapCommand {
       
       for (Iterator i = parts.iterator(); i.hasNext();) {
         Object part = i.next();
-        FetchPart handler = regestry.getHandler(part);
+        FetchPart handler = registry.getHandler(part);
         result.append(handler.fetch(msg, part));
         
         if (i.hasNext())
