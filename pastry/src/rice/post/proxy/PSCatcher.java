@@ -22,7 +22,7 @@ public class PSCatcher extends PrintStream {
    * @throws FileNotFoundException
    */
   public PSCatcher(Environment env, PrintStream out) throws FileNotFoundException {
-    super(new FileOutputStream("out.txt"), true);
+    super(new FileOutputStream("out.txt", true), true);
     this.environment = env;
     this.out = out;
   }
