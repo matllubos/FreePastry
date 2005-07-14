@@ -3,11 +3,13 @@ package rice.pastry.dist;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.*;
 import java.util.Random;
 
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
 
@@ -54,8 +56,8 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     return generateNodeHandle(address);
   }
   
-  public final void getNodeHandle(InetSocketAddress address, Continuation c) {
-    generateNodeHandle(address, c);
+  public final CancellableTask getNodeHandle(InetSocketAddress address, Continuation c) {
+    return generateNodeHandle(address, c);
   }
   
   /**
@@ -93,7 +95,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    *  
    * @author Jeff Hoye
    */
-  class GNHContinuation implements Continuation {
+  class GNHContinuation implements Continuation, CancellableTask {
     /**
      * Points to next address to try
      */
@@ -102,10 +104,15 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     int outstandingRequests;
     InetSocketAddress[] addresses;
     Continuation subContinuation;
+    
+    /**
+     * Stored list of sub CancellableTasks to make the whole parallel process cancellable.
+     */
+    ArrayList outstandingTasks = new ArrayList();
     /**
      * Set to true when complete.
      */
-    boolean found = false;
+    boolean done = false;
     
     public GNHContinuation(InetSocketAddress[] addresses, Continuation subContinuation, int numInParallel) {
       this.addresses = addresses;
@@ -118,10 +125,10 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     
     
     public synchronized void receiveResult(Object result) {
-      if (found) return;
+      if (done) return;
       outstandingRequests--;
       if (result != null) {
-        found = true;
+        cancel();
         subContinuation.receiveResult(result);
         return;
       } else {
@@ -130,7 +137,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     }
 
     public synchronized void receiveException(Exception result) {
-      if (found) return;
+      if (done) return;
       environment.getLogManager().getLogger(DistPastryNodeFactory.class, null).logException(Logger.WARNING, 
           "Received exception while booting, trying next bootstap address",result);
       outstandingRequests--;
@@ -138,19 +145,42 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     }
     
     private synchronized void tryNext() {
+      if (done) return;
       while(outstandingRequests < numInParallel &&
           index < addresses.length) {
         outstandingRequests++; 
         index++; // do this in case call comes back on same thread, in same stack
-        getNodeHandle(addresses[index-1], this);
+        outstandingTasks.add(getNodeHandle(addresses[index-1], this));
       }
       if (outstandingRequests == 0) {
         subContinuation.receiveResult(null);
+        // cant be any tasks to cancel at this point
+        done = true;
       }
+    }
+
+
+    public void run() {    }
+
+
+    public synchronized boolean cancel() {
+      if (done) return false;
+      Iterator i = outstandingTasks.iterator();
+      while(i.hasNext()) {
+        CancellableTask ct = (CancellableTask)i.next(); 
+        ct.cancel();
+      }
+      done = true;
+      return true;
+    }
+
+
+    public long scheduledExecutionTime() {
+      return 0;
     }    
   }
   
-  public final void getNodeHandle(InetSocketAddress[] addresses, Continuation c) {
+  public final CancellableTask getNodeHandle(InetSocketAddress[] addresses, Continuation c) {
     // first, randomize the addresses
     Random r = new Random();
     for (int i=0; i<addresses.length; i++) {
@@ -160,7 +190,9 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
       addresses[i] = tmp;
     }     
 
-    new GNHContinuation(addresses,c,environment.getParameters().getInt("pastry_factory_bootsInParallel")).tryNext();
+    GNHContinuation gnh = new GNHContinuation(addresses,c,environment.getParameters().getInt("pastry_factory_bootsInParallel"));
+    gnh.tryNext();
+    return gnh;
   }
 
   /**
@@ -173,7 +205,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return DESCRIBE THE RETURN VALUE
    */
   public abstract NodeHandle generateNodeHandle(InetSocketAddress address);
-  public abstract void generateNodeHandle(InetSocketAddress address, Continuation c);
+  public abstract CancellableTask generateNodeHandle(InetSocketAddress address, Continuation c);
   
   /**
    * Generates a new pastry node with a random NodeId using the bootstrap

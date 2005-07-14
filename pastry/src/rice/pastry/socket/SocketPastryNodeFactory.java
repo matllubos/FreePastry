@@ -11,6 +11,7 @@ import rice.environment.logging.*;
 import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
@@ -92,10 +93,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return lm.getLeafSet();
   }
 
-  public void getLeafSet(NodeHandle handle, final Continuation c) {
+  public CancellableTask getLeafSet(NodeHandle handle, final Continuation c) {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
-    getResponse(wHandle.getAddress(), new LeafSetRequestMessage(), new Continuation() {
+    return getResponse(wHandle.getAddress(), new LeafSetRequestMessage(), new Continuation() {
       public void receiveResult(Object result) {
         LeafSetResponseMessage lm = (LeafSetResponseMessage)result; 
         c.receiveResult(lm.getLeafSet());
@@ -124,10 +125,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return rm.getRouteRow();
   }
 
-  public void getRouteRow(NodeHandle handle, int row, final Continuation c) {
+  public CancellableTask getRouteRow(NodeHandle handle, int row, final Continuation c) {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
-    getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row), new Continuation() {
+    return getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row), new Continuation() {
       public void receiveResult(Object result) {
         RouteRowResponseMessage rm = (RouteRowResponseMessage) result; 
         c.receiveResult(rm.getRouteRow());
@@ -204,10 +205,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
-  public void generateNodeHandle(final InetSocketAddress address, final Continuation c) {
+  public CancellableTask generateNodeHandle(final InetSocketAddress address, final Continuation c) {
     log(Logger.FINE, "Socket: Contacting bootstrap node " + address);
 
-    getResponse(address, new NodeIdRequestMessage(), new Continuation() {
+    return getResponse(address, new NodeIdRequestMessage(), new Continuation() {
       public void receiveResult(Object result) {
         NodeIdResponseMessage rm = (NodeIdResponseMessage) result; 
         c.receiveResult(new SocketNodeHandle(new EpochInetSocketAddress(address, rm.getEpoch()), rm.getNodeId()));
@@ -390,7 +391,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return (Message) o;
   }
 
-  protected void getResponse(final InetSocketAddress address, final Message message, final Continuation c) {    
+  protected CancellableTask getResponse(final InetSocketAddress address, final Message message, final Continuation c) {    
     // create reader and writer
     final SocketChannelWriter writer;
     final SocketChannelReader reader; 
@@ -403,7 +404,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     try {
       final SocketChannel channel = SocketChannel.open();
       channel.configureBlocking(false);
-      SelectionKey key = environment.getSelectorManager().register(channel, 
+      final SelectionKey key = environment.getSelectorManager().register(channel, 
           new SelectionKeyHandler() {
             public void connect(SelectionKey key) {
               log(Logger.FINE,"SPNF.getResponse("+address+","+message+").connect()");
@@ -468,9 +469,32 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       else 
         key.interestOps(SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE | SelectionKey.OP_READ);
 
+      return new CancellableTask() {
+        public void run() {
+        }
+
+        public boolean cancel() {
+          try {
+            synchronized(key) {
+              channel.socket().close();
+              channel.close();
+              key.cancel();           
+            }
+            return true;
+          } catch (Exception ioe) {
+            logException(Logger.WARNING,"Error cancelling task.",ioe);
+            return false;
+          }
+        }
+
+        public long scheduledExecutionTime() {
+          return 0;
+        }
+      };
     } catch (IOException ioe) {
       c.receiveException(ioe); 
-    }
+      return null;
+    }    
   }
 
   /**

@@ -4,6 +4,7 @@ package rice.pastry;
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
 import rice.pastry.leafset.*;
@@ -84,7 +85,7 @@ public abstract class PastryNodeFactory {
    * @return
    * @throws IOException
    */
-  public abstract void getLeafSet(NodeHandle handle, Continuation c);
+  public abstract CancellableTask getLeafSet(NodeHandle handle, Continuation c);
 
   /**
    * This method returns the remote route row of the provided handle
@@ -106,7 +107,7 @@ public abstract class PastryNodeFactory {
    * @return
    * @throws IOException
    */
-  public abstract void getRouteRow(NodeHandle handle, int row, Continuation c);
+  public abstract CancellableTask getRouteRow(NodeHandle handle, int row, Continuation c);
 
   /**
    * This method determines and returns the proximity of the current local

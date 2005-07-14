@@ -5,6 +5,7 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.environment.logging.CloneableLogManager;
+import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.security.*;
@@ -131,9 +132,29 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     return dHandle.getRemote().getLeafSet();
   }
 
-  public void getLeafSet(NodeHandle handle, Continuation c) {
+  /**
+   * The non-blocking versions here all execute immeadiately.  
+   * This CancellableTask is just a placeholder.
+   * @author Jeff Hoye
+   */
+  class NullCancellableTask implements CancellableTask {
+    public void run() {
+    }
+
+    public boolean cancel() {
+      return false;
+    }
+
+    public long scheduledExecutionTime() {
+      return 0;
+    }
+  }
+
+  
+  public CancellableTask getLeafSet(NodeHandle handle, Continuation c) {
     DirectNodeHandle dHandle = (DirectNodeHandle) handle;
     c.receiveResult(dHandle.getRemote().getLeafSet());
+    return new NullCancellableTask();  
   }
 
   /**
@@ -151,9 +172,10 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     return dHandle.getRemote().getRoutingTable().getRow(row);
   }
 
-  public void getRouteRow(NodeHandle handle, int row, Continuation c) {
+  public CancellableTask getRouteRow(NodeHandle handle, int row, Continuation c) {
     DirectNodeHandle dHandle = (DirectNodeHandle) handle;
     c.receiveResult(dHandle.getRemote().getRoutingTable().getRow(row));
+    return new NullCancellableTask();  
   }
   
   /**
