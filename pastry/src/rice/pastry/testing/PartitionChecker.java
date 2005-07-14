@@ -155,9 +155,11 @@ public class PartitionChecker {
                     ring.addFailure(handle, new Exception("Node is now "+ns.get(0))); 
                   }
                   
-                  for (int i=1; i<ns.size(); i++) 
-                    if ((! ring.contains(ns.get(i))) && (! dead.contains(ns.get(i))))
-                      unseen.add(ns.get(i));
+                  synchronized (unseen) {
+	                  for (int i=1; i<ns.size(); i++) 
+	                    if ((! ring.contains(ns.get(i))) && (! dead.contains(ns.get(i))))
+	                      unseen.add(ns.get(i));
+                  }
                 
                 } catch (java.net.ConnectException e) {
                   ring.addFailure(handle,e);
