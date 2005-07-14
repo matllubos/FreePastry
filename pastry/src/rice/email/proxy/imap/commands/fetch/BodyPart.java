@@ -106,7 +106,7 @@ public class BodyPart extends FetchPart {
         msg.getFlagList().commit();
         result += " ";
 
-        FetchPart handler = FetchCommand.regestry.getHandler("FLAGS");
+        FetchPart handler = FetchCommand.registry.getHandler("FLAGS");
         handler.setConn(getConn());
         result += handler.fetch(msg, "FLAGS");
       }
