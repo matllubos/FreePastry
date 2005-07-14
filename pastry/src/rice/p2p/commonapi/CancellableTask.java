@@ -12,6 +12,10 @@ public interface CancellableTask {
   
   public void run();
   
+  /**
+   * 
+   * @return true if it was cancelled, false if it was already complete, or cancelled.
+   */
   public boolean cancel();
   
   public long scheduledExecutionTime();
