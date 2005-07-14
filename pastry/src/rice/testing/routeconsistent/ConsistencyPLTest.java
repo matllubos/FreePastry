@@ -81,7 +81,8 @@ public class ConsistencyPLTest implements Observer {
     if (args.length > 0) {
       bindport = Integer.parseInt(args[0]);
     }
-    // todo, test port bindings before proceeding
+    
+    // test port bindings before proceeding
     boolean success = false;
     while(!success) {
       try {
