@@ -73,9 +73,6 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   // the factory for manipulating ids
   protected IdFactory factory;
 
-  // the logger which we will use
-//  protected Logger log = Logger.getLogger(this.getClass().getName());
-  
   // the instance name we are running with
   protected String instance;
   
