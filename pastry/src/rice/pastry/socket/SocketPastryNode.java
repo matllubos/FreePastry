@@ -100,7 +100,7 @@ public class SocketPastryNode extends DistPastryNode {
    * @return a String
    */
   public String toString() {
-    return "SocketNodeHandle (" + getNodeId() + "/" + address + ")\n";
+    return "SocketNodeHandle (" + getNodeId() + "/" + address + ")";
   }
   
   /**
