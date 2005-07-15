@@ -41,6 +41,20 @@ public class SplitStreamImpl implements SplitStream {
   protected final int defaultMaxChildren;
   
   protected String instance;
+
+  /**
+   * Convienience constructor which uses the default SplitStreamScribePolicy.
+   * @param node
+   * @param instance
+   */
+  public SplitStreamImpl(Node node, String instance) {
+    this(node, instance, new SplitStreamScribePolicyFactory() {
+      public ScribePolicy getSplitStreamScribePolicy(Scribe scribe,
+          SplitStream splitstream) {
+        return new SplitStreamScribePolicy(scribe, splitstream);
+      }
+    });
+  }
   
   /**
    * The constructor for building the splitStream object which internally
@@ -49,7 +63,7 @@ public class SplitStreamImpl implements SplitStream {
    * @param node the pastry node that we will use
    * @param instance The instance name for this splitstream
    */
-  public SplitStreamImpl(Node node, String instance) {
+  public SplitStreamImpl(Node node, String instance, SplitStreamScribePolicyFactory factory) {
     this.instance = instance;
     Environment environment = node.getEnvironment();
     Parameters p = environment.getParameters();
@@ -59,8 +73,7 @@ public class SplitStreamImpl implements SplitStream {
     this.scribe = new ScribeImpl(node, instance);
     this.node = node;
     this.channels = new Hashtable();
-    scribe.setPolicy(new SplitStreamScribePolicy(scribe, this));
-
+    scribe.setPolicy(factory.getSplitStreamScribePolicy(scribe, this));
   }
 
   /**
