@@ -85,8 +85,12 @@ past_replication_factor=2
 past_backup_cache_enable=true
 past_backup_cache_limit=10000000
 past_use_trashcan=true
+pastry_node_boot_wait=30000
+# global ring
 pastry_ring_0000000000000000000000000000000000000000_allow_new_ring=false
+# rice ring
 pastry_ring_094B000000000000000000000000000000000000_allow_new_ring=false
+# open ring
 pastry_ring_A3B7000000000000000000000000000000000000_allow_new_ring=false
 pastry_proxy_connectivity_hosts=planetlab2.eecs.umich.edu:10003,planetlab1.csail.mit.edu:10003,planetlab1.csres.utexas.edu:10003,planetlab1.eecs.umich.edu:10003,planetlab10.millennium.berkeley.edu:10003,planetlab11.millennium.berkeley.edu:10003,planetlab12.millennium.berkeley.edu:10003,planetlab13.millennium.berkeley.edu:10003,planetlab14.millennium.berkeley.edu:10003,planetlab15.millennium.berkeley.edu:10003,planetlab16.millennium.berkeley.edu:10003,planetlab3.csail.mit.edu:10003,planetlab4.csail.mit.edu:10003,planetlab5.csail.mit.edu:10003,planetlab6.csail.mit.edu:10003,planetlab7.csail.mit.edu:10003,planlab1.cs.caltech.edu:10003,planlab2.cs.caltech.edu:10003
 pastry_proxy_connectivity_port=10001

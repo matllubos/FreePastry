@@ -960,6 +960,8 @@ public class PostProxy {
     if (glacierTrashStorage != null)
       ((PersistentStorage) glacierTrashStorage.getStorage()).setTimer(timer);
     
+    int maxcount = (parameters.getInt("pastry_node_boot_wait")+1500)/3000;
+
     int count = 0;
     
     do {
@@ -967,8 +969,8 @@ public class PostProxy {
       Thread.sleep(3000);
       count++;
       
-      if (count > 10) {
-        panic("The Pastry node has unsuccessfully tried for 30 seconds to boot into the\n" +
+      if (count > maxcount) {
+        panic("The Pastry node has unsuccessfully tried for "+(maxcount*3)+" seconds to boot into the\n" +
               "ring - it is highly likely that there is a problem preventing the connection.\n" + 
               "The most common error is a firewall which is preventing incoming connections - \n" +
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
@@ -1041,6 +1043,8 @@ public class PostProxy {
     globalNode = factory.newNode(factory.getNodeHandle(bootsNotMe), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
     globalPastryNode = (PastryNode) globalNode;
 
+    int maxcount = (parameters.getInt("pastry_node_boot_wait")+1500)/3000;
+
     int count = 0;
     
     do {
@@ -1048,8 +1052,8 @@ public class PostProxy {
       Thread.sleep(3000);
       count++;
       
-      if (count > 10) {
-        panic("The global Pastry node has unsuccessfully tried for 30 seconds to boot into the\n" +
+      if (count > maxcount) {
+        panic("The global Pastry node has unsuccessfully tried for "+(maxcount*3)+" seconds to boot into the\n" +
               "ring - it is highly likely that there is a problem preventing the connection.\n" + 
               "The most common error is a firewall which is preventing incoming connections - \n" +
               "please ensure that any firewall protecting you machine allows incoming traffic \n" +
