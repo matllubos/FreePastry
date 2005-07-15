@@ -115,6 +115,13 @@ public class SplitStreamScribePolicy implements ScribePolicy {
     Channel channel = getChannel(message.getTopic());
     NodeHandle newChild = (NodeHandle)message.getSubscriber();
 
+    if (channel == null) {
+      // If the channel is null, return false *unless you are root*, in which case you 
+      // return true.  This is a weird case.  We have to accept here if we are the root, even 
+      // if we are not attached to the channel (it's a bootstrapping issue)
+      return scribe.isRoot(message.getTopic());
+    }
+    
     /* do not accept self - wierd case, should not happen */
     if(message.getSubscriber().getId().equals(channel.getLocalId()))
       return false;
