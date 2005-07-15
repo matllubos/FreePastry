@@ -110,6 +110,10 @@ public class ScribeImpl implements Scribe, Application {
     environment.getLogManager().getLogger(ScribeImpl.class, instance).log(level, msg); 
   }
   
+  private void logException(int level, String msg, Throwable t) {
+    environment.getLogManager().getLogger(ScribeImpl.class, instance).logException(level, msg, t); 
+  }
+  
   public Environment getEnvironment() {
     return environment; 
   }
@@ -215,8 +219,8 @@ public class ScribeImpl implements Scribe, Application {
   private void sendSubscribe(Topic topic, ScribeClient client, ScribeContent content, Id previousParent) {
     id++;
 
-    log(Logger.FINEST,endpoint.getId() + ": Sending subscribe message for topic " + topic);
-
+    log(Logger.FINEST,endpoint.getId() + ": Sending subscribe message for topic " + topic + " client:"+client);
+    //logException(Logger.FINEST,"Stack Trace",new Exception("StackTrace"));
     if (client != null)
       outstanding.put(new Integer(id), client);
 
