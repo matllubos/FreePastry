@@ -360,6 +360,10 @@ public class NodeSet implements NodeSetI, Serializable {
       throws NoSuchElementException {
     return getIndex((NodeId) id);
   }
+  
+  public Iterator iterator() {
+    return set.iterator(); 
+  }
 
 }
 
