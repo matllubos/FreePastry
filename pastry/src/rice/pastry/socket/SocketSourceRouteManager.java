@@ -736,6 +736,7 @@ public class SocketSourceRouteManager {
        * @param route The route
        */
       public SourceRouteManager(SourceRoute route) {
+        if (route == null) throw new IllegalArgumentException("route is null");
         this.route = route;
         this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
         this.proximity = SocketNodeHandle.DEFAULT_PROXIMITY;
