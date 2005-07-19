@@ -43,6 +43,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   protected final int MAX_TIME_TO_BE_SCHEDULED;
 
+  /**
+   * Suppresses sendTheMessage() if we are not ready to do this part of the join process,
+   * or we are already done.
+   */
+  protected boolean tryingToGoReady = false;
   
   /**
    * Contains NodeHandles that know about us. 
@@ -87,15 +92,18 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * setReady();
    */
   protected void setReady() {    
+    if (tryingToGoReady) return;
+    tryingToGoReady = true;
+    log(Logger.INFO, "ChurnJonProtocol.setReady()");
     gotResponse.clear();
     failed.clear();
     // send a probe to everyone in the leafset
-    for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-      if (i != 0) {
-        NodeHandle nh = leafSet.get(i);          
-        sendTheMessage(nh, false);
-      }
+    Iterator i = leafSet.neighborSet(Integer.MAX_VALUE).iterator();
+    while(i.hasNext()) {
+      NodeHandle nh = (NodeHandle)i.next();
+      sendTheMessage(nh, false);      
     }
+    
     retryTask = localNode.scheduleMsg(new RequestFromEveryoneMsg(getAddress()), RETRY_INTERVAL, RETRY_INTERVAL);
   }  
   
@@ -293,6 +301,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           // active_i = true;
           localNode.setReady(); 
           retryTask.cancel();
+          tryingToGoReady = false;
         }
         // failed_i = {}
     //      gotResponse.clear();
@@ -320,18 +329,27 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @param reply
    */
   public void sendTheMessage(NodeHandle nh, boolean reply) {
+    if (!reply) {
+      if (!tryingToGoReady) return;
+//      logException(Logger.FINEST, "StackTrace", new Exception("Stack Trace")); 
+    }
     log(Logger.FINE, "CJP:  sendTheMessage("+nh+","+reply+")");
+    
     // todo, may want to repeat this message as long as the node is alive if we 
     // are worried about rare message drops
     if (localNode.isReady()) {
       failed.clear(); 
-    }
+    }    
     nh.receiveMessage(new ConsistentJoinMsg(getAddress(),leafSet,failed,!reply));      
   }
   
 
   private void log(int level, String s) {
     localNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).log(level,s);
+  }
+  
+  private void logException(int level, String s, Throwable t) {
+    localNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).logException(level,s, t);
   }
   
 
