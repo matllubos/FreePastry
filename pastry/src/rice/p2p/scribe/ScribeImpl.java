@@ -221,6 +221,14 @@ public class ScribeImpl implements Scribe, Application {
 
     log(Logger.FINEST,endpoint.getId() + ": Sending subscribe message for topic " + topic + " client:"+client);
     //logException(Logger.FINEST,"Stack Trace",new Exception("StackTrace"));
+    
+    // TODO: This should go to the ScribeImpl
+    if (client == null) {
+      ScribeClient[] clients = getClients(topic); 
+      if (clients.length > 0)
+        client = clients[0];
+    }
+    
     if (client != null)
       outstanding.put(new Integer(id), client);
 
