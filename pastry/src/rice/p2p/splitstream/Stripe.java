@@ -241,7 +241,8 @@ public class Stripe implements ScribeClient {
           }
         }
       };
-      scribe.getEnvironment().getSelectorManager().getTimer().schedule(resubscribeTask, 5000);
+      scribe.getEnvironment().getSelectorManager().getTimer().schedule(resubscribeTask, 
+          scribe.getEnvironment().getParameters().getInt("p2p_splitStream_stripe_max_failed_subscription_retry_delay"));
     }
   }
 

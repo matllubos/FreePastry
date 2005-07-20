@@ -79,6 +79,7 @@ pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
 p2p_splitStream_stripeBaseBitLength = 4
 p2p_splitStream_policy_default_maximum_children = 24
 p2p_splitStream_stripe_max_failed_subscription = 5
+p2p_splitStream_stripe_max_failed_subscription_retry_delay = 1000
 
 #multiring
 p2p_multiring_base = 2
