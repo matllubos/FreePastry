@@ -68,7 +68,7 @@ public class SplitStreamImpl implements SplitStream {
     Environment environment = node.getEnvironment();
     Parameters p = environment.getParameters();
     defaultMaxChildren = p.getInt("p2p_splitStream_policy_default_maximum_children");
-    maxFailedSubscriptions = p.getInt("p2p_splitStream_policy_default_maximum_children");
+    maxFailedSubscriptions = p.getInt("p2p_splitStream_stripe_max_failed_subscription");
     stripeBaseBitLength = p.getInt("p2p_splitStream_stripeBaseBitLength");
     this.scribe = new ScribeImpl(node, instance);
     this.node = node;
