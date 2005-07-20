@@ -7,6 +7,8 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
+import rice.pastry.dist.DistPastryNode;
+import rice.selector.TimerTask;
 
 /**
  * This class encapsulates all data about an individual stripe. It is the basic unit in the system.
@@ -211,7 +213,7 @@ public class Stripe implements ScribeClient {
    *
    * @param topic The topic that failed
    */
-  public void subscribeFailed(Topic topic) {
+  public void subscribeFailed(final Topic topic) {
     Integer count = (Integer) failed.get(topic);
 
     if (count == null) {
@@ -226,6 +228,20 @@ public class Stripe implements ScribeClient {
       scribe.subscribe(topic, this);
 
       failed.put(topic, count);
+    } else {
+      // TODO: Make this random exponential backoff!
+      // set random exponential backoff timer
+      // if there is a parent then cancel self, else 
+      
+      // TODO: Need to reset count, (and in the future, the exponential backoff count)
+      TimerTask resubscribeTask = new TimerTask() {
+        public void run() {
+          if (getParent() == null) {
+            scribe.subscribe(topic, Stripe.this);         
+          }
+        }
+      };
+      scribe.getEnvironment().getSelectorManager().getTimer().schedule(resubscribeTask, 5000);
     }
   }
 
