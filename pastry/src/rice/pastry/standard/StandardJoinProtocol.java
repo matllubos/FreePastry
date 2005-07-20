@@ -93,7 +93,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 
 					jh = security.verifyNodeHandle(jh);
 
-					if (jh.equals(localHandle) && !localNode.isReady()) {
+					if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
             localNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.WARNING,
 							"NodeId collision, unable to join: " + localHandle + ":" + jh);
 					} else if (jh.isAlive() == true) { // the join handle is alive
