@@ -255,6 +255,10 @@ public class SocketChannelWriter {
     environment.getLogManager().getLogger(SocketChannelWriter.class, null).log(level,s);
   }
 
+  private void logException(int level, String s, Throwable t) {
+    environment.getLogManager().getLogger(SocketChannelWriter.class, null).logException(level,s, t);
+  }
+
 
   /**
    * Method which serializes a given object into a ByteBuffer, in order to
@@ -331,7 +335,7 @@ public class SocketChannelWriter {
       log(Logger.SEVERE,"PANIC: Object to be serialized was not serializable! [" + o + "]");
       throw new IOException("Unserializable class during attempt to serialize.");
     } catch (NullPointerException e) {
-      log(Logger.SEVERE,"PANIC: Object to be serialized caused null pointer exception! [" + o + "]");
+      logException(Logger.SEVERE,"PANIC: Object to be serialized caused null pointer exception! [" + o + "]",e);
       return null;
     } catch (Exception e) {
       log(Logger.SEVERE,"PANIC: Object to be serialized caused excception! [" + e + "]");
