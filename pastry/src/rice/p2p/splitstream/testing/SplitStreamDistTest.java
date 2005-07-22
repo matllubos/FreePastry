@@ -22,6 +22,10 @@ public class SplitStreamDistTest {
     
   public static String INSTANCE = "DistSplitStreamTest";
 
+  public static final String BOOTNODE = "ricepl-3.cs.rice.edu";
+//  public static final String BOOTNODE = "sys02.cs.rice.edu";
+  
+  public static final boolean nameSelf = false;
   
   /**
    * Usage java rice.p2p.splitstream.testing.SplitStreamDistTest <artificialchurn?> <bootstrap> <port> <bootport>
@@ -31,10 +35,17 @@ public class SplitStreamDistTest {
    */
   public static void main(String[] args) throws Exception {
     
+    String suffix = "";
+    
+    if (nameSelf) {
+      suffix+="."+InetAddress.getLocalHost().getHostName();
+    }
+    String outfileString = "ss.txt"+suffix;
+    
     // setup output
-//    PrintStream ps = new PrintStream(new FileOutputStream("ss.txt", true));
-//    System.setErr(ps);
-//    System.setOut(ps);
+    PrintStream ps = new PrintStream(new FileOutputStream(outfileString, true));
+    System.setErr(ps);
+    System.setOut(ps);
 
     // setup environment
     final Environment env = new Environment();
@@ -49,7 +60,7 @@ public class SplitStreamDistTest {
     }
     
     // parse non automatic bootstrap
-    String bootNode = "ricepl-3.cs.rice.edu";
+    String bootNode = BOOTNODE;
     if (args.length > 1) {
       bootNode = args[1]; 
     }
@@ -60,13 +71,13 @@ public class SplitStreamDistTest {
       port = Integer.parseInt(args[2]); 
     }
             
-    boolean isBootNode = true;
+    boolean isBootNode = false;
     InetAddress localAddress = InetAddress.getLocalHost();
     if (localAddress.getHostName().startsWith(bootNode)) {
       isBootNode = true;
     }
     System.out.println("isBootNode:"+isBootNode);
-    
+        
     if (IM_ALIVE_PERIOD > 0) {
       new Thread(new Runnable() {
         public void run() {
@@ -78,6 +89,13 @@ public class SplitStreamDistTest {
           } 
         }
       },"ImALIVE").start();
+    }
+    
+    if (!isBootNode) {
+      int waitTime = env.getRandomSource().nextInt(300000); 
+      System.out.println("Waiting for "+waitTime+" millis before continuing..."+env.getTimeSource().currentTimeMillis());
+      Thread.sleep(waitTime);
+      System.out.println("Starting connection process "+env.getTimeSource().currentTimeMillis());
     }
     
     // test port bindings before proceeding
@@ -134,14 +152,35 @@ public class SplitStreamDistTest {
     
     // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
     final PastryNode node = factory.newNode(bootHandle);
+    System.out.println("Node "+node+" created.");
     
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() { System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node); }
     });
+    
+    synchronized(node) {
+      while(!node.isReady()) {
+        System.out.println("Waiting for node to go ready.  "+env.getTimeSource().currentTimeMillis());
+        node.wait(5000); 
+      }
+    }
 
+//    if (!isBootNode) {
+//      System.out.println("Sleeping a minute at "+env.getTimeSource().currentTimeMillis());
+//      Thread.sleep(1*60*1000);
+//      System.out.println("Done sleeping at "+env.getTimeSource().currentTimeMillis());
+//    }          
     MySplitStreamClient app = new MySplitStreamClient(node, INSTANCE);      
-    ChannelId CHANNEL_ID = new ChannelId(generateId());
+    ChannelId CHANNEL_ID = new ChannelId(generateId());    
     app.attachChannel(CHANNEL_ID);
+    
+    if (!isBootNode) {
+      System.out.println("Sleeping(2) a minute at "+env.getTimeSource().currentTimeMillis());
+      Thread.sleep(1*60*1000);
+      System.out.println("Done(2) sleeping at "+env.getTimeSource().currentTimeMillis());
+    }   
+    
+    app.subscribeToAllChannels();    
     if (isBootNode) {
       app.startPublishTask(); 
     }

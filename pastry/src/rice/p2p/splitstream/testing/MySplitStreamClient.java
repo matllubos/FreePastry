@@ -15,9 +15,10 @@ import rice.selector.TimerTask;
  */
 public class MySplitStreamClient implements SplitStreamClient {
 
-  int PERIOD = 1000;
+  int SEND_PERIOD = 1000;
   
-  int msgSize = 500;
+  // 16KBps/base
+  int msgSize = 4;
   
   /**
    * The underlying common api node
@@ -63,9 +64,15 @@ public class MySplitStreamClient implements SplitStreamClient {
     System.out.println("Attaching to Channel " + cid + " at "+n.getEnvironment().getTimeSource().currentTimeMillis());
     if (channel == null)
       channel = ss.attachChannel(cid);
-    getStripes();
+    getStripes(); // implicitly sets the stripes parameter
   }
 
+  public void subscribeToAllChannels() {
+    for (int i = 0; i < stripes.length; i++) {
+      stripes[i].subscribe(this);
+    } 
+  }
+  
   public Stripe[] getStripes() {
     stripes = channel.getStripes();
     return stripes;
@@ -104,7 +111,7 @@ public class MySplitStreamClient implements SplitStreamClient {
     int seq = MathUtils.byteArrayToInt(theInt);
     Id stripeId = (rice.pastry.Id) (s.getStripeId().getId());
     String stripeStr = stripeId.toString().substring(3, 4);
-    System.out.println("deliver("+stripeStr+","+seq+")");
+    System.out.println("deliver("+stripeStr+","+seq+"):"+n.getEnvironment().getTimeSource().currentTimeMillis());
   }
 
   /**
@@ -116,6 +123,6 @@ public class MySplitStreamClient implements SplitStreamClient {
         publishNext();
       }
     };    
-    n.getEnvironment().getSelectorManager().getTimer().schedule(publishTask, PERIOD, PERIOD);    
+    n.getEnvironment().getSelectorManager().getTimer().schedule(publishTask, SEND_PERIOD, SEND_PERIOD);    
   }
 }
