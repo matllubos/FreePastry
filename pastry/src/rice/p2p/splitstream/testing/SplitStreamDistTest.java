@@ -18,14 +18,17 @@ import rice.pastry.standard.RandomNodeIdFactory;
  * @author Jeff Hoye
  */
 public class SplitStreamDistTest {
+  public static final int DEFAULT_PORT = 53245; //13245;
+  public static final int WAIT_TO_JOIN_DELAY = 3000; // 300000;
+  public static final int WAIT_TO_SUBSCRIBE_DELAY = 3000; // 60000;
   public static final int IM_ALIVE_PERIOD = 5000;
     
   public static String INSTANCE = "DistSplitStreamTest";
 
-  public static final String BOOTNODE = "ricepl-3.cs.rice.edu";
-//  public static final String BOOTNODE = "sys02.cs.rice.edu";
+//  public static final String BOOTNODE = "ricepl-3.cs.rice.edu";
+  public static final String BOOTNODE = "jeffh.cs.rice.edu";
   
-  public static final boolean nameSelf = false;
+  public static final boolean nameSelf = true;
   
   /**
    * Usage java rice.p2p.splitstream.testing.SplitStreamDistTest <artificialchurn?> <bootstrap> <port> <bootport>
@@ -66,7 +69,7 @@ public class SplitStreamDistTest {
     }
 
     // parse non automatic port
-    int port = 13245;
+    int port = DEFAULT_PORT;
     if (args.length > 2) {
       port = Integer.parseInt(args[2]); 
     }
@@ -92,7 +95,7 @@ public class SplitStreamDistTest {
     }
     
     if (!isBootNode) {
-      int waitTime = env.getRandomSource().nextInt(300000); 
+      int waitTime = env.getRandomSource().nextInt(WAIT_TO_JOIN_DELAY); 
       System.out.println("Waiting for "+waitTime+" millis before continuing..."+env.getTimeSource().currentTimeMillis());
       Thread.sleep(waitTime);
       System.out.println("Starting connection process "+env.getTimeSource().currentTimeMillis());
@@ -175,8 +178,8 @@ public class SplitStreamDistTest {
     app.attachChannel(CHANNEL_ID);
     
     if (!isBootNode) {
-      System.out.println("Sleeping(2) a minute at "+env.getTimeSource().currentTimeMillis());
-      Thread.sleep(1*60*1000);
+      System.out.println("Sleeping(2) for "+WAIT_TO_SUBSCRIBE_DELAY+" at "+env.getTimeSource().currentTimeMillis());
+      Thread.sleep(WAIT_TO_SUBSCRIBE_DELAY);
       System.out.println("Done(2) sleeping at "+env.getTimeSource().currentTimeMillis());
     }   
     

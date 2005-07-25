@@ -15,7 +15,7 @@ import rice.selector.TimerTask;
  */
 public class MySplitStreamClient implements SplitStreamClient {
 
-  int SEND_PERIOD = 1000;
+  int SEND_PERIOD = 15000;//1000;
   
   // 16KBps/base
   int msgSize = 4;
