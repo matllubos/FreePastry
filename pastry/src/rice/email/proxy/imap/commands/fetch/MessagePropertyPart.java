@@ -409,7 +409,7 @@ public class MessagePropertyPart extends FetchPart {
       String[] result = headers.getHeader(header);
 
       if ((result != null) && (result.length > 0)) {
-        String text = result[0].replaceAll("\\n", "").replaceAll("\\r", "");
+        String text = result[0].replaceAll("\\n", "").replaceAll("\\r", "").replaceAll("[\\u0080-\\uffff]", "?");
 
         if (! format)
           return text;

@@ -236,8 +236,8 @@ public class BodyPart extends FetchPart {
       } else {
         headers = iHeaders.getNonMatchingHeaderLines(parts);
       }
-
-      return format(collapse(headers) + "\r\n");
+      
+      return format(collapse(headers).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n");
     } catch (MessagingException e) {
       throw new MailboxException(e);
     }
@@ -327,7 +327,7 @@ public class BodyPart extends FetchPart {
 
     EmailContentPart data = (EmailContentPart) c.getResult();
 
-    return new String(headers.getData()) + "\r\n" + fetchAll(data);
+    return new String(headers.getData()).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n" + fetchAll(data);
   }
 
   private String getRange(BodyPartRequest breq, String content) {
