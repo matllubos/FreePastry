@@ -26,7 +26,7 @@ public interface Cache extends Catalog {
   /**
    * Caches an object in this storage. This method is non-blocking.
    * If the object has already been stored at the location id, this
-   * method has the effect of calling <code>uncachr(id)</code> followed
+   * method has the effect of calling <code>uncache(id)</code> followed
    * by <code>cache(id, obj)</code>. This method finishes by calling
    * receiveResult() on the provided continuation with whether or not
    * the object was cached.  Note that the object may not actually be
