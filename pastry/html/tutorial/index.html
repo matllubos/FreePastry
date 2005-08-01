@@ -12,8 +12,8 @@
 <div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
 API and software toolkit.</div>
 
-<h4>Version 1.2; May 26, 2005.  For <a
-href="http://freepastry.rice.edu/">FreePastry</a> version 1.4.1.  Maintained by <a
+<h4>Version 1.3; August 1, 2005.  For <a
+href="http://freepastry.rice.edu/">FreePastry</a> version 1.4.2.  Maintained by <a
 href="mailto:jeffh@rice.edu">Jeff Hoye</a>.</h4>
 
 </div>
@@ -26,6 +26,8 @@ href="mailto:jeffh@rice.edu">Jeff Hoye</a>.</h4>
 	</ul>
 	<h3>Lessons</h3>
 	<ul>
+	<li><a href="#lesson0a">Lesson 0.a</a>: Continuations.</li>
+	<li><a href="#lesson0b">Lesson 0.b</a>: Environment.</li>
 	<li><a href="#lesson1">Lesson 1</a>: Minimal code to create/join a pastry
 	ring.</li>
 	<li><a href="#lesson2">Lesson 2</a>: Execute the code to launch your new
@@ -37,12 +39,13 @@ href="mailto:jeffh@rice.edu">Jeff Hoye</a>.</h4>
 	<li><a href="#lesson5">Lesson 5</a>: Scheduling tasks on the FreePastry 
 	timer.</li>
 	<li><a href="#lesson6">Lesson 6</a>: Introducing Scribe.</li>
+	<li><a href="#lesson7">Lesson 7</a>: Past &mdash FreePastry's DHT.</li>
 	</ul>
 	<h3>Coming soon:</h3>
 	<ul>
-	<li>Lesson 7: Advanced Scribe: Policies.</li>
-	<li>Lesson 8: Past.</li>
-	<li>Lesson 9: Splitstream.</li>
+	<li>Lesson 8: Splitstream.</li>
+	<li>Lesson 9: Advanced Scribe: Policies.</li>
+	<li>Lesson 10: Advanced Environment.</li>
 	</ul>
 </ul>
 
@@ -54,9 +57,190 @@ Before you begin, you should meet the following requirements.
   <li>An intermediate level of knowledge in the Java programming language.  <a href="http://java.sun.com/docs/books/tutorial/">The Java Tutorial</a> is a good place to start. 
   <li>A copy of a current JDK, 1.4.2_06 or later.  <a href="http://java.sun.com/j2se/index.jsp">Sun's J2SE</a>. 
   <li>A basic understanding of Pastry overlay structure.  Read the short overview <a href="http://freepastry.rice.edu/PAST/overview.pdf">[pdf]</a><a href="http://freepastry.rice.edu/PAST/overview.ps">[ps]</a> of <a href="http://freepastry.rice.edu/">FreePastry</a>.
-  <li>Have a working copy of FreePastry-1.4_01 or later.  You can simply download the <a href="http://freepastry.rice.edu/FreePastry/FreePastry-1.4.1.jar">current jar</a>, or download and build the <a href="http://freepastry.rice.edu/FreePastry/">source</a>.
+  <li>Have a working copy of FreePastry-1.4_01 or later.  You can simply download the <a href="http://freepastry.rice.edu/FreePastry/FreePastry-1.4.2.jar">current jar</a>, or download and build the <a href="http://freepastry.rice.edu/FreePastry/">source</a>.
 </ol>
 <hr/>
+
+<a name="lesson0a"></a><h1>Lesson 0.a</h1>
+<h2>Continuations.</h2>
+FreePastry and its applications use Continuations in various places, so it is important that you understand what they do and how to use them.<br/><br/>
+
+A continuation is similar to a callback, or in java, a Listener, but it is typically used only once.  A google search for continuations will show you a variety of uses in computer science, but the primary use for them in FreePastry is to handle network latency, or other types of IO that may block or take a significant amount of time.<br/><br/>
+
+To understand why we use continuations, let's look at an alternative style of calls.  RMI/RPC style calls are generally blocking calls.  Blocking calls work similar to a regular function call.  The lookup command in Past (FreePastry's DHT) <i>could</i> look like:
+<pre>
+  public Result lookup(Id id) {
+    // blocking network call
+  }
+</pre>
+But if the network call takes a while to execute due to latency, then your program will block until it completes.  In the meantime you could be doing other lookups, but because of this style of call, you are forced to wait, or use a lot of threads.  Continuations allow you to "continue" processing
+when the result arrives, and in the meantime issue other requests.<br/><br/>
+
+Let's look at the <code>rice.Continuation</code> interface.
+<pre>
+/**
+ * Asynchronously receives the result to a given method call, using
+ * the command pattern.
+ * 
+ * Implementations of this class contain the remainder of a computation
+ * which included an asynchronous method call.  When the result to the
+ * call becomes available, the receiveResult method on this command
+ * is called.
+ *
+ * @version $Id$
+ *
+ * @author Alan Mislove
+ * @author Andreas Haeberlen
+ */
+public interface Continuation {
+
+  /**
+   * Called when a previously requested result is now availble.
+   *
+   * @param result The result of the command.
+   */
+  public void receiveResult(Object result);
+
+  /**
+   * Called when an execption occured as a result of the
+   * previous command.
+   *
+   * @param result The exception which was caused.
+   */
+  public void receiveException(Exception result);
+}
+</pre>
+
+In Past (the DHT that runs on top of FreePastry) the code to do a lookup looks like this:
+
+<pre>
+  public void lookup(Id id, Continuation command) {
+    // non-blocking network call
+  }
+</pre>
+
+Note the differences between this call and the alternative approach mentioned before: 
+<ol>
+  <li>The method takes a Continuation.</li>
+  <li>There is no return value.</li>
+</ol>
+
+When the result arrives, Past will call <code>command.receiveResult()</code> with the response.  Inside the continuation, you can complete the task that required the lookup.  If instead, an error occurs, Past will call <code>command.receiveException()</code>.  Note that because <code>receiveResult()</code> is called with an Object, you must cast the result to what you are expecting from the lookup.<br/><br/>
+
+Here is an example implementation of a continuation <a href="./src/lesson0a/MyContinuation.java">MyContinuation.java</a>:<br/><br/>
+
+First, create the continuation :
+<pre>
+class MyContinuation implements Continuation {
+  /**
+   * Called when the result arrives.
+   */
+  public void receiveResult(Object result) {
+    PastContent pc = (PastContent)result;
+    System.out.println("Received a "+pc);
+  }
+
+  /**
+   * Called if there is an error.
+   */
+  public void receiveException(Exception result) {
+    System.out.println("There was an error: "+result);      
+  }
+}
+</pre>
+
+Note that the continuation has 2 methods it must implement: <code>receiveResult()</code> and <code>receiveException()</code>.  This continuation will print "Received a <i>blah</i>" when the result comes in.  Note that we need to cast the result to what we should be expecting.  In the case of Past, we know that the result will be a PastContent.  If there is an error, we will print "There was an error: <i>Description of the error</i>"<br/><br/>
+
+Here is the code to use our continuation.  Note that this code will not run, because Past and Id have not been initialized.  (You will learn how to do that in <a href="#lesson7">Lesson 7</a>).<br/><br/>  
+
+Download the code here: <a href="./src/lesson0a/TestContinuation.java">TestContinuation.java</a>
+
+<pre>
+public class TestContinuation {
+  public static void main(String[] args) {
+    Past past = null; // generated elsewhere
+    Id id = null; // generated elsewhere
+    
+    // create the continuation
+    Continuation command = new MyContinuation();    
+    
+    // make the call with the continuation
+    past.lookup(id, command);    
+  }
+}
+</pre>
+
+This code calls lookup with the continuation.  When the result arrives, <code>command.receiveResult()</code> will be called.<br/><br/>
+
+<h3>Anonymous inner classes</h3>
+Java hackers love anonymous inner classes, so here is the same code as an anonymous inner class, rather than a seperate class.  This is handy because it flows a bit more like a typical blocking program.  <i>First do a <code>past.lookup()</code> then <code>System.out.println()</code>.</i><br/><br/>
+Download the code here: <a href="./src/lesson0a/TestContinuationAnon.java">TestContinuationAnon.java</a>
+
+<pre>
+public class TestContinuationAnon {
+
+  public static void main(String[] args) {
+    Past past = null; // generated elsewhere
+    Id id = null; // generated elsewhere
+    
+    // same code as TestContinuation and MyContinuation combined
+    past.lookup(id, new Continuation() {
+      // will be called if success in the lookup
+      public void receiveResult(Object result) {
+        PastContent pc = (PastContent)result;
+        System.out.println("Received a "+pc);        
+      }
+
+      // will be called if failure in the lookup
+      public void receiveException(Exception result) {
+        System.out.println("There was an error: "+result);      
+      }
+    });    
+  }
+}
+</pre>
+Click here for more information on <a href="http://java.sun.com/docs/books/tutorial/java/javaOO/innerclasses.html">Java Anonymous Inner Classes</a>.
+<hr/>
+
+<a name="lesson0b"></a><h1>Lesson 0.b</h1>
+<h2>Environment</h2>
+The environment allows us to more easily virtualize pastry inside the same Virtual machine.  This is the main
+new feature of FreePastry 1.4.2.  The environment serves FreePastry in 5 key ways:
+<ul>
+  <li><b>Logging</b> &mdash We have standardize on a logging system throughout FreePastry.  This is a simpler
+  logging framework than the one that ships with java, however it is compatable.  (In other words, you can implement
+  our LogManager and Logger with the Java one.)  This logging replaces the previous "-verbose" etc. logging.</li>
+  <li><b>Parameters</b> &mdash Formerly hard-coded (<code>public static final</code>) parameters are now able to be specified at startup, or even changed during runtime
+  rather than requiring a re-compile.  It allows parameters to be changed from code, and to be persistent.
+  In other words, you could have a gui that lets you change the parameters, then store them to disk (By calling Parameters.store()), so next time the 
+  code is run, it retains the parameters.</li>
+  <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
+  thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
+  synchronization than several threads.</li> 
+  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
+  you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
+  where some nodes have incorrect system clocks due to misconfigured nntp servers.</li>
+  <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
+</ul>
+
+Pastry applications access the Environment from the PastryNode or the commonapi Node (PastryNode implements Node).  Generally you 
+can use the same Environment for everything inside your JVM.  The two Objects that you will likely construct with an Environment are the 
+PastryNodeFactory and the IdFactory.  
+
+<h3>How should I get an environment?</h3>
+<ul>
+  <li>In your main method simply call <code>new Environment()</code>.</li>
+  <li>In your application, call <code>node.getEnvironment(), or endpoint.getEnvironment()</code>.</li>
+</ul> 
+
+The default constructor for an environment looks in the classpath for a params file called <b>freepastry.params</b>.  If you compiled
+the jar with the included ant task, or used the jar from the web, this should work automagically.  If you are compiling FreePastry
+from an IDE (such as eclipse) or from the command line (javac) then you will need to make sure to put the freepastry.params file
+located in <b>jars/freepastry</b> in your classpath, or use a different contstructor for the Environment.<br/>
+
+This should be sufficient information for you to continue with the tutorial.  You can learn more in Lesson 10 Advanced Environment.
+<hr/>
+
 
 <a name="lesson1"></a><h1>Lesson 1</h1>
 <h2>Minimal code to create/join a pastry ring.</h2>
@@ -67,12 +251,13 @@ In this lesson we are going to use Socket transport layer to communicate.  The S
 
 <h2>Terms:</h2>
 <ul>
-  <li><b>NodeId</b>&mdash;The randomly assigned unique identifier of a Node in the FreePastry.  <i>Typically a NodeId is 160bit represented by 20 Hex digits.  We usually only display the first 6 digits as this is enough to uniquely identify nodes for a pretty large ring.</i></li>
-  <li><b>NodeIdFactory</b>&mdash;This generates your local NodeId.  <i>Why do we need a NodeIdFactory?  In a real deployment of Pastry, it is critical that one cannot choose their NodeId.  To accomplish this you may want to use a Certificate Authority to centrally assign NodeIds.  However, for your initial purposes one doesn't need to be able to secure the choice of NodeId.  The factory pattern gives us the flexibility we need to change this behavior in the future.  Thus we begin with RandomNodeIdFactory which generates a Random node id.</i></li>
-  <li><b>PastryNode</b>&mdash;This is a Node in the network.  <i>Your application will send messages through the node and the node will deliver messages to your application.</i></li>
-  <li><b>NodeHandle</b>&mdash;This is a "reference" to a PastryNode.  It is how you refer to a specific node in the network.  <i>A NodeHandle consists of a NodeId and whatever information the transport layer needs to find the node in the underlieing protocol.  In this case an IP address and port.  In this lesson, you will use a NodeHandle to bootstrap your node into the ring.  You can get the NodeHandle to your local node by calling PastryNode.getLocalHandle().  In the distributed environment, you will need to get a NodeHandle to your bootstrap node(s) by asking the transport layer.  In this case you are interested in acquiring a node handle from an IP address and port.  The the Socket transport uses this information to opens a socket to this address:port and requests a copy of the NodeHandle from the remote node.  If it doesn't find a node at this location it returns null.</i></li>
-  <li><b>Bootstrap Node</b>&mdash;The node you use to join the ring.  <i>When a node starts up, it can either join an existing ring, or start a new one.  If you don't have a ring yet, then your choice is narrowed down to starting your own.  But once your first node has started a ring, you probably want all new nodes join that one.  To join a ring, you need to bootstrap off of any one node in the existing ring.  This is the bootstrap node.  In the example below, we use the first node that we construct as the bootstrap node.  In a real deployment, you may want to cache several nodes so that if you are unable to boot off of the first one, you can try others.</i></li>
-  <li><b>PastryNodeFactory</b>&mdash;Constructs and initializes the Pastry Node.  <i>This sets up the PastryNode including the transport layer, the Leafset Maintenance protocol and, the RoutingTable Maintenance protocol.  These protocols are necessary for a FreePastry deployment to properly maintain the overlay structure.  In this example we will use the SocketPastryNodeFactory which as its name implies sets up the pastry node to use the Socket transport layer to communicate with other nodes.</i></li>  
+  <li><b>NodeId</b> &mdash; The randomly assigned unique identifier of a Node in the FreePastry.  <i>Typically a NodeId is 160bit represented by 20 Hex digits.  We usually only display the first 6 digits as this is enough to uniquely identify nodes for a pretty large ring.</i></li>
+  <li><b>NodeIdFactory</b> &mdash; This generates your local NodeId.  <i>Why do we need a NodeIdFactory?  In a real deployment of Pastry, it is critical that one cannot choose their NodeId.  To accomplish this you may want to use a Certificate Authority to centrally assign NodeIds.  However, for your initial purposes one doesn't need to be able to secure the choice of NodeId.  The factory pattern gives us the flexibility we need to change this behavior in the future.  Thus we begin with RandomNodeIdFactory which generates a Random node id.</i></li>
+  <li><b>PastryNode</b> &mdash; This is a Node in the network.  <i>Your application will send messages through the node and the node will deliver messages to your application.</i></li>
+  <li><b>NodeHandle</b> &mdash; This is a "reference" to a PastryNode.  It is how you refer to a specific node in the network.  <i>A NodeHandle consists of a NodeId and whatever information the transport layer needs to find the node in the underlieing protocol.  In this case an IP address and port.  In this lesson, you will use a NodeHandle to bootstrap your node into the ring.  You can get the NodeHandle to your local node by calling PastryNode.getLocalHandle().  In the distributed environment, you will need to get a NodeHandle to your bootstrap node(s) by asking the transport layer.  In this case you are interested in acquiring a node handle from an IP address and port.  The the Socket transport uses this information to opens a socket to this address:port and requests a copy of the NodeHandle from the remote node.  If it doesn't find a node at this location it returns null.</i></li>
+  <li><b>Bootstrap Node</b> &mdash; The node you use to join the ring.  <i>When a node starts up, it can either join an existing ring, or start a new one.  If you don't have a ring yet, then your choice is narrowed down to starting your own.  But once your first node has started a ring, you probably want all new nodes join that one.  To join a ring, you need to bootstrap off of any one node in the existing ring.  This is the bootstrap node.  In the example below, we use the first node that we construct as the bootstrap node.  In a real deployment, you may want to cache several nodes so that if you are unable to boot off of the first one, you can try others.</i></li>
+  <li><b>PastryNodeFactory</b> &mdash; Constructs and initializes the Pastry Node.  <i>This sets up the PastryNode including the transport layer, the Leafset Maintenance protocol and, the RoutingTable Maintenance protocol.  These protocols are necessary for a FreePastry deployment to properly maintain the overlay structure.  In this example we will use the SocketPastryNodeFactory which as its name implies sets up the pastry node to use the Socket transport layer to communicate with other nodes.</i></li>  
+  <li><b>Daemon thread</b> &mdash; Prevents the JVM from exiting after the main method is complete.  See <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/Thread.html">java.lang.Thread</a> for more information.</i></li>  
 </ul>
 
 <p/>Now that you have the proper vocabulary, here is the constructor for the DistTutorial.  You can see most of the elements described in the vocabulary.
@@ -85,14 +270,15 @@ In this lesson we are going to use Socket transport layer to communicate.  The S
    * 
    * @param bindport the local port to bind to 
    * @param bootaddress the IP:port of the node to boot from
+   * @param env the environment for these nodes
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress) throws Exception {
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
     
-    // Used to generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory();
+    // Generate the NodeIds Randomly
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
     // This will return null if we there is no node at that location
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
@@ -107,7 +293,7 @@ In this lesson we are going to use Socket transport layer to communicate.  The S
       Thread.sleep(100);
     }
     
-    System.out.println("Finished creating new node "+node);
+    System.out.println("Finished creating new node "+node);    
   }
 </pre>
 
@@ -116,19 +302,20 @@ In this lesson we are going to use Socket transport layer to communicate.  The S
 <ol>
   <li>The arguments that we start with are: 
   <ol type="a">
-    <li><code>int bindport</code>&mdash;the local port to bind to.</li>
-    <li><code>InetSocketAddress bootaddress</code>&mdash;The address of our bootstrap node.</li>
+    <li><code>int bindport</code> &mdash; the local port to bind to.</li>
+    <li><code>InetSocketAddress bootaddress</code> &mdash; The address of our bootstrap node.</li>
+    <li><code>Environment env</code> &mdash; The environment.  See <a href="#lesson0b">lesson 0.b</a>.</li>
   </ol><br/>
 <pre>
-public DistTutorial(int bindport, InetSocketAddress bootaddress) throws Exception {</pre></li>
+public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {</pre></li>
 
   <li>We begin by constructing our NodeIdFactory, which we are going to need to give to our PastryNodeFactory.<br/><br/>
 <pre>
-NodeIdFactory nidFactory = new RandomNodeIdFactory();</pre></li>
+NodeIdFactory nidFactory = new RandomNodeIdFactory(env);</pre></li>
 
   <li>Give the nidFactory to our SocketPastryNodeFactory.  Additionally, we need to tell the SocketPastryNodeFactory what port to bind our pastry node to.<br/><br/>
 <pre>
-PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport);</pre></li>
+PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);</pre></li>
 
   <li>Turn the bootaddress into a NodeHandle.  Note that this call blocks, and can take several seconds to complete.  It is opening a socket to the specified address.  If there is an error, or no PastryNode found at the bootaddress, then <code>getNodeHandle()</code> returns null.<br/><br/>
 <pre>
@@ -155,6 +342,9 @@ while(!node.isReady()) {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
+    // Loads pastry settings
+    Environment env = new Environment();
+
     try {
       // the port to use locally
       int bindport = Integer.parseInt(args[0]);
@@ -179,20 +369,24 @@ while(!node.isReady()) {
 <h3>Let's examine each line:</h3>
 
 <ol>
+  <li>This line constructs the Environment.  It has the side effect of starting a daemon thread.
+<pre>
+    Environment env = new Environment();
+</pre></li>
   <li>This line parses the first command line argument into an int.
 <pre>
-int bindport = Integer.parseInt(args[0]);
+    int bindport = Integer.parseInt(args[0]);
 </pre></li>
 
   <li>These lines parse the IP and port and turn them into an InetSocketAddress.
 <pre>
-InetAddress bootaddr = InetAddress.getByName(args[1]);
-int bootport = Integer.parseInt(args[2]);
-InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+    InetAddress bootaddr = InetAddress.getByName(args[1]);
+    int bootport = Integer.parseInt(args[2]);
+    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
 </pre></li>
   <li>Finally we execute our constructor.
 <pre>
-DistTutorial dt = new DistTutorial(bindport, bootaddress);
+    DistTutorial dt = new DistTutorial(bindport, bootaddress);
 </pre></li>
   <li>We wrap the method with an indication of how to use the program in case the user inputs the wrong args.
 <pre>
@@ -229,35 +423,38 @@ Lesson 2 will aid you in running your code.</h3>
     <ol type="i">
       <li>Setup your directory as follows:
 <pre>
-FreePastry-1.4.1.jar
+FreePastry-1.4.2.jar
 rice/tutorial/lesson1/DistTutorial.java
 </pre>
       </li>
       <li>Compile the Java sources:
-	  <pre><span class="input">javac -classpath FreePastry-1.4.1.jar rice/tutorial/lesson1/*.java</span></pre></li>
+	  <pre><span class="input">javac -classpath FreePastry-1.4.2.jar rice/tutorial/lesson1/*.java</span></pre></li>
     </ol>
   <li><b>Step 2:</b> Launch the bootstrap node.
 Even though this is the first node, and therefore we know the bootstrap will
 not work, you need to place in a bogus ip/port.  A smarter <code>main()</code> method in DistTutorial.java could fix this problem.
-<pre><span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
+<pre><span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
 <p>
 (In the above command, <i>yourhost.domain</i> can be the DNS name of your
 host or its IP address.)  Your output will look something like this:</p>
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
-<span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
-Couldn't find a bootstrap node, starting a new ring...
-Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:9001 [-4233509936758121968])</span></pre></li>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122932166578:No bootstrap node provided, starting a new ring...
+Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:9001 [-4233509936758121968])</span></pre>
+Note that the first 2 lines starting with the current system time are generated by the new logging system.  
+</li>
   <li><b>Step 3:</b> Launch another node.
   <p>
   You can do this on another computer but make sure you fill in the name of
   the computer from step 2 in <i>bootstraphost.domain</i>.</p>
-<pre><span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
+<pre><span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
 <p/> Your output will look something like this:    
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
-<span class="output">Finished creating new node SocketNodeHandle (&lt;0x74345D..&gt;/FOO/10.9.8.7:9002 [6054526012380911947])</span></pre></li>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="output">Finished creating new node SocketNodeHandle (<0xE00352..>/FOO/10.9.8.7:9002 [4492232311666603357])</span></pre></li>
 </ul>
+
 
 <h3>Congratulations!  You have just launched your first FreePastry ring!<br>
 Lesson 3 will show you how to send and receive messages by creating a commonAPI application.</h3>
@@ -512,11 +709,10 @@ Now if you execute this code twice you should get something like:
 
 <p><em>(for Node1)</em></p>
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
-<span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
-Couldn't find a bootstrap node, starting a new ring...
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="output">:1122933198281:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122933198296:No bootstrap node provided, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996])
-
 MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xA67C20..&gt;
 MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xBF799E..&gt;
 MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC4BEE7..&gt;
@@ -528,9 +724,8 @@ MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545.
 
 <p><em>(for Node2)</em></p>
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
 <span class="output">Finished creating new node SocketNodeHandle (&lt;0xDD90C6..&gt;/FOO/10.9.8.7:9002 [5138450490561334965])
-
 MyApp &lt;0xDD90C6..&gt; sending to &lt;0x2E5C63..&gt;
 MyApp &lt;0xDD90C6..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x2E5C63..&gt;
 MyApp &lt;0xDD90C6..&gt; sending to &lt;0x03045C..&gt;
@@ -584,7 +779,7 @@ Now we will look at the changes to DistTutorial.  We have a member variable <cod
 
 We modify the constructor to take in how many nodes we wish to create:
 <pre>
-  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes) throws Exception {
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
 </pre>
 
 After constructing the <code>PastryNodeFactory</code> we create a loop to construct the nodes, and add them to our <code>apps</code> Vector.
@@ -627,29 +822,19 @@ In the send direct loop we use our getter <code>MyApp.getNode()</code>.  This pr
 
 Other than that, we changed the delay in several locations so the program doesn't take as long to execute.  Compile and run this program as before, but make sure to specify some the number of nodes to run as the 4th argument.
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson4.DistTutorial 9001 10.9.8.7 9001 10</span>
-<span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
-Couldn't find a bootstrap node, starting a new ring...
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson4.DistTutorial 9001 10.9.8.7 9001 10</span>
+<span class="output">:1122933905343:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122933905359:No bootstrap node provided, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x93426F..&gt;/FOO/10.9.8.7:9001 [6666451457797044406])
-
 Finished creating new node SocketNodeHandle (&lt;0xAE1B63..&gt;/FOO/10.9.8.7:9002 [8904287830673843378])
-
 Finished creating new node SocketNodeHandle (&lt;0x3E99E3..&gt;/FOO/10.9.8.7:9003 [-1171813548315184530])
-
 Finished creating new node SocketNodeHandle (&lt;0xC8715F..&gt;/FOO/10.9.8.7:9004 [6496343980737954414])
-
 Finished creating new node SocketNodeHandle (&lt;0x688826..&gt;/FOO/10.9.8.7:9005 [-6779179910423314388])
-
 Finished creating new node SocketNodeHandle (&lt;0x640179..&gt;/FOO/10.9.8.7:9006 [3471226224877450778])
-
 Finished creating new node SocketNodeHandle (&lt;0x7A6F99..&gt;/FOO/10.9.8.7:9007 [7101267768505206817])
-
 Finished creating new node SocketNodeHandle (&lt;0xD5DAAE..&gt;/FOO/10.9.8.7:9008 [7899110252170216207])
-
 Finished creating new node SocketNodeHandle (&lt;0x19C832..&gt;/FOO/10.9.8.7:9009 [-4206970387543598705])
-
 Finished creating new node SocketNodeHandle (&lt;0x490C38..&gt;/FOO/10.9.8.7:9010 [-6742572645641651296])
-
 MyApp &lt;0x93426F..&gt; sending to &lt;0x0E510A..&gt;
 MyApp &lt;0x19C832..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0x0E510A..&gt;
 MyApp &lt;0xAE1B63..&gt; sending to &lt;0xE704A5..&gt;
@@ -769,11 +954,10 @@ code after constructing the MyApp to cancel the task after 15 seconds.
 
 <p/>Ok, time to run it!  Your output should resemble the following:
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson5.DistTutorial 9001 localhost 9001</span>
-<span class="output">Error connecting to address localhost/127.0.0.1:9001: java.net.ConnectException: Connection refused: no further information
-Couldn't find a bootstrap node, starting a new ring...
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson5.DistTutorial 9001 localhost 9001</span>
+<span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122932166578:No bootstrap node provided, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x3C1EEA..&gt;/FOO/10.9.8.7:9001 [9038308767327354496])
-
 MyApp &lt;0x3C1EEA..&gt; received rice.tutorial.lesson5.MyApp$MessageToSelf@d70d7a
 I got the MessageToSelf at time:1115228553359
 MyApp &lt;0x3C1EEA..&gt; received rice.tutorial.lesson5.MyApp$MessageToSelf@d70d7a
@@ -790,7 +974,7 @@ I got the MessageToSelf at time:1115228563359
 <a href="./src/lesson6/MyScribeContent.java">MyScribeContent.java</a>,
 <a href="./src/lesson6/ScribeTutorial.java">ScribeTutorial.java</a> into a directory called rice/tutorial/lesson6/.</h3>
 
-<p/>This tutorial will show you how to get scribe up and running.  You will learn how to do the following:
+<p/>Scribe is an application that allows you to subscribe to groups and publish messages to that group.  This tutorial will show you how to get scribe up and running.  You will learn how to do the following:
 <ul>
  <li><a href="#l6Topic">Create a topic.</a></li>
  <li><a href="#l6Client">Create a ScribeClient.</a></li>
@@ -802,7 +986,7 @@ I got the MessageToSelf at time:1115228563359
 </ul>
 
 
-The next tutorial, Lesson 7: Advanced Scribe: Policies, will show you how to control tree formation and anycast selection.
+Lesson 9: Advanced Scribe: Policies, will show you how to control tree formation and anycast selection.
 
 <h2>Terms:</h2>
 <ul>
@@ -1076,14 +1260,12 @@ The parameters are identical to those in Lesson 4:
 Your output will resemble:
 
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.1.jar rice.tutorial.lesson6.ScribeTutorial 9001 10.9.8.7 9001 10</span>
-<span class="output">Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
-Couldn't find a bootstrap node, starting a new ring...
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson6.ScribeTutorial 9001 10.9.8.7 9001 10</span>
+<span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122932166578:No bootstrap node provided, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x489BCB..&gt;/FOO/10.9.8.7:9001 [3776408266594462189])
-
 myTopic = [TOPIC &lt;0x19A8F5..&gt;]
 Finished creating new node SocketNodeHandle (&lt;0x8904D9..&gt;/FOO/10.9.8.7:9002 [4410881318286179245])
-
 myTopic = [TOPIC &lt;0x19A8F5..&gt;]
 Finished creating new node SocketNodeHandle (&lt;0x281817..&gt;/FOO/10.9.8.7:9003 [1144941711194723161])
 
@@ -1153,9 +1335,266 @@ Note that anycast is called on different nodes until a node returns true.<br/>
 
 <h3>Congratulations!  You have built and run your first scribe application!<br>
 
+<a name="lesson7"></a><h1>Lesson 7</h1>
+<h2>Past &mdash FreePastry's DHT.</h2>
+<h3>Download the tutorial files: 
+<a href="./src/lesson7/MyPastContent.java">MyPastContent.java</a>,
+<a href="./src/lesson7/PastTutorial.java">PastTutorial.java</a> into a directory called rice/tutorial/lesson7/.</h3>
+
+<p/>Past is FreePastry's Distributed Hash Table (DHT).  This tutorial will show you how to get scribe up and running.  You will learn how to do the following:
+<ul>
+ <li><a href="#l7Content">Create a PastContent.</a></li>
+ <li><a href="#l7Past">Create a Past instance.</a></li>
+ <li><a href="#l7Put">Put an object in Past.</a></li>
+ <li><a href="#l7Get">Get an object from Past.</a></li>
+ <li><a href="#l7GetFailed">A failed Get.</a></li>
+</ul>
+
+
+<h2>Terms:</h2>
+<ul>
+  <li><b>Past</b>&mdash;A large-scale, peer-to-peer archival storage facility.<i>FreePastry's DHT, has insert() and lookup() operations.</i></li>
+  <li><b>Content</b>&mdash;A possible value of the DHT.</li>
+  <li><b>IdFactory</b>&mdash;A hash function.  <i>An IdFactory implements a hash function to build Ids that are compatable with pastry.</i></li>
+  <li><b>PastryIdFactory</b>&mdash;A commonly used IdFactory in Pastry.  <i>The PastryIdFactory uses SHA1 as it's underlieing hash function.</i></li>
+  <li><b>Storage</b>&mdash;provides a local storage service <i>for example, a persistence storage service or an in-memory storage service</i></li>
+  <li><b>MemoryStorage</b>&mdash;an implementation of Storage which provides in-memory storage. <i>This class is specifically *NOT* designed to provide persistent storage.</i></li>
+  <li><b>PersistentStorage</b>&mdash;an implementation of Storage which provides persistent storage to disk.</li>
+  <li><b>Cache</b>&mdash;finite temporary storage for rapid access.</i></li>
+  <li><b>LRUCache</b>&mdash;implemetation of a least-recently-used (LRU) cache.</i></li>
+  <li><b>StorageManager</b>&mdash;a storage attached to a cache.  <i>Objects inserted and retrieved from the storage are auto-matically cached, to speed up future accesses.</i></li>
+</ul>
+
+
+
+<a name="l7Content"></a><h3>Create a PastContent.</h3>
+Unlike Scribe, you do not need to write a client to utilize Past.  However, you do need to crate a content object to put/get.  This is called a PastContent.  The easiest way to create a PastContent is to extend rice.p2p.past.ContentHashPastContent.  Here is the code for MyPastContent.  
+<pre>
+public class MyPastContent extends ContentHashPastContent {  
+  /**
+   * Store the content.
+   * 
+   * Note that this class is Serializable, so any non-transient field will 
+   * automatically be stored to to disk.
+   */
+  String content;
+    
+  /**
+   * Takes an environment for the timestamp
+   * An IdFactory to generate the hash
+   * The content to be stored.
+   * 
+   * @param idf to generate a hash of the content
+   * @param content to be stored
+   */
+  public MyPastContent(Id id, String content) {
+    super(id);
+    this.content = content;
+  }
+  
+  /**
+   * A descriptive toString()
+   */
+  public String toString() {
+    return "MyPastContent ["+content+"]";
+  }
+}
+</pre>
+Note that the super constructor needs an Id.  Other than that the class must be <a href="http://java.sun.com/developer/technicalArticles/Programming/serialization/">serializable</a>.
+
+
+<a name="l7Past"></a><h3>Create a Past instance.</h3>
+Now on to the PastTutorial.  The first part of PastTutorial looks identical to ScribeTutorial.  The interesting part is creating the Past application.  
+<pre>
+      // used for generating PastContent object Ids.
+      // this implements the "hash function" for our DHT
+      PastryIdFactory idf = new rice.pastry.commonapi.PastryIdFactory(env);
+      
+      // create a different storage root for each node
+      String storageDirectory = "./storage"+node.getId().hashCode();
+
+      // create the persistent part
+      Storage stor = new PersistentStorage(idf, storageDirectory, 4 * 1024 * 1024, node
+          .getEnvironment());
+      Past app = new PastImpl(node, new StorageManagerImpl(idf, stor, new LRUCache(
+          new MemoryStorage(idf), 512 * 1024, node.getEnvironment())), 3, "");
+</pre>
+Recall the PastryIdFactory is basically a hash funciton that produces Ids.  
+
+The rest of the code sets up a pretty typical PastImpl.  It uses PersistentStorage for the primary store, and an LRUCache backed by a MemoryStorage as the cache.<br/><br/>
+
+Here is an overview of what is going on.<br/><br/>
+
+PastImpl needs the following:
+<ul>
+  <li>The Node</li>
+  <li>StorageManager</li>
+  <li>The number of Replicas to maintain &mdash; this is a parameter that you can tune to adjust overhead vs. chance of data-loss</li>
+  <li>An instance name</li>
+</ul>  
+StorageManagerImpl (the StorageManager) needs the following:
+<ul>
+  <li>An IdFactory</li>
+  <li>A storage &mdash; we'll use the PersistentStorage</li>
+  <li>A cache &mdash; we'll use the LRUCache</li>  
+</ul>
+The PersistentStorage needs the following:
+<ul>
+  <li>An IdFactory</li>
+  <li>The directory to put the storage root. &mdash; Note that we need a different storage root for each node, otherwise they will use the same one.  This is only necessary
+  because we are running multiple nodes in the same JVM.</li>
+  <li>The max size (in bytes) &mdash; 1 Meg</li>
+  <li>The environment</li>
+</ul>  
+The LRUCache needs the following:
+<ul>
+  <li>A storage &mdash; we'll use a MemoryStorage</li>
+  <li>The max size (in bytes) &mdash; 0.5 Meg</li>
+  <li>The environment</li>
+</ul>  
+
+<a name="l7Put"></a><h3>Put an object in Past.</h3>
+Now lets store some data.  The loop around this code is so we can later look up the data that was stored.
+
+<pre>
+      // these variables are final so that the continuation can access them
+      final String s = "test" + env.getRandomSource().nextInt();
+      
+      // build the past content
+      final PastContent myContent = new MyPastContent(localFactory.buildId(s), s);
+    
+      storedKey[ctr] = myContent.getId();
+      
+      // pick a random past appl on a random node
+      Past p = (Past)apps.get(env.getRandomSource().nextInt(numNodes));
+      System.out.println("Inserting " + myContent + " at node "+p.getLocalNodeHandle());
+      
+      // insert the data
+      p.insert(myContent, new Continuation() {
+        // the result is an Array of Booleans for each insert
+        public void receiveResult(Object result) {          
+          Boolean[] results = ((Boolean[]) result);
+          int numSuccessfulStores = 0;
+          for (int ctr = 0; ctr < results.length; ctr++) {
+            if (results[ctr].booleanValue()) 
+              numSuccessfulStores++;
+          }
+          System.out.println(myContent + " successfully stored at " + 
+              numSuccessfulStores + " locations.");
+        }
+  
+        public void receiveException(Exception result) {
+          System.out.println("Error storing "+myContent);
+          result.printStackTrace();
+        }
+      });
+</pre>
+Note that we call <code>Past.insert()</code> with our newly created MyPastContent object, and a Continuation.  <code>Past.insert()</code> calls <code>receiveResult()</code> on the continuation with a Boolean[] that represents the success/failure of the individual stores for this object in the ring.  Our continuation prints how many times this node was stored.  Because our replication factor is 3, it should be stored 4 times (primary+3 replicas).  If an error occurs it will call <code>receiveException()</code>. 
+
+<a name="l7Get"></a><h3>Get an object from Past.</h3>
+We choose a random application and call Past.lookup()
+<pre>
+      final Id lookupKey = storedKey[ctr];
+      
+      // pick a random past appl on a random node
+      Past p = (Past)apps.get(env.getRandomSource().nextInt(numNodes));
+
+      System.out.println("Looking up " + lookupKey + " at node "+p.getLocalNodeHandle());
+      p.lookup(lookupKey, new Continuation() {
+        public void receiveResult(Object result) {
+          System.out.println("Successfully looked up " + result + " for key "+lookupKey+".");
+        }
+  
+        public void receiveException(Exception result) {
+          System.out.println("Error looking up "+lookupKey);
+          result.printStackTrace();
+        }
+      });
+</pre>
+
+<a name="l7GetFailed"></a><h3>A failed Get.</h3>
+Now let's see what happen if the Past doesn't have the requested content.  Here's a hint, it calls <code>receiveResult()</code> with a null result.
+<pre>
+    final Id bogusKey = localFactory.buildId("bogus");
+
+...
+
+    System.out.println("Looking up bogus key " + bogusKey + " at node "+p.getLocalNodeHandle());
+    p.lookup(bogusKey, new Continuation() {
+      public void receiveResult(Object result) {
+        System.out.println("Successfully looked up " + result + " for key "+bogusKey+".  Notice that the result is null.");
+      }
+
+      public void receiveException(Exception result) {
+        System.out.println("Error looking up "+bogusKey);
+        result.printStackTrace();
+      }
+    });
+</pre>
+
+When you run the code, your output will resemble:
+
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson7.PastTutorial 9001 10.9.8.7 9001 5</span>
+<span class="output">:1122487192406:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122487192421:No bootstrap node provided, starting a new ring...
+Finished creating new node SocketNodeHandle (&lt;0x22D2E1..&gt;/FOO/10.9.8.7:9001 [6702844014892124116])
+Finished creating new node SocketNodeHandle (&lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790])
+Finished creating new node SocketNodeHandle (&lt;0x16C2C6..&gt;/FOO/10.9.8.7:9003 [419583566816935501])
+Finished creating new node SocketNodeHandle (&lt;0xED50E1..&gt;/FOO/10.9.8.7:9004 [-7110190430495110085])
+Finished creating new node SocketNodeHandle (&lt;0x4AE14A..&gt;/FOO/10.9.8.7:9005 [-7392240638718374041])
+Storing 5 keys
+Inserting MyPastContent [test1382830848] at node [SNH: &lt;0x22D2E1..&gt; -&gt; &lt;0x22D2E1..&gt;/FOO/10.9.8.7:9001 [6702844014892124116]]
+Inserting MyPastContent [test-618483902] at node [SNH: &lt;0xED50E1..&gt; -&gt; &lt;0xED50E1..&gt;/FOO/10.9.8.7:9004 [-7110190430495110085]]
+Inserting MyPastContent [test482928483] at node [SNH: &lt;0x22D2E1..&gt; -&gt; &lt;0x22D2E1..&gt;/FOO/10.9.8.7:9001 [6702844014892124116]]
+Inserting MyPastContent [test-919775810] at node [SNH: &lt;0x4AE14A..&gt; -&gt; &lt;0x4AE14A..&gt;/FOO/10.9.8.7:9005 [-7392240638718374041]]
+Inserting MyPastContent [test1099145466] at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+MyPastContent [test1382830848] successfully stored at 4 locations.
+MyPastContent [test-618483902] successfully stored at 4 locations.
+MyPastContent [test482928483] successfully stored at 4 locations.
+MyPastContent [test-919775810] successfully stored at 4 locations.
+MyPastContent [test1099145466] successfully stored at 4 locations.
+Looking up the 5 keys
+Looking up &lt;0x9515FC..&gt; at node [SNH: &lt;0x16C2C6..&gt; -&gt; &lt;0x16C2C6..&gt;/FOO/10.9.8.7:9003 [419583566816935501]]
+Looking up &lt;0xB987B7..&gt; at node [SNH: &lt;0x16C2C6..&gt; -&gt; &lt;0x16C2C6..&gt;/FOO/10.9.8.7:9003 [419583566816935501]]
+Looking up &lt;0x999A32..&gt; at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+Looking up &lt;0xC9B06E..&gt; at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+Looking up &lt;0xC2EF27..&gt; at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+Successfully looked up MyPastContent [test1099145466] for key &lt;0xC2EF27..&gt;.
+Successfully looked up MyPastContent [test-618483902] for key &lt;0xB987B7..&gt;.
+Successfully looked up MyPastContent [test482928483] for key &lt;0x999A32..&gt;.
+Successfully looked up MyPastContent [test-919775810] for key &lt;0xC9B06E..&gt;.
+Successfully looked up MyPastContent [test1382830848] for key &lt;0x9515FC..&gt;.
+Looking up a bogus key
+Looking up bogus key &lt;0x216ACE..&gt; at node [SNH: &lt;0xED50E1..&gt; -&gt; &lt;0xED50E1..&gt;/FOO/10.9.8.7:9004 [-7110190430495110085]]
+Successfully looked up null for key &lt;0x216ACE..&gt;.  Notice that the result is null.
+</span></pre>
+
+
+
+Also 5 directories were created, each containing a FreePastry-Storage-Root subfolder:
+<pre>
+<span class="input">ls storage*</span>
+<span class="output">storage-1404778543:
+FreePastry-Storage-Root
+
+storage-1501429183:
+FreePastry-Storage-Root
+
+storage-1862004272:
+FreePastry-Storage-Root
+
+storage2042841361:
+FreePastry-Storage-Root
+
+storage848913672:
+FreePastry-Storage-Root
+</span></pre>
+
+
 <div class="footer">
-Pastry tutorial version 1.2. &nbsp;&nbsp;&nbsp; Last updated May 26, 2005.
-&nbsp;&nbsp;&nbsp; For FreePastry-1.4+. &nbsp;&nbsp;&nbsp; Maintained by <a
+Pastry tutorial version 1.3. &nbsp;&nbsp;&nbsp; Last updated August 1, 2005.
+&nbsp;&nbsp;&nbsp; For FreePastry-1.4.2. &nbsp;&nbsp;&nbsp; Maintained by <a
 href="mailto:jeffh@rice.edu">Jeff Hoye</a></font>
 </div>
 
