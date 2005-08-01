@@ -23,6 +23,10 @@ public abstract class ContentHashPastContent implements PastContent {
 
   // ----- PastCONTENT METHODS -----
 
+  public ContentHashPastContent(Id myId) {
+    this.myId = myId;
+  }
+  
   /**
    * Checks if a insert operation should be allowed.  Invoked when a
    * Past node receives an insert request and it is a replica root for
