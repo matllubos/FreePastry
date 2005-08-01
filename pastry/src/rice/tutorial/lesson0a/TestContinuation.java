@@ -16,7 +16,10 @@ public class TestContinuation {
     Past past = null; // generated elsewhere
     Id id = null; // generated elsewhere
     
+    // create the continuation
     Continuation command = new MyContinuation();    
+    
+    // make the call with the continuation
     past.lookup(id, command);    
   }
 }

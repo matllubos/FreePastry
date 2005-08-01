@@ -33,8 +33,9 @@ public class DistTutorial {
    * @param bindport the local port to bind to 
    * @param bootaddress the IP:port of the node to boot from
    * @param numNodes the number of nodes to create in this JVM
+   * @param env the environment for these nodes
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env, int numNodes) throws Exception {
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -137,7 +138,7 @@ public class DistTutorial {
       int numNodes = Integer.parseInt(args[3]);    
       
       // launch our node!
-      DistTutorial dt = new DistTutorial(bindport, bootaddress, env, numNodes);
+      DistTutorial dt = new DistTutorial(bindport, bootaddress, numNodes, env);
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 

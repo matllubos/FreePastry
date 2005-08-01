@@ -21,6 +21,7 @@ public class DistTutorial {
    * 
    * @param bindport the local port to bind to 
    * @param bootaddress the IP:port of the node to boot from
+   * @param env the environment for these nodes
    */
   public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
     
