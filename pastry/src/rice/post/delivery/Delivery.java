@@ -37,6 +37,7 @@ public class Delivery extends ContentHashPastContent implements GCPastContent {
    * @param message The message to deliver
    */
   protected Delivery(SignedPostMessage message, IdFactory factory) {
+    super(null);
     this.message = message;
     
     try {
