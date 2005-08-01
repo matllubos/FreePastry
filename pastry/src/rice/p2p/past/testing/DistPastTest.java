@@ -42,7 +42,7 @@ import rice.persistence.StorageManagerImpl;
  * Window - Preferences - Java - Code Style - Code Templates
  */
 public class DistPastTest {
-
+  
     public DistPastTest(int bindport, InetSocketAddress bootaddress, Environment env, int numNodes) throws Exception {
       
       // Generate the NodeIds Randomly
@@ -51,6 +51,7 @@ public class DistPastTest {
       Storage stor = null;
 
       // used for generating PastContent object Ids.
+      // this implements the "hash function" for our DHT
       PastryIdFactory idf = new rice.pastry.commonapi.PastryIdFactory(env);
       
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
@@ -76,18 +77,38 @@ public class DistPastTest {
         stor = new PersistentStorage(idf,".",4*1024*1024,node.getEnvironment());
         	p = new PastImpl(node, new StorageManagerImpl(idf,stor,new LRUCache(new MemoryStorage(idf),512*1024,node.getEnvironment())), 3, "");
       }
+      Thread.sleep(5000);
         
       String s = "test" + env.getRandomSource().nextInt();
-      p.insert(new DistPastTestContent(env,idf,s), new Continuation() {
+      PastContent dptc = new DistPastTestContent(env,idf,s);
+      System.out.println("Inserting "+dptc);
+      p.insert(dptc, new Continuation() {
         public void receiveResult(Object result) {
-          System.out.println("got: "+result);
+          Boolean[] results = ((Boolean[])result);
+          for(int ctr = 0; ctr < results.length;ctr++) {
+            System.out.println("got "+results[ctr].booleanValue());
+          }
+          
+//          System.out.println("got: "+result);
+//          System.out.println(result.getClass().getName());
         }
 
         public void receiveException(Exception result) {
           result.printStackTrace();
         }
       });
+
+      Thread.sleep(5000);
       
+      p.lookup(dptc.getId(), new Continuation() {
+        public void receiveResult(Object result) {
+          System.out.println("Got a "+result);
+        }
+
+        public void receiveException(Exception result) {
+          result.printStackTrace();
+        }
+      });
     }
 
     /**

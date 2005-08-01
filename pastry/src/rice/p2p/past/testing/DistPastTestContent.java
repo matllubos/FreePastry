@@ -21,8 +21,8 @@ public class DistPastTestContent extends ContentHashPastContent {
   long timestamp;
   
   public DistPastTestContent(Environment env, IdFactory idf, String content) {
+    super(idf.buildId(content));
     this.content = content;
-    this.myId = idf.buildId(this.content);
     this.timestamp = env.getTimeSource().currentTimeMillis();
   }
   
