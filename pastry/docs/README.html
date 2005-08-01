@@ -5,14 +5,14 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 1.4.1,&nbsp; 25 May 2005.
+Release 1.4.2,&nbsp; 1 August 2005.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
 <h3> Contributors</h3>
 <a href="http://www.cs.rice.edu/%7Edruschel/">Peter Druschel</a> , 
 Eric Engineer , 
-<a href="http://www.cs.rice.edu/%7Ergil">Romer Gil</a> , 
+Romer Gil , 
 <a href="http://www.cs.rice.edu/%7Eahae/">Andreas Haeberlen</a> , 
 <a href="http://www.cs.rice.edu/%7Ejeffh/">Jeff Hoye</a> , 
 <a href="http://www.cs.rice.edu/%7Eychu/">Y. Charlie Hu</a> , 
@@ -23,7 +23,7 @@ Eric Engineer ,
 <a href="http://www.cs.rice.edu/%7Eabpost">Ansley Post</a> , 
 <a href="http://www.cs.rice.edu/%7Ecreis">Charlie Reis</a> , 
 <a href="http://www.cs.rice.edu/%7Edsandler">Dan Sandler</a> ,
-Jim Stewart,
+<a href="http://www.cs.rice.edu/%7Ejstewart">Jim Stewart</a> ,
 <a href="http://www.cs.rice.edu/%7Eatuls">Atul Singh</a> , and 
 <a href="http://composer.ecn.purdue.edu/%7Erongmei/">RongMei Zhang</a>
 contributed to the FreePastry code. The code is based on algorithms and
@@ -118,6 +118,93 @@ The software requires a Java runtime, version 1.4.2+. The software was
 developed using Sun's SDK, version 1.4.2_03+ <br>
 <br>
 &nbsp;<br>
+<h3>Changes since release 1.4.1</h3>
+Aside from various bug fixes, this version includes rice.environment which allows for node virtualization within the same JVM.  
+FreePastry and it's p2p applilcations all use the new features.
+the Environment provides the following:
+<ul>
+  <li><b>Logging</b> &mdash We have standardize on a logging system throughout FreePastry.  This is a simpler
+  logging framework than the one that ships with java, however it is compatable.  (In other words, you can implement
+  our LogManager and Logger with the Java one.)  This logging replaces the previous "-verbose" etc. logging.</li>
+  <li><b>Parameters</b> &mdash Formerly hard-coded (<code>public static final</code>) parameters are now able to be specified at startup, or even changed during runtime
+  rather than requiring a re-compile.  It allows parameters to be changed from code, and to be persistent.
+  In other words, you could have a gui that lets you change the parameters, then store them to disk (By calling Parameters.store()), so next time the 
+  code is run, it retains the parameters.</li>
+  <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
+  thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
+  synchronization than several threads.</li> 
+  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
+  you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
+  where some nodes have incorrect system clocks due to misconfigured nntp servers.</li>
+  <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
+</ul>  
+
+<h4>How to use parameters:</h4>
+  The Parameters interface contains:
+  <ul>
+    <li>A <b>getter</b> and <b>setter</b> for the java primitive types, as well as String, String[], InetAddress, InetSocketAddress, and InetSocketAddressAddress[].  For example <code>pubilc int getInt(String paramName)</code>.  Calling the wrong type of getter will result in a RuntimeException, such as NumberFormatException.  Calling the getter for an entry that doesn't exist will result in a RuntimeException.</li>  
+    <li><code>boolean <b>contains</b>(String paramName)</code> &mdash can check to see if a param exists before calling the getter which will result in an exceptin if it doesn't exist.</li> 
+    <li><code>void <b>remove</b>(String paramName)</code> &mdash removes a param.</li> 
+    <li><code>void <b>store</b>() throws IOException</code> &mdash stores the differences from the defaults to media (such as disk).</li> 
+  </ul>
+    Default implementation:<br/>
+    
+  When you construct the environment (<code>new Environment()</code>) it will use rice.environment.params.simple.SimpleParameters to manage parameters.  The Environment constructor with no parameters will look for a file called <b>freepastry.params</b> in the classpath.  This file is the default file, and is immutable, thus calling the store() method on the Parameters object will do nothing.  The format for freepastry.params is explained <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/util/Properties.html">here</a>.<br/>
+  If you want to specify a file to save dynamic user parameters, or to override the default freepastry parameters, you can specify a single String fileName in the Environment constructor.<br/>  
+  To override the default params filename, or to use a chain of defaults (for example epost uses a secondary default file to override and add to freepastry's defaults), specify a String[] of the defaults in order (for example freepastry, then epost), then specify a String for the dynamic user settings.<br/><br/>
+
+<h4>How to use logging:</h4>
+  You can access the environment from the rice.p2p.commonapi.Node interface.  A programatic call to the Logger would typically look like:
+<pre>
+  Node n;
+  n.getEnvironment().getLogManager().getLogger(MyClass.class, instance).log(Logger.WARNING, "This is a warning");
+  n.getEnvironment().getLogManager().getLogger(MyClass.class, instance).logException(Logger.WARNING, "This is an exception", new Exception());
+</pre>  
+
+Of course you can use helper methods to reduce typing.<br/><br/>
+
+The available log levels can be found in the rice.environment.logging.Logger interface, but the match <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/util/logging/Level.html">java's log Levels</a>.
+
+  The following parameters affect logging:
+<ul>
+  By default the logging will go to standard out.  To make the logging go elsewhere, construct the environment with a SimpleLogManager that is constructed with a PrintStream that you want (such as System.err, or a File).
+
+  <li><b>loglevel</b> &mdash specifies the default log level.  Can be an integer level, or any of the defined names.
+ (defaults to WARNING in freepastry.params)</li>
+  <br/>
+  Specifying log levels on specific packages or classes:
+  
+  <li><b>(package.or.full.class.name)[:instance]_loglevel</b></li>
+  
+  so, for example, to turn on ALL logging for the scribe package add a parameter to the params file such as<br/>
+  rice.p2p.scribe_loglevel = ALL<br/><br/>
+  
+  to do this for a particular scribe instance do<br/>
+  rice.p2p.scribe:myinstance = ALL<br/><br/>
+  
+  and for a specific class:<br/>
+  rice.pastry.socket.SocketChannelWriter = ALL<br/><br/>
+      
+  <li><b>pastry_factory_multipleNodes</b> &mdash if true, prepends each logged line with the nodeId.  This is useful when you have multiple nodes in the same JVM, but want to be able to distinguish which nodes is logging what.</li>
+  <br/>
+  Logging to file (used when you have multiple nodes in the same JVM, and want logging to go to separate files, with a name that is based on the node's id):
+  <li><b>environment_logToFile</b> &mdash if true, used in conjunction with <b>pastry_factory_multipleNodes</b>, logs each node to its own file, logging not related to a node goes to Stdout by default (usually stdout).</li>
+  <li><b>fileLogManager_filePrefix</b> &mdash allows you to specify the prefix of these files</li>
+  <li><b>fileLogManager_fileSuffix</b> &mdash allows you to specify the suffix of these files, default is ".log"</li>
+
+</ul>
+
+<h4>Other notes on the Environment:</h4>
+<ul>
+<li>The main constructor takes in all 5 services that the environment provides.  Any fields that are null will be given an appropriate default value.  However, the Parameters field must be non-null to use this constructor.</li>
+<li>The default implementation of each service, except for the SelectorManager, can be found in subpackages of rice.environment.  They are named "simple" for each type of service.  (For example rice.environment.params.simple.SimpleParameters implements rice.enviornment.params.Parameters.)</li>
+</ul>
+
+<h4>Other changes:</h4>
+<ul>
+<li>Created non-blocking, continuation based verisons of getNodeHandle(), getLeafSet() etc in the factories.</li>
+</ul>
+
 <h3>Changes since release 1.4</h3>
 <p/>Version 1.4.1 introduces the ConsistentJoinProtocol and some changes to the PeriodicLeafSetProtocol.  These improvements provide stronger guarantees regarding routing consistency.  
 <h4>What is consistency?</h4>
