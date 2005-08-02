@@ -3,6 +3,8 @@ package rice.email.proxy.smtp.manager;
 import java.io.*;
 import java.util.*;
 
+import org.jfree.chart.labels.StandardContourToolTipGenerator;
+
 import rice.*;
 import rice.Continuation.*;
 import rice.post.*;
@@ -76,10 +78,27 @@ public class SimpleManager implements SmtpManager {
     }
   }
   
-  public boolean isPostAddress(MailAddress addr) {
+  public boolean isPostAddress(final MailAddress addr) {
     for (int i=0; i<POST_HOST.length; i++) 
-      if (addr.getHost().toLowerCase().endsWith(POST_HOST[i].toLowerCase()))
-        return true;
+      if (addr.getHost().toLowerCase().endsWith(POST_HOST[i].toLowerCase())) {
+        ExternalContinuation c = new ExternalContinuation();
+
+        email.getPost().getPostLog(
+            new PostUserAddress(PostMessage.factory, addr.toString(),
+                environment), c);
+
+        c.sleep();
+
+        if (c.exceptionThrown()) {
+          logException(Logger.FINE,
+              "got exception looking for PostLog in SMTP", c.getException());
+          return false;
+        } else if (c.getResult() != null) {
+          return true;
+        } else {
+          return false;
+        }
+      }
     
     return false;
   }
@@ -163,5 +182,9 @@ public class SimpleManager implements SmtpManager {
   
   private void log(int level, String m) {
     environment.getLogManager().getLogger(SimpleManager.class, null).log(level, m); 
+  }
+  
+  private void logException(int level, String m, Throwable t) {
+    environment.getLogManager().getLogger(SimpleManager.class,null).logException(level, m, t);
   }
 }
