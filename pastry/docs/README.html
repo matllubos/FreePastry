@@ -112,12 +112,9 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 </li>
 </ul>
 
-<br>
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.4.2+. The software was
-developed using Sun's SDK, version 1.4.2_03+ <br>
-<br>
-&nbsp;<br>
+developed using Sun's SDK, version 1.4.2_03+
 <h3>Changes since release 1.4.1</h3>
 Aside from various bug fixes, this version includes rice.environment which allows for node virtualization within the same JVM.  
 FreePastry and it's p2p applilcations all use the new features.
@@ -128,14 +125,14 @@ the Environment provides the following:
   our LogManager and Logger with the Java one.)  This logging replaces the previous "-verbose" etc. logging.</li>
   <li><b>Parameters</b> &mdash Formerly hard-coded (<code>public static final</code>) parameters are now able to be specified at startup, or even changed during runtime
   rather than requiring a re-compile.  It allows parameters to be changed from code, and to be persistent.
-  In other words, you could have a gui that lets you change the parameters, then store them to disk (By calling Parameters.store()), so next time the 
+  In other words, you could have a gui that lets you change the parameters, then store them to disk (By calling <code>Parameters.store()</code>), so next time the 
   code is run, it retains the parameters.</li>
   <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
   thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
   synchronization than several threads.</li> 
-  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
+  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than <code>System.currentTimeMillis()</code>.  This will (for example) allow 
   you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
-  where some nodes have incorrect system clocks due to misconfigured nntp servers.</li>
+  where some nodes have incorrect system clocks due to misconfigured NTP servers.</li>
   <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
 </ul>  
 
@@ -148,12 +145,15 @@ the Environment provides the following:
     <li><code>void <b>store</b>() throws IOException</code> &mdash stores the differences from the defaults to media (such as disk).</li> 
   </ul>
     Default implementation:<br/>
-    
+
+<p>    
   When you construct the environment (<code>new Environment()</code>) it will use rice.environment.params.simple.SimpleParameters to manage parameters.  The Environment constructor with no parameters will look for a file called <b>freepastry.params</b> in the classpath.  This file is the default file, and is immutable, thus calling the store() method on the Parameters object will do nothing.  The format for freepastry.params is explained <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/util/Properties.html">here</a>.<br/>
   If you want to specify a file to save dynamic user parameters, or to override the default freepastry parameters, you can specify a single String fileName in the Environment constructor.<br/>  
-  To override the default params filename, or to use a chain of defaults (for example epost uses a secondary default file to override and add to freepastry's defaults), specify a String[] of the defaults in order (for example freepastry, then epost), then specify a String for the dynamic user settings.<br/><br/>
+  To override the default params filename, or to use a chain of defaults (for example epost uses a secondary default file to override and add to freepastry's defaults), specify a String[] of the defaults in order (for example freepastry, then epost), then specify a String for the dynamic user settings.
+</p>
 
 <h4>How to use logging:</h4>
+<p>
   You can access the environment from the rice.p2p.commonapi.Node interface.  A programatic call to the Logger would typically look like:
 <pre>
   Node n;
@@ -161,33 +161,38 @@ the Environment provides the following:
   n.getEnvironment().getLogManager().getLogger(MyClass.class, instance).logException(Logger.WARNING, "This is an exception", new Exception());
 </pre>  
 
-Of course you can use helper methods to reduce typing.<br/><br/>
+Of course you can use helper methods to reduce typing.</p>
 
-The available log levels can be found in the rice.environment.logging.Logger interface, but the match <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/util/logging/Level.html">java's log Levels</a>.
+<p>The available log levels can be found in the rice.environment.logging.Logger interface, but the match <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/util/logging/Level.html">java's log Levels</a>.</p>
+
+  <p>By default the logging will go to <code>System.out</code> (standard output).  To make the logging go elsewhere, construct the environment with a SimpleLogManager that is constructed with a PrintStream that you want (such as <code>System.err</code>, or a File).</p>
 
   The following parameters affect logging:
 <ul>
-  By default the logging will go to standard out.  To make the logging go elsewhere, construct the environment with a SimpleLogManager that is constructed with a PrintStream that you want (such as System.err, or a File).
-
   <li><b>loglevel</b> &mdash specifies the default log level.  Can be an integer level, or any of the defined names.
  (defaults to WARNING in freepastry.params)</li>
-  <br/>
-  Specifying log levels on specific packages or classes:
   
-  <li><b>(package.or.full.class.name)[:instance]_loglevel</b></li>
+  <li><b>(package.or.full.class.name)[:instance]_loglevel</b> &mdash; specifies log levels on specific packages or classes.
+  So, for example, to turn on ALL logging for the scribe package add a parameter to the params file such as:
+  <blockquote>
+  <tt>rice.p2p.scribe_loglevel = ALL</tt>
+  </blockquote>
   
-  so, for example, to turn on ALL logging for the scribe package add a parameter to the params file such as<br/>
-  rice.p2p.scribe_loglevel = ALL<br/><br/>
+  to do this for a particular scribe instance do:
+  <blockquote>
+  <tt>rice.p2p.scribe:myinstance_loglevel = ALL</tt>
+  </blockquote>
   
-  to do this for a particular scribe instance do<br/>
-  rice.p2p.scribe:myinstance = ALL<br/><br/>
-  
-  and for a specific class:<br/>
-  rice.pastry.socket.SocketChannelWriter = ALL<br/><br/>
+  and for a specific class:
+  <blockquote>
+  <tt>rice.pastry.socket.SocketChannelWriter_loglevel = ALL</tt>
+  </blockquote></li>
       
   <li><b>pastry_factory_multipleNodes</b> &mdash if true, prepends each logged line with the nodeId.  This is useful when you have multiple nodes in the same JVM, but want to be able to distinguish which nodes is logging what.</li>
-  <br/>
+</ul>
+
   Logging to file (used when you have multiple nodes in the same JVM, and want logging to go to separate files, with a name that is based on the node's id):
+<ul>
   <li><b>environment_logToFile</b> &mdash if true, used in conjunction with <b>pastry_factory_multipleNodes</b>, logs each node to its own file, logging not related to a node goes to Stdout by default (usually stdout).</li>
   <li><b>fileLogManager_filePrefix</b> &mdash allows you to specify the prefix of these files</li>
   <li><b>fileLogManager_fileSuffix</b> &mdash allows you to specify the suffix of these files, default is ".log"</li>
@@ -202,7 +207,7 @@ The available log levels can be found in the rice.environment.logging.Logger int
 
 <h4>Other changes:</h4>
 <ul>
-<li>Created non-blocking, continuation based verisons of getNodeHandle(), getLeafSet() etc in the factories.</li>
+<li>Created non-blocking, continuation based versions of getNodeHandle(), getLeafSet() etc. in the factories.</li>
 </ul>
 
 <h3>Changes since release 1.4</h3>
