@@ -207,11 +207,11 @@ Click here for more information on <a href="http://java.sun.com/docs/books/tutor
 The environment allows us to more easily virtualize pastry inside the same Virtual machine.  This is the main
 new feature of FreePastry 1.4.2.  The environment serves FreePastry in 5 key ways:
 <ul>
-  <li><b>Logging</b> &mdash We have standardize on a logging system throughout FreePastry.  This is a simpler
-  logging framework than the one that ships with java, however it is compatable.  (In other words, you can implement
+  <li><b>Logging</b> &mdash We have standardized on a logging system throughout FreePastry.  This is a simpler
+  logging framework than the one that ships with java. However it is compatible.  (In other words, you can implement
   our LogManager and Logger with the Java one.)  This logging replaces the previous "-verbose" etc. logging.</li>
   <li><b>Parameters</b> &mdash Formerly hard-coded (<code>public static final</code>) parameters are now able to be specified at startup, or even changed during runtime
-  rather than requiring a re-compile.  It allows parameters to be changed from code, and to be persistent.
+  rather than requiring a recompile.  It allows parameters to be changed from code, and to be persistent.
   In other words, you could have a gui that lets you change the parameters, then store them to disk (By calling Parameters.store()), so next time the 
   code is run, it retains the parameters.</li>
   <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
@@ -219,7 +219,7 @@ new feature of FreePastry 1.4.2.  The environment serves FreePastry in 5 key way
   synchronization than several threads.</li> 
   <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
   you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
-  where some nodes have incorrect system clocks due to misconfigured nntp servers.</li>
+  where some nodes have incorrect system clocks due to misconfigured NTP servers.</li>
   <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
 </ul>
 
@@ -1353,12 +1353,12 @@ Note that anycast is called on different nodes until a node returns true.<br/>
 
 <h2>Terms:</h2>
 <ul>
-  <li><b>Past</b>&mdash;A large-scale, peer-to-peer archival storage facility.<i>FreePastry's DHT, has insert() and lookup() operations.</i></li>
+  <li><b>Past</b>&mdash;A large-scale, peer-to-peer archival storage facility.  Past is FreePastry's DHT.  It has insert() and lookup() operations.</i></li>
   <li><b>Content</b>&mdash;A possible value of the DHT.</li>
   <li><b>IdFactory</b>&mdash;A hash function.  <i>An IdFactory implements a hash function to build Ids that are compatable with pastry.</i></li>
-  <li><b>PastryIdFactory</b>&mdash;A commonly used IdFactory in Pastry.  <i>The PastryIdFactory uses SHA1 as it's underlieing hash function.</i></li>
+  <li><b>PastryIdFactory</b>&mdash;A commonly used IdFactory in Pastry.  <i>The PastryIdFactory uses SHA1 as it's underlying hash function.</i></li>
   <li><b>Storage</b>&mdash;provides a local storage service <i>for example, a persistence storage service or an in-memory storage service</i></li>
-  <li><b>MemoryStorage</b>&mdash;an implementation of Storage which provides in-memory storage. <i>This class is specifically *NOT* designed to provide persistent storage.</i></li>
+  <li><b>MemoryStorage</b>&mdash;an implementation of Storage which provides in-memory storage. <i>This class is specifically <b>not</b> designed to provide persistent storage.</i></li>
   <li><b>PersistentStorage</b>&mdash;an implementation of Storage which provides persistent storage to disk.</li>
   <li><b>Cache</b>&mdash;finite temporary storage for rapid access.</i></li>
   <li><b>LRUCache</b>&mdash;implemetation of a least-recently-used (LRU) cache.</i></li>
@@ -1368,7 +1368,7 @@ Note that anycast is called on different nodes until a node returns true.<br/>
 
 
 <a name="l7Content"></a><h3>Create a PastContent.</h3>
-Unlike Scribe, you do not need to write a client to utilize Past.  However, you do need to crate a content object to put/get.  This is called a PastContent.  The easiest way to create a PastContent is to extend rice.p2p.past.ContentHashPastContent.  Here is the code for MyPastContent.  
+Unlike Scribe, you do not need to write a client to utilize Past.  However, you do need to create a content object to put/get.  This is called a PastContent.  The easiest way to create a PastContent is to extend rice.p2p.past.ContentHashPastContent.  Here is the code for MyPastContent.  
 <pre>
 public class MyPastContent extends ContentHashPastContent {  
   /**
@@ -1421,7 +1421,7 @@ Now on to the PastTutorial.  The first part of PastTutorial looks identical to S
 </pre>
 Recall the PastryIdFactory is basically a hash funciton that produces Ids.  
 
-The rest of the code sets up a pretty typical PastImpl.  It uses PersistentStorage for the primary store, and an LRUCache backed by a MemoryStorage as the cache.<br/><br/>
+The rest of the code sets up a typical PastImpl.  It uses PersistentStorage for the primary store, and an LRUCache backed by a MemoryStorage as the cache.<br/><br/>
 
 Here is an overview of what is going on.<br/><br/>
 
