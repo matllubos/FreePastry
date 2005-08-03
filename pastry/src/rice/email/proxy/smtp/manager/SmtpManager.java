@@ -1,5 +1,6 @@
 package rice.email.proxy.smtp.manager;
 
+import rice.Continuation;
 import rice.email.proxy.mail.MailAddress;
 
 import rice.email.proxy.smtp.SmtpState;
@@ -17,5 +18,5 @@ public interface SmtpManager
 
     void send(SmtpState state, boolean local) throws Exception;
     
-    boolean isPostAddress(String string);
+    void isPostAddress(String string, Continuation c);
 }

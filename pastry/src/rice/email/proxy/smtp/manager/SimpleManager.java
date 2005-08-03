@@ -78,29 +78,49 @@ public class SimpleManager implements SmtpManager {
     }
   }
   
-  public boolean isPostAddress(final MailAddress addr) {
+  public boolean isPostAddress(MailAddress addr) {
+    ExternalContinuation c = new ExternalContinuation();
+
+    isPostAddress(addr, c);
+
+    c.sleep();
+
+    if (c.exceptionThrown()) {
+      return false;
+    } else {
+      return ((Boolean)c.getResult()).booleanValue();
+    }
+  }
+  
+  public void isPostAddress(String addr, Continuation c) {
+    try {
+      isPostAddress(new MailAddress(addr), c);
+    } catch (MalformedAddressException e) {
+      // maybe we should do receieveException, but this is for backwards compatibility
+      c.receiveResult(Boolean.FALSE);
+    }
+  }
+  
+  public void isPostAddress(final MailAddress addr, final Continuation c) {
     for (int i=0; i<POST_HOST.length; i++) 
       if (addr.getHost().toLowerCase().endsWith(POST_HOST[i].toLowerCase())) {
-        ExternalContinuation c = new ExternalContinuation();
-
         email.getPost().getPostLog(
             new PostUserAddress(PostMessage.factory, addr.toString(),
-                environment), c);
+                environment), new Continuation() {
 
-        c.sleep();
+                  public void receiveResult(Object result) {
+                    c.receiveResult(new Boolean(result != null));
+                  }
 
-        if (c.exceptionThrown()) {
-          logException(Logger.FINE,
-              "got exception looking for PostLog in SMTP", c.getException());
-          return false;
-        } else if (c.getResult() != null) {
-          return true;
-        } else {
-          return false;
-        }
+                  public void receiveException(Exception result) {
+                    logException(Logger.FINE,
+                        "got exception looking for PostLog for "+addr+" in isPostAddress", result);
+                    c.receiveException(result);
+                  }
+            });
+        return;
       }
-    
-    return false;
+      c.receiveResult(Boolean.FALSE);
   }
 
   public void send(SmtpState state, boolean local) throws Exception {

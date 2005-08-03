@@ -205,22 +205,43 @@ public class EmailService extends PostClient {
                 ((Log) o).getChildLog(ForwardLog.FORWARD_NAME, new StandardContinuation(parent) {
                   public void receiveResult(Object o) {
                     if (o != null) {
-                      String[] addresses = ((ForwardLog) o).getAddresses();
+                      final String[] addresses = ((ForwardLog) o).getAddresses();
                       
                       if (addresses != null) {
-                        for (int j=0; j<addresses.length; j++) {
-                          if (manager.isPostAddress(addresses[j])) {
-                            PostUserAddress pua = new PostUserAddress(rice.email.proxy.mailbox.postbox.PostMessage.factory, addresses[j], post.getEnvironment());
-                            if (! expanded.contains(pua))
-                              toExpand.add(pua);
-                          } else {
-                            expanded.add(addresses[j]);
+                        Continuation collate = new Continuation() {
+
+                          public void receiveResult(Object result) {
+                            Object results[] = (Object[])result;
+                            for (int i = 0; i < results.length; i++) {
+                              if (results[i].equals(Boolean.TRUE)) {
+                                PostUserAddress pua = new PostUserAddress(
+                                    rice.email.proxy.mailbox.postbox.PostMessage.factory,
+                                    addresses[i], post.getEnvironment());
+                                if (!expanded.contains(pua))
+                                  toExpand.add(pua);
+                              } else {
+                                expanded.add(addresses[i]);
+                              }
+                            }
+                            next();
                           }
-                        } 
+
+                          public void receiveException(Exception result) {
+                            // will never be called
+                          }
+
+                        };
+                        
+                        MultiContinuation mc = new MultiContinuation(collate, addresses.length);
+                        for (int j=0; j<addresses.length; j++) {
+                          manager.isPostAddress(addresses[j], mc.getSubContinuation(j));
+                        }
+                      } else {
+                        next();
                       }
+                    } else {
+                      next();
                     }
-                    
-                    next();
                   }
                 });
               } else {
