@@ -237,11 +237,6 @@ public class PostProxy {
   protected Cache deliveredBackupCache;
   
   /**
-   * The name of the local user
-   */
-  protected String name;
-
-  /**
     * The password of the local user
    */
   protected String pass;
@@ -659,17 +654,19 @@ public class PostProxy {
     if (! file.exists()) 
       panic("ERROR: ePOST could not find the keypair for user " + parameters.getString("post_username"));
     
-    String password = parameters.getString("post_password");
+    pass = parameters.getString("post_password");
     
-    if ((password == null) || (password.equals(""))) {
-      password = new PasswordFrame(parameters).getPassword();
+    if ((pass == null) || (pass.equals(""))) {
+      pass = new PasswordFrame(parameters).getPassword();
       
-      if (parameters.getBoolean("post_password_remember"))
-        parameters.setString("post_password", password);
+      if (parameters.getBoolean("post_password_remember")) {
+        parameters.setString("post_password", pass);
+        parameters.store();
+      }
     }
     
     try {
-      pair = CACertificateGenerator.readKeyPair(file, password);
+      pair = CACertificateGenerator.readKeyPair(file, pass);
       stepDone(SUCCESS);
     } catch (SecurityException e) {
       parameters.remove("post_password");

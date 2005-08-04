@@ -197,7 +197,7 @@ public class EmailProxy extends PostProxy {
       manager = new UserManagerImpl(email, new PostMailboxManager(email, null, env));
     
     String addr = address.toString();
-    manager.createUser(addr.substring(0, addr.indexOf("@")), null, parameters.getString("post_password"));
+    manager.createUser(addr.substring(0, addr.indexOf("@")), null, pass);
     stepDone(SUCCESS);
   }
 
