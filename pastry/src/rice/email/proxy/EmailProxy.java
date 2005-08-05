@@ -197,8 +197,21 @@ public class EmailProxy extends PostProxy {
       manager = new UserManagerImpl(email, new PostMailboxManager(email, null, env));
     
     String addr = address.toString();
-    manager.createUser(addr.substring(0, addr.indexOf("@")), null, pass);
-    stepDone(SUCCESS);
+    // note this means you can't have a a "" password
+    if (pass == null || "".equals(pass)) {
+      stepDone(FAILURE, "ERROR: Unable to determine IMAP password (no Post password found)");
+      env.getLogManager().getLogger(EmailProxy.class, null).log(Logger.SEVERE,
+          "ERROR: Unable to determine IMAP password (no Post password found)");
+      
+      int i = message("Could not find a password for your account.\nYou will not be able to log into IMAP, SMTP, or other services.", 
+                      new String[] {"Continue", "Kill ePOST Proxy"}, "Continue");
+      
+      if (i == 1)
+        System.exit(-1);
+    } else {
+      manager.createUser(addr.substring(0, addr.indexOf("@")), null, pass);
+      stepDone(SUCCESS);
+    }
   }
 
   /**
