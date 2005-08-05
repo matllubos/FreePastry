@@ -309,11 +309,11 @@ public class ErasureCodec {
  
       return (Serializable) objectInput.readObject();
     } catch (IOException ioe) {
-      System.err.println(ioe);
+      environment.getLogManager().getLogger(ErasureCodec.class, null).logException(Logger.WARNING, "", ioe);
     } catch (ClassNotFoundException cnfe) {
-      System.err.println(cnfe);
+      environment.getLogManager().getLogger(ErasureCodec.class, null).logException(Logger.WARNING, "", cnfe);
     } catch (IllegalStateException ise) {
-      System.err.println(ise);
+      environment.getLogManager().getLogger(ErasureCodec.class, null).logException(Logger.WARNING, "", ise);
     }
 
     return null;

@@ -815,7 +815,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           log(Logger.FINEST, "inserting replica of id " + id);
           
           if (! (o instanceof PastContent))
-            System.err.println("ERROR! Not PastContent " + o.getClass().getName() + " " + o);
+            log(Logger.WARNING, "ERROR! Not PastContent " + o.getClass().getName() + " " + o);
           storage.getStorage().store(((PastContent) o).getId(), null, (PastContent) o, parent);
         }
       }

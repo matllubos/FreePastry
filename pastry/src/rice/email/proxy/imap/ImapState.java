@@ -150,7 +150,7 @@ public class ImapState {
         }
       }
     } catch (MailboxException e) {
-      System.err.println("ERROR: Exception " + e + " thrown while printing unsolicited data.");
+      getEnvironment().getLogManager().getLogger(ImapState.class, null).logException(Logger.WARNING, "ERROR: Exception " + e + " thrown while printing unsolicited data.", e);
     }
     
     String[] result = (String[]) _queue.toArray(new String[0]);

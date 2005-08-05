@@ -76,10 +76,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    */
 
   public byte[] getHash() {
-
-    System.err.println("VersionKeySet.getHash() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("VersionKeySet.getHash() is not supported!");
     /*
      *  if (validHash) return cachedHash;
      *  / recompute the hash
@@ -87,7 +84,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
      *  try {
      *  md = MessageDigest.getInstance("SHA");
      *  } catch ( NoSuchAlgorithmException e ) {
-     *  System.err.println( "No SHA support!" );
+     *  System.errr.println( "No SHA support!" );
      *  return null;
      *  }
      *  Iterator it = idSet.iterator();

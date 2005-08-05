@@ -321,7 +321,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
-      System.err.println(ioe);
+      logException(Logger.WARNING, "", ioe);
       return null;
     }
 
@@ -342,7 +342,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      System.err.println("No SHA support!");
+      logException(Logger.WARNING, "No SHA support!", e);
       return null;
     }
 
@@ -1153,8 +1153,9 @@ panic("setBit disabled");
    * @exception Error Terminates the program
    */
   private void panic(String s) throws Error {
-    System.err.println("PANIC: " + s);
-    throw new Error("Panic");
+    Error err = new Error("Panic "+s);
+    logException(Logger.SEVERE, "PANIC: " + s, err);
+    throw err;
   }
 
   /**
@@ -1301,7 +1302,7 @@ panic("setBit disabled");
     environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.INFO, str);
   }
 
-  private void logException(int level, String str, Exception e) {
+  private void logException(int level, String str, Throwable e) {
     environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(level, str, e);
   }
 
@@ -2309,7 +2310,7 @@ panic("setBit disabled");
       }
       default:
       {
-        System.err.println("Unknown timer expired: " + (int) timerID);
+        log(Logger.SEVERE, "Unknown timer expired: " + (int) timerID);
         System.exit(1);
       }
     }

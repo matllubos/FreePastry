@@ -50,10 +50,7 @@ public class FragmentKeyRange implements IdRange {
    * @return This range's complement
    */
   public IdRange getComplementRange() {
-    System.err.println("FragmentKeyRange.getComplementRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.getComplementRange());
+    throw new RuntimeException("FragmentKeyRange.getComplementRange() is not supported!");
   }
 
   /**
@@ -82,10 +79,7 @@ public class FragmentKeyRange implements IdRange {
    * @return The merge
    */
   public IdRange mergeRange(IdRange merge) {
-    System.err.println("FragmentKeyRange.mergeRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.mergeRange(((MultiringIdRange) merge).getRange()));
+    throw new RuntimeException("FragmentKeyRange.mergeRange() is not supported!");
   }
 
   /**
@@ -95,10 +89,7 @@ public class FragmentKeyRange implements IdRange {
    * @return The merge
    */
   public IdRange diffRange(IdRange diff) {
-    System.err.println("FragmentKeyRange.diffRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.diffRange(((MultiringIdRange) diff).getRange()));
+    throw new RuntimeException("FragmentKeyRange.diffRange() is not supported!");
   }
 
   /**
@@ -108,10 +99,7 @@ public class FragmentKeyRange implements IdRange {
    * @return The merge
    */
   public IdRange intersectRange(IdRange intersect) {
-    System.err.println("FragmentKeyRange.intersectRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.intersectRange(((MultiringIdRange) intersect).getRange()));
+    throw new RuntimeException("FragmentKeyRange.intersectRange() is not supported!");
   }
 
   /**
@@ -121,11 +109,7 @@ public class FragmentKeyRange implements IdRange {
    * @return Equals
    */
   public boolean equals(Object o) {
-    System.err.println("FragmentKeyRange.equals() called");
-    System.exit(1);
-    return false;
-//    MultiringIdRange other = (MultiringIdRange) o;
-//    return (other.getRange().equals(range) && other.ringId.equals(ringId));
+    throw new RuntimeException("FragmentKeyRange.equals() is not supported!");
   }
 
   /**
@@ -134,10 +118,7 @@ public class FragmentKeyRange implements IdRange {
    * @return hashCode
    */
   public int hashCode() {
-    System.err.println("FragmentKeyRange.hashCode() called");
-    System.exit(1);
-    return 0;
-//    return (range.hashCode() + ringId.hashCode());
+    throw new RuntimeException("FragmentKeyRange.hashCode() is not supported!");
   }
 
   /**
@@ -146,10 +127,7 @@ public class FragmentKeyRange implements IdRange {
    * @return A string
    */
   public String toString() {
-    System.err.println("FragmentKeyRange.toString() called");
-    System.exit(1);
-    return null;
-//    return "{RingId " + ringId + " " + range.toString() + "}";
+    throw new RuntimeException("FragmentKeyRange.toString() is not supported!");
   }
 }
 

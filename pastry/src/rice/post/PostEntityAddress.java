@@ -4,6 +4,7 @@ import java.security.*;
 import java.io.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.multiring.*;
 
@@ -59,7 +60,7 @@ public abstract class PostEntityAddress implements Serializable {
       try {
         md = MessageDigest.getInstance("SHA");
       } catch (NoSuchAlgorithmException e) {
-        System.err.println("FATAL ERROR - No SHA support!");
+        env.getLogManager().getLogger(PostEntityAddress.class, null).log(Logger.SEVERE, "FATAL ERROR - No SHA support!");
       }
 
       md.update(string.getBytes());

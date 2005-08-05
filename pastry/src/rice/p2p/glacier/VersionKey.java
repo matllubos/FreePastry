@@ -148,33 +148,23 @@ public class VersionKey implements Id, Serializable, Comparable {
   }
 
   public boolean isBetween(Id ccw, Id cw) {
-    System.err.println("VersionKey::isBetween() called");
-    System.exit(1);
-    return false;
+    throw new RuntimeException("VersionKey.isBetween() is not supported!");
   }
   
   public Distance longDistanceFromId(Id nid) {
-    System.err.println("VersionKey::longDistanceFromId() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("VersionKey.longDistanceFromId() is not supported!");
   }
 
   public Distance distanceFromId(Id nid) {
-    System.err.println("VersionKey::distanceFromId() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("VersionKey.distanceFromId() is not supported!");
   }
   
   public Id addToId(Distance offset) {
-    System.err.println("VersionKey::addToId() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("VersionKey.addToId() is not supported!");
   }
   
   public boolean clockwise(Id nid) {
-    System.err.println("VersionKey::clockwise() called");
-    System.exit(1);
-    return false;
+    throw new RuntimeException("VersionKey.clockwise() is not supported!");
   }
   
   public static VersionKey build(String s) {

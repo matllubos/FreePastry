@@ -41,9 +41,7 @@ public class FragmentKey implements Id, Comparable {
    * @return The Between value
    */
   public boolean isBetween(Id ccw, Id cw) {
-    System.err.println("FragmentKey::isBetween() called");
-    System.exit(1);
-    return false;
+    throw new RuntimeException("FragmentKey.isBetween() is not supported!");
   }
 
   /**
@@ -146,9 +144,7 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public Distance longDistanceFromId(Id nid) {
-    System.err.println("FragmentKey::longDistanceFromId() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKey.longDistanceFromId() is not supported!");
   }
 
   /**
@@ -158,9 +154,7 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public Distance distanceFromId(Id nid) {
-    System.err.println("FragmentKey::distanceFromId() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKey.distanceFromId() is not supported!");
   }
 
   /**
@@ -170,9 +164,7 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public Id addToId(Distance offset) {
-    System.err.println("FragmentKey::addToId() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKey.addToId() is not supported!");
   }
 
   /**
@@ -182,9 +174,7 @@ public class FragmentKey implements Id, Comparable {
    * @return DESCRIBE THE RETURN VALUE
    */
   public boolean clockwise(Id nid) {
-    System.err.println("FragmentKey::clockwise() called");
-    System.exit(1);
-    return false;
+    throw new RuntimeException("FragmentKey.clockwise() is not supported!");
   }
 
   /**

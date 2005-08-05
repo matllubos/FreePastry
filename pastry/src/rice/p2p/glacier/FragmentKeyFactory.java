@@ -35,9 +35,7 @@ public class FragmentKeyFactory implements IdFactory {
    * @return DESCRIBE THE RETURN VALUE
    */
   public rice.p2p.commonapi.Id buildId(byte[] material) {
-    System.err.println("FragmentKeyFactory.buildId(byte[]) called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKeyFactory.buildId(byte[]) is not supported!");
   }
 
   /**
@@ -47,9 +45,7 @@ public class FragmentKeyFactory implements IdFactory {
    * @return The built Id.
    */
   public rice.p2p.commonapi.Id buildId(int[] material) {
-    System.err.println("FragmentKeyFactory.buildId(int[]) called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKeyFactory.buildId(byte[]) is not supported!");
   }
 
   /**
@@ -60,9 +56,7 @@ public class FragmentKeyFactory implements IdFactory {
    * @return The built Id.
    */
   public rice.p2p.commonapi.Id buildId(String string) {
-    System.err.println("FragmentKeyFactory.buildId(String) called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKeyFactory.buildId(String) is not supported!");
   }
 
   /**
@@ -111,9 +105,7 @@ public class FragmentKeyFactory implements IdFactory {
    * @return The built Id.Distance.
    */
   public rice.p2p.commonapi.Id.Distance buildIdDistance(byte[] material) {
-    System.err.println("FragmentKeyFactory.buildIdDistance() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKeyFactory.buildIdDistance() is not supported!");
   }
 
   /**
@@ -124,9 +116,7 @@ public class FragmentKeyFactory implements IdFactory {
    * @return An IdRange with the appropriate delimiters.
    */
   public IdRange buildIdRange(rice.p2p.commonapi.Id cw, rice.p2p.commonapi.Id ccw) {
-    System.err.println("FragmentKeyFactory.buildIdRange() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKeyFactory.buildIdRange() is not supported!");
   }
   
   /**
@@ -166,9 +156,7 @@ public class FragmentKeyFactory implements IdFactory {
    * @return an empty NodeHandleSet
    */
   public NodeHandleSet buildNodeHandleSet() {
-    System.err.println("FragmentKeyFactory.buildNodeHandleSet() called");
-    System.exit(1);
-    return null;
+    throw new RuntimeException("FragmentKeyFactory.buildNodeHandleSet() is not supported!");
   }
   
   public int getIdToStringLength() {

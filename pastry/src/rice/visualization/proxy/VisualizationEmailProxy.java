@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 
 import rice.email.proxy.EmailProxy;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.multiring.MultiringNode;
 import rice.pastry.dist.DistNodeHandle;
@@ -94,7 +95,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           stepDone(SUCCESS);
         }
       } catch (Exception e) {
-        System.err.println("ERROR: Unable to launch Visualization server - continuing - " + e);
+        environment.getLogManager().getLogger(VisualizationEmailProxy.class, null).logException(Logger.WARNING, "ERROR: Unable to launch Visualization server - continuing - " , e);
       }
       
       
@@ -131,7 +132,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           t.start();
           stepDone(SUCCESS);
         } catch (Exception e) {
-          System.err.println("ERROR: Unable to launch Visualization server - continuing - " + e);
+          environment.getLogManager().getLogger(VisualizationEmailProxy.class, null).logException(Logger.WARNING, "ERROR: Unable to launch Visualization server - continuing - " , e);
           stepDone(FAILURE);
         }
       }

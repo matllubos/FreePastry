@@ -387,9 +387,9 @@ public class PostProxy {
    */
   protected void startCheckNAT(Environment env) throws Exception {
     Parameters parameters = env.getParameters();
-    System.err.println("Starting parsing...");
+    log(Logger.FINE, "Starting parsing...");
     InetSocketAddress[] addresses = parameters.getInetSocketAddressArray("pastry_proxy_connectivity_hosts");
-    System.err.println("Done parsing...");
+    log(Logger.FINE, "Done parsing...");
     
     try {
       natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/4,
@@ -1545,7 +1545,7 @@ public class PostProxy {
     message.append(" in your proxy.params file.\n\n");
     message.append(e.getClass().getName() + ": " + e.getMessage());
 
-    System.err.println("PANIC : " + message + " --- " + e);
+    log(Logger.SEVERE, "PANIC : " + message + " --- " + e);
     
     try {
       if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
@@ -1775,7 +1775,7 @@ public class PostProxy {
               LocalVisualization vis = new LocalVisualization(handle, environment);
             }
           } catch (Exception f) {
-            System.err.println("Got Error launching Vis: " + f);
+            logException(Logger.WARNING, "Got Error launching Vis: " , f);
           }
         }
       });
@@ -1793,7 +1793,7 @@ public class PostProxy {
                 
                 startUpdateForwardingLog(parameters);
               } catch (Exception f) {
-                System.err.println("Got Exception e waiting for config frame" + f);
+                logException(Logger.WARNING, "Got Exception e waiting for config frame" , f);
               }
             }
           };

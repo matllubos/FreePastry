@@ -563,7 +563,7 @@ public class Proxy {
           Thread.sleep(sleep);
           
           if (environment.getTimeSource().currentTimeMillis() - last > timeout) {
-            System.err.println("INFO: Sleep detected - " + (environment.getTimeSource().currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
+            log(Logger.INFO, "INFO: Sleep detected - " + (environment.getTimeSource().currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
             restart();
           }
           

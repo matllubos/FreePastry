@@ -50,10 +50,7 @@ public class VersionKeyRange implements IdRange {
    * @return This range's complement
    */
   public IdRange getComplementRange() {
-    System.err.println("VersionKeyRange.getComplementRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.getComplementRange());
+    throw new RuntimeException("VersionKeyRange.getComplementRange() is not supported!");
   }
 
   /**
@@ -82,10 +79,7 @@ public class VersionKeyRange implements IdRange {
    * @return The merge
    */
   public IdRange mergeRange(IdRange merge) {
-    System.err.println("VersionKeyRange.mergeRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.mergeRange(((MultiringIdRange) merge).getRange()));
+    throw new RuntimeException("VersionKeyRange.mergeRange() is not supported!");
   }
 
   /**
@@ -95,10 +89,7 @@ public class VersionKeyRange implements IdRange {
    * @return The merge
    */
   public IdRange diffRange(IdRange diff) {
-    System.err.println("VersionKeyRange.diffRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.diffRange(((MultiringIdRange) diff).getRange()));
+    throw new RuntimeException("VersionKeyRange.diffRange() is not supported!");
   }
 
   /**
@@ -108,10 +99,7 @@ public class VersionKeyRange implements IdRange {
    * @return The merge
    */
   public IdRange intersectRange(IdRange intersect) {
-    System.err.println("VersionKeyRange.intersectRange() called");
-    System.exit(1);
-    return null;
-//    return new MultiringIdRange(ringId, range.intersectRange(((MultiringIdRange) intersect).getRange()));
+    throw new RuntimeException("VersionKeyRange.intersectRange() is not supported!");
   }
 
   /**

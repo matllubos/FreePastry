@@ -30,8 +30,7 @@ public class GCIdRange implements IdRange {
     this.range = range;
     
     if (range instanceof GCIdRange) {
-      System.err.println("SEVERE ERROR: Illegal creation of GCIdRange with GCIdRange!");
-      Thread.dumpStack();
+      throw new RuntimeException("SEVERE ERROR: Illegal creation of GCIdRange with GCIdRange!");
     }
   }
   

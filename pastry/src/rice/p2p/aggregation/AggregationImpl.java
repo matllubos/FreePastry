@@ -244,8 +244,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   }
 
   private void panic(String s) throws Error {
-    System.err.println("PANIC: " + s);
-    throw new Error("Panic");
+    Error err = new Error("Panic "+s);
+    logException(Logger.SEVERE, "PANIC: " + s, err);
+    throw err;
   }
 
   public String handleDebugCommand(String command) {
