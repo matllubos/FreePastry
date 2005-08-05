@@ -334,7 +334,7 @@ public class RingCertificate implements Serializable {
     
     // get the ring info
     String ring = prompt(r, w, "Please enter the name of the ring (rice, berkeley): ");
-    String protocol = prompt(r, w, "Please enter the protocol of the ring (socket, wire, rmi): ");
+//    String protocol = prompt(r, w, "Please enter the protocol of the ring (socket, wire, rmi): ");
     String[] bootstrap = prompt(r, w, "Please enter the bootstraps (host1:port1,host2:port2...): ").trim().split(",");
     int port = Integer.parseInt(prompt(r, w, "Please enter the default port for nodes: "));
     String logServer = prompt(r, w, "Please enter the log upload server (host:port): ");
@@ -347,9 +347,9 @@ public class RingCertificate implements Serializable {
 //    } else if (protocol.equalsIgnoreCase("rmi")) {
 //      protocolId = DistPastryNodeFactory.PROTOCOL_RMI;
 //    } else 
-      if (protocol.equalsIgnoreCase("socket")) {
+//      if (protocol.equalsIgnoreCase("socket")) {
       protocolId = DistPastryNodeFactory.PROTOCOL_SOCKET;
-    } 
+//    } 
     
     // build the id
     Id id = generateId(ring, env);
@@ -373,6 +373,9 @@ public class RingCertificate implements Serializable {
     
     // and finally write out the KeyPair
     writeKeyPair(pair, pass, ring.toLowerCase());
+    
+    // Environment's Daemon thread.
+    System.exit(0);
   }
   
   /**
