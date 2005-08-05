@@ -75,7 +75,7 @@ public interface Endpoint {
   /**
    * This methods returns an ordered set of nodehandles on which replicas of an object with
    * a given id can be stored.  The call returns nodes up to and including a node with maxRank.
-   * This call also allows the application to provide a remove "center" node, as well as
+   * This call also allows the application to provide a remote "center" node, as well as
    * other nodes in the vicinity. 
    *
    * @param id The object's id.
