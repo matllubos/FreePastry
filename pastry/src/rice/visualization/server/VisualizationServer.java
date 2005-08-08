@@ -115,7 +115,7 @@ public class VisualizationServer implements Runnable {
       ObjectInputStream ois = null;
       
       // first, send across our public key, encrypted
-      if (socket.getInetAddress().isLoopbackAddress() || socket.getInetAddress().equals(InetAddress.getLocalHost())) {
+      if (socket.getInetAddress().isLoopbackAddress() || socket.getInetAddress().equals(address.getAddress())) {
         oos = new ObjectOutputStream(socket.getOutputStream());
         ois = new ObjectInputStream(socket.getInputStream());
       } else {
@@ -214,7 +214,7 @@ public class VisualizationServer implements Runnable {
     oos.writeObject(ujr);
 
     // kill the node
-    ((DistPastryNode)node).resign();
+    ((DistPastryNode)node).destroy();
   
     // sleep for a while
     try {

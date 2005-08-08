@@ -43,8 +43,11 @@ public class NetworkLogUploadThread extends Thread {
   private Environment environment;
   private Parameters params;
   
-  public NetworkLogUploadThread(Environment env, int port, PublicKey key, InetSocketAddress server) {      
+  private InetAddress localHost;
+  
+  public NetworkLogUploadThread(InetAddress localHost, int port, PublicKey key, InetSocketAddress server, Environment env) {      
     super("NetworkLogUploadThread");
+    this.localHost = localHost;
     this.host = server;
     this.key = key;
     this.pastry_port = port;
@@ -54,6 +57,9 @@ public class NetworkLogUploadThread extends Thread {
     this.buffer = new byte[params.getInt("log_network_buffer_size")];
   }
  
+  public InetAddress getLocalHost() {
+    return localHost;
+  }
   
   public void run() {
     try {
@@ -127,7 +133,7 @@ public class NetworkLogUploadThread extends Thread {
       ObjectOutputStream oos = new ObjectOutputStream(baos);
 
       log(Logger.INFO, "writing header for "+file.getName());
-      oos.writeObject(InetAddress.getLocalHost().getHostAddress() + ":" + pastry_port + "." + file.getName());
+      oos.writeObject(getLocalHost().getHostAddress() + ":" + pastry_port + "." + file.getName());
       oos.writeLong(file.length());
       oos.close();
       return baos.toByteArray();
