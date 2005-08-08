@@ -28,9 +28,9 @@ public class VisualizationEmailProxy extends EmailProxy {
   protected InetSocketAddress serverAddress;
   protected InetSocketAddress globalServerAddress;
   
-  public Environment start(Environment env) throws Exception { 
-    super.start(env);
-    Parameters parameters = env.getParameters();
+  public void start2() throws Exception { 
+    super.start2();
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("visualization_enable")) {
       DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
       int visualizationPort = ((DistNodeHandle) pastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
@@ -38,15 +38,15 @@ public class VisualizationEmailProxy extends EmailProxy {
       sectionStart("Starting Visualization services");
       stepStart("Creating Visualization Server");
       try {
-        this.serverAddress = new InetSocketAddress(InetAddress.getLocalHost(), 
+        this.serverAddress = new InetSocketAddress(getLocalHost(), 
                                                    visualizationPort);
       } catch (IOException e) {
         stepDone(FAILURE, e + "");
       }
       
-      server = new VisualizationServer(serverAddress, pastry, immutableStorage, cert, new Object[] {pastry, immutablePast, immutableStorage}, env);
-      server.addPanelCreator(new OverviewPanelCreator(env));
-      NetworkActivityPanelCreator network = new NetworkActivityPanelCreator(env);
+      server = new VisualizationServer(serverAddress, pastry, immutableStorage, cert, new Object[] {pastry, immutablePast, immutableStorage}, environment);
+      server.addPanelCreator(new OverviewPanelCreator(environment));
+      NetworkActivityPanelCreator network = new NetworkActivityPanelCreator(environment);
       server.addPanelCreator(network);
       MessageDistributionPanelCreator message = new MessageDistributionPanelCreator();
       server.addPanelCreator(message);
@@ -54,7 +54,7 @@ public class VisualizationEmailProxy extends EmailProxy {
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
       server.addPanelCreator(new SourceRoutePanelCreator());
-      server.addPanelCreator(new MultiPersistencePanelCreator(env, new String[] {"Immutable", "Mutable", "Pending", "Delivered", "Glacier Immutable", "Glacier Mutable", "Aggregation Waiting"},
+      server.addPanelCreator(new MultiPersistencePanelCreator(environment, new String[] {"Immutable", "Mutable", "Pending", "Delivered", "Glacier Immutable", "Glacier Mutable", "Aggregation Waiting"},
                                                               new StorageManagerImpl[] {immutableStorage, mutableStorage, pendingStorage, deliveredStorage, glacierImmutableStorage, glacierMutableStorage, aggrWaitingStorage}));
       server.addPanelCreator(new MultiPASTPanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
                                                        new PastImpl[] {(PastImpl) realImmutablePast, (PastImpl) mutablePast, pendingPast, deliveredPast}));
@@ -67,7 +67,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           server.addPanelCreator(new GlacierPanelCreator((GlacierImpl) aggregateStore));
       }
       
-      server.addPanelCreator(new QueuePanelCreator(env, DistPastryNode.QUEUE, rice.persistence.PersistentStorage.QUEUE));
+      server.addPanelCreator(new QueuePanelCreator(environment, DistPastryNode.QUEUE, rice.persistence.PersistentStorage.QUEUE));
       if (smtp != null)
         server.addPanelCreator(new EmailPanelCreator(timer, smtp));
       
@@ -105,14 +105,14 @@ public class VisualizationEmailProxy extends EmailProxy {
 
         stepStart("Creating Global Visualization Server");
         try {
-          this.globalServerAddress = new InetSocketAddress(InetAddress.getLocalHost(), globalVisualizationPort);
+          this.globalServerAddress = new InetSocketAddress(getLocalHost(), globalVisualizationPort);
         } catch (IOException e) {
           stepDone(FAILURE, e + "");
         }
         
-        globalServer = new VisualizationServer(globalServerAddress, gpastry, null, globalCert, new Object[] {gpastry}, env);
-        globalServer.addPanelCreator(new OverviewPanelCreator(env));
-        NetworkActivityPanelCreator gnetwork = new NetworkActivityPanelCreator(env);
+        globalServer = new VisualizationServer(globalServerAddress, gpastry, null, globalCert, new Object[] {gpastry}, environment);
+        globalServer.addPanelCreator(new OverviewPanelCreator(environment));
+        NetworkActivityPanelCreator gnetwork = new NetworkActivityPanelCreator(environment);
         globalServer.addPanelCreator(gnetwork);
         MessageDistributionPanelCreator gmessage = new MessageDistributionPanelCreator();
         globalServer.addPanelCreator(gmessage);
@@ -139,9 +139,7 @@ public class VisualizationEmailProxy extends EmailProxy {
     }
     
     dialogPrint("\n\nYour ePOST is now booted and ready.  You can connect your mail client\n" +
-                "with the instructions shown on the http://www.epostmail.org website.\n");
-    
-    return env;
+                "with the instructions shown on the http://www.epostmail.org website.\n");    
   }
   
   public static void main(String[] args) {

@@ -33,6 +33,7 @@ import rice.pastry.*;
 import rice.pastry.commonapi.PastryIdFactory;
 import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.socket.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.CertifiedNodeIdFactory;
 import rice.persistence.*;
@@ -298,17 +299,23 @@ public class PostProxy {
   
   protected Environment environment;
   
+  InetAddress localHost;
+  
   /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
    * VM to have a client liveness monitor.
    *
    * @param parameters The parameters to use
    */
-  protected void startLivenessMonitor(Environment env) throws Exception {
-    if (env.getParameters().getBoolean("proxy_liveness_monitor_enable")) {
-      LivenessThread lt = new LivenessThread(env);
+  protected void startLivenessMonitor() throws Exception {
+    if (environment.getParameters().getBoolean("proxy_liveness_monitor_enable")) {
+      LivenessThread lt = new LivenessThread(environment);
       lt.start();
     }
+  }
+  
+  public InetAddress getLocalHost() throws IOException {
+    return localHost;
   }
     
   /**
@@ -316,10 +323,10 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startCheckBoot(Environment env) throws Exception {
-    Parameters parameters = env.getParameters();
+  protected void startCheckBoot() throws Exception {
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("proxy_compatibility_check_enable")) {
-      String address = InetAddress.getLocalHost().getHostAddress();
+      String address = getLocalHost().getHostAddress();
       
       if (! CompatibilityCheck.testIPAddress(address)) {
         if (parameters.getBoolean("pastry_proxy_connectivity_show_message")) {
@@ -334,10 +341,10 @@ public class PostProxy {
           if (i == 0) {
             System.exit(-1);
           } else {
-            startCheckNAT(env);
+            startCheckNAT();
           }
         } else {
-          startCheckNAT(env);
+          startCheckNAT();
         }
       } 
           
@@ -385,40 +392,40 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startCheckNAT(Environment env) throws Exception {
-    Parameters parameters = env.getParameters();
+  protected void startCheckNAT() throws Exception {
+    Parameters parameters = environment.getParameters();
     log(Logger.FINE, "Starting parsing...");
     InetSocketAddress[] addresses = parameters.getInetSocketAddressArray("pastry_proxy_connectivity_hosts");
     log(Logger.FINE, "Done parsing...");
     
     try {
       natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/4,
-                                                            new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                            randomSubset(addresses, 5), env).getAddress();
+                                                            new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
+                                                            randomSubset(addresses, 5), environment).getAddress();
     } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/2,
-                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                              randomSubset(addresses, 5), env).getAddress();
+                                                              new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
+                                                              randomSubset(addresses, 5), environment).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout"),
-                                                              new InetSocketAddress(InetAddress.getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                              randomSubset(addresses, 5), env).getAddress();
+                                                              new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
+                                                              randomSubset(addresses, 5), environment).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
       int j = message("ePOST attempted to determine the NAT IP address, but was unable to.  This\n" +
                       "is likely caused by an incorrectly configured NAT - make sure that your NAT\n" +
-                      "is set up to forward both TCP and UDP packets on port " + parameters.getInt("pastry_proxy_connectivity_port") + " to '" + InetAddress.getLocalHost() + "'.\n\n" + 
+                      "is set up to forward both TCP and UDP packets on port " + parameters.getInt("pastry_proxy_connectivity_port") + " to '" + getLocalHost() + "'.\n\n" + 
                       "Error: java.net.SocketTimeoutException", new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
     
       if (j == 1)
-        startCheckNAT(env);
+        startCheckNAT();
       else
         System.exit(-1);
     } else {
@@ -799,7 +806,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startCreateIdFactory(Parameters parameters) throws Exception {
+  protected void startCreateIdFactory() throws Exception {
+    Parameters parameters = environment.getParameters();
     stepStart("Creating Id Factory");
     FACTORY = new MultiringIdFactory(ringId, new PastryIdFactory(environment));
     stepDone(SUCCESS);
@@ -810,12 +818,12 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startStorageManagers(Environment env) throws Exception {
-    Parameters parameters = env.getParameters();
+  protected void startStorageManagers() throws Exception {
+    Parameters parameters = environment.getParameters();
     String hostname = "localhost";
     
     try {
-      hostname = InetAddress.getLocalHost().getHostName();
+      hostname = getLocalHost().getHostName();
     } catch (UnknownHostException e) {}
     
     String prefix = hostname + "-" + port + "-";
@@ -830,32 +838,32 @@ public class PostProxy {
       
     stepStart("Starting Immutable Storage");
     immutableStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "immutable", location, diskLimit, env),
-                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "cache", ".", diskLimit, env), cacheLimit, env));
+                                              new PersistentStorage(FACTORY, prefix + "immutable", location, diskLimit, environment),
+                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "cache", ".", diskLimit, environment), cacheLimit, environment));
     stepDone(SUCCESS);
     
     stepStart("Starting Mutable Storage");
     mutableStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "mutable", location, diskLimit, env),
+                                            new PersistentStorage(FACTORY, prefix + "mutable", location, diskLimit, environment),
                                             new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     stepStart("Starting Pending Message Storage");
     pendingStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "pending", location, diskLimit, env),
+                                            new PersistentStorage(FACTORY, prefix + "pending", location, diskLimit, environment),
                                             new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     stepStart("Starting Delivered Message Storage");
     deliveredStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "delivered", location, diskLimit, env),
+                                              new PersistentStorage(FACTORY, prefix + "delivered", location, diskLimit, environment),
                                               new EmptyCache(FACTORY));    
     stepDone(SUCCESS);
     
     if (parameters.getBoolean("past_garbage_collection_enable")) {
       stepStart("Starting Trashcan Storage");
       trashStorage = new StorageManagerImpl(FACTORY,
-                                            new PersistentStorage(FACTORY, prefix + "trash", location, diskLimit, false, env),
+                                            new PersistentStorage(FACTORY, prefix + "trash", location, diskLimit, false, environment),
                                             new EmptyCache(FACTORY));
       stepDone(SUCCESS);
     }
@@ -863,24 +871,24 @@ public class PostProxy {
     if (parameters.getBoolean("glacier_enable")) {
       FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
-      PastryIdFactory PFACTORY = new PastryIdFactory(env);
+      PastryIdFactory PFACTORY = new PastryIdFactory(environment);
 
       stepStart("Starting Glacier Storage");
       glacierMutableStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "glacier-mutable", location, diskLimit, env),
+                                              new PersistentStorage(KFACTORY, prefix + "glacier-mutable", location, diskLimit, environment),
                                               new EmptyCache(KFACTORY));
       glacierImmutableStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "glacier-immutable", location, diskLimit, env),
+                                              new PersistentStorage(KFACTORY, prefix + "glacier-immutable", location, diskLimit, environment),
                                               new EmptyCache(KFACTORY));
       glacierNeighborStorage = new StorageManagerImpl(FACTORY,
-                                              new PersistentStorage(FACTORY, prefix + "glacier-neighbor", location, diskLimit, env),
+                                              new PersistentStorage(FACTORY, prefix + "glacier-neighbor", location, diskLimit, environment),
                                               new EmptyCache(FACTORY));
       aggrWaitingStorage = new StorageManagerImpl(VFACTORY,
-                                              new PersistentStorage(VFACTORY, prefix + "aggr-waiting", location, diskLimit, env),
+                                              new PersistentStorage(VFACTORY, prefix + "aggr-waiting", location, diskLimit, environment),
                                               new EmptyCache(VFACTORY));
       if (parameters.getBoolean("glacier_use_trashcan")) {
         glacierTrashStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "glacier-trash", location, diskLimit, false, env),
+                                              new PersistentStorage(KFACTORY, prefix + "glacier-trash", location, diskLimit, false, environment),
                                               new EmptyCache(KFACTORY));
       } else {
         glacierTrashStorage = null;
@@ -893,15 +901,15 @@ public class PostProxy {
       long backupLimit = parameters.getLong("past_backup_cache_limit");
       
       stepStart("Starting Immutable Backup Cache");
-      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "immutable-cache", ".", diskLimit, env), cacheLimit, env);
+      immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "immutable-cache", ".", diskLimit, environment), cacheLimit, environment);
       stepDone(SUCCESS);
       
       stepStart("Starting Pending Backup Cache");
-      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "pending-cache", ".", diskLimit, env), cacheLimit, env);
+      pendingBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "pending-cache", ".", diskLimit, environment), cacheLimit, environment);
       stepDone(SUCCESS);
       
       stepStart("Starting Delivered Backup Cache");
-      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "delivered-cache", ".", diskLimit, env), cacheLimit, env);
+      deliveredBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "delivered-cache", ".", diskLimit, environment), cacheLimit, environment);
       stepDone(SUCCESS);
     }
   }
@@ -911,15 +919,16 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startPastryNode(Parameters parameters) throws Exception {    
+  protected void startPastryNode() throws Exception {    
+    Parameters parameters = environment.getParameters();
     stepStart("Creating Pastry node");
     String prefix = ((RingId) address.getAddress()).getRingId().toStringFull();
 
     if (parameters.getBoolean("log_network_upload_enable")) {
-      (new NetworkLogUploadThread(environment, port, cert.getKey(), cert.getLogServer())).start(); 
+      (new NetworkLogUploadThread(getLocalHost(), port, cert.getKey(), cert.getLogServer(), environment)).start(); 
     }
 
-    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(port, environment), cert.getProtocol(), port, environment);
+    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(getLocalHost(), port, environment), cert.getProtocol(), port, environment);
     InetSocketAddress proxyAddress = null;
         
     if (natAddress != null)
@@ -1007,8 +1016,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startMultiringNode(Environment env) throws Exception { 
-    Parameters parameters = env.getParameters();
+  protected void startMultiringNode() throws Exception { 
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("multiring_enable")) {
       rice.p2p.commonapi.Id ringId = ((RingId) address.getAddress()).getRingId();
 
@@ -1029,7 +1038,7 @@ public class PostProxy {
     String prefix = generateRingId(null).toStringFull();
         
     DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(
-        new CertifiedNodeIdFactory(port,environment), globalCert.getProtocol(), globalPort, environment);
+        new CertifiedNodeIdFactory(getLocalHost(), port, environment), globalCert.getProtocol(), globalPort, environment);
     InetSocketAddress proxyAddress = null;
     
     if (parameters.getBoolean("pastry_ring_" + prefix+ "_proxy_enable"))
@@ -1070,7 +1079,7 @@ public class PostProxy {
    * @return
    */
   protected InetSocketAddress[] getBootstrapsThatAreNotMe(InetSocketAddress[] addrs, int port) throws IOException {
-    InetSocketAddress localAddress = new InetSocketAddress(InetAddress.getLocalHost(),port);
+    InetSocketAddress localAddress = new InetSocketAddress(getLocalHost(),port);
     ArrayList list = new ArrayList(Arrays.asList(addrs));
     // removes all copies
     while(list.remove(localAddress));
@@ -1097,11 +1106,11 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startGlobalNode(Environment env) throws Exception { 
-    Parameters parameters = env.getParameters();
+  protected void startGlobalNode() throws Exception { 
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("multiring_global_enable") && (natAddress == null)) {
       startGlobalPastryNode(parameters);
-      startGlobalMultiringNode(env);
+      startGlobalMultiringNode(environment);
     }
   } 
   
@@ -1110,12 +1119,12 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startGlacier(Environment env) throws Exception {
-    Parameters parameters = env.getParameters();
+  protected void startGlacier() throws Exception {
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("glacier_enable")) {
       stepStart("Starting Glacier service");
 
-      String prefix = InetAddress.getLocalHost().getHostName() + "-" + port;
+      String prefix = getLocalHost().getHostName() + "-" + port;
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
 
       String instance = parameters.getString("application_instance_name") + "-glacier-immutable";
@@ -1130,10 +1139,10 @@ public class PostProxy {
           new ErasureCodec(
             parameters.getInt("glacier_num_fragments"),
             parameters.getInt("glacier_num_survivors"),
-            env
+            environment
           ), 
           instance, 
-          env
+          environment
         )
       );
       
@@ -1145,7 +1154,7 @@ public class PostProxy {
       immutableGlacier.setTrashcan(glacierTrashStorage);
 
       final Integer[] done = new Integer[1];
-      env.getSelectorManager().invoke(new Runnable() {
+      environment.getSelectorManager().invoke(new Runnable() {
         public void run() {
           immutableGlacier.startup();
           done[0] = new Integer(1);
@@ -1186,8 +1195,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startPast(Environment env) throws Exception {
-    Parameters parameters = env.getParameters();
+  protected void startPast() throws Exception {
+    Parameters parameters = environment.getParameters();
     stepStart("Starting Past services");
     
     if (parameters.getBoolean("past_garbage_collection_enable")) {
@@ -1229,7 +1238,7 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startPost(Environment env) throws Exception {
+  protected void startPost() throws Exception {
     if (System.getProperty("RECOVER") != null) {
       stepStart("Recovering/Restoring POST Logs backup");
       ExternalContinuation d = new ExternalContinuation();
@@ -1250,7 +1259,7 @@ public class PostProxy {
       Calendar cal = Calendar.getInstance();
       log(Logger.INFO,"COUNT: Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
       cal.set(year, month, day, hour, minute, 0);
-      StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d, env);
+      StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d, environment);
       d.sleep();
       
       if (d.exceptionThrown())
@@ -1288,7 +1297,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startInsertLog(Parameters parameters) throws Exception {
+  protected void startInsertLog() throws Exception {
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("post_force_log_reinsert")) {
       stepStart("Manually inserting new PostLog");
       ExternalContinuation c = new ExternalContinuation();
@@ -1307,8 +1317,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startFetchLog(Environment env) throws Exception {
-    Parameters parameters = env.getParameters();
+  protected void startFetchLog() throws Exception {
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("post_proxy_enable") &&
         parameters.getBoolean("post_fetch_log")) {
       int retries = 0;
@@ -1318,7 +1328,7 @@ public class PostProxy {
       
       while (!done) {
         final ExternalContinuation c = new ExternalContinuation();
-        env.getSelectorManager().invoke(new Runnable() {
+        environment.getSelectorManager().invoke(new Runnable() {
           public void run() {
             post.getPostLog(c); 
           }
@@ -1352,7 +1362,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startFetchForwardingLog(Parameters parameters) throws Exception {
+  protected void startFetchForwardingLog() throws Exception {
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("post_proxy_enable") &&
         parameters.getBoolean("post_fetch_log")) {
       
@@ -1378,7 +1389,8 @@ public class PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startUpdateForwardingLog(Parameters parameters) throws Exception {
+  protected void startUpdateForwardingLog() throws Exception {
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("post_proxy_enable") &&
         parameters.getBoolean("post_fetch_log")) {
       String[] addresses = parameters.getStringArray("post_forward_addresses");
@@ -1406,14 +1418,14 @@ public class PostProxy {
     }
   }
   
-  protected Environment start(Environment env) throws Exception {
+  protected void start2() throws Exception {
 //    parameters = env.getParameters();  // done in start(void)
-    startLivenessMonitor(env);
+    startLivenessMonitor();
     // XXX make this cooler in production code
-    System.setErr(new PSCatcher(env, System.err));
+    System.setErr(new PSCatcher(environment, System.err));
     System.setOut(System.err);
     
-    startCheckBoot(env);    
+    startCheckBoot();    
     startDialog(parameters);
         
     log(Logger.INFO,"-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
@@ -1432,35 +1444,33 @@ public class PostProxy {
     sectionDone();
     
     sectionStart("Initializing Disk Storage");
-    startCreateIdFactory(parameters);
-    startStorageManagers(env);
+    startCreateIdFactory();
+    startStorageManagers();
     sectionDone();
     
     sectionStart("Bootstrapping Local Node");
-    startPastryNode(parameters);
+    startPastryNode();
     sectionDone();
     
     sectionStart("Bootstrapping Multiring Protocol");
-    startMultiringNode(env);
-    startGlobalNode(env);
+    startMultiringNode();
+    startGlobalNode();
     sectionDone();
     
     sectionStart("Bootstrapping Local Post Applications");
-    startPast(env);
-    startGlacier(env);
-    startPost(env);
-    startInsertLog(parameters);
-    startFetchLog(env);
-    startFetchForwardingLog(parameters);
-    startUpdateForwardingLog(parameters);
+    startPast();
+    startGlacier();
+    startPost();
+    startInsertLog();
+    startFetchLog();
+    startFetchForwardingLog();
+    startUpdateForwardingLog();
     
     sectionDone();
     
     sectionStart("Installing Partition Handler");
     startPartitionHandler();
     sectionDone();
-    
-    return env;
   }
   
   /**
@@ -1502,7 +1512,18 @@ public class PostProxy {
       logManager.startRotateTask(selectorManager);
       Environment env = new Environment(selectorManager, randomSource, timeSource, logManager, parameters);
       environment = env;
-      start(env);
+      
+      if (localHost == null) {      
+        if (env.getParameters().contains("socket_bindAddress")) {
+          localHost = env.getParameters().getInetAddress("socket_bindAddress");
+        }
+      }
+      if (localHost == null) {
+        localHost = InetAddress.getLocalHost(); 
+      }
+      
+
+      start2();
       updateParameters(parameters);
       
       if (dialog != null) 
@@ -1573,10 +1594,10 @@ public class PostProxy {
 
   public void resign() {
     if (pastryNode != null)
-      pastryNode.resign();
+      pastryNode.destroy();
     
     if (globalPastryNode != null)
-      globalPastryNode.resign();
+      globalPastryNode.destroy();
   }
 
   public int message(String m, String[] options, String def) {
@@ -1771,7 +1792,7 @@ public class PostProxy {
             if (natAddress == null) {
               LocalVisualization vis = new LocalVisualization((DistNodeHandle) pastryNode.getLocalNodeHandle(), environment);
             } else {
-              DistNodeHandle handle = (DistNodeHandle) factory.getNodeHandle(new InetSocketAddress(InetAddress.getLocalHost(), 10001));
+              DistNodeHandle handle = (DistNodeHandle) factory.getNodeHandle(new InetSocketAddress(getLocalHost(), 10001));
               LocalVisualization vis = new LocalVisualization(handle, environment);
             }
           } catch (Exception f) {
@@ -1791,7 +1812,7 @@ public class PostProxy {
                   frame.wait();
                 }
                 
-                startUpdateForwardingLog(parameters);
+                startUpdateForwardingLog();
               } catch (Exception f) {
                 logException(Logger.WARNING, "Got Exception e waiting for config frame" , f);
               }

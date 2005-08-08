@@ -23,7 +23,7 @@ public class VisualizationProxy {
     
   protected Environment environment;
   
-  public VisualizationProxy(String[] args, Environment env) {
+  public VisualizationProxy(String[] args, Environment env) throws IOException {
     this.environment = env;
     parseArgs(args);
   }
@@ -34,7 +34,7 @@ public class VisualizationProxy {
 //    visualization = new Visualization(handle);
   }
   
-  public void parseArgs(String[] args) {
+  public void parseArgs(String[] args) throws IOException {
     Environment env = new Environment();
     int protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
     for (int i = 0; i < args.length; i++) {
@@ -115,7 +115,7 @@ public class VisualizationProxy {
     return -1;
   }
   
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     Environment env = new Environment();
     VisualizationProxy proxy = new VisualizationProxy(args, env);
     proxy.start();
