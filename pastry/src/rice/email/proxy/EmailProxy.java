@@ -88,7 +88,8 @@ public class EmailProxy extends PostProxy {
     *
     * @param parameters The parameters to use
     */  
-   protected void startRetrieveKeystore(Parameters parameters) throws Exception {
+   protected void startRetrieveKeystore() throws Exception {
+     Parameters parameters = environment.getParameters();
      String file = parameters.getString("email_ssl_keystore_filename");
      
      if ((! new File(file).exists()) &&
@@ -118,7 +119,7 @@ public class EmailProxy extends PostProxy {
        BufferedReader r = new BufferedReader(new InputStreamReader(process.getErrorStream()));
        BufferedWriter w = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
        
-       w.write("ePOST User at " + InetAddress.getLocalHost() + "\n");
+       w.write("ePOST User at " + getLocalHost() + "\n");
        w.write("Unknown\n");
        w.write("Unknown\n");
        w.write("Unknown\n");
@@ -141,9 +142,10 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */  
-  protected void startEmailService(Parameters parameters) throws Exception {
+  protected void startEmailService() throws Exception {
+   Parameters parameters = environment.getParameters();
    stepStart("Starting Email service");
-   email = new EmailService(post, pair, parameters.getBoolean("post_allow_log_insert"));
+   email = new EmailService(getLocalHost(), post, pair, parameters.getBoolean("post_allow_log_insert"));
    PostMessage.factory = FACTORY;
    stepDone(SUCCESS);
   }
@@ -153,7 +155,8 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startFetchEmailLog(Parameters parameters) throws Exception {    
+  protected void startFetchEmailLog() throws Exception {    
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("email_fetch_log")) {
       stepStart("Fetching Email INBOX log");
       int retries = 0;
@@ -187,20 +190,20 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startUserManager(Environment env) throws Exception {    
-    Parameters parameters = env.getParameters();
+  protected void startUserManager() throws Exception {    
+    Parameters parameters = environment.getParameters();
     stepStart("Starting User Email Services");
     
     if (parameters.getBoolean("email_fetch_log"))
-      manager = new UserManagerImpl(email, new PostMailboxManager(email, emailFolder, env));
+      manager = new UserManagerImpl(email, new PostMailboxManager(email, emailFolder, environment));
     else 
-      manager = new UserManagerImpl(email, new PostMailboxManager(email, null, env));
+      manager = new UserManagerImpl(email, new PostMailboxManager(email, null, environment));
     
     String addr = address.toString();
     // note this means you can't have a a "" password
     if (pass == null || "".equals(pass)) {
       stepDone(FAILURE, "ERROR: Unable to determine IMAP password (no Post password found)");
-      env.getLogManager().getLogger(EmailProxy.class, null).log(Logger.SEVERE,
+      environment.getLogManager().getLogger(EmailProxy.class, null).log(Logger.SEVERE,
           "ERROR: Unable to determine IMAP password (no Post password found)");
       
       int i = message("Could not find a password for your account.\nYou will not be able to log into IMAP, SMTP, or other services.", 
@@ -219,8 +222,8 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startSMTPServer(Environment env) throws Exception {    
-    Parameters parameters = env.getParameters();
+  protected void startSMTPServer() throws Exception {    
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("email_smtp_enable")) {
       try {
         int port = parameters.getInt("email_smtp_port");
@@ -239,23 +242,23 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBoolean("email_smtp_ssl")) {
           stepStart("Starting SSL SMTP server on port " + port);
-          smtp = new SSLSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, file, pass, server, env);
+          smtp = new SSLSmtpServerImpl(getLocalHost(), port, email, gateway, address, accept, authenticate, manager, file, pass, server, environment);
           smtp.start();
           stepDone(SUCCESS);
         } else if (parameters.getBoolean("email_smtp_non_blocking")) {
           stepStart("Starting Non-Blocking SMTP server on port " + port);
-          smtp = new NonBlockingSmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, env);
+          smtp = new NonBlockingSmtpServerImpl(getLocalHost(), port, email, gateway, address, accept, authenticate, manager, server, environment);
           smtp.start();
           stepDone(SUCCESS);
         } else {
           stepStart("Starting SMTP server on port " + port);
-          smtp = new SmtpServerImpl(port, email, gateway, address, accept, authenticate, manager, server, env);
+          smtp = new SmtpServerImpl(getLocalHost(), port, email, gateway, address, accept, authenticate, manager, server, environment);
           smtp.start();
           stepDone(SUCCESS);
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch SMTP server - continuing - " + e);
-        env.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+        environment.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
             "ERROR: Unable to launch SMTP server - continuing - ",e);
         
         int i = message("The SMTP server failed to launch due to an exception.\n\n" + 
@@ -272,8 +275,8 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startIMAPServer(Environment env) throws Exception {    
-    Parameters parameters = env.getParameters();
+  protected void startIMAPServer() throws Exception {    
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("email_imap_enable")) {
       try {
         boolean log = parameters.getBoolean("email_imap_log");
@@ -285,23 +288,23 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBoolean("email_imap_ssl")) {
           stepStart("Starting SSL IMAP server on port " + port);
-          imap = new SSLImapServerImpl(port, email, manager, gateway, accept, file, pass, log, env);
+          imap = new SSLImapServerImpl(getLocalHost(), port, email, manager, gateway, accept, file, pass, log, environment);
           imap.start();
           stepDone(SUCCESS);
         } else if (parameters.getBoolean("email_imap_non_blocking")) {
           stepStart("Starting Non-Blocking IMAP server on port " + port);
-          imap = new NonBlockingImapServerImpl(port, email, manager, gateway, accept, log, env);
+          imap = new NonBlockingImapServerImpl(getLocalHost(), port, email, manager, gateway, accept, log, environment);
           imap.start();
           stepDone(SUCCESS);
         } else {
           stepStart("Starting IMAP server on port " + port);
-          imap = new ImapServerImpl(port, email, manager, gateway, accept, env);
+          imap = new ImapServerImpl(getLocalHost(), port, email, manager, gateway, accept, environment);
           imap.start();
           stepDone(SUCCESS);
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
-        env.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+        environment.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
             "ERROR: Unable to launch IMAP server - continuing - ",e);
         
         int i = message("The IMAP server failed to launch due to an exception.\n\n" + 
@@ -318,8 +321,8 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startPOP3Server(Environment env) throws Exception {    
-    Parameters parameters = env.getParameters();
+  protected void startPOP3Server() throws Exception {    
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("email_pop3_enable")) {
       try {
         int port = parameters.getInt("email_pop3_port");
@@ -330,23 +333,23 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBoolean("email_pop3_ssl")) {
           stepStart("Starting SSL POP3 server on port " + port);
-          pop3 = new SSLPop3ServerImpl(port, email, manager, gateway, accept, file, pass, env);
+          pop3 = new SSLPop3ServerImpl(getLocalHost(), port, email, manager, gateway, accept, file, pass, environment);
           pop3.start();
           stepDone(SUCCESS);
         } else if (parameters.getBoolean("email_pop3_non_blocking")) {
           stepStart("Starting Non-Blocking POP3 server on port " + port);
-          pop3 = new NonBlockingPop3ServerImpl(port, email, manager, gateway, accept, env);
+          pop3 = new NonBlockingPop3ServerImpl(getLocalHost(), port, email, manager, gateway, accept, environment);
           pop3.start();
           stepDone(SUCCESS);
         } else {
           stepStart("Starting POP3 server on port " + port);
-          pop3 = new Pop3ServerImpl(port, email, manager, gateway, accept, env);
+          pop3 = new Pop3ServerImpl(getLocalHost(), port, email, manager, gateway, accept, environment);
           pop3.start();
           stepDone(SUCCESS);
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
-        env.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+        environment.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
             "ERROR: Unable to launch IMAP server - continuing - ",
             e);
         
@@ -364,40 +367,38 @@ public class EmailProxy extends PostProxy {
    *
    * @param parameters The parameters to use
    */
-  protected void startWebMailServer(Environment env) throws Exception { 
-    Parameters parameters = env.getParameters();
+  protected void startWebMailServer() throws Exception { 
+    Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("email_webmail_enable")) {
       int port = parameters.getInt("email_webmail_port");
       stepStart("Starting WebMail server on port " + port);
-      web = new WebServerImpl(port, email, manager, env);
+      web = new WebServerImpl(port, email, manager, environment);
       web.start();
       stepDone(SUCCESS);
     }
   }
 
-  public Environment start(Environment env) throws Exception {
-    super.start(env);
+  public void start2() throws Exception {
+    super.start2();
 
     if (System.getProperty("RECOVER") != null)
-      return env;
+      return;
 
     sectionStart("Starting Email services");
     startMailcap(parameters);
        
     if (parameters.getBoolean("post_proxy_enable")) {
-      startRetrieveKeystore(parameters);
-      startEmailService(parameters);
-      startFetchEmailLog(parameters);
-      startUserManager(env);
-      startSMTPServer(env);
-      startIMAPServer(env);
-      startPOP3Server(env);
-      startWebMailServer(env);
+      startRetrieveKeystore();
+      startEmailService();
+      startFetchEmailLog();
+      startUserManager();
+      startSMTPServer();
+      startIMAPServer();
+      startPOP3Server();
+      startWebMailServer();
     }
 
     sectionDone();
-    
-    return env;
   }    
 
 
