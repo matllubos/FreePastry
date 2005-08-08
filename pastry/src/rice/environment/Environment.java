@@ -138,5 +138,18 @@ public class Environment {
   public Parameters getParameters() {
     return params; 
   }
+  
+  /**
+   * Tears down the environment.  Calls params.store(), selectorManager.destroy().
+   *
+   */
+  public void destroy() {
+    try {
+      params.store();
+    } catch (IOException ioe) {
+      logging.getLogger(Environment.class, null).logException(Logger.WARNING, "Error during shutdown",ioe); 
+    }
+    selectorManager.destroy();
+  }
 }
 
