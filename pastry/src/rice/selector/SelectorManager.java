@@ -233,7 +233,7 @@ public class SelectorManager extends Thread implements Timer {
   }
 
   
-  public void resign() {
+  public void destroy() {
     running = false; 
   }
   

@@ -45,15 +45,33 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   
   private RandomSource random;
 
+  private InetAddress localAddress;
+  
   /**
    * Constructor.
    *
+   * Here is order for bind address
+   * 1) bindAddress parameter
+   * 2) if bindAddress is null, then parameter: socket_bindAddress (if it exists)
+   * 3) if socket_bindAddress doesn't exist, then InetAddress.getLocalHost()
+   *
    * @param nf The factory for building node ids
+   * @param bindAddress which address to bind to
    * @param startPort The port to start creating nodes on
 	 * @param env The environment.
    */
-  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env) {
+  public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env) throws IOException {
     super(env);
+    localAddress = bindAddress;
+    if (localAddress == null) {      
+      if (env.getParameters().contains("socket_bindAddress")) {
+        localAddress = env.getParameters().getInetAddress("socket_bindAddress");
+      }
+    }
+    if (localAddress == null) {
+      localAddress = InetAddress.getLocalHost(); 
+    }
+    
     environment = env;
     nidFactory = nf;
     port = startPort;
@@ -61,6 +79,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     leafSetMaintFreq = env.getParameters().getInt("pastry_leafSetMaintFreq");
     routeSetMaintFreq = env.getParameters().getInt("pastry_routeSetMaintFreq");
     this.random = env.getRandomSource();
+  }
+  
+  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env) throws IOException {
+    this(nf, null, startPort, env);    
   }
   
   /**
@@ -508,7 +530,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     EpochInetSocketAddress result = null;
 
     try {
-      result = new EpochInetSocketAddress(new InetSocketAddress(InetAddress.getLocalHost(), portNumber), epoch);
+      result = new EpochInetSocketAddress(new InetSocketAddress(localAddress, portNumber), epoch);
       ServerSocket test = new ServerSocket();
       
       try {

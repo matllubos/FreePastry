@@ -164,7 +164,7 @@ public abstract class DistPastryNode extends PastryNode {
   /**
    * Method which kills a PastryNode (used only for testing).
    */
-  public void resign() {
+  public void destroy() {
     leafSetRoutineMaintenance.cancel();
     routeSetRoutineMaintenance.cancel();
   }

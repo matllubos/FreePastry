@@ -183,7 +183,7 @@ public class SourceRouteTest {
 //    PingManager.FLAG = false;
 //    Thread.sleep(120000);
     
-    node2.resign();
+    node2.destroy();
     
     Thread.sleep(40000);
     

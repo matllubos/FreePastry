@@ -345,7 +345,7 @@ public class DistTestHarnessRunner {
 
         thi.kill();
         pauseQuiet(2000);
-        ((DistPastryNode) pn).resign();
+        pn.destroy();
 
       } else if ( token.startsWith( "jt" ) ) {
         String run_name = "t0";

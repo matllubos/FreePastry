@@ -453,9 +453,9 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
   }
 
   /**
-   * Method which kills a PastryNode (used only for testing).
+   * Method which kills a PastryNode.  Note, this doesn't implicitly kill the environment.
    */
-  public void resign() {
+  public void destroy() {
   }
 }
 

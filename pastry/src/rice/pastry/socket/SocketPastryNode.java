@@ -107,9 +107,9 @@ public class SocketPastryNode extends DistPastryNode {
    * Makes this node resign from the network.  Is designed to be used for
    * debugging and testing.
    */
-  public void resign() {
+  public void destroy() {
     try {
-      super.resign();
+      super.destroy();
       srManager.resign();
     } catch (IOException e) {
       getEnvironment().getLogManager().getLogger(SocketPastryNode.class, 
