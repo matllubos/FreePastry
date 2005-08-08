@@ -225,10 +225,13 @@ public class LeafSet extends Observable implements Serializable {
 
   /**
    * Gets the current size of the leaf set.
-   *
+   * 
    * @return the size.
    */
-  public int size() { return cwSet.size() + ccwSet.size(); }
+  public int size() { 
+    // TODO: if overlaps, need to cull common nodes
+    return cwSet.size() + ccwSet.size();     
+  }
 
   /**
    * Gets the current clockwise size.
