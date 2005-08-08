@@ -62,7 +62,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
     // -- it is shared among multiple virtual nodes
     pastryNodesSorted = Collections.synchronizedSortedMap(pastryNodesSorted);
 
-    factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(port, env),
+    factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(InetAddress.getLocalHost(), port, env),
         protocol, port, env);
 
     try {
@@ -193,7 +193,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
   }
 
   protected void killNode(PastryNode pn) {
-    ((DistPastryNode) pn).resign();
+    ((DistPastryNode) pn).destroy();
   }
 
   /**

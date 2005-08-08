@@ -31,7 +31,6 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   boolean authenticate = false;
   int port;
   ServerSocket server;
-  boolean log;
 
   SmtpManager manager;
 
@@ -45,8 +44,11 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
   Environment environment;
   
-  public SmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
+  InetAddress localHost;
+  
+  public SmtpServerImpl(InetAddress localHost, int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
     super("SMTP Server Thread");
+    this.localHost = localHost;
     this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
@@ -58,11 +60,14 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();
-    this.log = log;
 
     initialize();
   }
 
+  public InetAddress getLocalHost() {
+    return localHost;
+  }
+  
   public int getPort() {
     return port;
   }
@@ -81,7 +86,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
             "Accepted connection from " + socket.getInetAddress());
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
-            (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
+            (socket.getInetAddress().equals(getLocalHost()))) {
           Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {

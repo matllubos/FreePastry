@@ -54,8 +54,11 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
 
   Environment environment;
   
-  public NonBlockingSmtpServerImpl(int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
+  InetAddress localHost;
+  
+  public NonBlockingSmtpServerImpl(InetAddress localHost, int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
     this.environment = env;
+    this.localHost = localHost;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -70,6 +73,10 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
     initialize();
   }
 
+  public InetAddress getLocalHost() {
+    return localHost;
+  }
+  
   public int getPort() {
     return port;
   }
@@ -123,7 +130,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
           "Accepted connection " + connections + " of " + MAX_CONNECTIONS + " from " + socket.getInetAddress());
       
       if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
-          (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
+          (socket.getInetAddress().equals(getLocalHost()))) {
         Thread thread = new Thread("SMTP Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {

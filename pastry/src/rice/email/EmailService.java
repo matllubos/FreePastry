@@ -1,5 +1,6 @@
 package rice.email;
 
+import java.net.InetAddress;
 import java.security.*;
 import java.util.*;
 
@@ -51,13 +52,16 @@ public class EmailService extends PostClient {
    */
   public final static String INBOX_NAME = "INBOX";
 
+  InetAddress localHost;
+  
   /**
    * Constructor
    *
    * @param post The Post service to use
    * @param keyPair The keyPair of the local user
    */
-  public EmailService(Post post, KeyPair keyPair, boolean logRewrite) {
+  public EmailService(InetAddress localHost, Post post, KeyPair keyPair, boolean logRewrite) {
+    this.localHost = localHost;
     this.post = post;
     this.keyPair = keyPair;
     this.logRewrite = logRewrite;
@@ -442,5 +446,13 @@ public class EmailService extends PostClient {
   private void log(int level, String msg) {
     post.getEnvironment().getLogManager().getLogger(EmailService.class, null).log(level, msg);
   }
+  
+  /**
+   * @return the localHost
+   */
+  public InetAddress getLocalHost() {
+    return localHost;
+  }
+
 }
 

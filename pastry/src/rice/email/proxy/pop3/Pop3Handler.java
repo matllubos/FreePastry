@@ -19,11 +19,18 @@ public class Pop3Handler {
   boolean _quitting;
   String _currentLine;
   Environment environment;
+  InetAddress localHost;
   
-  public Pop3Handler(Pop3CommandRegistry registry, UserManager manager, Environment env) {
+  
+  public Pop3Handler(InetAddress localHost, Pop3CommandRegistry registry, UserManager manager, Environment env) {
+    this.localHost = localHost;
     _registry = registry;
     _manager = manager;
     environment = env;
+  }
+  
+  public InetAddress getLocalHost() {
+    return localHost;
   }
   
   public void handleConnection(Socket socket) throws IOException {
@@ -55,10 +62,10 @@ public class Pop3Handler {
   
   void sendGreetings() {          
     String challenge = "<" + environment.getTimeSource().currentTimeMillis() + "@localhost>";
-    try {
-      challenge = "<" + environment.getTimeSource().currentTimeMillis() + "@" + InetAddress.getLocalHost().getHostName() + ">";
-    } catch (UnknownHostException e) {
-    } 
+//    try {
+      challenge = "<" + environment.getTimeSource().currentTimeMillis() + "@" + getLocalHost().getHostName() + ">";
+//    } catch (UnknownHostException e) {
+//    } 
 
     _state.setChallenge(challenge);
     

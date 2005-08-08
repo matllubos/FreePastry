@@ -36,7 +36,7 @@ public class AuthCommand extends SmtpCommand {
     } else if (mechanism.toUpperCase().equals("CRAM-MD5")) {
       try {
         long timestamp = state.getEnvironment().getTimeSource().currentTimeMillis();
-        String text = "<" + timestamp + "@" + InetAddress.getLocalHost().getHostName() + ">";
+        String text = "<" + timestamp + "@" + manager.getLocalHost().getHostName() + ">";
         conn.println("334 " + Base64.encodeBytes(text.getBytes()));
         String response = new String(Base64.decode(conn.readLine()));
         

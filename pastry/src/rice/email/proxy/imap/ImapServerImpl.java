@@ -28,8 +28,11 @@ public class ImapServerImpl extends Thread implements ImapServer {
 
   Environment environment;
   
-  public ImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
+  InetAddress localHost;
+  
+  public ImapServerImpl(InetAddress bindAddress, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
     super("IMAP Server Thread");
+    this.localHost = bindAddress;
     this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
@@ -41,6 +44,10 @@ public class ImapServerImpl extends Thread implements ImapServer {
     initialize();
   }
 
+  public InetAddress getLocalHost() {
+    return localHost; 
+  }
+  
   public int getPort() {
     return port;
   }
@@ -57,11 +64,11 @@ public class ImapServerImpl extends Thread implements ImapServer {
         log(Logger.INFO, "Accepted connection from " + socket.getInetAddress());
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
-            (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
+            (socket.getInetAddress().equals(getLocalHost()))) {
           Thread thread = new Thread("IMAP Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
-                ParserImapHandler handler = new ParserImapHandler(manager, workspace, environment);
+                ParserImapHandler handler = new ParserImapHandler(getLocalHost(), manager, workspace, environment);
                 handler.handleConnection(socket, environment);
               } catch (IOException e) {
                 logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);

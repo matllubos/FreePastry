@@ -31,12 +31,12 @@ public class IPNodeIdFactory implements NodeIdFactory {
    * @param port the port number on which this Java VM listens
    */
 
-  public IPNodeIdFactory(int port, Environment env) {
+  public IPNodeIdFactory(InetAddress localIP, int port, Environment env) {
     this.port = port;
     this.environment = env;
 
     try {
-      localIP = InetAddress.getLocalHost();
+      this.localIP = localIP;
       if (localIP.isLoopbackAddress())
         throw new Exception(
             "got loopback address: nodeIds will not be unique across computers!");

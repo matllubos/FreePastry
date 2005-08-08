@@ -1,6 +1,7 @@
 package rice.email.proxy.smtp.manager;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.util.*;
 
 import org.jfree.chart.labels.StandardContourToolTipGenerator;
@@ -50,6 +51,10 @@ public class SimpleManager implements SmtpManager {
     this.gateway = gateway;
     this.address = address;
     this.server = server;
+  }
+  
+  public InetAddress getLocalHost() {
+    return email.getLocalHost(); 
   }
 
   public String checkSender(SmtpState state, MailAddress sender) {
@@ -158,7 +163,7 @@ public class SimpleManager implements SmtpManager {
     
     log(Logger.FINER, "Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
-    Email email = PostMessage.parseEmail(state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
+    Email email = PostMessage.parseEmail(getLocalHost(), state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
     
     ExternalContinuation d = new ExternalContinuation();
     this.email.sendMessage(email, d);

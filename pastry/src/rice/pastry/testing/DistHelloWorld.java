@@ -52,7 +52,7 @@ public class DistHelloWorld {
    */
   public DistHelloWorld(Environment env) throws IOException {
     environment = env;
-    factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(port, env),
+    factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(InetAddress.getLocalHost(), port, env),
         protocol, port, env);
     pastryNodes = new Vector();
     helloClients = new Vector();

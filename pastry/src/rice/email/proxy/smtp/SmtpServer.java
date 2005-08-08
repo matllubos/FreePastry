@@ -1,5 +1,7 @@
 package rice.email.proxy.smtp;
 
+import java.net.InetAddress;
+
 import rice.environment.Environment;
 
 public interface SmtpServer {
@@ -15,4 +17,6 @@ public interface SmtpServer {
   public void incrementFail();
 
   public Environment getEnvironment();
+  
+  public InetAddress getLocalHost();
 }

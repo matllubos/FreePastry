@@ -31,10 +31,17 @@ final class ParserImapHandler implements Quittable {
     ImapState state;
     ImapLineParser cmdParser;
 
-    public ParserImapHandler(UserManager manager, Workspace workspace, Environment env) {
+    InetAddress localHost;
+    
+    public ParserImapHandler(InetAddress localHost, UserManager manager, Workspace workspace, Environment env) {
+      this.localHost = localHost;
       state = new ImapState(manager, workspace, env);        
     }
 
+    public InetAddress getLocalHost() {
+      return localHost; 
+    }
+    
     public void handleConnection(final Socket socket, Environment env) throws IOException {
         conn = new ImapConnection(this, socket, env);
         cmdParser = new ImapLineParser();
@@ -71,11 +78,11 @@ final class ParserImapHandler implements Quittable {
     protected void sendGreetings() {
       SimpleDateFormat df = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z (z)");
       
-      try {
-        conn.println("* OK [CAPABILITY IMAP4REV1 AUTH=CRAM-MD5] " + InetAddress.getLocalHost().getHostName() + " IMAP4rev1 2001.315 at " + df.format(new Date()));
-      } catch (UnknownHostException e) {
-        conn.println("* OK [CAPABILITY IMAP4REV1 AUTH=CRAM-MD5] IMAP4rev1 2001.315 at " + df.format(new Date()));
-      } 
+//s      try {
+        conn.println("* OK [CAPABILITY IMAP4REV1 AUTH=CRAM-MD5] " + getLocalHost().getHostName() + " IMAP4rev1 2001.315 at " + df.format(new Date()));
+//      } catch (UnknownHostException e) {
+//        conn.println("* OK [CAPABILITY IMAP4REV1 AUTH=CRAM-MD5] IMAP4rev1 2001.315 at " + df.format(new Date()));
+//      } 
     }
 
     protected void handleCommand() throws IOException, TokenStreamException {

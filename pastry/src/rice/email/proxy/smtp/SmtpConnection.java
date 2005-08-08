@@ -13,16 +13,6 @@ public class SmtpConnection {
     private SmtpServer server;
 
 
-    {
-        try
-        {
-            serverAddress = InetAddress.getLocalHost();
-        }
-        catch (UnknownHostException uhe)
-        {
-        }
-    }
-
     // networking/io stuff
     Socket sock;
     InetAddress clientAddress;
@@ -33,6 +23,7 @@ public class SmtpConnection {
     String heloName;
 
     public SmtpConnection(SmtpHandler handler, Socket sock, SmtpServer server) throws IOException {
+      serverAddress = server.getLocalHost();
         if (sock != null) {
           this.sock = sock;
           sock.setSoTimeout(TIMEOUT_MILLIS);
@@ -114,6 +105,6 @@ public class SmtpConnection {
 
     public boolean isLocal() throws IOException {
       return (sock.getInetAddress().isLoopbackAddress() ||
-              sock.getInetAddress().equals(InetAddress.getLocalHost()));
+              sock.getInetAddress().equals(server.getLocalHost()));
     }
 }

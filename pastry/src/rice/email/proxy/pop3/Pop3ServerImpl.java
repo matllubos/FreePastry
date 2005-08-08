@@ -23,8 +23,11 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
 
   Environment environment;
   
-  public Pop3ServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
+  InetAddress localHost;
+
+  public Pop3ServerImpl(InetAddress localHost, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
     super("POP3 Server Thread");
+    this.localHost = localHost;
     this.environment = env;
     this.acceptNonLocal = acceptNonLocal;
     this.port = port;
@@ -33,6 +36,10 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
     this.registry.load(environment);
     
     initialize();
+  }
+  
+  public InetAddress getLocalHost() {
+    return localHost;
   }
   
   public int getPort() {
@@ -51,11 +58,11 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
         log(Logger.INFO, "Accepted connection from " + socket.getInetAddress());
         
         if (acceptNonLocal || socket.getInetAddress().isLoopbackAddress() ||
-            (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
+            (socket.getInetAddress().equals(getLocalHost()))) {
           Thread thread = new Thread("POP3 Server Thread for " + socket.getInetAddress()) {
             public void run() {
               try {
-                Pop3Handler handler = new Pop3Handler(registry, manager, environment);
+                Pop3Handler handler = new Pop3Handler(getLocalHost(), registry, manager, environment);
                 handler.handleConnection(socket);
               } catch (IOException e) {
                 logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);

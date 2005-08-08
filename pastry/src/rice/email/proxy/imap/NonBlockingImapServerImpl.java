@@ -30,8 +30,11 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
 
   Environment environment;
   
-  public NonBlockingImapServerImpl(int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
+  InetAddress localHost;
+  
+  public NonBlockingImapServerImpl(InetAddress bindAddress, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
     this.environment = env;
+    this.localHost = bindAddress;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -43,6 +46,10 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
     initialize();
   }
 
+  public InetAddress getLocalHost() {
+    return localHost; 
+  }
+  
   public int getPort() {
     return port;
   }
@@ -77,11 +84,11 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
           "Accepted connection from " + socket.getInetAddress());
       
       if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
-          (socket.getInetAddress().equals(InetAddress.getLocalHost()))) {
+          (socket.getInetAddress().equals(getLocalHost()))) {
         Thread thread = new Thread("IMAP Server Thread for " + socket.getInetAddress()) {
           public void run() {
             try {
-              ParserImapHandler handler = new ParserImapHandler(manager, workspace, environment);
+              ParserImapHandler handler = new ParserImapHandler(getLocalHost(), manager, workspace, environment);
               handler.handleConnection(socket, environment);
             } catch (IOException e) {
               environment.getLogManager().getLogger(NonBlockingImapServerImpl.class, null).logException(Logger.WARNING,

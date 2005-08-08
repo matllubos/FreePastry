@@ -1,5 +1,7 @@
 package rice.email.proxy.smtp.manager;
 
+import java.net.InetAddress;
+
 import rice.Continuation;
 import rice.email.proxy.mail.MailAddress;
 
@@ -19,4 +21,6 @@ public interface SmtpManager
     void send(SmtpState state, boolean local) throws Exception;
     
     void isPostAddress(String string, Continuation c);
+    
+    public InetAddress getLocalHost();
 }

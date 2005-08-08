@@ -2,6 +2,7 @@
 package rice.pastry.standard;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.security.*;
 import java.security.cert.*;
 import java.security.spec.*;
@@ -36,10 +37,10 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
   /**
    * Constructor.
    */
-  public CertifiedNodeIdFactory(int port, Environment env) {
+  public CertifiedNodeIdFactory(InetAddress localIP, int port, Environment env) {
     this.environment = env;
     this.port = port;
-    this.realFactory = new IPNodeIdFactory(port, env);
+    this.realFactory = new IPNodeIdFactory(localIP, port, env);
   }
   
   /**
