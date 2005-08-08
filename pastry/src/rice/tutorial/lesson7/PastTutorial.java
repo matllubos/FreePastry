@@ -213,8 +213,6 @@ public class PastTutorial {
           .println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
       throw e;
     }
-    Thread.sleep(5000);
-    System.exit(0);
   }
 }
 
