@@ -114,6 +114,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   public void addToLeafSet(NodeHandle nh) {
     leafSet.put(nh);
     if (!observing.contains(nh)) {
+      log(Logger.FINE, "CJP observing "+nh);
       nh.addObserver(this);
       observing.add(nh);
     }
@@ -358,7 +359,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   public void update(Observable arg0, Object arg) {
     
-    // we wen't offline for whatever reason.  Now we need to try to come back online.
+    // we went offline for whatever reason.  Now we need to try to come back online.
     if (arg0 == localNode) {
       if (((Boolean)arg).booleanValue() == false) {
         setReady();
@@ -372,7 +373,10 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         if (!gotResponse.contains(nsu.handle())) {
           sendTheMessage(nsu.handle(),false);
         }
+      } else {
+        doneProbing(); 
       }
+      
       return;
     }
     
@@ -387,6 +391,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         // want to throw the exception if it is something we don't recognize
       NodeHandle nh = (NodeHandle)arg0;
       if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
+        log(Logger.FINE, "CJP:"+arg0+" declared dead");
         failed.add(nh);
         leafSet.remove(nh); 
         doneProbing();
