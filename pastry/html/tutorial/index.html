@@ -216,7 +216,7 @@ new feature of FreePastry 1.4.2.  The environment serves FreePastry in 5 key way
   code is run, it retains the parameters.</li>
   <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
   thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
-  synchronization than several threads.</li> 
+  synchronization than several threads.  Note that the SelectorManager is a Daemon thread that will cause the JVM to not exit when the main method ends.  See below to find out how to destroy the SelectorManager.</li> 
   <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
   you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
   where some nodes have incorrect system clocks due to misconfigured NTP servers.</li>
@@ -237,6 +237,9 @@ The default constructor for an environment looks in the classpath for a params f
 the jar with the included ant task, or used the jar from the web, this should work automagically.  If you are compiling FreePastry
 from an IDE (such as eclipse) or from the command line (javac) then you will need to make sure to put the freepastry.params file
 located in <b>jars/freepastry</b> in your classpath, or use a different contstructor for the Environment.<br/>
+
+<h3>My JVM won't exit, or How should I get rid of an environment?</h3>
+The SelectorManager has a daemon thread that is used to handle communication for the PastryNode.  For the JVM to be able to exit, you will need to properly destroy the environment, by calling environment.destroy().  This will call store on the parameters, and destroy the selector thread.  Of course, you can also call System.exit(), but that is generally considered bad form.<br/><br/>
 
 This should be sufficient information for you to continue with the tutorial.  You can learn more in Lesson 10 Advanced Environment.
 <hr/>
