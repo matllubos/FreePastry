@@ -454,8 +454,11 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
 
   /**
    * Method which kills a PastryNode.  Note, this doesn't implicitly kill the environment.
+   * 
+   * Make sure to call super.destroy() !!!
    */
   public void destroy() {
+    myMessageDispatch.destroy();
   }
 }
 

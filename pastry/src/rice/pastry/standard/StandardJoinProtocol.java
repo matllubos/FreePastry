@@ -7,6 +7,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 import rice.pastry.security.*;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.join.*;
 
 import java.util.*;
@@ -22,15 +23,14 @@ import java.util.*;
  * @author Y. Charlie Hu
  */
 
-public class StandardJoinProtocol implements MessageReceiver {
-	protected PastryNode localNode;
+public class StandardJoinProtocol extends PastryAppl {
 	protected NodeHandle localHandle;
 	protected PastrySecurityManager security;
 	protected RoutingTable routeTable;
 	protected LeafSet leafSet;
 
-	protected Address address;
-
+  protected Credentials cred = new PermissiveCredentials();
+  
 	/**
 	 * Constructor.
 	 *
@@ -44,10 +44,9 @@ public class StandardJoinProtocol implements MessageReceiver {
 		PastrySecurityManager sm,
 		RoutingTable rt,
 		LeafSet ls) {
-		localNode = ln;
+    super(ln);
 		localHandle = lh;
 		security = sm;
-		address = new JoinAddress();
 
 		routeTable = rt;
 		leafSet = ls;
@@ -58,9 +57,8 @@ public class StandardJoinProtocol implements MessageReceiver {
 	 *
 	 * @return gets the address.
 	 */
-
 	public Address getAddress() {
-		return address;
+		return new JoinAddress();
 	}
 
 	/**
@@ -81,11 +79,11 @@ public class StandardJoinProtocol implements MessageReceiver {
 				if (jr.accepted() == false) {
 					// this is the terminal node on the request path
 					//leafSet.put(nh);
-          if (localNode.isReady()) {
+          if (thePastryNode.isReady()) {
   					jr.acceptJoin(localHandle, leafSet);
 	  				nh.receiveMessage(jr);
           } else {
-            localNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.INFO,
+            thePastryNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.INFO,
                 "NOTE: Dropping incoming JoinRequest " + jr + " because local node is not ready!");
           }
 				} else { // this is the node that initiated the join request in the first place
@@ -94,7 +92,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 					jh = security.verifyNodeHandle(jh);
 
 					if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
-            localNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.WARNING,
+            thePastryNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.WARNING,
 							"NodeId collision, unable to join: " + localHandle + ":" + jh);
 					} else if (jh.isAlive() == true) { // the join handle is alive
 						routeTable.put(jh);
@@ -127,7 +125,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 
 			jh = security.verifyNodeHandle(jh);
 
-      int base = localNode.getRoutingTable().baseBitLength();
+      int base = thePastryNode.getRoutingTable().baseBitLength();
 
 			int msdd = localId.indexOfMSDD(nid, base);
 			int last = jr.lastRow();
@@ -147,7 +145,7 @@ public class StandardJoinProtocol implements MessageReceiver {
 			nh = security.verifyNodeHandle(nh);
 
 			if (nh.isAlive() == true) {
-				JoinRequest jr = new JoinRequest(localHandle, localNode.getRoutingTable().baseBitLength());
+				JoinRequest jr = new JoinRequest(localHandle, thePastryNode.getRoutingTable().baseBitLength());
 
 				RouteMessage rm =
 					new RouteMessage(
@@ -161,8 +159,13 @@ public class StandardJoinProtocol implements MessageReceiver {
 		}
 	}
   
+  /**
+   * Can be overloaded to do additional things before going ready.  For example,
+   * verifying that other nodes are aware of us, so that consistent routing is 
+   * guaranteed.
+   */
   protected void setReady() {
-    localNode.setReady(); 
+    thePastryNode.setReady(); 
   }
 
 	/**
@@ -216,6 +219,23 @@ public class StandardJoinProtocol implements MessageReceiver {
 				*/
 			}
 		}
-
 	}
+  
+  /**
+   * Should not be called becasue we are overriding the receiveMessage() interface anyway.
+   */
+  public void messageForAppl(Message msg) {
+    throw new RuntimeException("Should not be called.");
+  }
+
+  public Credentials getCredentials() {
+    return cred;
+  }
+    
+  /**
+   * We always want to receive messages.
+   */
+  public boolean deliverWhenNotReady() {
+    return true;
+  }  
 }

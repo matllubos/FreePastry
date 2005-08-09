@@ -323,7 +323,29 @@ public abstract class PastryAppl implements MessageReceiver
    * 
    * As of FreePastry 1.4.1, replaced by PastryNode Observer pattern.
    */
-  public void notifyReady() {}  
+  public void notifyReady() {}
+
+  /**
+   * Instructs the MessageDispatch how to behave when the PastryNode is not ready.
+   * 
+   * An application can override this method to return true if it wishes to receive
+   * messages before Pastry is ready().
+   * 
+   * Most applications should leave this as false, so that their application does 
+   * not have inconsistent routing.  However Pastry's protocols (such as the join protocol)
+   * need to receive messages before pastry is ready().  This is because they are attempting
+   * to make pastry ready().
+   * 
+   * @return false unless the node is a service
+   */
+  public boolean deliverWhenNotReady() {
+    return false;
+  }  
+  
+  /**
+   * Called when PastryNode is destroyed.  Can be overloaded by applications.
+   */
+  public void destroy() {}
 }
 
 

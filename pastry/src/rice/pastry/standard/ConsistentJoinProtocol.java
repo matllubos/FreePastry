@@ -104,7 +104,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       sendTheMessage(nh, false);      
     }
     
-    retryTask = localNode.scheduleMsg(new RequestFromEveryoneMsg(getAddress()), RETRY_INTERVAL, RETRY_INTERVAL);
+    retryTask = thePastryNode.scheduleMsg(new RequestFromEveryoneMsg(getAddress()), RETRY_INTERVAL, RETRY_INTERVAL);
   }  
   
   /**
@@ -133,7 +133,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   TimerTask retryTask;
   
   public void requestFromEveryoneWeHaventHeardFrom() {
-    if (localNode.isReady()) {      
+    if (thePastryNode.isReady()) {      
       retryTask.cancel();
       return; 
     }
@@ -162,7 +162,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    *
    */
   public void otherNodesMaySuspectFaulty() {
-    localNode.setReady(false);
+    thePastryNode.setReady(false);
   }
   
   /**
@@ -194,7 +194,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       // failed_i := failed_i - {j}
       failed.remove(j);
       
-      if (localNode.isReady()) {
+      if (thePastryNode.isReady()) {
         if (cjm.request) {
           sendTheMessage(j, true); 
         }
@@ -298,9 +298,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       }
       
       if (numToHearFrom == 0) {
-        if (!localNode.isReady()) {
+        if (!thePastryNode.isReady()) {
           // active_i = true;
-          localNode.setReady(); 
+          thePastryNode.setReady(); 
           retryTask.cancel();
           tryingToGoReady = false;
         }
@@ -338,7 +338,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     
     // todo, may want to repeat this message as long as the node is alive if we 
     // are worried about rare message drops
-    if (localNode.isReady()) {
+    if (thePastryNode.isReady()) {
       failed.clear(); 
     }    
     nh.receiveMessage(new ConsistentJoinMsg(getAddress(),leafSet,failed,!reply));      
@@ -346,11 +346,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   
 
   private void log(int level, String s) {
-    localNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).log(level,s);
+    thePastryNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).log(level,s);
   }
   
   private void logException(int level, String s, Throwable t) {
-    localNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).logException(level,s, t);
+    thePastryNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).logException(level,s, t);
   }
   
 
@@ -360,14 +360,14 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   public void update(Observable arg0, Object arg) {
     
     // we went offline for whatever reason.  Now we need to try to come back online.
-    if (arg0 == localNode) {
+    if (arg0 == thePastryNode) {
       if (((Boolean)arg).booleanValue() == false) {
         setReady();
       }
     }
     
     if (arg instanceof NodeSetUpdate) {
-      if (localNode.isReady()) return;
+      if (thePastryNode.isReady()) return;
       NodeSetUpdate nsu = (NodeSetUpdate)arg;
       if (nsu.wasAdded()) {
         if (!gotResponse.contains(nsu.handle())) {
@@ -381,7 +381,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     }
     
     if (arg0 instanceof NodeHandle) {
-      if (localNode.isReady()) {
+      if (thePastryNode.isReady()) {
         observing.remove(arg0);
         arg0.deleteObserver(this);
         return; 
@@ -399,7 +399,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   
       if (((Integer) arg) == NodeHandle.DECLARED_LIVE) {
         failed.remove(nh);
-        if (!localNode.isReady()) {
+        if (!thePastryNode.isReady()) {
           if (leafSet.test(nh)) {
             leafSet.put(nh);
             sendTheMessage(nh, false);
@@ -430,5 +430,10 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     if (loopTime > delayInterest()) {
       otherNodesMaySuspectFaulty(); 
     }
+  }
+  
+  public void destroy() {
+    log(Logger.INFO, "CJP: destroy() called");
+    thePastryNode.getEnvironment().getSelectorManager().removeLoopObserver(this);
   }
 }

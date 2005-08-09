@@ -5,9 +5,11 @@ import java.util.Hashtable;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.pastry.*;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeSet;
 import rice.pastry.PastryNode;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
 import rice.pastry.leafset.LeafSet;
@@ -17,6 +19,7 @@ import rice.pastry.messaging.Address;
 import rice.pastry.messaging.Message;
 import rice.pastry.messaging.MessageReceiver;
 import rice.pastry.routing.RoutingTable;
+import rice.pastry.security.*;
 import rice.pastry.security.PastrySecurityManager;
 
 /**
@@ -26,15 +29,13 @@ import rice.pastry.security.PastrySecurityManager;
  *
  * @author Alan Mislove
  */
-public class PeriodicLeafSetProtocol implements MessageReceiver {
+public class PeriodicLeafSetProtocol extends PastryAppl {
 
 	protected NodeHandle localHandle;
 	protected PastryNode localNode;
 	protected PastrySecurityManager security;
 	protected LeafSet leafSet;
 	protected RoutingTable routeTable;
-
-	private Address address;
 
   /**
    * NodeHandle -> Long
@@ -48,11 +49,14 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
   public final int PING_NEIGHBOR_PERIOD;
   public final int CHECK_LIVENESS_PERIOD;
   
+  ScheduledMessage pingNeighborMessage;
+  
   /**
    * Builds a periodic leafset protocol
    *
    */
 	public PeriodicLeafSetProtocol(PastryNode ln, NodeHandle local, PastrySecurityManager sm, LeafSet ls, RoutingTable rt) {
+    super(ln);
 		this.localNode = ln;
 		this.localHandle = local;
 		this.security = sm;
@@ -65,18 +69,8 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
     
     // Removed after meeting on 5/5/2005  Don't know if this is always the appropriate policy.
     //leafSet.addObserver(this);
-		address = new LeafSetProtocolAddress();
-    localNode.scheduleMsgAtFixedRate(new InitiatePingNeighbor(),
+    pingNeighborMessage = localNode.scheduleMsgAtFixedRate(new InitiatePingNeighbor(),
         PING_NEIGHBOR_PERIOD, PING_NEIGHBOR_PERIOD);
-	}
-
-	/**
-	 * Gets the address.
-	 *
-	 * @return the address.
-	 */
-	public Address getAddress() {
-		return address;
 	}
 
 	/**
@@ -200,4 +194,40 @@ public class PeriodicLeafSetProtocol implements MessageReceiver {
 //      }
 //    }
 //  }
+  
+  /**
+   * Should not be called becasue we are overriding the receiveMessage() interface anyway.
+   */
+  public void messageForAppl(Message msg) {
+    throw new RuntimeException("Should not be called.");
+  }
+  
+  protected Credentials cred = new PermissiveCredentials();
+
+  public Credentials getCredentials() {
+    return cred;
+  }
+  
+  /**
+   * Get address.
+   *
+   * @return gets the address.
+   */
+  public Address getAddress() {
+    return new LeafSetProtocolAddress();
+  }
+
+  /**
+   * We always want to receive messages.
+   */
+  public boolean deliverWhenNotReady() {
+    return true;
+  }  
+  
+  public void destroy() {
+    thePastryNode.getEnvironment().getLogManager()
+      .getLogger(PeriodicLeafSetProtocol.class, null).log(Logger.INFO, "PLSP: destroy() called");
+    pingNeighborMessage.cancel();
+  }
+
 }

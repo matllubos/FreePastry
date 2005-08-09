@@ -115,7 +115,7 @@ public class MessageDispatch {
     // PastryThread, and the only way to set a node ready is also on the ready thread.
     MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
         
-    if ((mr != null) && (!(mr instanceof PastryAppl) || localNode.isReady())) {
+    if ((mr != null) && (!(mr instanceof PastryAppl) || (((PastryAppl)mr).deliverWhenNotReady()) || localNode.isReady())) {
       Address address = msg.getDestination();
       // note we want to deliver the buffered messages first, otherwise we 
       // can get out of order messages
@@ -166,7 +166,7 @@ public class MessageDispatch {
     // deliver any buffered messages
     MessageReceiver mr = (MessageReceiver) addressBook.get(address);
     if (mr != null) {    
-      if (!(mr instanceof PastryAppl) || localNode.isReady()) {
+      if (!(mr instanceof PastryAppl) || (((PastryAppl)mr).deliverWhenNotReady()) || localNode.isReady()) {
         Vector vector = (Vector) buffer.remove(address);
         
         if (vector != null) {
@@ -192,5 +192,16 @@ public class MessageDispatch {
       Address addr = (Address)i.next(); 
       deliverBuffered(addr);
     }
+  }
+  
+  public void destroy() {
+    Iterator i = addressBook.values().iterator();
+    while(i.hasNext()) {
+      MessageReceiver mr = (MessageReceiver)i.next();
+      if (mr instanceof PastryAppl) {
+        ((PastryAppl)mr).destroy(); 
+      }
+    }      
+    addressBook.clear();
   }
 }
