@@ -186,9 +186,12 @@ public class SocketChannelWriter {
             buffer = serialize(queue.getFirst());
             
             if (buffer != null) {
-              if ((spn != null) && (spn instanceof SocketPastryNode))
-                ((SocketPastryNode) spn).broadcastSentListeners(queue.getFirst(), (path == null ? new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : path.toArray()), buffer.limit());
-            
+              if ((spn != null) && (spn instanceof SocketPastryNode)) {
+                ((SocketPastryNode) spn).broadcastSentListeners(queue.getFirst(), 
+                    (path == null ? 
+                        new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : 
+                        path.toArray()), buffer.limit());
+              }
               record("Sent", queue.getFirst(), buffer.limit(), path);
             } else {
               synchronized (queue) {

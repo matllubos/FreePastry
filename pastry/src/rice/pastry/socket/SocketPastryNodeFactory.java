@@ -10,6 +10,8 @@ import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.processing.Processor;
+import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
@@ -300,14 +302,21 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       if (this.environment.getLogManager() instanceof CloneableLogManager) {
         LogManager lman = ((CloneableLogManager)this.environment.getLogManager()).clone("0x"+nodeId.toStringBare());
         SelectorManager sman = this.environment.getSelectorManager();
-        if (this.environment.getParameters().getBoolean("pastry_factory_selectorPerNode")) 
+        Processor proc = this.environment.getProcessor();
+        if (this.environment.getParameters().getBoolean("pastry_factory_selectorPerNode")) {
           sman = new SelectorManager(
               nodeId.toString()+" Selector",
               this.environment.getTimeSource(),
               lman);
+        }
+        if (this.environment.getParameters().getBoolean("pastry_factory_processorPerNode")) {
+          proc = new SimpleProcessor(
+            nodeId.toString()+" Processor");
+        }
         
         environment = new Environment(
           sman,
+          proc,
           this.environment.getRandomSource(),
           this.environment.getTimeSource(),
           lman,
@@ -345,22 +354,23 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router = new StandardRouter(pn, secureMan);
-    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
-    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable, environment);
-//    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
-    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
-
     msgDisp.registerReceiver(router.getAddress(), router);
-    msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
+
+    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(localhandle, secureMan, routeTable, environment);
     msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
-    msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
+    
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
     pn.setSocketElements(proxyAddress, srManager, pool, leafSetMaintFreq, routeSetMaintFreq);
     secureMan.setLocalPastryNode(pn);
 
+
     pool.coalesce(localhandle);
     localhandle.setLocalNode(pn);
+    
+    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+//    msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
+    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
     if (bootstrap != null) 
       bootstrap.setLocalNode(pn);

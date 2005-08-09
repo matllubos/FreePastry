@@ -76,6 +76,16 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // maps a SelectionKey -> SocketConnector
   public Hashtable sockets;
   
+  /**
+   * 
+   * used to fix a memory leak caused by a hanging SM who never was put into the 
+   * sockets collection
+   * put() called when SM is constructed
+   * remove() called when added to socekts on socketOpened 
+   * emptied() in SCM.destroy()
+   */
+  private HashSet unIdentifiedSM = new HashSet();
+
   // the linked list of open source routes
   private LinkedList sourceRouteQueue;
 
@@ -90,6 +100,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   
   // whether or not we've resigned
   private boolean resigned;
+  
   
   /**
    * Constructs a new SocketManager.
@@ -336,6 +347,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   protected void socketOpened(SourceRoute path, SocketManager manager) {
     synchronized (sockets) {
       if (! sockets.containsKey(path)) {
+        unIdentifiedSM.remove(manager);
         sockets.put(path, manager);
         socketQueue.addFirst(path);
 
@@ -491,7 +503,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * Makes this node resign from the network.  Is designed to be used for
    * debugging and testing.
    */
-  public void resign() throws IOException {
+  public void destroy() throws IOException {
     resigned = true;
     
     pingManager.resign();
@@ -501,6 +513,16 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
     while (sourceRouteQueue.size() > 0) 
       ((SourceRouteManager) sourceRouteQueue.getFirst()).close();
+        
+    // anything somehow left in sockets?
+    while (sockets.size() > 0) {
+      ((SocketManager) sockets.values().iterator().next()).close();   
+    }
+    
+    // any left in un
+    while (unIdentifiedSM.size() > 0) {
+      ((SocketManager) unIdentifiedSM.iterator().next()).close();
+    }
     
     key.channel().close();
     key.cancel();    
@@ -775,6 +797,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           key.attach(null);
           key = null;
         }
+        
+        unIdentifiedSM.remove(this);
         
         if (channel != null) 
           channel.close();
@@ -1377,7 +1401,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       
       // verify the buffer
       if (Arrays.equals(array, HEADER_DIRECT)) {
-        new SocketManager(key);
+        unIdentifiedSM.add(new SocketManager(key));
       } else if (Arrays.equals(array, HEADER_SOURCE_ROUTE)) {
         new SourceRouteManager(key);
       } else {

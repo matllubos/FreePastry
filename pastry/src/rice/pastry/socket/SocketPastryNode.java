@@ -106,14 +106,29 @@ public class SocketPastryNode extends DistPastryNode {
   /**
    * Makes this node resign from the network.  Is designed to be used for
    * debugging and testing.
+   * 
+   * If run on the SelectorThread, then destroys now.  Other threads cause
+   * a task to be placed on the selector, and destroyed asap.
+   * Make sure to call super.destroy() !!!
    */
   public void destroy() {
-    try {
-      super.destroy();
-      srManager.resign();
-    } catch (IOException e) {
-      getEnvironment().getLogManager().getLogger(SocketPastryNode.class, 
-          "ERROR: Got exception " + e + " while resigning node!");
+    super.destroy();
+    if (getEnvironment().getSelectorManager().isSelectorThread()) {
+      // destroy now
+      try {
+        super.destroy();
+        srManager.destroy();
+      } catch (IOException e) {
+        getEnvironment().getLogManager().getLogger(SocketPastryNode.class, 
+            "ERROR: Got exception " + e + " while resigning node!");
+      }
+    } else {
+      // schedule to be destroyed on the selector
+      getEnvironment().getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          destroy();
+        }
+      });
     }
   }
 }

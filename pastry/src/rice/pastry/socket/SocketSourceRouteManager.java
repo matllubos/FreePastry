@@ -83,8 +83,8 @@ public class SocketSourceRouteManager {
    * Makes this node resign from the network.  Is designed to be used for
    * debugging and testing.
    */
-  public void resign() throws IOException {
-    manager.resign();
+  public void destroy() throws IOException {
+    manager.destroy();
   }
   
   /**
