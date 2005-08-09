@@ -31,14 +31,6 @@ import sun.misc.SignalHandler;
  */
 public abstract class DistPastryNode extends PastryNode {
   
-  // the queue used for processing requests
-  public static ProcessingQueue QUEUE = new ProcessingQueue();
-  public static ProcessingThread THREAD = new ProcessingThread(QUEUE);
-  
-  static {
-    THREAD.start();
-    THREAD.setPriority(Thread.MIN_PRIORITY);
-  }
   
   // Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
   // 0 means never.
@@ -163,8 +155,10 @@ public abstract class DistPastryNode extends PastryNode {
 
   /**
    * Method which kills a PastryNode (used only for testing).
+   * Make sure to call super.destroy() !!!
    */
   public void destroy() {
+    super.destroy();
     leafSetRoutineMaintenance.cancel();
     routeSetRoutineMaintenance.cancel();
   }
@@ -236,115 +230,8 @@ public abstract class DistPastryNode extends PastryNode {
    * @param command The command to return the result to once it's done
    */
   public void process(Executable task, Continuation command) {
-    QUEUE.enqueue(new ProcessingRequest(task, command, getEnvironment()));
+    getEnvironment().getProcessor().process(task, command, getEnvironment().getSelectorManager(), getEnvironment().getTimeSource(), getEnvironment().getLogManager());
   }
   
-  private static class ProcessingThread extends Thread {
-    ProcessingQueue queue;
-	   
-	   public ProcessingThread(ProcessingQueue queue){
-       super("Dedicated Processing Thread");
-       this.queue = queue;
-	   }
-	   
-	   public void run() {
-       while (true) {
-         ProcessingRequest e = queue.dequeue();
-         
-         e.run();
-       }
-	   }
-  }
-  
-  public static class ProcessingQueue {
-    
-    List q = new LinkedList();
-	  int capacity = -1;
-	  
-	  public ProcessingQueue() {
-	     /* do nothing */
-	  }
-	  
-	  public ProcessingQueue(int capacity) {
-	     this.capacity = capacity;
-	  }
-    
-    public synchronized int getLength() {
-      return q.size();
-    }
-	  
-	  public synchronized void enqueue(ProcessingRequest request) {
-      if (capacity < 0 || q.size() < capacity) {
-			  q.add(request);
-			  notifyAll();
-		  } else {
-			  request.returnError(new ProcessingQueueOverflowException());
-      }
-	  }
-	  
-	  public synchronized ProcessingRequest dequeue() {
-      while (q.isEmpty()) {
-        try {
-          wait();
-        } catch (InterruptedException e) {
-        }
-      }
-      
-      return (ProcessingRequest) q.remove(0);
-    }
-	}
-
-  private static class ProcessingRequest {
-    Continuation c;
-    Executable r;
-    Environment environment;
-    
-		public ProcessingRequest(Executable r, Continuation c, Environment env){
-      this.r = r;
-      this.c = c;
-      this.environment = env;
-		}
-    
-    public void returnResult(Object o) {
-      c.receiveResult(o); 
-    }
-    
-    public void returnError(Exception e) {
-      c.receiveException(e); 
-    }
-    
-    public void run() {
-      environment.getLogManager().getLogger(DistPastryNode.class, null).log(Logger.FINER,
-        "COUNT: Starting execution of " + this);
-      try {
-      long start = environment.getTimeSource().currentTimeMillis();
-        final Object result = r.execute();
-        environment.getLogManager().getLogger(getClass(), null).log(Logger.FINEST,"QT: " + (environment.getTimeSource().currentTimeMillis() - start) + " " + r.toString());
-
-        environment.getSelectorManager().invoke(new Runnable() {
-          public void run() {
-            returnResult(result);
-          }
-          public String toString(){
-            return "return ProcessingRequest for " + r + " to " + c;
-          }
-        });
-      } catch (final Exception e) {
-        environment.getSelectorManager().invoke(new Runnable() {
-          public void run() {
-            returnError(e);
-          }
-          public String toString(){
-            return "return ProcessingRequest for " + r + " to " + c;
-          }
-        });
-      }
-      environment.getLogManager().getLogger(DistPastryNode.class, null).log(Logger.FINER,
-        "COUNT: Done execution of " + this);      
-    }
-	}
-  
-  public static class ProcessingQueueOverflowException extends Exception {
-  }
 }
 

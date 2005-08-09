@@ -31,6 +31,7 @@ pastry_messageDispatch_bufferSize = 32
 # this causes the logger to prepend all entries with the nodeid
 pastry_factory_multipleNodes = true
 pastry_factory_selectorPerNode = false
+pastry_factory_processorPerNode = false
 # number of bootstap nodehandles to fetch in parallel
 pastry_factory_bootsInParallel = 1
 

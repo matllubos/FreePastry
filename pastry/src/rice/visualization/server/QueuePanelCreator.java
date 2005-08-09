@@ -3,6 +3,7 @@ package rice.visualization.server;
 import rice.visualization.data.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.processing.simple.ProcessingQueue;
 import rice.pastry.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;

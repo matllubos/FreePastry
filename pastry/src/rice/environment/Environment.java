@@ -10,6 +10,8 @@ import rice.environment.logging.file.FileLogManager;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.processing.Processor;
+import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
@@ -29,6 +31,7 @@ public class Environment {
   public static final String[] defaultParamFileArray = {"freepastry"};
    
   private SelectorManager selectorManager;
+  private Processor processor;
   private RandomSource randomSource;
   private TimeSource time;
   private LogManager logging;
@@ -45,12 +48,13 @@ public class Environment {
    * @param lm the LogManager.  Default: rice.environment.logging.simple.SimpleLogManager
    * @param props the Properties.  Default: empty properties
    */
-  public Environment(SelectorManager sm, RandomSource rs, TimeSource time, LogManager lm, Parameters params) {
+  public Environment(SelectorManager sm, Processor proc, RandomSource rs, TimeSource time, LogManager lm, Parameters params) {
     this.selectorManager = sm;
     this.randomSource = rs;
     this.time = time; 
     this.logging = lm;
     this.params = params;
+    this.processor = proc;
     
     if (params == null) {
       throw new IllegalArgumentException("params cannot be null"); 
@@ -67,7 +71,7 @@ public class Environment {
    * @throws IOException
    */
   public Environment(String[] orderedDefaultFiles, String paramFileName) {
-    this(null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName));
+    this(null,null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName));
   }
   
   public Environment(String paramFileName) {
@@ -101,6 +105,9 @@ public class Environment {
     if (selectorManager == null) {      
       selectorManager = generateDefaultSelectorManager(time, logging); 
     }
+    if (processor == null) {      
+      processor = generateDefaultProcessor(logging, time, selectorManager); 
+    }
   }
   
   public static RandomSource generateDefaultRandomSource(Parameters params) {
@@ -122,9 +129,16 @@ public class Environment {
     return new SelectorManager("Default", time, logging);
   }
   
+  public static Processor generateDefaultProcessor(LogManager logging, TimeSource time, SelectorManager selector) {
+    return new SimpleProcessor("Default");
+  }
+  
   // Accessors
   public SelectorManager getSelectorManager() {
     return selectorManager; 
+  }
+  public Processor getProcessor() {
+    return processor; 
   }
   public RandomSource getRandomSource() {
     return randomSource; 
@@ -150,6 +164,7 @@ public class Environment {
       logging.getLogger(Environment.class, null).logException(Logger.WARNING, "Error during shutdown",ioe); 
     }
     selectorManager.destroy();
+    processor.destroy();
   }
 }
 

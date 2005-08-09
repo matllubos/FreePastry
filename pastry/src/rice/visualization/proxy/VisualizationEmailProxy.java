@@ -8,6 +8,7 @@ import rice.email.proxy.EmailProxy;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.environment.processing.simple.SimpleProcessor;
 import rice.p2p.multiring.MultiringNode;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.dist.DistPastryNode;
@@ -67,7 +68,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           server.addPanelCreator(new GlacierPanelCreator((GlacierImpl) aggregateStore));
       }
       
-      server.addPanelCreator(new QueuePanelCreator(environment, DistPastryNode.QUEUE, rice.persistence.PersistentStorage.QUEUE));
+      server.addPanelCreator(new QueuePanelCreator(environment, ((SimpleProcessor)environment.getProcessor()).getQueue(), rice.persistence.PersistentStorage.QUEUE));
       if (smtp != null)
         server.addPanelCreator(new EmailPanelCreator(timer, smtp));
       
