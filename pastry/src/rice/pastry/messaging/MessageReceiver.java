@@ -14,6 +14,5 @@ public interface MessageReceiver {
    * 
    * @param msg the message.
    */
-
   public void receiveMessage(Message msg);
 }
