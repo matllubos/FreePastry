@@ -28,9 +28,6 @@ public class SelectorManager extends Thread implements Timer {
   // the maximal time to sleep on a select operation
   public static int TIMEOUT = 500;
 
-  // The static selector manager which is used by all applications
-  private static SelectorManager manager;
-
   // the underlying selector used
   protected Selector selector;
 
@@ -424,8 +421,8 @@ public class SelectorManager extends Thread implements Timer {
    * 
    * @return Whether or not this is the selector thread
    */
-  public static boolean isSelectorThread() {
-    return (Thread.currentThread() == manager);
+  public boolean isSelectorThread() {
+    return (Thread.currentThread() == this);
   }
 
   /**
