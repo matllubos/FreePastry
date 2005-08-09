@@ -63,7 +63,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
 
     // by properly setting the params first, the enviornment will use
     // the specified seed when creating a default RandomSource
-    Environment env = new Environment(null, null, null, null, params);
+    Environment env = new Environment(null, null, null, null, null, params);
 
     parseArgs(args);
     SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest(env);

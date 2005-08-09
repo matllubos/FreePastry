@@ -19,6 +19,7 @@ import rice.environment.logging.*;
 import rice.environment.logging.file.RotatingLogManager;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.processing.Processor;
 import rice.environment.random.RandomSource;
 import rice.environment.time.TimeSource;
 import rice.p2p.aggregation.*;
@@ -1509,8 +1510,9 @@ public class PostProxy {
       RandomSource randomSource = Environment.generateDefaultRandomSource(parameters);
       RotatingLogManager logManager = new RotatingLogManager(timeSource, parameters);
       SelectorManager selectorManager = Environment.generateDefaultSelectorManager(timeSource, logManager);
+      Processor proc = Environment.generateDefaultProcessor(logManager, timeSource, selectorManager);
       logManager.startRotateTask(selectorManager);
-      Environment env = new Environment(selectorManager, randomSource, timeSource, logManager, parameters);
+      Environment env = new Environment(selectorManager, proc, randomSource, timeSource, logManager, parameters);
       environment = env;
       
       if (localHost == null) {      

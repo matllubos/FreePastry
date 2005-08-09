@@ -74,7 +74,8 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
       if (this.environment.getLogManager() instanceof CloneableLogManager) {
         environment = new Environment(
-          this.environment.getSelectorManager(),
+            this.environment.getSelectorManager(),
+            this.environment.getProcessor(),
           this.environment.getRandomSource(),
           this.environment.getTimeSource(),
           ((CloneableLogManager)this.environment.getLogManager()).clone("0x"+nodeId.toStringBare()),
