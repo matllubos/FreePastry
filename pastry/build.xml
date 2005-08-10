@@ -61,7 +61,7 @@
     <antlr target="${src.dir}/rice/email/proxy/imap/parser/antlr/grammer.g" />
   </target>
 
-  <target name="compile_epost" depends="make_imap_parser">
+  <target name="compile-epost" depends="make_imap_parser">
     <javac srcdir="${src.dir}"
            destdir="${build.dir}"
            classpathref="project.classpath"
@@ -91,7 +91,7 @@
   <!-- We want to do this so the line numbers match up with the prefixed license -->
   <target name="beautifythencompile">    
     <antcall target="beautifyandlicense"/>
-    <antcall target="compile_epost"/>    
+    <antcall target="compile-epost"/>    
   </target>
   
   <target name="beautifyandlicense" unless="dontbeautify">
@@ -234,7 +234,7 @@
 
   <!-- ********************** freepastry release section ********************* -->
   
-  <target name="freepastry_jar" depends="beautifythencompile">
+  <target name="freepastry-jar" depends="beautifythencompile">
     <jar destfile="pastry.jar" compress="true">
       <fileset dir="${build.dir}">
         <include name="rice/*.class"/>
@@ -271,7 +271,39 @@
     </jar>
   </target>
 
-  <target name="freepastry-release" depends="freepastry_jar,javadoc">
+  <!-- freepastry-core-jar: creates ./pastry-core.jar which excludes Glacier
+       and SplitStream, as well as rice.pastry.testing.* -->
+  <target name="freepastry-core-jar" depends="beautifythencompile">
+    <jar destfile="pastry-core.jar" compress="true">
+      <fileset dir="${build.dir}">
+        <include name="rice/*.class"/>
+        <include name="rice/environment/**/*.class"/>
+        <include name="rice/p2p/commonapi/**/*.class"/>
+        <include name="rice/p2p/past/**/*.class"/>
+        <include name="rice/p2p/replication/**/*.class"/>
+        <include name="rice/p2p/scribe/**/*.class"/>
+        <include name="rice/p2p/util/**/*.class"/> 
+        <include name="rice/pastry/*.class"/>
+        <include name="rice/pastry/client/**/*.class"/>
+        <include name="rice/pastry/commonapi/**/*.class"/>
+        <include name="rice/pastry/direct/**/*.class"/>
+        <include name="rice/pastry/dist/**/*.class"/>
+        <include name="rice/pastry/join/**/*.class"/>
+        <include name="rice/pastry/leafset/**/*.class"/>
+        <include name="rice/pastry/messaging/**/*.class"/>
+        <include name="rice/pastry/routing/**/*.class"/>
+        <include name="rice/pastry/security/**/*.class"/>
+        <include name="rice/pastry/socket/**/*.class"/>
+        <exclude name="rice/pastry/socket/testing/*.class"/>
+        <include name="rice/pastry/standard/**/*.class"/>
+        <include name="rice/persistence/**/*.class"/>
+        <include name="rice/selector/**/*.class"/>
+      </fileset>
+      <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
+    </jar>
+  </target>
+
+  <target name="freepastry-release" depends="freepastry-jar,javadoc">
     <move file="pastry.jar" tofile="FreePastry-${freepastry-version}.jar"/>
  <!--
     <tar destfile="FreePastry-${freepastry-version}-all.tgz" compression="gzip">
@@ -395,7 +427,7 @@
   
   <!-- ********************** epost section ********************* -->
   
-  <target name="epost_jar" depends="compile_epost">
+  <target name="epost-jar" depends="compile-epost">
     <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest" compress="true">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
@@ -420,7 +452,7 @@
     </jar>
   </target>
 
-  <target name="epost" depends="epost_jar">
+  <target name="epost" depends="epost-jar">
     <signjar jar="epost.jar" alias="ePOST" storepass="monkey" keystore="jars/ePOST_keystore" />
   </target>
 
