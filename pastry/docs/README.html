@@ -130,6 +130,7 @@ the Environment provides the following:
   <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
   thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
   synchronization than several threads.</li> 
+  <li><b>Processor</b> &mdash It is important that tasks done on the SelectorThread don't take long, as this is the network IO thread, and can cause other nodes to suspect you are faulty.  However, sometimes you need to do a CPU intensive task (like calculate a manifest for a bloom filter) that will cause problems if done on the SelectorThread.  For these tasks, you can use the "<i>Processor</i>.  This is simply a different thread that will be context switched automatically by the system.  Typically, you will access this by using the Node.process() or Endpoint.process() function call.  These calls result in a call to the <i>Processor</i>.  Future implementations could use more Threads for computers with several processors, or hyper-threading.</li> 
   <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than <code>System.currentTimeMillis()</code>.  This will (for example) allow 
   you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
   where some nodes have incorrect system clocks due to misconfigured NTP servers.</li>
@@ -201,7 +202,7 @@ Of course you can use helper methods to reduce typing.</p>
 
 <h4>Other notes on the Environment:</h4>
 <ul>
-<li>The main constructor takes in all 5 services that the environment provides.  Any fields that are null will be given an appropriate default value.  However, the Parameters field must be non-null to use this constructor.</li>
+<li>The main constructor takes in all 6 services that the environment provides.  Any fields that are null will be given an appropriate default value.  However, the Parameters field must be non-null to use this constructor.</li>
 <li>The default implementation of each service, except for the SelectorManager, can be found in subpackages of rice.environment.  They are named "simple" for each type of service.  (For example rice.environment.params.simple.SimpleParameters implements rice.enviornment.params.Parameters.)</li>
 </ul>
 
