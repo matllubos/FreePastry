@@ -190,13 +190,21 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @return the replica set
    */
   public NodeHandleSet replicaSet(Id id, int maxRank) {
-    return getLeafSet().replicaSet((rice.pastry.Id) id, maxRank);
+    LeafSet leafset = getLeafSet();
+    if (maxRank > leafset.maxSize() / 2 + 1) {
+      throw new IllegalArgumentException("maximum replicaSet size for this configuration exceeded; asked for "+maxRank+" but max is "+leafset.maxSize()/2+1);
+    }
+    if (maxRank > leafset.size()) {
+      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,"trying to get a replica set of size "+maxRank+" but only "+leafset.size()+" nodes in leafset");
+    }
+    
+    return leafset.replicaSet((rice.pastry.Id) id, maxRank);
   }
   
   /**
    * This methods returns an ordered set of nodehandles on which replicas of an object with
    * a given id can be stored.  The call returns nodes up to and including a node with maxRank.
-   * This call also allows the application to provide a remove "center" node, as well as
+   * This call also allows the application to provide a remote "center" node, as well as
    * other nodes in the vicinity. 
    *
    * @param id The object's id.
