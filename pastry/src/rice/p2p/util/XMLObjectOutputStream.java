@@ -1287,6 +1287,10 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
       return ((Short) getPrimitive(name)).shortValue();
     } 
     
+    /**
+     * only exists to satisfy deprecated method in superclass
+     * @deprecated
+     */
     public void write(ObjectOutput output) throws IOException {
       XMLObjectOutputStream xoos = (XMLObjectOutputStream) output;
       xoos.writeFields();
