@@ -137,6 +137,7 @@ the Environment provides the following:
   <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
 </ul>  
 
+<a name="parameters"/>
 <h4>How to use parameters:</h4>
   The Parameters interface contains:
   <ul>
@@ -445,8 +446,7 @@ planetlab.</li>
 </ul>
   <ul>
 <blockquote>
-Support for simulated killing of nodes is for testing purposes only.
-<br><br>On Unix systems, Java's socket implementation uses File
+On Unix systems, Java's socket implementation uses File
 Descriptors.  In this implementation, the File Descriptors can be used
 up if too many nodes are running in a single process.  We have a soft
 limit on the number of file descriptors, but we are aware that you can 
@@ -456,6 +456,10 @@ thread to allow io.  If you require running more than one node inside a
 single process, consider increasing the number of File Descriptors per 
 process (bash: ulimit -n), or lowering the available sockets per node
 (rice.pastry.socket.SocketCollectionManager.MAX_OPEN_SOCKETS).
+
+The number of allowed sockets is set set by the parameter 
+<b>pastry_socket_scm_max_open_sockets</b>.  See <a href="#parameters">
+parameters</a> for information on how to override the default paramteters.
 </li>
   </ul>
 </blockquote>
@@ -491,7 +495,7 @@ jars in the lib/ directory in your classpath.
 <p>To compile the source distribution we have switched to ant for the build 
 process.  You will need to have ANT installed (available from 
 <a href="http://ant.apache.org/">http://ant.apache.org/</a>) on your
-system.  Expand the archive (FreePastry-1.4-source.tgz or FreePastry-1.4-source.zip)
+system.  Expand the archive (FreePastry-1.4.2-source.tgz or FreePastry-1.4.2-source.zip)
 into a directory. Execute "ant" in the top level
 directory (you may have to increase the maximum memory for ant by setting the
 environment variable ANT_OPTS=-Xmx128m), then change
@@ -512,7 +516,7 @@ content into your home directory: </p>
           [-verbose|-silent|-verbosity v] [-help]
 
         Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
-        Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).
+        Default verbosity is 8, -verbose is 1, and -silent is 10 (error msgs only).
 
         (replace "pastry.jar" by "FreePastry-&lt;version&gt;.jar", of course)
 </b></pre>
@@ -616,10 +620,11 @@ package rice.p2p.commonapi.<br>
 <br>
 <hr>
 <h3> Running PAST</h3>
-1. To run a simple distributed test: <br>
+1. To run a simple distributed test requires placing the xmlpull.jar in the classpath: <br/>
 <pre><b>
-     java [-cp pastry.jar] rice.p2p.past.testing.PastRegrTest [-nodes n] [-protocol (direct|socket)]<br>
+     java -cp [.|pastry.jar];xmlpull&lt;version&gt;.jar;xpp&lt;version&gt;.jar rice.p2p.past.testing.PastRegrTest [-nodes n] [-protocol (direct|socket)]<br>
 </b></pre>
+In some unix shells, you may need to specify the classpath inside double quotes.  <br/>
 This creates a network of <tt>n</tt> nodes (10 by default), and then
 runs the Past regression test over these nodes.
 <br>
