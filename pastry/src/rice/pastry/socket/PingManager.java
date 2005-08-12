@@ -115,7 +115,7 @@ public class PingManager extends SelectionKeyHandler {
    * @param prl The listener which should hear about the response
    */
   protected void ping(SourceRoute path, PingResponseListener prl) {
-    log(Logger.INFO, "(PM) Actually sending ping via path " + path + " local " + localAddress);
+    log(Logger.FINE, "(PM) Actually sending ping via path " + path + " local " + localAddress);
 
     addPingResponseListener(path, prl);
     

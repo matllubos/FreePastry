@@ -172,7 +172,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
     if (ready == r)
       return;
     //      if (r == false)
-    getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.INFO, "PastryNode.setReady("+r+")");
+    getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.CONFIG, "PastryNode.setReady("+r+")");
 
     ready = r;
 
