@@ -58,10 +58,8 @@ import rice.p2p.util.*;
 public class PersistentStorage implements Storage {
   
   /**
-   * Static fields for logging based on the requests we are writing.
-   * Enable logWriteTypes to turn on this output.
+   * Fields for logging based on the requests we are writing.
    */  
-  private static boolean logWriteTypes = false;
   private Object statLock = new Object();
   private long statsLastWritten;
   private long statsWriteInterval = 60 * 1000;
@@ -194,17 +192,15 @@ public class PersistentStorage implements Storage {
   } 
   
   private void printStats() {
-    if (logWriteTypes) {
-      synchronized(statLock) {
-        long now = environment.getTimeSource().currentTimeMillis();
-        if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
-          log(Logger.INFO,"@L.PE name=" + name + " interval="+statsLastWritten+"-"+now);
-          statsLastWritten = now;
-          
-          log(Logger.INFO,"@L.PE   objsTotal=" + (index ? "" + metadata.keySet().size() : "?") + " objsBytesTotal=" + getTotalSize());
-          log(Logger.INFO,"@L.PE   numWrites=" + numWrites + " numReads=" + numReads + " numDeletes=" + numDeletes);
-          log(Logger.INFO,"@L.PE   numMetadataWrites=" + numMetadataWrites + " numRenames=" + numRenames);
-        }
+    synchronized(statLock) {
+      long now = environment.getTimeSource().currentTimeMillis();
+      if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
+        log(Logger.INFO,"@L.PE name=" + name + " interval="+statsLastWritten+"-"+now);
+        statsLastWritten = now;
+        
+        log(Logger.INFO,"@L.PE   objsTotal=" + (index ? "" + metadata.keySet().size() : "?") + " objsBytesTotal=" + getTotalSize());
+        log(Logger.INFO,"@L.PE   numWrites=" + numWrites + " numReads=" + numReads + " numDeletes=" + numDeletes);
+        log(Logger.INFO,"@L.PE   numMetadataWrites=" + numMetadataWrites + " numRenames=" + numRenames);
       }
     }
   }
@@ -316,6 +312,7 @@ public class PersistentStorage implements Storage {
             throw new OutofDiskSpaceException();
         } catch (Exception e) {
           /* if an IOException is thrown, delete the temporary file and abort */
+          logException(Logger.WARNING, "", e);
           deleteFile(transcFile);
           throw e;
         }
@@ -2078,16 +2075,24 @@ public class PersistentStorage implements Storage {
 
   private static class PersistenceThread extends Thread {
     WorkQueue workQ;
-	   
+
+    boolean running = true;
+    
 	   public PersistenceThread(WorkQueue workQ){
        super("Persistence Worker Thread");
        this.workQ = workQ;
 	   }
 	   
 	   public void run() {
-       while (true) 
+       running = true;
+       while (running) {
          workQ.dequeue().run();
+       }
 	   }
+     
+     public void destroy() {
+       running = false;
+     }
   }
   
   public static class WorkQueue {
