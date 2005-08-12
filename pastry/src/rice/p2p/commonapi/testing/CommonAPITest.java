@@ -371,7 +371,7 @@ public abstract class CommonAPITest {
 
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-help")) {
-        System.out.println("Usage: DistCommonAPITest [-port p] [-protocol (rmi|wire)] [-bootstrap host[:port]] [-help]");
+        System.out.println("Usage: DistCommonAPITest [-port p] [-protocol (direct|socket)] [-bootstrap host[:port]] [-help]");
         System.exit(1);
       }
     }
@@ -412,19 +412,12 @@ public abstract class CommonAPITest {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-protocol") && i+1 < args.length) {
         String s = args[i+1];
-
-//        if (s.equalsIgnoreCase("wire"))
-//          PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
-//        else if (s.equalsIgnoreCase("rmi"))
-//          PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
-//        else 
-          if (s.equalsIgnoreCase("socket"))
+        if (s.equalsIgnoreCase("socket"))
           PROTOCOL = DistPastryNodeFactory.PROTOCOL_SOCKET;
         else if (s.equalsIgnoreCase("direct"))
           PROTOCOL = PROTOCOL_DIRECT;
         else
           System.out.println("ERROR: Unsupported protocol: " + s);
-
         break;
       }
     }
