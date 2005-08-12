@@ -40,7 +40,7 @@ public class DistHelloWorld {
 
   private static int bsport = 5009;
 
-  private static int numnodes = 5;
+  private static int numnodes = 1;
 
   private static int nummsgs = 2; // per virtual node
 
@@ -87,10 +87,10 @@ public class DistHelloWorld {
   /**
    * process command line args,
    */
-  private static void doIinitstuff(String args[]) {
+  private static void doIinitstuff(String args[], Environment env) {
 
-    // process command line arguments
-
+    // process command line arguments    
+    
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-help")) {
         System.out
@@ -103,7 +103,7 @@ public class DistHelloWorld {
         System.out
             .println("  Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.");
         System.out
-            .println("  Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).");
+            .println("  Default verbosity is 8, -verbose is 1, and -silent is 10 (error msgs only).");
         System.exit(1);
       }
     }
@@ -111,6 +111,28 @@ public class DistHelloWorld {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-msgs") && i + 1 < args.length)
         nummsgs = Integer.parseInt(args[i + 1]);
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-verbosity") && i + 1 < args.length) {
+        int num = Integer.parseInt(args[i + 1]);
+        env.getParameters().setInt("loglevel", num*100);
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-silent") && i + 1 < args.length) {
+        env.getParameters().setInt("loglevel", Logger.SEVERE);
+        break;
+      }        
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-verbose") && i + 1 < args.length) {
+        env.getParameters().setInt("loglevel", Logger.ALL);
+        break;
+      }        
     }
 
     for (int i = 0; i < args.length; i++) {
@@ -153,12 +175,6 @@ public class DistHelloWorld {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-protocol") && i + 1 < args.length) {
         String s = args[i + 1];
-
-        //		if (s.equalsIgnoreCase("wire"))
-        //		    protocol = DistPastryNodeFactory.PROTOCOL_WIRE;
-        //    else if (s.equalsIgnoreCase("rmi"))
-        //      protocol = DistPastryNodeFactory.PROTOCOL_RMI;
-        //    else
         if (s.equalsIgnoreCase("socket"))
           protocol = DistPastryNodeFactory.PROTOCOL_SOCKET;
         else
@@ -192,14 +208,17 @@ public class DistHelloWorld {
    * Usage: DistHelloWorld [-msgs m] [-nodes n] [-port p] [-bootstrap
    * bshost[:bsport]] [-verbose|-silent|-verbosity v] [-help].
    * 
-   * Ports p and bsport refer to RMI registry/ Socket port numbers (default =
+   * Ports p and bsport refer to Socket port numbers (default =
    * 5009). Without -bootstrap bshost[:bsport], only localhost:p is used for
-   * bootstrap. Default verbosity is 5, -verbose is 10, and -silent is -1 (error
+   * bootstrap. Default verbosity is 8, -verbose is 1, and -silent is 10 (error
    * msgs only).
    */
   public static void main(String args[]) throws IOException {
+    
+    
     Environment env = new Environment();
-    doIinitstuff(args);
+    env.getParameters().setInt("loglevel", 800);
+    doIinitstuff(args, env);
     DistHelloWorld driver = new DistHelloWorld(env);
 
     // create first node
