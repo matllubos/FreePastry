@@ -34,9 +34,7 @@ public class SocketChannelWriter {
   
   /**
    * Static fields for logging based on the messages we are writing.
-   * Enable logWriteTypes to turn on this output.
    */  
-  private boolean logWriteTypes;
   private static Object statLock = new Object();
   private static HashMap msgTypes = new HashMap();
   private static HashMap msgSizes = new HashMap();
@@ -81,7 +79,6 @@ public class SocketChannelWriter {
     Parameters p = environment.getParameters();
     MAXIMUM_QUEUE_LENGTH = p.getInt("pastry_socket_writer_max_queue_length");
     statsWriteInterval = p.getLong("pastry_socket_writer_status_interval");
-    logWriteTypes = p.getBoolean("pastry_socket_writer_logWriteTypes");
   }
   
   /**
@@ -279,7 +276,7 @@ public class SocketChannelWriter {
     else if (o instanceof byte[]) 
       return ByteBuffer.wrap((byte[]) o);
     
-    if (logWriteTypes) {
+    // logWriteTypes
       synchronized(statLock) {
         long now = environment.getTimeSource().currentTimeMillis();
         if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
@@ -296,7 +293,6 @@ public class SocketChannelWriter {
           msgSizes.clear();
         }
       }
-    }
 
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -306,8 +302,8 @@ public class SocketChannelWriter {
       oos.writeObject(o);
       oos.close();
       int len = baos.toByteArray().length;
-      
-      if (logWriteTypes) {
+
+      // logWriteTypes
         Object newO = o;
         if (newO instanceof RouteMessage) {
           newO = ((RouteMessage)newO).unwrap();
@@ -319,7 +315,6 @@ public class SocketChannelWriter {
         
         String oType = newO.getClass().getName();
         logMessageSent(oType, len);
-      }
 
       ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos2);
