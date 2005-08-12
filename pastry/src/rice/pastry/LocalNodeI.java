@@ -7,22 +7,12 @@ import java.util.*;
 import rice.pastry.messaging.*;
 
 /**
- * Interface that some Serializable classes (such as NodeHandle and
- * Certificate) implement, if they want to be kept informed of what node
- * they're on. Think of this as a pattern. One implementation of this
- * is provided (LocalNodeImpl), but if a class cannot use this implementation
- * (for reasons such as multiple inheritance), it should implement
- * LocalNode and provide the methods below.
- *
- * NOTE: All implementations of local nodes should override their readObject()
- * methods in order to add the following lines:
- *
- *    in.defaultReadObject();
- *    LocalNode.pending.addPending(in, this)
- *
- * which will schedule the LocalNode to have it's local node to be set to
- * non-null.
- *
+ * This interface is for any objects who need to automatically have the 
+ * PastryNode assigned to it upon reception off of the wire.  As of FreePastry 1.4.1,
+ * this is now done by the PastryObjectInputStream.  The main object that needs this
+ * is the NodeHandle.  So that NodeHandle.receiveMessage() will work.  When using the 
+ * commonAPI, this is not necessary.
+ * 
  * @version $Id$
  *
  * @author Alan Mislove
