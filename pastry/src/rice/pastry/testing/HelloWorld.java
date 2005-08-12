@@ -107,14 +107,29 @@ public class HelloWorld {
     return simulator.simulate();
   }
 
-  /**
-   * Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]
-   * [-simultaneous_joins] [-simultaneous_msgs] [-help]
-   */
-  public static void main(String args[]) {
+  private static void doIinitstuff(String args[], Environment env) {
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-verbosity") && i + 1 < args.length) {
+        int num = Integer.parseInt(args[i + 1]);
+        env.getParameters().setInt("loglevel", num*100);
+        break;
+      }
+    }
 
-    Environment env = new Environment();
-    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-silent") && i + 1 < args.length) {
+        env.getParameters().setInt("loglevel", Logger.SEVERE);
+        break;
+      }        
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-verbose") && i + 1 < args.length) {
+        env.getParameters().setInt("loglevel", Logger.ALL);
+        break;
+      }        
+    }
+
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-nodes") && i + 1 < args.length)
         numnodes = Integer.parseInt(args[i + 1]);
@@ -130,13 +145,26 @@ public class HelloWorld {
 
       if (args[i].equals("-help")) {
         System.out
-            .println("Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]");
+            .println("Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]");        
         System.out
             .println("                  [-simultaneous_joins] [-simultaneous_msgs] [-help]");
+        System.out
+            .println("  Default verbosity is 8, -verbose is 1, and -silent is 10 (error msgs only).");
         System.exit(1);
       }
-    }
+    }    
+  }
+  
+  /**
+   * Usage: HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v]
+   * [-simultaneous_joins] [-simultaneous_msgs] [-help]
+   */
+  public static void main(String args[]) {
 
+    Environment env = new Environment();
+    env.getParameters().setInt("loglevel", 800);    
+    doIinitstuff(args, env);
+    
     HelloWorld driver = new HelloWorld(env);
 
     for (int i = 0; i < numnodes; i++) {

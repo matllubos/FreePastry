@@ -108,7 +108,7 @@ public class HelloWorldApp extends PastryAppl {
   public boolean enrouteMessage(Message msg, Id key, NodeId nextHop,
       SendOptions opt) {
     thePastryNode.getEnvironment().getLogManager().getLogger(
-        HelloWorldApp.class, null).log(Logger.INFO,
+        HelloWorldApp.class, null).log(Logger.CONFIG,
         "Enroute " + msg + " at " + getNodeId());
     return true;
   }
