@@ -100,18 +100,18 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
       new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol =
       new StandardRouteSetProtocol(localhandle, secureMan, routeTable, environment);
-    StandardJoinProtocol jProtocol =
-      new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
     msgDisp.registerReceiver(router.getAddress(), router);
     msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
     msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
-    msgDisp.registerReceiver(jProtocol.getAddress(), jProtocol);
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
     pn.setDirectElements(/* simulator */);
     secureMan.setLocalPastryNode(pn);
 
+    StandardJoinProtocol jProtocol =
+      new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);    
+    
     // pn.doneNode(bootstrap);
     //pn.doneNode( simulator.getClosest(nodeId) );
     pn.doneNode(getNearest(localhandle, bootstrap));
