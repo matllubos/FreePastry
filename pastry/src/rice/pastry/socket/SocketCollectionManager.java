@@ -911,7 +911,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           }
         }
       } catch (IOException e) {
-        log(Logger.INFO, "(SM) WARNING " + e + " reading - cancelling.");        
+        log(Logger.FINE, "(SM) WARNING " + e + " reading - cancelling.");        
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
