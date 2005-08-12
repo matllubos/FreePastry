@@ -86,8 +86,12 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    */
   public XMLObjectOutputStream(OutputStream out) throws IOException {
     super();
-    
-    this.writer = new XMLWriter(out);
+    try {
+      this.writer = new XMLWriter(out);
+    } catch (NoClassDefFoundError ncdfe) {
+      System.err.println("ERROR: Make sure to add xmlpull.jar to the classpath");
+      throw ncdfe; 
+    }
     this.references = new Hashtable();
     this.currentObjects = new Stack();
     this.currentClasses = new Stack();
