@@ -552,8 +552,8 @@ public class PastRegrTest extends CommonAPITest {
                 stepDone();
 
                 // Check file exists (at a huge number of replicas)
-                stepStart("Remote Handles Lookup - 500 Replicas");
-                local.lookupHandles(remoteId, 500, new TestCommand() {
+                stepStart("Remote Handles Lookup - 12 Replicas");
+                local.lookupHandles(remoteId, 12, new TestCommand() {
                   public void receive(Object result) throws Exception {
                     assertTrue("Replicas should not be null", result != null);
                     assertTrue("Replicas should be handle[]", result instanceof PastContentHandle[]);
@@ -682,6 +682,8 @@ public class PastRegrTest extends CommonAPITest {
                     stepDone();
 
                     sectionDone();
+                    
+                    cleanUp();
                   }
                 });
                 simulate();
@@ -721,12 +723,19 @@ public class PastRegrTest extends CommonAPITest {
                 
 
   /**
-   * Usage: DistPastTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (rmi|wire)] [-help]
+   * Usage: DistPastTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (direct|socket)] [-help]
    */
   public static void main(String args[]) throws IOException {
+//    System.setOut(new PrintStream(new FileOutputStream("pastrtest.txt")));
     parseArgs(args);
-    PastRegrTest pastTest = new PastRegrTest(new Environment());
+    Environment env = new Environment();
+    PastRegrTest pastTest = new PastRegrTest(env);
     pastTest.start();
+  }
+
+  protected void cleanUp() {
+    environment.destroy();    
+    PersistentStorage.WORK_THREAD.destroy();
   }
   
   /**
