@@ -26,6 +26,13 @@ public interface Processor {
   public void process(Executable task, Continuation command, SelectorManager selector, TimeSource ts, LogManager log);
 
   /**
+   * Schedules a different type of task.  This thread is for doing Disk IO that is required to be blocking.
+   * 
+   * @param request
+   */
+  public void processBlockingIO(WorkRequest request);
+  
+  /**
    * Shuts down the processing thread.
    */
   public void destroy();

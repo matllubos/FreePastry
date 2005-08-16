@@ -11,8 +11,8 @@ public class ProcessingThread extends Thread {
    
   boolean running = false;
   
-   public ProcessingThread(ProcessingQueue queue){
-     super("Dedicated Processing Thread");
+   public ProcessingThread(String name, ProcessingQueue queue){
+     super(name);
      this.queue = queue;
    }
    

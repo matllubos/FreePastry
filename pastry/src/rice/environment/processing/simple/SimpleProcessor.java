@@ -5,6 +5,7 @@ package rice.environment.processing.simple;
 
 import rice.*;
 import rice.environment.logging.LogManager;
+import rice.environment.processing.*;
 import rice.environment.processing.Processor;
 import rice.environment.time.TimeSource;
 import rice.selector.SelectorManager;
@@ -14,12 +15,21 @@ import rice.selector.SelectorManager;
  */
 public class SimpleProcessor implements Processor {
   // the queue used for processing requests
-  private ProcessingQueue QUEUE = new ProcessingQueue();
-  private ProcessingThread THREAD = new ProcessingThread(QUEUE);
-    
+  private ProcessingQueue QUEUE;
+  private ProcessingThread THREAD;
+
+  // for blocking IO WorkRequests
+  private WorkQueue workQueue;
+  private BlockingIOThread bioThread;
+  
   public SimpleProcessor(String name) {
+    QUEUE = new ProcessingQueue();
+    THREAD = new ProcessingThread(name+".ProcessingThread",QUEUE);
     THREAD.start();
     THREAD.setPriority(Thread.MIN_PRIORITY);    
+    workQueue = new WorkQueue();
+    bioThread = new BlockingIOThread(workQueue);
+    bioThread.start();
   }
   
   /**
@@ -34,7 +44,11 @@ public class SimpleProcessor implements Processor {
     QUEUE.enqueue(new ProcessingRequest(task, command, log, ts, selector));
   }
 
-
+  public void processBlockingIO(WorkRequest workRequest) {
+    workQueue.enqueue(workRequest);
+  }
+  
+  
   public ProcessingQueue getQueue() {
     return QUEUE;
   }
@@ -42,5 +56,11 @@ public class SimpleProcessor implements Processor {
   public void destroy() {
     THREAD.destroy();
     QUEUE.destroy();
+    bioThread.destroy();
+    workQueue.destroy();
+  }
+  
+  public WorkQueue getIOQueue() {
+    return workQueue;
   }
 }

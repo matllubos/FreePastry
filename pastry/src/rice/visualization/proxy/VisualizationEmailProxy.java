@@ -68,7 +68,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           server.addPanelCreator(new GlacierPanelCreator((GlacierImpl) aggregateStore));
       }
       
-      server.addPanelCreator(new QueuePanelCreator(environment, ((SimpleProcessor)environment.getProcessor()).getQueue(), rice.persistence.PersistentStorage.QUEUE));
+      server.addPanelCreator(new QueuePanelCreator(environment, ((SimpleProcessor)environment.getProcessor()).getQueue(), ((SimpleProcessor)environment.getProcessor()).getIOQueue()));
       if (smtp != null)
         server.addPanelCreator(new EmailPanelCreator(timer, smtp));
       

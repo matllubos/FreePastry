@@ -17,6 +17,7 @@ import rice.*;
 import rice.Continuation.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.processing.WorkRequest;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
 
@@ -99,21 +100,6 @@ public class PersistentStorage implements Storage {
    */
   public static final int METADATA_SYNC_TIME = 300000;
   
-  /**
-   * The static work queue, which all of the persistence roots use
-   */
-  public static WorkQueue QUEUE = new WorkQueue();
-  
-  /**
-   * The static worker thread, which services all disk requests for all roots
-   */
-  public static Thread WORK_THREAD = new PersistenceThread(QUEUE);
-  
-  /* now, start the worker thread at class-load time */
-  static {
-    WORK_THREAD.start();
-  }
-
   private IdFactory factory;			  // the factory used for creating ids
   
   private String name;              // the name of this instance
@@ -217,7 +203,7 @@ public class PersistentStorage implements Storage {
       timer.scheduleAtFixedRate(new rice.selector.TimerTask() {
         public String toString() { return "persistence dirty purge enqueue"; }
         public void run() {
-          QUEUE.enqueue(new WorkRequest(new ListenerContinuation("Enqueue of writeMetadataFile", environment)) {
+          environment.getProcessor().processBlockingIO(new WorkRequest(new ListenerContinuation("Enqueue of writeMetadataFile", environment), environment.getSelectorManager()) {
             public String toString() { return "persistence dirty purge"; }
             public Object doWork() throws Exception {
               writeDirty();
@@ -240,7 +226,7 @@ public class PersistentStorage implements Storage {
   public void rename(final Id oldId, final Id newId, Continuation c) {
     printStats();
     
-    QUEUE.enqueue(new WorkRequest(c) {
+    environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) {
       public String toString() { return "rename " + oldId + " " + newId; }
       public Object doWork() throws Exception {
         synchronized(statLock) { numRenames++; }
@@ -291,7 +277,7 @@ public class PersistentStorage implements Storage {
   public void store(final Id id, final Serializable metadata, final Serializable obj, Continuation c) {
     printStats();
     
-    QUEUE.enqueue(new WorkRequest(c) { 
+    environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) { 
       public String toString() { return "store " + id; }
       public Object doWork() throws Exception {
         synchronized(statLock) { numWrites++; }
@@ -362,7 +348,7 @@ public class PersistentStorage implements Storage {
   public void unstore(final Id id, Continuation c) {
     printStats();
     
-    QUEUE.enqueue(new WorkRequest(c) { 
+    environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) { 
       public String toString() { return "unstore " + id; }
       public Object doWork() throws Exception {
         synchronized(statLock) { numDeletes++; }
@@ -442,7 +428,7 @@ public class PersistentStorage implements Storage {
     if (! exists(id)) {
       c.receiveResult(new Boolean(false));
     } else {    
-      QUEUE.enqueue(new WorkRequest(c) { 
+      environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) { 
         public String toString() { return "setMetadata " + id; }
         public Object doWork() throws Exception {
           synchronized(statLock) { numMetadataWrites++; }
@@ -481,7 +467,7 @@ public class PersistentStorage implements Storage {
     if (index && (! exists(id))) {
       c.receiveResult(null);
     } else {    
-      QUEUE.enqueue(new WorkRequest(c) { 
+      environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) { 
         public String toString() { return "getObject " + id; }
         public Object doWork() throws Exception {
           synchronized(statLock) { numReads++; }
@@ -660,7 +646,7 @@ public class PersistentStorage implements Storage {
    * @param c The command to run once done
    */
   public void flush(Continuation c) {
-    QUEUE.enqueue(new WorkRequest(c) { 
+    environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) { 
       public String toString() { return "flush"; }
       public Object doWork() throws Exception {
         log(Logger.FINER,"COUNT: Flushing all data in " + name);
@@ -2073,125 +2059,12 @@ public class PersistentStorage implements Storage {
   /* Inner Classes for Worker Thread                               */
   /*****************************************************************/
 
-  private static class PersistenceThread extends Thread {
-    WorkQueue workQ;
-
-    boolean running = true;
-    
-	   public PersistenceThread(WorkQueue workQ){
-       super("Persistence Worker Thread");
-       this.workQ = workQ;
-	   }
-	   
-	   public void run() {
-       running = true;
-       while (running) {
-         workQ.dequeue().run();
-       }
-	   }
-     
-     public void destroy() {
-       running = false;
-     }
-  }
-  
-  public static class WorkQueue {
-    List q = new LinkedList();
-	  /* A negative capacity, is equivalent to infinted capacity */
-	  int capacity = -1;
-	  
-	  public WorkQueue() {
-	     /* do nothing */
-	  }
-    
-    public synchronized int getLength() {
-      return q.size();
-    }
-	  
-	  public WorkQueue(int capacity) {
-	     this.capacity = capacity;
-	  }
-	  
-	  public synchronized void enqueue(WorkRequest request) {
-      if (capacity < 0 || q.size() < capacity) {
-			  q.add(request);
-			  notifyAll();
-		  } else {
-			  request.returnError(new WorkQueueOverflowException());
-      }
-	  }
-	  
-	  public synchronized WorkRequest dequeue() {
-      while (q.isEmpty()) {
-        try {
-          wait();
-        } catch (InterruptedException e) {
-        }
-      }
-      
-      return (WorkRequest) q.remove(0);
-    }
-	}
-  
-	private abstract class WorkRequest {
-    private Continuation c;
-    
-		public WorkRequest(Continuation c){
-      this.c = c;
-		}
-		
-		public WorkRequest(){
-			/* do nothing */
-		}
-    
-    public void returnResult(Object o) {
-      c.receiveResult(o); 
-    }
-    
-    public void returnError(Exception e) {
-      c.receiveException(e); 
-    }
-    
-    public void run() {
-      try {
-       // long start = environment.getTimeSource().currentTimeMillis();
-        final Object result = doWork();
-       // System.outt.println("PT: " + (environment.getTimeSource().currentTimeMillis() - start) + " " + toString());
-        environment.getSelectorManager().invoke(new Runnable() {
-          public void run() {
-            returnResult(result);
-          }
-          
-          public String toString() {
-            return "invc result of " + c;
-          }
-        });
-      } catch (final Exception e) {
-        environment.getSelectorManager().invoke(new Runnable() {
-          public void run() {
-            returnError(e);
-          }
-          
-          public String toString() {
-            return "invc error of " + c;
-          }
-        });
-      }
-    }
-		
-		public abstract Object doWork() throws Exception;
-	}
-	
-	
 	private static class PersistenceException extends Exception {
 	}
 	
 	private static class OutofDiskSpaceException extends PersistenceException {
 	}
 	
-	private static class WorkQueueOverflowException extends PersistenceException {
-	}
-
   private void log(int level, String msg) {
     environment.getLogManager().getLogger(PersistentStorage.class, null).log(level, msg);
   }
