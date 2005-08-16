@@ -437,5 +437,22 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable,
   SimilarSet copy(LeafSet newLeafSet) {
     return new SimilarSet(this, newLeafSet);
   }
+
+  /**
+   * 
+   * This is thread safe, in that it won't throw an error if not properly synchronized.
+   * 
+   * @return
+   */
+  public Collection getCollection() {
+    ArrayList al = new ArrayList();
+    for (int i = 0; i < nodes.length; i++) {
+      NodeHandle nh = nodes[i];
+      if (nh != null) {
+        al.add(nh);
+      }
+    }
+    return al;
+  }
 }
 

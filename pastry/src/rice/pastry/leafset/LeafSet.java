@@ -113,40 +113,6 @@ public class LeafSet extends Observable implements Serializable {
     return false;
   }
 
-  /**
-   * Finds the NodeHandle associated with the NodeId.
-   *
-   * @param nid a node id.
-   * @return the handle associated with that id or null if no such handle is found.
-   */
-//  public NodeHandle get(NodeId nid, int foo)
-//  {
-//    NodeHandle res = cwSet.get(nid);
-//    if (res != null) return res;
-//    return ccwSet.get(nid);
-//  }
-
-
-  /**
-   * Gets the index of the element with the given node id.
-   *
-   * @param nid the node id.
-   *
-   * @return the index or throws a NoSuchElementException
-   */
-//  public int getIndex(NodeId nid, int foo) throws NoSuchElementException {
-//    int index;
-//
-//    if (baseId.equals(nid)) return 0;
-//
-//    index = cwSet.getIndex(nid);
-//    if (index >= 0) return index + 1;
-//    index = ccwSet.getIndex(nid);
-//    if (index >= 0) return -index - 1;
-//
-//    throw new NoSuchElementException();
-//  }
-
   public int getIndex(NodeHandle nh) throws NoSuchElementException {
     int index;
 
@@ -224,13 +190,19 @@ public class LeafSet extends Observable implements Serializable {
   public int maxSize() { return theSize; }
 
   /**
-   * Gets the current size of the leaf set.
+   * Gets the current size of the leaf set.  Note that if the leafset overlaps,
+   * there will be duplicates.  If you want the unique nodes, use getUniqueCount().
    * 
    * @return the size.
    */
   public int size() { 
-    // TODO: if overlaps, need to cull common nodes
-    return cwSet.size() + ccwSet.size();     
+    return cwSize() + ccwSize(); // old code
+    
+    // 8.16.5 decided not to do this because it will break too much code
+//    HashSet superset = new HashSet();
+//    superset.addAll(cwSet.getCollection());
+//    superset.addAll(ccwSet.getCollection());
+//    return superset.size();     
   }
 
   /**
@@ -425,15 +397,20 @@ public class LeafSet extends Observable implements Serializable {
    * @return the number of unique nodes in the leafset
    */
   private int getUniqueCount() {
-    Vector v = new Vector();
-
-    for (int i=-ccwSize(); i<=cwSize(); i++) {
-      if (! v.contains(get(i).getNodeId())) {
-        v.add(get(i).getNodeId());
-      }
-    }
-
-    return v.size();
+    HashSet superset = new HashSet();
+    superset.addAll(cwSet.getCollection());
+    superset.addAll(ccwSet.getCollection());
+    return superset.size();     
+//
+//    Vector v = new Vector();
+//
+//    for (int i=-ccwSize(); i<=cwSize(); i++) {
+//      if (! v.contains(get(i).getNodeId())) {
+//        v.add(get(i).getNodeId());
+//      }
+//    }
+//
+//    return v.size();
   }
 
   /**
@@ -461,13 +438,13 @@ public class LeafSet extends Observable implements Serializable {
    */
   public IdRange range(NodeHandle n, int r) { 
    // first, we check the arguments
-   if (r < 0) return null;
-   if (! (member(n) || baseId.equals(n.getNodeId()))) return null;
+   if (r < 0) throw new IllegalArgumentException("Range must be greater than or equal to zero. Attampted "+r);
+   if (! (member(n) || baseId.equals(n.getNodeId()))) throw new RangeCannotBeDeterminedException("Node "+n+" is not in this leafset.");
 
    // get the position of the node and the number of nodes in the network
    int pos = getIndex(n);
    int num = getUniqueCount();
-   NodeHandle cw, ccw;
+   NodeHandle cw, ccw; // these are the nodes in the Leafset that represent the extents of the range
 
    // if this leafset overlaps (or we are the only node in the network), then we have
    // global knowledge about the network and can determine any range.  Otherwise, we
@@ -500,7 +477,7 @@ public class LeafSet extends Observable implements Serializable {
 
    // if either of it's pair nodes are null, then we cannot determine the range
    if ((ccw == null) || (cw == null)) {
-     return null;
+     throw new RangeCannotBeDeterminedException("This leafset doesn't have enough information to provide the correct range.");
    }
 
    // otherwise, we then construct the ranges which comprise the main range, and finally
@@ -525,8 +502,13 @@ public class LeafSet extends Observable implements Serializable {
    */
   public IdRange range(NodeHandle n, int r, boolean cw) {
     IdRange rr = range(n, r);
-    IdRange rprev = range(n, r-1);
-
+    if (r == 0) return rr;
+    IdRange rprev = null;
+    try {
+      rprev = range(n, r-1);
+    } catch (RangeCannotBeDeterminedException rcbde) {
+      // keeps previous functionality now that we are throwing rcbde rather than returning null
+    }
     if (rr == null || rprev == null) return rr;
     
     //IdRange res = rr.diff(rprev, cw);
