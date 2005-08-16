@@ -1,19 +1,11 @@
 package rice.visualization.server;
 
-import rice.visualization.data.*;
+import java.util.Vector;
+
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.environment.processing.simple.ProcessingQueue;
-import rice.pastry.*;
-import rice.p2p.past.*;
-import rice.p2p.past.gc.*;
-import rice.persistence.*;
-import rice.persistence.PersistentStorage.*;
-import rice.Continuation.*;
-import rice.selector.*;
-import rice.pastry.dist.DistPastryNode.*;
-
-import java.util.*;
+import rice.environment.processing.simple.*;
+import rice.visualization.data.*;
 
 public class QueuePanelCreator implements PanelCreator {
   
