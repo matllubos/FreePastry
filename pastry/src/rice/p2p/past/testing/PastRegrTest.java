@@ -41,6 +41,7 @@ public class PastRegrTest extends CommonAPITest {
   // the past impls in the ring
   protected PastImpl pasts[];
 
+  protected boolean running = true;
   /**
    * Constructor which sets up all local variables
    */
@@ -49,18 +50,20 @@ public class PastRegrTest extends CommonAPITest {
     pasts = new PastImpl[NUM_NODES];
     storages = new StorageManager[NUM_NODES];
     
-    new Thread() {
-      public void run() {
-        while (true) {
-          try {
-            sleep(50);
-            simulate();
-          } catch (Exception e) {
-            System.out.println(e + " blah");
+    if (PROTOCOL == PROTOCOL_DIRECT) {
+      new Thread() {
+        public void run() {
+          while (running) {
+            try {
+              sleep(50);
+              simulate();
+            } catch (Exception e) {
+              System.out.println(e + " blah");
+            }
           }
         }
-      }
-    }.start();
+      }.start();
+    }
   }
 
   /**
@@ -734,8 +737,8 @@ public class PastRegrTest extends CommonAPITest {
   }
 
   protected void cleanUp() {
-    environment.destroy();    
-    PersistentStorage.WORK_THREAD.destroy();
+    running = false;
+    environment.destroy();        
   }
   
   /**
