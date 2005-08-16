@@ -225,7 +225,7 @@ public class SelectorManager extends Thread implements Timer {
           "ERROR (SelectorManager.run): " , t);
       System.exit(-1);
     }
-    log.getLogger(SelectorManager.class, instance).log(Logger.WARNING, "Selector "+instance+" shutting down.");
+    log.getLogger(SelectorManager.class, instance).log(Logger.INFO, "Selector "+instance+" shutting down.");
 
   }
 
