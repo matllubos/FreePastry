@@ -3,6 +3,9 @@
  */
 package rice.environment.params.simple;
 
+import java.io.*;
+import java.io.PrintWriter;
+
 
 /**
  * Unable to load the default parameters file.  This is required for running pastry.
@@ -15,8 +18,23 @@ public class ParamsNotPresentException extends RuntimeException {
   /**
    * @param ioe
    */
-  public ParamsNotPresentException(Exception e) {
+  public ParamsNotPresentException(String reason, Exception e) {
+    super(reason);
     this.subexception = e;
   }
   
+  public void printStackTrace(PrintStream arg0) {
+    super.printStackTrace(arg0);
+    subexception.printStackTrace(arg0);
+  }
+  
+  public void printStackTrace() {
+    super.printStackTrace();
+    subexception.printStackTrace();
+  }
+  
+  public void printStackTrace(PrintWriter pw) {
+    super.printStackTrace(pw);
+    subexception.printStackTrace(pw);
+  }
 }

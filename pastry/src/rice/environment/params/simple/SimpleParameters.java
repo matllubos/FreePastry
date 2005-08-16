@@ -56,10 +56,11 @@ public class SimpleParameters implements Parameters {
         this.defaults.load(ClassLoader.getSystemResource(
             orderedDefaults[ctr] + FILENAME_EXTENSION).openStream());
       } catch (Exception ioe) {
-        System.err.println("Warning, couldn't load param file:"
-            + (orderedDefaults[ctr] + FILENAME_EXTENSION));
-        ioe.printStackTrace(System.err);
-        throw new ParamsNotPresentException(ioe);
+        String errorString = "Warning, couldn't load param file:"
+          + (orderedDefaults[ctr] + FILENAME_EXTENSION);
+//        System.err.println(errorString);
+//        ioe.printStackTrace(System.err);
+        throw new ParamsNotPresentException(errorString,ioe);
       }
     }
 
@@ -69,7 +70,7 @@ public class SimpleParameters implements Parameters {
         try {
           properties.load(new FileInputStream(this.configFileName));
         } catch (Exception e) {
-          throw new ParamsNotPresentException(e);
+          throw new ParamsNotPresentException("Error loading "+f, e);
         }
       } else {
         System.err.println("Configuration file " + f.getAbsolutePath()
