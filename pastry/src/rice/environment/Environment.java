@@ -106,7 +106,7 @@ public class Environment {
       selectorManager = generateDefaultSelectorManager(time, logging); 
     }
     if (processor == null) {      
-      processor = generateDefaultProcessor(logging, time, selectorManager); 
+      processor = generateDefaultProcessor(); 
     }
   }
   
@@ -129,7 +129,7 @@ public class Environment {
     return new SelectorManager("Default", time, logging);
   }
   
-  public static Processor generateDefaultProcessor(LogManager logging, TimeSource time, SelectorManager selector) {
+  public static Processor generateDefaultProcessor() {
     return new SimpleProcessor("Default");
   }
   
