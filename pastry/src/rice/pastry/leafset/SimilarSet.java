@@ -18,6 +18,8 @@ import java.io.*;
 public class SimilarSet extends Observable implements NodeSetI, Serializable,
     Observer {
 
+  private static final long serialVersionUID = 2289610430696506873L;
+  
   private NodeHandle ln;
 
   private boolean clockwise;
