@@ -9,19 +9,25 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.p2p.splitstream.ChannelId;
+import rice.p2p.splitstream.testing.MySplitStreamClient;
 import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
-import rice.pastry.standard.*;
 import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
  * @author Jeff Hoye
  */
 public class ConsistencyPLTest implements Observer {
-  public static final boolean useScribe = false;
-  public static final boolean artificialChurn = !useScribe;
   public static final int startPort = 12000;
+  public static final int WAIT_TO_SUBSCRIBE_DELAY = 60000;
+  
+  public static final boolean useScribe = false;
+  public static final boolean useSplitStream = false;
+  public static String INSTANCE = "ConsPLSplitStreamTest";
+
+  public static final boolean artificialChurn = false;
   
   //the object is just to implement the destruction policy.
   PastryNode localNode;
@@ -47,6 +53,11 @@ public class ConsistencyPLTest implements Observer {
     }
   }
 
+  private static Id generateId() {
+    byte[] data = new byte[20];
+    new Random(100).nextBytes(data);
+    return rice.pastry.Id.build(data);
+  }
   
   public static void main(String[] args) throws Exception {
     
@@ -58,12 +69,12 @@ public class ConsistencyPLTest implements Observer {
     
     System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
     System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
-    boolean riceNode = false;
+    boolean isBootNode = false;
     InetAddress localAddress = InetAddress.getLocalHost();
     if (localAddress.getHostName().startsWith("ricepl-1")) {
-      riceNode = true;
+      isBootNode = true;
     }
-    System.out.println("Ricenode:"+riceNode);
+    System.out.println("Ricenode:"+isBootNode);
     
     new Thread(new Runnable() {
       public void run() {
@@ -115,7 +126,7 @@ public class ConsistencyPLTest implements Observer {
     } else {
       // this code makes ricepl-1 try to boot off of ricepl-3
       // everyone else boots off of ricepl-1
-      if (riceNode) {
+      if (isBootNode) {
         bootaddr = InetAddress.getByName("ricepl-3.cs.rice.edu"); 
       } else {
         bootaddr = InetAddress.getByName("ricepl-1.cs.rice.edu");
@@ -139,7 +150,7 @@ public class ConsistencyPLTest implements Observer {
     NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
     
     if (bootHandle == null) {
-      if (riceNode) {
+      if (isBootNode) {
         // go ahead and start a new ring
       } else {
         // don't boot your own ring unless you are ricepl-1
@@ -191,11 +202,27 @@ public class ConsistencyPLTest implements Observer {
       // this is to do scribe stuff
       MyScribeClient app = new MyScribeClient(node);      
       app.subscribe();
-      if (riceNode) {
+      if (isBootNode) {
         app.startPublishTask(); 
       }
     }
     
+    if (useSplitStream) {
+      MySplitStreamClient app = new MySplitStreamClient(node, INSTANCE);      
+      ChannelId CHANNEL_ID = new ChannelId(generateId());    
+      app.attachChannel(CHANNEL_ID);
+      
+      if (!isBootNode) {
+        System.out.println("Sleeping(2) for "+WAIT_TO_SUBSCRIBE_DELAY+" at "+env.getTimeSource().currentTimeMillis());
+        Thread.sleep(WAIT_TO_SUBSCRIBE_DELAY);
+        System.out.println("Done(2) sleeping at "+env.getTimeSource().currentTimeMillis());
+      }   
+      
+      app.subscribeToAllChannels();    
+      if (isBootNode) {
+        app.startPublishTask(); 
+      }
+    }  
     // this is to cause different connections to open
     // TODO: Implement
     
@@ -203,7 +230,7 @@ public class ConsistencyPLTest implements Observer {
       System.out.println("LEAFSET2:"+env.getTimeSource().currentTimeMillis()+":"+ls);
       Thread.sleep(1*60*1000);
       if (artificialChurn) {
-        if (!riceNode) {
+        if (!isBootNode) {
           if (env.getRandomSource().nextInt(60) == 0) {
             System.out.println("Killing self to cause churn. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
             System.exit(25);
