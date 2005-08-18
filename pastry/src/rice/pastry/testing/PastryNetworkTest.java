@@ -217,9 +217,9 @@ public class PastryNetworkTest {
   }
   
   public static void main(String[] args) throws Exception {
-    PrintStream ps = new PrintStream(new FileOutputStream("lses.txt"));
-    System.setOut(ps);
-    System.setErr(ps);
+//    PrintStream ps = new PrintStream(new FileOutputStream("lses.txt"));
+//    System.setOut(ps);
+//    System.setErr(ps);
     Environment env = new Environment();
     PastryNetworkTest test = new PastryNetworkTest(env, new SocketPastryNodeFactory(null, 1, env), new InetSocketAddress(args[0], Integer.parseInt(args[1])));
     test.start();
