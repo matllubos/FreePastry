@@ -1,4 +1,4 @@
-// $ANTLR 2.7.3: "grammer.g" -> "ImapCommandParser.java"$
+// $ANTLR 2.7.5 (20050128): "grammer.g" -> "ImapCommandParser.java"$
 
 package rice.email.proxy.imap.parser.antlr;
 

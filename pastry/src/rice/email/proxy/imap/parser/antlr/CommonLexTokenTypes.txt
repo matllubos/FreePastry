@@ -1,4 +1,4 @@
-// $ANTLR 2.7.3: lexer.g -> CommonLexTokenTypes.txt$
+// $ANTLR 2.7.5 (20050128): lexer.g -> CommonLexTokenTypes.txt$
 CommonLex    // output token vocab name
 CHECK="CHECK"=4
 NOOP="NOOP"=5

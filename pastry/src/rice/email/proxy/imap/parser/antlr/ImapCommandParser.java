@@ -1,4 +1,4 @@
-// $ANTLR 2.7.3: "grammer.g" -> "ImapCommandParser.java"$
+// $ANTLR 2.7.5 (20050128): "grammer.g" -> "ImapCommandParser.java"$
 
 package rice.email.proxy.imap.parser.antlr;
 
@@ -214,13 +214,13 @@ public ImapCommandParser(ParserSharedInputState state) {
 		
 		
 		{
-		_loop28:
+		_loop31:
 		do {
 			if (((LA(1) >= CHECK && LA(1) <= UNKNOWN))) {
 				matchNot(EOF);
 			}
 			else {
-				break _loop28;
+				break _loop31;
 			}
 			
 		} while (true);
@@ -1119,6 +1119,36 @@ public ImapCommandParser(ParserSharedInputState state) {
 		return ret;
 	}
 	
+	public final String  lname() throws RecognitionException, TokenStreamException {
+		String ret;
+		
+		Token  b = null;
+		ret=""; Token a,c;
+		
+		a=astring();
+		if ( inputState.guessing==0 ) {
+			ret += a.getText();
+		}
+		{
+		_loop15:
+		do {
+			if ((LA(1)==PERIOD)) {
+				b = LT(1);
+				match(PERIOD);
+				c=astring();
+				if ( inputState.guessing==0 ) {
+					ret += b.getText()+c.getText();
+				}
+			}
+			else {
+				break _loop15;
+			}
+			
+		} while (true);
+		}
+		return ret;
+	}
+	
 	public final Token  pattern() throws RecognitionException, TokenStreamException {
 		Token ret;
 		
@@ -1334,7 +1364,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			}
 			}
 			{
-			_loop21:
+			_loop24:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
@@ -1435,7 +1465,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					}
 				}
 				else {
-					break _loop21;
+					break _loop24;
 				}
 				
 			} while (true);
@@ -1470,7 +1500,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			list.add(f.getText());
 		}
 		{
-		_loop24:
+		_loop27:
 		do {
 			if ((LA(1)==SPACE)) {
 				match(SPACE);
@@ -1480,7 +1510,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				}
 			}
 			else {
-				break _loop24;
+				break _loop27;
 			}
 			
 		} while (true);
@@ -1747,14 +1777,14 @@ public ImapCommandParser(ParserSharedInputState state) {
 			match(LPAREN);
 			fetch_part(cmd);
 			{
-			_loop76:
+			_loop79:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
 					fetch_part(cmd);
 				}
 				else {
-					break _loop76;
+					break _loop79;
 				}
 				
 			} while (true);
@@ -1866,7 +1896,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 			part.addArgument(oPart);
 		}
 		{
-		_loop55:
+		_loop58:
 		do {
 			if ((LA(1)==SPACE)) {
 				match(SPACE);
@@ -1876,7 +1906,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				}
 			}
 			else {
-				break _loop55;
+				break _loop58;
 			}
 			
 		} while (true);
@@ -2177,7 +2207,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 				part.addArgument(oPart);
 			}
 			{
-			_loop59:
+			_loop62:
 			do {
 				if ((LA(1)==SPACE)) {
 					match(SPACE);
@@ -2187,7 +2217,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					}
 				}
 				else {
-					break _loop59;
+					break _loop62;
 				}
 				
 			} while (true);
@@ -3132,7 +3162,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 					breq.addPart(a.getText());
 				}
 				{
-				_loop91:
+				_loop94:
 				do {
 					if ((LA(1)==SPACE)) {
 						match(SPACE);
@@ -3142,7 +3172,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 						}
 					}
 					else {
-						break _loop91;
+						break _loop94;
 					}
 					
 				} while (true);
@@ -3187,17 +3217,17 @@ public ImapCommandParser(ParserSharedInputState state) {
 	
 	public final void login() throws RecognitionException, TokenStreamException {
 		
-		Token usr, pass;
+		String usr; Token pass;
 		
 		match(LOGIN);
 		match(SPACE);
-		usr=astring();
+		usr=lname();
 		match(SPACE);
 		pass=astring();
 		if ( inputState.guessing==0 ) {
 			
 				  LoginCommand cmd = new LoginCommand();
-				  cmd.setUser(usr.getText());
+				  cmd.setUser(usr);
 				  cmd.setPassword(pass.getText());
 				  command = cmd;
 				

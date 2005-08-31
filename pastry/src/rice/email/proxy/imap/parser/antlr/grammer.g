@@ -80,6 +80,10 @@ tag returns [Token ret]	{Token at; ret=null;}:	at=astring
 	}
 	;
 	
+lname returns [String ret] {ret=""; Token a,c;}:  
+    a=astring {ret += a.getText();} (b:PERIOD^ c=astring {ret += b.getText()+c.getText();})* 
+    ;
+    
 astring	returns [Token ret] {ret=null;}:
 												a:ATOM {ret = a; } |
 												b:STRING {ret = b; } |
@@ -623,10 +627,10 @@ fetch [boolean isUID]
 command_nonauth :	login | authenticate
 	;
 	
-login	{Token usr, pass;}:	LOGIN SPACE usr=astring SPACE pass=astring
+login	{String usr; Token pass;}:	LOGIN SPACE usr=lname SPACE pass=astring
 	{
 	  LoginCommand cmd = new LoginCommand();
-	  cmd.setUser(usr.getText());
+	  cmd.setUser(usr);
 	  cmd.setPassword(pass.getText());
 	  command = cmd;
 	}
