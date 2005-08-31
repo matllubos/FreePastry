@@ -57,8 +57,12 @@
   </target>
 
   <target name="make_imap_parser" depends="init">
-    <antlr target="${src.dir}/rice/email/proxy/imap/parser/antlr/lexer.g" />
-    <antlr target="${src.dir}/rice/email/proxy/imap/parser/antlr/grammer.g" />
+    <antlr target="${src.dir}/rice/email/proxy/imap/parser/antlr/lexer.g">
+    	  <classpath><pathelement location="lib/antlr-2.7.5.jar"/></classpath>
+    	</antlr>
+    <antlr target="${src.dir}/rice/email/proxy/imap/parser/antlr/grammer.g">
+  	  <classpath><pathelement location="lib/antlr-2.7.5.jar"/></classpath>
+    	</antlr>
   </target>
 
   <target name="compile-epost" depends="make_imap_parser">
