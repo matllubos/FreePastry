@@ -58,7 +58,7 @@ public class PostProxy {
   public static String PROXY_PARAMETERS_NAME = "proxy";
 
   public static String[] DEFAULT_PARAMS_FILES = {"freepastry","epost"}; 
-  
+   
   // ----- DISPLAY FIELDS -----
 
   protected static final String SUCCESS = "SUCCESS";
@@ -1571,7 +1571,7 @@ public class PostProxy {
     log(Logger.SEVERE, "PANIC : " + message + " --- " + e);
     
     try {
-      if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
+      if (useUI()) 
       JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
     } catch (Throwable t) {
       logException(Logger.SEVERE, "cause of panic: ", t);
@@ -1585,13 +1585,20 @@ public class PostProxy {
     resign();
 
     try {
-      if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
+      if (useUI()) 
         JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
     } catch (Throwable t) {
       logException(Logger.SEVERE, "cause of panic: ", t);
     }
     
     System.exit(-1);
+  }
+  
+  public boolean useUI() {
+    if ((environment.getParameters().getBoolean("proxy_show_dialog") == false) || 
+         GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless())
+      return false;
+    return true;
   }
 
   public void resign() {
@@ -1606,7 +1613,7 @@ public class PostProxy {
     log(Logger.INFO, "MESSAGE : " + m);
     
     try {
-      if (! GraphicsEnvironment.getLocalGraphicsEnvironment().isHeadless()) 
+      if (useUI()) 
         return JOptionPane.showOptionDialog(null, m, "ePOST Message", 
                                              0, JOptionPane.INFORMATION_MESSAGE, null, 
                                              options, def);
