@@ -439,7 +439,7 @@ public class LeafSet extends Observable implements Serializable {
   public IdRange range(NodeHandle n, int r) { 
    // first, we check the arguments
    if (r < 0) throw new IllegalArgumentException("Range must be greater than or equal to zero. Attampted "+r);
-   if (! (member(n) || baseId.equals(n.getNodeId()))) throw new RangeCannotBeDeterminedException("Node "+n+" is not in this leafset.");
+   if (! (member(n) || baseId.equals(n.getNodeId()))) throw new RangeCannotBeDeterminedException("Node "+n+" is not in this leafset.",r,Integer.MIN_VALUE, getUniqueCount(), n);
 
    // get the position of the node and the number of nodes in the network
    int pos = getIndex(n);
@@ -477,7 +477,7 @@ public class LeafSet extends Observable implements Serializable {
 
    // if either of it's pair nodes are null, then we cannot determine the range
    if ((ccw == null) || (cw == null)) {
-     throw new RangeCannotBeDeterminedException("This leafset doesn't have enough information to provide the correct range.");
+     throw new RangeCannotBeDeterminedException("This leafset doesn't have enough information to provide the correct range.",r,pos, getUniqueCount(), n);
    }
 
    // otherwise, we then construct the ranges which comprise the main range, and finally
