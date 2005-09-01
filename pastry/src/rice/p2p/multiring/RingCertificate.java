@@ -58,6 +58,7 @@ public class RingCertificate implements Serializable {
         URL a2 = ClassLoader.getSystemResource(filename);
         InputStream b2 = a2.openStream();
         RingCertificate cert = readFromStream(b2);
+        cert.refresh();
         
         if (cert.verify(caPublic)) {
           if ((getCertificate(cert.getId()) == null) || 
@@ -84,6 +85,35 @@ public class RingCertificate implements Serializable {
     return (RingCertificate) CERTIFICATES.get(ringId);
   }
   
+  /**
+   * Refreshes all of the InetAddresses based on their name, not IP address.
+   * 
+   * In other words, it fixes InetAddresses that are stale from storage.  It reads
+   * the "name" of the InetAddress, and then builds a new InetAddress with this name
+   * which should do a proper dns lookup.
+   *
+   */
+  private void refresh() {
+    logServer = refreshAddress(logServer);
+    for (int i = 0; i < bootstraps.length; i++) {
+      bootstraps[i] = refreshAddress(bootstraps[i]);  
+    }    
+  }
+  
+  /**
+   * Helper function for refresh().  Returns an identical InetSocketAddress unless
+   * the ip address in address is stale.  Then it returns the current one based on a
+   * dns lookup.
+   * 
+   * As of Sept/1/2005 untested if this actually works.  Need to force a dns change.
+   * 
+   * @param address
+   * @return
+   */
+  private InetSocketAddress refreshAddress(InetSocketAddress address) {
+    return new InetSocketAddress(address.getAddress().getHostName(), address.getPort());
+  }
+
   // the name of this ring
   protected String name;
   
