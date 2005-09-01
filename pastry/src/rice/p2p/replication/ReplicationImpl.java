@@ -13,6 +13,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.replication.ReplicationPolicy.*;
 import rice.p2p.replication.messaging.*;
 import rice.p2p.util.*;
+import rice.pastry.leafset.RangeCannotBeDeterminedException;
 
 /**
  * @(#) ReplicationImpl.java
@@ -184,23 +185,24 @@ public class ReplicationImpl implements Replication, Application {
 
         for (int i=0; i<handles.size(); i++) {
           final NodeHandle handle = handles.getHandle(i);
-          final IdRange handleRange = endpoint.range(handle, 0, handle.getId());
-          
-          if (handleRange != null) {
-            final IdRange range = handleRange.intersectRange(getTotalRange());
-
-            if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
-              endpoint.process(new BloomFilterExecutable(range), new StandardContinuation(this) {
-                public void receiveResult(Object o) {
-                  IdBloomFilter filter = (IdBloomFilter) o;
-
-                  log(Logger.FINE, "COUNT: Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
-                  
-                  RequestMessage request = new RequestMessage(ReplicationImpl.this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
-                  endpoint.route(null, request, handle);
-                }
-              });
+          try {
+	          final IdRange handleRange = endpoint.range(handle, 0, handle.getId());
+	          final IdRange range = handleRange.intersectRange(getTotalRange());
+	
+	          if ((range != null) && (! range.intersectRange(getTotalRange()).isEmpty())) {
+	            endpoint.process(new BloomFilterExecutable(range), new StandardContinuation(this) {
+	              public void receiveResult(Object o) {
+	                IdBloomFilter filter = (IdBloomFilter) o;
+	
+	                log(Logger.FINE, "COUNT: Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
+	                
+	                RequestMessage request = new RequestMessage(ReplicationImpl.this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
+	                endpoint.route(null, request, handle);
+	              }
+	            });
             }
+          } catch (RangeCannotBeDeterminedException re) {
+            // not an error 99.99% of the time, since we're probably just at one end of the range
           }
         }
         
