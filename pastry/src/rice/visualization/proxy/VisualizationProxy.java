@@ -85,7 +85,7 @@ public class VisualizationProxy {
           
           KeyPair pair = RingCertificate.readKeyPair(ringName.toLowerCase(), pass);
           
-          Ring r = new Ring(ringName, pair, (DistNodeHandle) factory.generateNodeHandle(new InetSocketAddress(bootstrap_host, bootstrap_port)), globalRing);
+          Ring r = new Ring(ringName, pair, (DistNodeHandle) factory.getNodeHandle(new InetSocketAddress(bootstrap_host, bootstrap_port)), globalRing);
           rings.add(r);
           if (globalRing == null) { // this logic makes the global ring the first ring
             globalRing = r;

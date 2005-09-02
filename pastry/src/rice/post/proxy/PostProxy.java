@@ -937,7 +937,7 @@ public class PostProxy {
     
     InetSocketAddress[] bootsNotMe = getBootstrapsThatAreNotMe(cert.getBootstraps(),port);
     
-    rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootsNotMe);
+    rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootsNotMe, parameters.getInt("bootstrap_contact_time"));
     
     if ((bootHandle == null) && (! parameters.getBoolean("pastry_ring_" + prefix+ "_allow_new_ring")))
       panic(new RuntimeException(), 
@@ -1047,7 +1047,7 @@ public class PostProxy {
     
     InetSocketAddress[] bootsNotMe = getBootstrapsThatAreNotMe(globalCert.getBootstraps(),globalPort);
     
-    globalNode = factory.newNode(factory.getNodeHandle(bootsNotMe), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
+    globalNode = factory.newNode(factory.getNodeHandle(bootsNotMe, parameters.getInt("bootstrap_contact_time")), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
     globalPastryNode = (PastryNode) globalNode;
 
     int maxcount = (parameters.getInt("pastry_node_boot_wait")+1500)/3000;

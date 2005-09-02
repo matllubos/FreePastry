@@ -53,7 +53,11 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return The NodeHandle value
    */
   public final NodeHandle getNodeHandle(InetSocketAddress address) {
-    return generateNodeHandle(address);
+    return generateNodeHandle(address, 0);
+  }
+  
+  public final NodeHandle getNodeHandle(InetSocketAddress address, int timeout) {
+    return generateNodeHandle(address, timeout);
   }
   
   public final CancellableTask getNodeHandle(InetSocketAddress address, Continuation c) {
@@ -71,6 +75,9 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @return The NodeHandle value
    */
   public final NodeHandle getNodeHandle(InetSocketAddress[] addresses) {
+    return getNodeHandle(addresses, 0);
+  }
+  public final NodeHandle getNodeHandle(InetSocketAddress[] addresses, int timeoutMillis) {
     // first, randomize the addresses
     Random r = new Random();
     for (int i=0; i<addresses.length; i++) {
@@ -82,7 +89,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     
     // then boot
     for (int i=0; i<addresses.length; i++) {
-      NodeHandle result = getNodeHandle(addresses[i]);
+      NodeHandle result = getNodeHandle(addresses[i], timeoutMillis);
       if (result != null)
         return result;
     }
@@ -204,7 +211,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @param address DESCRIBE THE PARAMETER
    * @return DESCRIBE THE RETURN VALUE
    */
-  public abstract NodeHandle generateNodeHandle(InetSocketAddress address);
+  public abstract NodeHandle generateNodeHandle(InetSocketAddress address, int timeout);
   public abstract CancellableTask generateNodeHandle(InetSocketAddress address, Continuation c);
   
   /**

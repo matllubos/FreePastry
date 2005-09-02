@@ -3,12 +3,10 @@ package rice.pastry.socket;
 import java.io.IOException;
 import java.net.*;
 import java.nio.channels.*;
-import java.nio.channels.SocketChannel;
 
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.*;
-import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
@@ -22,7 +20,6 @@ import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
 import rice.pastry.standard.*;
 import rice.selector.*;
-import rice.selector.SelectorManager;
 
 /**
  * Pastry node factory for Socket-linked nodes.
@@ -207,6 +204,51 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
+  /**
+   * Way to generate a NodeHandle with a maximum timeout to receive the result.  Helper funciton for using the 
+   * non-blocking version.  However this method behaves as a blocking call.
+   * 
+   * @param address
+   * @param timeout maximum time to return the result.  <= 0 will use the blocking version.
+   * @return
+   */
+  public NodeHandle generateNodeHandle(InetSocketAddress address, int timeout) {
+    if (timeout <= 0) return generateNodeHandle(address);
+    
+    TimerContinuation c = new TimerContinuation();
+    
+    CancellableTask task = generateNodeHandle(address,c);
+    
+    synchronized (c) {
+      try {
+        c.wait(timeout); 
+      } catch (InterruptedException ie) {
+        return null;
+      }
+    }
+    task.cancel();
+  
+    log(Logger.FINER, "SPNF.generateNodeHandle() returning "+c.ret+" after trying to contact "+address);
+    
+    return (NodeHandle)c.ret;
+  }
+  
+  class TimerContinuation implements Continuation {
+    public Object ret = null;
+    public void receiveResult(Object result) {
+      ret = result;
+      synchronized(this) {
+        this.notify();
+      }
+    }
+
+    public void receiveException(Exception result) {
+      synchronized(this) {
+        this.notify();
+      }        
+    }    
+  }
+  
   /**
    * Method which contructs a node handle (using the socket protocol) for the
    * node at address NodeHandle.

@@ -86,6 +86,7 @@ past_backup_cache_enable=true
 past_backup_cache_limit=10000000
 past_use_trashcan=true
 pastry_node_boot_wait=30000
+bootstrap_contact_time=30000
 # global ring
 pastry_ring_0000000000000000000000000000000000000000_allow_new_ring=false
 # rice ring
