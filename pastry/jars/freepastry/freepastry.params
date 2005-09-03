@@ -216,6 +216,8 @@ p2p_glacier_maxActiveRestores = 3
 #default log level
 loglevel = WARNING
 
+logging_date_format = 
+
 environment_logToFile = false
 fileLogManager_filePrefix = 
 fileLogManager_fileSuffix = .log

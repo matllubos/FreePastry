@@ -30,7 +30,7 @@ public class RotatingLogManager extends AbstractLogManager {
   TimerTask rotateTask;
   
   public RotatingLogManager(TimeSource timeSource, Parameters params) {
-    this(timeSource,params,"");
+    this(timeSource,params,"", null);
   }
   
   /**
@@ -38,8 +38,8 @@ public class RotatingLogManager extends AbstractLogManager {
    * @param params
    * @param prefix
    */
-  public RotatingLogManager(TimeSource timeSource, Parameters params, String prefix) {
-    super(null, timeSource, params, prefix);
+  public RotatingLogManager(TimeSource timeSource, Parameters params, String prefix, String dateFormat) {
+    super(null, timeSource, params, prefix, dateFormat);
     rotate();
   }
   

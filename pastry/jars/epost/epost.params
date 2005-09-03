@@ -147,6 +147,7 @@ log_rotate_filename=nohup.out
 log_network_upload_filename=nohup.out
 log_network_other_filenames=aggregation.param
 log_network_upload_enable=true
+logging_date_format = yyyyMMdd.HHmmss.SSS
 storage_cache_limit=50000000
 storage_disk_limit=-1
 storage_root_location=.

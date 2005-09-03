@@ -4,6 +4,10 @@
 package rice.environment.logging.simple;
 
 import java.io.PrintStream;
+import java.text.*;
+import java.util.Date;
+
+import javax.swing.text.DateFormatter;
 
 import rice.environment.logging.AbstractLogManager;
 import rice.environment.logging.LogLevelSetter;
@@ -53,7 +57,17 @@ public class SimpleLogger implements Logger, LogLevelSetter {
   public void log(int priority, String message) {
     if (priority >= minPriority) {
       synchronized(alm) {
-        alm.getPrintStream().println(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
+        if (alm.dateFormatter == null) {
+          alm.getPrintStream().println(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
+        } else {
+          try {
+            Date date = new Date(alm.getTimeSource().currentTimeMillis());
+            alm.getPrintStream().println(alm.getPrefix()+loggerName+":"+alm.dateFormatter.valueToString(date)+":"+message);           
+          } catch (ParseException cantHappen) {
+            alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
+            cantHappen.printStackTrace(alm.getPrintStream());
+          }
+        }
       }
     }
   }
@@ -64,8 +78,19 @@ public class SimpleLogger implements Logger, LogLevelSetter {
   public void logException(int priority, String message, Throwable exception) {
     if (priority >= minPriority) {
       synchronized(alm) {
-        alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
-        exception.printStackTrace(alm.getPrintStream());
+        if (alm.dateFormatter == null) {
+          alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
+          exception.printStackTrace(alm.getPrintStream());
+        } else {
+          try {
+            Date date = new Date(alm.getTimeSource().currentTimeMillis());
+            alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.dateFormatter.valueToString(date)+":"+message);
+            exception.printStackTrace(alm.getPrintStream());
+          } catch (ParseException cantHappen) {
+            alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
+            cantHappen.printStackTrace(alm.getPrintStream());
+          }
+        }
       }
     }
   }

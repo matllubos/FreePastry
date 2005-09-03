@@ -26,11 +26,12 @@ public class FileLogManager extends SimpleLogManager {
   public FileLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix) {
     this(stream, timeSource, params, prefix,
         params.getString("fileLogManager_filePrefix"),
-        params.getString("fileLogManager_fileSuffix"));
+        params.getString("fileLogManager_fileSuffix"),
+        null);
   }
   
-  public FileLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix, String filePrefix, String fileSuffix) {
-    super(stream, timeSource, params, prefix);
+  public FileLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix, String filePrefix, String fileSuffix, String dateFormat) {
+    super(stream, timeSource, params, prefix, dateFormat);
     this.filePrefix = filePrefix;
     this.fileSuffix = fileSuffix;
   }
@@ -74,7 +75,7 @@ public class FileLogManager extends SimpleLogManager {
     try {
       String fname = filePrefix+detail+fileSuffix;
       PrintStream newPS = new PrintStream(new FileOutputStream(fname,true));
-      return new FileLogManager(newPS, time, params, "", filePrefix, fileSuffix);
+      return new FileLogManager(newPS, time, params, "", filePrefix, fileSuffix, dateFormat);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe); 
     }

@@ -28,11 +28,11 @@ public class SimpleLogManager extends AbstractLogManager implements CloneableLog
    * @param minPriority the minimum priority to print
    */
   public SimpleLogManager(PrintStream stream, TimeSource timeSource, Parameters params) {
-    this(stream, timeSource, params, "");  
+    this(stream, timeSource, params, "", null);  
   }
   
-  public SimpleLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix) {
-    super(stream, timeSource, params, prefix);
+  public SimpleLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix, String dateFormat) {
+    super(stream, timeSource, params, prefix, dateFormat);
   }
   
   public PrintStream getPrintStream() {
@@ -91,7 +91,7 @@ public class SimpleLogManager extends AbstractLogManager implements CloneableLog
    * @see rice.environment.logging.CloneableLogManager#clone(java.lang.String)
    */
   public LogManager clone(String detail) {
-    return new SimpleLogManager(ps, time, params, detail);
+    return new SimpleLogManager(ps, time, params, detail, dateFormat);
   }
   
 }

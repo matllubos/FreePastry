@@ -5,7 +5,10 @@
 package rice.environment.logging;
 
 import java.io.PrintStream;
+import java.text.SimpleDateFormat;
 import java.util.Hashtable;
+
+import javax.swing.text.DateFormatter;
 
 import rice.environment.logging.simple.SimpleLogger;
 import rice.environment.params.ParameterChangeListener;
@@ -28,12 +31,24 @@ public abstract class AbstractLogManager implements LogManager {
   protected TimeSource time;
   protected PrintStream ps;
   protected String prefix;
+  protected String dateFormat;
 
-  protected AbstractLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix) {
+  public DateFormatter dateFormatter;
+  
+  protected AbstractLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix, String df) {
     this.ps = stream;
     this.time = timeSource;
     this.params = params;
     this.prefix = prefix;
+    this.dateFormat = df;
+    if (this.dateFormat == null) {
+      this.dateFormat = params.getString("logging_date_format");
+    }
+    if (this.dateFormat != null && !this.dateFormat.equals("")) {      
+      dateFormatter = new DateFormatter(new SimpleDateFormat(this.dateFormat));
+//      System.out.println("DateFormat "+this.dateFormat);
+    }
+
     this.loggers = new Hashtable();
     this.defaultLogger = constructLogger("",parseVal("loglevel"));
 
