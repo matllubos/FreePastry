@@ -217,6 +217,7 @@ p2p_glacier_maxActiveRestores = 3
 loglevel = WARNING
 
 logging_date_format = 
+log_rotating_date_format = yyyyMMdd.HHmmss.SSS
 
 environment_logToFile = false
 fileLogManager_filePrefix = 
