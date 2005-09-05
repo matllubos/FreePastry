@@ -57,17 +57,17 @@ public class SimpleLogger implements Logger, LogLevelSetter {
   public void log(int priority, String message) {
     if (priority >= minPriority) {
       synchronized(alm) {
-        if (alm.dateFormatter == null) {
-          alm.getPrintStream().println(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
-        } else {
+        String dateString = ""+alm.getTimeSource().currentTimeMillis();
+        if (alm.dateFormatter != null) {
           try {
-            Date date = new Date(alm.getTimeSource().currentTimeMillis());
-            alm.getPrintStream().println(alm.getPrefix()+loggerName+":"+alm.dateFormatter.valueToString(date)+":"+message);           
-          } catch (ParseException cantHappen) {
-            alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
-            cantHappen.printStackTrace(alm.getPrintStream());
+            Date date = new Date(alm.getTimeSource().currentTimeMillis());            
+            dateString = alm.dateFormatter.valueToString(date);
+          } catch (ParseException pe) {
+            pe.printStackTrace();
           }
         }
+
+        alm.getPrintStream().println(alm.getPrefix()+loggerName+":"+dateString+":"+message);
       }
     }
   }
@@ -78,19 +78,18 @@ public class SimpleLogger implements Logger, LogLevelSetter {
   public void logException(int priority, String message, Throwable exception) {
     if (priority >= minPriority) {
       synchronized(alm) {
-        if (alm.dateFormatter == null) {
-          alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
-          exception.printStackTrace(alm.getPrintStream());
-        } else {
+        String dateString = ""+alm.getTimeSource().currentTimeMillis();
+        if (alm.dateFormatter != null) {
           try {
-            Date date = new Date(alm.getTimeSource().currentTimeMillis());
-            alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.dateFormatter.valueToString(date)+":"+message);
-            exception.printStackTrace(alm.getPrintStream());
-          } catch (ParseException cantHappen) {
-            alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+alm.getTimeSource().currentTimeMillis()+":"+message);
-            cantHappen.printStackTrace(alm.getPrintStream());
+            Date date = new Date(alm.getTimeSource().currentTimeMillis());            
+            dateString = alm.dateFormatter.valueToString(date);
+          } catch (ParseException pe) {
+            pe.printStackTrace();
           }
         }
+        
+        alm.getPrintStream().print(alm.getPrefix()+loggerName+":"+dateString+":"+message);
+        exception.printStackTrace(alm.getPrintStream());
       }
     }
   }
