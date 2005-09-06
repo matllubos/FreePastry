@@ -159,7 +159,9 @@ public class MimeMessage {
       if (date == null)
         return "null";
       
-      if (date.getDate() < 10)
+      Calendar cal = Calendar.getInstance();
+      cal.setTime(date);
+      if (cal.get(Calendar.DAY_OF_MONTH) < 10)
         return " " + dateWriter.format(date);
       else
         return dateWriter.format(date);
