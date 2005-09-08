@@ -4,6 +4,9 @@
  */
 package rice.environment.logging;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Hashtable;
@@ -32,6 +35,9 @@ public abstract class AbstractLogManager implements LogManager {
   protected PrintStream ps;
   protected String prefix;
   protected String dateFormat;
+  
+  protected boolean enabled;
+  private PrintStream nullPrintStream;
 
   public DateFormatter dateFormatter;
   
@@ -49,12 +55,17 @@ public abstract class AbstractLogManager implements LogManager {
 //      System.out.println("DateFormat "+this.dateFormat);
     }
 
+    this.enabled = params.getBoolean("logging_enable");
+    this.nullPrintStream = new PrintStream(new NullOutputStream());
+
     this.loggers = new Hashtable();
     this.defaultLogger = constructLogger("",parseVal("loglevel"));
 
     params.addChangeListener(new ParameterChangeListener() {
 	    public void parameterChange(String paramName, String newVal) {
-	      if (paramName.equals("loglevel")) {
+	      if (paramName.equals("logging_enable")) {
+	        enabled = Boolean.getBoolean(newVal);
+	      } else if (paramName.equals("loglevel")) {
 	        ((LogLevelSetter)defaultLogger).setMinLogLevel(parseVal(paramName));
 	      } else if (paramName.endsWith("_loglevel")) {
 	        if (loggers.contains(paramName)) {
@@ -152,10 +163,26 @@ public abstract class AbstractLogManager implements LogManager {
   }
 
   public PrintStream getPrintStream() {
-    return ps;
+    if (enabled) {
+      return ps;
+    } else {
+      return nullPrintStream;
+    }
   }
   
   public String getPrefix() {
     return prefix;
+  }
+  
+  private static class NullOutputStream extends OutputStream {
+    public void write(int arg0) throws IOException {
+      // do nothing
+    }
+    public void write(byte[] buf) throws IOException {
+      // do nothing
+    }
+    public void write(byte[] buf, int a, int b) throws IOException {
+      // do nothing
+    }
   }
 }

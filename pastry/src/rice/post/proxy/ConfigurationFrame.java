@@ -241,9 +241,9 @@ public class ConfigurationFrame extends JFrame {
     public GeneralJavaConfiguration(GridBagLayout layout) {      
       super("General", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("java_home", "Java Home", new GridBagLayout(), "The location of the Java installation on your computer") },
-            { new TextBox("java_command", "Java Command", new GridBagLayout(), "The command to run when starting Java (this should not change)") },
-            { new TextBox("java_classpath", "Extra Classpath", new GridBagLayout(), "Any extra arguments that should go on the ePOST classpath") }});
+            { new TextBox("java_home", "Java Home", "The location of the Java installation on your computer") },
+            { new TextBox("java_command", "Java Command", "The command to run when starting Java (this should not change)") },
+            { new TextBox("java_classpath", "Extra Classpath", "Any extra arguments that should go on the ePOST classpath") }});
     }
   }
   
@@ -251,8 +251,9 @@ public class ConfigurationFrame extends JFrame {
     public MemoryConfiguration(GridBagLayout layout) {      
       super("Memory", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("java_maximum_memory", "Max JVM Memory", new GridBagLayout(), "The maximum amount of memory to allocate to Java (should look like ###M)") },
-            { new EnableBox("java_memory_free_enable", "Free JVM Memory", new GridBagLayout(), "Whether or not to request the JVM periodically release unused memory"), new FloatBox("java_memory_free_maximum", "Free Threshold", new GridBagLayout(), "The threshold of free memory before Java will release it") }});
+            { new TextBox("java_maximum_memory", "Max JVM Memory", "The maximum amount of memory to allocate to Java (should look like ###M)") },
+            { new EnableBox("java_memory_free_enable", "Free JVM Memory", "Whether or not to request the JVM periodically release unused memory"), 
+              new FloatBox("java_memory_free_maximum", "Free Threshold", new GridBagLayout(), "The threshold of free memory before Java will release it") }});
     }
   }
   
@@ -260,7 +261,8 @@ public class ConfigurationFrame extends JFrame {
     public DebugConfiguration(GridBagLayout layout) {      
       super("Debug", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("java_debug_enable", "Enable Debug", new GridBagLayout(), "Whether or not to enable the Java debugger (available using JDB)"), new NumericBox("java_debug_port", "Debug Port", new GridBagLayout(), "#####", "The port number of accept debugger connections on") }});
+            { new EnableBox("java_debug_enable", "Enable Debug", "Whether or not to enable the Java debugger (available using JDB)"), 
+              new NumericBox("java_debug_port", "Debug Port", new GridBagLayout(), "#####", "The port number of accept debugger connections on") }});
     }
   }
   
@@ -268,7 +270,8 @@ public class ConfigurationFrame extends JFrame {
     public ProfilingConfiguration(GridBagLayout layout) {      
       super("Profiling", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("java_profiling_enable", "Enable Profiling", new GridBagLayout(), "Whether or not to enable Borland OptimizeIt profiling (this is unavailable in the default installation)"), new NumericBox("java_profiling_port", "Profiling Port", new GridBagLayout(), "#####", "The port number of accept profiling connections on") }});
+            { new EnableBox("java_profiling_enable", "Enable Profiling", "Whether or not to enable Borland OptimizeIt profiling (this is unavailable in the default installation)"), 
+              new NumericBox("java_profiling_port", "Profiling Port", new GridBagLayout(), "#####", "The port number of accept profiling connections on") }});
     }
   }
   
@@ -276,8 +279,9 @@ public class ConfigurationFrame extends JFrame {
     public OtherJavaConfiguration(GridBagLayout layout) {      
       super("Advanced", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("java_stack_size", "Max JVM Stack", new GridBagLayout(), "The maximum stack size to allow the JVM to have (should be in the form ###K)") },
-            { new EnableBox("java_use_server_vm", "Use Server VM", new GridBagLayout(), "Whether or not to use the server VM (this is unavailable on most Windows installations)"), new EnableBox("java_interpreted_mode", "Interpreted Mode", new GridBagLayout(), "Whether or not to run in interpreted mode only (this is generally much slower)") }});
+            { new TextBox("java_stack_size", "Max JVM Stack", "The maximum stack size to allow the JVM to have (should be in the form ###K)") },
+            { new EnableBox("java_use_server_vm", "Use Server VM", "Whether or not to use the server VM (this is unavailable on most Windows installations)"), 
+              new EnableBox("java_interpreted_mode", "Interpreted Mode", "Whether or not to run in interpreted mode only (this is generally much slower)") }});
     }
   }
   
@@ -285,9 +289,9 @@ public class ConfigurationFrame extends JFrame {
     public GeneralPostConfiguration(GridBagLayout layout) {      
       super("General", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("post_username", "Post Username", new GridBagLayout(), "The username that POST should run with - a file with this name and the extension .epost must be in the local directory") },
-            { new PasswordBox("post_password", "Post Password", new GridBagLayout(), "The password corresponding to the user's certificate") }, 
-            { new TextBox("post_synchronize_interval", "Publish Interval", new GridBagLayout(), "The interval with which POST should request any pending email messages (in milliseconds)") }});
+            { new TextBox("post_username", "Post Username", "The username that POST should run with - a file with this name and the extension .epost must be in the local directory") },
+            { new PasswordBox("post_password", "Post Password", "The password corresponding to the user's certificate") }, 
+            { new TextBox("post_synchronize_interval", "Publish Interval", "The interval with which POST should request any pending email messages (in milliseconds)") }});
     }
   }
   
@@ -295,7 +299,8 @@ public class ConfigurationFrame extends JFrame {
     public SecurityConfiguration(GridBagLayout layout) {      
       super("Security", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("post_certificate_verification_enable", "Verify Certificate", new GridBagLayout(), "Whether or not POST should verify the certifate upon startup"), new EnableBox("post_keypair_verification_enable", "Verify Keypair", new GridBagLayout(), "Whether or not POST should compare the provided keypair to the ceriticate on startup") } });
+            { new EnableBox("post_certificate_verification_enable", "Verify Certificate", "Whether or not POST should verify the certifate upon startup"), 
+              new EnableBox("post_keypair_verification_enable", "Verify Keypair", "Whether or not POST should compare the provided keypair to the ceriticate on startup") } });
     }
   }
     
@@ -303,9 +308,11 @@ public class ConfigurationFrame extends JFrame {
     public LogConfiguration(GridBagLayout layout) {      
       super("Logs", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("post_allow_log_insert", "Allow Reinsert", new GridBagLayout(), "Whether or not POST is able to reinsert a log if it cannot be found - this should ONLY be enabled on the very first boot.\n It has the potential to erase you email folders!"), new EnableBox("post_allow_log_insert_reset", "Auto Reset", new GridBagLayout(), "Whether or not to automatically reset the 'Allow Reinsert' flag to a safe position") },
-            { new EnableBox("post_fetch_log", "Fetch Log", new GridBagLayout(), "Whether or not POST should fetch your log on startup - this is required to use email"), new NumericBox("post_fetch_log_retries", "Fetch Retries", new GridBagLayout(), "##", "The number of log fetch tries before giving up") },
-            { new EnableBox("post_force_log_reinsert", "Erase Log", new GridBagLayout(), "Whethere or not POST should erase your log on the next bootup - WARNING: This will PERMANENTLY erase your email folders!") }
+            { new EnableBox("post_allow_log_insert", "Allow Reinsert", "Whether or not POST is able to reinsert a log if it cannot be found - this should ONLY be enabled on the very first boot.\n It has the potential to erase you email folders!"), 
+              new EnableBox("post_allow_log_insert_reset", "Auto Reset", "Whether or not to automatically reset the 'Allow Reinsert' flag to a safe position") },
+            { new EnableBox("post_fetch_log", "Fetch Log", "Whether or not POST should fetch your log on startup - this is required to use email"), 
+              new NumericBox("post_fetch_log_retries", "Fetch Retries", "##", "The number of log fetch tries before giving up") },
+            { new EnableBox("post_force_log_reinsert", "Erase Log", "Whethere or not POST should erase your log on the next bootup - WARNING: This will PERMANENTLY erase your email folders!") }
             });
     }
   }
@@ -314,8 +321,8 @@ public class ConfigurationFrame extends JFrame {
     public RefreshConfiguration(GridBagLayout layout) {      
       super("Refresh", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("post_object_refresh_interval", "Refresh Interval", new GridBagLayout(), "The interval with which all live objects should be refreshed (in milliseconds)") },
-            { new TextBox("post_object_timeout_interval", "Refresh Lease", new GridBagLayout(), "The lifetime extension of all refreshed objects (in milliseconds)") },
+            { new TextBox("post_object_refresh_interval", "Refresh Interval", "The interval with which all live objects should be refreshed (in milliseconds)") },
+            { new TextBox("post_object_timeout_interval", "Refresh Lease", "The lifetime extension of all refreshed objects (in milliseconds)") },
             });
     }
   }
@@ -324,7 +331,8 @@ public class ConfigurationFrame extends JFrame {
     public GeneralEmailConfiguration(GridBagLayout layout) {      
       super("General", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("email_gateway", "Serve As Gateway", new GridBagLayout(), "Whether or not this machine should serve as a gateway - this should only be done by site administrators"), new EnableBox("email_accept_nonlocal", "Non-Local Connections", new GridBagLayout(), "Whether or not the email servers should accept connections which are not from the local box") } });
+            { new EnableBox("email_gateway", "Serve As Gateway", "Whether or not this machine should serve as a gateway - this should only be done by site administrators"), 
+              new EnableBox("email_accept_nonlocal", "Non-Local Connections", "Whether or not the email servers should accept connections which are not from the local box") } });
     }
   }
   
@@ -351,7 +359,7 @@ public class ConfigurationFrame extends JFrame {
       setPanels(
         new SaveablePanel[][] {
           { new InfoBox("Current size", (proxy==null) ? "???" : ((proxy.getGlacier().getTrashSize()/1024)+" kB"), new GridBagLayout(), currentSizeField, "This is the amount of trash stored in Glacier. Trash is kept around for efficiency but can be deleted to free up storage space."),
-            new ButtonBox(null, "Empty", new GridBagLayout(), "Click here to empty Glacier's trash storage") {
+            new ButtonBox(null, "Empty", "Click here to empty Glacier's trash storage") {
               public void action() {
                 if (proxy != null) {
                   currentSizeField.setText("Emptying...");
@@ -376,10 +384,12 @@ public class ConfigurationFrame extends JFrame {
     public SmtpConfiguration(GridBagLayout layout) {      
       super("SMTP Server", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("email_smtp_enable", "SMTP Enable", new GridBagLayout(), "Whether or not the SMTP service should be enabled - if so, there must be a default server"), new NumericBox("email_smtp_port", "SMTP Port", new GridBagLayout(), "#####", "The port which the local SMTP server should run on") },
-            { new EnableBox("email_smtp_ssl", "Use SSL", new GridBagLayout(), "Whether or not the SMTP server should run as an SSL server"), new EnableBox("email_smtp_authenticate", "Require Authentication", new GridBagLayout(), "Whether or not the SMTP server should require authenication before sending (via CRAM-MD5 or AUTH LOGIN)") },
-            { new TextBox("email_ring_" + ((rice.p2p.multiring.RingId) proxy.address.getAddress()).getRingId().toStringFull() + "_smtp_server", "Default SMTP Server", new GridBagLayout(), "The default SMTP server to use if an email is sent to a non-ePOST recipient - this is generally the same as your normal SMTP server") },
-            { new EnableBox("email_smtp_log", "Log Traffic", new GridBagLayout(), "Whether or not the SMTP server should log all traffic") } });
+            { new EnableBox("email_smtp_enable", "SMTP Enable", "Whether or not the SMTP service should be enabled - if so, there must be a default server"), 
+              new NumericBox("email_smtp_port", "SMTP Port", "#####", "The port which the local SMTP server should run on") },
+            { new EnableBox("email_smtp_ssl", "Use SSL", "Whether or not the SMTP server should run as an SSL server"), 
+              new EnableBox("email_smtp_authenticate", "Require Authentication", "Whether or not the SMTP server should require authenication before sending (via CRAM-MD5 or AUTH LOGIN)") },
+            { new TextBox("email_ring_" + ((rice.p2p.multiring.RingId) proxy.address.getAddress()).getRingId().toStringFull() + "_smtp_server", "Default SMTP Server", "The default SMTP server to use if an email is sent to a non-ePOST recipient - this is generally the same as your normal SMTP server") },
+            { new LogEnableBox("rice.email.proxy.smtp_loglevel", "Log Traffic", "Whether or not the SMTP server should log all traffic") } });
     }
   }
   
@@ -387,8 +397,10 @@ public class ConfigurationFrame extends JFrame {
     public ImapConfiguration(GridBagLayout layout) {      
       super("IMAP Server", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("email_imap_enable", "IMAP Enable", new GridBagLayout(), "Whether or not the IMAP service should be enabled"), new NumericBox("email_imap_port", "IMAP Port", new GridBagLayout(), "#####", "The port which the local IMAP server should run on") },
-            { new EnableBox("email_imap_ssl", "Use SSL", new GridBagLayout(), "Whether or not the IMAP server should run as an SSL server"), new EnableBox("email_imap_log", "Log Traffic", new GridBagLayout(), "Whether or not the IMAP server should log all traffic") } });
+            { new EnableBox("email_imap_enable", "IMAP Enable", "Whether or not the IMAP service should be enabled"), 
+              new NumericBox("email_imap_port", "IMAP Port", "#####", "The port which the local IMAP server should run on") },
+            { new EnableBox("email_imap_ssl", "Use SSL", "Whether or not the IMAP server should run as an SSL server"), 
+              new LogEnableBox("rice.email.proxy.imap_loglevel", "Log Traffic", "Whether or not the IMAP server should log all traffic") } });
     }
   }
 
@@ -396,8 +408,10 @@ public class ConfigurationFrame extends JFrame {
     public Pop3Configuration(GridBagLayout layout) {      
       super("POP3 Server", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("email_pop3_enable", "POP3 Enable", new GridBagLayout(), "Whether or not the POP3 service should be enabled"), new NumericBox("email_pop3_port", "POP3 Port", new GridBagLayout(), "#####", "The port which the local POP3 server should run on") },
-            { new EnableBox("email_pop3_ssl", "Use SSL", new GridBagLayout(), "Whether or not the POP3 server should run as an SSL server"), new EnableBox("email_pop3_log", "Log Traffic", new GridBagLayout(), "Whether or not the POP3 server should log all traffic") } });
+            { new EnableBox("email_pop3_enable", "POP3 Enable", "Whether or not the POP3 service should be enabled"), 
+              new NumericBox("email_pop3_port", "POP3 Port", "#####", "The port which the local POP3 server should run on") },
+            { new EnableBox("email_pop3_ssl", "Use SSL", "Whether or not the POP3 server should run as an SSL server"), 
+              new LogEnableBox("rice.email.proxy.pop3_loglevel", "Log Traffic", "Whether or not the POP3 server should log all traffic") } });
     }
   }
   
@@ -405,8 +419,8 @@ public class ConfigurationFrame extends JFrame {
     public SSLConfiguration(GridBagLayout layout) {      
       super("SSL Settings", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("email_ssl_keystore_filename", "Keystore Filename", new GridBagLayout(), "The filename of the SSL key which the SSL servers should use") },
-            { new PasswordBox("email_ssl_keystore_password", "Keystore Password", new GridBagLayout(), "The password to the keystore holding the SSL key") } });
+            { new TextBox("email_ssl_keystore_filename", "Keystore Filename", "The filename of the SSL key which the SSL servers should use") },
+            { new PasswordBox("email_ssl_keystore_password", "Keystore Password", "The password to the keystore holding the SSL key") } });
     }
   }
   
@@ -414,7 +428,8 @@ public class ConfigurationFrame extends JFrame {
     public GeneralProxyConfiguration(GridBagLayout layout) {      
       super("General", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("proxy_compatibility_check_enable", "Check Compatibility", new GridBagLayout(), "Whether or not the proxy should check ePOST compatibility on startup"), new EnableBox("proxy_show_dialog", "Show Window", new GridBagLayout(), "Whether or not the proxy should show the 'Welcome to ePOST' dialog on startup") }});
+            { new EnableBox("proxy_compatibility_check_enable", "Check Compatibility", "Whether or not the proxy should check ePOST compatibility on startup"), 
+              new EnableBox("proxy_show_dialog", "Show Window", "Whether or not the proxy should show the 'Welcome to ePOST' dialog on startup") }});
     }
   }
   
@@ -422,8 +437,9 @@ public class ConfigurationFrame extends JFrame {
     public UpdateConfiguration(GridBagLayout layout) {      
       super("Automatic Updating", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("proxy_automatic_update_enable", "Enable Updating", new GridBagLayout(), "Whether or not the proxy should periodically check for updated ePOST software"), new EnableBox("proxy_automatic_update_ask_user", "Ask Before Updating", new GridBagLayout(), "Whether or not you would like ePOST to automatically download and install new updates") },
-            { new TextBox("proxy_automatic_update_interval", "Updating Interval", new GridBagLayout(), "The interval, in milliseconds, with which ePOST should check for updates") } });
+            { new EnableBox("proxy_automatic_update_enable", "Enable Updating", "Whether or not the proxy should periodically check for updated ePOST software"), 
+              new EnableBox("proxy_automatic_update_ask_user", "Ask Before Updating", "Whether or not you would like ePOST to automatically download and install new updates") },
+            { new TextBox("proxy_automatic_update_interval", "Updating Interval", "The interval, in milliseconds, with which ePOST should check for updates") } });
     }
   }
   
@@ -431,8 +447,8 @@ public class ConfigurationFrame extends JFrame {
     public LivenessConfiguration(GridBagLayout layout) {      
       super("Liveness Monitor", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("proxy_liveness_monitor_enable", "Enable Monitor", new GridBagLayout(), "Whether or not the proxy should periodically ping the client JVM to make sure it's not hung") },
-            { new TextBox("proxy_liveness_monitor_timeout", "Monitor Timeout", new GridBagLayout(), "The maximum response time to a ping for the client JVM to be considered alive") } });
+            { new EnableBox("proxy_liveness_monitor_enable", "Enable Monitor", "Whether or not the proxy should periodically ping the client JVM to make sure it's not hung") },
+            { new TextBox("proxy_liveness_monitor_timeout", "Monitor Timeout", "The maximum response time to a ping for the client JVM to be considered alive") } });
     }
   }
   
@@ -440,8 +456,8 @@ public class ConfigurationFrame extends JFrame {
     public SleepConfiguration(GridBagLayout layout) {      
       super("Sleep Monitor", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("proxy_sleep_monitor_enable", "Enable Monitor", new GridBagLayout(), "Whether or not the proxy should detect the computer going to sleep, and automatically reboot the proxy") },
-            { new TextBox("proxy_sleep_monitor_timeout", "Monitor Timeout", new GridBagLayout(), "The maximal timeout before the proxy decides to reboot the proxy") } });
+            { new EnableBox("proxy_sleep_monitor_enable", "Enable Monitor", "Whether or not the proxy should detect the computer going to sleep, and automatically reboot the proxy") },
+            { new TextBox("proxy_sleep_monitor_timeout", "Monitor Timeout", "The maximal timeout before the proxy decides to reboot the proxy") } });
     }
   }
   
@@ -449,8 +465,8 @@ public class ConfigurationFrame extends JFrame {
     public RestartConfiguration(GridBagLayout layout) {      
       super("Auto-Restart", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("restart_delay", "Restart Delay", new GridBagLayout(), "The amount of time to wait, in milliseconds, before restart the client JVM") },
-            { new TextBox("restart_max", "Maximum Restarts", new GridBagLayout(), "The maximum number of times to restart the client before exiting the server JVM") } });
+            { new TextBox("restart_delay", "Restart Delay", "The amount of time to wait, in milliseconds, before restart the client JVM") },
+            { new TextBox("restart_max", "Maximum Restarts", "The maximum number of times to restart the client before exiting the server JVM") } });
     }
   }
   
@@ -458,18 +474,19 @@ public class ConfigurationFrame extends JFrame {
     public StorageConfiguration(GridBagLayout layout) {      
       super("Disk Storage", layout, 
             new SaveablePanel[][] { 
-            { new TextBox("storage_root_location", "Storage Location", new GridBagLayout(), "The path where the FreePastry-Storage-Root directory (containing DHT data) should be stored") },
-            { new TextBox("storage_cache_limit", "Cache Limit", new GridBagLayout(), "The size limit, in bytes, of the disk cache") },
-            { new TextBox("storage_disk_limit", "Disk Limit", new GridBagLayout(), "The size limit, in bytes, of the on-disk storage roots") } });
+            { new TextBox("storage_root_location", "Storage Location", "The path where the FreePastry-Storage-Root directory (containing DHT data) should be stored") },
+            { new TextBox("storage_cache_limit", "Cache Limit", "The size limit, in bytes, of the disk cache") },
+            { new TextBox("storage_disk_limit", "Disk Limit", "The size limit, in bytes, of the on-disk storage roots") } });
     }
   }
   
   protected class LoggingConfiguration extends TitledPanel {
     public LoggingConfiguration(GridBagLayout layout) {      
       super("Logging", layout, 
-            new SaveablePanel[][] { 
-            { new EnableBox("standard_output_redirect_enable", "Enable Logging", new GridBagLayout(), "Whether or not the proxy should log statistics to disk (please don't disable)"), new EnableBox("standard_output_network_enable", "Upload Logs", new GridBagLayout(), "Whether or not the proxy should automatically upload the statistics to the Rice ePOST team") },
-            { new TextBox("standard_output_network_interval", "Upload Interval", new GridBagLayout(), "The interval, in milliseconds, with which the statistics should be uploaded") } });
+            new SaveablePanel[][] {
+            { new EnableBox("logging_enable", "Enable Logging", "Whether or not the proxy should log statistics to disk (please don't disable)"), 
+              new EnableBox("log_network_upload_enable", "Upload Logs", "Whether or not the proxy should automatically upload the statistics to the Rice ePOST team") },
+            { new TextBox("log_network_upload_interval", "Upload Interval", "The interval, in milliseconds, with which the statistics should be uploaded") } });
     }
   }
   
@@ -477,7 +494,8 @@ public class ConfigurationFrame extends JFrame {
     public GlobalConfiguration(GridBagLayout layout) {      
       super("Global Ring", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("multiring_enable", "Enable Multiple Rings", new GridBagLayout(), "Whether or not the proxy should use the multiring protocol (do not disable)"), new EnableBox("multiring_global_enable", "Join Global Ring", new GridBagLayout(), "Whether or not the proxy should attempt to join the global ring (should only be activated if your have a routable IP address)") } });
+            { new EnableBox("multiring_enable", "Enable Multiple Rings", "Whether or not the proxy should use the multiring protocol (do not disable)"), 
+              new EnableBox("multiring_global_enable", "Join Global Ring", "Whether or not the proxy should attempt to join the global ring (should only be activated if your have a routable IP address)") } });
     }
   }
   
@@ -485,9 +503,9 @@ public class ConfigurationFrame extends JFrame {
     public PastConfiguration(GridBagLayout layout) {      
       super("PAST", layout, 
             new SaveablePanel[][] { 
-            { new EnableBox("past_backup_cache_enable", "Enable Backup Cache", new GridBagLayout(), "Whether or not PAST should cache over-replicated objects for better performacne") }, 
-            { new TextBox("past_backup_cache_limit", "Backup Cache Limit", new GridBagLayout(), "The limit to the amount of over-replicated objects to cache, in bytes") },
-            { new TextBox("past_garbage_collection_interval", "GC Interval", new GridBagLayout(), "The interval, in milliseconds, with which PAST should collect expired objects in the local storage") } });
+            { new EnableBox("past_backup_cache_enable", "Enable Backup Cache", "Whether or not PAST should cache over-replicated objects for better performacne") }, 
+            { new TextBox("past_backup_cache_limit", "Backup Cache Limit", "The limit to the amount of over-replicated objects to cache, in bytes") },
+            { new TextBox("past_garbage_collection_interval", "GC Interval", "The interval, in milliseconds, with which PAST should collect expired objects in the local storage") } });
     }
   }
 
@@ -591,8 +609,8 @@ public class ConfigurationFrame extends JFrame {
     
     protected JCheckBox box;
     
-    public EnableBox(String parameter, String label, GridBagLayout layout, String tip) {
-      this(parameter, label, layout, true, tip);
+    public EnableBox(String parameter, String label, String tip) {
+      this(parameter, label, new GridBagLayout(), true, tip);
     }
     
     public EnableBox(String parameter, String label, GridBagLayout layout, boolean small, String tip) {
@@ -626,14 +644,55 @@ public class ConfigurationFrame extends JFrame {
     }
   }
   
+  protected class LogEnableBox extends ConfigurationPanel {
+
+    protected String label;
+    protected JCheckBox box;
+    
+	  	public LogEnableBox(String parameter, String label, String tip) {
+	  	  this(parameter, label, new GridBagLayout(), true, tip);
+	  	}
+	  	
+	  	public LogEnableBox(String parameter, String label, GridBagLayout layout, boolean small, String tip) {
+	  	  super(parameter, layout);
+
+	  	  this.label = label; 
+	      
+	  	  this.box = new JCheckBox();
+	  	  JLabel boxLabel = new JLabel(label + ": ", JLabel.TRAILING);
+	  	  boxLabel.setLabelFor(box);
+	  	  boxLabel.setToolTipText(tip);
+	      
+	  	  if (small)
+	  	    setPreferredSize(ENABLE_BOX_SIZE);
+	  	  else
+	  	    setPreferredSize(TEXT_BOX_SIZE);
+	      
+	  	  GridBagConstraints gbc1 = new GridBagConstraints();
+	  	  layout.setConstraints(boxLabel, gbc1);      
+	  	  add(boxLabel);
+	      
+	  	  GridBagConstraints gbc2 = new GridBagConstraints();
+	  	  gbc2.gridx = 1;
+	  	  layout.setConstraints(box, gbc2);      
+	  	  add(box);
+
+	  	  box.setSelected(!parameters.getString(parameter).equalsIgnoreCase("OFF"));
+	  	}
+	  
+	  	protected String getValue() {
+	  	  return box.isSelected() ? "ALL" : "OFF";
+	  	}
+	}
+
   protected class TextBox extends ConfigurationPanel {
     
     protected String label;
     
     protected JTextField field;
     
-    public TextBox(String parameter, String label, GridBagLayout layout, String tip) {
-      this(parameter, label, layout, new JTextField(20), tip);
+    public TextBox(String parameter, String label, String tip) {
+      this(parameter, label, new GridBagLayout(), new JTextField(20), tip);
     }
     
     public TextBox(String parameter, String label, GridBagLayout layout, JTextField field, String tip) {
@@ -670,8 +729,8 @@ public class ConfigurationFrame extends JFrame {
     
     protected JTextField field;
     
-    public InfoBox(String label, String value, GridBagLayout layout, String tip) {
-      this(label, value, layout, new JTextField(20), tip);
+    public InfoBox(String label, String value, String tip) {
+      this(label, value, new GridBagLayout(), new JTextField(20), tip);
     }
     
     public InfoBox(String label, String value, GridBagLayout layout, JTextField field, String tip) {
@@ -715,8 +774,8 @@ public class ConfigurationFrame extends JFrame {
     
     protected JButton button;
     
-    public ButtonBox(String label, String value, GridBagLayout layout, String tip) {
-      this(label, layout, new JButton(value), tip);
+    public ButtonBox(String label, String value, String tip) {
+      this(label, new GridBagLayout(), new JButton(value), tip);
     }
     
     public ButtonBox(String label, GridBagLayout layout, JButton button, String tip) {
@@ -915,8 +974,8 @@ public class ConfigurationFrame extends JFrame {
     
     protected JSlider slider;
     
-    public SliderBox(String parameter, String label, GridBagLayout layout, String tip) {
-      this(parameter, label, layout, new JSlider(), tip);
+    public SliderBox(String parameter, String label, String tip) {
+      this(parameter, label, new GridBagLayout(), new JSlider(), tip);
     }
     
     public SliderBox(String parameter, String label, GridBagLayout layout, JSlider slider, String tip) {
@@ -957,6 +1016,10 @@ public class ConfigurationFrame extends JFrame {
     
     protected String mask;
     
+    public NumericBox(String parameter, String label, String mask, String tip) {
+      this(parameter, label, new GridBagLayout(), mask, tip);
+    }
+    
     public NumericBox(String parameter, String label, GridBagLayout layout, String mask, String tip) {
       super(parameter, label, layout, buildMaskedField(mask), tip);
       
@@ -972,6 +1035,10 @@ public class ConfigurationFrame extends JFrame {
     
     protected String mask;
     
+    public FloatBox(String parameter, String label, String tip) {
+      this(parameter, label, new GridBagLayout(), tip);
+    }
+    
     public FloatBox(String parameter, String label, GridBagLayout layout, String tip) {
       super(parameter, label, layout, new JTextField(4), tip);
       
@@ -981,6 +1048,10 @@ public class ConfigurationFrame extends JFrame {
   }
   
   protected class PasswordBox extends TextBox {
+    
+    public PasswordBox(String parameter, String label, String tip) {
+      this(parameter, label, new GridBagLayout(),tip);
+    }
     
     public PasswordBox(String parameter, String label, GridBagLayout layout, String tip) {
       super(parameter, label, layout, new JPasswordField(20), tip);
