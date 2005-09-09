@@ -7,6 +7,7 @@ import antlr.TokenStreamRecognitionException;
 
 import rice.email.proxy.imap.commands.AbstractImapCommand;
 import rice.email.proxy.imap.commands.BadSyntaxCommand;
+import rice.environment.Environment;
 
 import java.io.StringReader;
 
@@ -15,6 +16,12 @@ import java.io.StringReader;
 public class ImapLineParser
 {
 
+  Environment environment;
+  
+  public ImapLineParser(Environment env) {
+    this.environment = env;   
+  }
+  
     void lexEatUnknowns(ImapCommandLexer lexer)
                  throws RecognitionException, TokenStreamException
     {
@@ -36,6 +43,7 @@ public class ImapLineParser
         ImapCommandLexer lexer = new ImapCommandLexer(new StringReader(
                                                               line));
         ImapCommandParser parser = new ImapCommandParser(lexer);
+        parser.setEnvironment(environment);
         try
         {
 

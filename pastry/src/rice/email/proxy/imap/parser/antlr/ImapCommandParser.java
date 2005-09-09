@@ -7,6 +7,7 @@ import rice.email.proxy.imap.commands.fetch.*;
 import rice.email.proxy.imap.commands.search.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
 
 import antlr.TokenStreamRecognitionException;
 import antlr.CharStreamException;
@@ -33,10 +34,16 @@ import antlr.collections.impl.BitSet;
 public class ImapCommandParser extends antlr.LLkParser       implements ImapCommandParserTokenTypes
  {
 
+  Environment env; 
+  
   AbstractImapCommand command;
 
   public AbstractImapCommand getCommand() {
     return command;
+  }
+  
+  public void setEnvironment(Environment env) {
+    this.env = env;
   }
   
   public void resetState() {
@@ -1747,7 +1754,7 @@ public ImapCommandParser(ParserSharedInputState state) {
 	) throws RecognitionException, TokenStreamException {
 		
 		
-				FetchCommand cmd = new FetchCommand(isUID);
+				FetchCommand cmd = new FetchCommand(isUID, env);
 				MsgFilter range;
 			
 		

@@ -11,6 +11,7 @@ import rice.email.proxy.mail.StoredMessage;
 import rice.email.proxy.mailbox.MailFolder;
 import rice.email.proxy.mailbox.MailboxException;
 import rice.email.proxy.mailbox.MsgFilter;
+import rice.environment.Environment;
 import rice.environment.logging.Logger;
 
 
@@ -31,9 +32,12 @@ public class FetchCommand extends AbstractImapCommand {
   
   public static FetchOptionRegistry registry = new FetchOptionRegistry();
 
-  public FetchCommand(boolean isUID) {
+  Environment environment;
+  
+  public FetchCommand(boolean isUID, Environment env) {
     super("FETCH");
     this.isUID = isUID;
+    this.environment = env;
   }
 
   public boolean isValidForState(ImapState state) {

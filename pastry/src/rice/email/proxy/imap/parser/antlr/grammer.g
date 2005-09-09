@@ -6,6 +6,7 @@ import rice.email.proxy.imap.commands.fetch.*;
 import rice.email.proxy.imap.commands.search.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
 
 import antlr.TokenStreamRecognitionException;
 import antlr.CharStreamException;
@@ -26,10 +27,16 @@ options {
 }
 
 {
+  Environment env; 
+  
   AbstractImapCommand command;
 
   public AbstractImapCommand getCommand() {
     return command;
+  }
+  
+  public void setEnvironment(Environment env) {
+    this.env = env;
   }
   
   public void resetState() {
@@ -208,7 +215,7 @@ unknown : (.)* EOF
  * Commands for logged in people
  */
 
-command_auth :
+command_auth:
 create | delete | rename |
 subscribe | unsubscribe | list | lsub |
 examine | status | select |
@@ -527,7 +534,7 @@ search_part_date_arg returns [DateArgSearchPart part]
 
 fetch [boolean isUID]
 	{
-		FetchCommand cmd = new FetchCommand(isUID);
+		FetchCommand cmd = new FetchCommand(isUID, env);
 		MsgFilter range;
 	}:
 	FETCH SPACE range=range[isUID] SPACE

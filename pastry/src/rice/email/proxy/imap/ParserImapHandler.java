@@ -44,7 +44,7 @@ final class ParserImapHandler implements Quittable {
     
     public void handleConnection(final Socket socket, Environment env) throws IOException {
         conn = new ImapConnection(this, socket, env);
-        cmdParser = new ImapLineParser();
+        cmdParser = new ImapLineParser(env);
 
         try {
             quitting = false;

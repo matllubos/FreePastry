@@ -7,6 +7,7 @@ import rice.email.proxy.imap.commands.fetch.*;
 import rice.email.proxy.imap.commands.search.*;
 import rice.email.proxy.mailbox.*;
 import rice.email.proxy.util.*;
+import rice.environment.Environment;
 
 import antlr.TokenStreamRecognitionException;
 import antlr.CharStreamException;

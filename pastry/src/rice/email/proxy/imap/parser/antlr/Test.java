@@ -3,6 +3,8 @@
  */
 package rice.email.proxy.imap.parser.antlr;
 
+import rice.environment.Environment;
+
 public class Test {
 
   /**
@@ -11,9 +13,9 @@ public class Test {
   public static void main(String[] args) {
     System.out.println("Hello world");
     
-    Object foo = new ImapLineParser().parseCommand("001 LOGIN foobar somepasswd");
+    Object foo = new ImapLineParser(new Environment()).parseCommand("001 LOGIN foobar somepasswd");
     System.out.println("foo:"+foo);
-    foo = new ImapLineParser().parseCommand("001 LOGIN foo.bar somepasswd");
+    foo = new ImapLineParser(new Environment()).parseCommand("001 LOGIN foo.bar somepasswd");
     System.out.println("foo:"+foo);
   }
 
