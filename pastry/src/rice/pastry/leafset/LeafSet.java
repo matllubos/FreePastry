@@ -396,11 +396,11 @@ public class LeafSet extends Observable implements Serializable {
    *
    * @return the number of unique nodes in the leafset
    */
-  private int getUniqueCount() {
+  public int getUniqueCount() {
     HashSet superset = new HashSet();
     superset.addAll(cwSet.getCollection());
     superset.addAll(ccwSet.getCollection());
-    return superset.size();     
+    return superset.size()+1; // the local node     
 //
 //    Vector v = new Vector();
 //
@@ -439,7 +439,7 @@ public class LeafSet extends Observable implements Serializable {
   public IdRange range(NodeHandle n, int r) { 
    // first, we check the arguments
    if (r < 0) throw new IllegalArgumentException("Range must be greater than or equal to zero. Attampted "+r);
-   if (! (member(n) || baseId.equals(n.getNodeId()))) throw new RangeCannotBeDeterminedException("Node "+n+" is not in this leafset.",r,Integer.MIN_VALUE, getUniqueCount(), n);
+   if (! (member(n) || baseHandle.equals(n))) throw new RangeCannotBeDeterminedException("Node "+n+" is not in this leafset.",r,Integer.MIN_VALUE, getUniqueCount(), n);
 
    // get the position of the node and the number of nodes in the network
    int pos = getIndex(n);
