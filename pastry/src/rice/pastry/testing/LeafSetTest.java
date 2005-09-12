@@ -165,7 +165,12 @@ public class LeafSetTest {
         for (int pos=-min(size/2,nodes/2); pos<=min(size/2,nodes/2); pos++) {
           
           for (int q=0; q<size; q++) {
-            IdRange range = leafset.range(leafset.get(pos), q);
+            IdRange range = null;
+            try {
+              range = leafset.range(leafset.get(pos), q);
+            } catch (RangeCannotBeDeterminedException rcbde) {
+               
+            }
             if ((q < size/2 - abs(pos)) || (size + 1 > nodes)) {
               assertTrue("Range of node " + pos + " with q " + q + " nodes " + nodes + " size " + size +
                          " should be defined in leafset " + leafset, range != null);
@@ -197,8 +202,10 @@ public class LeafSetTest {
         for (int pos=-min(size/2,nodes/2); pos<=min(size/2,nodes/2); pos++) {
 
           for (int q=0; q<size; q++) {
-            IdRange range = leafset.range(leafset.get(pos), q, true);
-
+            IdRange range = null;
+            try {
+              range = leafset.range(leafset.get(pos), q, true);
+            } catch (RangeCannotBeDeterminedException rcbde) {}
             if ((q < size/2 - abs(pos)) || (size + 1 > nodes)) {
               assertTrue("Range of node " + pos + " with q " + q + " nodes " + nodes + " size " + size +
                          " should not be null in leafset " + leafset, range != null);
