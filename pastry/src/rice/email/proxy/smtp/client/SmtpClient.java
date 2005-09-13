@@ -6,6 +6,7 @@ import rice.environment.logging.Logger;
 
 import java.io.*;
 import java.net.*;
+import rice.p2p.util.*;
 
 public class SmtpClient {
 
@@ -74,8 +75,38 @@ public class SmtpClient {
     response = sendCommand("\r\n.");
     if (!response.startsWith("250"))
       throw new SmtpProtocolException("Unsucessful DATA content: " + response);
-
   }
+  
+  public void send(String returnPath, String rcptTo, Reader message, String username, String password) throws IOException, SmtpProtocolException {
+		String response = sendCommand("AUTH CRAM-MD5");
+    
+    if (response.startsWith("334")) {
+      String text = new String(Base64.decode(response.substring(response.indexOf(" ")+1)));
+      
+      String response2 = sendCommand(Base64.encodeBytes((username + " " + SecurityUtils.hmac(password.getBytes(), text.getBytes())).getBytes()));
+      
+      if (! response2.startsWith("235")) throw new SmtpProtocolException("Authentication failed: " + response2);      
+    } else {
+      String response2 = sendCommand("AUTH LOGIN");
+      
+      if (!response2.startsWith("334")) throw new SmtpProtocolException("Unsuccessful AUTH command (CRAM-MD5: " + response + ", LOGIN: " + response2 + ")");  
+
+      String command = new String(Base64.decode(response2.substring(response2.indexOf(" ")+1))).trim().toLowerCase();
+      if (!command.equals("username")) throw new SmtpProtocolException("Unknown AUTH LOGIN username response: " + command);
+          
+      String response3 = sendCommand(Base64.encodeBytes(username.getBytes()));
+      
+      command = new String(Base64.decode(response3.substring(response3.indexOf(" ")+1))).trim().toLowerCase();
+      if (!command.equals("password")) throw new SmtpProtocolException("Unknown AUTH LOGIN password response: " + command);
+      
+      String response4 = sendCommand(Base64.encodeBytes(password.getBytes()));
+
+      if (! response4.startsWith("235")) throw new SmtpProtocolException("Authentication failed: " + response4);
+    }
+		
+    send(returnPath, rcptTo, message);
+  }
+  
 
   public void close() throws IOException {
     try {

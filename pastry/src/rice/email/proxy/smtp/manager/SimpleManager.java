@@ -34,6 +34,10 @@ public class SimpleManager implements SmtpManager {
  
   protected Environment environment;
   
+  protected String smtpUsername;
+  
+  protected String smtpPassword;
+  
 //  static {
 //    String s = System.getProperty("POST_HOST");
 //    
@@ -51,6 +55,11 @@ public class SimpleManager implements SmtpManager {
     this.gateway = gateway;
     this.address = address;
     this.server = server;
+    
+    if (environment.getParameters().getBoolean("email_smtp_use_authentication")) {
+      this.smtpUsername = environment.getParameters().getString("email_smtp_username");
+      this.smtpPassword = environment.getParameters().getString("email_smtp_password");
+    }
   }
   
   public InetAddress getLocalHost() {
@@ -197,7 +206,7 @@ public class SimpleManager implements SmtpManager {
         Reader content = state.getMessage().getContent();
         SmtpClient client = new SmtpClient(host, environment);
         client.connect();
-        client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content);
+        client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content, smtpUsername, smtpPassword);
         client.close();
       } catch (Exception e) {
         throw new IOException("Couldn't send a message to " + addr + " due to " + e);
