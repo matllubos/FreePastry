@@ -351,6 +351,8 @@
         <include name="rice/tutorial/**/*.java"/>
       </tarfileset>
       <tarfileset dir="ant" includes="**/*" prefix="pastry-${freepastry-version}/ant"/>
+      <tarfileset dir="html" includes="**/*" prefix="pastry-${freepastry-version}/html"/>
+      <tarfileset dir="jars/freepastry" includes="freepastry.params" prefix="pastry-${freepastry-version}/jars/freepastry"/>
       <tarfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license"/>
       <tarfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing"/>
       <tarfileset dir="${lib.dir}" prefix="pastry-${freepastry-version}/lib">
@@ -394,6 +396,8 @@
         <include name="rice/tutorial/**/*.java"/>
       </zipfileset>
       <zipfileset dir="ant" includes="**/*" prefix="pastry-${freepastry-version}/ant" />
+      <zipfileset dir="html" includes="**/*" prefix="pastry-${freepastry-version}/html" />
+      <zipfileset dir="jars/freepastry" includes="freepastry.params" prefix="pastry-${freepastry-version}/jars/freepastry" />
       <zipfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license" />
       <zipfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing" />
       <zipfileset dir="${lib.dir}" prefix="pastry-${freepastry-version}/lib">
