@@ -30,15 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
-import javax.swing.ButtonGroup;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JRadioButtonMenuItem;
+import javax.swing.*;
 
 /**
  * @author Jeff Hoye
@@ -626,6 +618,22 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }  
   
   public static void main(String[] args) throws Exception {
+    
+    if (args.length <= 1) {
+      String number = "1";
+      if (args.length == 1) {
+        number = args[0];
+      } else {
+        System.out.println("opening dialog");
+        number = JOptionPane.showInputDialog(new JFrame(), "Enter the run number", "1"); 
+      }
+      args = new String[3];
+      // m:/planetlab/plcons/cons1/viz m:/planetlab/plcons/cons1/node_index.txt m:/planetlab/plcons/cons1/
+      args[0] = "m:/planetlab/plcons/cons"+number+"/viz";
+      args[1] = "m:/planetlab/plcons/cons"+number+"/node_index.txt";
+      args[2] = "m:/planetlab/plcons/cons1/";
+    }
+    
     JFrame frame = new JFrame("ConsRenderer");
     JMenuBar menuBar = new JMenuBar();
     JMenu preLifeMenu = new JMenu("preReady");
