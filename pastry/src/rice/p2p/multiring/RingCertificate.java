@@ -58,11 +58,11 @@ public class RingCertificate implements Serializable {
         URL a2 = ClassLoader.getSystemResource(filename);
         InputStream b2 = a2.openStream();
         RingCertificate cert = readFromStream(b2);
-        cert.refresh();
         
         if (cert.verify(caPublic)) {
           if ((getCertificate(cert.getId()) == null) || 
               (getCertificate(cert.getId()).getVersion() < cert.getVersion())) {
+            cert.refresh();
             CERTIFICATES.put(cert.getId(), cert);
           } 
         } else {
@@ -104,8 +104,6 @@ public class RingCertificate implements Serializable {
    * Helper function for refresh().  Returns an identical InetSocketAddress unless
    * the ip address in address is stale.  Then it returns the current one based on a
    * dns lookup.
-   * 
-   * As of Sept/1/2005 untested if this actually works.  Need to force a dns change.
    * 
    * @param address
    * @return
