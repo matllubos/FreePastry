@@ -56,7 +56,7 @@ public class SimpleManager implements SmtpManager {
     this.address = address;
     this.server = server;
     
-    if (environment.getParameters().getBoolean("email_smtp_use_authentication")) {
+    if (environment.getParameters().getBoolean("email_smtp_send_authentication")) {
       this.smtpUsername = environment.getParameters().getString("email_smtp_username");
       this.smtpPassword = environment.getParameters().getString("email_smtp_password");
     }

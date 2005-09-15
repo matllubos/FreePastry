@@ -64,7 +64,7 @@ public class ConfigurationFrame extends JFrame {
     this.parameters = environment.getParameters();
     this.panels = new ControlPanel[7];
     this.panels[0] = new EmailConfiguration();
-    this.panels[1] = new ForwardingConfiguration();
+    this.panels[1] = new SendingConfiguration();
     this.panels[2] = new JavaConfiguration();
     this.panels[3] = new PostConfiguration();
     this.panels[4] = new ProxyConfiguration();
@@ -77,7 +77,7 @@ public class ConfigurationFrame extends JFrame {
     JTabbedPane pane = new JTabbedPane();
     
     pane.addTab("Email", null, panels[0], "Email Configuration Pane");
-    pane.addTab("Forward", null, panels[1], "Email Forwarding Configuration Pane");
+    pane.addTab("Sending", null, panels[1], "Sending Email Configuration Pane");
     pane.addTab("Java", null, panels[2], "Java Configuration Pane");
     pane.addTab("POST", null, panels[3], "POST Configuration Pane");
     pane.addTab("Proxy", null, panels[4], "Proxy Configuration Pane");
@@ -198,10 +198,11 @@ public class ConfigurationFrame extends JFrame {
     }
   }
   
-  protected class ForwardingConfiguration extends ControlPanel {
-    public ForwardingConfiguration() {
+  protected class SendingConfiguration extends ControlPanel {
+    public SendingConfiguration() {
       super(new GridBagLayout(), 
-            new SaveablePanel[] { new GeneralForwardingConfiguration(new GridBagLayout())});
+            new SaveablePanel[] { new SmtpClientConfiguration(new GridBagLayout()), 
+                                new ForwardingConfiguration(new GridBagLayout()) });
     }
   }
   
@@ -336,8 +337,8 @@ public class ConfigurationFrame extends JFrame {
     }
   }
   
-  protected class GeneralForwardingConfiguration extends TitledPanel {
-    public GeneralForwardingConfiguration(GridBagLayout layout) {      
+  protected class ForwardingConfiguration extends TitledPanel {
+    public ForwardingConfiguration(GridBagLayout layout) {      
       super("Email Forwarding", layout, 
             new SaveablePanel[][] { 
             { new ListBox("post_forward_addresses", "Forwarding Addresses", new GridBagLayout(), "The list of email addresses you would like your mail forwarded to - note that these must be ePOST addresses")} });
@@ -388,11 +389,21 @@ public class ConfigurationFrame extends JFrame {
               new NumericBox("email_smtp_port", "SMTP Port", "#####", "The port which the local SMTP server should run on") },
             { new EnableBox("email_smtp_ssl", "Use SSL", "Whether or not the SMTP server should run as an SSL server"), 
               new EnableBox("email_smtp_authenticate", "Require Authentication", "Whether or not the SMTP server should require authenication before sending (via CRAM-MD5 or AUTH LOGIN)") },
-            { new TextBox("email_ring_" + ((rice.p2p.multiring.RingId) proxy.address.getAddress()).getRingId().toStringFull() + "_smtp_server", "Default SMTP Server", "The default SMTP server to use if an email is sent to a non-ePOST recipient - this is generally the same as your normal SMTP server") },
             { new LogEnableBox("rice.email.proxy.smtp_loglevel", "Log Traffic", "Whether or not the SMTP server should log all traffic") } });
     }
   }
   
+  protected class SmtpClientConfiguration extends TitledPanel {
+    public SmtpClientConfiguration(GridBagLayout layout) {      
+      super("SMTP Client", layout, 
+            new SaveablePanel[][] { 
+            { new TextBox("email_ring_" + ((rice.p2p.multiring.RingId) proxy.address.getAddress()).getRingId().toStringFull() + "_smtp_server", "Default SMTP Server", "The default SMTP server to use if an email is sent to a non-ePOST recipient - this is generally the same as your normal SMTP server") },
+            { new EnableBox("email_smtp_send_authenticate", "Use Authentication", "Whether or not the SMTP client should attempt authenication before sending (via CRAM-MD5 or AUTH LOGIN)") },
+            { new TextBox("email_smtp_username", "Username", "Username to use when logging into remote SMTP servers") },
+            { new PasswordBox("email_smtp_password", "Password", "Password to use when logging into remote SMTP servers") } });
+    }
+  }
+
   protected class ImapConfiguration extends TitledPanel {
     public ImapConfiguration(GridBagLayout layout) {      
       super("IMAP Server", layout, 
