@@ -35,10 +35,10 @@ public class AggregateList {
     this.label = label;
     this.rootKey = null;
     this.nextSerial = 0;
+    this.environment = env;
     this.wasReadOK = readFromDisk();
     this.loggingEnabled = loggingEnabled;
     this.logFileName = configFileName + ".log";
-    this.environment = env;
     
     if (loggingEnabled) {
       recoverLog();
