@@ -34,6 +34,8 @@ public class SimpleManager implements SmtpManager {
  
   protected Environment environment;
   
+  protected boolean authenticate;
+  
   protected String smtpUsername;
   
   protected String smtpPassword;
@@ -55,8 +57,9 @@ public class SimpleManager implements SmtpManager {
     this.gateway = gateway;
     this.address = address;
     this.server = server;
-    
-    if (environment.getParameters().getBoolean("email_smtp_send_authentication")) {
+  
+    this.authenticate = environment.getParameters().getBoolean("email_smtp_send_authentication"); 
+    if (authenticate) {
       this.smtpUsername = environment.getParameters().getString("email_smtp_username");
       this.smtpPassword = environment.getParameters().getString("email_smtp_password");
     }
@@ -206,7 +209,11 @@ public class SimpleManager implements SmtpManager {
         Reader content = state.getMessage().getContent();
         SmtpClient client = new SmtpClient(host, environment);
         client.connect();
-        client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content, smtpUsername, smtpPassword);
+        if (authenticate) {
+          client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content, smtpUsername, smtpPassword);
+        } else {
+          client.send(state.getMessage().getReturnPath().toString(), addr.toString(), content);
+        }
         client.close();
       } catch (Exception e) {
         throw new IOException("Couldn't send a message to " + addr + " due to " + e);
