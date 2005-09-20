@@ -22,7 +22,7 @@ fi
 
 case $1 in
 	start)
-		$JAVA -cp epost.jar:mysql-connector.jar rice.proxy.CertificateServer \
+		$JAVA -cp epost.jar:mysql-connector.jar rice.certgenerator.CertificateServer \
 			$PORT \
 			> server.$LOCALHOST.out 2>&1 &
 		disown %1
