@@ -212,10 +212,14 @@ public class CACertificateGenerator {
   }
   
   public static void writeFile(PostCertificate cert, KeyPair keypair, String password, File file) throws IOException {
+    write(cert, keypair, password, new FileOutputStream(file));
+  }
+
+  public static void write(PostCertificate cert, KeyPair keypair, String password, OutputStream os) throws IOException {
     ObjectOutputStream oos = null;
     
     try {
-      oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(file))));
+      oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(os)));
       oos.writeObject(cert);
     
       byte[] cipher = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(keypair), SecurityUtils.hash(password.getBytes()));

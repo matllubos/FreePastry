@@ -91,14 +91,14 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
    * @param file The location to write the certificate to
    * @param key The private key to use to sign the result
    */
-  public static void generateCertificate(NodeId id, File file, PrivateKey key) {
+  public static void generateCertificate(NodeId id, OutputStream os, PrivateKey key) {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       XMLObjectOutputStream xoos = new XMLObjectOutputStream(baos);
       xoos.writeObject(id);
       xoos.close();
       
-      XMLObjectOutputStream xoos2 = new XMLObjectOutputStream(new FileOutputStream(file));
+      XMLObjectOutputStream xoos2 = new XMLObjectOutputStream(os);
       xoos2.writeObject(id);
       xoos2.write(SecurityUtils.sign(baos.toByteArray(), key));
       xoos2.close();
@@ -127,7 +127,7 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
     
     KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(st.sval.getBytes())));
           
-    generateCertificate(new RandomNodeIdFactory(new Environment()).generateNodeId(), new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME), caPair.getPrivate());
+    generateCertificate(new RandomNodeIdFactory(new Environment()).generateNodeId(), new FileOutputStream(new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME)), caPair.getPrivate());
   }
   
   public static String getArg(String[] args, String argType) {
