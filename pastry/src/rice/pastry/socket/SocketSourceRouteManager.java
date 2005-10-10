@@ -336,7 +336,12 @@ public class SocketSourceRouteManager {
     // the remote address of this manager
     protected EpochInetSocketAddress address;
     
-    // the current best route to this remote address
+    /**
+     * the current best route to this remote address
+     * 
+     * if best == null, we are already in a CheckDead, which means
+     * we are searching for a path
+     */
     protected SourceRoute best;
     
     // the queue of messages waiting for a route
