@@ -1,0 +1,9 @@
+JAR_CONTENT = rice/Continuation.class \
+	rice/pastry \
+	rice/scribe \
+	rice/past \
+	rice/persistence
+
+MANIFEST = Manifest.directory.jar
+
+include $(JAVA_DEV_ROOT)/Makefile

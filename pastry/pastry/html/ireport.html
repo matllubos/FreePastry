@@ -1,0 +1,217 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head http-equiv="Content-Type" content="text/html; charset=iso-8859-1" /="">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" /="">
+  <title>Intermediate Report</title>
+                
+  <style>
+	td.class {
+		font-family : monospace;
+		vertical-align : top;
+	}
+	td.des {
+		font-family : Verdana, Arial;
+		font-style : justify;
+	}
+</style>
+</head>
+   <body style="font-family: Verdana,Arial; " bgcolor="white">
+<center>
+<h2>Pastry</h2>
+<h1>Intermediate Report</h1>
+    Romer Gil &nbsp; &nbsp; &nbsp; Andrew Ladd &nbsp; &nbsp; &nbsp; Tsuen 
+Wan Ngan    
+<div style="font-family: monospace; ">{rgil, aladd, twngan}@cs.rice.edu</div>
+</center>
+<h3>Architecture</h3>
+<div align="Center"><img src="archi.png" alt="Architecture" width="512" height="384">
+<br>
+<br>
+</div>
+<div align="Justify">
+<table cellspacing="2" cellpadding="2" border="1">
+  <tbody>
+    <tr>
+      <td width="180" class="class">PastryNode</td>
+      <td class="des">A single entity in the Pastry network.</td>
+    </tr>
+    <tr>
+      <td valign="Top">PastryAPI<br>
+      </td>
+      <td valign="Top">The API exported by the Pastry node.<br>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">NodeId</td>
+      <td class="des">A unique identifier for a Pastry node.</td>
+    </tr>
+    <tr>
+      <td class="class">NodeIdFactory</td>
+      <td class="des">Used to generate node ids.</td>
+    </tr>
+    <tr>
+      <td class="class">NodeHandle</td>
+      <td class="des">
+      <div align="Justify">An interface to any Pastry node. This provides
+ a consistent interface to the local node, or a remote node.</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">Address</td>
+      <td class="des">Associated with a local message receiver. Every message
+ has a destination address.</td>
+    </tr>
+    <tr>
+      <td class="class">Message</td>
+      <td class="des">A datagram bound for internal delivery.</td>
+    </tr>
+    <tr>
+      <td class="class">MessageReceiver</td>
+      <td class="des">
+      <div align="Justify">Any entity which is capable of receiving messages.
+ The Pastry node and node handles are examples of this. Node handles are
+not  local message receivers.</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">MessageDispatch</td>
+      <td class="des">
+      <div align="Justify">Receives messages that arrive at a Pastry node
+ and redirects them to the message receiver bound to an address.</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">MessageQueue</td>
+      <td class="des">Receives messages and forwards them to the dispatch.</td>
+    </tr>
+    <tr>
+      <td class="class">Client</td>
+      <td class="des">
+      <div align="Justify">Any object which identified itself to a Pastry
+ node for the purposes of being able to interface with the node. Clients
+are  message receivers and often local.</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">ClientInterface</td>
+      <td class="des">
+      <div align="Justify">An interface to a Pastry node which is given to
+ a client by the node. Depending on the client, parts of the interface might
+ be disabled.</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">Manager</td>
+      <td class="des">A special client which is unique to a node and is given
+ more interface priviliges than usual.</td>
+    </tr>
+    <tr>
+      <td class="class">RoutingManager</td>
+      <td class="des">
+      <div align="Justify">Receives all messages which are being sent to
+an external Pastry node. If it decides that the message is meant for itself,
+ it strips the message of its wrapper and sends it back to the Pastry node.
+ Otherwise, the message is sent to the routing manager of the appropriate
+node.</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">RoutingMessageReceiver</td>
+      <td class="des">An interface to a routing manager to receive maintenance
+ routing messages.</td>
+    </tr>
+    <tr>
+      <td class="class">RoutingMessageSender</td>
+      <td class="des">
+      <div align="Justify">An interface to a network interface layer. Any
+ object implemented this interface can deal with the communication, e.g.,
+method invokation, RMI, socket over serialization, or socket passing a real
+protocol.</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="class">RoutingTable</td>
+      <td class="des">The Pastry routing table described in the paper.</td>
+    </tr>
+    <tr>
+      <td class="class">RouteTableManager</td>
+      <td class="des">Takes care of manipulations of the routing table.</td>
+    </tr>
+    <tr>
+      <td class="class">LeafSet</td>
+      <td class="des">The leaf set described in the paper.</td>
+    </tr>
+    <tr>
+      <td class="class">LeafSetManager</td>
+      <td class="des">Takes care of manipulations of the leaf set.</td>
+    </tr>
+    <tr>
+      <td class="class">NeighborSet</td>
+      <td class="des">The neighborhood set described in the paper.</td>
+    </tr>
+    <tr>
+      <td class="class">NeighborSetManager</td>
+      <td class="des">Takes care of manipulations of the neighborhood set.</td>
+    </tr>
+    <tr>
+      <td class="class">SecurityManager</td>
+      <td class="des">Takes care of security issues by deciding whether to 
+process a received message by looking at its credentials.<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+   In particular, replacable components should implement the following interfaces: 
+  
+<ul>
+  <li><a href="http://www.cs.rice.edu/%7Ealadd/pastry/docs/rice/pastry/client/ClientInterface.html">
+  ClientInterface</a> (API)</li>
+  <li><i>Leaf set maintenace interface missing</i></li>
+  <li><a href="http://www.cs.rice.edu/%7Ealadd/pastry/docs/rice/pastry/Manager.html">
+  Manager</a> (also functioned as security component)</li>
+  <li><a href="http://www.cs.rice.edu/%7Ealadd/pastry/docs/rice/pastry/PastryAPI.html">
+PastryAPI</a><br>
+  </li>
+  <li><a href="http://www.cs.rice.edu/%7Ealadd/pastry/docs/rice/pastry/RoutingManager.html">
+  RoutingManager</a></li>
+  <li><a href="http://www.cs.rice.edu/%7Ealadd/pastry/docs/rice/pastry/routing/RoutingMessageSender.html">
+  RoutingMessageSender</a> (transport interface layer)</li>
+  <li><i>Routing state interface missing</i></li>
+  <li><i>Routing table maintenance interface missing</i></li>
+  <li><a href="http://www.cs.rice.edu/%7Ealadd/pastry/docs/rice/pastry/SecurityManager.html">
+ SecurityManager</a><br>
+  </li>
+  <li><i>Wire protocol interface missing</i></li>
+</ul>
+<h3>PastryAPI</h3>
+<div align="Justify">This is an interface for the Pastry object to export
+to clients. &nbsp;It provides all functions that a client needs to interact
+with the Pastry object. &nbsp;Any new Pastry class should implement this
+interface.<br>
+</div>
+<h3>Routing Manager</h3>
+<div align="Justify">This is an interface for the core routing object, which
+controls how every message is being routed. &nbsp;Any new routing mechanisms
+should implement this interface.<br>
+</div>
+<h3>Routing Message Sender</h3>
+<div align="Justify">This is an interface for a routing manager to send routing-specific
+messages to other routers. &nbsp;How the messages are being sent is encapsulated
+under this interface. &nbsp;Under this interface, the connections can be
+made by direct method invokation, RMI, or socket connection.<br>
+</div>
+<h3>Security Manager<br>
+</h3>
+<div align="Justify">The security manager is placed in between the message
+queue and the message dispatch. &nbsp;Its main function is to decide whether
+or not a message from the message queue and get passed to the message dispatch.
+&nbsp;It decides by looking at the source of the message and the credentials
+the message comes with. &nbsp;Any new security controller should implement
+this interface.<br>
+</div>
+<br>
+The latest javadoc version of the documentation can always be found  <a href="http://www.cs.rice.edu/%7Ealadd/pastry/docs/index.html">
+  here</a>.     
+</body>
+</html>

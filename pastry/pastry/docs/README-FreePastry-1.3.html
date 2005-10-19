@@ -1,0 +1,386 @@
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+  <meta http-equiv="Content-Type"
+ content="text/html; charset=iso-8859-1">
+  <title>FreePastry</title>
+</head>
+<body text="#000000" bgcolor="#ffffff" link="#0000ee" vlink="#551a8b"
+ alink="#ff0000" style="font-family: Verdana,Arial;">
+<h2>
+<center>
+<h1><font size="+4">FreePastry release notes</font></h1>
+<hr width="100%" size="2"></center>
+</h2>
+Release 1.3,&nbsp; 7/22/03.
+<p>FreePastry is a modular, open source implementation of the <a
+ href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p routing
+and location substrate. <br>
+&nbsp; </p>
+<h3> Contributors</h3>
+<a href="http://www.cs.rice.edu/%7Edruschel/">Peter Druschel</a> , Eric
+Engineer, <a href="http://www.cs.rice.edu/%7Ergil">Romer Gil</a> , <a
+ href="http://www.cs.rice.edu/%7Eychu/">Y. Charlie Hu</a> , <a
+ href="http://www.cs.rice.edu/%7Essiyer/">Sitaram Iyer</a> , <a
+ href="http://www.cs.rice.edu/%7Ealadd/">Andrew Ladd</a> ,&nbsp;<a
+ href="http://www.cs.rice.edu/%7Eamislove">Alan Mislove</a> , <a
+ href="http://www.cs.rice.edu/%7Eanimesh">Animesh Nandi</a> , <a
+ href="http://www.cs.rice.edu/%7Eabpost">Ansley Post</a>, <a
+ href="http://www.cs.rice.edu/%7Ecreis">Charlie Reis</a>, <a
+ href="http://www.cs.rice.edu/%7Eatuls">Atul Singh</a> , and <a
+ href="http://composer.ecn.purdue.edu/%7Erongmei/">RongMei Zhang</a>
+contributed to the FreePastry code. The code is based on algorithms and
+protocols described in the following papers: <br>
+&nbsp;
+<ul>
+  <li><font face="Helvetica, Arial, sans-serif">A. Rowstron and P.
+Druschel, <i>Pastry: Scalable, distributed object location and routing
+for large-scale   peer-to-peer systems</i>.&nbsp; IFIP/ACM International
+Conference on Distributed   Systems Platforms (Middleware), Heidelberg,
+Germany, pages 329-350, November,   2001. [<i><a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.pdf.zip">
+pdf.zip</a> | <a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.ps.zip">
+ps.zip</a> | <a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.pdf"> pdf</a>
+| <a href="http://www.research.microsoft.com/%7Eantr/PAST/pastry.ps"> ps</a> </i>]</font></li>
+</ul>
+<ul>
+  <li><font face="Helvetica, Arial, sans-serif">M. Castro, P. Druschel,
+Y. C. Hu, A. Rowstron, <i>Exploiting network proximity in peer-to-peer
+overlay networks</i>.&nbsp; Submitted for publication.&nbsp; [<i><a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/location.pdf.zip">
+pdf.zip</a> |<a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/location.ps.zip">
+ps.zip</a> | <a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/location.pdf"> pdf</a>
+| <a href="http://www.research.microsoft.com/%7Eantr/PAST/location.ps">
+ps</a> </i>]</font></li>
+</ul>
+<ul>
+  <li><font face="Helvetica, Arial, sans-serif"> M. Castro, P. Druschel,
+ A.-M.  Kermarrec&nbsp; and A. Rowstron, "<i>SCRIBE: A large-scale and
+decentralised application-level multicast infrastructure</i>", IEEE
+Journal on Selected  Areas  in Communications (JSAC) (Special issue on
+Network Support for Multicast   Communications). 2002, to appear.&nbsp; [<i><a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/jsac.pdf.zip">
+pdf.zip</a> | <a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/jsac.ps.zip">
+ps.zip</a> | <a
+ href="http://www.research.microsoft.com/%7Eantr/PAST/jsac.pdf">pdf</a>
+| <a href="http://www.research.microsoft.com/%7Eantr/PAST/jsac.ps">ps</a> </i>
+]</font></li>
+</ul>
+<ul>
+  <li><font style="font-family: helvetica,arial,sans-serif;">A.
+Rowstron and P. Druschel, "<i>Storage management and caching in PAST, a
+large-scale, persistent       peer-to-peer storage utility</i>", 18th
+ACM SOSP'01, Lake Louise, Alberta, Canada, October 2001.&nbsp; [<i> <a
+ href="http://www.cs.rice.edu/CS/Systems/PAST/past-sosp.pdf.zip">pdf.zip</a>
+| <a href="http://www.cs.rice.edu/CS/Systems/PAST/past-sosp.ps.zip">ps.zip</a>
+| <a href="http://www.cs.rice.edu/CS/Systems/PAST/past-sosp.pdf">pdf</a>
+| <a href="http://www.cs.rice.edu/CS/Systems/PAST/past-sosp.ps">ps</a> </i>
+] (Corrected - erratum for original version: <i>&nbsp;<a
+ href="http://www.cs.rice.edu/CS/Systems/PAST/sosp-erratum.ps">ps</a>)</i></font><br
+ style="font-family: helvetica,arial,sans-serif;">
+  </li>
+</ul>
+<ul>
+  <li><font style="font-family: helvetica,arial,sans-serif;">F. Dabek,
+P. Druschel, B. Zhao, J. Kubiatowicz, and I. Stoica, "<i>Towards a
+Common API for Structured Peer-to-Peer Overlays</i>", 2nd IPTP'03,
+Berkeley, CA, February, 2003.&nbsp; [<i> <a
+ href="http://www.cs.rice.edu/%7Edruschel/publications/kbr-api.pdf">pdf</a></i>
+]</font></li>
+</ul>
+<br>
+<h3>Requirements</h3>
+The software requires a Java runtime, version 1.4. The software was
+developed using Sun's SDK, version 1.4.1. <br>
+<br>
+&nbsp;<br>
+<h3>Changes since release 1.2</h3>
+<ul>
+  <li>FreePastry now supports the common API, as described in the
+IPTPS'03 paper listed above. Newly developed applications should should
+use this API, and only import the p2p.commonapi package. The previous,
+native FreePastry API continues to be supported for backward
+compatibility. <br>
+  </li>
+</ul>
+<ul>
+  <li>A more general implementation of the <a
+ href="http://www.cs.rice.edu/CS/Systems/PAST/default.htm">PAST</a>
+archival storage system was added in this release. The release adds
+support for replication and caching of data.&nbsp;  The implementation
+provides a generic distributed hash table (DHT) facility, and allows
+control over the semantics of tuple insertion for a given,
+application-specific value type. The previous version of PAST has been
+marked as deprecated and may not be included in future releases. 
+Applications that use Past should migrate to the new version. </li>
+</ul>
+<ul>
+  <li>A version of the replication manager, which provides
+application-independent management   of replicas, is included.
+Application that need to replicate data on the set of <i>n</i> nodes
+closest to a given key can use the replication manager in order to
+perform this task. </li>
+</ul>
+<ul>
+  <li>Some bug fixes.</li>
+</ul>
+<br>
+<h3>Changes since release 1.1</h3>
+<ul>
+  <li>A simple implementation of the <a
+ href="http://www.cs.rice.edu/CS/Systems/PAST/default.htm">PAST</a>
+archival storage system was added in this release. The implementation
+does not currently perform the storage balancing algorithms described in
+the SOSP paper, nor does it perform data replication or caching. Support
+for replication and caching will be included in the next release.</li>
+</ul>
+<ul>
+  <li>An anycast primitive was added to the implementation of <a
+ href="http://www.research.microsoft.com/%7Eantr/SCRIBE/"> Scribe</a>, a
+group communication infrastructure. Also, several methods and new
+interfaces and a new interface were added to provide apps more control
+over the construction and maintenance of Scribe trees.</li>
+</ul>
+<ul>
+  <li>Some bug fixes.</li>
+</ul>
+<ul>
+  <li>Some initial performance work was done. As a result, large
+simulations run about 50% faster, and use a lot less memory.<br>
+  </li>
+</ul>
+<br>
+<br>
+<h3> Notes</h3>
+Release 1.3 has the following limitations. <br>
+&nbsp;
+<ul>
+  <li> More performance tuning needs to be done.</li>
+&nbsp; <li> Three "transport protocols" are provided with this release,
+"Direct", "RMI", and "Wire".</li>
+</ul>
+<ul>
+  <ul>
+    <li> "Direct" emulates a network, allowing many Pastry nodes to
+execute in one Java VM without a real network. This is very useful for
+application development and testing.</li>
+  </ul>
+</ul>
+<ul>
+  <ul>
+    <li>"RMI" is simple transport protocol based on Java RMI. Several
+"virtual" Pastry  nodes can be started in each Java VM. RMI is used for
+communication across  physical nodes.<br>
+    </li>
+  </ul>
+</ul>
+<blockquote>
+  <ul>
+    <li>"Wire" uses an event-based implementation based on sockets, and
+uses the non-blocking NIO support in Java 1.4. It uses UDP as transport
+by default, switching dynamically to TCP for large messages or in the
+event that a stream of traffic is sent to a given node. The wire
+protocol is till in beta testing, in part because the implementations of
+the Java NIO do not yet work properly and efficiently in several Java
+VMs on some platforms (for instance, Sun's JDK 1.4.1 RC1 and earlier on
+Windows platforms). </li>
+  </ul>
+</blockquote>
+<blockquote>Future transport protocols will also be based on an open
+standard to ensure interoperability among different implementations.</blockquote>
+<ul>
+  <li> Security support does not exist in this release. Therefore,
+the&nbsp; software should only be run in trusted environments. Future
+releases will include security.</li>
+</ul>
+<ul>
+  <li> The discovery protocol for automatic location of a nearby node
+using any bootstrap node, which is described in the Pastry proximity
+paper, is  not yet included in this release. It will be in release 1.4.
+To allow Pastry  to construct an efficient  network topology-aware
+overlay, the specified bootstrap node should therefore  be the near the
+current node in the network, among all existing Pastry nodes  in the
+overlay.</li>
+</ul>
+<blockquote>(Background: To start a Pastry node, the IP address (and
+port number, unless the default port is used) of a "bootstrap" or
+"contact" node  must be provided. If no such node is provided, and no
+other Pastry node runs  on the local machine, then FreePastry creates a
+new overlay network  with itself as the only node. Any node that is
+already part of the Pastry  node can serve as the bootstrap node.)</blockquote>
+<ul>
+  <li>The Scribe implementation included in this release does not yet
+support the tree optimization techniques describe in Sections IV, E-F of
+the <a
+ href="http://www.cs.rice.edu/%7Edruschel/publications/Scribe-jsac.pdf">
+Scribe paper</a>.<br>
+  </li>
+</ul>
+<p> &nbsp; <br>
+&nbsp; <br>
+&nbsp; </p>
+<h3> Installation</h3>
+To use the binary distribution, download the pastry jar file and set
+the Java classpath to include the path of the jar file. This can be done
+using the "-cp" command line argument, or by setting the CLASSPATH
+variable in  your shell environment.
+<p>To compile the source distribution, you will need to have GNU make
+installed (available from <a href="ftp://ftp.gnu.org/pub/gnu/make">ftp://ftp.gnu.org/pub/gnu/make</a>
+, or as part of <a href="http://www.cygwin.com">cygwin</a> ) on your
+system. Expand the archive (FreePastry-1.3.tgz or FreePastry-1.3.zip)
+into a directory. Set the environment variables mentioned in setpath.csh
+to values appropriate for your system. Execute "make" in the top level
+directory (you may have to run "make" twice the first time), then change
+to the "classes" directory to run FreePastry.&nbsp; </p>
+<p>You may have to provide a Java security policy file with sufficient
+permissions to allow FreePastry to contact other nodes. The simplest way
+to do this is to install a ".java.policy" file with the following
+content into your home directory: </p>
+<p>grant { <br>
+&nbsp;&nbsp;&nbsp; permission java.security.AllPermission; <br>
+}; </p>
+<hr>
+<h3> Running FreePastry</h3>
+1. To run a HelloWorld example:
+<pre><b>
+     java [-cp pastry.jar] rice.pastry.testing.DistHelloWorld 
+          [-msgs m] [-nodes n] [-port p] [-bootstrap bshost[:bsport]] [-protocol [wire,rmi]] 
+          [-verbose|-silent|-verbosity v] [-help]
+     
+        Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
+        Default verbosity is 5, -verbose is 10, and -silent is -1 (error msgs only).
+        
+        (replace "pastry.jar" by "FreePastry-&lt;version&gt;.jar", of course)
+</b></pre>
+<br>
+&nbsp;&nbsp;&nbsp; Some interesting configurations:
+<pre><b>
+  a. java rice.pastry.testing.DistHelloWorld
+
+        Starts a standalone Pastry network, and sends two messages
+        essentially to itself. Waits for anyone to connect to it,
+        so terminate with ^C.
+
+  b. java rice.pastry.testing.DistHelloWorld -nodes 2
+
+        One node starts a Pastry network, and sends two messages to
+        random destination addresses. At some point another node
+        joins in, synchronizes their leaf sets and route sets, and
+        sends two messages to random destinations. These may be
+        delivered to either node with equal probability. Note how
+        the sender node gets an "enroute" upcall from Pastry before
+        forwarding the message.
+
+  c. java rice.pastry.testing.DistHelloWorld -nodes 2 -verbose
+
+        Also prints some interesting transport-level messages.
+
+  d. pokey$ java rice.pastry.testing.DistHelloWorld
+     gamma$ java rice.pastry.testing.DistHelloWorld -bootstrap pokey
+
+        Two machines coordinate to form a Pastry network.
+
+  e. pokey$ java rice.pastry.testing.DistHelloWorld
+     gamma$ java rice.pastry.testing.DistHelloWorld -bootstrap pokey
+     
+        wait a few seconds, and interrupt with &lt;ctrl-C&gt;
+                
+     gamma$ java rice.pastry.testing.DistHelloWorld -bootstrap pokey
+
+        The second client restarts with a new NodeID, and joins the
+        Pastry network. One of them sends messages to the now-dead
+        node, finds it down, and <em>may or may not</em> remove it<br>        from the leaf sets. (repeat a few times to observe both<br>        possibilities, i.e., leaf sets of size 3 or 5). If the<br>        latter, then leaf set maintenance kicks in within a minute<br>        on one of the nodes, and removes the stale entries.<br>        <br>  f. pokey$ java rice.pastry.testing.DistHelloWorld<br>     gamma$ java rice.pastry.testing.DistHelloWorld -bootstrap pokey -nodes 2<br>     <br>        The client on gamma instantiates two virtual nodes, which<br>        are independent in identity and functionality. Note how the <br>        second virtual node bootstraps from the first (rather than <br>        from pokey). Try starting say 10 or 30 virtual nodes, killing <br>        with a &lt;ctrl-C&gt;, starting another bunch, etc.<br></b></pre>
+<br>
+2. To run the same HelloWorld application on an emulated network:
+<pre><b>
+     java [-cp pastry.jar] rice.pastry.testing.HelloWorld [-msgs m] [-nodes n] [-verbose|-silent|-verbosity v] [-simultaneous_joins] [-simultaneous_msgs] [-help]
+</b></pre>
+<br>
+&nbsp;&nbsp;&nbsp; Some interesting configurations:
+<pre><b>
+  a. java rice.pastry.testing.HelloWorld
+
+        Creates three nodes, and sends total three messages from
+        randomly chosen nodes to random destinations addresses
+        (which are delivered to the node with the numerically
+        closest address).
+
+  b. java rice.pastry.testing.HelloWorld -simultaneous_joins -simultaneous_msgs
+
+        Join all three nodes at once, then issue three messages,
+        then go about delivering them.
+</b></pre>
+<br>
+3. To run a regression test that constructs 500 nodes connected by an
+emulated network:
+<pre><b>
+     java [-cp pastry.jar] rice.pastry.testing.DirectPastryRegrTest
+</b></pre>
+<br>
+4. To run a simple performance test based on an emulated network with
+successively larger numbers of nodes:
+<pre><b>
+     java [-cp pastry.jar] rice.pastry.testing.DirectPastryPingTest 
+</b></pre>
+<p> </p>
+<h3> Writing applications on top of FreePastry</h3>
+Applications that wish to use the native Pastry API must extend the
+class rice.pastry.client.PastryAppl. This class implements the Pastry
+API. Each application  consists minimally of an application class that
+extends rice.pastry.client.PastryAppl, and a driver class that
+implements main(), creates and initializes one of  more nodes, etc.
+Example applications and drivers can be found in rice.pastry.testing;
+the Hello World suite (HelloWorldApp.java,  HelloWorld.java,
+DistHelloWorld.java) may be a good starting point.<br>
+<br>
+Another sample Pastry application is rice.scribe.<br>
+<br>
+Application writers are stringly encouraged to base newly written
+applications on the new common API. Such applications should import the
+package rice.p2p.commonapi.<br>
+<br>
+<hr>
+<h3> Running Scribe</h3>
+1. To run a simple distributed test:
+<pre><b>
+     java [-cp pastry.jar] rice.scribe.testing.DistScribeRegrTest [-nodes n] [-port p] [-bootstrap bshost[:bsport]] [-protocol [wire,rmi]] [-help]
+     
+        Ports p and bsport refer to contact port numbers (default = 5009).
+        Without -bootstrap bshost[:bsport], only localhost:p is used for bootstrap.
+        (replace "pastry.jar" by "FreePastry-&lt;version&gt;.jar", of course)
+</b></pre>
+<br>
+&nbsp;&nbsp;&nbsp; Some interesting configurations:
+<pre><b>
+  a. java rice.scribe.testing.DistScribeRegrTest
+
+        Starts five Scribe nodes on the local host, creates some groups and published a message every 10 seconds. Waits for anyone to connect to it,
+        so terminate with ^C. 
+        
+  b. pokey$ ..DistDistScribeRegrTest
+     gamma$ ..DistDistScribeRegrTest -bootstrap pokey
+        
+        Two machines with 5 Scribes nodes each coordinate to form several groups and publish a message every 10 seconds in each.  
+        Try starting the test on several more machines then kill the test with </b>^C<b> on some machine and watch how the multicast groups recover.<br></b></pre>
+<br>
+2. To run a regression test that constructs many Scribe nodes connected
+by an emulated network, and stresses many aspects of Scribe:
+<pre><b>
+     java [-cp pastry.jar] rice.scribe.testing.DirectScribeRegrTest
+</b></pre>
+<br>
+<hr>
+<h3> Running PAST</h3>
+1. To run a simple distributed test: <br>
+<pre><b>
+     java [-cp pastry.jar] rice.p2p.past.testing.DistPastRegrTest [-nodes n] [-protocol [wire|rmi]]<br>
+</b></pre>
+This creates a network of <tt>n</tt> nodes (10 by default), and then
+runs the Past regression test over these nodes.
+</body>
+</html>

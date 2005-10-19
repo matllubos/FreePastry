@@ -1,0 +1,43 @@
+# Mark done entries by commenting them out with a # in the left column.
+
+GENERAL CLEANUP
+
+#    Define commmon API with SimPastry
+
+CORRECTNESS
+
+#    Leaf set consistency on massive concurrent joins.
+
+FUNCTIONALITY
+
+#    Transparent handle verification, and setLocalHandle.
+
+    A real Log class; probably use the Log support in Java 1.4.
+
+#    Let PastryNodeFactory constructors take as argument a NodeIdFactory.
+
+    Implement support for automatic deployment and experimentation in a testbed.
+
+PERFORMANCE
+
+#    Do some memory tuning to allow simulations with larger numbers of nodes.
+#    Improve efficiency of NodeIds.
+#    Improve serialization efficiency of leafsets.
+    Implement find-nearby-node algorithm.
+#    Socket based wire protocol; use scalable non-blocking I/O support from Java 1.4.
+
+SECURITY
+
+    Implement security
+
+APPLICATIONS
+
+#    RoundTrip (or HelloWorld with flags) to measure the real latency diff.
+
+LONG-TERM
+
+#    When the Socket interface is being implemented:
+#    Consider moving stuff common to all wire protocols to base. This
+#    includes significant stuff from RMINodeHandle{,Pool}. Make NodeHandle
+#    an abstract class (a la PastryNode), rather than an interface.
+

@@ -1,0 +1,6 @@
+export JAVA_DEV_ROOT=~/pastry
+export JAVA_HOME=/usr/site/jdk-1.4
+export IS_UNIX=true
+export CVSROOT=dosa.cs.rice.edu:/net/madras/FreePastry/cvsroot
+export CVS_RSH=ssh
+export OBJECTWEB_DIR=~/comp413/test/ObjectWeb

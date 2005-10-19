@@ -1,0 +1,114 @@
+Problem: Given a 'handle' object embedded deep inside a 'message', how can a
+"handle.localNode" be updated when the handle is transferred between nodes?
+
+Code on the receiving node calls handle = secmgr.verify(handle). This means
+that either secmgr or node (for node.secmgr) is stored in, or passed around
+to ridiculously many classes/methods (e.g. leafset.merge(..,secmgr)). Verify
+tries to coalesce the handle in the node's pool, and also sets its localNode
+ref. The latter is needed for three reasons: to determine isLocal (thus
+alive and distance = 0), to set senderId in messages (for coalescing on the
+other end), and to bounce messages back to self on failure.
+
+Explicit verification gets messy when user apps use handles inside messages,
+and forgot to verify them. Also, setLocalNode from verify is .. well, ugh.
+Verification can be made transparent by using a 'tainted' flag, and from
+every method in handle, try to coalesce first if tainted. Since the outside
+reference cannot be changed if successfully coalesced, these nodes can be
+reduced to stubs with indirection to other "real" nodes. On serialization,
+the real nodes can be transferred instead. No problem there.
+
+The problem is with setting the node's localNode (not local node Id). When
+readObject on the local node is called, it doesn't have context for what
+node it's on. This information will be available in node.receiveMessage (of
+course), but by the time receiveMessage gets called, the message and its
+constituents are completely deserialized. This is not simply a problem with
+the order of receiveMessage and deserialization, since even if these are
+somehow flipped, it is not possible to pass the 'extra localNode argument'
+to all the handle.readObjects.
+
+There is a wonderful chicken and egg here: one tempting approach is to keep
+a list of handles encountered during deserialization, and on subsequent
+receiveMessage, set all their localNodes. But store them where? We don't
+have the node for a per-node list. A global (static class variable) list
+can't distinguish between different nodes, not even from receiveMessage. If
+you knew any of that, of course, you wouldn't use a list.
+
+It may be possible to read objects off the serialized stream, one by one,
+and if they are handles, then set their localNode and put them back into a
+stream. Unfortunately localNode isn't serializable, and this is ugly on
+performance and compatibility anyway. Also stream.readResolve() doesn't help
+for the usual lack-of-context reason: we can rewrite nodes, but to what?
+
+One valid but ugly solution is the following: in node.receiveMessage (after
+deserialization), iterate over members of Message, either explicitly or
+automatically (neither iterator nor visitor pattern, but something close).
+For all handles so encountered, set localNode. Problems: handles are
+buried deep inside Messages (like RoutingTableRow contains RouteSet contains
+vector of handles), and calling setLocalNode, or a more generic visitHandles
+recursively would make all these classes fragile to change. This is worsened
+in the case of user-defined messages (e.g., HelloMsg), which may contain
+handles (e.g., sender_handle), or LeafSets, or what have you. It's too much
+to ask for the user to call visitHandles on each handle and each object that
+may contain handles inside. Automatic traversal is more robust, but firstly
+painful to implement, and secondly _very_ performance intensive if there are
+large arrays of random stuff in a message, and none of them are handles.
+
+Ruminated for many hours with Martin, and conjured up something cool.
+
+The nifty solution is based on storing handles (while deserialization) in a
+list associated with the input stream itself. There's a static (global) hash
+of linked lists somewhere. From handle.readObject(ObjectInputStream ins), it
+adds the decentralized handle to the list hashed on "ins". Secondly, from
+the readObject for Message, either before or after (it doesn't matter)
+defaultReadObject is called, "ins" is recorded in a private field in Message.
+The actual messages (HelloMsg etc.) are not touched. Now node.receiveMessage
+gets called with the Message, and it simply looks up the hash on "ins"
+(which may be a closed stream by now, doesn't matter), traverses the list,
+sets all the handles' localNodes to "this", and removes the hash entry. When
+it returns, the Message goes out of scope, and the stream gets finalized.
+
+This is the only solution (I think) where we (the Pastry hackers) and the
+application writers don't have to keep track of all the handles used in
+various messages -- either for verifying them, or for assigning localNodes.
+Consequences are, as mentioned before, implicit verification, and reducing
+the security manager to purely policies.
+
+Sitaram Iyer, 5 Apr 2002, 6am, good night!
+
+
+Mail to Peter (and introduction of LocalNodeI):
+
+> I am not sure this is possible in a completely transparent manner. Note
+> that verification will later involve verifying signatures. This
+> verification must be performed by code provided by the local node -- so
+> can't be performed by the handle class itself, as that many be shipped
+> with the handle.
+
+THe difference is that the security mgr can be accessible to everyone
+without passing it into every little irrelevant function.
+
+Not completely transparent (handles and other shipped-with classes implement
+LocalNodeI, but RouteSet, HelloMsg and other containers don't). setLocalNode
+invocations on each of these little handles and stuff buried inside Messages
+is transparent.
+
+ADDENDUM 25 Aug 2002, by Alan Mislove:
+
+The LocalNode class structure has been changed a little.  There is now a class
+in pastry called PendingLocalNodesList which serves a global hashtable for all
+of the LocalNodeI classes waiting to have their local nodes set.  It is a static
+field in LocalNodeI, and as before, when the PastryNode receives a message, it 
+calls the appropriate method in this list (LocalNodeI.pending).  
+
+There is now LocalNodeI, which is designed to be an interface for all classes 
+wishing to know which pastryNode they are on.  Also provided is one implementing
+class, LocalNode, which provides the basic local node functionality as before.  
+It is preferable that a class simply extend LocalNode, which will automatically
+handle all of the bookkeeping with no intervention from the extending class. 
+If this is not possible (for reasons such as multiple inheratince), the class
+must then implement LocalNodeI, and *MUST* override the default readObject 
+method to include the following lines:
+
+  in.defaultReadObject();
+  LocalNode.pending.addPending(in, this);
+
