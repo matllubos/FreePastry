@@ -383,8 +383,11 @@ public class SocketSourceRouteManager {
      *
      * @param route The route
      * @return THe manager
+     * @throws IllegalArgumentException if route is null
      */
     protected SourceRouteManager getRouteManager(SourceRoute route) {
+      if (route == null) throw new IllegalArgumentException("route is null in "+toString());
+      
       SourceRouteManager result = (SourceRouteManager) routes.get(route);
       
       if (result == null) {
@@ -516,13 +519,14 @@ public class SocketSourceRouteManager {
     protected synchronized void markProximity(SourceRoute route, int proximity) {
       getRouteManager(route).markAlive();
       getRouteManager(route).markProximity(proximity);
-      setAlive();
       
       // first, we check and see if we have no best route (this can happen if the best just died)
       if (best == null) {
         log(Logger.FINE, "(SSRM) No previous best route existed to " + address + " route " + route + " is now the best");
         best = route;        
       }
+      
+      setAlive();
         
       // next, we update everyone if this is the active route
       if (route.equals(best))
@@ -613,8 +617,14 @@ public class SocketSourceRouteManager {
     /**
      * Internal method which marks this address as being alive.  If we were dead before, it
      * sends an update out to the observers.
+     * 
+     * best must be non-null
+     * 
+     * @throws IllegalStateException if best is null.
      */
     protected void setAlive() {
+      if (best == null) throw new IllegalStateException("best is null in "+toString());
+      
       // we can now send any pending messages
       while (queue.size() > 0)
         getRouteManager(best).send((Message) queue.remove(0));    
