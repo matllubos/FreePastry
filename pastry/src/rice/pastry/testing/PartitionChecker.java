@@ -4,21 +4,14 @@
 package rice.pastry.testing;
 
 import java.io.*;
-import java.net.*;
 import java.net.InetSocketAddress;
 import java.util.*;
 
-import com.sun.rsasign.r;
-
 import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.p2p.multiring.RingCertificate;
 import rice.pastry.*;
-import rice.pastry.NodeSet;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
-import rice.pastry.socket.SocketNodeHandle;
 
 /**
  * Pass in a certificate which contains bootstrap nodes.  
