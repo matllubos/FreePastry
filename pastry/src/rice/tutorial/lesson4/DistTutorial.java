@@ -134,7 +134,7 @@ public class DistTutorial {
       int bootport = Integer.parseInt(args[2]);
       InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
   
-      // the port to use locally
+      // the number of nodes to use
       int numNodes = Integer.parseInt(args[3]);    
       
       // launch our node!

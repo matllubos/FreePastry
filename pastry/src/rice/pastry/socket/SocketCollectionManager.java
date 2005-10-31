@@ -122,7 +122,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
     Parameters p = pastryNode.getEnvironment().getParameters();
     MAX_OPEN_SOCKETS = p.getInt("pastry_socket_scm_max_open_sockets");
-    MAX_OPEN_SOURCE_ROUTES = p.getInt("pastry_socket_scm_max_open_sockets");
+    MAX_OPEN_SOURCE_ROUTES = p.getInt("pastry_socket_scm_max_open_source_routes");
     SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size");
     PING_DELAY = p.getInt("pastry_socket_scm_ping_delay");
     PING_JITTER = p.getInt("pastry_socket_scm_ping_jitter");

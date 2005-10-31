@@ -48,6 +48,9 @@ public class PartitionChecker {
    * of InetSocketAddress.  This list is kept around.
    */
   HashSet bootstraps;
+
+  final PrintStream ps = new PrintStream(new FileOutputStream("response.txt"));
+
   
   /**
    * A list of Ring.  Increased whenever a new one is found.
@@ -116,7 +119,6 @@ public class PartitionChecker {
 //    final HashMap leafsets = new HashMap();
     final HashSet unseen = new HashSet();
     
-    final PrintStream ps = new PrintStream(new FileOutputStream("response.txt"));
     
     unseen.add(factory.getNodeHandle(bootstrap));
 
@@ -253,7 +255,7 @@ public class PartitionChecker {
     }
     
     public String toString() {
-      String s = nodes.size()+":"+myBootstraps.size()+":";
+      String s = nodes.size()+":"+myBootstraps.size()+": boots:";
       synchronized(myBootstraps) {
         Iterator i = myBootstraps.iterator();
         s+=i.next();
@@ -261,6 +263,15 @@ public class PartitionChecker {
           s+=","+i.next();
         }
       }
+      s+=" non-boots:";
+      synchronized(nodes) {
+        Iterator i = nodes.iterator();
+        while(i.hasNext()) {
+          Object nxt = i.next();
+          if (!bootstraps.contains(nxt))
+            s+=","+nxt;
+        }
+      }      
       return s;
     }
 
