@@ -850,7 +850,10 @@ public class ScribeImpl implements Scribe, Application {
    */
   public void update(NodeHandle handle, boolean joined) {
     Set set = topics.keySet();
-    Iterator e = set.iterator();
+    Iterator e;
+    synchronized(set) {
+      e = new ArrayList(set).iterator();
+    }
     TopicManager manager;
     Topic topic;
 
