@@ -460,6 +460,12 @@
     </jar>
   </target>
 
+  <target name="certgenerator" depends="compile-epost">
+  	<jar destfile="certgenerator.jar" manifest="${jar.dir}/certgenerator/Manifest" compress="true">
+  	  <fileset dir="${build.dir}" includes="rice/certgenerator/*.class"/>
+  	</jar>
+  </target>
+	
   <target name="epost" depends="epost-jar">
     <signjar jar="epost.jar" alias="ePOST" storepass="monkey" keystore="jars/ePOST_keystore" />
   </target>

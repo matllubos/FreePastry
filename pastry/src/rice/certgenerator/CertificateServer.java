@@ -13,7 +13,6 @@ import rice.post.security.ca.*;
 import java.io.*;
 import java.net.*;
 import java.sql.*;
-import java.text.*;
 import java.util.*;
 import java.util.zip.*;
 import java.util.regex.*;
@@ -368,7 +367,8 @@ public class CertificateServer {
 
           Class.forName("com.mysql.jdbc.Driver");
           Connection connection = DriverManager.getConnection(
-              "jdbc:mysql://joshua.cs.rice.edu/epost", "dsandler", "wombat");
+        		  "jdbc:mysql://svn.mpi-sws.mpg.de/epost",
+                  "epost", "monkey");
           PreparedStatement insert = connection
               .prepareStatement("insert into cert_servers (hostname, alive) values ('"
                   + hostname + "', NOW())");
@@ -383,8 +383,8 @@ public class CertificateServer {
           while (true) {
             try {
               Connection conn = DriverManager
-                  .getConnection("jdbc:mysql://joshua.cs.rice.edu/epost",
-                      "dsandler", "wombat");
+                  .getConnection("jdbc:mysql://svn.mpi-sws.mpg.de/epost",
+                      "epost", "monkey");
               PreparedStatement update = conn
                   .prepareStatement("update cert_servers set alive=NOW() where hostname='"
                       + hostname + "'");
@@ -465,7 +465,8 @@ public class CertificateServer {
 
           Class.forName("com.mysql.jdbc.Driver");
           Connection connection = DriverManager.getConnection(
-              "jdbc:mysql://joshua.cs.rice.edu/epost", "dsandler", "wombat");
+        		  "jdbc:mysql://svn.mpi-sws.mpg.de/epost",
+                  "epost", "monkey");
           PreparedStatement stmt = connection
               .prepareStatement("update certificates set cert_data=?, nodeid_data=? where name=? and ring=?");
 
