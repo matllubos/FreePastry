@@ -1,6 +1,0 @@
-If you wish to run the DistPASTRegrTest using RMI, remember that you must
-set the policy:
-
-java -Djava.security.policy=POLICY_PATH/policy rice.past.testing.DistPASTRegrTest -protocol rmi
-
-
