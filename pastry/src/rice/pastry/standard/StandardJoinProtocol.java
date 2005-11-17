@@ -1,4 +1,3 @@
-
 package rice.pastry.standard;
 
 import rice.environment.logging.Logger;
@@ -14,9 +13,9 @@ import java.util.*;
 
 /**
  * An implementation of a simple join protocol.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Peter Druschel
  * @author Andrew Ladd
  * @author Rongmei Zhang
@@ -24,205 +23,203 @@ import java.util.*;
  */
 
 public class StandardJoinProtocol extends PastryAppl {
-	protected NodeHandle localHandle;
-	protected PastrySecurityManager security;
-	protected RoutingTable routeTable;
-	protected LeafSet leafSet;
+  protected NodeHandle localHandle;
+
+  protected PastrySecurityManager security;
+
+  protected RoutingTable routeTable;
+
+  protected LeafSet leafSet;
 
   protected Credentials cred = new PermissiveCredentials();
-  
-	/**
-	 * Constructor.
-	 *
-	 * @param lh the local node handle.
-	 * @param sm the Pastry security manager.
-	 */
 
-	public StandardJoinProtocol(
-		PastryNode ln,
-		NodeHandle lh,
-		PastrySecurityManager sm,
-		RoutingTable rt,
-		LeafSet ls) {
+  /**
+   * Constructor.
+   * 
+   * @param lh the local node handle.
+   * @param sm the Pastry security manager.
+   */
+
+  public StandardJoinProtocol(PastryNode ln, NodeHandle lh,
+      PastrySecurityManager sm, RoutingTable rt, LeafSet ls) {
     super(ln);
-		localHandle = lh;
-		security = sm;
+    localHandle = lh;
+    security = sm;
 
-		routeTable = rt;
-		leafSet = ls;
-	}
+    routeTable = rt;
+    leafSet = ls;
+  }
 
-	/**
-	 * Get address.
-	 *
-	 * @return gets the address.
-	 */
-	public Address getAddress() {
-		return new JoinAddress();
-	}
+  /**
+   * Get address.
+   * 
+   * @return gets the address.
+   */
+  public Address getAddress() {
+    return new JoinAddress();
+  }
 
-	/**
-	 * Receives a message from the outside world.
-	 *
-	 * @param msg the message that was received.
-	 */
+  /**
+   * Receives a message from the outside world.
+   * 
+   * @param msg the message that was received.
+   */
 
-	public void receiveMessage(Message msg) {
-		if (msg instanceof JoinRequest) {
-			JoinRequest jr = (JoinRequest) msg;
+  public void receiveMessage(Message msg) {
+    if (msg instanceof JoinRequest) {
+      JoinRequest jr = (JoinRequest) msg;
 
-			NodeHandle nh = jr.getHandle();
+      NodeHandle nh = jr.getHandle();
 
-			nh = security.verifyNodeHandle(nh);
+      nh = security.verifyNodeHandle(nh);
 
-	//		if (nh.isAlive() == true) // the handle is alive
-				if (jr.accepted() == false) {
-					// this is the terminal node on the request path
-					//leafSet.put(nh);
-          if (thePastryNode.isReady()) {
-  					jr.acceptJoin(localHandle, leafSet);
-	  				nh.receiveMessage(jr);
-          } else {
-            thePastryNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.INFO,
-                "NOTE: Dropping incoming JoinRequest " + jr + " because local node is not ready!");
-          }
-				} else { // this is the node that initiated the join request in the first place
-					NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
+      // if (nh.isAlive() == true) // the handle is alive
+      if (jr.accepted() == false) {
+        // this is the terminal node on the request path
+        // leafSet.put(nh);
+        if (thePastryNode.isReady()) {
+          jr.acceptJoin(localHandle, leafSet);
+          nh.receiveMessage(jr);
+        } else {
+          thePastryNode.getEnvironment().getLogManager().getLogger(
+              StandardJoinProtocol.class, null).log(
+              Logger.INFO,
+              "NOTE: Dropping incoming JoinRequest " + jr
+                  + " because local node is not ready!");
+        }
+      } else { // this is the node that initiated the join request in the first
+                // place
+        NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
 
-					jh = security.verifyNodeHandle(jh);
+        jh = security.verifyNodeHandle(jh);
 
-					if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
-            thePastryNode.getEnvironment().getLogManager().getLogger(StandardJoinProtocol.class, null).log(Logger.WARNING,
-							"NodeId collision, unable to join: " + localHandle + ":" + jh);
-					} else if (jh.isAlive() == true) { // the join handle is alive
-						routeTable.put(jh);
-						// add the num. closest node to the routing table
+        if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
+          thePastryNode.getEnvironment().getLogManager().getLogger(
+              StandardJoinProtocol.class, null).log(Logger.WARNING,
+              "NodeId collision, unable to join: " + localHandle + ":" + jh);
+        } else if (jh.isAlive() == true) { // the join handle is alive
+          routeTable.put(jh);
+          // add the num. closest node to the routing table
 
-						// update local RT, then broadcast rows to our peers
-						broadcastRows(jr);
+          // update local RT, then broadcast rows to our peers
+          broadcastRows(jr);
 
-						// now update the local leaf set
-						BroadcastLeafSet bls =
-							new BroadcastLeafSet(
-								jh,
-								jr.getLeafSet(),
-								BroadcastLeafSet.JoinInitial);
-						localHandle.receiveMessage(bls);
-            
-            // we have now successfully joined the ring, set the local node ready
-						setReady();
-					}
-				}
-		} else if (msg instanceof RouteMessage) {
-			// a join request message at an intermediate node
-			RouteMessage rm = (RouteMessage) msg;
+          // now update the local leaf set
+          BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(),
+              BroadcastLeafSet.JoinInitial);
+          localHandle.receiveMessage(bls);
 
-			JoinRequest jr = (JoinRequest) rm.unwrap();
+          // we have now successfully joined the ring, set the local node ready
+          setReady();
+        }
+      }
+    } else if (msg instanceof RouteMessage) {
+      // a join request message at an intermediate node
+      RouteMessage rm = (RouteMessage) msg;
 
-			NodeId localId = localHandle.getNodeId();
-			NodeHandle jh = jr.getHandle();
-			NodeId nid = jh.getNodeId();
+      JoinRequest jr = (JoinRequest) rm.unwrap();
 
-			jh = security.verifyNodeHandle(jh);
+      NodeId localId = localHandle.getNodeId();
+      NodeHandle jh = jr.getHandle();
+      NodeId nid = jh.getNodeId();
+
+      jh = security.verifyNodeHandle(jh);
 
       int base = thePastryNode.getRoutingTable().baseBitLength();
 
-			int msdd = localId.indexOfMSDD(nid, base);
-			int last = jr.lastRow();
+      int msdd = localId.indexOfMSDD(nid, base);
+      int last = jr.lastRow();
 
-			for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
-				RouteSet row[] = routeTable.getRow(i);
+      for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
+        RouteSet row[] = routeTable.getRow(i);
 
-				jr.pushRow(row);
-			}
+        jr.pushRow(row);
+      }
 
-			rm.routeMessage(localHandle);
-		} else if (msg instanceof InitiateJoin) { // request from the local node to join
-			InitiateJoin ij = (InitiateJoin) msg;
+      rm.routeMessage(localHandle);
+    } else if (msg instanceof InitiateJoin) { // request from the local node to
+                                              // join
+      InitiateJoin ij = (InitiateJoin) msg;
 
-			NodeHandle nh = ij.getHandle();
+      NodeHandle nh = ij.getHandle();
 
-			nh = security.verifyNodeHandle(nh);
+      nh = security.verifyNodeHandle(nh);
 
-			if (nh.isAlive() == true) {
-				JoinRequest jr = new JoinRequest(localHandle, thePastryNode.getRoutingTable().baseBitLength());
+      if (nh.isAlive() == true) {
+        JoinRequest jr = new JoinRequest(localHandle, thePastryNode
+            .getRoutingTable().baseBitLength());
 
-				RouteMessage rm =
-					new RouteMessage(
-						localHandle.getNodeId(),
-						jr,
-						new PermissiveCredentials(),
-						address);
-				rm.getOptions().setRerouteIfSuspected(false);
-				nh.bootstrap(rm);
-			}
-		}
-	}
-  
+        RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr,
+            new PermissiveCredentials(), getAddress());
+        rm.getOptions().setRerouteIfSuspected(false);
+        nh.bootstrap(rm);
+      }
+    }
+  }
+
   /**
-   * Can be overloaded to do additional things before going ready.  For example,
-   * verifying that other nodes are aware of us, so that consistent routing is 
+   * Can be overloaded to do additional things before going ready. For example,
+   * verifying that other nodes are aware of us, so that consistent routing is
    * guaranteed.
    */
   protected void setReady() {
-    thePastryNode.setReady(); 
+    thePastryNode.setReady();
   }
 
-	/**
-	 * Broadcasts the route table rows.
-	 *
-	 * @param jr the join row.
-	 */
-
-	public void broadcastRows(JoinRequest jr) {
-		//NodeId localId = localHandle.getNodeId();
-		int n = jr.numRows();
-
-		// send the rows to the RouteSetProtocol on the local node
-		for (int i = jr.lastRow(); i < n; i++) {
-			RouteSet row[] = jr.getRow(i);
-
-			if (row != null) {
-				BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
-
-				localHandle.receiveMessage(brr);
-			}
-		}
-
-		// now broadcast the rows to our peers in each row
-
-		for (int i = jr.lastRow(); i < n; i++) {
-			RouteSet row[] = jr.getRow(i);
-
-			BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
-
-			for (int j = 0; j < row.length; j++) {
-				RouteSet rs = row[j];
-				if (rs == null)
-					continue;
-
-				// send to closest nodes only
-
-				NodeHandle nh = rs.closestNode();
-				if (nh != null)
-					nh = security.verifyNodeHandle(nh);
-				if (nh != null)
-					nh.receiveMessage(brr);
-
-				/*
-				int m = rs.size();
-				for (int k=0; k<m; k++) {
-				    NodeHandle nh = rs.get(k);
-				    
-				    nh.receiveMessage(brr);
-				}
-				*/
-			}
-		}
-	}
-  
   /**
-   * Should not be called becasue we are overriding the receiveMessage() interface anyway.
+   * Broadcasts the route table rows.
+   * 
+   * @param jr the join row.
+   */
+
+  public void broadcastRows(JoinRequest jr) {
+    // NodeId localId = localHandle.getNodeId();
+    int n = jr.numRows();
+
+    // send the rows to the RouteSetProtocol on the local node
+    for (int i = jr.lastRow(); i < n; i++) {
+      RouteSet row[] = jr.getRow(i);
+
+      if (row != null) {
+        BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
+
+        localHandle.receiveMessage(brr);
+      }
+    }
+
+    // now broadcast the rows to our peers in each row
+
+    for (int i = jr.lastRow(); i < n; i++) {
+      RouteSet row[] = jr.getRow(i);
+
+      BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
+
+      for (int j = 0; j < row.length; j++) {
+        RouteSet rs = row[j];
+        if (rs == null)
+          continue;
+
+        // send to closest nodes only
+
+        NodeHandle nh = rs.closestNode();
+        if (nh != null)
+          nh = security.verifyNodeHandle(nh);
+        if (nh != null)
+          nh.receiveMessage(brr);
+
+        /*
+         * int m = rs.size(); for (int k=0; k<m; k++) { NodeHandle nh =
+         * rs.get(k);
+         * 
+         * nh.receiveMessage(brr); }
+         */
+      }
+    }
+  }
+
+  /**
+   * Should not be called becasue we are overriding the receiveMessage()
+   * interface anyway.
    */
   public void messageForAppl(Message msg) {
     throw new RuntimeException("Should not be called.");
@@ -231,11 +228,11 @@ public class StandardJoinProtocol extends PastryAppl {
   public Credentials getCredentials() {
     return cred;
   }
-    
+
   /**
    * We always want to receive messages.
    */
   public boolean deliverWhenNotReady() {
     return true;
-  }  
+  }
 }
