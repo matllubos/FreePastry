@@ -368,4 +368,20 @@ public class RoutingTable extends Observable implements Observer {
 
     return s;
   }
+  
+  public int numEntries() {
+    int count = 0;
+    int maxr = numRows();
+    int maxc = numColumns();
+    for (int r = 0; r < maxr; r++) {
+      for (int c = 0; c < maxc; c++) {
+        RouteSet rs = routingTable[r][c];
+        if (rs != null) {
+          count+=rs.size();
+        }
+      }
+    }
+    return count;
+  }
+
 }
