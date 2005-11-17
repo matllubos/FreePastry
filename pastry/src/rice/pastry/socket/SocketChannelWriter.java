@@ -127,7 +127,7 @@ public class SocketChannelWriter {
         log(Logger.WARNING, "(W): Maximum TCP queue length reached to " + path + " - message " + remove + " will be dropped.");
         return false;
       } else if (queue.size() > 20) {
-        log(Logger.WARNING,"ERROR: Queue to " + path + " has more than 20 elements - probably a bad sign - enqueue of " + o);
+        log(Logger.WARNING,"ERROR: Queue to " + path + " has "+queue.size()+" elements (more than 20) - probably a bad sign - enqueue of " + o);
       }        
     }
 
