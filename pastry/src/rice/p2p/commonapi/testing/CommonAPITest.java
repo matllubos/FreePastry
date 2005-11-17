@@ -225,7 +225,8 @@ public abstract class CommonAPITest {
    */
   protected void kill(int n) {
     if (PROTOCOL == PROTOCOL_DIRECT)
-      simulator.setAlive((rice.pastry.NodeId) nodes[n].getId(), false);
+      ((PastryNode)nodes[n]).destroy();
+//      simulator.setAlive((rice.pastry.NodeId) nodes[n].getId(), false);
   }
 
 
