@@ -302,7 +302,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     }
   }
 
-  public final boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
+  public final boolean enrouteMessage(Message msg, Id key, NodeHandle nextHop, SendOptions opt) {
     if (msg instanceof RouteMessage) {
       thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
           "[" + thePastryNode + "] forward " + msg);

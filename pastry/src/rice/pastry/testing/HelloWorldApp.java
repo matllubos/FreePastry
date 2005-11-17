@@ -105,7 +105,7 @@ public class HelloWorldApp extends PastryAppl {
    * @param opt send options
    * @return true if message needs to be forwarded according to plan.
    */
-  public boolean enrouteMessage(Message msg, Id key, NodeId nextHop,
+  public boolean enrouteMessage(Message msg, Id key, NodeHandle nextHop,
       SendOptions opt) {
     thePastryNode.getEnvironment().getLogManager().getLogger(
         HelloWorldApp.class, null).log(Logger.CONFIG,

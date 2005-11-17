@@ -158,7 +158,7 @@ public abstract class PastryAppl implements MessageReceiver
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
 
-      if (enrouteMessage(rm.unwrap(), rm.getTarget(), rm.nextHop.getNodeId(), rm.getOptions()))
+      if (enrouteMessage(rm.unwrap(), rm.getTarget(), rm.nextHop, rm.getOptions()))
         rm.routeMessage(thePastryNode.getLocalHandle());
     }
     else messageForAppl(msg);
@@ -297,7 +297,7 @@ public abstract class PastryAppl implements MessageReceiver
    *
    * @return true if the message should be routed, false if the message should be cancelled.
    */
-  public boolean enrouteMessage(Message msg, Id key, NodeId nextHop, SendOptions opt) {
+  public boolean enrouteMessage(Message msg, Id key, NodeHandle nextHop, SendOptions opt) {
     return true;
   }
 

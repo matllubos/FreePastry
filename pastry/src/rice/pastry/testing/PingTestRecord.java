@@ -29,8 +29,8 @@ public class PingTestRecord extends TestRecord {
     nIndex = (int) Math
         .ceil(Math.log(n) / Math.log(Math.pow(2, baseBitLength)));
     nIndex *= 3;
-    nHops = new int[nIndex];
-    fProb = new double[nIndex];
+    nHops = new int[nIndex*2];
+    fProb = new double[nIndex*2];
   }
 
   public void doneTest() {

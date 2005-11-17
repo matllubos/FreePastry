@@ -80,16 +80,17 @@ public class DirectPastryRegrTest extends PastryRegrTest {
   /**
    * get authoritative information about liveness of node.
    */
-  protected boolean isReallyAlive(NodeId id) {
-    return simulator.isAlive(id);
+  protected boolean isReallyAlive(NodeHandle nh) {
+    return simulator.isAlive((DirectNodeHandle)nh);
   }
 
   /**
    * murder the node. comprehensively.
    */
   protected void killNode(PastryNode pn) {
-    NetworkSimulator enet = (NetworkSimulator) simulator;
-    enet.setAlive(pn.getNodeId(), false);
+    pn.destroy();
+//    NetworkSimulator enet = (NetworkSimulator) simulator;
+//    enet.setAlive(pn.getNodeId(), false);
   }
 
   /**

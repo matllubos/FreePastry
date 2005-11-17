@@ -17,21 +17,20 @@ import java.util.*;
  */
 
 public class PingMessageNew extends Message {
-    private NodeId source;
     private NodeId target;
 
     private int		nHops = 0;
     private double	fDistance = 0;
 
-    public PingMessageNew(Address pingAddress, NodeId src, NodeId tgt) {
+    public PingMessageNew(Address pingAddress, NodeHandle src, NodeId tgt) {
 	super(pingAddress);
-	source = src;
+	setSender(src);
 	target = tgt;
     }
 
     public String toString() {
 	String s="";
-	s += "ping from " + source + " to " + target;
+	s += "ping from " + getSender().getNodeId() + " to " + target;
 	return s;
     }
 
@@ -41,6 +40,6 @@ public class PingMessageNew extends Message {
     public int getHops(){ return nHops; }
     public double getDistance(){ return fDistance; }
 
-    public NodeId getSource(){ return source; }
+    public NodeId getSource(){ return getSender().getNodeId(); }
 }
 

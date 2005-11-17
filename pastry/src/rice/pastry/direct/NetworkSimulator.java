@@ -1,70 +1,129 @@
-
 package rice.pastry.direct;
 
+import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
 /**
  * Interface to an object which is simulating the network.
- *
+ * 
  * @version $Id$
- *
+ * 
  * @author Andrew Ladd
  */
 
-public interface NetworkSimulator 
-{
+public interface NetworkSimulator {
+
+  public Environment getEnvironment();
   
-    /**
-     * Registers a node handle with the simulator.
-     *
-     * @param nh the node handle to register.
-     */
+  /**
+   * Registers a node handle with the simulator.
+   * 
+   * @param nh the node handle to register.
+   */
+  public void registerNode(DirectPastryNode dpn);
 
-    public void registerNodeId(DirectNodeHandle nh);
+  /**
+   * Checks to see if a node id is alive.
+   * 
+   * @param nid a node id.
+   * 
+   * @return true if alive, false otherwise.
+   */
 
-    /**
-     * Checks to see if a node id is alive.
-     *
-     * @param nid a node id.
-     *
-     * @return true if alive, false otherwise.
-     */
+  public boolean isAlive(DirectNodeHandle nh);
 
-    public boolean isAlive(NodeId nid);
+  /**
+   * Determines proximity between two nodes.
+   * 
+   * @param a a node id.
+   * @param b another node id.
+   * 
+   * @return proximity of b to a.
+   */
 
-    /**
-     * Determines proximity between two nodes.
-     *
-     * @param a a node id.
-     * @param b another node id.
-     *
-     * @return proximity of b to a.
-     */
+  public int proximity(DirectNodeHandle a, DirectNodeHandle b);
 
-    public int proximity(NodeId a, NodeId b);
+  /**
+   * Deliver message.
+   * 
+   * @param msg message to deliver.
+   * @param node the Pastry node to deliver it to.
+   * @param how long to delay to deliver the message
+   */
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay);
 
-    /**
-     * Deliver message.
-     *
-     * @param msg message to deliver.
-     * @param node the Pastry node to deliver it to.
-     */
+  /**
+   * Deliver message.
+   * 
+   * @param msg message to deliver.
+   * @param node the Pastry node to deliver it to.
+   * @param how long to delay to deliver the message
+   * @param period to deliver the message after the delay
+   */
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay, int period);
 
-    public void deliverMessage(Message msg, PastryNode node);
+  /**
+   * Deliver message.
+   * 
+   * @param msg message to deliver.
+   * @param node the Pastry node to deliver it to.
+   * @param how long to delay to deliver the message
+   * @param period to deliver the message after the delay
+   */
+  public ScheduledMessage deliverMessageFixedRate(Message msg, DirectPastryNode node, int delay, int period);
 
-    /**
-     * Simulate one message delivery.
-     *
-     * @return true if a message was delivered, false otherwise.
-     */
+  /**
+   * Deliver message ASAP.
+   * 
+   * @param msg message to deliver.
+   * @param node the Pastry node to deliver it to.
+   */
+  public void deliverMessage(Message msg, DirectPastryNode node);
 
-    public boolean simulate();
+  /**
+   * Simulate one message delivery.
+   * 
+   * @return true if a message was delivered, false otherwise.
+   */
+  public boolean simulate();
 
+  /**
+   * Deliver messages until the clock reaches time
+   * 
+   * @param time the time to simulate until
+   * @return
+   */
+  public boolean simulateUntil(long time);
 
-    public void setTestRecord( TestRecord tr );
-    public TestRecord getTestRecord();
-    public DirectNodeHandle getClosest(NodeId nid);
-    public void setAlive(NodeId nid, boolean alive);
+  /**
+   * Simulate for that many millis
+   * 
+   * @param millis the amount of time to simulate until
+   * @return
+   */
+  public boolean simulateFor(int millis);
 
+  public void setTestRecord(TestRecord tr);
+
+  public TestRecord getTestRecord();
+
+  /**
+   * Returns the closest Node in proximity.
+   * 
+   * @param nid
+   * @return
+   */
+  public DirectNodeHandle getClosest(DirectNodeHandle nh);
+
+  public void destroy(DirectPastryNode dpn);
+
+  /**
+   * Generates a random node record
+   * 
+   * @return
+   */
+  public NodeRecord generateNodeRecord();
+
+  public void removeNode(DirectPastryNode node);
 }

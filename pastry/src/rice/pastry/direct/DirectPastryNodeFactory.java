@@ -59,6 +59,8 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
 
+  Hashtable recordTable = new Hashtable();
+  
   /**
    * Manufacture a new Pastry node.
    *
@@ -83,14 +85,19 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
       }
     }    
 
-    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment);
+    NodeRecord nr = (NodeRecord)recordTable.get(nodeId);
+    if (nr == null) {
+      nr = simulator.generateNodeRecord();
+      recordTable.put(nodeId,nr);
+    }
+    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment, nr);
 
     DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
-    simulator.registerNodeId( localhandle );
+    simulator.registerNode(pn);
 
     DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
     MessageDispatch msgDisp = new MessageDispatch(pn);
-
+ 
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
@@ -112,8 +119,18 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     StandardJoinProtocol jProtocol =
       new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);    
     
+    DirectNodeHandle simClosest = simulator.getClosest(localhandle);
+    DirectNodeHandle closest = (DirectNodeHandle)getNearest(localhandle, bootstrap);
+    if (simClosest != null) {
+      int sProx = simulator.proximity(localhandle, simClosest);
+      int prox = simulator.proximity(localhandle, closest);
+      
+      if (sProx != prox) {
+        System.out.println("localhandle:"+localhandle+" closest:"+closest+":"+prox+" simClosest:"+simClosest+":"+sProx);
+      }
+    }    
     // pn.doneNode(bootstrap);
-    //pn.doneNode( simulator.getClosest(nodeId) );
+    //pn.doneNode( simulator.getClosest(localhandle) );    
     pn.doneNode(getNearest(localhandle, bootstrap));
       
     return pn;
@@ -188,7 +205,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return The proximity of the provided handle
    */
   public int getProximity(NodeHandle local, NodeHandle remote) {
-    return simulator.proximity(local.getNodeId(), remote.getNodeId());
+    return simulator.proximity((DirectNodeHandle)local, (DirectNodeHandle)remote);
   }
 
 }

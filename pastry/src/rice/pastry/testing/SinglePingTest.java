@@ -55,15 +55,17 @@ public class SinglePingTest {
     return bootstrap;
   }
 
-  public void makePastryNode() {
+  public PastryNode makePastryNode() {
     PastryNode pn = factory.newNode(getBootstrap());
     pastryNodes.addElement(pn);
 
     Ping pc = new Ping(pn);
     pingClients.addElement(pc);
+    
+    return pn;
   }
 
-  public void sendPings(int k) {
+  public void sendPings(int k) {    
     int n = pingClients.size();
 
     for (int i = 0; i < k; i++) {
@@ -74,8 +76,7 @@ public class SinglePingTest {
       PastryNode pn = (PastryNode) pastryNodes.get(to);
 
       pc.sendPing(pn.getNodeId());
-      while (simulate())
-        ;
+      while (simulate());
     }
   }
 
@@ -88,9 +89,10 @@ public class SinglePingTest {
     Date prev = new Date();
 
     for (i = 0; i < testRecord.getNodeNumber(); i++) {
-      makePastryNode();
-      while (simulate())
-        ;
+      PastryNode pn = makePastryNode();
+      while (simulate());
+      System.out.println(pn.getLeafSet());
+
       if (i != 0 && i % 1000 == 0)
         System.out.println(i + " nodes constructed");
     }
@@ -110,9 +112,10 @@ public class SinglePingTest {
 
     System.out.println("-------------------------");
     for (i = 0; i < testRecord.getNodeNumber(); i++) {
-      makePastryNode();
-      while (simulate())
-        ;
+      PastryNode pn = makePastryNode();
+      while (simulate());
+//      System.out.println(pn.getLeafSet());
+
       if (i != 0 && i % 500 == 0)
         System.out.println(i + " nodes constructed");
     }

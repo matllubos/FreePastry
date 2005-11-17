@@ -29,6 +29,9 @@ public abstract class PastryRegrTest {
 
   public Vector pastryNodes;
 
+  /**
+   * of NodeId
+   */
   public SortedMap pastryNodesSorted;
 
   public Vector pastryNodesLastAdded;
@@ -69,7 +72,7 @@ public abstract class PastryRegrTest {
   /**
    * determine whether this node is really alive.
    */
-  protected abstract boolean isReallyAlive(NodeId id);
+  protected abstract boolean isReallyAlive(NodeHandle nh);
 
   /**
    * kill a given node.
@@ -519,11 +522,12 @@ public abstract class PastryRegrTest {
 
             }
 
-            NodeId id = rs.get(k).getNodeId();
-
+            NodeHandle nh2 = rs.get(k);
+            NodeId id = nh2.getNodeId();
+            
             // check if node exists
             if (!pastryNodesSorted.containsKey(id)) {
-              if (isReallyAlive(id))
+              if (isReallyAlive(nh2))
                 System.out.println("checkRoutingTable failure 2, row=" + i
                     + " column=" + j + " rank=" + k);
             } else // check if node has correct prefix

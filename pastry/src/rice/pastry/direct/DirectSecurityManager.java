@@ -65,25 +65,27 @@ public class DirectSecurityManager implements PastrySecurityManager {
    * @return the verified node handle
    */
   public NodeHandle verifyNodeHandle(NodeHandle handle) {
-    NodeId local = pnode.getNodeId();
-    NodeId nid = handle.getNodeId();
-
-    if (local.equals(nid)) {
-      return pnode.getLocalHandle();
-    } else if (handle instanceof DirectNodeHandle) {
-      DirectNodeHandle dnh = (DirectNodeHandle) handle;
-
-      DirectNodeHandle retDnh = (DirectNodeHandle) pool.get(handle.getNodeId());
-
-      if (retDnh == null) {
-        retDnh = new DirectNodeHandle(pnode, dnh.getRemote(), sim);
-        pool.put(handle.getNodeId(), retDnh);
-
-        sim.registerNodeId(retDnh);
-      }
-
-      return retDnh;
-    } else throw new Error("node handle of unknown type");
+    return handle;
+    
+//    NodeId local = pnode.getNodeId();
+//    NodeId nid = handle.getNodeId();
+//
+//    if (local.equals(nid)) {
+//      return pnode.getLocalHandle();
+//    } else if (handle instanceof DirectNodeHandle) {
+//      DirectNodeHandle dnh = (DirectNodeHandle) handle;
+//
+//      DirectNodeHandle retDnh = (DirectNodeHandle) pool.get(handle.getNodeId());
+//
+//      if (retDnh == null) {
+//        retDnh = new DirectNodeHandle(pnode, dnh.getRemote(), sim);
+//        pool.put(handle.getNodeId(), retDnh);
+//
+//        sim.registerNodeId(retDnh);
+//      }
+//
+//      return retDnh;
+//    } else throw new Error("node handle of unknown type");
   }
 
   /**

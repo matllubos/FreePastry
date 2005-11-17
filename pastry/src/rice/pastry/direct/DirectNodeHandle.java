@@ -16,9 +16,9 @@ import rice.pastry.messaging.*;
  */
 
 public class DirectNodeHandle extends NodeHandle {
-  private PastryNode remoteNode;
+  private DirectPastryNode remoteNode;
   private NetworkSimulator simulator;
-
+  
   /**
    * Constructor for DirectNodeHandle.
    *
@@ -26,8 +26,9 @@ public class DirectNodeHandle extends NodeHandle {
    * @param rn The remote pastry node
    * @param sim The current network simulator
    */
-  public DirectNodeHandle(PastryNode ln, PastryNode rn, NetworkSimulator sim) {
+  DirectNodeHandle(DirectPastryNode ln, DirectPastryNode rn, NetworkSimulator sim) {
     setLocalNode(ln);
+    if (rn == null) throw new IllegalArgumentException("rn must be non-null");
     remoteNode = rn;
     simulator = sim;
   }
@@ -37,7 +38,7 @@ public class DirectNodeHandle extends NodeHandle {
    *
    * @return The Remote value
    */
-  public PastryNode getRemote() {
+  public DirectPastryNode getRemote() {
     return remoteNode;
   }
 
@@ -56,7 +57,7 @@ public class DirectNodeHandle extends NodeHandle {
    * @return The Alive value
    */
   public int getLiveness() {
-    if (simulator.isAlive(remoteNode.getNodeId())) {
+    if (remoteNode.isAlive()) {
       return LIVENESS_ALIVE;
     }
     return LIVENESS_DEAD; 
@@ -97,7 +98,7 @@ public class DirectNodeHandle extends NodeHandle {
    */
   public int proximity() {
     assertLocalNode();
-    int result = simulator.proximity(getLocalNode().getNodeId(), remoteNode.getNodeId());
+    int result = simulator.proximity((DirectNodeHandle)localnode.getLocalHandle(), this);
 
     return result;
   }
@@ -108,11 +109,9 @@ public class DirectNodeHandle extends NodeHandle {
    * @param msg DESCRIBE THE PARAMETER
    */
   public void receiveMessage(Message msg) {
-    if (! simulator.isAlive(msg.getSenderId())) {
-      if (localnode != null) {
-        localnode.getEnvironment().getLogManager().getLogger(DirectNodeHandle.class, "").log(Logger.WARNING, 
-            "DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");        
-      }
+    if (! remoteNode.isAlive()) {
+      localnode.getEnvironment().getLogManager().getLogger(DirectNodeHandle.class, "").log(Logger.WARNING, 
+          "DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");              
     } else {
       simulator.deliverMessage(msg, remoteNode);
     }

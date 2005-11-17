@@ -16,13 +16,16 @@ import rice.selector.*;
 
 public class DirectPastryNode extends PastryNode {
   private NetworkSimulator simulator;
-
+  protected boolean alive = true;
+  NodeRecord record;
+  
   protected Timer timer;
 
-  public DirectPastryNode(NodeId id, NetworkSimulator sim, Environment e) {
+  public DirectPastryNode(NodeId id, NetworkSimulator sim, Environment e, NodeRecord nr) {
     super(id, e);
     timer = e.getSelectorManager().getTimer();
     simulator = sim;
+    record = nr;
   }
 
   public void setDirectElements(/* simulator */) {
@@ -32,6 +35,16 @@ public class DirectPastryNode extends PastryNode {
     initiateJoin(bootstrap);
   }
 
+  public boolean isAlive() {
+    return alive; 
+  }
+  
+  public void destroy() {
+    super.destroy();
+    this.alive = false; 
+    simulator.removeNode(this);
+  }
+  
   /**
    * Sends an InitiateJoin message to itself.
    * 
@@ -63,9 +76,7 @@ public class DirectPastryNode extends PastryNode {
    * @return the scheduled event object; can be used to cancel the message
    */
   public ScheduledMessage scheduleMsg(Message msg, long delay) {
-    ScheduledMessage sm = new ScheduledMessage(this, msg);
-    timer.schedule(sm, delay);
-    return sm;
+    return simulator.deliverMessage(msg, this, (int)delay);
   }
 
   /**
@@ -84,9 +95,7 @@ public class DirectPastryNode extends PastryNode {
    * @return the scheduled event object; can be used to cancel the message
    */
   public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
-    ScheduledMessage sm = new ScheduledMessage(this, msg);
-    timer.schedule(sm, delay, period);
-    return sm;
+    return simulator.deliverMessage(msg, this, (int)delay, (int)period);
   }
 
   /**
@@ -106,9 +115,7 @@ public class DirectPastryNode extends PastryNode {
    */
   public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay,
       long period) {
-    ScheduledMessage sm = new ScheduledMessage(this, msg);
-    timer.scheduleAtFixedRate(sm, delay, period);
-    return sm;
+    return simulator.deliverMessageFixedRate(msg, this, (int)delay, (int)period);
   }
 }
 

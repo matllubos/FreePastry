@@ -37,7 +37,7 @@ public class Ping extends PastryAppl {
   }
 
   public void sendPing(NodeId nid) {
-    routeMsg(nid, new PingMessageNew(pingAddress, getNodeId(), nid), pingCred,
+    routeMsg(nid, new PingMessageNew(pingAddress, getNodeHandle(), nid), pingCred,
         new SendOptions());
   }
 
@@ -52,8 +52,8 @@ public class Ping extends PastryAppl {
         .getLocalHandle()).getSimulator();
     PingTestRecord tr = (PingTestRecord) (sim.getTestRecord());
 
-    double dDistance = sim.proximity(thePastryNode.getNodeId(), pMsg
-        .getSource());
+    double dDistance = sim.proximity((DirectNodeHandle)thePastryNode.getLocalHandle(), (DirectNodeHandle)pMsg
+        .getSender());
     if (dDistance == 0) {
       rDistance = 0;
     } else {
@@ -64,14 +64,15 @@ public class Ping extends PastryAppl {
 
   }
 
-  public boolean enrouteMessage(Message msg, Id from, NodeId nextHop,
+  public boolean enrouteMessage(Message msg, Id from, NodeHandle nextHop,
       SendOptions opt) {
 
     PingMessageNew pMsg = (PingMessageNew) msg;
     pMsg.incrHops();
     pMsg.incrDistance(((DirectNodeHandle) ((DirectPastryNode) thePastryNode)
-        .getLocalHandle()).getSimulator().proximity(thePastryNode.getNodeId(),
-        nextHop));
+        .getLocalHandle()).getSimulator().proximity(
+            (DirectNodeHandle)thePastryNode.getLocalHandle(),
+            (DirectNodeHandle)nextHop));
 
     return true;
   }

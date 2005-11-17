@@ -187,7 +187,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
     }
   }
 
-  public boolean isReallyAlive(NodeId id) {
+  public boolean isReallyAlive(NodeHandle nh) {
     // xxx
     return false;
   }

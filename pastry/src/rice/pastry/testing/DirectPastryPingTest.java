@@ -1,6 +1,7 @@
 package rice.pastry.testing;
 
 import rice.environment.Environment;
+import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -69,7 +70,8 @@ public class DirectPastryPingTest {
 
   public static void main(String args[]) throws IOException {
     boolean quit = false;
-    Environment env = new Environment();
+    Environment env = new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
+        new SimpleParameters(Environment.defaultParamFileArray,null));
     BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
     String command = null;
 
