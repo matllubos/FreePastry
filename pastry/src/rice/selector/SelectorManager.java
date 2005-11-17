@@ -12,7 +12,6 @@ import java.util.LinkedList;
 import java.util.TreeSet;
 
 import rice.environment.logging.*;
-import rice.environment.logging.LogManager;
 import rice.environment.time.TimeSource;
 
 /**
@@ -486,6 +485,7 @@ public class SelectorManager extends Thread implements Timer {
   public void scheduleAtFixedRate(TimerTask task, long delay, long period) {
     task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
     task.period = (int) period;
+    task.fixedRate = true;
     addTask(task);
   }
 

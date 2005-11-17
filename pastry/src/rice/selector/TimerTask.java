@@ -10,14 +10,15 @@ import rice.p2p.commonapi.CancellableTask;
  * @author Jeff Hoye
  */
 public abstract class TimerTask implements Comparable, CancellableTask {
-  long nextExecutionTime;
-  private boolean cancelled = false;
+  protected long nextExecutionTime;
+  protected boolean cancelled = false;
 
   /**
    * If period is positive, task will be rescheduled.
    */
-  int period = -1;    
+  protected int period = -1;    
     
+  protected boolean fixedRate = false;
   
   public abstract void run();
 
@@ -25,14 +26,19 @@ public abstract class TimerTask implements Comparable, CancellableTask {
    * Returns true if should re-insert.
    * @return
    */
-  boolean execute(TimeSource ts) {
+  public boolean execute(TimeSource ts) {
     if (cancelled) return false;
     run();
     // often cancelled in the execution
     if (cancelled) return false;
     if (period > 0) {
-      nextExecutionTime = ts.currentTimeMillis()+period;
-      return true;
+      if (fixedRate) {
+        nextExecutionTime+=period;
+        return true;
+      } else {
+        nextExecutionTime = ts.currentTimeMillis()+period;
+        return true;
+      }
     } else {
       return false;
     }
