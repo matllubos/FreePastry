@@ -135,6 +135,27 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   }
 
   /**
+   * Schedule the specified message for repeated fixed-rate delivery to the
+   * local node, beginning after the specified delay. Subsequent executions take
+   * place at approximately regular intervals, separated by the specified
+   * period.
+   * 
+   * @param msg
+   *          a message that will be delivered to the local node after the
+   *          specified delay
+   * @param delay
+   *          time in milliseconds before message is to be delivered
+   * @param period
+   *          time in milliseconds between successive message deliveries
+   * @return the scheduled event object; can be used to cancel the message
+   */
+  public CancellableTask scheduleMessageAtFixedRate(Message msg,
+      long delay, long period) {
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg);
+    return thePastryNode.scheduleMsgAtFixedRate(pm, delay, period);    
+  }
+    
+  /**
    * This method produces a list of nodes that can be used as next
    * hops on a route towards key, such that the resulting route
    * satisfies the overlay protocol's bounds on the number of hops

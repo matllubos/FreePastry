@@ -146,7 +146,17 @@ public interface Endpoint {
    * @param delay The number of milliseconds to wait before delivering subsequent messages
    */
   CancellableTask scheduleMessage(Message message, long delay, long period);
-  
+    
+  /**
+   * Schedules a message to be delivered to this application every period number of 
+   * milliseconds, after delay number of miliseconds have passed.
+   *
+   * @param message The message to be delivered
+   * @param delay The number of milliseconds to wait before delivering the fist message
+   * @param delay The number of milliseconds to wait before delivering subsequent messages
+   */
+  CancellableTask scheduleMessageAtFixedRate(Message message, long delay, long period);
+    
   /**
    * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
    * as encryption, erasure encoding, or bloom filter creation should never be done in the context

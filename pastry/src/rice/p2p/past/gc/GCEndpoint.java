@@ -182,6 +182,10 @@ public class GCEndpoint implements Endpoint {
     return endpoint.scheduleMessage(message, delay, period);
   }
   
+  public CancellableTask scheduleMessageAtFixedRate(Message message, long delay, long period) {
+    return endpoint.scheduleMessageAtFixedRate(message, delay, period);
+  }
+  
   /**
    * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
    * as encryption, erasure encoding, or bloom filter creation should never be done in the context
