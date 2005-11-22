@@ -116,8 +116,15 @@ public class Proxy {
     
     if (((parameters.getString("java_home") == null) ||
          (parameters.getString("java_home").equals(""))) && 
-        (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0))
+        (System.getProperty("os.name").toLowerCase().indexOf("windows") < 0)) {
       parameters.setString("java_home", System.getProperty("java.home"));
+      try {
+        parameters.store();
+      } catch (IOException e) {
+        if (logger.level <= Logger.FINE) 
+        		logger.logException("Got error storing java_home parameter",e);
+      }
+    }
     
     if ((parameters.getString("java_home") != null) && (! ("".equals(parameters.getString("java_home"))))) {
       result.append(parameters.getString("java_home"));
