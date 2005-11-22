@@ -63,6 +63,8 @@ public class MultiringNode implements Node, ScribeClient {
    */
   protected Environment environment;
   
+  protected Logger logger;
+  
   /**
    * Constructor
    *
@@ -72,6 +74,7 @@ public class MultiringNode implements Node, ScribeClient {
   public MultiringNode(Id ringId, Node node) {
     this.node = node;
     this.environment = node.getEnvironment();
+    this.logger = environment.getLogManager().getLogger(MultiringNode.class, null);
     this.ringId = ringId;
     this.endpoints = new Hashtable();
     this.scribe = new ScribeImpl(this, "Multiring");
@@ -277,7 +280,7 @@ public class MultiringNode implements Node, ScribeClient {
       //System.outt.println("RECEIVED ANYCAST TO " + rm.getId() + " AT NODE " + getId());
       collection.route(rm.getId(), rm.getMessage(), rm.getApplication());
     } else {
-      environment.getLogManager().getLogger(MultiringNode.class, null).log(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.log(
           "Received unrecognized message " + content);
     }
     return true;
@@ -291,7 +294,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @param content The content which was published
    */
   public void deliver(Topic topic, ScribeContent content) {
-    environment.getLogManager().getLogger(MultiringNode.class, null).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "Received unexpected delivery on topic " + topic + " of " + content);
   }
   
@@ -323,7 +326,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @param topic The topic which the subscribe failed on
    */
   public void subscribeFailed(Topic topic) {
-    environment.getLogManager().getLogger(MultiringNode.class, null).log(Logger.WARNING,
+    if (logger.level <= Logger.WARNING) logger.log(
         getId() + ": Received error joining ringId topic " + topic + " - trying again.");
     nodeAdded(((RingId) topic.getId()).getId());
   }

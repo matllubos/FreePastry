@@ -72,7 +72,8 @@ public class FileMailbox implements Mailbox {
 
       return folders;
     } catch (PatternSyntaxException pse) {
-      environment.getLogManager().getLogger(FileMailbox.class, null).logException(Logger.WARNING,
+      Logger logger = environment.getLogManager().getLogger(FileMailbox.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException(
           "Pattern syntax", pse);
       throw new MailboxException("Pattern syntax", pse);
     }
@@ -114,7 +115,8 @@ public class FileMailbox implements Mailbox {
 
       return subscriptions;
     } catch (PatternSyntaxException pse) {
-      environment.getLogManager().getLogger(FileMailbox.class, null).logException(Logger.WARNING,
+      Logger logger = environment.getLogManager().getLogger(FileMailbox.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException(
           "Pattern syntax", pse);
       throw new MailboxException("Pattern syntax", pse);
     }

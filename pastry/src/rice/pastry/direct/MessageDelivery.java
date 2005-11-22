@@ -11,18 +11,20 @@ import rice.pastry.messaging.Message;
    */
   class MessageDelivery {
     private Message msg;
-    private PastryNode node;
-
+    private PastryNode node;    
+    protected Logger logger;
+    
     /**
      * Constructor for MessageDelivery.
      */
     public MessageDelivery(Message m, PastryNode pn) {
       msg = m;
       node = pn;
+      logger = pn.getEnvironment().getLogManager().getLogger(MessageDelivery.class, null);
     }
 
     public void deliver() {
-      node.getEnvironment().getLogManager().getLogger(MessageDelivery.class, null).log(Logger.FINE, "MD: deliver "+msg+" to "+node);
+      if (logger.level <= Logger.FINE) logger.log("MD: deliver "+msg+" to "+node);
       node.receiveMessage(msg);
       
 //      if (isAlive(msg.getSenderId())) {

@@ -66,6 +66,8 @@ public class Stripe implements ScribeClient {
 
   protected String instance;
   
+  Logger logger;
+  
   /**
    * The constructor used when creating a stripe from scratch.
    *
@@ -77,6 +79,7 @@ public class Stripe implements ScribeClient {
     this.MAX_FAILED_SUBSCRIPTION = maxFailedSubscriptions;
     this.stripeId = stripeId;
     this.scribe = scribe;
+    logger = scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance);    
     this.channel = channel;
     this.isPrimary = false;
     this.failed = new Hashtable();
@@ -182,10 +185,10 @@ public class Stripe implements ScribeClient {
           clients[i].deliver(this, data);
         }
       } else {
-        scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance).log(Logger.WARNING, "Received unexpected content " + content);
+        if (logger.level <= Logger.WARNING) logger.log("Received unexpected content " + content);
       }
     } else {
-      scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance).log(Logger.WARNING, "Received update for unexcpected topic " + topic + " content " + content);
+      if (logger.level <= Logger.WARNING) logger.log("Received update for unexcpected topic " + topic + " content " + content);
     }
   }
 
@@ -223,7 +226,7 @@ public class Stripe implements ScribeClient {
     if (count.intValue() < MAX_FAILED_SUBSCRIPTION) {
       count = new Integer(count.intValue() + 1);
 
-      scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance).log(Logger.WARNING, 
+      if (logger.level <= Logger.WARNING) logger.log( 
           "DEBUG :: Subscription failed at " + channel.getLocalId() + " for topic " + topic + " - retrying.");
       scribe.subscribe(topic, this);
 

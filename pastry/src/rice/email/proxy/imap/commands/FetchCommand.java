@@ -86,7 +86,8 @@ public class FetchCommand extends AbstractImapCommand {
       
       return result.toString() +")\r\n";
     } catch (MailboxException e) {
-      _state.getEnvironment().getLogManager().getLogger(FetchCommand.class, null).logException(Logger.WARNING,
+      Logger logger = _state.getEnvironment().getLogManager().getLogger(FetchCommand.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException(
           "Got exception " + e + " while fetching data - not returning anything.",e);
       return "";
     }

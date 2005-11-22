@@ -49,14 +49,17 @@ public class Visualization implements DataProvider {
   
   protected Data data;
     
-  protected Environment environment;
-
+  protected Environment environment;  
+  protected Logger logger;
+  
   public Visualization(Ring[] bootstrapNodes, Environment env) {
     this.environment = env;
-    Logger logger = environment.getLogManager().getLogger(Visualization.class,null);
-    for (int i = 0; i < bootstrapNodes.length; i++) {
-      logger.log(Logger.INFO,bootstrapNodes[i].toString());
-    }        
+    logger = environment.getLogManager().getLogger(Visualization.class,null);
+    if (logger.level <= Logger.INFO) {
+      for (int i = 0; i < bootstrapNodes.length; i++) {
+        logger.log(bootstrapNodes[i].toString());
+      }        
+    }
     ringArray = bootstrapNodes;
 
     this.rings = new Hashtable();
@@ -79,7 +82,8 @@ public class Visualization implements DataProvider {
             refreshData();
           }
         } catch (Exception e) {
-          environment.getLogManager().getLogger(Visualization.class,null).logException(Logger.SEVERE,"",e);
+          if (logger.level <= Logger.SEVERE) logger.logException(
+              "",e);
         }
       }
     };
@@ -144,7 +148,7 @@ public class Visualization implements DataProvider {
       try {
         frame.nodeHighlighted(node);
       } catch (NullPointerException npe) {
-        environment.getLogManager().getLogger(Visualization.class,null).logException(Logger.SEVERE,
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "ERROR: Visualization.setHighlighted() frame == null!!!", npe);
       }
     }

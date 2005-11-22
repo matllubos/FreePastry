@@ -22,6 +22,11 @@ public class OverviewPanelCreator implements PanelCreator {
   
   Environment environment;
   
+  /**
+   * Lazilly constructed.
+   */
+  protected Logger logger;  
+  
   public OverviewPanelCreator(Environment env) {
     this.environment = env;
     env.getSelectorManager().getTimer().scheduleAtFixedRate(new rice.selector.TimerTask() {
@@ -152,7 +157,8 @@ public class OverviewPanelCreator implements PanelCreator {
         times.removeElementAt(0); 
       }
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger == null) logger = environment.getLogManager().getLogger(OverviewPanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Ecception " + e + " thrown.",e);
     }
   }

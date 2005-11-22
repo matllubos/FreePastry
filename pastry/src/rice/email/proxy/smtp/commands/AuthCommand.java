@@ -67,7 +67,8 @@ public class AuthCommand extends SmtpCommand {
         conn.println("535 User error - please try again.");
       } catch (NullPointerException e) {
         conn.println("535 Internal error " + e + " - please try again.");
-        state.getEnvironment().getLogManager().getLogger(AuthCommand.class, null).logException(Logger.WARNING, 
+        Logger logger = state.getEnvironment().getLogManager().getLogger(AuthCommand.class, null);
+        if (logger.level <= Logger.WARNING) logger.logException(
             "535 Internal error " + e + " - please try again.", e);
       }
     } else if (mechanism.toUpperCase().equals("LOGIN")) {
@@ -93,7 +94,8 @@ public class AuthCommand extends SmtpCommand {
         conn.println("535 User error - please try again.");
       } catch (NullPointerException e) {
         conn.println("535 Internal error " + e + " - please try again.");
-        state.getEnvironment().getLogManager().getLogger(AuthCommand.class, null).logException(Logger.WARNING, 
+        Logger logger = state.getEnvironment().getLogManager().getLogger(AuthCommand.class, null);
+        if (logger.level <= Logger.WARNING) logger.logException(
             "535 Internal error " + e + " - please try again.", e);
       }
     } else {

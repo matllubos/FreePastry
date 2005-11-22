@@ -28,6 +28,8 @@ public abstract class PastryAppl implements MessageReceiver
 
   protected Address address;
 
+  protected Logger logger;
+  
   private class LeafSetObserver implements Observer {
     public void update(Observable o, Object arg) {
       NodeSetUpdate nsu = (NodeSetUpdate) arg;
@@ -58,14 +60,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @param pn the pastry node that client will attach to.
    */
   public PastryAppl(PastryNode pn) {
-    thePastryNode = pn;
-
-    thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
-
-    thePastryNode.addLeafSetObserver(new LeafSetObserver());
-    thePastryNode.addRouteSetObserver(new RouteSetObserver());
-
-    thePastryNode.registerApp(this); // just adds it to a list
+    this(pn, null);
   }
   
   /**
@@ -78,9 +73,11 @@ public abstract class PastryAppl implements MessageReceiver
    * @param instance The instance name of this appl.
    */
   public PastryAppl(PastryNode pn, String instance) {
-    this.instance = instance;
-    this.address = new StandardAddress(this.getClass(), instance, pn.getEnvironment());
-
+    if (instance != null) {
+      this.instance = instance;
+      this.address = new StandardAddress(this.getClass(), instance, pn.getEnvironment());
+    }
+    
     thePastryNode = pn;
     thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
 
@@ -88,6 +85,7 @@ public abstract class PastryAppl implements MessageReceiver
     thePastryNode.addRouteSetObserver(new RouteSetObserver());
 
     thePastryNode.registerApp(this); // just adds it to a list
+    logger = pn.getEnvironment().getLogManager().getLogger(getClass(), instance);
   }
   
   /**
@@ -99,18 +97,9 @@ public abstract class PastryAppl implements MessageReceiver
    * @param instance The instance name of this appl.
    */
   public PastryAppl(PastryNode pn, int port) {
-    this.instance = "[PORT " + port + "]";
-    this.address = new StandardAddress(port);
-    
-    thePastryNode = pn;
-    thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
-    
-    thePastryNode.addLeafSetObserver(new LeafSetObserver());
-    thePastryNode.addRouteSetObserver(new RouteSetObserver());
-    
-    thePastryNode.registerApp(this); // just adds it to a list
+    this(pn, "[PORT " + port + "]");
   }
-
+  
   /**
    * Returns the address of this application.
    *
@@ -142,7 +131,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @param msg a message.
    */
   public final void sendMessage(Message msg) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] send " + msg);
     thePastryNode.receiveMessage(msg);
   }
@@ -153,7 +142,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @param msg the message that is arriving.
    */
   public void receiveMessage(Message msg) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] recv " + msg);
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
@@ -195,7 +184,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @param opt send options that describe how the message is to be routed.  
    */
   public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] routemsgdirect " + msg + " to " + dest);
     if (!dest.isAlive()) return false;
     //RouteMessage rm = new RouteMessage(dest, msg, cred, opt, getAddress());
@@ -223,7 +212,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @param opt send options that describe how the message is to be routed.
    */
   public void routeMsg(Id key, Message msg, Credentials cred, SendOptions opt) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(PastryAppl.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] routemsg " + msg + " to " + key);
     RouteMessage rm = new RouteMessage(key, msg, cred, opt, getAddress());
     thePastryNode.receiveMessage(rm);

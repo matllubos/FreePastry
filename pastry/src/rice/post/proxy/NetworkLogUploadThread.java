@@ -41,9 +41,12 @@ public class NetworkLogUploadThread extends Thread {
   protected int pastry_port;
   
   private Environment environment;
+  protected Logger logger;
   private Parameters params;
   
   private InetAddress localHost;
+  
+  
   
   public NetworkLogUploadThread(InetAddress localHost, int port, PublicKey key, InetSocketAddress server, Environment env) {      
     super("NetworkLogUploadThread");
@@ -52,6 +55,8 @@ public class NetworkLogUploadThread extends Thread {
     this.key = key;
     this.pastry_port = port;
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(getClass(), null);
+    
     this.params = env.getParameters();
     
     this.buffer = new byte[params.getInt("log_network_buffer_size")];
@@ -70,7 +75,7 @@ public class NetworkLogUploadThread extends Thread {
     } catch (InterruptedException e) {}
     
     while (true) {
-      log(Logger.INFO, "NetworkLogUploadThread Waking up...");
+      if (logger.level <= Logger.INFO) logger.log( "NetworkLogUploadThread Waking up...");
       try {
         sendFiles();
       } catch (IOException e) {
@@ -85,7 +90,7 @@ public class NetworkLogUploadThread extends Thread {
     try {
       Thread.sleep(params.getInt("log_network_upload_interval"));
     } catch (InterruptedException e) {
-      logException(Logger.WARNING, "Unexpected IE in NetworkLogUploadThread",e);
+      if (logger.level <= Logger.WARNING) logger.logException( "Unexpected IE in NetworkLogUploadThread",e);
       throw new RuntimeException("Unexpected InterruptedException",e);
     }
   }
@@ -132,13 +137,13 @@ public class NetworkLogUploadThread extends Thread {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);
 
-      log(Logger.INFO, "writing header for "+file.getName());
+      if (logger.level <= Logger.INFO) logger.log( "writing header for "+file.getName());
       oos.writeObject(getLocalHost().getHostAddress() + ":" + pastry_port + "." + file.getName());
       oos.writeLong(file.length());
       oos.close();
       return baos.toByteArray();
     } catch (Exception e) {
-      logException(Logger.WARNING, "ERROR: Could not create header... ", e);
+      if (logger.level <= Logger.WARNING) logger.logException( "ERROR: Could not create header... ", e);
       throw new RuntimeException(e);
     }
   }
@@ -167,15 +172,15 @@ public class NetworkLogUploadThread extends Thread {
       
       out.finish();
       out.flush();
-      log(Logger.FINE,"Done writing... "+file.getName());
+      if (logger.level <= Logger.FINE) logger.log("Done writing... "+file.getName());
       
       int done = socket.getInputStream().read(new byte[1]);
-      log(Logger.FINE,"Done reading... (" + done + ")" + " for "+file.getName());
+      if (logger.level <= Logger.FINE) logger.log("Done reading... (" + done + ")" + " for "+file.getName());
       
       if (done < 0)
         throw new IOException("Log file was not correctly received - skipping...");
     } catch (IOException e) {
-      logException(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.logException(
           "ERROR: Got exception " + e + " while sending file - aborting!",e);
       throw e;
     } finally {
@@ -183,22 +188,14 @@ public class NetworkLogUploadThread extends Thread {
         if (socket != null) socket.close();
         if (in != null) in.close();
       } catch (IOException e) {
-        logException(Logger.SEVERE, "PANIC: Got exception " + e + " while closing streams!",e);
+        if (logger.level <= Logger.SEVERE) logger.logException( "PANIC: Got exception " + e + " while closing streams!",e);
       }
     }
     
     if (delete) {
       boolean result = file.delete();
       if (! result)
-        log(Logger.WARNING,"WARNING: Error deleting log file " + file + " " + file.exists() + " " + result);
+        if (logger.level <= Logger.WARNING) logger.log("WARNING: Error deleting log file " + file + " " + file.exists() + " " + result);
     }
-  }
-  
-  private void log(int level, String msg) {
-    environment.getLogManager().getLogger(getClass(), "").log(level, msg);
-  }
-
-  private void logException(int level, String msg, Throwable t) {
-    environment.getLogManager().getLogger(getClass(), "").logException(level, msg, t);
-  }
+  }  
 }

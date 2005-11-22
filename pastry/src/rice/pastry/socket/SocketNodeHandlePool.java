@@ -28,6 +28,8 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
    */
   protected Hashtable handles;
 
+  protected Logger logger;
+  
   /**
    * Constructor.
    *
@@ -36,6 +38,7 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
   public SocketNodeHandlePool(SocketPastryNode node) {
     this.node = node;
     handles = new Hashtable();
+    this.logger = node.getEnvironment().getLogManager().getLogger(SocketNodeHandlePool.class, null);
   }
 
   /**
@@ -89,10 +92,10 @@ public class SocketNodeHandlePool extends DistNodeHandlePool {
         if (handle != null) {
           if (!printed) {
             if (update == SocketNodeHandle.DECLARED_DEAD) {
-              node.getEnvironment().getLogManager().getLogger(SocketNodeHandle.class, null).log(Logger.FINE,
+              if (logger.level <= Logger.FINE) logger.log(
                   "found " + handle.getNodeId() + " to be dead.");
             } else if (update == SocketNodeHandle.DECLARED_LIVE) {
-              node.getEnvironment().getLogManager().getLogger(SocketNodeHandle.class, null).log(Logger.FINE,
+              if (logger.level <= Logger.FINE) logger.log(
                   "found " + handle.getNodeId() + " to be alive again.");
             }
 

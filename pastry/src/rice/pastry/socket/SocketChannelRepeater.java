@@ -54,6 +54,8 @@ public class SocketChannelRepeater {
   // for reading from the header information socket
   private ByteBuffer headerBuffer;
 
+  private Logger logger;
+  
   /**
    * Constructor which creates this SocketChannelReader and the WirePastryNode.
    * Once the reader has completely read a message, it deserializes the message
@@ -63,6 +65,7 @@ public class SocketChannelRepeater {
    */
   public SocketChannelRepeater(PastryNode spn, SourceRouteManager manager) {
     this.spn = spn;
+    logger = spn.getEnvironment().getLogManager().getLogger(SocketChannelRepeater.class, null);
     this.manager = manager;
     REPEATER_BUFFER_SIZE = spn.getEnvironment().getParameters().getInt("pastry_socket_repeater_buffer_size");
     this.headerBuffer = ByteBuffer.allocateDirect(HEADER_BUFFER_SIZE);
@@ -177,7 +180,8 @@ public class SocketChannelRepeater {
 
     int read = sc.read(buffer);
     
-    debug("Read " + read + " bytes of data..." + buffer.remaining());
+    if (logger.level <= Logger.FINER) logger.log(
+        "Read " + read + " bytes of data..." + buffer.remaining());
 
     // implies that the channel is closed
     if (read == -1) 
@@ -206,7 +210,8 @@ public class SocketChannelRepeater {
     int j = buffer.limit();
     int i = sc.write(buffer);
     
-    debug("Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+    if (logger.level <= Logger.FINER) logger.log(
+        "Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
     
     // if we've written everything in the buffer, clear it, and return true
     if (buffer.remaining() == 0) {
@@ -236,18 +241,9 @@ public class SocketChannelRepeater {
     EpochInetSocketAddress address = decodeHeader(headerArray);
     manager.createConnection(address);
     
-    debug("Read address " + address);    
+    if (logger.level <= Logger.FINER) logger.log(
+        "Read address " + address);    
     
     this.connected = true;
-  }
-
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param s DESCRIBE THE PARAMETER
-   */
-  private void debug(String s) {
-    spn.getEnvironment().getLogManager().getLogger(SocketChannelRepeater.class, null).log(Logger.FINER,
-        "(SCR): " + s);
   }
 }

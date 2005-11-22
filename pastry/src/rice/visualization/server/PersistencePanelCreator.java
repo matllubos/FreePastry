@@ -25,6 +25,11 @@ public class PersistencePanelCreator implements PanelCreator {
   
   Environment environment;
   
+  /**
+   * Lazilly constructed.
+   */
+  protected Logger logger;  
+  
   public PersistencePanelCreator(Environment env, String name, StorageManagerImpl storage) {
     this.environment = env;
     this.storage = storage;
@@ -51,8 +56,9 @@ public class PersistencePanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(PersistencePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
     
     try {      
@@ -66,8 +72,9 @@ public class PersistencePanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(PersistencePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
     
     try {      
@@ -81,8 +88,9 @@ public class PersistencePanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(PersistencePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
     
     return pastPanel;
@@ -129,8 +137,9 @@ public class PersistencePanelCreator implements PanelCreator {
         keys.removeElementAt(0);
       }
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Ecception " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(PersistencePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
   }
 }

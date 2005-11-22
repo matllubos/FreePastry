@@ -72,6 +72,8 @@ public class ReplicationImpl implements Replication, Application {
   
   Environment environment;
   
+  Logger logger;
+  
   /**
    * Constructor
    *
@@ -94,6 +96,7 @@ public class ReplicationImpl implements Replication, Application {
    */
   public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
     this.environment = node.getEnvironment();
+    logger = environment.getLogManager().getLogger(ReplicationImpl.class, instance);
     
     Parameters p = environment.getParameters();
 
@@ -117,7 +120,7 @@ public class ReplicationImpl implements Replication, Application {
   //  log.setLevel(Level.FINER);
   //  log.getHandlers()[0].setLevel(Level.FINER);
     
-    log(Logger.FINER,"Starting up ReplicationImpl with client " + client + " and factor " + replicationFactor);
+    if (logger.level <= Logger.FINER) logger.log("Starting up ReplicationImpl with client " + client + " and factor " + replicationFactor);
     
     // inject the first reminder message, which will cause the replication to begin
     // and the next maintenance message to be scheduled
@@ -163,7 +166,7 @@ public class ReplicationImpl implements Replication, Application {
    * Internal method which updates the client about what his current range is
    */
   private void updateClient() {
-    log(Logger.FINE, "Updating client with range " + getTotalRange());
+    if (logger.level <= Logger.FINE) logger.log( "Updating client with range " + getTotalRange());
     
     if (getTotalRange() != null)
       client.setRange(getTotalRange());
@@ -194,7 +197,7 @@ public class ReplicationImpl implements Replication, Application {
 	              public void receiveResult(Object o) {
 	                IdBloomFilter filter = (IdBloomFilter) o;
 	
-	                log(Logger.FINE, "COUNT: Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
+	                if (logger.level <= Logger.FINE) logger.log( "COUNT: Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
 	                
 	                RequestMessage request = new RequestMessage(ReplicationImpl.this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
 	                endpoint.route(null, request, handle);
@@ -206,7 +209,7 @@ public class ReplicationImpl implements Replication, Application {
           }
         }
         
-        log(Logger.FINE, "COUNT: Done sending replications requests with " + total + " in instance " + instance);
+        if (logger.level <= Logger.FINE) logger.log( "COUNT: Done sending replications requests with " + total + " in instance " + instance);
       }
     });
   }
@@ -238,7 +241,7 @@ public class ReplicationImpl implements Replication, Application {
    * @param message The message being sent
    */
   public void deliver(Id id, Message message) {
-    log(Logger.FINE, "COUNT: Replication " + instance + " received message " + message);
+    if (logger.level <= Logger.FINE) logger.log( "COUNT: Replication " + instance + " received message " + message);
     
     if (message instanceof RequestMessage) {
       final RequestMessage rm = (RequestMessage) message;
@@ -249,7 +252,7 @@ public class ReplicationImpl implements Replication, Application {
           IdSet[] result = new IdSet[array.length];
           System.arraycopy(array, 0, result, 0, array.length);
           
-          log(Logger.FINE, "COUNT: Telling node " + rm.getSource() + " to fetch");
+          if (logger.level <= Logger.FINE) logger.log( "COUNT: Telling node " + rm.getSource() + " to fetch");
           endpoint.route(null, new ResponseMessage(handle, rm.getRanges(), result), rm.getSource());
         }
       }, rm.getRanges().length);
@@ -272,7 +275,7 @@ public class ReplicationImpl implements Replication, Application {
       for (int i=0; i<rm.getIdSets().length; i++) {
         IdSet fetch = policy.difference(client.scan(rm.getRanges()[i]), rm.getIdSets()[i], factory);
         
-        log(Logger.FINE, "COUNT: Was told to fetch " + fetch.numElements() + " in instance " + instance);
+        if (logger.level <= Logger.FINE) logger.log( "COUNT: Was told to fetch " + fetch.numElements() + " in instance " + instance);
 
         if (fetch.numElements() > 0) 
           client.fetch(fetch, rm.getSource());
@@ -281,7 +284,7 @@ public class ReplicationImpl implements Replication, Application {
       replicate(); 
       updateClient(); 
     } else {
-      log(Logger.WARNING, "Received unknown message " + message + " - dropping on floor.");
+      if (logger.level <= Logger.WARNING) logger.log( "Received unknown message " + message + " - dropping on floor.");
     }
   }
   
@@ -314,11 +317,7 @@ public class ReplicationImpl implements Replication, Application {
     public Object execute() {
       return new IdBloomFilter(client.scan(range));
     }
-  }
-  
-  private void log(int level, String str) {
-    environment.getLogManager().getLogger(ReplicationImpl.class, instance).log(level, str); 
-  }
+  }  
 }
 
 

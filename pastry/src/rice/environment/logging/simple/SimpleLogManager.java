@@ -83,8 +83,8 @@ public class SimpleLogManager extends AbstractLogManager implements CloneableLog
     this(System.out, timeSource, params);
   }
   
-  protected Logger constructLogger(String clazz, int level) {
-    return new SimpleLogger(clazz,this,level);
+  protected Logger constructLogger(String clazz, int level, boolean useDefault) {
+    return new SimpleLogger(clazz,this,level, useDefault);
   }
 
   /* (non-Javadoc)

@@ -14,9 +14,11 @@ import rice.environment.logging.Logger;
 public class DnsServiceImpl implements DnsService {
   DirContext ictx;
   Environment environment;
+  Logger logger;
   
   public DnsServiceImpl(Environment env) throws IOException {
     this.environment = env;
+    this.logger = env.getLogManager().getLogger(getClass(),null);
     try {
       ictx = new InitialDirContext();
     } catch (NamingException e) {
@@ -53,7 +55,7 @@ public class DnsServiceImpl implements DnsService {
 
       return hosts;
     } catch (NamingException e) {
-      environment.getLogManager().getLogger(DnsServiceImpl.class, null).logException(Logger.WARNING, 
+      if (logger.level <= Logger.WARNING) logger.logException(
           "Error looking up MX record for " + host + " due to ", e);
 
       return new String[0];

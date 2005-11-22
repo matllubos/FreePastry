@@ -56,6 +56,7 @@ public class MessageDispatch {
   public static final String BUFFER_IF_NOT_READY_PARAM = "pastry_messageDispatch_bufferIfNotReady";
   public static final String BUFFER_SIZE_PARAM = "pastry_messageDispatch_bufferSize";
   
+  protected Logger logger;
   
   /**
    * Constructor.
@@ -67,6 +68,7 @@ public class MessageDispatch {
     buffer = new Hashtable();
     bufferCount = 0;
     this.localNode = pn;
+    this.logger = pn.getEnvironment().getLogManager().getLogger(getClass(), null);    
   }
 
   /**
@@ -77,7 +79,7 @@ public class MessageDispatch {
    */
   public void registerReceiver(Address address, MessageReceiver receiver) {
     if (addressBook.get(address) != null) {
-      localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.log(
           "ERROR - Registering receiver for already-registered address " + address);
     }
 
@@ -108,7 +110,8 @@ public class MessageDispatch {
   public boolean dispatchMessage(Message msg) {
     if (msg.getDestination() == null) {
       Logger logger = localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null);
-      logger.logException(Logger.WARNING, "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
       return false;
     }
     // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
@@ -134,7 +137,7 @@ public class MessageDispatch {
           buffer.put(msg.getDestination(), vector);
         }
         
-        localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.INFO,
+        if (logger.level <= Logger.INFO) logger.log(
             "Buffering message " + msg + " because the application address " + msg.getDestination() + " is unknown." + "Message will be delivered when the an application with that address is registered.");
         
         vector.add(msg);
@@ -142,10 +145,10 @@ public class MessageDispatch {
       } else { 
         // give an excuse
         if (localNode.isReady()) {
-          localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.WARNING,
+          if (logger.level <= Logger.WARNING) logger.log(
               "Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown." + "Message is going to be dropped on the floor.");
         } else {
-          localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null).log(Logger.WARNING,
+          if (logger.level <= Logger.WARNING) logger.log(
               "Could not dispatch message " + msg + " because the pastry node is not yet ready." + "Message is going to be dropped on the floor.");          
         }
       }    

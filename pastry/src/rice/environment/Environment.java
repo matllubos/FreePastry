@@ -34,8 +34,9 @@ public class Environment {
   private Processor processor;
   private RandomSource randomSource;
   private TimeSource time;
-  private LogManager logging;
+  private LogManager logManager;
   private Parameters params;
+  private Logger logger;
   
   /**
    * Constructor.  You can provide null values for all/any paramenters, which will result
@@ -52,7 +53,7 @@ public class Environment {
     this.selectorManager = sm;
     this.randomSource = rs;
     this.time = time; 
-    this.logging = lm;
+    this.logManager = lm;
     this.params = params;
     this.processor = proc;
     
@@ -62,6 +63,8 @@ public class Environment {
     
     // choose defaults for all non-specified parameters
     chooseDefaults();
+    
+    logger = this.logManager.getLogger(getClass(), null);
   }
   
   /**
@@ -99,11 +102,11 @@ public class Environment {
     if (time == null) {
       time = generateDefaultTimeSource(); 
     }
-    if (logging == null) {
-      logging = generateDefaultLogManager(time, params);
+    if (logManager == null) {
+      logManager = generateDefaultLogManager(time, params);
     }
     if (selectorManager == null) {      
-      selectorManager = generateDefaultSelectorManager(time, logging); 
+      selectorManager = generateDefaultSelectorManager(time, logManager); 
     }
     if (processor == null) {      
       processor = generateDefaultProcessor(); 
@@ -147,7 +150,7 @@ public class Environment {
     return time; 
   }
   public LogManager getLogManager() {
-    return logging; 
+    return logManager; 
   }
   public Parameters getParameters() {
     return params; 
@@ -160,8 +163,8 @@ public class Environment {
   public void destroy() {
     try {
       params.store();
-    } catch (IOException ioe) {
-      logging.getLogger(Environment.class, null).logException(Logger.WARNING, "Error during shutdown",ioe); 
+    } catch (IOException ioe) {      
+      if (logger.level <= Logger.WARNING) logger.logException("Error during shutdown",ioe); 
     }
     selectorManager.destroy();
     processor.destroy();

@@ -35,8 +35,11 @@ public class Proxy {
     
   protected Environment environment;
   
+  protected Logger logger;
+  
   public Proxy(Environment env) {
     environment = env;
+    logger = environment.getLogManager().getLogger(Proxy.class, null);
   }
   
   public void run(String params) throws IOException, InterruptedException {
@@ -57,7 +60,7 @@ public class Proxy {
       String command = buildJavaCommand(parameters);
       String[] environment = buildJavaEnvironment(parameters);
 
-      log(Logger.INFO,"[Loader       ]: Launching command " + command);
+      if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Launching command " + command);
       
       process = (environment.length > 0 ? Runtime.getRuntime().exec(command, environment) : Runtime.getRuntime().exec(command));
       lm = new LivenessMonitor(parameters, process);
@@ -74,15 +77,15 @@ public class Proxy {
       parameters = new SimpleParameters(DEFAULT_PARAM_FILES, params);
       
       if (exit != -1) { 
-        log(Logger.INFO,"[Loader       ]: Child process exited with value " + exit + " - restarting client");
+        if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Child process exited with value " + exit + " - restarting client");
         count++;
         
         if (count < parameters.getInt("restart_max")) {
-          log(Logger.INFO,"[Loader       ]: Waiting for " + parameters.getInt("restart_delay") + " milliseconds");   
+          if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Waiting for " + parameters.getInt("restart_delay") + " milliseconds");   
           Thread.sleep(parameters.getInt("restart_delay"));
         }
       } else {
-        log(Logger.INFO,"[Loader       ]: Child process exited with value " + exit + " - exiting loader");   
+        if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Child process exited with value " + exit + " - exiting loader");   
         break;
       }
     }
@@ -278,12 +281,12 @@ public class Proxy {
           String line = reader.readLine();
 
           if (line != null) 
-            log(Logger.INFO,prefix + line);
+            if (logger.level <= Logger.INFO) logger.log(prefix + line);
           else
             done = true;
         }
       } catch (IOException e) {
-        logException(Logger.WARNING,"",e);
+        if (logger.level <= Logger.WARNING) logger.logException("",e);
       }
     }
   }
@@ -368,12 +371,12 @@ public class Proxy {
         if (j >= 0)
           monitor.answered();
       } catch (IOException e) {
-        logException(Logger.SEVERE, 
+        if (logger.level <= Logger.SEVERE) logger.logException( 
             "ERROR: Got IOException while checking liveness!" + e + " This is usually an unrecoverable JVM crash - we're going to exit now.",
             e);
         System.exit(-1);
       } catch (NullPointerException e) {
-        logException(Logger.SEVERE, "Liveness test ended in NullPointerExceptin " , e);
+        if (logger.level <= Logger.SEVERE) logger.logException( "Liveness test ended in NullPointerExceptin " , e);
       }
     }
   }
@@ -474,7 +477,7 @@ public class Proxy {
               }
             }
           } catch (Exception e) {
-            logException(Logger.SEVERE, 
+            if (logger.level <= Logger.SEVERE) logger.logException( 
                 "ERROR: Got exception " + e + " while running automatic update - ignoring",
                 e);
           }
@@ -563,7 +566,7 @@ public class Proxy {
           Thread.sleep(sleep);
           
           if (environment.getTimeSource().currentTimeMillis() - last > timeout) {
-            log(Logger.INFO, "INFO: Sleep detected - " + (environment.getTimeSource().currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
+            if (logger.level <= Logger.INFO) logger.log( "INFO: Sleep detected - " + (environment.getTimeSource().currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
             restart();
           }
           
@@ -571,12 +574,5 @@ public class Proxy {
         } catch (InterruptedException e) {}
       }
     }
-  } 
-  
-  private void log(int level, String s) {
-    environment.getLogManager().getLogger(Proxy.class, null).log(level,s);
-  }
-  private void logException(int level, String s, Throwable t) {
-    environment.getLogManager().getLogger(Proxy.class, null).logException(level,s,t);
-  }
+  }   
 }

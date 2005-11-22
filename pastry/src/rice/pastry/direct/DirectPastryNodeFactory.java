@@ -68,8 +68,8 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
     if (bootstrap == null)
-      environment.getLogManager().getLogger(DirectPastryNodeFactory.class, null).log(Logger.WARNING, 
-        "No bootstrap node provided, starting a new ring...");
+      if (logger.level <= Logger.WARNING) logger.log(
+          "No bootstrap node provided, starting a new ring...");
     
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;

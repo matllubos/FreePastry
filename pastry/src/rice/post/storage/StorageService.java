@@ -85,6 +85,8 @@ public class StorageService {
   
   Environment environment;
   
+  Logger logger;
+  
   /**
    * Contructs a StorageService given a PAST to run on top of.
    *
@@ -94,6 +96,7 @@ public class StorageService {
    */
   public StorageService(Endpoint endpoint, PostEntityAddress address, Past immutablePast, Past mutablePast, IdFactory factory, KeyPair keyPair, long timeoutInterval) {
     this.environment = endpoint.getEnvironment();
+    logger = environment.getLogManager().getLogger(StorageService.class, null);    
     this.entity = address;
     this.immutablePast = immutablePast;
     this.mutablePast = mutablePast;
@@ -196,7 +199,7 @@ public class StorageService {
       offset += next.length;
     }
     
-    log(Logger.FINE,"PARTITION: Split " + array.length + " bytes into " + result.size() + " groups...");
+    if (logger.level <= Logger.FINE) logger.log("PARTITION: Split " + array.length + " bytes into " + result.size() + " groups...");
     
     return (byte[][]) result.toArray(new byte[0][]);
   }
@@ -259,12 +262,12 @@ public class StorageService {
                   }
                   
                   public void receiveException(Exception e) {
-                    log(Logger.WARNING,"******* CRYPTO ERROR (storeContentHashEntry) *******");
-                    log(Logger.WARNING,"Received exception " + e + " while verifying inserted data!");
-                    log(Logger.WARNING,"plaintext: " + MathUtils.toHex(plainText));
-                    log(Logger.WARNING,"location: " + location);
-                    log(Logger.WARNING,"key: "  +MathUtils.toHex(key));
-                    logException(Logger.WARNING,"ciphertext: " + MathUtils.toHex(cipherText),e);
+                    if (logger.level <= Logger.WARNING) logger.log("******* CRYPTO ERROR (storeContentHashEntry) *******");
+                    if (logger.level <= Logger.WARNING) logger.log("Received exception " + e + " while verifying inserted data!");
+                    if (logger.level <= Logger.WARNING) logger.log("plaintext: " + MathUtils.toHex(plainText));
+                    if (logger.level <= Logger.WARNING) logger.log("location: " + location);
+                    if (logger.level <= Logger.WARNING) logger.log("key: "  +MathUtils.toHex(key));
+                    if (logger.level <= Logger.WARNING) logger.logException("ciphertext: " + MathUtils.toHex(cipherText),e);
                     
                     parent.receiveException(new IOException("Storage of content hash data into PAST failed - could not decrypt after encryption"));                    
                   }
@@ -410,7 +413,7 @@ public class StorageService {
       
       Id[] ids = (Id[]) idset.toArray(new Id[0]);
       
-      log(Logger.FINE,"CALLING REFRESH WITH " + ids.length + " OBJECTS!");
+      if (logger.level <= Logger.FINE) logger.log("CALLING REFRESH WITH " + ids.length + " OBJECTS!");
       ((GCPast) immutablePast).refresh(ids, getTimeout(), new StandardContinuation(command) {
         public void receiveResult(Object o) {
           parent.receiveResult(Boolean.TRUE);
@@ -438,9 +441,9 @@ public class StorageService {
    * provided PAST store.
    *
    */
-  public static void recoverLogs(final Id location, final long timestamp, final KeyPair keyPair, final Past immutablePast, final Past mutablePast, Continuation command, final Environment env) {
+  public static void recoverLogs(final Id location, final long timestamp, final KeyPair keyPair, final Past immutablePast, final Past mutablePast, Continuation command, final Environment env, final Logger logger) {
     final long version = (timestamp / PostImpl.BACKUP_INTERVAL) * PostImpl.BACKUP_INTERVAL;
-    env.getLogManager().getLogger(StorageService.class, null).log(Logger.FINE,
+    if (logger.level <= Logger.FINE) logger.log(
         "COUNT: Timestamp is "+timestamp+", using version "+version);
     ((VersioningPast)immutablePast).lookupHandles(location, version, immutablePast.getReplicationFactor()+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -467,7 +470,7 @@ public class StorageService {
               if (data == null) 
                 throw new StorageException("Log backup not found!");
 
-              env.getLogManager().getLogger(StorageService.class, null).log(Logger.FINE,
+              if (logger.level <= Logger.FINE) logger.log(
                   "COUNT: Log backup found!");
 
               GroupData group = (GroupData) SecurityUtils.deserialize(data.getData());
@@ -556,13 +559,13 @@ public class StorageService {
                 // do nothing
               }
               
-              log(Logger.WARNING,"******* CRYPTO ERROR (storeSigned) *******");
-              log(Logger.WARNING,"data: "+MathUtils.toHex(xxx.toByteArray()));
-              log(Logger.WARNING,"location: "+location);
-              log(Logger.WARNING,"public key: "+keyPair.getPublic());
-              log(Logger.WARNING,"private key: "+keyPair.getPrivate());
-              log(Logger.WARNING,"signed referece: "+sr);
-              logException(Logger.WARNING,"stack trace:",e);
+              if (logger.level <= Logger.WARNING) logger.log("******* CRYPTO ERROR (storeSigned) *******");
+              if (logger.level <= Logger.WARNING) logger.log("data: "+MathUtils.toHex(xxx.toByteArray()));
+              if (logger.level <= Logger.WARNING) logger.log("location: "+location);
+              if (logger.level <= Logger.WARNING) logger.log("public key: "+keyPair.getPublic());
+              if (logger.level <= Logger.WARNING) logger.log("private key: "+keyPair.getPrivate());
+              if (logger.level <= Logger.WARNING) logger.log("signed referece: "+sr);
+              if (logger.level <= Logger.WARNING) logger.logException("stack trace:",e);
               parent.receiveException(new IOException("Storage of singed data into PAST failed - could not verify"));
             } else {
               parent.receiveException(e);
@@ -784,12 +787,12 @@ public class StorageService {
             public void receiveException(Exception e) {
               // XXX this is kind of stupid; retrieveSecure just deserialized it
               // and we reserialze just to compare
-              log(Logger.WARNING,"******* CRYPTO ERROR (storeSecure) *******");
-              log(Logger.WARNING,"Received exception " + e + " verifying inserted data.");
-              log(Logger.WARNING,"plaintext: " + MathUtils.toHex(plainText));
-              log(Logger.WARNING,"location: " + location);
-              log(Logger.WARNING,"key: "+ MathUtils.toHex(key));
-              logException(Logger.WARNING,"ciphertext: " + MathUtils.toHex(cipherText),e);
+              if (logger.level <= Logger.WARNING) logger.log("******* CRYPTO ERROR (storeSecure) *******");
+              if (logger.level <= Logger.WARNING) logger.log("Received exception " + e + " verifying inserted data.");
+              if (logger.level <= Logger.WARNING) logger.log("plaintext: " + MathUtils.toHex(plainText));
+              if (logger.level <= Logger.WARNING) logger.log("location: " + location);
+              if (logger.level <= Logger.WARNING) logger.log("key: "+ MathUtils.toHex(key));
+              if (logger.level <= Logger.WARNING) logger.logException("ciphertext: " + MathUtils.toHex(cipherText),e);
               
               parent.receiveException(new IOException("Storage of secure data into PAST failed - could not recover data"));
             }
@@ -870,13 +873,5 @@ public class StorageService {
     } else {
       command.receiveResult(Boolean.TRUE);
     }
-  }
-  
-  private void log(int level, String msg) {
-    environment.getLogManager().getLogger(StorageService.class, null).log(level,msg);
-  }
-  
-  private void logException(int level, String msg, Throwable t) {
-    environment.getLogManager().getLogger(StorageService.class, null).logException(level, msg, t);
-  }
+  }  
 }

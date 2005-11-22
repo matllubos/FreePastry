@@ -25,6 +25,8 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
   
   InetAddress localHost;
 
+  protected Logger logger;
+  
   public Pop3ServerImpl(InetAddress localHost, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
     super("POP3 Server Thread");
     this.localHost = localHost;
@@ -34,7 +36,7 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
     this.manager = manager;
     this.registry = new Pop3CommandRegistry();
     this.registry.load(environment);
-    
+    logger = environment.getLogManager().getLogger(Pop3ServerImpl.class, null);    
     initialize();
   }
   
@@ -55,7 +57,7 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
       while (true) {
         final Socket socket = server.accept();
         
-        log(Logger.INFO, "Accepted connection from " + socket.getInetAddress());
+        if (logger.level <= Logger.INFO) logger.log("Accepted connection from " + socket.getInetAddress());
         
         if (acceptNonLocal || socket.getInetAddress().isLoopbackAddress() ||
             (socket.getInetAddress().equals(getLocalHost()))) {
@@ -65,14 +67,14 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
                 Pop3Handler handler = new Pop3Handler(getLocalHost(), registry, manager, environment);
                 handler.handleConnection(socket);
               } catch (IOException e) {
-                logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);
+                if (logger.level <= Logger.WARNING) logger.logException("IOException occurred during handling of connection - " , e);
               }
             }
           };
           
           thread.start();
         } else {
-          log(Logger.WARNING, "Connection not local - aborting");
+          if (logger.level <= Logger.WARNING) logger.log("Connection not local - aborting");
           
           OutputStream o = socket.getOutputStream();
           PrintWriter out = new PrintWriter(o, true);
@@ -83,17 +85,8 @@ public class Pop3ServerImpl extends Thread implements Pop3Server {
         }
       }
     } catch (IOException e) {
-      logException(Logger.WARNING, "IOException occurred during accepting of connection - " , e);
+      if (logger.level <= Logger.WARNING) logger.logException("IOException occurred during accepting of connection - " , e);
     }
   }
-  
-  private void log(int level, String message) {
-    environment.getLogManager().getLogger(Pop3ServerImpl.class, null).log(level, message);    
-  }
-  
-  private void logException(int level, String message, Throwable t) {
-    environment.getLogManager().getLogger(Pop3ServerImpl.class, null).logException(level, message, t);
-  }
-  
   
 }

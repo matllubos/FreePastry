@@ -189,7 +189,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket = new DatagramSocket(lAddress.getAddress().getPort());
       socket.setSoTimeout(5000);
 
-      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress), environment.getTimeSource().currentTimeMillis()), lAddress, environment);
+      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress), environment.getTimeSource().currentTimeMillis()), lAddress, logger);
       
       socket.send(new DatagramPacket(data, data.length, rAddress.getAddress()));
       
@@ -228,7 +228,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
     task.cancel();
   
-    log(Logger.FINER, "SPNF.generateNodeHandle() returning "+c.ret+" after trying to contact "+address);
+    if (logger.level <= Logger.FINER) logger.log(
+        "SPNF.generateNodeHandle() returning "+c.ret+" after trying to contact "+address);
     
     return (NodeHandle)c.ret;
   }
@@ -259,20 +260,20 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public NodeHandle generateNodeHandle(InetSocketAddress address) {
     // send nodeId request to remote node, wait for response
     // allocate enought bytes to read a node handle
-    log(Logger.FINE, "Socket: Contacting bootstrap node " + address);
+    if (logger.level <= Logger.FINE) logger.log( "Socket: Contacting bootstrap node " + address);
 
     try {
       NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address, new NodeIdRequestMessage());
       
       return new SocketNodeHandle(new EpochInetSocketAddress(address, rm.getEpoch()), rm.getNodeId());
     } catch (IOException e) {
-      log(Logger.WARNING, "Error connecting to address " + address + ": " + e);
+      if (logger.level <= Logger.WARNING) logger.log("Error connecting to address " + address + ": " + e);
       return null;
     }
   }
 
   public CancellableTask generateNodeHandle(final InetSocketAddress address, final Continuation c) {
-    log(Logger.FINE, "Socket: Contacting bootstrap node " + address);
+    if (logger.level <= Logger.FINE) logger.log( "Socket: Contacting bootstrap node " + address);
 
     return getResponse(address, new NodeIdRequestMessage(), new Continuation() {
       public void receiveResult(Object result) {
@@ -281,7 +282,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       }
 
       public void receiveException(Exception result) {
-        log(Logger.WARNING, "Error connecting to address " + address + ": " + result);
+        if (logger.level <= Logger.WARNING) logger.log("Error connecting to address " + address + ": " + result);
         c.receiveException(result);
       }
     });    
@@ -336,7 +337,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
     if (bootstrap == null)
-      log(Logger.WARNING, "No bootstrap node provided, starting a new ring...");
+      if (logger.level <= Logger.WARNING) logger.log("No bootstrap node provided, starting a new ring...");
 
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
@@ -481,12 +482,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       final SelectionKey key = environment.getSelectorManager().register(channel, 
           new SelectionKeyHandler() {
             public void connect(SelectionKey key) {
-              log(Logger.FINE,"SPNF.getResponse("+address+","+message+").connect()");
+              if (logger.level <= Logger.FINE) logger.log("SPNF.getResponse("+address+","+message+").connect()");
               try {
                 if (channel.finishConnect()) 
                   key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
 
-              log(Logger.FINE, "(SPNF) Found connectable channel - completed connection");
+              if (logger.level <= Logger.FINE) logger.log( "(SPNF) Found connectable channel - completed connection");
 //                channel.socket().connect(address, 20000);
 //                channel.socket().setSoTimeout(20000);
               } catch (IOException ioe) {
@@ -495,7 +496,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
             }
   
             public void read(SelectionKey key) {
-              log(Logger.FINE,"SPNF.getResponse("+address+","+message+").read()");
+              if (logger.level <= Logger.FINE) logger.log("SPNF.getResponse("+address+","+message+").read()");
               try {
                 Object o = null;
     
@@ -512,7 +513,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
             }
   
             public void write(SelectionKey key) {
-              log(Logger.FINE,"SPNF.getResponse("+address+","+message+").write()");
+              if (logger.level <= Logger.FINE) logger.log("SPNF.getResponse("+address+","+message+").write()");
               try {
                 if (writer.write(channel)) {
                   key.interestOps(SelectionKey.OP_READ);
@@ -528,7 +529,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                 channel.close();
                 channel.keyFor(environment.getSelectorManager().getSelector()).cancel();
               } catch (IOException ioe) {
-                logException(Logger.WARNING,"Error while trying requesting "+message+" from "+address,e);
+                
+                if (logger.level <= Logger.WARNING) logger.logException(
+                    "Error while trying requesting "+message+" from "+address,e);
               } finally {
                 c.receiveException(e);               
               }
@@ -536,7 +539,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           }, 
           0);
       
-      log(Logger.FINE, "(SPNF) Initiating socket connection to address " + address);
+      if (logger.level <= Logger.FINE) logger.log( "(SPNF) Initiating socket connection to address " + address);
 
       if (channel.connect(address)) 
         key.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
@@ -556,7 +559,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
             }
             return true;
           } catch (Exception ioe) {
-            logException(Logger.WARNING,"Error cancelling task.",ioe);
+            if (logger.level <= Logger.WARNING) logger.logException(
+                "Error cancelling task.",ioe);
             return false;
           }
         }
@@ -592,15 +596,15 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         result = new EpochInetSocketAddress(new InetSocketAddress(temp.getLocalAddress(), portNumber), epoch);
         temp.close();
         
-        log(Logger.WARNING, "Error binding to original IP, using " + result);
+        if (logger.level <= Logger.WARNING) logger.log("Error binding to original IP, using " + result);
       }
       
       test.close();
       return result;
     } catch (UnknownHostException e) {
-      log(Logger.SEVERE, "PANIC: Unknown host in getAddress. " + e);
+      if (logger.level <= Logger.SEVERE) logger.log( "PANIC: Unknown host in getAddress. " + e);
     } catch (IOException e) {
-      log(Logger.SEVERE, "PANIC: IOException in getAddress. " + e);
+      if (logger.level <= Logger.SEVERE) logger.log( "PANIC: IOException in getAddress. " + e);
     }
 
     return result;
@@ -615,8 +619,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * If the method works, then nothing should be done and the method should return.  If
    * an error condition is detected, an exception should be thrown.
    */
-  public static InetSocketAddress verifyConnection(int timeout, InetSocketAddress local, InetSocketAddress[] existing, Environment env) throws IOException {
-    env.getLogManager().getLogger(SocketPastryNodeFactory.class, null).log(Logger.INFO, 
+  public static InetSocketAddress verifyConnection(int timeout, 
+      InetSocketAddress local, InetSocketAddress[] existing, Environment env, 
+      Logger logger) throws IOException {
+    if (logger.level <= Logger.INFO) logger.log(
         "Verifying connection of local node " + local + " using " + existing[0] + " and " + existing.length + " more");
     DatagramSocket socket = null;
     
@@ -625,7 +631,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket.setSoTimeout(timeout);
       
       for (int i=0; i<existing.length; i++) {
-        byte[] buf = PingManager.addHeader(SourceRoute.build(new EpochInetSocketAddress(existing[i])), new IPAddressRequestMessage(env.getTimeSource().currentTimeMillis()), new EpochInetSocketAddress(local), env);    
+        byte[] buf = PingManager.addHeader(
+            SourceRoute.build(
+                new EpochInetSocketAddress(existing[i])), 
+                new IPAddressRequestMessage(
+                    env.getTimeSource().currentTimeMillis()), 
+                new EpochInetSocketAddress(local), 
+                logger);    
         DatagramPacket send = new DatagramPacket(buf, buf.length, existing[i]);
         socket.send(send);
       }
@@ -636,22 +648,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       byte[] data = new byte[receive.getLength() - 38];
       System.arraycopy(receive.getData(), 38, data, 0, data.length);
       
-      return ((IPAddressResponseMessage) PingManager.deserialize(data, env, null)).getAddress();
+      return ((IPAddressResponseMessage) PingManager.deserialize(data, env, null, logger)).getAddress();
     } finally {
       if (socket != null)
         socket.close();
     }
-  }
-
-  /**
-   * DESCRIBE THE METHOD
-   *
-   * @param s DESCRIBE THE PARAMETER
-   */
-  private void log(int level, String s) {
-    environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null).log(level,s);
-  }
-  private void logException(int level, String s, Throwable t) {
-    environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null).logException(level,s,t);
   }
 }

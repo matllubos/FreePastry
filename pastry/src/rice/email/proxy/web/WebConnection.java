@@ -50,9 +50,11 @@ public class WebConnection {
   protected StringBuffer response;
   
   protected Environment environment;
+  protected Logger logger;
   
   public WebConnection(WebHandler handler, Socket socket, Environment env) throws IOException {
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(WebConnection.class, null);
     this.socket = socket;
     this.socket.setSoTimeout(TIMEOUT_MILLIS);
     this.out = new OutputStreamWriter(socket.getOutputStream());
@@ -82,7 +84,7 @@ public class WebConnection {
       
       if (pair.length == 2) {
         this.parameters.put(cleanse(pair[0]), cleanse(pair[1]));
-        environment.getLogManager().getLogger(WebConnection.class, null).log(Logger.FINE,
+        if (logger.level <= Logger.FINE) logger.log(
             "READ IN " + cleanse(pair[0]) + "->" + cleanse(pair[1]));
       }
     }
@@ -172,7 +174,7 @@ public class WebConnection {
   }
   
   public void print(String line) {
-    environment.getLogManager().getLogger(WebConnection.class, null).log(Logger.FINE,
+    if (logger.level <= Logger.FINE) logger.log(
         "S: " + line);
 
     response.append(line);
@@ -180,7 +182,7 @@ public class WebConnection {
   
   private String readLine() throws IOException {
     in.nextToken();
-    environment.getLogManager().getLogger(WebConnection.class, null).log(Logger.FINE,
+    if (logger.level <= Logger.FINE) logger.log(
         "C: " + in.sval);
     return in.sval;
   }

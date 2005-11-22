@@ -18,7 +18,7 @@ import rice.pastry.messaging.*;
 public class DirectNodeHandle extends NodeHandle {
   private DirectPastryNode remoteNode;
   private NetworkSimulator simulator;
-  
+  protected Logger logger;
   /**
    * Constructor for DirectNodeHandle.
    *
@@ -28,6 +28,7 @@ public class DirectNodeHandle extends NodeHandle {
    */
   DirectNodeHandle(DirectPastryNode ln, DirectPastryNode rn, NetworkSimulator sim) {
     setLocalNode(ln);
+    logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
     if (rn == null) throw new IllegalArgumentException("rn must be non-null");
     remoteNode = rn;
     simulator = sim;
@@ -110,7 +111,7 @@ public class DirectNodeHandle extends NodeHandle {
    */
   public void receiveMessage(Message msg) {
     if (! remoteNode.isAlive()) {
-      localnode.getEnvironment().getLogManager().getLogger(DirectNodeHandle.class, "").log(Logger.WARNING, 
+      if (logger.level <= Logger.WARNING) logger.log(
           "DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");              
     } else {
       simulator.deliverMessage(msg, remoteNode);

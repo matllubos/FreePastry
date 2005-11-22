@@ -24,6 +24,8 @@ public class IPNodeIdFactory implements NodeIdFactory {
   private int port;
 
   Environment environment;
+
+  protected Logger logger;
   
   /**
    * Constructor.
@@ -34,14 +36,14 @@ public class IPNodeIdFactory implements NodeIdFactory {
   public IPNodeIdFactory(InetAddress localIP, int port, Environment env) {
     this.port = port;
     this.environment = env;
-
+    this.logger = env.getLogManager().getLogger(getClass(), null);
     try {
       this.localIP = localIP;
       if (localIP.isLoopbackAddress())
         throw new Exception(
             "got loopback address: nodeIds will not be unique across computers!");
     } catch (Exception e) {
-      env.getLogManager().getLogger(IPNodeIdFactory.class, null).log(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.log(
           "ALERT: IPNodeIdFactory cannot determine local IP address: "+ e);
     }
   }
@@ -74,7 +76,7 @@ public class IPNodeIdFactory implements NodeIdFactory {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      environment.getLogManager().getLogger(IPNodeIdFactory.class, null).log(Logger.SEVERE, "No SHA support!");
+      if (logger.level <= Logger.SEVERE) logger.log("No SHA support!");
       throw new RuntimeException("No SHA support!",e);
     }
 

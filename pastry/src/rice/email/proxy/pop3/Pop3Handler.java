@@ -20,13 +20,14 @@ public class Pop3Handler {
   String _currentLine;
   Environment environment;
   InetAddress localHost;
-  
+  Logger logger;
   
   public Pop3Handler(InetAddress localHost, Pop3CommandRegistry registry, UserManager manager, Environment env) {
     this.localHost = localHost;
     _registry = registry;
     _manager = manager;
     environment = env;
+    logger = environment.getLogManager().getLogger(Pop3Handler.class, null);
   }
   
   public InetAddress getLocalHost() {
@@ -50,12 +51,12 @@ public class Pop3Handler {
       _conn.println("421 Service shutting down and closing transmission channel");
     }
     catch (Exception e) {
-      environment.getLogManager().getLogger(Pop3Handler.class, null).logException(Logger.WARNING, "", e);
+      if (logger.level <= Logger.WARNING) logger.logException("", e);
     } finally {
       try {
         socket.close();
       } catch (IOException ioe) {
-        environment.getLogManager().getLogger(Pop3Handler.class, null).logException(Logger.WARNING, "", ioe);
+        if (logger.level <= Logger.WARNING) logger.logException("", ioe);
       }
     }
   }

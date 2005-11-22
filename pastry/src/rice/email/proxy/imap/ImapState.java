@@ -45,12 +45,14 @@ public class ImapState {
   int _cachedExists = -1;
   int _cachedRecent = -1;
   Environment environment;
+  Logger logger;
   
   public ImapState(UserManager man, Workspace workspace, Environment env) {
     environment = env;
     _manager = man;
     _workspace = workspace;
     _queue = new Vector();
+    logger = environment.getLogManager().getLogger(ImapState.class, null);
   }
   
   public Environment getEnvironment() {
@@ -150,7 +152,7 @@ public class ImapState {
         }
       }
     } catch (MailboxException e) {
-      getEnvironment().getLogManager().getLogger(ImapState.class, null).logException(Logger.WARNING, "ERROR: Exception " + e + " thrown while printing unsolicited data.", e);
+      if (logger.level <= Logger.WARNING) logger.logException("ERROR: Exception " + e + " thrown while printing unsolicited data.", e);
     }
     
     String[] result = (String[]) _queue.toArray(new String[0]);
@@ -183,7 +185,7 @@ public class ImapState {
     Vector v = (Vector) folderMap.get(folder);
     
     if (v == null) {
-      environment.getLogManager().getLogger(ImapState.class, null).log(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.log(
           "ERROR: ImapState folder maintenance is wrong!");
       return;
     }

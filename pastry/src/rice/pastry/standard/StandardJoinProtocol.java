@@ -81,9 +81,7 @@ public class StandardJoinProtocol extends PastryAppl {
           jr.acceptJoin(localHandle, leafSet);
           nh.receiveMessage(jr);
         } else {
-          thePastryNode.getEnvironment().getLogManager().getLogger(
-              StandardJoinProtocol.class, null).log(
-              Logger.INFO,
+          if (logger.level <= Logger.INFO) logger.log(
               "NOTE: Dropping incoming JoinRequest " + jr
                   + " because local node is not ready!");
         }
@@ -94,8 +92,7 @@ public class StandardJoinProtocol extends PastryAppl {
         jh = security.verifyNodeHandle(jh);
 
         if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
-          thePastryNode.getEnvironment().getLogManager().getLogger(
-              StandardJoinProtocol.class, null).log(Logger.WARNING,
+          if (logger.level <= Logger.WARNING) logger.log(
               "NodeId collision, unable to join: " + localHandle + ":" + jh);
         } else if (jh.isAlive() == true) { // the join handle is alive
           routeTable.put(jh);

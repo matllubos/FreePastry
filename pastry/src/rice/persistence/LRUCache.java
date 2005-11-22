@@ -392,7 +392,8 @@ public class LRUCache implements Cache {
 
       return baos.toByteArray().length;
     } catch (IOException e) {
-      environment.getLogManager().getLogger(LRUCache.class, null).logException(Logger.WARNING, "", e);
+      Logger logger = environment.getLogManager().getLogger(LRUCache.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException("", e);
       // returns maximum value here, so it won't be cached
       return Integer.MAX_VALUE;
     }

@@ -57,8 +57,11 @@ public class VisualizationServer implements Runnable {
 
   protected Environment environment;
   
+  protected Logger logger;
+  
   public VisualizationServer(InetSocketAddress address, PastryNode node, StorageManager storage, RingCertificate cert, Object[] objects, Environment env) {
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(VisualizationServer.class, null);
     this.address = address;
     this.objects = objects;
     this.node = node;
@@ -100,7 +103,7 @@ public class VisualizationServer implements Runnable {
         t.start();
       }
     } catch (IOException e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Server: Exception " + e + " thrown.",e);
     }
   }
@@ -161,19 +164,19 @@ public class VisualizationServer implements Runnable {
         oos.flush();
       }
     } catch (IOException e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Server: Exception " + e + " thrown.",e);
     } catch (ClassNotFoundException e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Server: Exception " + e + " thrown.",e);
     } catch (SecurityException e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Server: Exception " + e + " thrown.",e);
     } finally {
       try {
         socket.close();
       } catch (IOException e) {
-        environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "Server: Exception " + e + " thrown closing.",e);
       }
     }
@@ -195,7 +198,7 @@ public class VisualizationServer implements Runnable {
     try {
       req.writeFiles();
     } catch (Exception e1) {
-      environment.getLogManager().getLogger(VisualizationServer.class, null).logException(Logger.WARNING,"",e1);
+      if (logger.level <= Logger.WARNING) logger.logException("",e1);
     }          
     
     UpdateJarResponse ujr;
@@ -220,7 +223,7 @@ public class VisualizationServer implements Runnable {
     try {
       Thread.sleep(req.getWaitTime());
     } catch (InterruptedException ie) {
-      environment.getLogManager().getLogger(VisualizationServer.class, null).logException(Logger.WARNING,"",ie);
+      if (logger.level <= Logger.WARNING) logger.logException("",ie);
     }    
     
 //    System.outt.println("restarting with command:\""+restartCommand+"\"");
@@ -312,13 +315,13 @@ public class VisualizationServer implements Runnable {
     public void checkForErrors() {
       int sent = (int) ((environment.getTimeSource().currentTimeMillis() - lastSent)/1000);
       if (sent > 60) {
-        environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.WARNING,
+        if (logger.level <= Logger.WARNING) logger.log(
             "WARNING: No message has been sent in over " + sent + " seconds.");
       }
       
       int received = (int) ((environment.getTimeSource().currentTimeMillis() - lastReceived)/1000);
       if (received > 60) {
-        environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.WARNING,
+        if (logger.level <= Logger.WARNING) logger.log(
             "WARNING: No message has been received in over " + received + " seconds.");
       }
     }
@@ -335,18 +338,18 @@ public class VisualizationServer implements Runnable {
       storage.store(id, null, data, new Continuation() {
         public void receiveResult(Object o) {
           if (! (o.equals(new Boolean(true)))) { 
-            environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+            if (logger.level <= Logger.SEVERE) logger.log(
                 "SEVERE: Attempt to store data under " + id + " failed with " + o);
           } else {
             storage.unstore(id, new Continuation() {
               public void receiveResult(Object o) {
                 if (! (o.equals(new Boolean(true)))) 
-                  environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+                  if (logger.level <= Logger.SEVERE) logger.log(
                       "SEVERE: Attempt to store data under " + id + " failed with " + o);
               }
               
               public void receiveException(Exception e) {
-                environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+                if (logger.level <= Logger.SEVERE) logger.log(
                     "SEVERE: Attempt to store data under " + id + " failed with " + e);
               }
             });
@@ -354,7 +357,7 @@ public class VisualizationServer implements Runnable {
         }
         
         public void receiveException(Exception e) {
-          environment.getLogManager().getLogger(VisualizationServer.class, null).log(Logger.SEVERE,
+          if (logger.level <= Logger.SEVERE) logger.log(
               "SEVERE: Attempt to store data under " + id + " failed with " + e);
         }
       });

@@ -83,6 +83,8 @@ public class TestHarness implements Application, ScribeClient {
   Topic topicRoot = new Topic(factory, "ROOT");
   Topic topic = new Topic(factory, "monkey2");
   
+  Logger logger;
+  
   /**
    * Constructor which creates a TestHarness given a
    * PastryNode.
@@ -91,6 +93,7 @@ public class TestHarness implements Application, ScribeClient {
    */
   public TestHarness(PastryNode pn) {
     factory = new PastryIdFactory(pn.getEnvironment());
+    logger = pn.getEnvironment().getLogManager().getLogger(TestHarness.class,"monkey");
     endpoint = pn.registerApplication(this, "monkey");
     _pastryNode = pn;
     _tests = new Hashtable();
@@ -104,7 +107,7 @@ public class TestHarness implements Application, ScribeClient {
     try {
       hostname = InetAddress.getLocalHost().getHostAddress();
     } catch (java.net.UnknownHostException uhe) {
-      pn.getEnvironment().getLogManager().getLogger(TestHarness.class, "monkey").logException(Logger.WARNING, "", uhe);
+      if (logger.level <= Logger.WARNING) logger.logException("", uhe);
     }
   }
   String hostname;
@@ -179,10 +182,10 @@ public class TestHarness implements Application, ScribeClient {
         _streams.put(itm.getRunName(), fw);
 
       } catch (InvocationTargetException e) {
-        _pastryNode.getEnvironment().getLogManager().getLogger(TestHarness.class, "monkey").logException(Logger.WARNING, 
+        if (logger.level <= Logger.WARNING) logger.logException( 
             "InvocationTargetException occurred during initing of test: " , e.getTargetException());
       } catch (Exception e) {
-        _pastryNode.getEnvironment().getLogManager().getLogger(TestHarness.class, "monkey").logException(Logger.WARNING, 
+        if (logger.level <= Logger.WARNING) logger.logException(
             "Exception occurred during initing of test: " , e);
       }
     } else if (msg instanceof StartTestMessage) {

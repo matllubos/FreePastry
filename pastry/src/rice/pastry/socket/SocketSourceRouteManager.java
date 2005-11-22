@@ -44,6 +44,7 @@ public class SocketSourceRouteManager {
   // the address of this local node
   private EpochInetSocketAddress localAddress;
   
+  private Logger logger;
   /**
    * Constructor
    *
@@ -58,6 +59,7 @@ public class SocketSourceRouteManager {
     CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
     
+    this.logger = node.getEnvironment().getLogManager().getLogger(SocketSourceRouteManager.class, null);
     this.pool = pool;
     this.managers = new Hashtable();
     this.manager = new SocketCollectionManager(node, pool, this, bindAddress, proxyAddress);
@@ -194,7 +196,7 @@ public class SocketSourceRouteManager {
    * @param route The now-dead route
    */
   protected void markDead(SourceRoute route) {
-    log(Logger.FINE, "(SSRM) Found route " + route + " to be dead");
+    if (logger.level <= Logger.FINE) logger.log( "(SSRM) Found route " + route + " to be dead");
     
     AddressManager am = (AddressManager) managers.get(route.getLastHop());
     
@@ -223,7 +225,7 @@ public class SocketSourceRouteManager {
    * @param route The now-live route
    */
   protected void markAlive(SourceRoute route) {
-    log(Logger.FINE, "(SSRM) Found route " + route + " to be alive");
+    if (logger.level <= Logger.FINE) logger.log( "(SSRM) Found route " + route + " to be alive");
     
     getAddressManager(route.getLastHop(), false).markAlive(route);
   }
@@ -235,7 +237,7 @@ public class SocketSourceRouteManager {
    * @param route The now-live route
    */
   protected void markSuspected(SourceRoute route) {
-    log(Logger.FINE, "(SSRM) Found route " + route + " to be suspected");
+    if (logger.level <= Logger.FINE) logger.log( "(SSRM) Found route " + route + " to be suspected");
     
     getAddressManager(route.getLastHop(), false).markSuspected(route);
   }
@@ -260,17 +262,17 @@ public class SocketSourceRouteManager {
    */
   protected void reroute(EpochInetSocketAddress address, Message m) {
     if (getLiveness(address) == SocketNodeHandle.LIVENESS_ALIVE) {
-      log(Logger.INFO, "(SSRM) Attempting to resend message " + m + " to alive address " + address);
+      if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to resend message " + m + " to alive address " + address);
       send(address, m);
     } else {
       if (m instanceof RouteMessage) {
         if (((RouteMessage) m).getOptions().multipleHopsAllowed()) {
-          log(Logger.INFO, "(SSRM) Attempting to reroute route message " + m);
+          if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
           ((RouteMessage) m).nextHop = null;
           spn.receiveMessage(m);
         }
       } else {
-        log(Logger.WARNING, "(SSRM) Dropping message " + m + " because next hop is dead!");
+        if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop is dead!");
       }
     }  
   }
@@ -315,17 +317,7 @@ public class SocketSourceRouteManager {
     else
       return am.best;
   }
-  
-  
-  /**
-   * Debugging method
-   *
-   * @param s The string to print
-   */
-  private void log(int level, String s) {
-    spn.getEnvironment().getLogManager().getLogger(SocketSourceRouteManager.class, null).log(level,s);
-  }
-  
+    
   /**
    * Internal class which is tasked with maintaining the status of a single
    * remote address.  This class is in charge of all source routes to that address,
@@ -370,7 +362,7 @@ public class SocketSourceRouteManager {
       this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
       this.updated = 0L;
       
-      log(Logger.FINE, "(SSRM) ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
+      if (logger.level <= Logger.FINE) logger.log( "(SSRM) ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
       
       if (search) {
         getRouteManager(SourceRoute.build(address)).checkLiveness();
@@ -434,7 +426,7 @@ public class SocketSourceRouteManager {
       
       // first, we check and see if we have no best route (this can happen if the best just died)
       if (best == null) {
-        log(Logger.FINE, "(SSRM) No previous best route existed to " + address + " route " + route + " is now the best");
+        if (logger.level <= Logger.FINE) logger.log( "(SSRM) No previous best route existed to " + address + " route " + route + " is now the best");
         best = route;        
       }
       
@@ -443,7 +435,7 @@ public class SocketSourceRouteManager {
       if ((best.getNumHops() > route.getNumHops()) || 
           ((best.getNumHops() == route.getNumHops()) &&
            (getRouteManager(best).proximity() > getRouteManager(route).proximity()))) {
-        log(Logger.FINE, "(SSRM) Route " + route + " is better than previous best route " + best + " - replacing");
+        if (logger.level <= Logger.FINE) logger.log( "(SSRM) Route " + route + " is better than previous best route " + best + " - replacing");
             
         best = route;  
         pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
@@ -522,7 +514,7 @@ public class SocketSourceRouteManager {
       
       // first, we check and see if we have no best route (this can happen if the best just died)
       if (best == null) {
-        log(Logger.FINE, "(SSRM) No previous best route existed to " + address + " route " + route + " is now the best");
+        if (logger.level <= Logger.FINE) logger.log( "(SSRM) No previous best route existed to " + address + " route " + route + " is now the best");
         best = route;        
       }
       
@@ -571,7 +563,7 @@ public class SocketSourceRouteManager {
           case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
             return;
           case SocketNodeHandle.LIVENESS_DEAD:
-            log(Logger.FINE, "(SSRM) PING: PINGING DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
+            if (logger.level <= Logger.FINE) logger.log( "(SSRM) PING: PINGING DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
             getRouteManager(SourceRoute.build(address)).ping();
             break;
           default:
@@ -598,7 +590,7 @@ public class SocketSourceRouteManager {
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
           return;
         case SocketNodeHandle.LIVENESS_DEAD:
-          log(Logger.FINE, "(SSRM) CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
+          if (logger.level <= Logger.FINE) logger.log( "(SSRM) CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
           getRouteManager(SourceRoute.build(address)).checkLiveness();
           break;
         default:
@@ -633,14 +625,14 @@ public class SocketSourceRouteManager {
         case SocketNodeHandle.LIVENESS_DEAD:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
           pool.update(address, SocketNodeHandle.DECLARED_LIVE);
-          log(Logger.FINE, "COUNT: " + localAddress + " Found address " + address + " to be alive again.");
+          if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be alive again.");
           break;
         case SocketNodeHandle.LIVENESS_SUSPECTED:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
-          log(Logger.FINE, "COUNT: " + localAddress + " Found address " + address + " to be unsuspected.");
+          if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be unsuspected.");
           break;
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
-          log(Logger.WARNING, "ERROR: Found dead-forever handle to " + address + " to be alive again!");
+          if (logger.level <= Logger.WARNING) logger.log( "ERROR: Found dead-forever handle to " + address + " to be alive again!");
           break;
       }
     }
@@ -652,13 +644,13 @@ public class SocketSourceRouteManager {
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_ALIVE:
           liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
-          log(Logger.FINE, "COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be suspected.");
+          if (logger.level <= Logger.FINE) logger.log( "COUNT: " + spn.getEnvironment().getTimeSource().currentTimeMillis() + " " + localAddress + " Found address " + address + " to be suspected.");
           break;
         case SocketNodeHandle.LIVENESS_DEAD:
-          log(Logger.WARNING, "ERROR: Found node handle " + address + " to be suspected from dead - should not happen!");
+          if (logger.level <= Logger.WARNING) logger.log( "ERROR: Found node handle " + address + " to be suspected from dead - should not happen!");
           break;
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
-          log(Logger.WARNING, "ERROR: Found node handle " + address + " to be suspected from dead forever - should never ever happen!");
+          if (logger.level <= Logger.WARNING) logger.log( "ERROR: Found node handle " + address + " to be suspected from dead forever - should never ever happen!");
           break;
       }
       
@@ -667,7 +659,7 @@ public class SocketSourceRouteManager {
       
       for (int i=0; i<array.length; i++) {
         if (array[i] instanceof RouteMessage) {
-          log(Logger.FINE, "REROUTE: Rerouting message " + array[i] + " due to suspected next hop " + address);
+          if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + array[i] + " due to suspected next hop " + address);
           reroute(address, (Message) array[i]);
           queue.remove(array[i]);
         }
@@ -683,14 +675,14 @@ public class SocketSourceRouteManager {
         case SocketNodeHandle.LIVENESS_DEAD:
           return;
         case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
-          log(Logger.WARNING, "ERROR: Found node handle " + address + " to be dead from dead forever - should not happen!");
+          if (logger.level <= Logger.WARNING) logger.log( "ERROR: Found node handle " + address + " to be dead from dead forever - should not happen!");
           break;
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD;
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);   
           manager.declaredDead(address);
-          log(Logger.FINE, "COUNT: " + localAddress + " Found address " + address + " to be dead.");
+          if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead.");
           break;
       }
       
@@ -709,13 +701,13 @@ public class SocketSourceRouteManager {
           return;
         case SocketNodeHandle.LIVENESS_DEAD:
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
-          log(Logger.FINE, "COUNT: " + localAddress + " Found address " + address + " to be dead forever.");
+          if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead forever.");
           break;
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
           pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
-          log(Logger.FINE, "COUNT: " + localAddress + " Found address " + address + " to be dead forever.");
+          if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead forever.");
           break;
       }
       

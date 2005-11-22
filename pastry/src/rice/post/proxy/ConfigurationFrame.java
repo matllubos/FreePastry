@@ -107,7 +107,8 @@ public class ConfigurationFrame extends JFrame {
       parameters.store();
     } catch (IOException e) {
       JOptionPane.showMessageDialog(this, "Could not save configuration due to an error: "+e);
-      environment.getLogManager().getLogger(this.getClass(), "").logException(Logger.WARNING, "could not save user configuration", e);
+      Logger logger = environment.getLogManager().getLogger(this.getClass(), "");
+      if (logger.level <= Logger.WARNING) logger.logException("could not save user configuration", e);
     }
   }
   
@@ -1087,7 +1088,8 @@ public class ConfigurationFrame extends JFrame {
       result.setColumns(5);
       return result;
     } catch (Exception e) { 
-      environment.getLogManager().getLogger(ConfigurationFrame.class, null).logException(Logger.WARNING,"ERROR: " , e); 
+      Logger logger = environment.getLogManager().getLogger(ConfigurationFrame.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException("ERROR: " , e); 
     }
     
     return null;

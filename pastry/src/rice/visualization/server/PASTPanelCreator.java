@@ -31,6 +31,11 @@ public class PASTPanelCreator implements PanelCreator {
   protected PastImpl past;
   protected String name;
   
+  /**
+   * Lazilly constructed.
+   */
+  protected Logger logger;  
+  
   public PASTPanelCreator(rice.selector.Timer timer, String name, PastImpl past) {
     this.past = past;
     this.name = name;
@@ -71,8 +76,9 @@ public class PASTPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = past.getEnvironment().getLogManager().getLogger(PASTPanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
     
     try {      
@@ -89,8 +95,9 @@ public class PASTPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = past.getEnvironment().getLogManager().getLogger(PASTPanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
         
     return pastPanel;
@@ -171,8 +178,9 @@ public class PASTPanelCreator implements PanelCreator {
         others.removeElementAt(0);
       }
     } catch (Exception e) {
-      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Ecception " + e + " thrown.",e);
+      if (logger == null) logger = past.getEnvironment().getLogManager().getLogger(PASTPanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
   }
 }

@@ -34,7 +34,9 @@ public class StandardAddress implements Address {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch ( NoSuchAlgorithmException e ) {
-      env.getLogManager().getLogger(getClass(), instance).log(Logger.SEVERE, "No SHA support!" );
+      Logger logger = env.getLogManager().getLogger(getClass(), null);
+      if (logger.level <= Logger.SEVERE) logger.log(
+        "No SHA support!" );
     }
     
     name = c.toString() + "-" + instance;

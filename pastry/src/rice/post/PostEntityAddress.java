@@ -60,7 +60,8 @@ public abstract class PostEntityAddress implements Serializable {
       try {
         md = MessageDigest.getInstance("SHA");
       } catch (NoSuchAlgorithmException e) {
-        env.getLogManager().getLogger(PostEntityAddress.class, null).log(Logger.SEVERE, "FATAL ERROR - No SHA support!");
+        Logger logger = env.getLogManager().getLogger(PostEntityAddress.class, null);
+        if (logger.level <= Logger.SEVERE) logger.log("FATAL ERROR - No SHA support!");
       }
 
       md.update(string.getBytes());

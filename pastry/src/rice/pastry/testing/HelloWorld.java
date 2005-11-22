@@ -74,8 +74,7 @@ public class HelloWorld {
 
     HelloWorldApp app = new HelloWorldApp(pn);
     helloClients.addElement(app);
-    pn.getEnvironment().getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
-      "created " + pn);
+    System.out.println("created " + pn);
   }
 
   /**
@@ -84,8 +83,7 @@ public class HelloWorld {
   private void printLeafSets() {
     for (int i = 0; i < pastryNodes.size(); i++) {
       PastryNode pn = (PastryNode) pastryNodes.get(i);
-      pn.getEnvironment().getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
-          pn.getLeafSet().toString());
+      System.out.println(pn.getLeafSet().toString());
     }
   }
 
@@ -174,14 +172,12 @@ public class HelloWorld {
           ;
     }
     if (simultaneous_joins) {
-      env.getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
-           "let the joins begin!");
+      System.out.println("let the joins begin!");
       while (driver.simulate())
         ;
     }
 
-    env.getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
-        numnodes + " nodes constructed");
+    System.out.println(numnodes + " nodes constructed");
 
     driver.printLeafSets();
 
@@ -193,8 +189,7 @@ public class HelloWorld {
     }
 
     if (simultaneous_msgs) {
-      env.getLogManager().getLogger(HelloWorld.class, null).log(Logger.INFO, 
-        "let the msgs begin!");
+      System.out.println("let the msgs begin!");
       while (driver.simulate())
         ;
     }

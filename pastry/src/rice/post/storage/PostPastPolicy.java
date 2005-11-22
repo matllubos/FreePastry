@@ -34,7 +34,8 @@ public class PostPastPolicy implements PastPolicy {
         PastContentHandle[] handles = (PastContentHandle[]) o;
       
         if ((handles == null) || (handles.length == 0)) {
-          past.getEnvironment().getLogManager().getLogger(PostPastPolicy.class, past.getInstance()).log(Logger.SEVERE,
+          Logger logger = past.getEnvironment().getLogManager().getLogger(PostPastPolicy.class, past.getInstance());
+          if (logger.level <= Logger.SEVERE) logger.log(
               "ERROR: Unable to fetch replica of id " + id + " - handles:" + handles);
           parent.receiveException(new PostException("Unable to fetch data - returned unexpected null."));
           return;

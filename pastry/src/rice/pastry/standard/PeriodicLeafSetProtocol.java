@@ -145,7 +145,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
         if (time == null || 
             (time.longValue() < (localNode.getEnvironment().getTimeSource().currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on right neighbor
-          localNode.getEnvironment().getLogManager().getLogger(PeriodicLeafSetProtocol.class, null).log(Logger.FINE,
+          if (logger.level <= Logger.FINE) logger.log(
               "PeriodicLeafSetProtocol: Checking liveness on right neighbor:"+right);
           right.checkLiveness();
         }
@@ -155,7 +155,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
         if (time == null || 
             (time.longValue() < (localNode.getEnvironment().getTimeSource().currentTimeMillis()-CHECK_LIVENESS_PERIOD))) {
           // else checkLiveness() on left neighbor
-          localNode.getEnvironment().getLogManager().getLogger(PeriodicLeafSetProtocol.class, null).log(Logger.FINE,
+          if (logger.level <= Logger.FINE) logger.log(
               "PeriodicLeafSetProtocol: Checking liveness on left neighbor:"+left);
           left.checkLiveness();
         }
@@ -225,8 +225,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
   }  
   
   public void destroy() {
-    thePastryNode.getEnvironment().getLogManager()
-      .getLogger(PeriodicLeafSetProtocol.class, null).log(Logger.INFO, "PLSP: destroy() called");
+    if (logger.level <= Logger.INFO) logger.log(
+        "PLSP: destroy() called");
     pingNeighborMessage.cancel();
   }
 

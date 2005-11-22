@@ -22,6 +22,7 @@ public class RandomNodeIdFactory implements NodeIdFactory {
 
   Environment environment;
 
+  protected Logger logger;
   /**
    * Constructor.
    */
@@ -29,6 +30,7 @@ public class RandomNodeIdFactory implements NodeIdFactory {
   public RandomNodeIdFactory(Environment env) {
     this.environment = env;
     next = env.getRandomSource().nextLong();
+    this.logger = env.getLogManager().getLogger(getClass(), null);
   }
 
   /**
@@ -53,7 +55,8 @@ public class RandomNodeIdFactory implements NodeIdFactory {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      environment.getLogManager().getLogger(RandomNodeIdFactory.class, null).log(Logger.SEVERE, "No SHA support!");
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "No SHA support!");
       throw new RuntimeException("No SHA support!",e);
     }
 

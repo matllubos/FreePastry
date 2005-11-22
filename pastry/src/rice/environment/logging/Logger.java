@@ -10,7 +10,7 @@ package rice.environment.logging;
  * 
  * @author Jeff Hoye
  */
-public interface Logger {
+public abstract class Logger {
 
   // These are suggested base level priorities.
   
@@ -64,11 +64,16 @@ public interface Logger {
   public static final int OFF = Integer.MAX_VALUE;
 
   /**
+   * This is public for performance reasons.
+   */
+  public int level = 0;
+    
+  /**
    * Prints the message if the priority is equal to or higher than the minimum priority.
    * @param priority the priority of this log message
    * @param message the message to print
    */
-  public void log(int priority, String message);
+  public abstract void log(String message);
 
   /**
    * Prints the stack trace of the exception.  If you only want to print the 
@@ -79,5 +84,5 @@ public interface Logger {
    * @param priority the priority of this log message
    * @param exception the exception to print
    */
-  public void logException(int priority, String message, Throwable exception);
+  public abstract void logException(String message, Throwable exception);
 }

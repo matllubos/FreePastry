@@ -43,12 +43,14 @@ public abstract class PastryNodeFactory {
 
   protected Environment environment;
   
+  protected Logger logger;
+  
   public PastryNodeFactory(Environment env) {
     this.environment = env;
     rtMax = environment.getParameters().getInt("pastry_rtMax");
     rtBase = environment.getParameters().getInt("pastry_rtBaseBitLength");
     lSetSize = environment.getParameters().getInt("pastry_lSetSize");
-
+    logger = env.getLogManager().getLogger(getClass(), null);
   }
   
   /**
@@ -203,7 +205,7 @@ public abstract class PastryNodeFactory {
       // return the resulting closest node
       return nearNode;
     } catch (IOException e) {
-      environment.getLogManager().getLogger(PastryNodeFactory.class, null).log(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.log(
         "ERROR: Exception " + e + " occured while finding best bootstrap.");
       return seed;
     }

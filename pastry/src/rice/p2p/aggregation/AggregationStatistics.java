@@ -41,6 +41,6 @@ public class AggregationStatistics {
     s+="@L.AG   objsTotal="+numObjectsTotal+" objsAlive="+numObjectsAlive+"\n";
     s+="@L.AG   objBytesTotal="+totalObjectsSize+" objBytesAlive="+liveObjectsSize+"\n";
     s+="@L.AG   aggrTotal="+numAggregatesTotal+" ptrArrays="+numPointerArrays+" critical="+criticalAggregates+" orphaned="+orphanedAggregates;
-    logger.log(Logger.INFO, s);
+    if (logger.level <= Logger.INFO) logger.log(s);
   }
 }

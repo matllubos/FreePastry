@@ -57,13 +57,13 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param id The id to fetch
    */
   public void fetch(Id id, NodeHandle hint, Continuation command) {
-    log(Logger.FINER, endpoint.getId() + ": Told to fetch Id " + id);
+    if (logger.level <= Logger.FINER) logger.log( endpoint.getId() + ": Told to fetch Id " + id);
     
     if (delivered.exists(((GCId) id).getId())) {
-      log(Logger.FINER, endpoint.getId() + ": Skipping Id " + id + " because we have receipt.");
+      if (logger.level <= Logger.FINER) logger.log( endpoint.getId() + ": Skipping Id " + id + " because we have receipt.");
       command.receiveResult(new Boolean(true));
     } else {
-      log(Logger.FINER, endpoint.getId() + ": Actually fetching Id " + id);
+      if (logger.level <= Logger.FINER) logger.log( endpoint.getId() + ": Actually fetching Id " + id);
       super.fetch(id, hint, command);
     }
   }
@@ -74,7 +74,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * from our pending list.
    */
   public void synchronize(Continuation command) { 
-    log(Logger.FINER, endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor()+1, null, true));
+    if (logger.level <= Logger.FINER) logger.log( endpoint.getId() + ": Synchronizing range " + endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor()+1, null, true));
     
     GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), getReplicationFactor()+1, null, true);
     
@@ -86,7 +86,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
     Continuation c = new StandardContinuation(command) {      
       public void receiveResult(Object o) {
         if (! Boolean.TRUE.equals(o))
-          log(Logger.WARNING, endpoint.getId() + ": Removal of delivered message caused " + o);
+          if (logger.level <= Logger.WARNING) logger.log( endpoint.getId() + ": Removal of delivered message caused " + o);
         
         while (i.hasNext()) {
           final Id id = (Id) i.next();
@@ -94,11 +94,11 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
           if (delivered.exists(id)) {
             final Continuation me = this;
             
-            log(Logger.FINER, endpoint.getId() + ": Deleting id " + id + " because receipt exists");
+            if (logger.level <= Logger.FINER) logger.log( endpoint.getId() + ": Deleting id " + id + " because receipt exists");
             storage.unstore(id, new StandardContinuation(parent) {
               public void receiveResult(Object o) {
                 if (! Boolean.TRUE.equals(o))
-                  log(Logger.WARNING, endpoint.getId() + ": Removal of delivered message caused " + o);
+                  if (logger.level <= Logger.WARNING) logger.log( endpoint.getId() + ": Removal of delivered message caused " + o);
 
                 if (backup == null) 
                   me.receiveResult(o);
@@ -111,7 +111,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
           }
         } 
         
-        log(Logger.FINER, endpoint.getId() + ": Done Synchronizing...");
+        if (logger.level <= Logger.FINER) logger.log( endpoint.getId() + ": Done Synchronizing...");
         parent.receiveResult(new Boolean(true));
       }
     };
@@ -126,7 +126,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
    * @param command The command to return the results to
    */
   public void getGroups(final Continuation command) {    
-    log(Logger.FINER, "Getting list of groups...");
+    if (logger.level <= Logger.FINER) logger.log( "Getting list of groups...");
     GCIdRange range = (GCIdRange) endpoint.range(endpoint.getLocalNodeHandle(), redundancy, null, true);
 
     final Iterator i = storage.getStorage().scan(range.getRange()).getIterator();
@@ -147,7 +147,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
           }
         } 
         
-        log(Logger.FINER, "Return list of " + result.size() + " groups");
+        if (logger.level <= Logger.FINER) logger.log( "Return list of " + result.size() + " groups");
         parent.receiveResult(result.toArray(new PostEntityAddress[0]));
       }
     };
@@ -177,7 +177,7 @@ public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
       }
     }      
      
-    environment.getLogManager().getLogger(DeliveryPastImpl.class, instance).log(Logger.WARNING,
+    if (logger.level <= Logger.WARNING) logger.log(
         "Could not find any messages for user " + address + " - not tragic, but strange...");
       
     command.receiveResult(null);

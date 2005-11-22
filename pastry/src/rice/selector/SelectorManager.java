@@ -5,7 +5,6 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -49,8 +48,9 @@ public class SelectorManager extends Thread implements Timer {
 
   long lastTime = 0;
 
-  protected LogManager log;
-
+//  protected LogManager log;
+  protected Logger logger;
+  
   protected String instance;
 
   protected boolean running = true;
@@ -63,7 +63,7 @@ public class SelectorManager extends Thread implements Timer {
     super(instance == null ? "Selector Thread" : "Selector Thread -- "
         + instance);
     this.instance = instance;
-    this.log = log;
+    this.logger = log.getLogger(getClass(), instance);
     this.invocations = new LinkedList();
     this.modifyKeys = new HashSet();
     this.cancelledKeys = new HashSet();
@@ -181,7 +181,7 @@ public class SelectorManager extends Thread implements Timer {
   public void run() {
     try {
       //System.out.println("SelectorManager starting...");
-      log(Logger.INFO, "SelectorManager -- " + instance + " starting...");
+      if (logger.level <= Logger.INFO) logger.log("SelectorManager -- " + instance + " starting...");
 
       lastTime = timeSource.currentTimeMillis();
       // loop while waiting for activity
@@ -220,12 +220,11 @@ public class SelectorManager extends Thread implements Timer {
         }
       }
     } catch (Throwable t) {
-      log.getLogger(SelectorManager.class, instance).logException(Logger.SEVERE, 
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "ERROR (SelectorManager.run): " , t);
       System.exit(-1);
     }
-    log.getLogger(SelectorManager.class, instance).log(Logger.INFO, "Selector "+instance+" shutting down.");
-
+    if (logger.level <= Logger.INFO) logger.log("Selector "+instance+" shutting down.");
   }
 
   
@@ -316,7 +315,7 @@ public class SelectorManager extends Thread implements Timer {
       try {
         run.run();
       } catch (Exception e) {
-        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+        if (logger.level <= Logger.SEVERE) logger.logException( 
             "Invoking runnable caused exception " + e + " - continuing",e);
       }
     }
@@ -411,10 +410,6 @@ public class SelectorManager extends Thread implements Timer {
         .toArray(new SelectionKey[0]);
   }
 
-  private void log(int loglevel, String s) {
-    log.getLogger(SelectorManager.class, instance).log(loglevel, s);
-  }
-
   /**
    * Returns whether or not this thread of execution is the selector thread
    * 
@@ -436,17 +431,6 @@ public class SelectorManager extends Thread implements Timer {
   }
 
   /**
-   * Method which schedules a task to run at a specified time
-   * 
-   * @param task The task to run
-   * @param time The time to run
-   */
-  public void schedule(TimerTask task, Date time) {
-    task.nextExecutionTime = time.getTime();
-    addTask(task);
-  }
-
-  /**
    * Method which schedules a task to run repeatedly after a specified delay and
    * period
    * 
@@ -456,20 +440,6 @@ public class SelectorManager extends Thread implements Timer {
    */
   public void schedule(TimerTask task, long delay, long period) {
     task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
-    task.period = (int) period;
-    addTask(task);
-  }
-
-  /**
-   * Method which schedules a task to run repeatedly first at a specified time
-   * and period
-   * 
-   * @param task The task to run
-   * @param firstTime The first time
-   * @param period The period with which to run in milliseconds
-   */
-  public void schedule(TimerTask task, Date firstTime, long period) {
-    task.nextExecutionTime = firstTime.getTime();
     task.period = (int) period;
     addTask(task);
   }
@@ -486,20 +456,6 @@ public class SelectorManager extends Thread implements Timer {
     task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
     task.period = (int) period;
     task.fixedRate = true;
-    addTask(task);
-  }
-
-  /**
-   * Method which schedules a task to run repeatedly (at a fixed rate) after a
-   * specified delay and period
-   * 
-   * @param task The task to run
-   * @param firstTime The first time
-   * @param period The period with which to run in milliseconds
-   */
-  public void scheduleAtFixedRate(TimerTask task, Date firstTime, long period) {
-    task.nextExecutionTime = firstTime.getTime();
-    task.period = (int) period;
     addTask(task);
   }
 
@@ -562,7 +518,7 @@ public class SelectorManager extends Thread implements Timer {
           addBack.add(next);
         }
       } catch (Exception e) {
-        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE,"",e);
+        if (logger.level <= Logger.SEVERE) logger.logException("",e);
       }
     }
 

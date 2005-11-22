@@ -30,6 +30,8 @@ public class ImapServerImpl extends Thread implements ImapServer {
   
   InetAddress localHost;
   
+  protected Logger logger;
+  
   public ImapServerImpl(InetAddress bindAddress, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
     super("IMAP Server Thread");
     this.localHost = bindAddress;
@@ -39,8 +41,8 @@ public class ImapServerImpl extends Thread implements ImapServer {
     this.port = port;
     this.email = email;
     this.manager = manager;
+    this.logger = environment.getLogManager().getLogger(getClass(), null);
     this.workspace = new InMemoryWorkspace();
-
     initialize();
   }
 
@@ -61,7 +63,8 @@ public class ImapServerImpl extends Thread implements ImapServer {
       while (! quit) {
         final Socket socket = server.accept();
 
-        log(Logger.INFO, "Accepted connection from " + socket.getInetAddress());
+        if (logger.level <= Logger.INFO) logger.log(
+            "Accepted connection from " + socket.getInetAddress());
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
             (socket.getInetAddress().equals(getLocalHost()))) {
@@ -71,14 +74,16 @@ public class ImapServerImpl extends Thread implements ImapServer {
                 ParserImapHandler handler = new ParserImapHandler(getLocalHost(), manager, workspace, environment);
                 handler.handleConnection(socket, environment);
               } catch (IOException e) {
-                logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);
+                if (logger.level <= Logger.WARNING) logger.logException(
+                    "IOException occurred during handling of connection - " , e);
               }
             }
           };
 
           thread.start();
         } else {
-          log(Logger.WARNING, "Connection not local - aborting");
+          if (logger.level <= Logger.WARNING) logger.log(
+              "Connection not local - aborting");
 
           OutputStream o = socket.getOutputStream();
           PrintWriter out = new PrintWriter(o, true);
@@ -89,15 +94,8 @@ public class ImapServerImpl extends Thread implements ImapServer {
         }
       }
     } catch (IOException e) {
-      logException(Logger.WARNING, "IOException occurred during accepting of connection - " , e);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "IOException occurred during accepting of connection - " , e);
     }
-  }
-  private void log(int level, String message) {
-    environment.getLogManager().getLogger(ImapServerImpl.class, null).log(level, message);
-  }
-  private void logException(int level, String message, Throwable t) {
-    environment.getLogManager().getLogger(ImapServerImpl.class, null).logException(level, message, t);
-  }
-  
-  
+  }  
 }

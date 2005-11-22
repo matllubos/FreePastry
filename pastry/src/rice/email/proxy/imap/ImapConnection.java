@@ -37,7 +37,8 @@ public class ImapConnection
     InetAddress _clientAddress;
     SpyInputStream _spy;
     Environment environment;
-
+    protected Logger logger;
+    
     // see quit()
     Quittable _handler;
 
@@ -45,7 +46,7 @@ public class ImapConnection
                    throws IOException
     {
       this.environment = env;
-      
+      this.logger = env.getLogManager().getLogger(getClass(), null);
         // networking
         if (sock != null) {
           _socket = sock;
@@ -79,7 +80,8 @@ public class ImapConnection
      */
     public void println(String line)
     {
-        log(Logger.FINEST, "S: " + line);
+      if (logger.level <= Logger.FINEST) logger.log(
+        "S: " + line);
         _out.print(line);
         _out.print("\r\n");
         _out.flush();
@@ -97,7 +99,8 @@ public class ImapConnection
      */
     public void print(String string)
     {
-        log(Logger.FINEST, string);
+      if (logger.level <= Logger.FINEST) logger.log(
+          string);
         _out.print(string);
     }
 
@@ -155,13 +158,15 @@ public class ImapConnection
 
         /* if client has disconnected, make sure socket is closed and throw exception */
         if (line == null) {
-            log(Logger.FINEST, "C: <disconnected>");
+          if (logger.level <= Logger.FINEST) logger.log(
+              "C: <disconnected>");
 
             close();
             throw new DisconnectedException();
         } else {
             /* more crude debug logging */
-            log(Logger.FINEST, "C: " + line);
+          if (logger.level <= Logger.FINEST) logger.log(
+              "C: " + line);
 
             return line;
         }
@@ -172,10 +177,6 @@ public class ImapConnection
       }
     }
 
-    private void log(int level, String message) {
-      environment.getLogManager().getLogger(ImapConnection.class, null).log(level, message);
-    }
-    
     /**
      * Specifies that no more commands should be processed after the
      * current on finishes.

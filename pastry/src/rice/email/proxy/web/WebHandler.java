@@ -52,7 +52,8 @@ public class WebHandler {
     } catch (SocketTimeoutException ste) {
       _conn.println("421 Service shutting down and closing transmission channel");
     } catch (IOException e) {
-      environment.getLogManager().getLogger(WebHandler.class, null).logException(Logger.WARNING,
+      Logger logger = environment.getLogManager().getLogger(WebHandler.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException(
           "Detected connection error " + e + " - closing.",e);
     } catch (WebException e) {
       _conn.error(e.getStatus(), e.getMessage());

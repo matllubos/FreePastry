@@ -16,15 +16,15 @@ public class ProcessingRequest {
   Continuation c;
   Executable r;
   
-  LogManager logManager;
   TimeSource timeSource;
   SelectorManager selectorManager;
+  Logger logger;
   
   public ProcessingRequest(Executable r, Continuation c, LogManager logging, TimeSource timeSource, SelectorManager selectorManager ){
     this.r = r;
     this.c = c;
     
-    this.logManager = logging;
+    logger = logging.getLogger(getClass(), null);
     this.timeSource = timeSource;
     this.selectorManager = selectorManager;
   }
@@ -38,12 +38,11 @@ public class ProcessingRequest {
   }
   
   public void run() {
-    logManager.getLogger(DistPastryNode.class, null).log(Logger.FINER,
-      "COUNT: Starting execution of " + this);
+    if (logger.level <= Logger.FINER) logger.log("COUNT: Starting execution of " + this);
     try {
     long start = timeSource.currentTimeMillis();
       final Object result = r.execute();
-      logManager.getLogger(getClass(), null).log(Logger.FINEST,"QT: " + (timeSource.currentTimeMillis() - start) + " " + r.toString());
+      if (logger.level <= Logger.FINEST) logger.log("QT: " + (timeSource.currentTimeMillis() - start) + " " + r.toString());
 
       selectorManager.invoke(new Runnable() {
         public void run() {
@@ -63,8 +62,7 @@ public class ProcessingRequest {
         }
       });
     }
-    logManager.getLogger(DistPastryNode.class, null).log(Logger.FINER,
-      "COUNT: Done execution of " + this);      
+    if (logger.level <= Logger.FINER) logger.log("COUNT: Done execution of " + this);      
   }
 }
 

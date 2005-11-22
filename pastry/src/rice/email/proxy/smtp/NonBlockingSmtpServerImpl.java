@@ -56,8 +56,11 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
   
   InetAddress localHost;
   
+  protected Logger logger;
+  
   public NonBlockingSmtpServerImpl(InetAddress localHost, int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null);
     this.localHost = localHost;
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
@@ -69,7 +72,6 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
     this.registry = new SmtpCommandRegistry();
     this.registry.load();
     this.workspace = new InMemoryWorkspace();
-
     initialize();
   }
 
@@ -95,7 +97,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         try {
           key = environment.getSelectorManager().register(channel, NonBlockingSmtpServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
-          environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+          if (logger.level <= Logger.WARNING) logger.logException(
               "ERROR modifiying SMTP server socket key " , e);
         }
       }
@@ -126,7 +128,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
       final Socket socket = ((SocketChannel) ((ServerSocketChannel) key.channel()).accept()).socket();
       connections1++;
       
-      environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.INFO,
+      if (logger.level <= Logger.INFO) logger.log(
           "Accepted connection " + connections + " of " + MAX_CONNECTIONS + " from " + socket.getInetAddress());
       
       if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
@@ -143,16 +145,16 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
               }
               
               setAcceptable(true);
-              environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.INFO,
+              if (logger.level <= Logger.INFO) logger.log(
                   "Done with connection - now at " + connections + " of " + MAX_CONNECTIONS);
             } catch (IOException e) {
-              environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+              if (logger.level <= Logger.WARNING) logger.logException(
                   "IOException occurred during handling of connection - " , e);
             } finally {
               try {
                 socket.close();
               } catch (IOException e) {
-                environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.SEVERE,
+                if (logger.level <= Logger.SEVERE) logger.logException(
                     "ERROR!!!! - Got exception " + e + " while closing socket!",e);
               }
             }
@@ -161,7 +163,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         
         thread.start();
       } else {
-        environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.WARNING,
+        if (logger.level <= Logger.WARNING) logger.log(
           "Connection not local - aborting");
         
         OutputStream o = socket.getOutputStream();
@@ -172,7 +174,7 @@ public class NonBlockingSmtpServerImpl extends SelectionKeyHandler implements Sm
         socket.close();
       }
     } catch (IOException e) {
-      environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.logException(
           "IOException occurred during accepting of connection - " , e);
     }
   }

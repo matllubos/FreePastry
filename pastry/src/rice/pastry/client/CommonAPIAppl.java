@@ -60,7 +60,7 @@ public abstract class CommonAPIAppl extends PastryAppl {
    * @param hint the hint
    */
   public void route(Id key, Message msg, NodeHandle hint) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(CommonAPIAppl.class, instance).log(Logger.FINER, 
+    if (logger.level <= Logger.FINER) logger.log( 
         "[" + thePastryNode + "] route " + msg + " to " + key);
 
     RouteMessage rm = new RouteMessage(key, msg, hint, getAddress());
@@ -270,7 +270,7 @@ public abstract class CommonAPIAppl extends PastryAppl {
    */
 
   public void receiveMessage(Message msg) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(CommonAPIAppl.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] recv " + msg);
 
     if (msg instanceof RouteMessage) {

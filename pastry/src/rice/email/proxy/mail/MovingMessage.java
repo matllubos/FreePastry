@@ -137,8 +137,9 @@ public class MovingMessage
       
       while (true) {
         String line = conn.readLine();
-        if (line == null) {
-          env.getLogManager().getLogger(MovingMessage.class, null).log(Logger.WARNING, 
+        if (line == null) {          
+          Logger logger = env.getLogManager().getLogger(MovingMessage.class, null);
+          if (logger.level <= Logger.WARNING) logger.log( 
               "Did not receive <CRLF>.<CRLF> - Accepting anyway...");
           dataWriter.close();
           break;
@@ -160,7 +161,8 @@ public class MovingMessage
       }
       
       if (line == null) {
-        env.getLogManager().getLogger(MovingMessage.class, null).log(Logger.WARNING, 
+        Logger logger = env.getLogManager().getLogger(MovingMessage.class, null);
+        if (logger.level <= Logger.WARNING) logger.log( 
             "Did not receive <CRLF>.<CRLF> - Accepting anyway...");
         dataWriter.close();
         return true;

@@ -40,6 +40,7 @@ public class SimpleManager implements SmtpManager {
   
   protected String smtpPassword;
   
+  protected Logger logger;
 //  static {
 //    String s = System.getProperty("POST_HOST");
 //    
@@ -57,7 +58,8 @@ public class SimpleManager implements SmtpManager {
     this.gateway = gateway;
     this.address = address;
     this.server = server;
-  
+    this.logger = environment.getLogManager().getLogger(SimpleManager.class, null);
+    
     this.authenticate = environment.getParameters().getBoolean("email_smtp_send_authentication"); 
     if (authenticate) {
       this.smtpUsername = environment.getParameters().getString("email_smtp_username");
@@ -130,7 +132,7 @@ public class SimpleManager implements SmtpManager {
                   }
 
                   public void receiveException(Exception result) {
-                    logException(Logger.FINE,
+                    if (logger.level <= Logger.FINE) logger.logException(
                         "got exception looking for PostLog for "+addr+" in isPostAddress", result);
                     c.receiveException(result);
                   }
@@ -173,7 +175,8 @@ public class SimpleManager implements SmtpManager {
     
     PostUserAddress[] recipients = (PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]);
     
-    log(Logger.FINER, "Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
+    if (logger.level <= Logger.FINER) logger.log(
+        "Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
     Email email = PostMessage.parseEmail(getLocalHost(), state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
     
@@ -194,7 +197,8 @@ public class SimpleManager implements SmtpManager {
       String host = server;
       
       if ((host == null) || (host.equals(""))) {
-        log(Logger.WARNING, "WARNING: No default SMTP server specified - using DNS MX records for " + addr.getHost() + " to send email.");
+        if (logger.level <= Logger.WARNING) logger.log(
+            "WARNING: No default SMTP server specified - using DNS MX records for " + addr.getHost() + " to send email.");
         String[] hosts = dns.lookup(addr.getHost());
         
         if (hosts.length == 0)
@@ -203,7 +207,8 @@ public class SimpleManager implements SmtpManager {
         host = hosts[0];
       } 
       
-      log(Logger.FINER, "A message is headed to " + addr + " using SMTP server at " + host);
+      if (logger.level <= Logger.FINER) logger.log(
+          "A message is headed to " + addr + " using SMTP server at " + host);
       
       try {
         Reader content = state.getMessage().getContent();
@@ -219,13 +224,5 @@ public class SimpleManager implements SmtpManager {
         throw new IOException("Couldn't send a message to " + addr + " due to " + e);
       }
     }
-  }
-  
-  private void log(int level, String m) {
-    environment.getLogManager().getLogger(SimpleManager.class, null).log(level, m); 
-  }
-  
-  private void logException(int level, String m, Throwable t) {
-    environment.getLogManager().getLogger(SimpleManager.class,null).logException(level, m, t);
-  }
+  }  
 }

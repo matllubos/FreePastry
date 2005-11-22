@@ -68,6 +68,8 @@ public class PingManager extends SelectionKeyHandler {
   // the local node
   private SocketPastryNode spn;
   
+  private Logger logger;
+  
   /**
    * @param port DESCRIBE THE PARAMETER
    * @param manager DESCRIBE THE PARAMETER
@@ -75,6 +77,7 @@ public class PingManager extends SelectionKeyHandler {
    */
   public PingManager(SocketPastryNode spn, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.spn = spn;
+    this.logger = spn.getEnvironment().getLogManager().getLogger(PingManager.class, null);
     this.manager = manager;
     this.pendingMsgs = new ArrayList();
     this.localAddress = proxyAddress;
@@ -97,7 +100,7 @@ public class PingManager extends SelectionKeyHandler {
       key = spn.getEnvironment().getSelectorManager().register(channel, this, 0);
       key.interestOps(SelectionKey.OP_READ);
     } catch (IOException e) {
-      log(Logger.SEVERE, 
+      if (logger.level <= Logger.SEVERE) logger.log(
           "PANIC: Error binding datagram server to address " + localAddress + ": " + e);
     }
   }
@@ -115,7 +118,8 @@ public class PingManager extends SelectionKeyHandler {
    * @param prl The listener which should hear about the response
    */
   protected void ping(SourceRoute path, PingResponseListener prl) {
-    log(Logger.FINE, "(PM) Actually sending ping via path " + path + " local " + localAddress);
+    if (logger.level <= Logger.FINE) logger.log(
+        "(PM) Actually sending ping via path " + path + " local " + localAddress);
 
     addPingResponseListener(path, prl);
     
@@ -160,7 +164,7 @@ public class PingManager extends SelectionKeyHandler {
       
       enqueue(route, baos.toByteArray());
     } catch (Exception canthappen) {
-      log(Logger.SEVERE, 
+      if (logger.level <= Logger.SEVERE) logger.log(
           "CANT HAPPEN: " +canthappen);  
     }
   }
@@ -237,7 +241,7 @@ public class PingManager extends SelectionKeyHandler {
    */
   public void enqueue(SourceRoute path, Object msg) {
     try {
-      byte[] data = addHeader(path, msg, localAddress, spn.getEnvironment());
+      byte[] data = addHeader(path, msg, localAddress, logger);
       
       synchronized (pendingMsgs) {
         pendingMsgs.add(new Envelope(path.getFirstHop(), data));
@@ -247,31 +251,23 @@ public class PingManager extends SelectionKeyHandler {
         ((SocketPastryNode) spn).broadcastSentListeners(msg, path.toArray(), data.length);
       
       if (! (msg instanceof byte[])) {
-        log(Logger.FINER,
+        if (logger.level <= Logger.FINER) logger.log(
           "COUNT: Sent message " + msg.getClass() + " of size " + data.length  + " to " + path);    
       } else if (((byte[]) msg)[3] == 0x11) {
-        log(Logger.FINER,
+        if (logger.level <= Logger.FINER) logger.log(
           "COUNT: Sent message rice.pastry.socket.messaging.ShortPingMessage of size " + data.length  + " to " + path);    
       } else if (((byte[]) msg)[3] == 0x12) {
-        log(Logger.FINER,
+        if (logger.level <= Logger.FINER) logger.log(
           "COUNT: Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path); 
       }
         
       spn.getEnvironment().getSelectorManager().modifyKey(key);
     } catch (IOException e) {
-      log(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.log(
           "ERROR: Received exceptoin " + e + " while enqueuing ping " + msg);
     }
   }
 
-  private void log(int level, String s) {
-    spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).log(level,s);
-  }
-  
-  private void logException(int level, String s, Exception e) {
-    spn.getEnvironment().getLogManager().getLogger(PingManager.class, null).logException(level,s, e);
-  }
-  
   /**
    * DESCRIBE THE METHOD
    *
@@ -291,12 +287,12 @@ public class PingManager extends SelectionKeyHandler {
         ((SocketPastryNode) spn).broadcastReceivedListeners(dm, path.reverse().toArray(), size);
             
       if (dm instanceof PingMessage) {
-        log(Logger.FINER,
+        if (logger.level <= Logger.FINER) logger.log(
             "COUNT: Read message " + message.getClass() + " of size " + size + " from " + dm.getInboundPath().reverse());      
 
         enqueue(dm.getInboundPath(), new PingResponseMessage(dm.getOutboundPath(), dm.getInboundPath(), start));        
       } else if (dm instanceof PingResponseMessage) {
-        log(Logger.FINER,
+        if (logger.level <= Logger.FINER) logger.log(
             "COUNT: Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
         int ping = (int) (spn.getEnvironment().getTimeSource().currentTimeMillis() - start);
         
@@ -306,18 +302,18 @@ public class PingManager extends SelectionKeyHandler {
       } else if (dm instanceof WrongEpochMessage) {
         WrongEpochMessage wem = (WrongEpochMessage) dm;
         
-        log(Logger.FINER,
+        if (logger.level <= Logger.FINER) logger.log(
             "COUNT: Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
 
         manager.markAlive(dm.getOutboundPath());
         manager.markDead(wem.getIncorrect());
       } else if (dm instanceof IPAddressRequestMessage) {
-        log(Logger.FINER,
+        if (logger.level <= Logger.FINER) logger.log(
             "COUNT: Read message " + message.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
         
         enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, spn.getEnvironment().getTimeSource().currentTimeMillis())); 
       } else {
-        log(Logger.WARNING,
+        if (logger.level <= Logger.WARNING) logger.log(
             "ERROR: Received unknown DatagramMessage " + dm);
       }
     }
@@ -344,12 +340,14 @@ public class PingManager extends SelectionKeyHandler {
         if (buffer.remaining() > 0) {
           readHeader(address);
         } else {
-          log(Logger.INFO, "(PM) Read from datagram channel, but no bytes were there - no bad, but wierd.");
+          if (logger.level <= Logger.INFO) logger.log(
+            "(PM) Read from datagram channel, but no bytes were there - no bad, but wierd.");
           break;
         }
       }
     } catch (IOException e) {
-      logException(Logger.WARNING, "ERROR (datagrammanager:read): ", e);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "ERROR (datagrammanager:read): ", e);
     } finally {
       buffer.clear();
     }
@@ -375,7 +373,8 @@ public class PingManager extends SelectionKeyHandler {
         }
       }
     } catch (IOException e) {
-      log(Logger.WARNING, "ERROR (datagrammanager:write): " + e);
+      if (logger.level <= Logger.WARNING) logger.log(
+          "ERROR (datagrammanager:write): " + e);
     } finally {
       if (pendingMsgs.isEmpty()) 
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
@@ -402,7 +401,7 @@ public class PingManager extends SelectionKeyHandler {
    * @return A ByteBuffer containing the object
    * @exception IOException if the object can't be serialized
    */
-  public static byte[] serialize(Object message, Environment env) throws IOException {
+  public static byte[] serialize(Object message, Logger logger) throws IOException {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);      
@@ -411,12 +410,12 @@ public class PingManager extends SelectionKeyHandler {
       
       return baos.toByteArray();
     } catch (InvalidClassException e) {
-      env.getLogManager().getLogger(PingManager.class, null).log(Logger.SEVERE,
-          "PANIC: Object to be serialized was an invalid class!");
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "PANIC: Object to be serialized was an invalid class!",e);
       throw new IOException("Invalid class during attempt to serialize.");
     } catch (NotSerializableException e) {
-      env.getLogManager().getLogger(PingManager.class, null).log(Logger.SEVERE,
-          "PANIC: Object to be serialized was not serializable! [" + message + "]");
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "PANIC: Object to be serialized was not serializable! [" + message + "]",e);
       throw new IOException("Unserializable class " + message + " during attempt to serialize.");
     }
   }
@@ -429,18 +428,18 @@ public class PingManager extends SelectionKeyHandler {
    * @return The deserialized object.
    * @exception IOException if the buffer can't be deserialized
    */
-  public static Object deserialize(byte[] array, Environment env, SocketPastryNode spn) throws IOException {
+  public static Object deserialize(byte[] array, Environment env, SocketPastryNode spn, Logger logger) throws IOException {
     PastryObjectInputStream ois = new PastryObjectInputStream(new ByteArrayInputStream(array), spn);
     
     try {
       return ois.readObject();
     } catch (ClassNotFoundException e) {
-      env.getLogManager().getLogger(PingManager.class, null).log(Logger.SEVERE, 
-          "PANIC: Unknown class type in serialized message!"+e);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "PANIC: Unknown class type in serialized message!",e);
       throw new IOException("Unknown class type in message - closing channel.");
     } catch (InvalidClassException e) {
-      env.getLogManager().getLogger(PingManager.class, null).log(Logger.SEVERE, 
-          "PANIC: Serialized message was an invalid class!"+e);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "PANIC: Serialized message was an invalid class!",e);
       throw new IOException("Invalid class in message - closing channel.");
     }
   }
@@ -450,7 +449,7 @@ public class PingManager extends SelectionKeyHandler {
    *
    * @return The messag with a header attached
    */
-  public static byte[] addHeader(SourceRoute path, Object data, EpochInetSocketAddress localAddress, Environment env) throws IOException {
+  public static byte[] addHeader(SourceRoute path, Object data, EpochInetSocketAddress localAddress, Logger logger) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);      
 
@@ -465,7 +464,7 @@ public class PingManager extends SelectionKeyHandler {
     if (data instanceof byte[])
       dos.write((byte[]) data);
     else
-      dos.write(serialize(data, env));
+      dos.write(serialize(data, logger));
     
     dos.flush();
   
@@ -477,7 +476,7 @@ public class PingManager extends SelectionKeyHandler {
    *
    * @return The messag with a header attached
    */
-  public static SourceRoute decodeHeader(byte[] header) throws IOException {
+  public SourceRoute decodeHeader(byte[] header) throws IOException {
     EpochInetSocketAddress[] route = new EpochInetSocketAddress[header.length / SocketChannelRepeater.HEADER_BUFFER_SIZE];
   
     for (int i=0; i<route.length; i++)
@@ -521,13 +520,15 @@ public class PingManager extends SelectionKeyHandler {
           SourceRoute sr = decodeHeader(route).removeLastHop();
           
           if (Arrays.equals(test, HEADER_SHORT_PING)) {
-            log(Logger.FINER,"COUNT: Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            if (logger.level <= Logger.FINER) logger.log(
+                "COUNT: Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
             shortPingReceived(sr, array);
           } else if (Arrays.equals(test, HEADER_SHORT_PING_RESPONSE)) {
-            log(Logger.FINER,"COUNT: Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            if (logger.level <= Logger.FINER) logger.log(
+                "COUNT: Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
             shortPingResponseReceived(sr, array);
           } else {
-            receiveMessage(deserialize(array, spn.getEnvironment(), spn), array.length, address);
+            receiveMessage(deserialize(array, spn.getEnvironment(), spn, logger), array.length, address);
           }
         } else {
           EpochInetSocketAddress next = SocketChannelRepeater.decodeHeader(route, metadata[0] + 1);
@@ -560,12 +561,14 @@ public class PingManager extends SelectionKeyHandler {
 
           enqueue(back.reverse(), new WrongEpochMessage(outbound, back.reverse(), eisa, localAddress, spn.getEnvironment().getTimeSource().currentTimeMillis()));
         } else {
-          log(Logger.WARNING,"WARNING: Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");
+          if (logger.level <= Logger.WARNING) logger.log(
+              "WARNING: Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");
           throw new IOException("Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");
         }
       }
     } else {
-      log(Logger.WARNING,"WARNING: Received unrecognized message header - ignoring from "+address+".");
+      if (logger.level <= Logger.WARNING) logger.log(
+        "WARNING: Received unrecognized message header - ignoring from "+address+".");
       throw new IOException("Improper message header received - ignoring from "+address+". Read " + ((byte) header[0]) + " " + ((byte) header[1]) + " " + ((byte) header[2]) + " " + ((byte) header[3]));
     }    
   }

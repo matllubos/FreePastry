@@ -71,7 +71,7 @@ public class DataCommand extends SmtpCommand {
       conn.getServer().incrementFail();
       Logger logger = state.getEnvironment().getLogManager().getLogger(getClass(), null);
 
-      logger.logException(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "SEVERE: Exception " + je + " occurred while attempting to send message to " + msg.getRecipientIterator().next(), 
           je);
     }

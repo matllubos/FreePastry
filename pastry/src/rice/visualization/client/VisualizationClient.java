@@ -34,9 +34,12 @@ public class VisualizationClient {
   protected ObjectInputStream ois;
   
   protected Environment environment;
+  protected Logger logger;
   
   public VisualizationClient(PrivateKey key, InetSocketAddress address, Environment env) {
     environment = env;
+    logger = environment.getLogManager().getLogger(VisualizationClient.class, null);
+
     this.address = address;
     this.state = STATE_ALIVE;
     this.socket = new Socket();
@@ -90,18 +93,18 @@ public class VisualizationClient {
       return result;
     } catch (IOException e) {
       this.state = STATE_DEAD;
-      logException("Client ("+address+"): Exception " + e + " thrown.",e);
+      if (logger.level <= Logger.SEVERE) logger.logException("Client ("+address+"): Exception " + e + " thrown.",e);
       //e.printStackTracee();
       try {
         socket.close();
       } catch (IOException f) {
-        logException("Client: Exception " + f + " thrown closing.",f);
+        if (logger.level <= Logger.SEVERE) logger.logException("Client: Exception " + f + " thrown closing.",f);
       }
       
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
-      logException("Client: Exception " + e + " thrown.",e);
+      if (logger.level <= Logger.SEVERE) logger.logException("Client: Exception " + e + " thrown.",e);
       
       return null;
     }
@@ -117,18 +120,18 @@ public class VisualizationClient {
       return result;
     } catch (IOException e) {
       this.state = STATE_DEAD;
-      logException("Client: Exception " + e + " thrown.",e);
+      if (logger.level <= Logger.SEVERE) logger.logException("Client: Exception " + e + " thrown.",e);
 
       try {
         socket.close();
       } catch (IOException f) {
-        logException("Client: Exception " + f + " thrown closing.",f);
+        if (logger.level <= Logger.SEVERE) logger.logException("Client: Exception " + f + " thrown closing.",f);
       }
       
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
-      logException("Client: Exception " + e + " thrown.",e);
+      if (logger.level <= Logger.SEVERE) logger.logException("Client: Exception " + e + " thrown.",e);
 
       return null;
     }
@@ -158,18 +161,14 @@ public class VisualizationClient {
       return result;
     } catch (IOException e) {
       this.state = STATE_DEAD;
-      logException("Client: Exception " + e + " thrown.",e);
+      if (logger.level <= Logger.SEVERE) logger.logException("Client: Exception " + e + " thrown.",e);
 
       return null;
     } catch (ClassNotFoundException e) {
       this.state = STATE_UNKNOWN;
-      logException("Client: Exception " + e + " thrown.",e);
+      if (logger.level <= Logger.SEVERE) logger.logException("Client: Exception " + e + " thrown.",e);
 
       return null;
     }    
   }
-
-  private void logException(String s, Throwable t) {
-    environment.getLogManager().getLogger(VisualizationClient.class, null).logException(Logger.SEVERE,s,t);
-  }  
 }

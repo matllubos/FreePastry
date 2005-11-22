@@ -11,7 +11,7 @@ public class SmtpConnection {
     private static final int TIMEOUT_MILLIS = 1000 * 30;
     private InetAddress serverAddress;
     private SmtpServer server;
-
+    protected Logger logger;
 
     // networking/io stuff
     Socket sock;
@@ -32,7 +32,7 @@ public class SmtpConnection {
           InputStream i = sock.getInputStream();
           out = new PrintWriter(o, true);
           in = new StreamTokenizer(new InputStreamReader(i));
-          
+          logger = server.getEnvironment().getLogManager().getLogger(SmtpConnection.class, null);  
           in.resetSyntax();
           in.eolIsSignificant(false);
           in.wordChars(1, Integer.MAX_VALUE);
@@ -52,7 +52,7 @@ public class SmtpConnection {
     }
 
     public void println(String line) {
-        server.getEnvironment().getLogManager().getLogger(SmtpConnection.class, null).log(Logger.FINEST,
+        if (logger.level <= Logger.FINEST) logger.log(
             "S: " + line);
         out.print(line + "\r\n");
         out.flush();
@@ -62,11 +62,11 @@ public class SmtpConnection {
       int result = in.nextToken();
       
       if (result == in.TT_WORD) {
-        server.getEnvironment().getLogManager().getLogger(SmtpConnection.class, null).log(Logger.FINEST,
+        if (logger.level <= Logger.FINEST) logger.log(
             "C: " + in.sval);
         return in.sval;
       } else if (result == in.TT_NUMBER) {
-        server.getEnvironment().getLogManager().getLogger(SmtpConnection.class, null).log(Logger.FINEST,
+        if (logger.level <= Logger.FINEST) logger.log(
             "C*:" + in.nval);
         return "" + in.nval;
       } else {

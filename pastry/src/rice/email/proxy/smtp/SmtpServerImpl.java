@@ -46,10 +46,13 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
   
   InetAddress localHost;
   
+  protected Logger logger;
+
   public SmtpServerImpl(InetAddress localHost, int port, EmailService email, boolean gateway, PostEntityAddress address, boolean acceptNonLocal, boolean authenticate, UserManager userManager, String server, Environment env) throws Exception {
     super("SMTP Server Thread");
     this.localHost = localHost;
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(SmtpServerImpl.class, null);
     this.acceptNonLocal = acceptNonLocal;
     this.gateway = gateway;
     this.port = port;
@@ -82,7 +85,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
         final Socket socket = server.accept();
         connections++;
 
-        environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.INFO,
+        if (logger.level <= Logger.INFO) logger.log(
             "Accepted connection from " + socket.getInetAddress());
 
         if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
@@ -94,7 +97,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
                 handler.handleConnection(socket);
                 socket.close();
               } catch (IOException e) {
-                environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+                if (logger.level <= Logger.WARNING) logger.logException(
                     "IOException occurred during handling of connection - " , e);
               }
               
@@ -104,7 +107,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
 
           thread.start();
         } else {
-          environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).log(Logger.WARNING,
+          if (logger.level <= Logger.WARNING) logger.log(
             "Connection not local - aborting");
           
           OutputStream o = socket.getOutputStream();
@@ -116,7 +119,7 @@ public class SmtpServerImpl extends Thread implements SmtpServer {
         }
       }
     } catch (IOException e) {
-      environment.getLogManager().getLogger(NonBlockingSmtpServerImpl.class, null).logException(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.logException(
           "IOException occurred during accepting of connection - " , e);
     }
   }

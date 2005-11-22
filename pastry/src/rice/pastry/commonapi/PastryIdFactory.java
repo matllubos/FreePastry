@@ -32,7 +32,9 @@ public class PastryIdFactory implements IdFactory {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch ( NoSuchAlgorithmException e ) {
-      env.getLogManager().getLogger(PastryIdFactory.class, null).log(Logger.SEVERE, "No SHA support!" );
+      Logger logger = env.getLogManager().getLogger(getClass(), null);
+      if (logger.level <= Logger.SEVERE) logger.log(
+        "No SHA support!" );
     }
   }
       

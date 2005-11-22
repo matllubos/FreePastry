@@ -49,6 +49,8 @@ public class SocketChannelReader {
   
   // the environment to use
   protected Environment environment;
+
+  protected Logger logger;
   
   /**
    * Constructor which creates this SocketChannelReader and the WirePastryNode.
@@ -65,6 +67,7 @@ public class SocketChannelReader {
   public SocketChannelReader(Environment env, SourceRoute path) {
     this.environment = env;
     this.path = path;
+    this.logger = env.getLogManager().getLogger(SocketChannelReader.class, null);
     sizeBuffer = ByteBuffer.allocateDirect(4);
     SELECTOR_DESERIALIZATION_MAX_SIZE = environment.getParameters().getInt(
         "pastry_socket_reader_selector_deserialization_max_size");
@@ -79,15 +82,6 @@ public class SocketChannelReader {
     this.path = path;
   }
   
-  private void log(int level, String s) {
-    environment.getLogManager().getLogger(SocketChannelReader.class, null).log(level,s);
-  }
-
-  private void logException(int level, String s, Throwable e) {
-    environment.getLogManager().getLogger(SocketChannelReader.class, null).logException(level, s, e);
-  }
-
-
   /**
    * Method which is to be called when there is data available on the specified
    * SocketChannel. The data is read in, and if the object is done being read,
@@ -115,7 +109,8 @@ public class SocketChannelReader {
     if (objectSize != -1) {
       int read = sc.read(buffer);
 
-      log(Logger.FINEST, "(R) Read " + read + " bytes of object..." + buffer.remaining());
+      if (logger.level <= Logger.FINEST) logger.log(
+          "(R) Read " + read + " bytes of object..." + buffer.remaining());
 
       // implies that the channel is closed
       if (read == -1) 
@@ -133,7 +128,8 @@ public class SocketChannelReader {
           Object obj = deserialize(objectArray);
           
           if (obj != null) {
-            log(Logger.FINER, "(R) Deserialized bytes into object " + obj);
+            if (logger.level <= Logger.FINER) logger.log(
+                "(R) Deserialized bytes into object " + obj);
             
             if ((spn != null) && (spn instanceof SocketPastryNode))
               ((SocketPastryNode) spn).broadcastReceivedListeners(obj, (path == null ? new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : path.toArray()), size);
@@ -143,11 +139,13 @@ public class SocketChannelReader {
             return obj;
           }
         } else {
-          log(Logger.INFO, "COUNT: Read message, but too big to deserialize on Selector thread");
+          if (logger.level <= Logger.INFO) logger.log(
+              "COUNT: Read message, but too big to deserialize on Selector thread");
           ((SocketPastryNode) spn).process(new Executable() {
             public String toString() { return "Deserialization of message of size " + size + " from " + path; }
             public Object execute() {
-              log(Logger.INFO, "COUNT: Starting deserialization on message on processing thread");
+              if (logger.level <= Logger.INFO) logger.log(
+                  "COUNT: Starting deserialization on message on processing thread");
               try {
                 return deserialize(objectArray);
               } catch (Exception e) {
@@ -168,7 +166,8 @@ public class SocketChannelReader {
             }
             
             public void receiveException(Exception e) {
-              logException(Logger.WARNING, "Processing deserialization of message caused exception ", e);
+              if (logger.level <= Logger.WARNING) logger.logException(
+                  "Processing deserialization of message caused exception ", e);
             }
           });
         }
@@ -194,7 +193,8 @@ public class SocketChannelReader {
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
     if (!recorded) {
-      log(Logger.FINER, "COUNT: Read message " + obj.getClass() + " of size " + size + " from " + path);
+      if (logger.level <= Logger.FINER) logger.log(
+          "COUNT: Read message " + obj.getClass() + " of size " + size + " from " + path);
     }
   }
 
@@ -230,13 +230,15 @@ public class SocketChannelReader {
     if (objectSize <= 0) 
       throw new IOException("Found message of improper number of bytes - " + objectSize + " bytes");
     
-    log(Logger.FINER, "(R) Found object of " + objectSize + " bytes from "+sc.socket().getRemoteSocketAddress());
+    if (logger.level <= Logger.FINER) logger.log(
+        "(R) Found object of " + objectSize + " bytes from "+sc.socket().getRemoteSocketAddress());
     
     // allocate the appropriate space
     try {
       buffer = ByteBuffer.allocateDirect(objectSize);
     } catch (OutOfMemoryError oome) {
-      logException(Logger.SEVERE, "SCR ran out of memory allocating an object of size "+objectSize+" from "+path, oome);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "SCR ran out of memory allocating an object of size "+objectSize+" from "+path, oome);
       throw oome; 
     }
   }
@@ -256,22 +258,28 @@ public class SocketChannelReader {
     try {
       return ois.readObject();
     } catch (ClassCastException e) {
-      log(Logger.SEVERE, "PANIC: Serialized message was not a pastry message!");
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Serialized message was not a pastry message!");
       throw new IOException("Message recieved " + o + " was not a pastry message - closing channel.");
     } catch (ClassNotFoundException e) {
-      log(Logger.SEVERE, "PANIC: Unknown class type in serialized message!");
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Unknown class type in serialized message!");
       throw new IOException("Unknown class type in message - closing channel.");
     } catch (InvalidClassException e) {
-      log(Logger.SEVERE, "PANIC: Serialized message was an invalid class! " + e.getMessage());
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Serialized message was an invalid class! " + e.getMessage());
       throw new IOException("Invalid class in message - closing channel.");
     } catch (IllegalStateException e) {
-      log(Logger.SEVERE, "PANIC: Serialized message caused an illegal state exception! " + e.getMessage());
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Serialized message caused an illegal state exception! " + e.getMessage());
       throw new IOException("Illegal state from deserializing message - closing channel.");
     } catch (NullPointerException e) {
-      log(Logger.SEVERE, "PANIC: Serialized message caused a null pointer exception! " + e.getMessage());
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Serialized message caused a null pointer exception! " + e.getMessage());
       return null;
     } catch (Exception e) {
-      log(Logger.SEVERE, "PANIC: Serialized message caused exception! " + e.getMessage());
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Serialized message caused exception! " + e.getMessage());
       throw new IOException("Exception from deserializing message - closing channel.");
     }
   }

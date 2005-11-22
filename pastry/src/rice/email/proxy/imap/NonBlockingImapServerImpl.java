@@ -15,7 +15,6 @@ import java.nio.channels.*;
 
 public class NonBlockingImapServerImpl extends SelectionKeyHandler implements ImapServer {
   
-  boolean log;
   boolean quit = false;
   int port;
   
@@ -32,7 +31,9 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
   
   InetAddress localHost;
   
-  public NonBlockingImapServerImpl(InetAddress bindAddress, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, boolean log, Environment env) throws IOException {
+  Logger logger;
+  
+  public NonBlockingImapServerImpl(InetAddress bindAddress, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
     this.environment = env;
     this.localHost = bindAddress;
     this.acceptNonLocal = acceptNonLocal;
@@ -41,7 +42,7 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
     this.email = email;
     this.manager = manager;
     this.workspace = new InMemoryWorkspace();
-    this.log = log;
+    logger = environment.getLogManager().getLogger(NonBlockingImapServerImpl.class, null);
 
     initialize();
   }
@@ -69,7 +70,7 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
         try {
           environment.getSelectorManager().register(channel, NonBlockingImapServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
-          environment.getLogManager().getLogger(NonBlockingImapServerImpl.class, null).logException(Logger.WARNING,
+          if (logger.level <= Logger.WARNING) logger.logException(
               "ERROR creating IMAP server socket key " , e);
         }
       }
@@ -80,7 +81,7 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
     try {
       final Socket socket = ((SocketChannel) ((ServerSocketChannel) key.channel()).accept()).socket();
       
-      environment.getLogManager().getLogger(NonBlockingImapServerImpl.class, null).log(Logger.INFO,
+      if (logger.level <= Logger.INFO) logger.log(
           "Accepted connection from " + socket.getInetAddress());
       
       if (acceptNonLocal || gateway || socket.getInetAddress().isLoopbackAddress() ||
@@ -91,7 +92,7 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
               ParserImapHandler handler = new ParserImapHandler(getLocalHost(), manager, workspace, environment);
               handler.handleConnection(socket, environment);
             } catch (IOException e) {
-              environment.getLogManager().getLogger(NonBlockingImapServerImpl.class, null).logException(Logger.WARNING,
+              if (logger.level <= Logger.WARNING) logger.logException(
                   "IOException occurred during handling of connection - " , e);
             }
           }
@@ -99,8 +100,8 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
         
         thread.start();
       } else {
-        environment.getLogManager().getLogger(NonBlockingImapServerImpl.class, null).log(Logger.WARNING,
-        "Connection not local - aborting");
+        if (logger.level <= Logger.WARNING) logger.log(
+          "Connection not local - aborting");
         
         OutputStream o = socket.getOutputStream();
         PrintWriter out = new PrintWriter(o, true);
@@ -110,7 +111,7 @@ public class NonBlockingImapServerImpl extends SelectionKeyHandler implements Im
         socket.close();
       }
     } catch (IOException e) {
-      environment.getLogManager().getLogger(NonBlockingImapServerImpl.class, null).logException(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.logException(
           "IOException occurred during accepting of connection - " , e);
     }
   }

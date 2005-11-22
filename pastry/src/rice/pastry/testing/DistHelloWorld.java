@@ -47,6 +47,7 @@ public class DistHelloWorld {
   public static int protocol = DistPastryNodeFactory.PROTOCOL_DEFAULT;
 
   public Environment environment;
+  
   /**
    * Constructor
    */
@@ -55,7 +56,7 @@ public class DistHelloWorld {
     factory = DistPastryNodeFactory.getFactory(new IPNodeIdFactory(InetAddress.getLocalHost(), port, env),
         protocol, port, env);
     pastryNodes = new Vector();
-    helloClients = new Vector();
+    helloClients = new Vector();    
   }
 
   /**
@@ -199,8 +200,7 @@ public class DistHelloWorld {
 
     HelloWorldApp app = new HelloWorldApp(pn);
     helloClients.addElement(app);
-    pn.getEnvironment().getLogManager().getLogger(DistHelloWorld.class, null).log(Logger.INFO, 
-        "created " + pn);
+    System.out.println("created " + pn);
     return pn;
   }
 
@@ -249,8 +249,7 @@ public class DistHelloWorld {
       }
     }
 
-    env.getLogManager().getLogger(DistHelloWorld.class, null).log(Logger.INFO, 
-        numnodes + " nodes constructed");
+    System.out.println(numnodes + " nodes constructed");
 
     for (int i = 0; i < nummsgs; i++) {
       for (int client = 0; client < driver.helloClients.size(); client++) {

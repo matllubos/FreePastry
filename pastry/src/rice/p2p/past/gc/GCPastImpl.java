@@ -113,7 +113,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void insert(final PastContent obj, final long expiration, Continuation command) {
-    log(Logger.FINE, "Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
+    if (logger.level <= Logger.FINE) logger.log( "Inserting data of class " + obj.getClass().getName() + " under " + obj.getId().toStringFull());
     
     doInsert(obj.getId(), new MessageBuilder() {
       public PastMessage buildMessage() {
@@ -168,7 +168,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param command Command to be performed when the result is received
    */
   public void refresh(final Id[] array, long[] expirations, Continuation command) {
-    log(Logger.FINE, "Refreshing " + array.length + " data elements");
+    if (logger.level <= Logger.FINE) logger.log( "Refreshing " + array.length + " data elements");
 
     GCIdSet set = new GCIdSet(realFactory);
     for (int i=0; i<array.length; i++)
@@ -194,7 +194,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    */
   protected void refresh(final GCIdSet ids, Continuation command) {
     final Logger logger = environment.getLogManager().getLogger(GCPastImpl.class, instance);
-    logger.log(Logger.FINE, "REFRESH: CALLED WITH "+ ids.numElements() + " ELEMENTS");
+    if (logger.level <= Logger.FINE) logger.log( "REFRESH: CALLED WITH "+ ids.numElements() + " ELEMENTS");
 
     if (ids.numElements() == 0) {
       command.receiveResult(new Object[0]);
@@ -203,7 +203,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
     
     final Id[] array = ids.asArray();
     GCId start = (GCId) array[0];
-    logger.log(Logger.FINE, "REFRESH: GETTINGS ALL HANDLES OF " + start);
+    if (logger.level <= Logger.FINE) logger.log( "REFRESH: GETTINGS ALL HANDLES OF " + start);
 
     
     sendRequest(start.getId(), new GCLookupHandlesMessage(getUID(), start.getId(), getLocalNodeHandle(), start.getId()), 
@@ -212,11 +212,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
         final NodeHandleSet set = (NodeHandleSet) o;
         final ReplicaMap map = new ReplicaMap();
 
-        logger.log(Logger.FINE, "REFRESH: GOT " + set + " SET OF HANDLES!");
+        if (logger.level <= Logger.FINE) logger.log( "REFRESH: GOT " + set + " SET OF HANDLES!");
         
         endpoint.process(new Executable() {
           public Object execute() {
-            logger.log(Logger.FINE, "REFRESH: ON PROCESSING THREAD!");
+            if (logger.level <= Logger.FINE) logger.log( "REFRESH: ON PROCESSING THREAD!");
 
             for (int i=0; i<array.length; i++) {
               GCId id = (GCId) array[i];
@@ -233,13 +233,13 @@ public class GCPastImpl extends PastImpl implements GCPast {
               }
             }
             
-            logger.log(Logger.FINE, "REFRESH: DONE WITH PROCESSING THREAD - MOVING TO NORMAL THREAD!");
+            if (logger.level <= Logger.FINE) logger.log( "REFRESH: DONE WITH PROCESSING THREAD - MOVING TO NORMAL THREAD!");
             
             return null;
           }
         }, new StandardContinuation(parent) {
           public void receiveResult(Object o) {
-            logger.log(Logger.FINE, "REFRESH: BACK ON NORMAL THREAD!");
+            if (logger.level <= Logger.FINE) logger.log( "REFRESH: BACK ON NORMAL THREAD!");
 
             final Iterator iterator = map.getReplicas();
             
@@ -248,20 +248,20 @@ public class GCPastImpl extends PastImpl implements GCPast {
                 if (iterator.hasNext()) {
                   NodeHandle next = (NodeHandle) iterator.next();
                   GCIdSet ids = map.getIds(next);
-                  logger.log(Logger.FINE, "REFRESH: SENDING REQUEST TO " + next + " FOR IDSET " + ids);
+                  if (logger.level <= Logger.FINE) logger.log( "REFRESH: SENDING REQUEST TO " + next + " FOR IDSET " + ids);
                   
                   
                   sendRequest(next, new GCRefreshMessage(getUID(), ids, getLocalNodeHandle(), next.getId()), 
                               new NamedContinuation("GCRefresh to " + next, this));
                 } else {
-                  logger.log(Logger.FINE, "REFRESH: DONE SENDING REQUESTS, RECURSING");
+                  if (logger.level <= Logger.FINE) logger.log( "REFRESH: DONE SENDING REQUESTS, RECURSING");
                   
                   refresh(ids, parent);
                 }
               }
               
               public void receiveException(Exception e) {
-                logger.log(Logger.FINE, "GOT EXCEPTION " + e + " REFRESHING ITEMS - CONTINUING");
+                if (logger.level <= Logger.FINE) logger.log( "GOT EXCEPTION " + e + " REFRESHING ITEMS - CONTINUING");
                 receiveResult(null);
               }
             };
@@ -363,7 +363,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
                   trash.getObject(id.getId(), new StandardContinuation(this) {
                     public void receiveResult(Object o) {
                       if ((o != null) && (o instanceof GCPastContent)) {
-                        environment.getLogManager().getLogger(GCPastImpl.class, instance).log(Logger.FINE, 
+                        if (logger.level <= Logger.FINE) logger.log( 
                             "GCREFRESH: Restoring object " + id + " from trash!");
                         GCPastContent content = (GCPastContent) o;
                         
@@ -394,7 +394,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
         set.removeHandle(getLocalNodeHandle().getId());
         set.putHandle(getLocalNodeHandle());
         
-        log(Logger.FINER, "Returning neighbor set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
+        if (logger.level <= Logger.FINER) logger.log( "Returning neighbor set " + set + " for lookup handles of id " + lmsg.getId() + " max " + lmsg.getMax() + " at " + endpoint.getId());
         getResponseContinuation(msg).receiveResult(set);
       } else if (msg instanceof GCCollectMessage) {
         // get all ids which expiration before now
@@ -413,7 +413,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
             GCPastContent content = (GCPastContent) o;
             
             if (content != null) {
-              log(Logger.FINE, "Retrieved data for fetch handles of id " + fmsg.getId());
+              if (logger.level <= Logger.FINE) logger.log( "Retrieved data for fetch handles of id " + fmsg.getId());
               GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(fmsg.getId());
               
               if (metadata != null) 
@@ -484,7 +484,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @param id The id to fetch
    */
   public void fetch(final Id id, NodeHandle hint, Continuation command) {
-    log(Logger.FINER, "Sending out replication fetch request for the id " + id);
+    if (logger.level <= Logger.FINER) logger.log( "Sending out replication fetch request for the id " + id);
     final GCId gcid = (GCId) id;
     
     if (gcid.getExpiration() < environment.getTimeSource().currentTimeMillis()) {
@@ -508,11 +508,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
       policy.fetch(gcid.getId(), hint, backup, this, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           if (o == null) {
-            log(Logger.WARNING, "Could not fetch id " + id + " - policy returned null in namespace " + instance);
+            if (logger.level <= Logger.WARNING) logger.log( "Could not fetch id " + id + " - policy returned null in namespace " + instance);
             parent.receiveResult(new Boolean(false));
           } else {
             GCPastContent content = (GCPastContent) o;
-            log(Logger.FINEST, "inserting replica of id " + id);
+            if (logger.level <= Logger.FINEST) logger.log( "inserting replica of id " + id);
             
             storage.getStorage().store(gcid.getId(), content.getMetadata(gcid.getExpiration()), content, parent);
           }

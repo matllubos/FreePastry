@@ -101,6 +101,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // whether or not we've resigned
   private boolean resigned;
   
+  protected Logger logger;
+
   
   /**
    * Constructs a new SocketManager.
@@ -119,6 +121,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     this.sockets = new Hashtable();
     this.sourceRouteQueue = new LinkedList();
     this.resigned = false;
+    this.logger = node.getEnvironment().getLogManager().getLogger(SocketChannelWriter.class, null);
     
     Parameters p = pastryNode.getEnvironment().getParameters();
     MAX_OPEN_SOCKETS = p.getInt("pastry_socket_scm_max_open_sockets");
@@ -132,7 +135,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     BACKOFF_LIMIT = p.getInt("pastry_socket_scm_backoff_limit");
 
     
-    log(Logger.FINE, "BINDING TO ADDRESS " + bindAddress + " AND CLAIMING " + localAddress);
+    if (logger.level <= Logger.FINE) logger.log("BINDING TO ADDRESS " + bindAddress + " AND CLAIMING " + localAddress);
     
     try {
       // bind to port
@@ -143,7 +146,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       this.key.interestOps(SelectionKey.OP_ACCEPT);
     } catch (IOException e) {
-      logException(Logger.WARNING,"ERROR creating server socket channel ",e);
+      if (logger.level <= Logger.WARNING) logger.logException("ERROR creating server socket channel ",e);
     }
   }  
   
@@ -198,7 +201,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    */
   protected void checkLiveness(SourceRoute path) {    
     if (! resigned) {
-      log(Logger.FINE, "CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
+      if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
       DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);
       ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + pastryNode.getEnvironment().getRandomSource().nextInt(PING_JITTER), PING_DELAY + pastryNode.getEnvironment().getRandomSource().nextInt(PING_JITTER));
       pingManager.ping(path, checker);
@@ -228,7 +231,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
     for (int i=0; i<routes.length; i++)
       if (routes[i].getLastHop().equals(address)) {
-        log(Logger.FINE, "WRITE_TIMER::Closing active socket to " + routes[i]);
+        if (logger.level <= Logger.FINE) logger.log("WRITE_TIMER::Closing active socket to " + routes[i]);
         ((SocketManager) sockets.get(routes[i])).close();
       }
   }
@@ -247,18 +250,18 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     if (! resigned) {
       synchronized (sockets) {
         if (! sockets.containsKey(path)) {
-          log(Logger.FINE, "(SCM) No connection open to path " + path + " - opening one");
+          if (logger.level <= Logger.FINE) logger.log("(SCM) No connection open to path " + path + " - opening one");
           openSocket(path, false);
         }
         
         if (sockets.containsKey(path)) {
-          log(Logger.FINE, "(SCM) Found connection open to path " + path + " - sending now");
+          if (logger.level <= Logger.FINE) logger.log("(SCM) Found connection open to path " + path + " - sending now");
           
           ((SocketManager) sockets.get(path)).send(message);
           socketUpdated(path);
           return true;
         } else {
-          log(Logger.WARNING, "(SCM) ERROR: Could not connect to remote address " + path + " delaying " + message);
+          if (logger.level <= Logger.WARNING) logger.log( "(SCM) ERROR: Could not connect to remote address " + path + " delaying " + message);
           return false;
         }
       }
@@ -280,7 +283,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     try {
       new SocketAccepter(key);
     } catch (IOException e) {
-      log(Logger.WARNING, "ERROR (accepting connection): " + e);
+      if (logger.level <= Logger.WARNING) logger.log( "ERROR (accepting connection): " + e);
     }
   }
 
@@ -298,7 +301,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           socketOpened(path, new SocketManager(path, bootstrap));
       }
     } catch (IOException e) {
-      logException(Logger.WARNING,"GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!",e);
+      if (logger.level <= Logger.WARNING) logger.logException("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!",e);
       closeSocket(path);
       manager.markDead(path);
     }
@@ -317,7 +320,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       if (sockets.containsKey(path)) {
         ((SocketManager) sockets.get(path)).shutdown();
       } else {
-        log(Logger.SEVERE, "(SCM) SERIOUS ERROR: Request to close socket to non-open handle to path " + path);
+        if (logger.level <= Logger.SEVERE) logger.log( "(SCM) SERIOUS ERROR: Request to close socket to non-open handle to path " + path);
       }
     }
   }
@@ -351,32 +354,32 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         sockets.put(path, manager);
         socketQueue.addFirst(path);
 
-        log(Logger.FINE, "(SCM) Recorded opening of socket to path " + path);
+        if (logger.level <= Logger.FINE) logger.log("(SCM) Recorded opening of socket to path " + path);
 
         if (sockets.size() > MAX_OPEN_SOCKETS) {
           //SourceRoute toClose = (SourceRoute) socketQueue.removeLast();
           SourceRoute toClose = getSocketToClose();
           socketQueue.remove(toClose);
           
-          log(Logger.FINE, "(SCM) Too many sockets open - closing currently unused socket to path " + toClose);
+          if (logger.level <= Logger.FINE) logger.log("(SCM) Too many sockets open - closing currently unused socket to path " + toClose);
           closeSocket(toClose);
         }
       } else {
-        log(Logger.WARNING, "(SCM) ERROR: Request to record path opening for already-open path " + path);
+        if (logger.level <= Logger.WARNING) logger.log( "(SCM) ERROR: Request to record path opening for already-open path " + path);
         String local = "" + localAddress.getAddress().getAddress().getHostAddress() + localAddress.getAddress().getPort();
         String remote = "" + path.getLastHop().getAddress().getAddress().getHostAddress() + path.getLastHop().getAddress().getPort();
 
-        log(Logger.FINE, "(SCM) RESOLVE: Comparing paths " + local + " and " + remote);
+        if (logger.level <= Logger.FINE) logger.log("(SCM) RESOLVE: Comparing paths " + local + " and " + remote);
 
         if (remote.compareTo(local) < 0) {
-          log(Logger.FINE, "(SCM) RESOLVE: Cancelling existing connection to " + path);
+          if (logger.level <= Logger.FINE) logger.log("(SCM) RESOLVE: Cancelling existing connection to " + path);
           SocketManager toClose = (SocketManager) sockets.get(path);
 
           socketClosed(path, toClose);
           socketOpened(path, manager);
           toClose.close();
         } else {
-          log(Logger.FINE, "(SCM) RESOLVE: Implicitly cancelling new connection to path " + path);
+          if (logger.level <= Logger.FINE) logger.log("(SCM) RESOLVE: Implicitly cancelling new connection to path " + path);
         } 
       }
     }
@@ -394,15 +397,15 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     synchronized (sockets) {
       if (sockets.containsKey(path)) {
         if (sockets.get(path) == manager) {
-          log(Logger.FINE, "(SCM) Recorded closing of socket to " + path);
+          if (logger.level <= Logger.FINE) logger.log("(SCM) Recorded closing of socket to " + path);
 
           socketQueue.remove(path);
           sockets.remove(path);
         } else {
-          log(Logger.FINE, "(SCM) SocketClosed called with corrent address, but incorrect manager - not a big deal.");
+          if (logger.level <= Logger.FINE) logger.log("(SCM) SocketClosed called with corrent address, but incorrect manager - not a big deal.");
         }
       } else {
-        log(Logger.SEVERE, "(SCM) SEROUS ERROR: Request to record socket closing for non-existant socket to path " + path);
+        if (logger.level <= Logger.SEVERE) logger.log( "(SCM) SEROUS ERROR: Request to record socket closing for non-existant socket to path " + path);
       }
     }
   }
@@ -420,7 +423,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         socketQueue.remove(path);
         socketQueue.addFirst(path);
       } else {
-        log(Logger.SEVERE, "(SCM) SERIOUS ERROR: Request to record update for non-existant socket to " + path);
+        if (logger.level <= Logger.SEVERE) logger.log( "(SCM) SERIOUS ERROR: Request to record update for non-existant socket to " + path);
       }
     }
   }
@@ -437,17 +440,17 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     if (! sourceRouteQueue.contains(manager)) {
       sourceRouteQueue.addFirst(manager);
       
-      log(Logger.FINE, "(SCM) Recorded opening of source route manager " + manager);
+      if (logger.level <= Logger.FINE) logger.log("(SCM) Recorded opening of source route manager " + manager);
       
       if (sourceRouteQueue.size() > MAX_OPEN_SOURCE_ROUTES) {
         SourceRouteManager toClose = (SourceRouteManager) sourceRouteQueue.removeLast();
-        log(Logger.FINE, "(SCM) Too many source routes open - closing source route manager " + toClose);
+        if (logger.level <= Logger.FINE) logger.log("(SCM) Too many source routes open - closing source route manager " + toClose);
 
         toClose.close();
         sourceRouteClosed(toClose);
       }
     } else {
-      log(Logger.FINE, "(SCM) ERROR: Request to record source route opening for already-open manager " + manager);
+      if (logger.level <= Logger.FINE) logger.log("(SCM) ERROR: Request to record source route opening for already-open manager " + manager);
       sourceRouteUpdated(manager);
     }
   }
@@ -464,9 +467,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     if (sourceRouteQueue.contains(manager)) {
       sourceRouteQueue.remove(manager);
       
-      log(Logger.FINE, "(SCM) Recorded closing of source route manager " + manager);      
+      if (logger.level <= Logger.FINE) logger.log("(SCM) Recorded closing of source route manager " + manager);      
     } else {
-      log(Logger.WARNING, "(SCM) ERROR: Request to record source route closing for unknown manager " + manager);
+      if (logger.level <= Logger.WARNING) logger.log( "(SCM) ERROR: Request to record source route closing for unknown manager " + manager);
     }
   }
 
@@ -482,23 +485,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       sourceRouteQueue.remove(manager);
       sourceRouteQueue.addFirst(manager);
     } else {
-      log(Logger.SEVERE, "(SCM) SERIOUS ERROR: Request to record update for unknown source route " + manager);
+      if (logger.level <= Logger.SEVERE) logger.log( "(SCM) SERIOUS ERROR: Request to record update for unknown source route " + manager);
     }
   }
 
-  /**
-   * Method which prints out debugging information
-   *
-   * @param s The string to print
-   */
-  private void log(int level, String s) {
-    pastryNode.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null).log(level,s);
-  }
-  
-  private void logException(int level, String s, Exception e) {
-    pastryNode.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null).logException(level,s,e);
-  }
-  
   /**
    * Makes this node resign from the network.  Is designed to be used for
    * debugging and testing.
@@ -600,7 +590,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void run() {
       if (! sendInternal(route, message)) {
-        log(Logger.FINE, "BACKOFF: Could not send message " + message + " after " + tries + " timeout " + timeout + " retries - retrying.");
+        if (logger.level <= Logger.FINE) logger.log("BACKOFF: Could not send message " + message + " after " + tries + " timeout " + timeout + " retries - retrying.");
 
         if (tries < BACKOFF_LIMIT) {
           tries++;
@@ -608,10 +598,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           
           pastryNode.getTimer().schedule(this, timeout);
         } else {
-          log(Logger.WARNING, "WARNING: Could not send message " + message + " after " + tries + " retries.  Dropping on the floor.");
+          if (logger.level <= Logger.WARNING) logger.log( "WARNING: Could not send message " + message + " after " + tries + " retries.  Dropping on the floor.");
         } 
       } else {
-        log(Logger.FINE, "BACKOFF: Was able to send message " + message + " after " + tries + " timeout " + timeout + " retries.");
+        if (logger.level <= Logger.FINE) logger.log("BACKOFF: Was able to send message " + message + " after " + tries + " timeout " + timeout + " retries.");
       }
     }
   }
@@ -641,7 +631,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param mgr DESCRIBE THE PARAMETER
      */
     public DeadChecker(SourceRoute path, int numTries) {
-      log(Logger.FINE, "DeadChecker(" + path + ") started.");
+      if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + path + ") started.");
 
       this.path = path;
       this.numTries = numTries;
@@ -655,7 +645,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param timeHeardFrom DESCRIBE THE PARAMETER
      */
     public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom) {
-      log(Logger.FINE, "Terminated DeadChecker(" + path + ") due to ping.");
+      if (logger.level <= Logger.FINE) logger.log("Terminated DeadChecker(" + path + ") due to ping.");
       manager.markAlive(path);
       cancel();
     }
@@ -671,7 +661,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         
         pingManager.ping(path, this);
       } else {
-        log(Logger.FINE, "DeadChecker(" + path + ") expired - marking as dead.");
+        if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + path + ") expired - marking as dead.");
         manager.markDead(path);
         cancel();
       }
@@ -744,7 +734,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.writer = new SocketChannelWriter(pastryNode, path);
       this.bootstrap = bootstrap;
       
-      log(Logger.FINE, "Opening connection with path " + path);
+      if (logger.level <= Logger.FINE) logger.log("Opening connection with path " + path);
       
       // build the entire connection
       createConnection(path);
@@ -767,17 +757,17 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown() {
       try {
-        log(Logger.FINE, "Shutting down output on connection with path " + path);
+        if (logger.level <= Logger.FINE) logger.log("Shutting down output on connection with path " + path);
         
         if (channel != null)
           channel.socket().shutdownOutput();
         else
-          log(Logger.SEVERE, "ERROR: Unable to shutdown output on channel; channel is null!");
+          if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
 
         socketClosed(path, this);
         pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
       } catch (IOException e) {
-        log(Logger.SEVERE, "ERROR: Received exception " + e + " while shutting down output.");
+        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Received exception " + e + " while shutting down output.");
         close();
       }
     }
@@ -788,7 +778,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void close() {
       try {
-        log(Logger.FINE, "Closing connection with path " + path);
+        if (logger.level <= Logger.FINE) logger.log("Closing connection with path " + path);
         
         clearTimer();
         
@@ -825,7 +815,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           path = null;
         }
       } catch (IOException e) {
-        log(Logger.SEVERE, "ERROR: Recevied exception " + e + " while closing socket!");
+        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
       }
     }
 
@@ -874,9 +864,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
         manager.markAlive(path);
 
-        log(Logger.FINE, "(SM) Found connectable channel - completed connection");
+        if (logger.level <= Logger.FINE) logger.log("(SM) Found connectable channel - completed connection");
       } catch (Exception e) {
-        logException(Logger.FINE,"(SM) Unable to connect to path " + path + " (" + e + ") marking as dead.",e);
+        if (logger.level <= Logger.FINE) logger.logException(
+            "(SM) Unable to connect to path " + path + " (" + e + ") marking as dead.",e);
         manager.markDead(path);
 
         close();
@@ -893,7 +884,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         Object o = reader.read(channel);
 
         if (o != null) {
-          log(Logger.FINE, "(SM) Read message " + o + " from socket.");
+          if (logger.level <= Logger.FINE) logger.log("(SM) Read message " + o + " from socket.");
           if (o instanceof SourceRoute) {
             if (this.path == null) {
               this.path = (SourceRoute) o;
@@ -902,16 +893,16 @@ public class SocketCollectionManager extends SelectionKeyHandler {
               this.writer.setPath(this.path);
               this.reader.setPath(this.path.reverse());
 
-              log(Logger.FINE, "Read open connection with path " + this.path);              
+              if (logger.level <= Logger.FINE) logger.log("Read open connection with path " + this.path);              
             } else {
-              log(Logger.SEVERE, "SERIOUS ERROR: Received duplicate path assignments: " + this.path + " and " + o);
+              if (logger.level <= Logger.SEVERE) logger.log( "SERIOUS ERROR: Received duplicate path assignments: " + this.path + " and " + o);
             }
           } else {
             receive((Message) o);
           }
         }
       } catch (IOException e) {
-        log(Logger.FINE, "(SM) WARNING " + e + " reading - cancelling.");        
+        if (logger.level <= Logger.FINE) logger.log("(SM) WARNING " + e + " reading - cancelling.");        
         
         // if it's not a bootstrap path, and we didn't close this socket's output,
         // then check to see if the remote address is dead or just closing a socket
@@ -941,7 +932,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           setTimer();
         }
       } catch (IOException e) {
-        log(Logger.WARNING, "(SM) ERROR " + e + " writing - cancelling.");
+        if (logger.level <= Logger.WARNING) logger.log( "(SM) ERROR " + e + " writing - cancelling.");
         close();
       }
     }
@@ -957,7 +948,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, 0);
       this.key.interestOps(SelectionKey.OP_READ);
       
-      log(Logger.FINE, "(SM) Accepted connection from " + channel.socket().getRemoteSocketAddress());
+      if (logger.level <= Logger.FINE) logger.log("(SM) Accepted connection from " + channel.socket().getRemoteSocketAddress());
     }
 
     /**
@@ -974,7 +965,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.channel.configureBlocking(false);
       this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       
-      log(Logger.FINE, "(SM) Initiating socket connection to path " + path);
+      if (logger.level <= Logger.FINE) logger.log("(SM) Initiating socket connection to path " + path);
 
       if (this.channel.connect(path.getFirstHop().getAddress())) 
         this.key.interestOps(SelectionKey.OP_READ);
@@ -1001,7 +992,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       } else {
         long start = pastryNode.getEnvironment().getTimeSource().currentTimeMillis();
         pastryNode.receiveMessage(message);
-        log(Logger.FINER, "ST: " + (pastryNode.getEnvironment().getTimeSource().currentTimeMillis() - start) + " deliver of " + message);
+        if (logger.level <= Logger.FINER) logger.log( "ST: " + (pastryNode.getEnvironment().getTimeSource().currentTimeMillis() - start) + " deliver of " + message);
       }
     }
     
@@ -1012,7 +1003,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       if (this.timer == null) {
         this.timer = new rice.selector.TimerTask() {
           public void run() {
-            log(Logger.FINE, "WRITE_TIMER::Timer expired, checking liveness...");
+            if (logger.level <= Logger.FINE) logger.log("WRITE_TIMER::Timer expired, checking liveness...");
             manager.checkLiveness(path.getLastHop());
           }
         };
@@ -1087,14 +1078,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     protected void addInterestOp(SelectableChannel channel, int op) throws IOException {
       String k = (channel == channel1 ? "1" : "2");
-      log(Logger.FINER, "(SRM) " + this + "   adding interest op " + op + " to key " + k);
+      if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   adding interest op " + op + " to key " + k);
 
       if (pastryNode.getEnvironment().getSelectorManager().getKey(channel) == null) {
-        log(Logger.FINER, "(SRM) " + this + "   key " + k + " is null - reregistering with ops " + op);
+        if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   key " + k + " is null - reregistering with ops " + op);
         pastryNode.getEnvironment().getSelectorManager().register(channel, this, op);
       } else {
         pastryNode.getEnvironment().getSelectorManager().register(channel, this, pastryNode.getEnvironment().getSelectorManager().getKey(channel).interestOps() | op);
-        log(Logger.FINER, "(SRM) " + this + "   interest ops for key " + k + " are now " + pastryNode.getEnvironment().getSelectorManager().getKey(channel).interestOps());
+        if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   interest ops for key " + k + " are now " + pastryNode.getEnvironment().getSelectorManager().getKey(channel).interestOps());
       }
     }
     
@@ -1109,7 +1100,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     protected void removeInterestOp(SelectableChannel channel, int op) throws IOException {
       String k = (channel == channel1 ? "1" : "2");
-      log(Logger.FINER, "(SRM) " + this + "   removing interest op " + op + " from key " + k);
+      if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   removing interest op " + op + " from key " + k);
 
       SelectionKey key = pastryNode.getEnvironment().getSelectorManager().getKey(channel);
       
@@ -1117,7 +1108,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         key.interestOps(key.interestOps() & ~op);
       
         if (key.interestOps() == 0) {
-          log(Logger.FINER, "(SRM) " + this + "   key " + k + " has no interest ops - cancelling");
+          if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   key " + k + " has no interest ops - cancelling");
           pastryNode.getEnvironment().getSelectorManager().cancel(key);
         }
       }
@@ -1130,11 +1121,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void shutdown(SocketChannel channel) {
       try {
-        log(Logger.FINE, "(SRM) " + this + " shutting down output to key " + (channel == channel1 ? "1" : "2"));
+        if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " shutting down output to key " + (channel == channel1 ? "1" : "2"));
         channel.socket().shutdownOutput();
         sourceRouteClosed(this);
       } catch (IOException e) {
-        log(Logger.SEVERE, "ERROR: Received exception " + e + " while shutting down SR output.");
+        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Received exception " + e + " while shutting down SR output.");
         close();
       }
     }
@@ -1144,7 +1135,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * cancelling the key and setting the key to be interested in nothing
      */
     public void close() {
-      log(Logger.FINE, "(SRM) " + this + " closing source route");
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " closing source route");
       
       try {
         if (channel1 != null) {
@@ -1167,7 +1158,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         
         sourceRouteClosed(this);
       } catch (IOException e) {
-        log(Logger.WARNING, "ERROR: Recevied exception " + e + " while closing intermediateSourceRoute!");
+        if (logger.level <= Logger.WARNING) logger.log( "ERROR: Recevied exception " + e + " while closing intermediateSourceRoute!");
       }
     }
     
@@ -1179,16 +1170,16 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The key which is connectable.
      */
     public void connect(SelectionKey key) {
-      log(Logger.FINE, "(SRM) " + this + " connecting to key " + (key.channel() == channel1 ? "1" : "2"));
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " connecting to key " + (key.channel() == channel1 ? "1" : "2"));
       
       try {
         // deregister interest in connecting to this socket
         if (((SocketChannel) key.channel()).finishConnect()) 
           removeInterestOp(key.channel(), SelectionKey.OP_CONNECT);
         
-        log(Logger.FINE, "(SRM) Found connectable source route channel - completed connection");
+        if (logger.level <= Logger.FINE) logger.log("(SRM) Found connectable source route channel - completed connection");
       } catch (IOException e) {
-        log(Logger.WARNING, "(SRM) Got exception " + e + " on connect - killing off source route");
+        if (logger.level <= Logger.WARNING) logger.log( "(SRM) Got exception " + e + " on connect - killing off source route");
         
         close();
       }
@@ -1201,7 +1192,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void read(SelectionKey key) {
       String k = (key.channel() == channel1 ? "1" : "2");
-      log(Logger.FINE, "(SRM) " + this + " reading from key " + k + " " + key.interestOps());
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " reading from key " + k + " " + key.interestOps());
       
       try {        
         try {
@@ -1210,14 +1201,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
             removeInterestOp(key.channel(), SelectionKey.OP_READ);
           }
 
-          log(Logger.FINE, "(SRM) " + this + " done reading from key " + k);
+          if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " done reading from key " + k);
         } catch (ClosedChannelException e) {
-          log(Logger.FINE, "(SRM) " + this + " reading from key " + k + " returned -1 - processing shutdown");
+          if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " reading from key " + k + " returned -1 - processing shutdown");
           
           // then determine if the sockets are now completely shut down,
           // or if only half is now closed
           if (otherChannel(key.channel()).socket().isInputShutdown()) {
-            log(Logger.FINE, "(SRM) " + this + " other key is shut down - closing");
+            if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " other key is shut down - closing");
             close();
           } else {
             // first, deregister in reading and writing to the appropriate sockets
@@ -1225,12 +1216,13 @@ public class SocketCollectionManager extends SelectionKeyHandler {
             removeInterestOp(key.channel(), SelectionKey.OP_READ);
             removeInterestOp(otherChannel(key.channel()), SelectionKey.OP_WRITE);
 
-            log(Logger.FINE, "(SRM) " + this + " other key not yet closed - shutting it down");
+            if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " other key not yet closed - shutting it down");
             shutdown(otherChannel(key.channel()));
           }
         }
       } catch (IOException e) {
-        logException(Logger.FINE,"(SRM) ERROR " + e + " reading source route - cancelling.",e);
+        if (logger.level <= Logger.FINE) logger.logException(
+            "(SRM) ERROR " + e + " reading source route - cancelling.",e);
         close();
       }
     }
@@ -1242,7 +1234,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public synchronized void write(SelectionKey key) { 
       String k = (key.channel() == channel1 ? "1" : "2");
-      log(Logger.FINER, "(SRM) " + this + " writing to key " + k + " " + key.interestOps());
+      if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + " writing to key " + k + " " + key.interestOps());
 
       try {        
         if (repeater.write((SocketChannel) key.channel())) {
@@ -1250,9 +1242,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           removeInterestOp(key.channel(), SelectionKey.OP_WRITE);
         }
         
-        log(Logger.FINER, "(SRM) " + this + " done writing to key " + k);
+        if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + " done writing to key " + k);
       } catch (IOException e) {
-        log(Logger.WARNING, "ERROR " + e + " writing source route - cancelling.");
+        if (logger.level <= Logger.WARNING) logger.log( "ERROR " + e + " writing source route - cancelling.");
         close();
       }
     }
@@ -1264,9 +1256,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @exception IOException DESCRIBE THE EXCEPTION
      */
     protected void acceptConnection(SelectionKey key) throws IOException {   
-      log(Logger.FINE, "(SRM) " + this + " accepted connection for key 1 as " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " accepted connection for key 1 as " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
 
-      log(Logger.FINE, "(SRM) Accepted source route connection from " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
+      if (logger.level <= Logger.FINE) logger.log("(SRM) Accepted source route connection from " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
       
       pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
       this.channel1 = (SocketChannel) key.channel();
@@ -1279,14 +1271,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @exception IOException DESCRIBE THE EXCEPTION
      */
     protected void createConnection(final EpochInetSocketAddress address) throws IOException {  
-      log(Logger.FINE, "(SRM) " + this + " creating connection for key 2 as " + address.getAddress());
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " creating connection for key 2 as " + address.getAddress());
 
       channel2 = SocketChannel.open();
       channel2.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
       channel2.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
       channel2.configureBlocking(false);
       
-      log(Logger.FINE, "(SRM) " + "Initiating source route connection to " + address);
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + "Initiating source route connection to " + address);
       
       boolean done = channel2.connect(address.getAddress());
 
@@ -1295,7 +1287,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       else 
         pastryNode.getEnvironment().getSelectorManager().register(channel2, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
       
-      log(Logger.FINE, "(SRM) " + this + "   setting initial ops to " + SelectionKey.OP_READ + " for key 2");
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + "   setting initial ops to " + SelectionKey.OP_READ + " for key 2");
     }    
   }
   
@@ -1341,7 +1333,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           key = null;
         }
       } catch (IOException e) {
-        log(Logger.WARNING, "(SA) " + "ERROR: Recevied exception " + e + " while closing just accepted socket!");
+        if (logger.level <= Logger.WARNING) logger.log( "(SA) " + "ERROR: Recevied exception " + e + " while closing just accepted socket!");
       }
     }
     
@@ -1354,7 +1346,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       try {
         int read = ((SocketChannel) key.channel()).read(buffer);
         
-        log(Logger.FINE, "(SA) Read " + read + " bytes from newly accepted connection.");
+        if (logger.level <= Logger.FINE) logger.log("(SA) Read " + read + " bytes from newly accepted connection.");
         
         // implies that the channel is closed
         if (read == -1) 
@@ -1363,7 +1355,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         if (buffer.remaining() == 0) 
           processBuffer();
       } catch (IOException e) {
-        log(Logger.FINE, "(SA) ERROR " + e + " reading source route - cancelling.");
+        if (logger.level <= Logger.FINE) logger.log("(SA) ERROR " + e + " reading source route - cancelling.");
         close();
       }
     }
@@ -1380,7 +1372,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
       channel.configureBlocking(false);
       
-      log(Logger.FINE, "(SA) " + "Accepted incoming connection from " + channel.socket().getRemoteSocketAddress());
+      if (logger.level <= Logger.FINE) logger.log("(SA) " + "Accepted incoming connection from " + channel.socket().getRemoteSocketAddress());
       
       key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, SelectionKey.OP_READ);
     }
@@ -1405,8 +1397,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       } else if (Arrays.equals(array, HEADER_SOURCE_ROUTE)) {
         new SourceRouteManager(key);
       } else {
-        log(Logger.WARNING, "ERROR: Improperly formatted header received accepted connection - ignoring.");
-        log(Logger.WARNING, "READ " + array[0] + " " + array[1] + " " + array[2] + " " + array[3]);
+        if (logger.level <= Logger.WARNING) logger.log( "ERROR: Improperly formatted header received accepted connection - ignoring.");
+        if (logger.level <= Logger.WARNING) logger.log( "READ " + array[0] + " " + array[1] + " " + array[2] + " " + array[3]);
         throw new IOException("Improperly formatted header received - unknown header.");
       }
     }    

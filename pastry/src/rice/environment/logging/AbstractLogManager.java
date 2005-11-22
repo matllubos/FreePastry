@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
-import java.util.Hashtable;
+import java.util.*;
 
 import javax.swing.text.DateFormatter;
 
@@ -29,12 +29,20 @@ public abstract class AbstractLogManager implements LogManager {
   protected Hashtable loggers;
   protected Parameters params;
   
-  protected Logger defaultLogger;
-  
   protected TimeSource time;
   protected PrintStream ps;
   protected String prefix;
   protected String dateFormat;
+  
+  /**
+   * the "default" log level
+   */
+  int globalLogLevel;
+
+  /**
+   * If we only want package level granularity.
+   */
+  protected boolean packageOnly = true;
   
   protected boolean enabled;
   private PrintStream nullPrintStream;
@@ -56,20 +64,49 @@ public abstract class AbstractLogManager implements LogManager {
     }
 
     this.enabled = params.getBoolean("logging_enable");
+    if (params.contains("logging_packageOnly")) {
+      this.packageOnly = params.getBoolean("logging_packageOnly");
+    }
     this.nullPrintStream = new PrintStream(new NullOutputStream());
 
     this.loggers = new Hashtable();
-    this.defaultLogger = constructLogger("",parseVal("loglevel"));
+    this.globalLogLevel = parseVal("loglevel");
 
     params.addChangeListener(new ParameterChangeListener() {
 	    public void parameterChange(String paramName, String newVal) {
 	      if (paramName.equals("logging_enable")) {
 	        enabled = Boolean.getBoolean(newVal);
-	      } else if (paramName.equals("loglevel")) {
-	        ((LogLevelSetter)defaultLogger).setMinLogLevel(parseVal(paramName));
+	      } else if (paramName.equals("loglevel")) {            
+            synchronized(this) {
+              // iterate over all loggers, if they are default loggers,
+              // set the level
+              globalLogLevel = parseVal(paramName);
+              Iterator i = loggers.values().iterator();
+              while(i.hasNext()) {
+                HeirarchyLogger hl = (HeirarchyLogger)i.next();
+                if (hl.useDefault) {
+                  hl.level = globalLogLevel; 
+                }
+              }
+            } // synchronized
 	      } else if (paramName.endsWith("_loglevel")) {
-	        if (loggers.contains(paramName)) {
-	          ((LogLevelSetter)loggers.get(paramName)).setMinLogLevel(parseVal(paramName));
+            if (newVal.equals("")) {
+              // parameter "removed" 
+              // a) set the logger to use defaultlevel, 
+              // b) set the level 
+              if (loggers.contains(paramName)) { // perhaps we haven't even created such a logger yet
+                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(paramName);
+                hl.useDefault = true;
+                hl.level = globalLogLevel;
+              }
+            } else {
+              // a) set the logger to not use the defaultlevel, 
+              // b) set the level 
+              if (loggers.contains(paramName)) { // perhaps we haven't even created such a logger yet
+                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(paramName);
+                hl.useDefault = false;
+                hl.level = parseVal(paramName);
+              }
 	        }
 	      }
 	    }
@@ -99,10 +136,44 @@ public abstract class AbstractLogManager implements LogManager {
    * 
    */
   public Logger getLogger(Class clazz, String instance) {
-    Logger temp; 
-    String baseStr;
+    // first we want to get the logger name
+    String loggerName;
     String className = clazz.getName();
-    String[] parts = className.split("\\.");
+    String[] parts = null;
+    if (packageOnly) {
+      // builds loggername = just the package
+      parts = className.split("\\.");
+      loggerName = parts[0];
+      // the "-1" cuts off the class part of the full package name
+      for (int curPart = 1; curPart < parts.length-1; curPart++) {
+        loggerName+="."+parts[curPart];   
+      }            
+    } else {
+      // loggerName is the className
+      loggerName = className;
+    }
+    
+    if (instance != null) {
+      loggerName = loggerName+":"+instance;
+    }
+    
+    // see if this logger exists
+    if (loggers.contains(loggerName)) {
+      return (Logger)loggers.get(loggerName);
+    }
+    
+    // OPTIMIZATION: parts is only built if needed, and it may have been needed earlier, or it may not have been
+    if (parts == null) parts = className.split("\\.");
+    
+    // at this point we know we are going to have to build a logger.  We need to
+    // figure out what level to initiate it with.
+    
+    
+    
+    int level = globalLogLevel;
+    boolean useDefault = true;    
+    
+    String baseStr;
     
     // Ex: if clazz.getName() == rice.pastry.socket.PingManager, try:
     // 1) rice.pastry.socket.PingManager
@@ -110,53 +181,49 @@ public abstract class AbstractLogManager implements LogManager {
     // 3) rice.pastry
     // 4) rice
     
+    int lastPart = parts.length;
+    
+    // this strips off the ClassName from the package
+    if (packageOnly) lastPart--;
+    
     // numParts is how much of the prefix we want to use, start with the full name    
-    for (int numParts = parts.length; numParts >= 0; numParts--) {     
+    for (int numParts = lastPart; numParts >= 0; numParts--) {     
+      
       // build baseStr which is the prefix of the clazz up to numParts
       baseStr = parts[0];
       for (int curPart = 1; curPart < numParts; curPart++) {
         baseStr+="."+parts[curPart];   
       }
       
+      
       // try to find one matching a specific instance
       if (instance != null) {            
-        temp = getLoggerHelper(baseStr+":"+instance);
-        if (temp != null) return temp;
+        String searchString = baseStr+":"+instance+"_loglevel";
+        // see if this logger should exist
+        if (params.contains(searchString)) {
+          level = parseVal(searchString);
+          useDefault = false;
+          break;
+        }
       }
       
-      // try to find one without the instance
-      temp = getLoggerHelper(baseStr);
-      if (temp != null) return temp;
+      String searchString = baseStr+"_loglevel";
+      if (params.contains(searchString)) {
+        level = parseVal(searchString);
+        useDefault = false;
+        break;
+      }
     }
-    return defaultLogger;
+    
+    
+    // at this point, we didn't find anything that matched, so now return a logger
+    // that has the established level
+    Logger logger = constructLogger(loggerName, level, useDefault);     
+    loggers.put(clazz, logger);
+    return logger;
   }
 
-  /**
-   * Searches the loggers HT for the searchString, then searches
-   * the params for the search string.
-   * 
-   * @param clazz
-   * @param instance
-   * @return
-   */
-  private Logger getLoggerHelper(String clazz) {
-    String searchString = clazz+"_loglevel";
-    
-    // see if this logger exists
-    if (loggers.contains(searchString)) {
-      return (Logger)loggers.get(searchString);
-    }
-    
-    // see if this logger should exist
-    if (params.contains(searchString)) {
-      Logger logger = constructLogger(clazz, parseVal(searchString));     
-      loggers.put(clazz, logger);
-      return logger;
-    }
-    return null;
-  }
-  
-  protected abstract Logger constructLogger(String clazz, int level);
+  protected abstract Logger constructLogger(String clazz, int level, boolean useDefault);
 
   public TimeSource getTimeSource() {
     return time;

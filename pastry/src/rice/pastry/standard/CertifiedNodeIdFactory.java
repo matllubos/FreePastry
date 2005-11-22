@@ -34,12 +34,16 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
   protected IPNodeIdFactory realFactory;
 
   protected Environment environment;
+  
+  protected Logger logger;
+  
   /**
    * Constructor.
    */
   public CertifiedNodeIdFactory(InetAddress localIP, int port, Environment env) {
     this.environment = env;
     this.port = port;
+    this.logger = environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null);
     this.realFactory = new IPNodeIdFactory(localIP, port, env);
   }
   
@@ -64,15 +68,15 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
         xois = new XMLObjectInputStream(new FileInputStream(f));
         return (NodeId) xois.readObject();
       } else {
-        environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).log(Logger.WARNING,
+        if (logger.level <= Logger.WARNING) logger.log(
           "Unable to find NodeID certificate - exiting.");
         throw new RuntimeException("Unable to find NodeID certificate - make sure that the NodeID certificate file '" + NODE_ID_FILENAME + "' exists in your ePOST directory.");
       }
     } catch (IOException e) {
-      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,"",e);
+      if (logger.level <= Logger.WARNING) logger.logException("",e);
       throw new RuntimeException(e);
     } catch (ClassNotFoundException e) {
-      environment.getLogManager().getLogger(CertifiedNodeIdFactory.class,null).logException(Logger.WARNING,"",e);
+      if (logger.level <= Logger.WARNING) logger.logException("",e);
       throw new RuntimeException(e);
     } finally {
       try {

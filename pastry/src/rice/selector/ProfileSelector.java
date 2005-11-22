@@ -249,7 +249,7 @@ public class ProfileSelector extends SelectorManager {
 //        }
         lastTaskType = "Invocation Complete";
       } catch (Exception e) {
-        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "Invoking runnable caused exception " + e + " - continuing",e);
       }
     }
@@ -287,7 +287,7 @@ public class ProfileSelector extends SelectorManager {
         addStat(run.getClass().getName(),time);        
         lastTaskType = "Invocation Complete";
       } catch (Exception e) {
-        log.getLogger(SelectorManager.class, null).logException(Logger.SEVERE, 
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "Invoking runnable caused exception " + e + " - continuing",e);
       }
       

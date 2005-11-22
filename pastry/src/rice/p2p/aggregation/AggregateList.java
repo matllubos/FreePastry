@@ -26,6 +26,7 @@ public class AggregateList {
   protected long nextSerial;
   protected String instance;
   protected Environment environment;
+  protected Logger logger;
 
   public AggregateList(String configFileName, String label, IdFactory factory, boolean loggingEnabled, String instance, Environment env) throws IOException {
     this.instance = instance;
@@ -36,6 +37,7 @@ public class AggregateList {
     this.rootKey = null;
     this.nextSerial = 0;
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(AggregateList.class, instance);
     this.wasReadOK = readFromDisk();
     this.loggingEnabled = loggingEnabled;
     this.logFileName = configFileName + ".log";
@@ -89,16 +91,19 @@ public class AggregateList {
           throw new AggregationException("Entries "+nextSerial+".."+(thisSerial-1)+" missing from log... cannot recover!");
         
         if (thisSerial == nextSerial) {
-          log(Logger.FINE, "Replaying log entry #"+thisSerial);
+          if (logger.level <= Logger.FINE) logger.log(
+              "Replaying log entry #"+thisSerial);
           entriesReplayed ++;
         
           if (parts[3].equals("setRoot")) {
             if (parts[4].equals("null")) {
               rootKey = null;
-              log(Logger.FINER, "  - rootKey = null");
+              if (logger.level <= Logger.FINER) logger.log(
+                "  - rootKey = null");
             } else {
               rootKey = factory.buildIdFromToString(parts[4]);
-              log(Logger.FINER, "  - rootKey = "+rootKey.toStringFull());
+              if (logger.level <= Logger.FINE) logger.log(
+                  "  - rootKey = "+rootKey.toStringFull());
             }
             
           } else if (parts[3].equals("setAL")) {
@@ -108,7 +113,8 @@ public class AggregateList {
             if (adc == null)
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
             adc.currentLifetime = lifetime;
-            log(Logger.FINER, "  - lifetime="+lifetime+" in ADC "+adcKey.toStringFull());
+            if (logger.level <= Logger.FINER) logger.log(
+                "  - lifetime="+lifetime+" in ADC "+adcKey.toStringFull());
             
           } else if (parts[3].equals("setOCL")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -120,7 +126,8 @@ public class AggregateList {
             if (adc.objects.length <= index)
               throw new AggregationException("Object index mismatch ("+index+"/"+adc.objects.length+"): "+line);
             adc.objects[index].currentLifetime = lifetime;
-            log(Logger.FINER, "  - currentLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
+            if (logger.level <= Logger.FINER) logger.log(
+                "  - currentLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
             
           } else if (parts[3].equals("setORL")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -132,7 +139,8 @@ public class AggregateList {
             if (adc.objects.length <= index)
               throw new AggregationException("Object index mismatch ("+index+"/"+adc.objects.length+"): "+line);
             adc.objects[index].refreshedLifetime = lifetime;
-            log(Logger.FINER, "  - refreshedLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
+            if (logger.level <= Logger.FINER) logger.log(
+                "  - refreshedLifetime="+lifetime+" in ADC "+adcKey.toStringFull()+" index "+index);
             
           } else if (parts[3].equals("refresh")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -144,7 +152,8 @@ public class AggregateList {
             adc.currentLifetime = lifetime;
             for (int i=0; i<adc.objects.length; i++) 
               adc.objects[i].currentLifetime = adc.objects[i].refreshedLifetime;
-            log(Logger.FINER, " - refresh="+lifetime+" in ADC "+adcKey.toStringFull());
+            if (logger.level <= Logger.FINER) logger.log(
+                " - refresh="+lifetime+" in ADC "+adcKey.toStringFull());
           
           } else if (parts[3].equals("removeAggregate")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -153,7 +162,8 @@ public class AggregateList {
               throw new AggregationException("Cannot find aggregate ("+adcKey.toStringFull()+": "+line);
             
             removeAggregateDescriptor(adc, false);
-            log(Logger.FINER, " - remove ADC "+adcKey.toStringFull());
+            if (logger.level <= Logger.FINER) logger.log(
+                " - remove ADC "+adcKey.toStringFull());
           
           } else if (parts[3].equals("addAggregate")) {
             Id adcKey = factory.buildIdFromToString(parts[4]);
@@ -163,7 +173,8 @@ public class AggregateList {
             
             adc = readAggregate(logFile, adcKey);
             addAggregateDescriptor(adc, false);
-            log(Logger.FINER, " - add ADC "+adcKey.toStringFull());
+            if (logger.level <= Logger.FINER) logger.log(
+                " - add ADC "+adcKey.toStringFull());
           } else {
             throw new AggregationException("Unknown command ("+parts[3]+"): "+line);
           } 
@@ -179,15 +190,18 @@ public class AggregateList {
       }
           
     } catch (FileNotFoundException fnfe) {
-      warn("No aggregate log found; using configuration file only");
+      if (logger.level <= Logger.WARNING) logger.log(
+        "No aggregate log found; using configuration file only");
     } catch (Exception e) {
-      warn("Exception while recovering aggregate log: ",e);      
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "Exception while recovering aggregate log: ",e);      
       System.exit(1);
     }
     
     if (entriesReplayed > 0) {
       writeToDisk();
-      warn(entriesReplayed+" entries replayed from aggregate log");
+      if (logger.level <= Logger.WARNING) logger.log(
+          entriesReplayed+" entries replayed from aggregate log");
     } 
   }
   
@@ -201,7 +215,8 @@ public class AggregateList {
         logFile.println("$|"+(nextSerial++)+"|"+environment.getTimeSource().currentTimeMillis()+"|"+entry+"|@");
         logFile.flush();
       } else {
-        warn("Aggregation cannot write to log: "+entry);
+        if (logger.level <= Logger.WARNING) logger.log(
+            "Aggregation cannot write to log: "+entry);
       }
     }
   }
@@ -304,7 +319,8 @@ public class AggregateList {
     }
     
     if (aggregateList.containsValue(aggr))
-      warn("Removal from aggregate list incomplete: "+aggr.key.toStringFull());
+      if (logger.level <= Logger.WARNING) logger.log(
+          "Removal from aggregate list incomplete: "+aggr.key.toStringFull());
   }
   
   public void recalculateReferenceCounts(Id[] excludes) {
@@ -426,7 +442,8 @@ public class AggregateList {
         addAggregateDescriptor(adc, false);
       }
     } catch (Exception e) {
-      warn("Cannot read configuration file: "+configFileName+" (e="+e+")",e);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "Cannot read configuration file: "+configFileName+" (e="+e+")",e);
     }
 
     if (configFile != null) {
@@ -490,7 +507,8 @@ public class AggregateList {
       (new File(configFileName)).delete();
       (new File(configFileName + ".new")).renameTo(new File(configFileName));
     } catch (IOException ioe) {
-      warn("AggregationImpl cannot write to its aggregate list: " + configFileName + " (" + ioe + ")",ioe);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "AggregationImpl cannot write to its aggregate list: " + configFileName + " (" + ioe + ")",ioe);
     }
   }
 
@@ -575,16 +593,5 @@ public class AggregateList {
 
   private String getLogPrefix() {
     return "COUNT: " + environment.getTimeSource().currentTimeMillis() + " AL";
-  }
-
-  private void log(int level, String str) {
-    environment.getLogManager().getLogger(AggregateList.class, instance).log(level, getLogPrefix() + " " + str);
-  }
-
-  private void warn(String str) {
-    log(Logger.WARNING, str);
-  }
-  private void warn(String str, Throwable t) {
-    environment.getLogManager().getLogger(AggregateList.class, instance).logException(Logger.WARNING, str,t);
   }
 }

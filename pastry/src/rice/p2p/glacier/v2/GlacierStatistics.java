@@ -53,6 +53,6 @@ public class GlacierStatistics {
     for (int i=0; i<messagesSentByTag.length; i++)
       s+=messagesSentByTag[i]+" ";
     s+="\n";
-    logger.log(Logger.INFO, s);
+    if (logger.level <= Logger.INFO) logger.log(s);
   }
 };

@@ -41,6 +41,8 @@ public abstract class LogEntry implements PostData {
   // this logentry's "parent" logentry (if it is, say, wrapped in an encLogEntry)
   private transient LogEntry parent;
   
+  protected transient Logger logger;
+  
   /**
    * Constructs a LogEntry
    */
@@ -70,7 +72,8 @@ public abstract class LogEntry implements PostData {
     if (this.user == null) {
       this.user = user;
     } else {
-      logException(Logger.SEVERE, "ERROR - Trying to set user on already-set log.",new Exception("Stack Trace"));
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(LogEntry.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException("ERROR - Trying to set user on already-set log.",new Exception("Stack Trace"));
     }
   }
   
@@ -85,7 +88,8 @@ public abstract class LogEntry implements PostData {
         Arrays.equals(ref,previousEntryReferences)) {
       previousEntryReferences = ref;
     } else {
-      logException(Logger.SEVERE, "ERROR - Trying to set previous ref on already-set log.",new Exception("Stack Trace"));
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(LogEntry.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException("ERROR - Trying to set previous ref on already-set log.",new Exception("Stack Trace"));
     }
   }
   
@@ -203,7 +207,8 @@ public abstract class LogEntry implements PostData {
     if (previousEntry == null) {
       previousEntry = new SoftReference(entry);
     } else {
-      log(Logger.SEVERE,"ERROR - Attempting to set a previous entry with an existing one in LogEntry!");
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(LogEntry.class, null);
+      if (logger.level <= Logger.SEVERE) logger.log("ERROR - Attempting to set a previous entry with an existing one in LogEntry!");
     }
   }
 
@@ -240,16 +245,6 @@ public abstract class LogEntry implements PostData {
    */
   public SecureReference buildSecureReference(Id location, byte[] key) {
     throw new IllegalArgumentException("Log entries are only stored as content-hash blocks.");
-  }
-  
-  private void log(int level, String m) {
-    post.getEnvironment().getLogManager().getLogger(LogEntry.class, null).log(level,m);
-  }
-  
-  private void logException(int level, String m, Throwable t) {
-    post.getEnvironment().getLogManager().getLogger(LogEntry.class, null).logException(level,m,t);
-  }
-  
-  
+  }  
 }
 

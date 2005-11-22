@@ -40,6 +40,8 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
 
   protected Vector apps;
 
+  protected Logger logger;
+  
   /**
    * This hash map helps us coalesce the nodeHandles so that there is only one
    * reference of each
@@ -66,6 +68,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
     myNodeId = id;
     ready = false;
     apps = new Vector();
+    logger = e.getLogManager().getLogger(getClass(), null);
   }
   
   /**
@@ -172,7 +175,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
     if (ready == r)
       return;
     //      if (r == false)
-    getEnvironment().getLogManager().getLogger(getClass(), null).log(Logger.CONFIG, "PastryNode.setReady("+r+")");
+    if (logger.level <= Logger.CONFIG) logger.log("PastryNode.setReady("+r+")");
 
     ready = r;
 

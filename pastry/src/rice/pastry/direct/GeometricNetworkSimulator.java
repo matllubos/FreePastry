@@ -26,9 +26,12 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
   DirectTimeSource timeSource;
 
   private TestRecord testRecord;
+ 
+  protected Logger logger;
   
   public GeometricNetworkSimulator(Environment env) {
     this.environment = env;
+    this.logger = env.getLogManager().getLogger(getClass(), null);
     try {
       timeSource = (DirectTimeSource) env.getTimeSource();
     } catch (ClassCastException cce) {
@@ -60,7 +63,8 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
 
 
   public void deliverMessage(Message msg, DirectPastryNode node) {
-    environment.getLogManager().getLogger(GeometricNetworkSimulator.class, null).log(Logger.FINE, "GNS: deliver "+msg+" to "+node);
+    if (logger.level <= Logger.FINE) logger.log(
+        "GNS: deliver "+msg+" to "+node);
     if (msg.getSender() == null || msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       msgQueue.addElement(md);

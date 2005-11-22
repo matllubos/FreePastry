@@ -300,7 +300,9 @@ public class PostProxy {
   
   protected Environment environment;
   
-  InetAddress localHost;
+  protected InetAddress localHost;
+  
+  protected Logger logger;
   
   /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
@@ -395,28 +397,28 @@ public class PostProxy {
    */
   protected void startCheckNAT() throws Exception {
     Parameters parameters = environment.getParameters();
-    log(Logger.FINE, "Starting parsing...");
+    if (logger.level <= Logger.FINE) logger.log( "Starting parsing...");
     InetSocketAddress[] addresses = parameters.getInetSocketAddressArray("pastry_proxy_connectivity_hosts");
-    log(Logger.FINE, "Done parsing...");
+    if (logger.level <= Logger.FINE) logger.log( "Done parsing...");
     
     try {
       natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/4,
                                                             new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                            randomSubset(addresses, 5), environment).getAddress();
+                                                            randomSubset(addresses, 5), environment, logger).getAddress();
     } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/2,
                                                               new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                              randomSubset(addresses, 5), environment).getAddress();
+                                                              randomSubset(addresses, 5), environment, logger).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout"),
                                                               new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
-                                                              randomSubset(addresses, 5), environment).getAddress();
+                                                              randomSubset(addresses, 5), environment, logger).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
@@ -466,7 +468,7 @@ public class PostProxy {
         Runtime.getRuntime().addShutdownHook(new Thread() {
           public void run() {
             int num = Thread.currentThread().getThreadGroup().activeCount();
-            log(Logger.INFO,"ePOST System shutting down with " + num + " active threads");
+            if (logger.level <= Logger.INFO) logger.log("ePOST System shutting down with " + num + " active threads");
           }
         });
         stepDone(SUCCESS);
@@ -494,7 +496,7 @@ public class PostProxy {
           public void checkWrite(FileDescriptor fd) {}
           public void checkWrite(String file) {}
           public void checkExit(int status) {
-            logException(Logger.INFO,"System.exit() called with status " + status + " - dumping stack!", 
+            if (logger.level <= Logger.INFO) logger.logException("System.exit() called with status " + status + " - dumping stack!", 
                 new Exception("Stack Trace"));
             super.checkExit(status);
           }
@@ -795,7 +797,7 @@ public class PostProxy {
           }
         }
       } catch (Throwable t) {
-        logException(Logger.WARNING,"Determining SMTP server causing error " , t);
+        if (logger.level <= Logger.WARNING) logger.logException("Determining SMTP server causing error " , t);
       }
     }
     
@@ -934,9 +936,16 @@ public class PostProxy {
         
     if (natAddress != null)
       proxyAddress = new InetSocketAddress(natAddress, port);
+
+    InetSocketAddress[] bootstrapList;
+    // option to take the specified bootstrap
+    if (parameters.contains("epost_preferred_bootstraps")) {
+      bootstrapList = parameters.getInetSocketAddressArray("epost_preferred_bootstraps");
+    } else {
+      bootstrapList = cert.getBootstraps();
+    }    
     
-    InetSocketAddress[] bootsNotMe = getBootstrapsThatAreNotMe(cert.getBootstraps(),port);
-    
+    InetSocketAddress[] bootsNotMe = getBootstrapsThatAreNotMe(bootstrapList,port);      
     rice.pastry.NodeHandle bootHandle = factory.getNodeHandle(bootsNotMe, parameters.getInt("bootstrap_contact_time"));
     
     if ((bootHandle == null) && (! parameters.getBoolean("pastry_ring_" + prefix+ "_allow_new_ring")))
@@ -972,7 +981,7 @@ public class PostProxy {
     int count = 0;
     
     do {
-      log(Logger.INFO,"Sleeping to allow node to boot into the ring");
+      if (logger.level <= Logger.INFO) logger.log("Sleeping to allow node to boot into the ring");
       Thread.sleep(3000);
       count++;
       
@@ -1055,7 +1064,7 @@ public class PostProxy {
     int count = 0;
     
     do {
-      log(Logger.INFO,"Sleeping to allow global node to boot into the ring");
+      if (logger.level <= Logger.INFO) logger.log("Sleeping to allow global node to boot into the ring");
       Thread.sleep(3000);
       count++;
       
@@ -1258,9 +1267,9 @@ public class PostProxy {
         year += 2000;
         
       Calendar cal = Calendar.getInstance();
-      log(Logger.INFO,"COUNT: Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
+      if (logger.level <= Logger.INFO) logger.log("COUNT: Recovery: Using timestamp "+(month+1)+"/"+day+"/"+year+" "+hour+":"+minute);
       cal.set(year, month, day, hour, minute, 0);
-      StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d, environment);
+      StorageService.recoverLogs(address.getAddress(), cal.getTimeInMillis(), pair, immutablePast, mutablePast, d, environment, logger);
       d.sleep();
       
       if (d.exceptionThrown())
@@ -1348,7 +1357,7 @@ public class PostProxy {
           }
         } else {
           done = true;
-          log(Logger.FINE,"LOG IS A " + c.getResult() + " " + c.getResult().getClass().getName());
+          if (logger.level <= Logger.FINE) logger.log("LOG IS A " + c.getResult() + " " + c.getResult().getClass().getName());
           log = (PostLog) c.getResult();
         }
       }
@@ -1429,7 +1438,7 @@ public class PostProxy {
     startCheckBoot();    
     startDialog(parameters);
         
-    log(Logger.INFO,"-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
+    if (logger.level <= Logger.INFO) logger.log("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
     
     if (dialog != null) 
       dialog.append("\n-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --\n");
@@ -1486,7 +1495,7 @@ public class PostProxy {
           if (pastryNode.isReady() && !leafSet.isComplete()
               && leafSet.size() < (leafSet.maxSize() / 2)) {
             // kill self
-            log(Logger.SEVERE,
+            if (logger.level <= Logger.SEVERE) logger.log(
                 "PostProxy: "
                     + environment.getTimeSource().currentTimeMillis()
                     + " Killing self due to leafset collapse. " + leafSet);
@@ -1514,6 +1523,7 @@ public class PostProxy {
       logManager.startRotateTask(selectorManager);
       Environment env = new Environment(selectorManager, proc, randomSource, timeSource, logManager, parameters);
       environment = env;
+      logger = environment.getLogManager().getLogger(getClass(), null);      
       
       if (localHost == null) {      
         if (env.getParameters().contains("socket_bindAddress")) {
@@ -1531,7 +1541,7 @@ public class PostProxy {
       if (dialog != null) 
         dialog.append("\n-- Your node is now up and running --\n");
     } catch (Exception e) {
-      logException(Logger.SEVERE, "ERROR: Found Exception while start proxy - exiting - " , e);
+      if (logger.level <= Logger.SEVERE) logger.logException( "ERROR: Found Exception while start proxy - exiting - " , e);
       if (dialog != null)
         dialog.append("\n-- ERROR: Found Exception while start proxy - exiting - " + e + " --\n");
       
@@ -1568,27 +1578,27 @@ public class PostProxy {
     message.append(" in your proxy.params file.\n\n");
     message.append(e.getClass().getName() + ": " + e.getMessage());
 
-    log(Logger.SEVERE, "PANIC : " + message + " --- " + e);
+    if (logger.level <= Logger.SEVERE) logger.log( "PANIC : " + message + " --- " + e);
     
     try {
       if (useUI()) 
       JOptionPane.showMessageDialog(null, message.toString() ,"Error: " + e.getClass().getName(), JOptionPane.ERROR_MESSAGE); 
     } catch (Throwable t) {
-      logException(Logger.SEVERE, "cause of panic: ", t);
+      if (logger.level <= Logger.SEVERE) logger.logException( "cause of panic: ", t);
     }
     
     System.exit(-1);
   }
   
   public void panic(String m) {
-    log(Logger.SEVERE, "PANIC : " + m);
+    if (logger.level <= Logger.SEVERE) logger.log( "PANIC : " + m);
     resign();
 
     try {
       if (useUI()) 
         JOptionPane.showMessageDialog(null, m, "Error Starting POST Proxy", JOptionPane.ERROR_MESSAGE); 
     } catch (Throwable t) {
-      logException(Logger.SEVERE, "cause of panic: ", t);
+      if (logger.level <= Logger.SEVERE) logger.logException( "cause of panic: ", t);
     }
     
     System.exit(-1);
@@ -1610,7 +1620,7 @@ public class PostProxy {
   }
 
   public int message(String m, String[] options, String def) {
-    log(Logger.INFO, "MESSAGE : " + m);
+    if (logger.level <= Logger.INFO) logger.log( "MESSAGE : " + m);
     
     try {
       if (useUI()) 
@@ -1618,7 +1628,7 @@ public class PostProxy {
                                              0, JOptionPane.INFORMATION_MESSAGE, null, 
                                              options, def);
     } catch (Throwable f) {
-      logException(Logger.SEVERE, "cause of panic: ", f);
+      if (logger.level <= Logger.SEVERE) logger.logException( "cause of panic: ", f);
     }
     
     return 0;
@@ -1630,37 +1640,37 @@ public class PostProxy {
   }
 
   protected void sectionStart(String name) {
-    log(Logger.INFO,name);
+    if (logger.level <= Logger.INFO) logger.log(name);
     
     if (dialog != null) dialog.append(name + "\n");
   }
 
   protected void sectionDone() {
-    log(Logger.INFO,"");
+    if (logger.level <= Logger.INFO) logger.log("");
     if (dialog != null) dialog.append("\n");
   }
 
   protected void stepStart(String name) {
-    log(Logger.INFO,pad("  " + name));
+    if (logger.level <= Logger.INFO) logger.log(pad("  " + name));
     if (dialog != null) dialog.append(pad("  " + name));
   }
 
   protected void stepDone(String status) {
-    log(Logger.INFO,"[" + status + "]"); 
+    if (logger.level <= Logger.INFO) logger.log("[" + status + "]"); 
     if (dialog != null) dialog.append("[" + status + "]\n");
   }
 
   protected void stepDone(String status, String message) {
-    log(Logger.INFO,"[" + status + "]");
-    log(Logger.INFO,"    " + message);
+    if (logger.level <= Logger.INFO) logger.log("[" + status + "]");
+    if (logger.level <= Logger.INFO) logger.log("    " + message);
     
     if (dialog != null) dialog.append("[" + status + "]\n" + message + "\n");
   }
 
   protected void stepException(Exception e) {
-    log(Logger.INFO,"");
+    if (logger.level <= Logger.INFO) logger.log("");
 
-    logException(Logger.SEVERE,"Exception " + e + " occurred during testing.",e);
+    if (logger.level <= Logger.SEVERE) logger.logException("Exception " + e + " occurred during testing.",e);
     System.exit(0);
   }
   
@@ -1805,7 +1815,7 @@ public class PostProxy {
               LocalVisualization vis = new LocalVisualization(handle, environment);
             }
           } catch (Exception f) {
-            logException(Logger.WARNING, "Got Error launching Vis: " , f);
+            if (logger.level <= Logger.WARNING) logger.logException( "Got Error launching Vis: " , f);
           }
         }
       });
@@ -1823,7 +1833,7 @@ public class PostProxy {
                 
                 startUpdateForwardingLog();
               } catch (Exception f) {
-                logException(Logger.WARNING, "Got Exception e waiting for config frame" , f);
+                if (logger.level <= Logger.WARNING) logger.logException( "Got Exception e waiting for config frame" , f);
               }
             }
           };
@@ -1904,12 +1914,12 @@ public class PostProxy {
             out.write(buffer2);
             out.flush();
           } else {
-            log(Logger.SEVERE,"ERROR: Liveness thread read " + i + " bytes - exiting!");
+            if (logger.level <= Logger.SEVERE) logger.log("ERROR: Liveness thread read " + i + " bytes - exiting!");
             return;
           }
         }
       } catch (IOException e) {
-        logException(Logger.SEVERE,"Got IOException " + e + " while monitoring liveness - exiting!",e);
+        if (logger.level <= Logger.SEVERE) logger.logException("Got IOException " + e + " while monitoring liveness - exiting!",e);
       }
     }
   }
@@ -1944,7 +1954,7 @@ public class PostProxy {
         source.read(buffer);
         sinkKey.interestOps(SelectionKey.OP_WRITE);
       } catch (IOException e) {
-        logException(Logger.SEVERE, "IOException while reading liveness monitor! " , e);
+        if (logger.level <= Logger.SEVERE) logger.logException( "IOException while reading liveness monitor! " , e);
       }
     }
     
@@ -1954,7 +1964,7 @@ public class PostProxy {
         sink.write(buffer);
         sinkKey.interestOps(0);
       } catch (IOException e) {
-        logException(Logger.SEVERE, "IOException while reading liveness monitor! " , e);
+        if (logger.level <= Logger.SEVERE) logger.logException( "IOException while reading liveness monitor! " , e);
       }
     }
   }
@@ -2049,7 +2059,7 @@ public class PostProxy {
         try {
           parameters.store();
         } catch (IOException ioe) {
-          logException(Logger.WARNING, "", ioe);
+          if (logger.level <= Logger.WARNING) logger.logException( "", ioe);
           JOptionPane.showMessageDialog(this, "Cannot store password: "+ioe); 
         }
         synchronized (parameters) {
@@ -2172,16 +2182,5 @@ public class PostProxy {
       
       return new String(this.field.getText());
     }
-  }
-  
-  private void log(int level, String msg) {
-    environment.getLogManager().getLogger(PostProxy.class, null).log(level,msg);
-  }
-
-  private void logException(int level, String msg, Throwable t) {
-    LogManager lm = environment.getLogManager();
-    Logger l = lm.getLogger(PostProxy.class, null);
-    l.logException(level,msg,t);
-  }
-
+  }  
 }

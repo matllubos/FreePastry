@@ -35,7 +35,6 @@ public abstract class CommonAPITest {
   // the collection of nodes which have been created
   protected Node[] nodes;
 
-
   // ----- PASTRY SPECIFIC VARIABLES -----
 
   // the factory for creating pastry nodes

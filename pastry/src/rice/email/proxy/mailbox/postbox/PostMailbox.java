@@ -50,11 +50,13 @@ public class PostMailbox implements Mailbox {
 
     this.email = email;
     
-    if (root != null)
+    if (root != null) {
       this.root = new PostFolder(root, null, email);
-    else
-      env.getLogManager().getLogger(MovingMessage.class, null).log(Logger.INFO, 
+    } else {
+      Logger logger = env.getLogManager().getLogger(MovingMessage.class, null);
+      if (logger.level <= Logger.INFO) logger.log( 
         "Root folder is null - folder operations will likely cause a NPE");
+    }
   }
   
   /**

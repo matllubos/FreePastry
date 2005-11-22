@@ -22,6 +22,11 @@ public class QueuePanelCreator implements PanelCreator {
   
   protected Environment environment;
   
+  /**
+   * Lazilly constructed.
+   */
+  protected Logger logger;  
+  
   public QueuePanelCreator(Environment env, ProcessingQueue processingQ, WorkQueue persistenceQ) {
     this.processingQ = processingQ;
     this.persistenceQ = persistenceQ;
@@ -48,8 +53,9 @@ public class QueuePanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(QueuePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
     
     try {      
@@ -63,8 +69,9 @@ public class QueuePanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(QueuePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
     
     try {      
@@ -78,8 +85,9 @@ public class QueuePanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Exceptoin " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(QueuePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
     
     return pastPanel;
@@ -126,8 +134,9 @@ public class QueuePanelCreator implements PanelCreator {
         persistence.removeElementAt(0);
       }
     } catch (Exception e) {
-      environment.getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
-          "Ecception " + e + " thrown.",e);
+      if (logger == null) logger = environment.getLogManager().getLogger(QueuePanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "",e);
     }
   }
 }

@@ -198,11 +198,11 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       try {
         FileInputStream fis = new FileInputStream(configFile);
         ObjectInputStream ois = new ObjectInputStream(fis);
-        log("Reading configuration from " + configFilePath);
+        if (logger.level <= Logger.INFO) logger.log("Reading configuration from " + configFilePath);
         state = (GlacierState) ois.readObject();
         ois.close();
       } catch (Exception e) {
-        logException(Logger.SEVERE, "GlacierImpl cannot read configuration file: " + configFilePath, e);
+        if (logger.level <= Logger.SEVERE) logger.logException( "GlacierImpl cannot read configuration file: " + configFilePath, e);
         System.exit(1);
       }
     }
@@ -258,7 +258,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
      *  of status casts will change the surviving fragments
      *  back to Certain.
      */
-    log("REFREEZING");
+    if (logger.level <= Logger.INFO) logger.log("REFREEZING");
     state.history = new LinkedList();
 
     Enumeration enu = state.fileList.elements();
@@ -310,7 +310,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
        Since the hash can only be computed over a byte array,
        the object must be serialized first. */
   
-    log("Serialize object: " + obj);
+    if (logger.level <= Logger.INFO) logger.log("Serialize object: " + obj);
     byte bytes[] = null;
     try {
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -321,17 +321,17 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
-      logException(Logger.WARNING, "", ioe);
+      if (logger.level <= Logger.WARNING) logger.logException("", ioe);
       return null;
     }
 
     /* We also need hashes of the fragments. */
 
-    log("Create fragments: " + obj);
+    if (logger.level <= Logger.INFO) logger.log("Create fragments: " + obj);
     boolean[] generateFragment = new boolean[numFragments];
     Arrays.fill(generateFragment, true);
     Fragment[] fragments = codec.encode(bytes, generateFragment);
-    log("Completed: " + obj);
+    if (logger.level <= Logger.INFO) logger.log("Completed: " + obj);
 
     if (fragments == null)
       return null;
@@ -342,7 +342,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      logException(Logger.WARNING, "No SHA support!", e);
+      if (logger.level <= Logger.WARNING) logger.logException("No SHA support!", e);
       return null;
     }
 
@@ -379,7 +379,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
     try {
       insert(obj, null, command);
     } catch (InvalidManifestException ime) {
-      warn("Invalid manifest during legacy insert?!?");
+      if (logger.level <= Logger.WARNING) logger.log("Invalid manifest during legacy insert?!?");
     }  
   }
 
@@ -392,7 +392,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
    */
 
   public void insert(final PastContent obj, final StorageManifest manifest, final Continuation command) throws InvalidManifestException{
-    log("Insert " + obj + " " + command + " (mutable=" + obj.isMutable() + ")");
+    if (logger.level <= Logger.INFO) logger.log("Insert " + obj + " " + command + " (mutable=" + obj.isMutable() + ")");
 
     super.insert(obj, command);
 
@@ -407,11 +407,11 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
       /* Compute the fragments */
 
-      log("Encode object: " + obj);
+      if (logger.level <= Logger.INFO) logger.log("Encode object: " + obj);
       boolean[] generateFragment = new boolean[numFragments];
       Arrays.fill(generateFragment, true);
       Fragment[] fragments = codec.encodeObject(obj, generateFragment);
-      log("Completed: " + obj);
+      if (logger.level <= Logger.INFO) logger.log("Completed: " + obj);
 
       if (fragments != null) {
         StorageManifest effectiveManifest;
@@ -434,7 +434,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
         /* Add an entry to the list of pending insertions */
 
         VersionKey vkey = new VersionKey(obj.getId(), effectiveVersion);
-        log("Creating new ILE at " + vkey);
+        if (logger.level <= Logger.INFO) logger.log("Creating new ILE at " + vkey);
 
         InsertListEntry ile = new InsertListEntry(
           vkey, fragments, effectiveManifest,
@@ -462,10 +462,10 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
               );
           }
         } else {
-          warn("Immutable object inserted a second time: " + vkey);
+          if (logger.level <= Logger.WARNING) logger.log("Immutable object inserted a second time: " + vkey);
         }
       } else {
-        warn("Cannot encode object -- too large?");
+        if (logger.level <= Logger.WARNING) logger.log("Cannot encode object -- too large?");
       }
     }
   }
@@ -480,7 +480,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
   public void update(NodeHandle handle, boolean joined) {
     ListIterator sqi = stickyQueue.listIterator(0);
 
-    log("UPDATE " + handle + " joined=" + joined);
+    if (logger.level <= Logger.INFO) logger.log("UPDATE " + handle + " joined=" + joined);
 
     /* When nodes leave, we do nothing. */
 
@@ -493,9 +493,9 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
     while (sqi.hasNext()) {
       GlacierStatusMessage lsm = (GlacierStatusMessage) sqi.next();
-      log("STICKY checking " + lsm.getDestination() + "/" + handle.getId() + " -- " + lsm);
+      if (logger.level <= Logger.INFO) logger.log("STICKY checking " + lsm.getDestination() + "/" + handle.getId() + " -- " + lsm);
       if (lsm.getDestination().equals(handle.getId())) {
-        log("STICKY delivering " + lsm);
+        if (logger.level <= Logger.INFO) logger.log("STICKY delivering " + lsm);
         endpoint.route(
           null,
           lsm,
@@ -523,13 +523,13 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       try {
         super.deliver(id, message);
       } catch (Exception e) {
-        unusualException("PAST reports Exception in deliver(): ",e);
+        if (logger.level <= Logger.SEVERE) logger.logException("PAST reports Exception in deliver(): ",e);
       }
       return;
     }
 
     final GlacierMessage msg = (GlacierMessage) message;
-    log("Received message " + msg + " with destination " + id + " from " + msg.getSource().getId());
+    if (logger.level <= Logger.INFO) logger.log("Received message " + msg + " with destination " + id + " from " + msg.getSource().getId());
 
     if (msg instanceof GlacierQueryMessage) {
 
@@ -537,13 +537,13 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
          with the corresponding key and then send back a ResponseMessage. */
 
       GlacierQueryMessage gqm = (GlacierQueryMessage) msg;
-      log("Queried for " + gqm.getKey());
+      if (logger.level <= Logger.INFO) logger.log("Queried for " + gqm.getKey());
 
       boolean haveIt = storage.exists(gqm.getKey());
       if (haveIt) {
-        log("EXISTS: " + gqm.getKey());
+        if (logger.level <= Logger.INFO) logger.log("EXISTS: " + gqm.getKey());
       } else {
-        log("DOES NOT EXIST: " + gqm.getKey());
+        if (logger.level <= Logger.INFO) logger.log("DOES NOT EXIST: " + gqm.getKey());
       }
 
       endpoint.route(
@@ -568,7 +568,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
          the reason by looking up the key in our local lists. */
     
       GlacierResponseMessage grm = (GlacierResponseMessage) msg;
-      log("Response for " + grm.getKey() + " (" + grm.getHaveIt() + ")");
+      if (logger.level <= Logger.INFO) logger.log("Response for " + grm.getKey() + " (" + grm.getHaveIt() + ")");
 
       /* If the key is in the insertList, we are trying to find holders for
          an object that is being inserted. The sender of the ResponseMessage
@@ -587,7 +587,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
           insertStep(ile);
           syncState();
         } else {
-          warn("Fragment ID too large in insert response");
+          if (logger.level <= Logger.WARNING) logger.log("Fragment ID too large in insert response");
         }
         
         return;
@@ -656,7 +656,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
           handoffList.remove(grm.getKey());
 
           if (!hle.isRestoredFragment) {
-            warn("Collision during handoff -- deleting my own copy");
+            if (logger.level <= Logger.WARNING) logger.log("Collision during handoff -- deleting my own copy");
 
             /* If this happened during migration, the fragment is already
                stored locally, so we must unstore it and delete the
@@ -674,15 +674,15 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
             storage.unstore(sk3,
               new Continuation() {
                 public void receiveResult(Object o) {
-                  log("Successfully unstored " + sk3 + " after collision");
+                  if (logger.level <= Logger.INFO) logger.log("Successfully unstored " + sk3 + " after collision");
                 }
 
                 public void receiveException(Exception e) {
-                  warn("receiveException(" + e + ") during collision -- unexpected, ignored (sk3=" + sk3 + ")");
+                  if (logger.level <= Logger.WARNING) logger.log("receiveException(" + e + ") during collision -- unexpected, ignored (sk3=" + sk3 + ")");
                 }
               });
           } else {
-            warn("He already has what I was going to restore!!!");
+            if (logger.level <= Logger.WARNING) logger.log("He already has what I was going to restore!!!");
             
             /* If this happened during recovery, the fragment is not yet
                stored locally. However, we must update our database of
@@ -701,10 +701,10 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       /* If the key was not found at all, the message was either misrouted
          or is a duplicate. */
 
-      warn("Unexpected GlacierResponseMessage");
+      if (logger.level <= Logger.WARNING) logger.log("Unexpected GlacierResponseMessage");
     } else if (msg instanceof GlacierInsertMessage) {
       final GlacierInsertMessage gim = (GlacierInsertMessage) msg;
-      log("Insert request for " + gim.getKey());
+      if (logger.level <= Logger.INFO) logger.log("Insert request for " + gim.getKey());
 
       /* InsertMessages are sent when 
            a) the initial set of fragments for a new object is being inserted,
@@ -712,7 +712,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
            c) a recovered fragment is stored */
 
       if (!storage.exists(gim.getKey())) {
-        log("STORING " + gim.getKey());
+        if (logger.level <= Logger.INFO) logger.log("STORING " + gim.getKey());
 
         /* If we do not have a copy of this fragment yet, we store it
            locally. Also, we add the information that came with the
@@ -742,7 +742,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
               !fileInfo.holderDead[fragmentID][i] &&
               (fileInfo.holderId[fragmentID][i] != null)) {
               if (fileInfo.holderId[fragmentID][i].equals(gim.getSource().getId())) {
-                log("KILLED PREVIOUS HOLDER");
+                if (logger.level <= Logger.INFO) logger.log("KILLED PREVIOUS HOLDER");
                 fileInfo.holderDead[fragmentID][i] = true;
               }
             }
@@ -763,13 +763,13 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
             }
 
             public void receiveException(Exception e) {
-              warn("receiveException(" + e + ") during GlacierInsert -- unexpected, ignored (key=" + gim.getKey() + ")");
+              if (logger.level <= Logger.WARNING) logger.log("receiveException(" + e + ") during GlacierInsert -- unexpected, ignored (key=" + gim.getKey() + ")");
             }
           });
 
         syncState();
       } else {
-        log("Collision on insert for " + gim.getKey() + ", sending receipt only");
+        if (logger.level <= Logger.INFO) logger.log("Collision on insert for " + gim.getKey() + ", sending receipt only");
 
         /* We already have a copy of this fragment, probably because there
            was a race condition (two nodes recovered the same fragment).
@@ -785,7 +785,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       return;
     } else if (msg instanceof GlacierReceiptMessage) {
       GlacierReceiptMessage grm = (GlacierReceiptMessage) msg;
-      log("Receipt for " + grm.getKey());
+      if (logger.level <= Logger.INFO) logger.log("Receipt for " + grm.getKey());
 
       /* ReceiptMessages are sent in response to InsertMessages, so we must
          have tried to insert, recover or hand off a fragment to another node */
@@ -819,7 +819,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
         if (!hle.isRestoredFragment) {
           int fragmentID = grm.getKey().getFragmentID();
-          log("Handoff successful for " + grm.getKey());
+          if (logger.level <= Logger.INFO) logger.log("Handoff successful for " + grm.getKey());
           recordMigratedFragmentEvent(grm.getKey(), grm.getSource().getId());
 
           FileInfo fileInfo = (FileInfo) state.fileList.get(grm.getKey().getVersionKey());
@@ -838,15 +838,15 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
           storage.unstore(sk3,
             new Continuation() {
               public void receiveResult(Object o) {
-                log("Successfully unstored " + sk3);
+                if (logger.level <= Logger.INFO) logger.log("Successfully unstored " + sk3);
               }
 
               public void receiveException(Exception e) {
-                warn("receiveException(" + e + ") during handoff -- unexpected, ignored (sk3=" + sk3 + ")");
+                if (logger.level <= Logger.WARNING) logger.log("receiveException(" + e + ") during handoff -- unexpected, ignored (sk3=" + sk3 + ")");
               }
             });
         } else {
-          log("Restore successful for " + grm.getKey());
+          if (logger.level <= Logger.INFO) logger.log("Restore successful for " + grm.getKey());
           handoffList.remove(grm.getKey());
           recordMigratedFragmentEvent(grm.getKey(), grm.getSource().getId());
           addFragmentNews(grm.getKey(), grm.getSource().getId(), HistoryEvent.evtAcquired, grm.getSource().getId());
@@ -855,11 +855,11 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
         return;
       }
 
-      warn("Unexpected GlacierReceiptMessage -- discarded");
+      if (logger.level <= Logger.WARNING) logger.log("Unexpected GlacierReceiptMessage -- discarded");
       return;
     } else if (msg instanceof GlacierStickyMessage) {
       GlacierStickyMessage gsm = (GlacierStickyMessage) msg;
-      log("STICKY Received " + gsm);
+      if (logger.level <= Logger.INFO) logger.log("STICKY Received " + gsm);
 
       /* StickyMessages encapsulate other messages that cannot be delivered
          at the moment because the destination is offline. We check our
@@ -875,30 +875,30 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
         GlacierStatusMessage lsm = (GlacierStatusMessage) sqi.next();
         if (lsm.getSource().getId().equals(esm.getSource().getId()) && lsm.getDestination().equals(esm.getDestination())) {
           if (lsm.sequenceNo >= esm.sequenceNo) {
-            log("STICKY Already got " + lsm);
+            if (logger.level <= Logger.INFO) logger.log("STICKY Already got " + lsm);
             return;
           }
 
-          log("STICKY Replacing " + lsm + " with " + esm);
+          if (logger.level <= Logger.INFO) logger.log("STICKY Replacing " + lsm + " with " + esm);
           sqi.remove();
           stickyQueue.addLast(esm);
           return;
         }
       }
 
-      log("STICKY First message of that type");
+      if (logger.level <= Logger.INFO) logger.log("STICKY First message of that type");
       stickyQueue.addLast(esm);
       return;
     } else if (msg instanceof GlacierStatusMessage) {
       GlacierStatusMessage gsm = (GlacierStatusMessage) msg;
-      log("Received status report #" + gsm.sequenceNo + " from " + gsm.getSource().getId() + " (" + gsm.events.length + " events)");
+      if (logger.level <= Logger.INFO) logger.log("Received status report #" + gsm.sequenceNo + " from " + gsm.getSource().getId() + " (" + gsm.events.length + " events)");
 
       /* StatusMessages are sent during status casts. They are always
          addressed to specific nodes, i.e. their destinationID is equal
          to the nodeID of the target node. */
 
       if (!gsm.getDestination().equals(getLocalNodeHandle().getId())) {
-        log("STICKY received status cast for " + gsm.getDestination() + ", forwarding...");
+        if (logger.level <= Logger.INFO) logger.log("STICKY received status cast for " + gsm.getDestination() + ", forwarding...");
 
         /* The message was not intended for us, but still, it was delivered
            here, so the destination must be offline at the moment. 
@@ -919,7 +919,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
               nhId = factory.buildRingId(((MultiringNode) node).getRingId(), nhId);
             }
 
-            log("STICKY forwarding to " + nhId);
+            if (logger.level <= Logger.INFO) logger.log("STICKY forwarding to " + nhId);
             endpoint.route(
               null,
               new GlacierStickyMessage(getUID(), gsm.getSource().getId(), gsm, getLocalNodeHandle(), nhId),
@@ -935,7 +935,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
 
       HolderInfo holderInfo = (HolderInfo) state.holderList.get(gsm.getSource().getId());
       if (holderInfo == null) {
-        warn("I don't know this guy");
+        if (logger.level <= Logger.WARNING) logger.log("I don't know this guy");
         return;
       }
 
@@ -961,15 +961,15 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
       holderInfo.lastHeardOf = new Date();
       if (!gsm.isFullList && (gsm.sequenceNo > (holderInfo.lastReceivedSequenceNo + numIncludePreviousStatusCasts))) {
         holderInfo.lastReceivedSequenceNo = -1;
-        warn("Lost too many status packets... resynching");
+        if (logger.level <= Logger.WARNING) logger.log("Lost too many status packets... resynching");
       } else {
-        log("OK. Going from sequence no #" + holderInfo.lastReceivedSequenceNo + " to #" + gsm.sequenceNo);
+        if (logger.level <= Logger.INFO) logger.log("OK. Going from sequence no #" + holderInfo.lastReceivedSequenceNo + " to #" + gsm.sequenceNo);
         holderInfo.lastReceivedSequenceNo = gsm.sequenceNo;
       }
     } else if (msg instanceof GlacierFetchMessage) {
       final GlacierFetchMessage gfm = (GlacierFetchMessage) msg;
       final StorageManager pastStore = super.storage;
-      log("Received fetch for " + gfm.getKey());
+      if (logger.level <= Logger.INFO) logger.log("Received fetch for " + gfm.getKey());
 
       /* FetchMessages are sent during recovery to retrieve a fragment from
          another node. They can be answered a) if the recipient has a copy
@@ -980,7 +980,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
         new Continuation() {
           public void receiveResult(Object o) {
             if (o != null) {
-              log("Fragment found, returning...");
+              if (logger.level <= Logger.INFO) logger.log("Fragment found, returning...");
               endpoint.route(
                 null,
                 new GlacierDataMessage(
@@ -991,17 +991,17 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
                 gfm.getSource()
                 );
             } else {
-              log("Fragment not found - but maybe we have the original?");
+              if (logger.level <= Logger.INFO) logger.log("Fragment not found - but maybe we have the original?");
               pastStore.getObject(gfm.getKey().getVersionKey().getId(),
                 new Continuation() {
                   public void receiveResult(Object o) {
                     if (o != null) {
-                      log("Original found. Recoding...");
+                      if (logger.level <= Logger.INFO) logger.log("Original found. Recoding...");
                       boolean[] generateFragment = new boolean[numFragments];
                       Arrays.fill(generateFragment, false);
                       generateFragment[gfm.getKey().getFragmentID()] = true;
                       Fragment[] frags = codec.encodeObject((Serializable) o, generateFragment);
-                      log("Fragments recoded ok. Returning fragment...");
+                      if (logger.level <= Logger.INFO) logger.log("Fragments recoded ok. Returning fragment...");
                       endpoint.route(
                         null,
                         new GlacierDataMessage(
@@ -1012,19 +1012,19 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
                         gfm.getSource()
                         );
                     } else {
-                      log("Original not found either");
+                      if (logger.level <= Logger.INFO) logger.log("Original not found either");
                     }
                   }
 
                   public void receiveException(Exception e) {
-                    warn("storage.getObject(" + gfm.getKey() + ") returned exception " , e);
+                    if (logger.level <= Logger.WARNING) logger.logException("storage.getObject(" + gfm.getKey() + ") returned exception " , e);
                   }
                 });
             }
           }
 
           public void receiveException(Exception e) {
-            warn("Fetch(" + gfm.getKey() + ") returned exception " + e);
+            if (logger.level <= Logger.WARNING) logger.log("Fetch(" + gfm.getKey() + ") returned exception " + e);
           }
         });
     } else if (msg instanceof GlacierDataMessage) {
@@ -1041,7 +1041,7 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
           /* If the primary replica sent us a copy of the fragment,
              we can reinsert it right away */
         
-          log("Preparing for handoff: " + gdm.getKey());
+          if (logger.level <= Logger.INFO) logger.log("Preparing for handoff: " + gdm.getKey());
 
           /*
            *  XXX check against manifest here! check correct fragment!
@@ -1061,18 +1061,18 @@ public class GlacierImpl extends PastImpl implements Glacier, Past, Application,
              otherwise we must request more fragments */
         
           rle.haveFragment[gdm.getKey().getFragmentID()] = gdm.getFragment();
-          log("RESTORE got another puzzle piece: " + rle.key + ", now have " + rle.numFragmentsAvailable() + "/" + numSurvivors);
+          if (logger.level <= Logger.INFO) logger.log("RESTORE got another puzzle piece: " + rle.key + ", now have " + rle.numFragmentsAvailable() + "/" + numSurvivors);
           if (rle.numFragmentsAvailable() >= numSurvivors) {
-            log("RESTORE enough puzzle pieces, ready to recode " + rle.key);
+            if (logger.level <= Logger.INFO) logger.log("RESTORE enough puzzle pieces, ready to recode " + rle.key);
             rle.status = RestoreListEntry.stRecoding;
           }
           return;
         } else {
-          warn("Unknown RLE status " + rle.status + " when receiving DataMessage");
+          if (logger.level <= Logger.WARNING) logger.log("Unknown RLE status " + rle.status + " when receiving DataMessage");
         }
       }
 
-      warn("Unexpected GlacierDataMessage -- discarded");
+      if (logger.level <= Logger.WARNING) logger.log("Unexpected GlacierDataMessage -- discarded");
       return;
     } else {
       panic("GLACIER ERROR - Received message " + msg + " of unknown type.");
@@ -1141,7 +1141,7 @@ panic("setBit disabled");
       try {
         throw new Error("assertion failed");
       } catch (Error e) {
-        warn("Assertion failed: " + e);
+        if (logger.level <= Logger.WARNING) logger.log("Assertion failed: " + e);
       }
     }
   }
@@ -1154,7 +1154,7 @@ panic("setBit disabled");
    */
   private void panic(String s) throws Error {
     Error err = new Error("Panic "+s);
-    logException(Logger.SEVERE, "PANIC: " + s, err);
+    if (logger.level <= Logger.SEVERE) logger.logException( "PANIC: " + s, err);
     throw err;
   }
 
@@ -1176,12 +1176,12 @@ panic("setBit disabled");
                 public void receiveResult(Object o) {
                   if (o != null) {
                     if (o instanceof Fragment) {
-                      log("Fragment " + sk + " found in local storage");
+                      if (logger.level <= Logger.INFO) logger.log("Fragment " + sk + " found in local storage");
                     } else {
-                      log("Fragment " + sk + " has wrong type");
+                      if (logger.level <= Logger.INFO) logger.log("Fragment " + sk + " has wrong type");
                     }
                   } else {
-                    log("Fragment " + sk + " not found in local storage");
+                    if (logger.level <= Logger.INFO) logger.log("Fragment " + sk + " not found in local storage");
                   }
                 }
 
@@ -1235,7 +1235,7 @@ panic("setBit disabled");
     cal.setTimeInMillis(nowMS + delayMS);
     nextStatusCastDate = cal.getTime();
 
-    log("Scheduling next status cast at " + nextStatusCastDate + " (in " + delayMS + " msec)");
+    if (logger.level <= Logger.INFO) logger.log("Scheduling next status cast at " + nextStatusCastDate + " (in " + delayMS + " msec)");
   }
 
   /**
@@ -1253,7 +1253,7 @@ panic("setBit disabled");
       oos.writeObject(state);
       oos.close();
     } catch (IOException ioe) {
-      logException(Logger.SEVERE, "GlacerImpl cannot write to its configuration file: " + configFilePath + " (" + ioe + ")",ioe);
+      if (logger.level <= Logger.SEVERE) logger.logException( "GlacerImpl cannot write to its configuration file: " + configFilePath + " (" + ioe + ")",ioe);
       System.exit(1);
     }
 
@@ -1288,49 +1288,9 @@ panic("setBit disabled");
         }
       }
     } catch (IOException ioe) {
-      logException(Logger.SEVERE,"GlacerImpl cannot write to its dump file: " + dumpFileName + " (" + ioe + ")",ioe);
+      if (logger.level <= Logger.SEVERE) logger.logException("GlacerImpl cannot write to its dump file: " + dumpFileName + " (" + ioe + ")",ioe);
       System.exit(1);
     }
-  }
-
-  /**
-   * Appends a normal entry to the log file
-   *
-   * @param str The entry to be appended
-   */
-  private void log(String str) {
-    environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.INFO, str);
-  }
-
-  private void logException(int level, String str, Throwable e) {
-    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(level, str, e);
-  }
-
-  /**
-   * Appends a warning to the log file
-   *
-   * @param str The warning to be appended
-   */
-  private void warn(String str) {
-    environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.WARNING, str);
-  }
-
-  private void warn(String str, Exception e) {
-    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(Logger.WARNING, str,e);
-  }
-
-  /**
-   * Appends an 'unusual' entry to the log file. These are marked with a
-   * special keyword so that they can be found easily.
-   *
-   * @param str The entry to be appended
-   */
-  private void unusual(String str) {
-    environment.getLogManager().getLogger(GlacierImpl.class, instance).log(Logger.SEVERE, str);
-  }
-
-  private void unusualException(String str, Exception e) {
-    environment.getLogManager().getLogger(GlacierImpl.class, instance).logException(Logger.SEVERE, str, e);
   }
 
   /**
@@ -1383,7 +1343,7 @@ panic("setBit disabled");
     Enumeration enu = auditList.elements();
     while (enu.hasMoreElements()) {
       FileInfo fileInfo = (FileInfo) enu.nextElement();
-      unusual("No audit response, must restore " + fileInfo.key);
+      if (logger.level <= Logger.SEVERE) logger.log("No audit response, must restore " + fileInfo.key);
 
       /*
        *  Add an entry to the RestoreList
@@ -1406,12 +1366,12 @@ panic("setBit disabled");
             storage.getObject(new FragmentKey(fileInfo.key, i),
               new Continuation() {
                 public void receiveResult(Object o) {
-                  log("Read and added fragment " + rle.key + ":" + thisFragment);
+                  if (logger.level <= Logger.INFO) logger.log("Read and added fragment " + rle.key + ":" + thisFragment);
                   rle.addFragment(thisFragment, (Fragment) o);
                 }
 
                 public void receiveException(Exception e) {
-                  warn("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " , e);
+                  if (logger.level <= Logger.WARNING) logger.logException("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " , e);
                 }
               });
           }
@@ -1488,7 +1448,7 @@ panic("setBit disabled");
          *  Get a random entry
          */
         restoreCandidates.removeElementAt(index);
-        log("decides to restore " + rle.key);
+        if (logger.level <= Logger.INFO) logger.log("decides to restore " + rle.key);
 
         /*
          *  Load any fragments that may be available locally, and mark
@@ -1503,12 +1463,12 @@ panic("setBit disabled");
               storage.getObject(new FragmentKey(fileInfo.key, i),
                 new Continuation() {
                   public void receiveResult(Object o) {
-                    log("Read and added fragment " + rle.key + ":" + thisFragment);
+                    if (logger.level <= Logger.INFO) logger.log("Read and added fragment " + rle.key + ":" + thisFragment);
                     rle.addFragment(thisFragment, (Fragment) o);
                   }
 
                   public void receiveException(Exception e) {
-                    warn("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " , e);
+                    if (logger.level <= Logger.WARNING) logger.logException("Cannot read fragment: " + rle.key + ":" + thisFragment + ", exception " , e);
                   }
                 });
             }
@@ -1531,7 +1491,7 @@ panic("setBit disabled");
    * @return True if there is more work left.
    */
   private boolean restoreStep() {
-    log("RestoreStep");
+    if (logger.level <= Logger.INFO) logger.log("RestoreStep");
 
     /*
      *  Try to make progress on each entry in the RestoreList
@@ -1542,7 +1502,7 @@ panic("setBit disabled");
       RestoreListEntry rle = (RestoreListEntry) enu.nextElement();
       boolean madeProgress = false;
 
-      log("Processing key " + rle.key + " (#" + (idx++) + ")");
+      if (logger.level <= Logger.INFO) logger.log("Processing key " + rle.key + " (#" + (idx++) + ")");
 
       /*
        *  If the entry is the AskingPrimary state, no request has been
@@ -1568,7 +1528,7 @@ panic("setBit disabled");
          *  If possible, retry
          */
         if (rle.attemptsLeft > 0) {
-          log("Sending audit for " + rle.key + " (" + (rle.attemptsLeft - 1) + " attempts left)");
+          if (logger.level <= Logger.INFO) logger.log("Sending audit for " + rle.key + " (" + (rle.attemptsLeft - 1) + " attempts left)");
           endpoint.route(
             rle.key.getVersionKey().getId(),
             new GlacierFetchMessage(
@@ -1600,10 +1560,10 @@ panic("setBit disabled");
            */
           if (numFragmentsKnown >= numSurvivors) {
             if (rle.numFragmentsAvailable() >= numSurvivors) {
-              unusual("Primary seems to have failed, restoring " + rle.key + " from fragments available locally (" + rle.numFragmentsAvailable() + ")");
+              if (logger.level <= Logger.SEVERE) logger.log("Primary seems to have failed, restoring " + rle.key + " from fragments available locally (" + rle.numFragmentsAvailable() + ")");
               rle.status = RestoreListEntry.stRecoding;
             } else {
-              unusual("Primary seems to have failed, attempting to restore " + rle.key + " from fragments");
+              if (logger.level <= Logger.SEVERE) logger.log("Primary seems to have failed, attempting to restore " + rle.key + " from fragments");
               rle.status = RestoreListEntry.stCollectingFragments;
               rle.attemptsLeft = (int) (maxRestoreFromFragmentFactor * numSurvivors);
             }
@@ -1654,7 +1614,7 @@ panic("setBit disabled");
 
             rle.checkedFragment[candidateIndex[index]] = true;
             rle.attemptsLeft--;
-            log("RESTORE fetching fragment #" + candidateIndex[index] + " for " + rle.key + " (attempts left: " + rle.attemptsLeft + ")");
+            if (logger.level <= Logger.INFO) logger.log("RESTORE fetching fragment #" + candidateIndex[index] + " for " + rle.key + " (attempts left: " + rle.attemptsLeft + ")");
 
             /*
              *  ... and send a request to its holder...
@@ -1672,7 +1632,7 @@ panic("setBit disabled");
             /*
              *  ... otherwise give up and cancel this entry.
              */
-            unusual("RESTORE giving up on " + rle.key + ", no more candidates");
+            if (logger.level <= Logger.SEVERE) logger.log("RESTORE giving up on " + rle.key + ", no more candidates");
             rle.status = RestoreListEntry.stCanceled;
           }
         } else {
@@ -1681,7 +1641,7 @@ panic("setBit disabled");
            *  The entry is also canceled if we exceed the maximum number
            *  of requests.
            */
-          unusual("RESTORE giving up on " + rle.key + ", attempt limit reached");
+          if (logger.level <= Logger.SEVERE) logger.log("RESTORE giving up on " + rle.key + ", attempt limit reached");
           rle.status = RestoreListEntry.stCanceled;
         }
 
@@ -1695,7 +1655,7 @@ panic("setBit disabled");
        *  hand the restored object over to PAST.
        */
       if (rle.status == RestoreListEntry.stRecoding) {
-        log("RESTORE Recoding " + rle.key);
+        if (logger.level <= Logger.INFO) logger.log("RESTORE Recoding " + rle.key);
         assume(rle.numFragmentsAvailable() >= numSurvivors);
 
         Fragment[] material = new Fragment[numSurvivors];
@@ -1707,16 +1667,16 @@ panic("setBit disabled");
           }
         }
 
-        log("Decode object: " + rle.key);
+        if (logger.level <= Logger.INFO) logger.log("Decode object: " + rle.key);
         Object o = codec.decode(material);
-        log("Decode complete: " + rle.key);
+        if (logger.level <= Logger.INFO) logger.log("Decode complete: " + rle.key);
 
         boolean proceed = true;
         if (o == null) {
-          warn("Decoder failed to decode " + rle.key);
+          if (logger.level <= Logger.WARNING) logger.log("Decoder failed to decode " + rle.key);
           proceed = false;
         } else if (!(o instanceof PastContent)) {
-          warn("Decoder delivered something other than PastContent");
+          if (logger.level <= Logger.WARNING) logger.log("Decoder delivered something other than PastContent");
           proceed = false;
         }
 
@@ -1725,15 +1685,15 @@ panic("setBit disabled");
           super.insert((PastContent) o,
             new Continuation() {
               public void receive(Object result) throws Exception {
-                warn("receive() " + result + " -- unexpected, ignored (key=" + frle.key + ")");
+                if (logger.level <= Logger.WARNING) logger.log("receive() " + result + " -- unexpected, ignored (key=" + frle.key + ")");
               }
 
               public void receiveException(Exception e) {
-                warn("receiveException() " + e + " -- unexpected, ignored (key=" + frle.key + ")");
+                if (logger.level <= Logger.WARNING) logger.log("receiveException() " + e + " -- unexpected, ignored (key=" + frle.key + ")");
               }
 
               public void receiveResult(Object o) {
-                log("Primary reinserted ok: " + frle.key);
+                if (logger.level <= Logger.INFO) logger.log("Primary reinserted ok: " + frle.key);
               }
             });
         }
@@ -1748,7 +1708,7 @@ panic("setBit disabled");
       }
 
       if (!madeProgress) {
-        warn("Did NOT make progress on RLE entry with status " + rle.status);
+        if (logger.level <= Logger.WARNING) logger.log("Did NOT make progress on RLE entry with status " + rle.status);
         panic("NO PROGRESS");
       }
     }
@@ -1763,7 +1723,7 @@ panic("setBit disabled");
     while (enu.hasMoreElements()) {
       RestoreListEntry rle = (RestoreListEntry) enu.nextElement();
       if (rle.status == RestoreListEntry.stCanceled) {
-        log("Entry " + rle.key + " canceled, removing...");
+        if (logger.level <= Logger.INFO) logger.log("Entry " + rle.key + " canceled, removing...");
         restoreList.remove(rle.key.getVersionKey());
         enu = restoreList.elements();
       }
@@ -1856,19 +1816,19 @@ panic("setBit disabled");
          *  add it to the HandoffList.
          */
         if (shouldMove) {
-          log(fileInfo.key.getId() + ":" + i + " (" + fkey + ") should move from " + getLocalNodeHandle() + " to " + best);
+          if (logger.level <= Logger.INFO) logger.log(fileInfo.key.getId() + ":" + i + " (" + fkey + ") should move from " + getLocalNodeHandle() + " to " + best);
           final FragmentKey skey = new FragmentKey(fileInfo.key, i);
           final Id nbest = best;
           final FileInfo nfileInfo = fileInfo;
           storage.getObject(skey,
             new Continuation() {
               public void receiveResult(Object o) {
-                log("PUT for " + skey);
+                if (logger.level <= Logger.INFO) logger.log("PUT for " + skey);
                 handoffList.put(skey, new HandoffListEntry(skey, nbest, false, (Fragment) o, nfileInfo.manifest));
               }
 
               public void receiveException(Exception e) {
-                warn("Cannot read fragment: " + skey + ", exception " , e);
+                if (logger.level <= Logger.WARNING) logger.logException("Cannot read fragment: " + skey + ", exception " , e);
               }
             });
           break;
@@ -1889,7 +1849,7 @@ panic("setBit disabled");
     Enumeration enu = handoffList.elements();
     while (enu.hasMoreElements()) {
       HandoffListEntry hle = (HandoffListEntry) enu.nextElement();
-      log("Attempting to handoff " + hle.skey + " to " + hle.destination);
+      if (logger.level <= Logger.INFO) logger.log("Attempting to handoff " + hle.skey + " to " + hle.destination);
 
       endpoint.route(
         hle.destination,
@@ -1925,7 +1885,7 @@ panic("setBit disabled");
    * Perform a status cast
    */
   private void statusCast() {
-    log("StatusCast #" + state.currentSequenceNo);
+    if (logger.level <= Logger.INFO) logger.log("StatusCast #" + state.currentSequenceNo);
 
     int numHolders = state.holderList.size();
     Id holder[] = new Id[numHolders];
@@ -1959,7 +1919,7 @@ panic("setBit disabled");
       ListIterator li = state.history.listIterator(0);
       while (li.hasNext()) {
         HistoryEvent event = (HistoryEvent) li.next();
-        log("Parsing " + event);
+        if (logger.level <= Logger.INFO) logger.log("Parsing " + event);
 
         FileInfo fileInfo = (FileInfo) state.fileList.get(event.key.getVersionKey());
         if (fileInfo != null) {
@@ -1984,7 +1944,7 @@ panic("setBit disabled");
             }
           }
         } else {
-          warn("File record disappeared?!?");
+          if (logger.level <= Logger.WARNING) logger.log("File record disappeared?!?");
         }
       }
     }
@@ -2039,7 +1999,7 @@ panic("setBit disabled");
      *  Send a StatusMessage to each holder
      */
     for (int i = 0; i < numHolders; i++) {
-      log("Sending to holder " + holder[i] + ": (full=" + holderGetsFullList[i] + ")");
+      if (logger.level <= Logger.INFO) logger.log("Sending to holder " + holder[i] + ": (full=" + holderGetsFullList[i] + ")");
 
       HistoryEvent[] evtList = new HistoryEvent[holderLog[i].size()];
       Enumeration enup = holderLog[i].elements();
@@ -2047,7 +2007,7 @@ panic("setBit disabled");
 
       while (enup.hasMoreElements()) {
         HistoryEvent evt = (HistoryEvent) enup.nextElement();
-        log("tells " + holder[i] + " " + evt);
+        if (logger.level <= Logger.INFO) logger.log("tells " + holder[i] + " " + evt);
         evtList[idx++] = evt;
       }
 
@@ -2092,7 +2052,7 @@ panic("setBit disabled");
 
         FileInfo fileInfo = (FileInfo) enumeration.nextElement();
         if (!auditList.containsKey(fileInfo.key)) {
-          log("decides to audit " + fileInfo.key);
+          if (logger.level <= Logger.INFO) logger.log("decides to audit " + fileInfo.key);
           auditList.put(fileInfo.key, fileInfo);
         }
       }
@@ -2112,12 +2072,12 @@ panic("setBit disabled");
             PastContentHandle[] handles = (PastContentHandle[]) o;
             if ((handles.length > 0) && (handles[0] != null)) {
               auditList.remove(key);
-              log("Got audit response from " + key);
+              if (logger.level <= Logger.INFO) logger.log("Got audit response from " + key);
             }
           }
 
           public void receiveException(Exception e) {
-            warn("receiveException(" + e + ") during audit -- unexpected, ignored (key=" + key + ")");
+            if (logger.level <= Logger.WARNING) logger.log("receiveException(" + e + ") during audit -- unexpected, ignored (key=" + key + ")");
           }
         });
     }
@@ -2133,7 +2093,7 @@ panic("setBit disabled");
       GlacierStatusMessage lsm = (GlacierStatusMessage) sqi.next();
       lsm.remainingLifetime--;
       if (lsm.remainingLifetime <= 0) {
-        log("STICKY expired packet " + lsm);
+        if (logger.level <= Logger.INFO) logger.log("STICKY expired packet " + lsm);
         sqi.remove();
       }
     }
@@ -2160,7 +2120,7 @@ panic("setBit disabled");
       cal.setTime(hle.lastHeardOf);
       long tdelay = tnow - cal.getTimeInMillis();
       if (tdelay > certainHolderEntryTimeout) {
-        log("Expiring HOLDER " + hle.nodeID + " (last heard of " + hle.lastHeardOf + ")");
+        if (logger.level <= Logger.INFO) logger.log("Expiring HOLDER " + hle.nodeID + " (last heard of " + hle.lastHeardOf + ")");
         expireList.add(hle.nodeID);
       }
     }
@@ -2176,19 +2136,19 @@ panic("setBit disabled");
         for (int j = 0; j < FileInfo.maxHoldersPerFragment; j++) {
           if (fi.holderKnown[i][j]) {
             if ((fi.holderId[i][j] != null) && (expireList.contains(fi.holderId[i][j]))) {
-              log("Expiring OLD HOLDER entry for " + fi.key + ":" + i + " at " + fi.holderId[i][j]);
+              if (logger.level <= Logger.INFO) logger.log("Expiring OLD HOLDER entry for " + fi.key + ":" + i + " at " + fi.holderId[i][j]);
               fi.holderKnown[i][j] = false;
             } else {
               cal.setTime(fi.lastHeard[i][j]);
               long tdelay = tnow - cal.getTimeInMillis();
               if (fi.holderDead[i][j]) {
                 if (tdelay > deadHolderEntryTimeout) {
-                  log("Expiring DEAD entry for " + fi.key + ":" + i + " at " + fi.holderId[i][j]);
+                  if (logger.level <= Logger.INFO) logger.log("Expiring DEAD entry for " + fi.key + ":" + i + " at " + fi.holderId[i][j]);
                   fi.holderKnown[i][j] = false;
                 }
               } else if (!fi.holderCertain[i][j]) {
                 if (tdelay > uncertainHolderEntryTimeout) {
-                  log("Expiring UNCERTAIN entry for " + fi.key + ":" + i + " at " + fi.holderId[i][j]);
+                  if (logger.level <= Logger.INFO) logger.log("Expiring UNCERTAIN entry for " + fi.key + ":" + i + " at " + fi.holderId[i][j]);
                   fi.holderKnown[i][j] = false;
                 }
               }
@@ -2214,7 +2174,7 @@ panic("setBit disabled");
     Enumeration e3 = state.holderList.elements();
     while (e3.hasMoreElements()) {
       HolderInfo hle = (HolderInfo) e3.nextElement();
-      log("HOLDER " + hle.nodeID + ": " + hle.numReferences + " total, " + hle.numLiveReferences + " live");
+      if (logger.level <= Logger.INFO) logger.log("HOLDER " + hle.nodeID + ": " + hle.numReferences + " total, " + hle.numLiveReferences + " live");
       if ((hle.numReferences == 0) && (!expireList.contains(hle.nodeID))) {
         expireList.add(hle.nodeID);
       }
@@ -2224,7 +2184,7 @@ panic("setBit disabled");
     while (e4.hasMoreElements()) {
       Object key = e4.nextElement();
       state.holderList.remove(key);
-      log("Expiring holder entry for " + key);
+      if (logger.level <= Logger.INFO) logger.log("Expiring holder entry for " + key);
     }
   }
 
@@ -2234,7 +2194,7 @@ panic("setBit disabled");
    * @param timerID An identifier for the timer
    */
   private void timerExpired(char timerID) {
-    log("TIMER EXPIRED: #" + (int) timerID);
+    if (logger.level <= Logger.INFO) logger.log("TIMER EXPIRED: #" + (int) timerID);
 
     switch (timerID) {
       case tiInsert:
@@ -2260,7 +2220,7 @@ panic("setBit disabled");
       {
         /* This timer expires when a status cast is due */
       
-        log("Timeout: StatusCast - auditing...");
+        if (logger.level <= Logger.INFO) logger.log("Timeout: StatusCast - auditing...");
         auditPrimaryReplicas();
         addTimer(auditTimeout, tiAudit);
         break;
@@ -2271,7 +2231,7 @@ panic("setBit disabled");
          * the primary replicas. At this point, all live replicas should
          * have replied. */
       
-        log("Timeout: Audit - determining restore jobs...");
+        if (logger.level <= Logger.INFO) logger.log("Timeout: Audit - determining restore jobs...");
         expireOldHolders();
         expireOldPackets();
         determineRestoreJobs();
@@ -2300,7 +2260,7 @@ panic("setBit disabled");
       
         if (!handoffList.isEmpty()) {
           HandoffListEntry hle = (HandoffListEntry) (handoffList.elements().nextElement());
-          warn("Handoff not successful: " + hle.skey + " to " + hle.destination);
+          if (logger.level <= Logger.WARNING) logger.log("Handoff not successful: " + hle.skey + " to " + hle.destination);
         }
         statusCast();
         state.lastStatusCast = new Date();
@@ -2310,7 +2270,7 @@ panic("setBit disabled");
       }
       default:
       {
-        log(Logger.SEVERE, "Unknown timer expired: " + (int) timerID);
+        if (logger.level <= Logger.SEVERE) logger.log("Unknown timer expired: " + (int) timerID);
         System.exit(1);
       }
     }
@@ -2328,7 +2288,7 @@ panic("setBit disabled");
 
     for (int i = 0; i < numInitialFragments; i++) {
       if (!ile.receiptReceived[i]) {
-        log("Sending insert request for " + ile.key + ":" + i + " to " + ile.holder[i].getId());
+        if (logger.level <= Logger.INFO) logger.log("Sending insert request for " + ile.key + ":" + i + " to " + ile.holder[i].getId());
         endpoint.route(
           null,
           new GlacierInsertMessage(
@@ -2360,7 +2320,7 @@ panic("setBit disabled");
       }
     }
     s+="\n";
-    log(s);
+    if (logger.level <= Logger.INFO) logger.log(s);
     
     if (environment.getTimeSource().currentTimeMillis() < ile.timeout) {
       boolean knowsAllHolders = true;
@@ -2385,21 +2345,21 @@ panic("setBit disabled");
 
         if (hasAllReceipts) {
           insertList.remove(ile.key);
-          log("Finished inserting " + ile.key);
+          if (logger.level <= Logger.INFO) logger.log("Finished inserting " + ile.key);
           return false;
         }
       }
     } else {
       /* A timeout has occurred */
 
-      log("Timeout... "+ile.attemptsLeft+" attempts left");
+      if (logger.level <= Logger.INFO) logger.log("Timeout... "+ile.attemptsLeft+" attempts left");
      
       if (ile.attemptsLeft > 0) {
         ile.timeout = environment.getTimeSource().currentTimeMillis() + insertTimeout - 100;
         ile.attemptsLeft --;
         
         if (!ile.insertsSent) {
-          unusual("Insert: Re-sending queries for " + ile.key);
+          if (logger.level <= Logger.SEVERE) logger.log("Insert: Re-sending queries for " + ile.key);
           for (int i = 0; i < numInitialFragments; i++) {
             Id fragmentLoc = getFragmentLocation(ile.key.getId(), i);
             endpoint.route(
@@ -2409,12 +2369,12 @@ panic("setBit disabled");
             );
           }
         } else {
-          unusual("Insert: Re-sending inserts for " + ile.key);
+          if (logger.level <= Logger.SEVERE) logger.log("Insert: Re-sending inserts for " + ile.key);
           sendInsertsFor(ile);
         }
       } else {
         insertList.remove(ile.key);
-        warn("Giving up attempt to insert " + ile.key);
+        if (logger.level <= Logger.WARNING) logger.log("Giving up attempt to insert " + ile.key);
         return false;
       } 
     }
@@ -2433,7 +2393,7 @@ panic("setBit disabled");
    * @param certain The feature to be added to the OrUpdateHolder attribute
    */
   private void addOrUpdateHolder(FileInfo fileInfo, int fragmentID, Id newHolder, boolean alive, boolean overrideDead, boolean certain) {
-    log("AOUH " + fileInfo.key + ":" + fragmentID + " H " + newHolder + " alive " + alive + " certain " + certain + " override " + overrideDead);
+    if (logger.level <= Logger.INFO) logger.log("AOUH " + fileInfo.key + ":" + fragmentID + " H " + newHolder + " alive " + alive + " certain " + certain + " override " + overrideDead);
 
     for (int k = 0; k < FileInfo.maxHoldersPerFragment; k++) {
       if (fileInfo.holderKnown[fragmentID][k] && (fileInfo.holderId[fragmentID][k] != null)) {
@@ -2449,7 +2409,7 @@ panic("setBit disabled");
              *  The holder is there, but marked as dead -- revive only if override
              */
             if (alive && overrideDead) {
-              log("Reviving");
+              if (logger.level <= Logger.INFO) logger.log("Reviving");
               fileInfo.holderDead[fragmentID][k] = false;
               fileInfo.holderCertain[fragmentID][k] = certain;
               currentHolder.numLiveReferences++;
@@ -2460,18 +2420,18 @@ panic("setBit disabled");
              *  The holder is there and alive
              */
             if (!alive) {
-              log("Killing");
+              if (logger.level <= Logger.INFO) logger.log("Killing");
               fileInfo.holderDead[fragmentID][k] = true;
               fileInfo.holderCertain[fragmentID][k] = certain;
               currentHolder.numLiveReferences--;
             } else {
               if (certain && !fileInfo.holderCertain[fragmentID][k]) {
-                log("Confirming");
+                if (logger.level <= Logger.INFO) logger.log("Confirming");
                 fileInfo.holderCertain[fragmentID][k] = true;
               }
 
               if (certain == fileInfo.holderCertain[fragmentID][k]) {
-                log("Updating timestamp");
+                if (logger.level <= Logger.INFO) logger.log("Updating timestamp");
                 fileInfo.lastHeard[fragmentID][k] = new Date();
               }
             }
@@ -2494,7 +2454,7 @@ panic("setBit disabled");
       removeHolderReference(fileInfo.holderId[fragmentID][slot]);
     }
 
-    log("Adding as new holder");
+    if (logger.level <= Logger.INFO) logger.log("Adding as new holder");
 
     fileInfo.holderKnown[fragmentID][slot] = true;
     fileInfo.holderId[fragmentID][slot] = addHolderReference(newHolder);
@@ -2519,7 +2479,7 @@ panic("setBit disabled");
    */
   private void addFragmentNews(FragmentKey key, Id newHolder, int eventType, Id sender) {
     assume((0 <= key.getFragmentID()) && (key.getFragmentID() < numFragments));
-    log("News on " + key + ": Sender " + sender + " says " + HistoryEvent.eventName(eventType) + " " + newHolder);
+    if (logger.level <= Logger.INFO) logger.log("News on " + key + ": Sender " + sender + " says " + HistoryEvent.eventName(eventType) + " " + newHolder);
 
     if (newHolder.equals(getLocalNodeHandle().getId())) {
       return;
@@ -2527,12 +2487,12 @@ panic("setBit disabled");
 
     FileInfo fileInfo = (FileInfo) state.fileList.get(key.getVersionKey());
     if (fileInfo == null) {
-      log("addFragmentNews cannot find the file in question -- ignoring");
+      if (logger.level <= Logger.INFO) logger.log("addFragmentNews cannot find the file in question -- ignoring");
       return;
     }
 
     if (fileInfo.haveFragment(key.getFragmentID())) {
-      warn("Got told about my own fragment -- ignoring");
+      if (logger.level <= Logger.WARNING) logger.log("Got told about my own fragment -- ignoring");
       return;
     }
 
@@ -2587,7 +2547,7 @@ panic("setBit disabled");
     if (!newHolder.equals(getLocalNodeHandle().getId())) {
       state.history.addLast(new HistoryEvent(HistoryEvent.evtHandedOff, key, newHolder, state.currentSequenceNo));
     } else {
-      log("MIGRATED TO MYSELF -- IGNORING");
+      if (logger.level <= Logger.INFO) logger.log("MIGRATED TO MYSELF -- IGNORING");
     }
   }
 
@@ -2634,7 +2594,7 @@ panic("setBit disabled");
 
     FileInfo fileInfo = (FileInfo) state.fileList.get(key.getVersionKey());
 
-    log("Marking new fragment as stored: " + key);
+    if (logger.level <= Logger.INFO) logger.log("Marking new fragment as stored: " + key);
 
     if (fileInfo == null) {
       fileInfo = new FileInfo(key.getVersionKey(), manifest, numFragments);
@@ -2668,11 +2628,11 @@ panic("setBit disabled");
   private void dumpFileList() {
     Enumeration enu = state.fileList.elements();
 
-    log("FileList at " + getLocalNodeHandle().getId() + ":");
+    if (logger.level <= Logger.INFO) logger.log("FileList at " + getLocalNodeHandle().getId() + ":");
     while (enu.hasMoreElements()) {
       FileInfo fileInfo = (FileInfo) enu.nextElement();
 
-      log(" - File " + fileInfo.key);
+      if (logger.level <= Logger.INFO) logger.log(" - File " + fileInfo.key);
       for (int i = 0; i < numFragments; i++) {
         for (int j = 0; j < FileInfo.maxHoldersPerFragment; j++) {
           if (fileInfo.holderKnown[i][j]) {
@@ -2681,7 +2641,7 @@ panic("setBit disabled");
               holderInfo = "" + fileInfo.holderId[i][j];
             }
 
-            log("    * Fragment " + i + " at " + holderInfo
+            if (logger.level <= Logger.INFO) logger.log("    * Fragment " + i + " at " + holderInfo
               + (fileInfo.holderCertain[i][j] ? " certainly " : " probably ")
               + (fileInfo.holderDead[i][j] ? "dead" : "alive")
               + " (" + fileInfo.lastHeard[i][j] + ")"

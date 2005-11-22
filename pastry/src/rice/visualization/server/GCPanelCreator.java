@@ -26,6 +26,11 @@ public class GCPanelCreator implements PanelCreator {
   
   double[] expirations = getExpirationArray();
   
+  /**
+   * Lazilly constructed.
+   */
+  protected Logger logger;
+  
   public GCPanelCreator(rice.selector.Timer timer, Past past) {
     this.past = (GCPastImpl) past;
     
@@ -67,7 +72,8 @@ public class GCPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger == null) past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null); 
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Exceptoin " + e + " thrown.", e);
     }
     
@@ -82,7 +88,8 @@ public class GCPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger == null) past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null); 
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Exceptoin " + e + " thrown.",e);
     }
     
@@ -97,7 +104,8 @@ public class GCPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(cacheView);
     } catch (Exception e) {
-      past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger == null) past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null); 
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Exceptoin " + e + " thrown.",e);
     } 
     
@@ -190,7 +198,8 @@ public class GCPanelCreator implements PanelCreator {
           times.removeElementAt(0);
         }
       } catch (Exception e) {
-        past.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+        if (logger == null) logger = past.getEnvironment().getLogManager().getLogger(GCPanelCreator.class, null);
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "Ecception " + e + " thrown.",e);
       }
     }

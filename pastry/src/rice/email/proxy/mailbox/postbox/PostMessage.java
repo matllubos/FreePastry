@@ -221,8 +221,9 @@ public class PostMessage implements StoredMessage {
     try {
       Vector parts = new Vector();
       String boundary = "boundary=" + parser.getBoundary();
-            
-      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
+
+      Logger logger = env.getLogManager().getLogger(PostMessage.class, null);
+      if (logger.level <= Logger.INFO) logger.log(
           "PROCESSING MIME MESSAGE WITH BOUNDARY " + boundary);
       
       while (true) {
@@ -249,27 +250,6 @@ public class PostMessage implements StoredMessage {
     }
   }
   
-  private static void walker(EmailContentPart part, String indent, Environment env) {
-    if (part instanceof EmailMultiPart) {
-      EmailMultiPart multi = (EmailMultiPart) part;
-      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
-          indent + "EmailMultiPart");
-      for (int i=0; i<multi.content.length; i++) 
-        walker(multi.content[i], indent + "  ", env);
-    } else if (part instanceof EmailSinglePart) {
-      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
-          indent + "EmailSinglePart");
-    } else if (part instanceof EmailMessagePart)  {
-      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
-          indent + "EmailMessagePart");
-      walker(((EmailHeadersPart) part).content, indent + "  ", env);
-    } else if (part instanceof EmailHeadersPart) {
-      env.getLogManager().getLogger(PostMessage.class, null).log(Logger.INFO,
-          indent + "EmailHeadersPart");
-      walker(((EmailHeadersPart) part).content, indent + "  ", env);
-    } 
-  }
-
   private static Object getContent(EmailContentPart part) throws MailboxException {
     ExternalContinuation c = new ExternalContinuation();
     part.getContent(c);

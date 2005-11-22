@@ -119,8 +119,7 @@ public class GlacierTest {
         glacierStor, new GlacierDefaultPolicy(), REPLICATION_FACTOR,
         numFragments, numSurvivors, null, INSTANCE);
     glaciers.addElement(glac);
-    pn.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
-      "created " + pn);
+    System.out.println("created " + pn);
   }
 
   /**
@@ -129,8 +128,7 @@ public class GlacierTest {
   private void printLeafSets() {
     for (int i = 0; i < pastryNodes.size(); i++) {
       PastryNode pn = (PastryNode) pastryNodes.get(i);
-      pn.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
-        pn.getLeafSet().toString());
+      System.out.println(pn.getLeafSet().toString());
     }
   }
 
@@ -206,14 +204,12 @@ public class GlacierTest {
           ;
     }
     if (simultaneous_joins) {
-      driver.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
-        "let the joins begin!");
+      System.out.println("let the joins begin!");
       while (driver.simulate())
         ;
     }
 
-    driver.getEnvironment().getLogManager().getLogger(GlacierTest.class, null).log(Logger.INFO,
-      numnodes + " nodes constructed");
+    System.out.println(numnodes + " nodes constructed");
 
     driver.printLeafSets();
 

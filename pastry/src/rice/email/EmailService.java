@@ -54,6 +54,8 @@ public class EmailService extends PostClient {
 
   InetAddress localHost;
   
+  protected Logger logger;
+  
   /**
    * Constructor
    *
@@ -66,7 +68,9 @@ public class EmailService extends PostClient {
     this.keyPair = keyPair;
     this.logRewrite = logRewrite;
     this.received = new HashSet();
-
+    
+    logger = post.getEnvironment().getLogManager().getLogger(EmailService.class, null);
+    
     post.addClient(this);
   }
 
@@ -186,54 +190,54 @@ public class EmailService extends PostClient {
     final HashSet expanded = new HashSet();
     final HashSet toExpand = new HashSet();
     
-    log(Logger.FINEST, "Starting EmailService.expand");
+    if (logger.level <= Logger.FINEST) logger.log( "Starting EmailService.expand");
     
     for (int i=0; i<list.length; i++) {
-      log(Logger.FINEST, "address to expand: "+list[i]);
+      if (logger.level <= Logger.FINEST) logger.log( "address to expand: "+list[i]);
       toExpand.add(list[i]);
     }
     
     final Continuation c = new StandardContinuation(command) {
       public void next() {
-        log(Logger.FINEST,"expand: next() called");
+        if (logger.level <= Logger.FINEST) logger.log("expand: next() called");
         receiveResult(null);
       }
       
       public void receiveResult(Object o) {
         Iterator i = toExpand.iterator();
         
-        log(Logger.FINEST,"in expand:c.receiveResult()");
+        if (logger.level <= Logger.FINEST) logger.log("in expand:c.receiveResult()");
         
         if (i.hasNext()) {
           final PostUserAddress address = (PostUserAddress) i.next();
           toExpand.remove(address);
           expanded.add(address);
 
-          log(Logger.FINEST,"expand:c.receiveResult(): processing address in queue "+address);
+          if (logger.level <= Logger.FINEST) logger.log("expand:c.receiveResult(): processing address in queue "+address);
           
           // and finally check for any forwarding addresses
           post.getPostLog(address, new StandardContinuation(parent) {
             public void receiveResult(Object o) {    
               if (o != null) {
-                log(Logger.FINEST,"expand:c.receiveResult():getPostLog got postlog for "+address);
+                if (logger.level <= Logger.FINEST) logger.log("expand:c.receiveResult():getPostLog got postlog for "+address);
                 ((Log) o).getChildLog(ForwardLog.FORWARD_NAME, new StandardContinuation(parent) {
                   public void receiveResult(Object o) {
                     if (o != null) {
-                      log(Logger.FINEST,"expand:c.receiveResult():getPostLog():getChildLog got ForwardLog for "+address);
+                      if (logger.level <= Logger.FINEST) logger.log("expand:c.receiveResult():getPostLog():getChildLog got ForwardLog for "+address);
                       final String[] addresses = ((ForwardLog) o).getAddresses();
                       
                       if (addresses != null && addresses.length > 0) {
-                        log(Logger.FINEST,"expand:c.receiveResult():getPostLog():getChildLog ForwardLog for "+address+" has addresses");
+                        if (logger.level <= Logger.FINEST) logger.log("expand:c.receiveResult():getPostLog():getChildLog ForwardLog for "+address+" has addresses");
                         
                         Continuation collate = new Continuation() {
 
                           public void receiveResult(Object result) {
                             Object results[] = (Object[])result;
 
-                            log(Logger.FINEST,"expand:collate: got results for "+address);
+                            if (logger.level <= Logger.FINEST) logger.log("expand:collate: got results for "+address);
 
                             for (int i = 0; i < results.length; i++) {
-                              log(Logger.FINEST,"expand:collate: result "+addresses[i]+" "+results[i]);
+                              if (logger.level <= Logger.FINEST) logger.log("expand:collate: result "+addresses[i]+" "+results[i]);
                               if (results[i].equals(Boolean.TRUE)) {
                                 PostUserAddress pua = new PostUserAddress(
                                     rice.email.proxy.mailbox.postbox.PostMessage.factory,
@@ -248,7 +252,7 @@ public class EmailService extends PostClient {
                           }
 
                           public void receiveException(Exception result) {
-                            log(Logger.FINEST,"expand:collate: got exception for "+address+": "+result);
+                            if (logger.level <= Logger.FINEST) logger.log("expand:collate: got exception for "+address+": "+result);
                             // will never be called
                           }
 
@@ -256,27 +260,27 @@ public class EmailService extends PostClient {
                         
                         MultiContinuation mc = new MultiContinuation(collate, addresses.length);
                         for (int j=0; j<addresses.length; j++) {
-                          log(Logger.FINEST,"expand:c.receiveResult():getPostLog():getChildLog address: "+addresses[j]);
+                          if (logger.level <= Logger.FINEST) logger.log("expand:c.receiveResult():getPostLog():getChildLog address: "+addresses[j]);
                           manager.isPostAddress(addresses[j], mc.getSubContinuation(j));
                         }
                       } else {
-                        log(Logger.FINEST,"expand:c.receiveResult():getPostLog():getChildLog ForwardLog has no addresses");
+                        if (logger.level <= Logger.FINEST) logger.log("expand:c.receiveResult():getPostLog():getChildLog ForwardLog has no addresses");
                         next();
                       }
                     } else {
-                      log(Logger.FINEST,"expand:c.receiveResult():getPostLog():getChildLog no ForwardLog for "+address);
+                      if (logger.level <= Logger.FINEST) logger.log("expand:c.receiveResult():getPostLog():getChildLog no ForwardLog for "+address);
                       next();
                     }
                   }
                 });
               } else {
-                log(Logger.WARNING,"WARNING: Could not find PostLog for forwarding for " + address);
+                if (logger.level <= Logger.WARNING) logger.log("WARNING: Could not find PostLog for forwarding for " + address);
                 next();
               }
             }
           });
         } else {
-          log(Logger.FINEST, "expand:c.receiveResult(): queue empty; returning results");
+          if (logger.level <= Logger.FINEST) logger.log( "expand:c.receiveResult(): queue empty; returning results");
           // pass any result from the Store Data (there should be none) to the handler.
           parent.receiveResult(expanded.toArray());
         }
@@ -332,7 +336,7 @@ public class EmailService extends PostClient {
       
       // in case we've already received it, just say ok
       if (received.contains(enm.getEmail())) {
-        log(Logger.WARNING,
+        if (logger.level <= Logger.WARNING) logger.log(
             "Received duplicate email from " + enm.getEmail().getSender() + " - silently accepting");
         command.receiveResult(Boolean.TRUE);
         return;
@@ -345,7 +349,7 @@ public class EmailService extends PostClient {
         return;
       }
 
-      log(Logger.FINE,
+      if (logger.level <= Logger.FINE) logger.log(
           "Received email from " + enm.getEmail().getSender());
 
       // notify the observers that an email has been received.
@@ -368,11 +372,13 @@ public class EmailService extends PostClient {
           }
         });
       } else {
-        log(Logger.WARNING,"Recieved message, but was unable to insert due to null inbox...");
+        if (logger.level <= Logger.WARNING) logger.log(
+            "Recieved message, but was unable to insert due to null inbox...");
         command.receiveResult(Boolean.FALSE);
       }
     } else {
-      log(Logger.WARNING,"EmailService received unknown notification " + nm + " - dropping on floor.");
+      if (logger.level <= Logger.WARNING) logger.log(
+          "EmailService received unknown notification " + nm + " - dropping on floor.");
       command.receiveException(new PostException("EmailService received unknown notification " + nm + " - dropping on floor."));
     }
   }
@@ -441,10 +447,6 @@ public class EmailService extends PostClient {
    */
   public void removeSubscription(String sub, Continuation command) {
     folder.removeSubscription(sub, command);
-  }
-  
-  private void log(int level, String msg) {
-    post.getEnvironment().getLogManager().getLogger(EmailService.class, null).log(level, msg);
   }
   
   /**

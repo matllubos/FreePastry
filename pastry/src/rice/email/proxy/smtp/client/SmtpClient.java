@@ -17,6 +17,7 @@ public class SmtpClient {
   private static final int TIMEOUT   = 1000 * 5;
 
   private Environment environment;
+  protected Logger logger;
   
   public SmtpClient(String host, Environment env) {
     if (host == null)
@@ -24,6 +25,7 @@ public class SmtpClient {
 
     _host = host;
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(SmtpClient.class, null);
   }
 
   public void connect() throws IOException, SmtpProtocolException {
@@ -43,14 +45,14 @@ public class SmtpClient {
   }
 
   private String sendCommand(String cmd) throws IOException, SmtpProtocolException {
-    environment.getLogManager().getLogger(SmtpClient.class, null).log(Logger.FINEST, 
+    if (logger.level <= Logger.FINEST) logger.log( 
         "C: " + cmd);
     _out.write(cmd);
     _out.write("\r\n");
     _out.flush();
 
     String response = _in.readLine();
-    environment.getLogManager().getLogger(SmtpClient.class, null).log(Logger.FINEST, 
+    if (logger.level <= Logger.FINEST) logger.log( 
         "S: " + response);
     if (response == null)
       throw new SmtpProtocolException("Connection unexpectedly closed");

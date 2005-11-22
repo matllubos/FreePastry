@@ -29,7 +29,8 @@ public class Pop3CommandRegistry {
         Pop3Command command = (Pop3Command) type.newInstance();
         registerCommand(name, command);
       } catch (Exception e) {
-        env.getLogManager().getLogger(Pop3CommandRegistry.class, null).logException(Logger.WARNING, "", e);
+        Logger logger = env.getLogManager().getLogger(Pop3CommandRegistry.class, null);
+        if (logger.level <= Logger.WARNING) logger.logException("", e);
       }
     }
   }

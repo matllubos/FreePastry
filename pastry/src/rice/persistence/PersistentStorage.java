@@ -121,6 +121,7 @@ public class PersistentStorage implements Storage {
   private long usedSize;            // The amount of storage currently in use
 
   Environment environment;
+  Logger logger;
   
  /**
   * Builds a PersistentStorage given a root directory in which to
@@ -159,6 +160,7 @@ public class PersistentStorage implements Storage {
    */
   public PersistentStorage(IdFactory factory, String name, String rootDir, int size, boolean index, Environment env) throws IOException {
     this.environment = env;
+    logger = environment.getLogManager().getLogger(PersistentStorage.class, null);
     this.factory = factory;
     this.name = name;
     this.rootDir = rootDir;
@@ -172,7 +174,7 @@ public class PersistentStorage implements Storage {
       this.metadata = new ReverseTreeMap();
     }
       
-    log(Logger.INFO, "Launching persistent storage in " + rootDir + " with name " + name + " spliting factor " + MAX_FILES);
+    if (logger.level <= Logger.INFO) logger.log( "Launching persistent storage in " + rootDir + " with name " + name + " spliting factor " + MAX_FILES);
     
     init();
   } 
@@ -181,12 +183,12 @@ public class PersistentStorage implements Storage {
     synchronized(statLock) {
       long now = environment.getTimeSource().currentTimeMillis();
       if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
-        log(Logger.INFO,"@L.PE name=" + name + " interval="+statsLastWritten+"-"+now);
+        if (logger.level <= Logger.INFO) logger.log("@L.PE name=" + name + " interval="+statsLastWritten+"-"+now);
         statsLastWritten = now;
         
-        log(Logger.INFO,"@L.PE   objsTotal=" + (index ? "" + metadata.keySet().size() : "?") + " objsBytesTotal=" + getTotalSize());
-        log(Logger.INFO,"@L.PE   numWrites=" + numWrites + " numReads=" + numReads + " numDeletes=" + numDeletes);
-        log(Logger.INFO,"@L.PE   numMetadataWrites=" + numMetadataWrites + " numRenames=" + numRenames);
+        if (logger.level <= Logger.INFO) logger.log("@L.PE   objsTotal=" + (index ? "" + metadata.keySet().size() : "?") + " objsBytesTotal=" + getTotalSize());
+        if (logger.level <= Logger.INFO) logger.log("@L.PE   numWrites=" + numWrites + " numReads=" + numReads + " numDeletes=" + numDeletes);
+        if (logger.level <= Logger.INFO) logger.log("@L.PE   numMetadataWrites=" + numMetadataWrites + " numRenames=" + numRenames);
       }
     }
   }
@@ -282,7 +284,7 @@ public class PersistentStorage implements Storage {
       public Object doWork() throws Exception {
         synchronized(statLock) { numWrites++; }
         
-        log(Logger.FINER,"Storing object " + obj + " under id " + id + " in root " + appDirectory);
+        if (logger.level <= Logger.FINER) logger.log("Storing object " + obj + " under id " + id + " in root " + appDirectory);
         
         /* first, create a temporary file */
         File objFile = getFile(id);
@@ -291,19 +293,19 @@ public class PersistentStorage implements Storage {
         /* next, write out the data to a new copy of the original file */
         try {
           writeObject(obj, metadata, id, environment.getTimeSource().currentTimeMillis(), transcFile);
-          log(Logger.FINER,"Done writing object " + obj + " under id " + id + " in root " + appDirectory);
+          if (logger.level <= Logger.FINER) logger.log("Done writing object " + obj + " under id " + id + " in root " + appDirectory);
 
           /* abort if this will put us over quota */
           if (getUsedSpace() + getFileLength(transcFile) > getStorageSize()) 
             throw new OutofDiskSpaceException();
         } catch (Exception e) {
           /* if an IOException is thrown, delete the temporary file and abort */
-          logException(Logger.WARNING, "", e);
+          if (logger.level <= Logger.WARNING) logger.logException( "", e);
           deleteFile(transcFile);
           throw e;
         }
         
-        log(Logger.FINER,"COUNT: Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + transcFile.length() + " in " + name);       
+        if (logger.level <= Logger.FINER) logger.log("COUNT: Storing data of class " + obj.getClass().getName() + " under " + id.toStringFull() + " of size " + transcFile.length() + " in " + name);       
         
         /* recalculate amount used */
         decreaseUsedSpace(getFileLength(objFile)); 
@@ -356,7 +358,7 @@ public class PersistentStorage implements Storage {
         /* first get the file */
         File objFile = getFile(id); 
         
-        log(Logger.FINER,"COUNT: Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
+        if (logger.level <= Logger.FINER) logger.log("COUNT: Unstoring data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
         
         /* remove id from stored list */
         if (index) {
@@ -433,7 +435,7 @@ public class PersistentStorage implements Storage {
         public Object doWork() throws Exception {
           synchronized(statLock) { numMetadataWrites++; }
           
-          log(Logger.FINER,"COUNT: Updating metadata for " + id.toStringFull() + " in " + name);
+          if (logger.level <= Logger.FINER) logger.log("COUNT: Updating metadata for " + id.toStringFull() + " in " + name);
           
           /* write the metadata to the file */
           File objFile = getFile(id);
@@ -480,7 +482,7 @@ public class PersistentStorage implements Storage {
             if ((objFile == null) || (! objFile.exists())) 
               return null;
 
-            log(Logger.FINER,"COUNT: Fetching data under " + id + " of size " + objFile.length() + " in " + name);
+            if (logger.level <= Logger.FINER) logger.log("COUNT: Fetching data under " + id + " of size " + objFile.length() + " in " + name);
             return readData(objFile);
           } catch (Exception e) {
             /* remove our index for this file */
@@ -649,7 +651,7 @@ public class PersistentStorage implements Storage {
     environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) { 
       public String toString() { return "flush"; }
       public Object doWork() throws Exception {
-        log(Logger.FINER,"COUNT: Flushing all data in " + name);
+        if (logger.level <= Logger.FINER) logger.log("COUNT: Flushing all data in " + name);
 
         flushDirectory(appDirectory);
         return Boolean.TRUE;
@@ -666,18 +668,18 @@ public class PersistentStorage implements Storage {
    * when we start up
    */
   private void init() throws IOException {
-    log(Logger.INFO,"Initing directories");
+    if (logger.level <= Logger.INFO) logger.log("Initing directories");
     initDirectories();
-    log(Logger.INFO,"Initing directory map");
+    if (logger.level <= Logger.INFO) logger.log("Initing directory map");
     initDirectoryMap(appDirectory);
-    log(Logger.INFO,"Initing files");
+    if (logger.level <= Logger.INFO) logger.log("Initing files");
     initFiles(appDirectory);
-    log(Logger.INFO,"Initing file map");
+    if (logger.level <= Logger.INFO) logger.log("Initing file map");
     initFileMap(appDirectory);
-    log(Logger.INFO,"Syncing metadata");
+    if (logger.level <= Logger.INFO) logger.log("Syncing metadata");
     if (index)
       writeDirty();
-    log(Logger.INFO,"Done initing");
+    if (logger.level <= Logger.INFO) logger.log("Done initing");
   }
 
   /**
@@ -737,7 +739,7 @@ public class PersistentStorage implements Storage {
             upgradeFile(dir, files[i]);
         }
       } catch (Exception e) {
-        logException(Logger.WARNING,"Got exception " + e + " initting file " + files[i] + " - moving to lost+found.",e);
+        if (logger.level <= Logger.WARNING) logger.logException("Got exception " + e + " initting file " + files[i] + " - moving to lost+found.",e);
         moveToLost(new File(dir, files[i]));
       }      
     }
@@ -780,7 +782,7 @@ public class PersistentStorage implements Storage {
    */
   private void upgradeFile(File parent, String name) throws IOException {
     if (name.startsWith(getPrefix(parent)) && (! parent.equals(appDirectory))) {
-      log(Logger.FINE,"Upgrading file " + name + " to new version " + name.substring(getPrefix(parent).length()));
+      if (logger.level <= Logger.FINE) logger.log("Upgrading file " + name + " to new version " + name.substring(getPrefix(parent).length()));
       renameFile(new File(parent, name), new File(parent, name.substring(getPrefix(parent).length())));
     }
   }
@@ -796,7 +798,7 @@ public class PersistentStorage implements Storage {
    *
    */
   private void initFileMap(File dir) throws IOException {
-    log(Logger.FINE,"Initting directory " + dir);
+    if (logger.level <= Logger.FINE) logger.log("Initting directory " + dir);
     
     /* first, see if this directory needs to be expanded */
     checkDirectory(dir);
@@ -812,7 +814,7 @@ public class PersistentStorage implements Storage {
       try {
         modified = readMetadataFile(dir);
       } catch (IOException e) {
-        logException(Logger.SEVERE, "Got exception " + e + " reading metadata file - regenerating", e);
+        if (logger.level <= Logger.SEVERE) logger.logException( "Got exception " + e + " reading metadata file - regenerating", e);
       }
     }
     
@@ -826,7 +828,7 @@ public class PersistentStorage implements Storage {
         long len = getFileLength(files[i]);
         
         if (id == null)
-          log(Logger.INFO, "READING " + files[i] + " RETURNED NULL!");
+          if (logger.level <= Logger.INFO) logger.log( "READING " + files[i] + " RETURNED NULL!");
         
         if (len > 0) {
           increaseUsedSpace(len);
@@ -834,7 +836,7 @@ public class PersistentStorage implements Storage {
           /* if the file is newer than the metadata file, update the metadata 
           if we don't have the metadata for this file, update it */
           if (index && ((! metadata.containsKey(id)) || (files[i].lastModified() > modified))) {
-            log(Logger.FINER,"Reading newer metadata out of file " + files[i] + " id " + id + " " + files[i].lastModified() + " " + modified + " " + metadata.containsKey(id));
+            if (logger.level <= Logger.FINER) logger.log("Reading newer metadata out of file " + files[i] + " id " + id + " " + files[i].lastModified() + " " + modified + " " + metadata.containsKey(id));
             metadata.put(id, readMetadata(files[i]));
             dirty.add(dir);
           }
@@ -847,7 +849,7 @@ public class PersistentStorage implements Storage {
           }
         }
       } catch (Exception e) {
-        environment.getLogManager().getLogger(PersistentStorage.class, null).logException(Logger.WARNING,
+        if (logger.level <= Logger.WARNING) logger.logException(
             "ERROR: Received Exception " + e + " while initing file " + files[i] + " - moving to lost+found.",e);
         moveToLost(files[i]);
       }
@@ -873,7 +875,7 @@ public class PersistentStorage implements Storage {
     } else if (file1.equals(file2)) {
       renameFile(file1, output);
     } else {
-      log(Logger.FINE,"resolving conflict between " + file1 + " and " + file2);
+      if (logger.level <= Logger.FINE) logger.log("resolving conflict between " + file1 + " and " + file2);
       
       if (readVersion(file1) < readVersion(file2)) {
         moveToLost(file1);
@@ -910,7 +912,7 @@ public class PersistentStorage implements Storage {
     int files = numFilesDir(directory);
     int dirs = numDirectoriesDir(directory);
 
-    log(Logger.FINE,"Checking directory " + directory + " for oversize " + files + "/" + dirs);
+    if (logger.level <= Logger.FINE) logger.log("Checking directory " + directory + " for oversize " + files + "/" + dirs);
 
     if (files > MAX_FILES) {
       expandDirectory(directory);
@@ -933,7 +935,7 @@ public class PersistentStorage implements Storage {
    * @param dir The directory to remove
    */
   private void pruneDirectory(File dir) throws IOException {
-    log(Logger.FINE,"Pruning directory " + dir + " due to emptiness");
+    if (logger.level <= Logger.FINE) logger.log("Pruning directory " + dir + " due to emptiness");
 
     /* First delete the metadata file, if it exists */
     deleteFile(new File(dir, METADATA_FILENAME));
@@ -959,11 +961,11 @@ public class PersistentStorage implements Storage {
    * @param dir The directory to expand 
    */
   private void reformatDirectory(File dir) throws IOException {
-    log(Logger.FINE,"Expanding directory " + dir + " due to too many subdirectories");
+    if (logger.level <= Logger.FINE) logger.log("Expanding directory " + dir + " due to too many subdirectories");
     /* first, determine what directories we should create */
     String[] newDirNames = getDirectories(dir.list(new DirectoryFilter()));
     reformatDirectory(dir, newDirNames);
-    log(Logger.FINE,"Done expanding directory " + dir);
+    if (logger.level <= Logger.FINE) logger.log("Done expanding directory " + dir);
   }
     
   /**
@@ -981,7 +983,7 @@ public class PersistentStorage implements Storage {
     for (int i=0; i<newDirNames.length; i++) {
       newDirs[i] = new File(dir, newDirNames[i]);
       createDirectory(newDirs[i]);
-      log(Logger.FINE,"creating directory " + newDirNames[i]);
+      if (logger.level <= Logger.FINE) logger.log("creating directory " + newDirNames[i]);
 
       /* now look through the original directory and move any matching dirs */
       String[] subDirNames = getMatchingDirectories(newDirNames[i], dirNames);
@@ -991,7 +993,7 @@ public class PersistentStorage implements Storage {
         /* move the directory */
         File oldDir = new File(dir, subDirNames[j]);
         newSubDirs[j] = new File(newDirs[i], subDirNames[j].substring(newDirNames[i].length()));
-        log(Logger.FINE,"moving the old direcotry " + oldDir + " to " + newSubDirs[j]);
+        if (logger.level <= Logger.FINE) logger.log("moving the old direcotry " + oldDir + " to " + newSubDirs[j]);
         renameFile(oldDir, newSubDirs[j]);
 
         /* remove the stale entry, add the new one */        
@@ -1035,7 +1037,7 @@ public class PersistentStorage implements Storage {
    * @param dir The directory to expand 
    */
   private void expandDirectory(File dir) throws IOException {
-    log(Logger.FINE,"Expanding directory " + dir + " due to too many files");
+    if (logger.level <= Logger.FINE) logger.log("Expanding directory " + dir + " due to too many files");
     /* first, determine what directories we should create */
     String[] fileNames = dir.list(new FileFilter());
     String[] dirNames = getDirectories(fileNames);
@@ -1046,7 +1048,7 @@ public class PersistentStorage implements Storage {
       dirs[i] = new File(dir, dirNames[i]);
       directories.put(dirs[i], new File[0]);
       createDirectory(dirs[i]);
-      log(Logger.FINE,"creating directory " + dirNames[i]);
+      if (logger.level <= Logger.FINE) logger.log("creating directory " + dirNames[i]);
       
       /* mark this directory for metadata syncing */
       if (index) 
@@ -1070,7 +1072,7 @@ public class PersistentStorage implements Storage {
     /* and remove the metadata file */
     deleteFile(new File(dir, METADATA_FILENAME));
     
-    log(Logger.FINE,"Done expanding directory " + dir);
+    if (logger.level <= Logger.FINE) logger.log("Done expanding directory " + dir);
   }
   
   /**
@@ -1146,7 +1148,7 @@ public class PersistentStorage implements Storage {
     
     /* if it's in the wrong directory, then move it and resolve the conflict if necessary */
     if (! dest.equals(parent)) {
-      log(Logger.FINE,"moving file " + file + " to correct directory " + dest + " from " + parent);
+      if (logger.level <= Logger.FINE) logger.log("moving file " + file + " to correct directory " + dest + " from " + parent);
       File other = new File(dest, id.toStringFull().substring(getPrefix(dest).length()));
       resolveConflict(file, other, other);
       checkDirectory(dest);
@@ -1159,7 +1161,7 @@ public class PersistentStorage implements Storage {
    * @param dir The directory to flush
    */
   private void flushDirectory(File dir) throws IOException {
-    log(Logger.FINE,"Flushing file " + dir);
+    if (logger.level <= Logger.FINE) logger.log("Flushing file " + dir);
 
     if (! dir.isDirectory()) {
       Id id = readKey(dir);
@@ -1356,7 +1358,7 @@ public class PersistentStorage implements Storage {
       /* here, we must create the appropriate directory */
       if (name.length() >= subDirs[0].getName().length()) {
         File newDir = new File(dir, name.substring(0, subDirs[0].getName().length()));
-        log(Logger.FINE,"Necessarily creating dir " + newDir.getName());
+        if (logger.level <= Logger.FINE) logger.log("Necessarily creating dir " + newDir.getName());
         createDirectory(newDir);
         this.directories.put(dir, append(subDirs, newDir));
         this.directories.put(newDir, new File[0]);
@@ -1527,16 +1529,16 @@ public class PersistentStorage implements Storage {
             dirty.remove(files[i]);
           }
           
-          logException(Logger.WARNING, "ERROR: Could not find directory while writing out metadata in '" + files[i].getCanonicalPath() + "' - removing from dirty list and continuing!",f);
+          if (logger.level <= Logger.WARNING) logger.logException( "ERROR: Could not find directory while writing out metadata in '" + files[i].getCanonicalPath() + "' - removing from dirty list and continuing!",f);
         } catch (IOException g) {
-          logException(Logger.SEVERE, "PANIC: Got IOException " + g + " trying to detail FNF exception " + f + " while writing out file " + files[i], g);
+          if (logger.level <= Logger.SEVERE) logger.logException( "PANIC: Got IOException " + g + " trying to detail FNF exception " + f + " while writing out file " + files[i], g);
         }
       } catch (IOException e) {
         try {
-          logException(Logger.WARNING,
+          if (logger.level <= Logger.WARNING) logger.logException(
               "ERROR: Got error " + e + " while writing out metadata in '" + files[i].getCanonicalPath() + "' - aborting!",e);
         } catch (IOException f) {
-          logException(Logger.SEVERE,"PANIC: Got IOException " + f+ " trying to detail exception " + e + " while writing out file " + files[i], f);
+          if (logger.level <= Logger.SEVERE) logger.logException("PANIC: Got IOException " + f+ " trying to detail exception " + e + " while writing out file " + files[i], f);
         }
       }
     }
@@ -1577,11 +1579,11 @@ public class PersistentStorage implements Storage {
         
         return metadata.lastModified();
       } catch (ClassNotFoundException e) {
-        logException(Logger.WARNING, "ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file",e);
+        if (logger.level <= Logger.WARNING) logger.logException( "ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file",e);
         deleteFile(metadata);
         return 0L;
       } catch (IOException e) {
-        logException(Logger.WARNING, "ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file",e);
+        if (logger.level <= Logger.WARNING) logger.logException( "ERROR: Got exception " + e + " while reading metadata file " + metadata + " - rebuilding file",e);
         deleteFile(metadata);
         return 0L;
       }
@@ -1691,10 +1693,10 @@ public class PersistentStorage implements Storage {
       if (ras.readLong() != PERSISTENCE_MAGIC_NUMBER) {
         return null;
       } else if (ras.readLong() != PERSISTENCE_VERSION_2) {
-        log(Logger.WARNING, "Persistence version did not match - exiting!");
+        if (logger.level <= Logger.WARNING) logger.log( "Persistence version did not match - exiting!");
         return null;
       } else if (ras.readLong() > PERSISTENCE_REVISION_2_1) {
-        log(Logger.WARNING, "Persistence revision did not match - exiting!");
+        if (logger.level <= Logger.WARNING) logger.log( "Persistence revision did not match - exiting!");
         return null;
       }
       
@@ -2063,14 +2065,5 @@ public class PersistentStorage implements Storage {
 	}
 	
 	private static class OutofDiskSpaceException extends PersistenceException {
-	}
-	
-  private void log(int level, String msg) {
-    environment.getLogManager().getLogger(PersistentStorage.class, null).log(level, msg);
-  }
-  
-  private void logException(int level, String msg, Throwable t) {
-    environment.getLogManager().getLogger(PersistentStorage.class, null).logException(level, msg, t);
-  }
-  
+	}	
 }

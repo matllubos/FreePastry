@@ -107,8 +107,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
     }
 
     if (isLocal && status != LIVENESS_ALIVE) {
-      localnode.getEnvironment().getLogManager().getLogger(
-          DistCoalesedNodeHandle.class, null).log(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.log(
           "panic; local node dead");
     }
     return status;
@@ -127,8 +126,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
     }
 
     if (!isAlive()) {
-      localnode.getEnvironment().getLogManager().getLogger(
-          DistCoalesedNodeHandle.class, null).log(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.log(
           "found " + nodeId + " to be alive after all");
 
       status = LIVENESS_ALIVE;
@@ -152,8 +150,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
     }
 
     if (isAlive()) {
-      localnode.getEnvironment().getLogManager().getLogger(
-          DistCoalesedNodeHandle.class, null).log(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.log(
           getLocalNode() + " found " + nodeId + " to be dead");
 
       status = LIVENESS_DEAD;
@@ -345,8 +342,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
    * @param s The message to print.
    */
   protected void debug(String s) {
-    localnode.getEnvironment().getLogManager().getLogger(
-        DistCoalesedNodeHandle.class, null).log(Logger.INFO,
+    if (logger.level <= Logger.INFO) logger.log(
         getLocalNode() + " (" + nodeId + "): " + s);
   }
 
@@ -429,7 +425,7 @@ public abstract class DistCoalesedNodeHandle extends DistNodeHandle {
   // Observer method
 
   public void update(Observable o, Object obj) {
-    localnode.getEnvironment().getLogManager().getLogger(DistCoalesedNodeHandle.class, null).log(Logger.SEVERE,
+    if (logger.level <= Logger.SEVERE) logger.log(
       "DistCoalesedNodeHandle::update(): should not be here!!!!");
   }
 }

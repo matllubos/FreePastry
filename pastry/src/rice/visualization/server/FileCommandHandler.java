@@ -29,6 +29,10 @@ public class FileCommandHandler implements DebugCommandHandler {
   Environment environment;
   
   /**
+   * Lazilly constructed.
+   */
+  protected Logger logger;
+  /**
    * @param environment
    */
   public FileCommandHandler(Environment env) {
@@ -68,7 +72,8 @@ public class FileCommandHandler implements DebugCommandHandler {
       ret+="FileSize:"+f.length()+" Last Modified:"+new Date(f.lastModified());
       return ret;
     } catch (Throwable t) {     
-      environment.getLogManager().getLogger(FileCommandHandler.class, null).logException(Logger.WARNING, 
+      if (logger == null) logger = environment.getLogManager().getLogger(FileCommandHandler.class, null); 
+      if (logger.level <= Logger.WARNING) logger.logException(
           "ERROR: opening \""+filename+"\":"+t.getMessage(), t);
       return "ERROR: opening \""+filename+"\":"+t.getMessage();
     }      
@@ -93,7 +98,8 @@ public class FileCommandHandler implements DebugCommandHandler {
       } 
       return ret;
     } catch (Throwable t) {
-      environment.getLogManager().getLogger(FileCommandHandler.class, null).logException(Logger.WARNING, 
+      if (logger == null) logger = environment.getLogManager().getLogger(FileCommandHandler.class, null); 
+      if (logger.level <= Logger.WARNING) logger.logException(
           "ERROR: opening \""+filename+"\":"+t.getMessage(),
           t);
       return "ERROR: opening \""+filename+"\":"+t.getMessage();

@@ -203,7 +203,7 @@ public class EmailProxy extends PostProxy {
     // note this means you can't have a a "" password
     if (pass == null || "".equals(pass)) {
       stepDone(FAILURE, "ERROR: Unable to determine IMAP password (no Post password found)");
-      environment.getLogManager().getLogger(EmailProxy.class, null).log(Logger.SEVERE,
+      if (logger.level <= Logger.SEVERE) logger.log(
           "ERROR: Unable to determine IMAP password (no Post password found)");
       
       int i = message("Could not find a password for your account.\nYou will not be able to log into IMAP, SMTP, or other services.", 
@@ -258,7 +258,7 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch SMTP server - continuing - " + e);
-        environment.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "ERROR: Unable to launch SMTP server - continuing - ",e);
         
         int i = message("The SMTP server failed to launch due to an exception.\n\n" + 
@@ -279,7 +279,6 @@ public class EmailProxy extends PostProxy {
     Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("email_imap_enable")) {
       try {
-        boolean log = parameters.getBoolean("email_imap_log");
         int port = parameters.getInt("email_imap_port");
         boolean gateway = parameters.getBoolean("email_gateway");
         boolean accept = parameters.getBoolean("email_accept_nonlocal");
@@ -288,12 +287,12 @@ public class EmailProxy extends PostProxy {
         
         if (parameters.getBoolean("email_imap_ssl")) {
           stepStart("Starting SSL IMAP server on port " + port);
-          imap = new SSLImapServerImpl(getLocalHost(), port, email, manager, gateway, accept, file, pass, log, environment);
+          imap = new SSLImapServerImpl(getLocalHost(), port, email, manager, gateway, accept, file, pass, environment);
           imap.start();
           stepDone(SUCCESS);
         } else if (parameters.getBoolean("email_imap_non_blocking")) {
           stepStart("Starting Non-Blocking IMAP server on port " + port);
-          imap = new NonBlockingImapServerImpl(getLocalHost(), port, email, manager, gateway, accept, log, environment);
+          imap = new NonBlockingImapServerImpl(getLocalHost(), port, email, manager, gateway, accept, environment);
           imap.start();
           stepDone(SUCCESS);
         } else {
@@ -304,7 +303,7 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
-        environment.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "ERROR: Unable to launch IMAP server - continuing - ",e);
         
         int i = message("The IMAP server failed to launch due to an exception.\n\n" + 
@@ -349,7 +348,7 @@ public class EmailProxy extends PostProxy {
         }
       } catch (Exception e) {
         stepDone(FAILURE, "ERROR: Unable to launch IMAP server - continuing - " + e);
-        environment.getLogManager().getLogger(EmailProxy.class, null).logException(Logger.SEVERE,
+        if (logger.level <= Logger.SEVERE) logger.logException(
             "ERROR: Unable to launch IMAP server - continuing - ",
             e);
         

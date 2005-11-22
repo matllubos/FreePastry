@@ -145,7 +145,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
 
     public synchronized void receiveException(Exception result) {
       if (done) return;
-      environment.getLogManager().getLogger(DistPastryNodeFactory.class, null).logException(Logger.WARNING, 
+      if (logger.level <= Logger.WARNING) logger.logException(
           "Received exception while booting, trying next bootstap address",result);
       outstandingRequests--;
       tryNext();      

@@ -28,6 +28,8 @@ final class EncryptedLogEntry extends LogEntry {
   // the encrypted contained log entry
   protected transient byte[] cipherEntry;
   
+  protected transient Logger logger;
+  
   /**
    * Constructs a LogEntry
    */
@@ -62,7 +64,8 @@ final class EncryptedLogEntry extends LogEntry {
       byte[] data = SecurityUtils.serialize(entry);
       cipherEntry = SecurityUtils.encryptSymmetric(data, key);
     } catch (IOException e) {
-      logException(Logger.WARNING, "Exception " + e + " thrown while serializing/encrypting entry " + entry,e);
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(EncryptedLogEntry.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException( "Exception " + e + " thrown while serializing/encrypting entry " + entry,e);
     }
   }
 
@@ -75,9 +78,11 @@ final class EncryptedLogEntry extends LogEntry {
       entry = (LogEntry) SecurityUtils.deserialize(data);
       entry.setParent(this);
     } catch (IOException e) {
-      logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting entry " + entry,e);
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(EncryptedLogEntry.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException( "Exception " + e + " thrown while deserializing/decrypting entry " + entry,e);
     } catch (ClassNotFoundException e) {
-      logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting entry " + entry,e);
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(EncryptedLogEntry.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException( "Exception " + e + " thrown while deserializing/decrypting entry " + entry,e);
     }
   }
   
@@ -169,15 +174,6 @@ final class EncryptedLogEntry extends LogEntry {
       cipherEntry = new byte[ois.readInt()];
       ois.readFully(cipherEntry, 0, cipherEntry.length);
     }
-  }
-  
-  private void log(int level, String m) {
-    post.getEnvironment().getLogManager().getLogger(EncryptedLogEntry.class, null).log(level,m);
-  }
-  
-  private void logException(int level, String m, Throwable t) {
-    post.getEnvironment().getLogManager().getLogger(EncryptedLogEntry.class, null).logException(level,m,t);
-  }
-
+  }  
 }
 

@@ -80,6 +80,8 @@ public class Log implements PostData {
    */
   protected transient HashMap childrenCache;
   
+  protected transient Logger logger;
+  
   /**
    * Constructs a Log for use in POST
    *
@@ -402,7 +404,8 @@ public class Log implements PostData {
           LogEntry thisEntry = (LogEntry) o;
           
           if (thisEntry == null) {
-            log(Logger.WARNING,"Log entry was unexpectedly null - returning prematurely...");
+            if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(Log.class, null);
+            if (logger.level <= Logger.WARNING) logger.log("Log entry was unexpectedly null - returning prematurely...");
             parent.receiveResult(Boolean.TRUE);
           } else if (((entry != null) && (thisEntry.contains(entry))) ||
                      (thisEntry.getPreviousEntryReference() == null)) {
@@ -507,7 +510,8 @@ public class Log implements PostData {
       state = STATE_1;
       entry.setPost(post);
       entry.setUser(post.getEntityAddress());
-      log(Logger.INFO,"setting PreviousEntryReferences on entry with: "+topEntryReferencesToString());
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(Log.class, null);
+      if (logger.level <= Logger.INFO) logger.log("setting PreviousEntryReferences on entry with: "+topEntryReferencesToString());
       entry.setPreviousEntryReferences(previousTopReferences);
       entry.setPreviousEntry(topEntry);
       post.getStorageService().storeContentHash(entry, this);
@@ -581,14 +585,6 @@ public class Log implements PostData {
     result.append(" ]");
     
     return result.toString();
-  }
-  
-  private void log(int level, String m) {
-    post.getEnvironment().getLogManager().getLogger(Log.class, null).log(level,m);
-  }
-  
-  private void logException(int level, String m, Throwable t) {
-    post.getEnvironment().getLogManager().getLogger(Log.class, null).logException(level,m,t);
   }
   
   

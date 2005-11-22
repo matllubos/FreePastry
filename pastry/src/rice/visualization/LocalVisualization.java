@@ -28,9 +28,12 @@ public class LocalVisualization implements DataProvider {
   protected boolean die = false;
   
   protected Environment environment;
+  protected Logger logger;
   
   public LocalVisualization(DistNodeHandle handle, Environment env) {
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(LocalVisualization.class, null);
+
     this.handle = handle;
     this.frame = new LocalVisualizationFrame(this);
     
@@ -46,10 +49,11 @@ public class LocalVisualization implements DataProvider {
           if (client != null)
             client.close();
           
-          environment.getLogManager().getLogger(ControlPanel.class, null).log(Logger.INFO,
+          if (logger.level <= Logger.INFO) logger.log(
               "Visualization Thread now dying...");
         } catch (Exception e) {
-          environment.getLogManager().getLogger(ControlPanel.class, null).logException(Logger.WARNING,"",e);
+          if (logger.level <= Logger.WARNING) logger.logException(
+              "",e);
         }
       }
     };

@@ -86,7 +86,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param hint the hint
    */
   public void route(Id key, Message msg, NodeHandle hint) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
       "[" + thePastryNode + "] route " + msg + " to " + key);
 
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg);
@@ -216,7 +216,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       throw new IllegalArgumentException("maximum replicaSet size for this configuration exceeded; asked for "+maxRank+" but max is "+leafset.maxSize()/2+1);
     }
     if (maxRank > leafset.size()) {
-      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,"trying to get a replica set of size "+maxRank+" but only "+leafset.size()+" nodes in leafset");
+      if (logger.level <= Logger.FINER) logger.log(
+          "trying to get a replica set of size "+maxRank+" but only "+leafset.size()+" nodes in leafset");
     }
     
     return leafset.replicaSet((rice.pastry.Id) id, maxRank);
@@ -311,21 +312,21 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   // Upcall to Application support
 
   public final void messageForAppl(rice.pastry.messaging.Message msg) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] deliver " + msg + " from " + msg.getSenderId());
     
     if (msg instanceof PastryEndpointMessage) {
       // null for now, when RouteMessage stuff is completed, then it will be different!
       application.deliver(null, ((PastryEndpointMessage) msg).getMessage());
     } else {
-      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.WARNING,
+      if (logger.level <= Logger.WARNING) logger.log(
           "Received unknown message " + msg + " - dropping on floor");
     }
   }
 
   public final boolean enrouteMessage(Message msg, Id key, NodeHandle nextHop, SendOptions opt) {
     if (msg instanceof RouteMessage) {
-      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+      if (logger.level <= Logger.FINER) logger.log(
           "[" + thePastryNode + "] forward " + msg);
       return application.forward((RouteMessage) msg);
     } else {
@@ -354,14 +355,14 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param msg the message that is arriving.
    */
   public void receiveMessage(rice.pastry.messaging.Message msg) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+    if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] recv " + msg);
       
     if (msg instanceof rice.pastry.routing.RouteMessage) {
       rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
 
       // call application
-      thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+      if (logger.level <= Logger.FINER) logger.log(
           "[" + thePastryNode + "] forward " + msg);
       if (application.forward(rm)) {
         if (rm.nextHop != null) {
@@ -370,7 +371,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
           // if the message is for the local node, deliver it here
           if (getNodeId().equals(nextHop.getNodeId())) {
             PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap();
-            thePastryNode.getEnvironment().getLogManager().getLogger(PastryEndpoint.class, instance).log(Logger.FINER,
+            if (logger.level <= Logger.FINER) logger.log(
                 "[" + thePastryNode + "] deliver " + pMsg + " from " + pMsg.getSenderId());
             application.deliver(rm.getTarget(), pMsg.getMessage());
           }

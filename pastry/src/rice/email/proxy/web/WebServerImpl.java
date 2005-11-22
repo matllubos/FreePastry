@@ -20,12 +20,13 @@ public class WebServerImpl extends Thread implements WebServer {
   protected Workspace workspace;  
   protected EmailService email;
   protected Environment environment;
-  
+  protected Logger logger;
   protected HashMap states;
   
   public WebServerImpl(int port, EmailService email, UserManager manager, Environment env) throws IOException {
     super("Web Server Thread");
     this.environment = env;
+    logger = environment.getLogManager().getLogger(WebServerImpl.class, null);
     this.port = port;
     this.email = email;
     this.manager = manager;
@@ -59,7 +60,7 @@ public class WebServerImpl extends Thread implements WebServer {
       while (! quit) {
         final Socket socket = server.accept();
         
-        log(Logger.INFO, "Accepted web connection from " + socket.getInetAddress());
+        if (logger.level <= Logger.INFO) logger.log("Accepted web connection from " + socket.getInetAddress());
         
         
         Thread thread = new Thread("Web Server Thread for " + socket.getInetAddress()) {
@@ -68,7 +69,7 @@ public class WebServerImpl extends Thread implements WebServer {
               WebHandler handler = new WebHandler(manager, workspace, getWebState(socket.getInetAddress()), environment);
               handler.handleConnection(socket);
             } catch (IOException e) {
-              logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);
+              if (logger.level <= Logger.WARNING) logger.logException("IOException occurred during handling of connection - " , e);
             }
           }
         };
@@ -76,14 +77,8 @@ public class WebServerImpl extends Thread implements WebServer {
         thread.start();
       }
     } catch (IOException e) {
-      logException(Logger.WARNING, "IOException occurred during accepting of connection - " , e);
+      if (logger.level <= Logger.WARNING) logger.logException("IOException occurred during accepting of connection - " , e);
     }
   }
   
-  private void log(int level, String m) {
-    environment.getLogManager().getLogger(WebServerImpl.class, null).log(level, m);
-  }
-  private void logException(int level, String m, Throwable t) {
-    environment.getLogManager().getLogger(WebServerImpl.class, null).logException(level, m, t);    
-  }
 }

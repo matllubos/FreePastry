@@ -53,12 +53,15 @@ public class ControlPanel extends JPanel implements ActionListener {
 
   JFileChooser chooser;
   DefaultListModel selectedFiles;
-
+  protected Logger logger;
+  
   /**
    * 
    */
   public ControlPanel(Visualization visualization) {
     this.visualization = visualization;
+    logger = visualization.getEnvironment().getLogManager().getLogger(ControlPanel.class, null);
+
     setBorder(BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder("Node Control"),
                                                BorderFactory.createEmptyBorder(5,5,5,5)));
     this.setLayout(new BorderLayout());
@@ -181,7 +184,7 @@ public class ControlPanel extends JPanel implements ActionListener {
 
     if (arg0.getSource() == removeJarsButton) {
       Object[] o = fileList.getSelectedValues();
-      visualization.getEnvironment().getLogManager().getLogger(ControlPanel.class, null).log(Logger.INFO,
+      if (logger.level <= Logger.INFO) logger.log(
           "o.length"+o.length);
       if (o.length > 0) {
         removeFiles(o);
@@ -237,7 +240,7 @@ public class ControlPanel extends JPanel implements ActionListener {
   }
 
   public void removeFiles(Object[] newFiles) {
-    visualization.getEnvironment().getLogManager().getLogger(ControlPanel.class, null).log(Logger.INFO,
+    if (logger.level <= Logger.INFO) logger.log(
         "removeFiles()");
     if (newFiles == null) return;
     for (int i = 0; i < newFiles.length; i++) {

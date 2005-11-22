@@ -75,7 +75,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   public ConsistentJoinProtocol(PastryNode ln, NodeHandle lh,
       PastrySecurityManager sm, RoutingTable rt, LeafSet ls) {
-    super(ln, lh, sm, rt, ls);
+    super(ln, lh, sm, rt, ls);    
     gotResponse = new HashSet();
     failed = new HashSet();
     observing = new HashSet();
@@ -94,7 +94,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   protected void setReady() {    
     if (tryingToGoReady) return;
     tryingToGoReady = true;
-    log(Logger.INFO, "ChurnJonProtocol.setReady()");
+    if (logger.level <= Logger.INFO) logger.log("ChurnJonProtocol.setReady()");
     gotResponse.clear();
     failed.clear();
     // send a probe to everyone in the leafset
@@ -114,7 +114,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   public void addToLeafSet(NodeHandle nh) {
     leafSet.put(nh);
     if (!observing.contains(nh)) {
-      log(Logger.FINE, "CJP observing "+nh);
+      if (logger.level <= Logger.FINE) logger.log("CJP observing "+nh);
       nh.addObserver(this);
       observing.add(nh);
     }
@@ -139,12 +139,12 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     }
     
     Collection c = whoDoWeNeedAResponseFrom();
-    log(Logger.INFO, "CJP: timeout1, still waiting to hear from "+c.size()+" nodes.");
+    if (logger.level <= Logger.INFO) logger.log("CJP: timeout1, still waiting to hear from "+c.size()+" nodes.");
     
     Iterator i = c.iterator();
     while(i.hasNext()) {
       NodeHandle nh = (NodeHandle)i.next(); 
-      log(Logger.FINE, "CJP: timeout2, still waiting to hear from "+nh);
+      if (logger.level <= Logger.FINE) logger.log("CJP: timeout2, still waiting to hear from "+nh);
       //nh.checkLiveness();
       sendTheMessage(nh, false);
     }
@@ -216,7 +216,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
             // hopefully this is redundant with the leafset protocol
             leafSet.remove(nh); 
           } else {
-            log(Logger.FINE, "CJP: checking liveness2 on "+nh);
+            if (logger.level <= Logger.FINE) logger.log("CJP: checking liveness2 on "+nh);
             nh.checkLiveness();
           }
         }
@@ -314,10 +314,10 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           it2.remove();
         }
       } else {
-        log(Logger.FINE, "CJP: still need to hear from:"+toHearFromStr);
+        if (logger.level <= Logger.FINE) logger.log("CJP: still need to hear from:"+toHearFromStr);
       }
     } else {
-      log(Logger.FINE, "CJP: LS is not complete: "+leafSet);
+      if (logger.level <= Logger.FINE) logger.log("CJP: LS is not complete: "+leafSet);
       // need to poll left and right neighbors
       // sendTheMessage to leftmost and rightmost?
       // send leafsetMaintenance to self?
@@ -334,7 +334,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       if (!tryingToGoReady) return;
 //      logException(Logger.FINEST, "StackTrace", new Exception("Stack Trace")); 
     }
-    log(Logger.FINE, "CJP:  sendTheMessage("+nh+","+reply+")");
+    if (logger.level <= Logger.FINE) logger.log("CJP:  sendTheMessage("+nh+","+reply+")");
     
     // todo, may want to repeat this message as long as the node is alive if we 
     // are worried about rare message drops
@@ -344,16 +344,6 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     nh.receiveMessage(new ConsistentJoinMsg(getAddress(),leafSet,failed,!reply));      
   }
   
-
-  private void log(int level, String s) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).log(level,s);
-  }
-  
-  private void logException(int level, String s, Throwable t) {
-    thePastryNode.getEnvironment().getLogManager().getLogger(ConsistentJoinProtocol.class, null).logException(level,s, t);
-  }
-  
-
   /**
    * Can be PastryNode updates, leafset updates, or nodehandle updates.
    */
@@ -391,7 +381,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         // want to throw the exception if it is something we don't recognize
       NodeHandle nh = (NodeHandle)arg0;
       if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
-        log(Logger.FINE, "CJP:"+arg0+" declared dead");
+        if (logger.level <= Logger.FINE) logger.log("CJP:"+arg0+" declared dead");
         failed.add(nh);
         leafSet.remove(nh); 
         doneProbing();
@@ -433,7 +423,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   }
   
   public void destroy() {
-    log(Logger.INFO, "CJP: destroy() called");
+    if (logger.level <= Logger.FINE) logger.log("CJP: destroy() called");
     thePastryNode.getEnvironment().getSelectorManager().removeLoopObserver(this);
   }
 }

@@ -32,9 +32,12 @@ public class Pop3Connection {
 
   Environment environment;
   
+  Logger logger;
+  
   public Pop3Connection(Pop3Handler handler, Socket socket, Environment env) throws IOException {
     this.handler = handler;
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(Pop3Connection.class, null);
     configureSocket(socket);
     configureStreams();
   }
@@ -56,7 +59,7 @@ public class Pop3Connection {
     try {
       close();
     } catch (IOException e) {
-      logException(Logger.WARNING,"",e);
+      if (logger.level <= Logger.WARNING) logger.logException("",e);
     }
   }
   
@@ -65,18 +68,18 @@ public class Pop3Connection {
   }
   
   public void println(String line) {
-    log(Logger.FINEST, "S: " + line);
+    if (logger.level <= Logger.FINEST) logger.log("S: " + line);
     _out.print(line);
     println();
   }
   
   public void print(String line) {
-    log(Logger.FINEST, line);
+    if (logger.level <= Logger.FINEST) logger.log(line);
     _out.print(line);
   }
   
   public void println() {
-    log(Logger.FINEST, "");
+    if (logger.level <= Logger.FINEST) logger.log("");
     _out.print("\r\n");
     _out.flush();
   }
@@ -88,20 +91,10 @@ public class Pop3Connection {
   
   public String readLine() throws IOException {
     String line = _in.readLine();
-    log(Logger.FINEST, "C: " + line);
+    if (logger.level <= Logger.FINEST) logger.log("C: " + line);
     
     return line;
   }
-  
-  private void log(int level, String message) {
-    environment.getLogManager().getLogger(Pop3Connection.class, null).log(level, message);    
-  }
-  
-  private void logException(int level, String message, Throwable t) {
-    environment.getLogManager().getLogger(Pop3Connection.class, null).logException(level, message, t);
-  }
-  
-
   
   public String getClientAddress() {
     return _clientAddress.toString();

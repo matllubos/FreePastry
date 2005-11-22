@@ -108,7 +108,8 @@ public class SocketNodeHandle extends DistNodeHandle {
       //debug("Sending message " + msg + " locally");
       spn.receiveMessage(msg);
     } else {
-      log(Logger.FINER, "Passing message " + msg + " to the socket controller for writing");
+      if (logger.level <= Logger.FINER) logger.log(
+          "Passing message " + msg + " to the socket controller for writing");
       spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
     }
   }
@@ -229,15 +230,6 @@ public class SocketNodeHandle extends DistNodeHandle {
     setChanged();
     notifyObservers(update);
   }
-
-  /**
-   * Method to print out debugging info, if required
-   *
-   * @param s The message to print
-   */
-  private void log(int level, String s) {
-    localnode.getEnvironment().getLogManager().getLogger(SocketNodeHandle.class, null).log(level,s);
-  }  
 }
 
 

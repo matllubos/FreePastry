@@ -83,7 +83,7 @@ public class BloomFilter implements Serializable {
       else
         s+="1";
     s+="\n";
-    logger.log(Logger.INFO,s);
+    if (logger.level <= Logger.INFO) logger.log(s);
   }
   
   public void add(byte[] data) {

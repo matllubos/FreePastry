@@ -47,7 +47,7 @@ public interface Continuation {
      * The parent continuation
      */
     protected Continuation parent;
-
+    
     /**
      * Constructor which takes in the parent continuation
      * for this continuation.
@@ -117,7 +117,7 @@ public interface Continuation {
      */
     protected String name;
     
-    protected Environment environment;
+    protected Logger logger;
     
     /**
      * Constructor which takes in a name
@@ -127,7 +127,7 @@ public interface Continuation {
      */
     public ListenerContinuation(String name, Environment env) {
       this.name = name;
-      this.environment = env;
+      this.logger = env.getLogManager().getLogger(getClass(), null);
     }
     
     /**
@@ -146,7 +146,7 @@ public interface Continuation {
      * @param result The exception which was caused.
      */
     public void receiveException(Exception result) {
-      environment.getLogManager().getLogger(Continuation.class, null).logException(Logger.WARNING, 
+      if (logger.level <= Logger.WARNING) logger.logException(
           "ERROR - Received exception " + result + " during task " + name, result);
     }
   }

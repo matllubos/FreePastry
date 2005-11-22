@@ -35,6 +35,8 @@ public class CoalescedLog extends EncryptedLog {
   
   // the buffer of waiting add entry tasks
   protected transient Vector cbuffer;
+
+  protected transient Logger logger;
   
   /**
    * Constructs a Log for use in POST, with the provided number of 
@@ -45,7 +47,7 @@ public class CoalescedLog extends EncryptedLog {
    */
   public CoalescedLog(Object name, Id location, Post post, KeyPair keyPair) {
     super(name, location, post, keyPair);
-    
+
     resetPending();
     this.cbuffer = new Vector();
   }
@@ -130,7 +132,8 @@ public class CoalescedLog extends EncryptedLog {
       byte[] data = SecurityUtils.serialize(pending);
       cipherPending = SecurityUtils.encryptSymmetric(data, key);
     } catch (IOException e) {
-      logException(Logger.WARNING, "Exception " + e + " thrown while serializing/encrypting pending " + pending,e);
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException( "Exception " + e + " thrown while serializing/encrypting pending " + pending,e);
     }
   }
   
@@ -145,12 +148,15 @@ public class CoalescedLog extends EncryptedLog {
         pending = (CoalescedLogEntry) SecurityUtils.deserialize(data);
         pending.setParent(new PhantomLogEntry());
       } catch (IOException e) {
-        logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting pending " + pending,e);
+        if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null);
+        if (logger.level <= Logger.WARNING) logger.logException( "Exception " + e + " thrown while deserializing/decrypting pending " + pending,e);
       } catch (ClassNotFoundException e) {
-        logException(Logger.WARNING, "Exception " + e + " thrown while deserializing/decrypting pending " + pending,e);
+        if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null);
+        if (logger.level <= Logger.WARNING) logger.logException( "Exception " + e + " thrown while deserializing/decrypting pending " + pending,e);
       }
     } else {
-      log(Logger.WARNING, "Found null cipher pending - resetting pending on log " + this);
+      if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null);
+      if (logger.level <= Logger.WARNING) logger.log( "Found null cipher pending - resetting pending on log " + this);
       resetPending();
     }
   }
@@ -333,15 +339,6 @@ public class CoalescedLog extends EncryptedLog {
       if (task != null)
         task.go();
     }      
-  }
-  
-  private void log(int level, String m) {
-    post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null).log(level,m);
-  }
-  
-  private void logException(int level, String m, Throwable t) {
-    post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null).logException(level,m,t);
-  }
-  
+  }  
 }
 

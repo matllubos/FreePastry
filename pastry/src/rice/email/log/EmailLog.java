@@ -238,7 +238,7 @@ public class EmailLog extends CoalescedLog {
 
         public void receiveException(Exception e) {
           Logger logger = post.getEnvironment().getLogManager().getLogger(EmailLog.class, null);
-          logger.logException(Logger.WARNING,"WARNING: Received exception " + e + " while reading snapshots - skipping for now.  This is bad.",e);
+          if (logger.level <= Logger.WARNING) logger.logException("WARNING: Received exception " + e + " while reading snapshots - skipping for now.  This is bad.",e);
           receiveResult(new SnapShot(new StoredEmail[0], null));
         }
       });

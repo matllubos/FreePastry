@@ -59,7 +59,7 @@ public class Manifest implements Serializable {
     try {
       md = MessageDigest.getInstance("SHA");
     } catch (NoSuchAlgorithmException e) {
-      logger.log(Logger.SEVERE, "*** SHA-1 not supported ***"+toStringFull());
+      if (logger.level <= Logger.SEVERE) logger.log("*** SHA-1 not supported ***"+toStringFull());
       return false;
     }
 
@@ -69,7 +69,7 @@ public class Manifest implements Serializable {
     byte[] thisHash = md.digest();
     
     if (thisHash.length != fragmentHash[fragmentID].length) {
-      logger.log(Logger.WARNING, "*** LENGTH MISMATCH: "+thisHash.length+" != "+fragmentHash[fragmentID].length+" ***"+toStringFull());
+      if (logger.level <= Logger.WARNING) logger.log("*** LENGTH MISMATCH: "+thisHash.length+" != "+fragmentHash[fragmentID].length+" ***"+toStringFull());
       return false;
     }
       
@@ -80,7 +80,7 @@ public class Manifest implements Serializable {
         for (int j=0; j<thisHash.length; j++)
           s+=thisHash[j];
         s+="\n"+toStringFull();
-        logger.log(Logger.WARNING, s);
+        if (logger.level <= Logger.WARNING) logger.log(s);
         return false;
       }
     }

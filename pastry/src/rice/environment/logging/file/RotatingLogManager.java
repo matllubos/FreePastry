@@ -107,7 +107,7 @@ public class RotatingLogManager extends AbstractLogManager {
     }
   }
 
-  protected Logger constructLogger(String clazz, int level) {
-    return new SimpleLogger(clazz, this, level);
+  protected Logger constructLogger(String clazz, int level, boolean useDefault) {
+    return new SimpleLogger(clazz, this, level, useDefault);
   }
 }

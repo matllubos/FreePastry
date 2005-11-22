@@ -28,6 +28,7 @@ public class ErasureCodec {
   static boolean isEltInitialized = false;
 
   Environment environment;
+  Logger logger;
   
   /**
    * Constructor for ErasureCodec.
@@ -37,6 +38,7 @@ public class ErasureCodec {
    */
   public ErasureCodec(int _numFragments, int _numSurvivors, Environment env) {
     environment = env;
+    logger = environment.getLogManager().getLogger(ErasureCodec.class, null);
     numFragments = _numFragments;
     numSurvivors = _numSurvivors;
 
@@ -44,7 +46,7 @@ public class ErasureCodec {
       initElt();
   }
 
-  public void dump(byte[] data, Logger logger) {
+  public void dump(byte[] data) {
     String hex = "0123456789ABCDEF";
     String s = "";
     for (int i=0; i<data.length; i++) {
@@ -60,7 +62,8 @@ public class ErasureCodec {
       else
         s+=" ";
     }
-    logger.log(Logger.INFO,s);
+    if (logger.level <= Logger.INFO) logger.log(
+        s);
   }
 
   public Fragment[] encodeObject(Serializable obj, boolean[] generateFragment) {
@@ -75,8 +78,8 @@ public class ErasureCodec {
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
-      Logger log = environment.getLogManager().getLogger(ErasureCodec.class, null);
-      log.logException(Logger.WARNING, "encodeObject: ", ioe);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "encodeObject: ", ioe);
       return null;
     }
 
@@ -309,11 +312,14 @@ public class ErasureCodec {
  
       return (Serializable) objectInput.readObject();
     } catch (IOException ioe) {
-      environment.getLogManager().getLogger(ErasureCodec.class, null).logException(Logger.WARNING, "", ioe);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "", ioe);
     } catch (ClassNotFoundException cnfe) {
-      environment.getLogManager().getLogger(ErasureCodec.class, null).logException(Logger.WARNING, "", cnfe);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "", cnfe);
     } catch (IllegalStateException ise) {
-      environment.getLogManager().getLogger(ErasureCodec.class, null).logException(Logger.WARNING, "", ise);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "", ise);
     }
 
     return null;

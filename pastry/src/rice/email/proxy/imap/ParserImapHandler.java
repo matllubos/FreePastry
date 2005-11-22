@@ -33,9 +33,12 @@ final class ParserImapHandler implements Quittable {
 
     InetAddress localHost;
     
+    protected Logger logger;
+    
     public ParserImapHandler(InetAddress localHost, UserManager manager, Workspace workspace, Environment env) {
       this.localHost = localHost;
       state = new ImapState(manager, workspace, env);        
+      logger = env.getLogManager().getLogger(ParserImapHandler.class, null);
     }
 
     public InetAddress getLocalHost() {
@@ -61,13 +64,13 @@ final class ParserImapHandler implements Quittable {
             conn.println("* BYE Autologout; idle for too long");
         } catch (DisconnectedException de) {
         } catch (final Exception e) {
-          env.getLogManager().getLogger(ParserImapHandler.class, null).logException(Logger.SEVERE,
+          if (logger.level <= Logger.WARNING) logger.logException(
               "",e);
         } finally {
             try {
                 conn.close();
             } catch (final IOException ioe) {
-              env.getLogManager().getLogger(ParserImapHandler.class, null).logException(Logger.WARNING,
+              if (logger.level <= Logger.WARNING) logger.logException(
                   "PANIC: Got error " + ioe + " while closing connection!", ioe);
             }
         }
@@ -104,7 +107,7 @@ final class ParserImapHandler implements Quittable {
             cmd.execute();
         } catch (RuntimeException re) {
           conn.println(cmd.getTag() + " NO internal error " + re);
-          state.getEnvironment().getLogManager().getLogger(ParserImapHandler.class, null).logException(Logger.SEVERE,
+          if (logger.level <= Logger.WARNING) logger.logException(
               " NO internal error ", re);
         }
     }

@@ -200,7 +200,8 @@ public class BodyPart extends FetchPart {
       }
     }
 
-    _conn.getEnvironment().getLogManager().getLogger(BodyPart.class, null).log(Logger.WARNING,
+    Logger logger = _conn.getEnvironment().getLogManager().getLogger(BodyPart.class, null);
+    if (logger.level <= Logger.WARNING) logger.log(
         "DIDN'T KNOW WHAT TO DO WITH " + part.getClass().getName() + " " + content.getClass().getName() + " " + type);
 
     return "\"\"";

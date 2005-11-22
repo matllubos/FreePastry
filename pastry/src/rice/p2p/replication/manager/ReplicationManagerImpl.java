@@ -75,6 +75,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   
   protected Environment environment;
   
+  protected Logger logger;
+  
   /**
     * Constructor
    *
@@ -98,6 +100,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    */
   public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
     this.environment = node.getEnvironment();
+    logger = environment.getLogManager().getLogger(ReplicationImpl.class, instance);
     Parameters p = environment.getParameters();
     
     FETCH_DELAY = p.getInt("p2p_replication_manager_fetch_delay");
@@ -111,7 +114,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     this.deleter = new ReplicationManagerDeleter();
     this.instance = instance;
     
-    log(Logger.FINE, "Starting up ReplicationManagerImpl with client " + client);
+    if (logger.level <= Logger.FINE) logger.log( "Starting up ReplicationManagerImpl with client " + client);
     
     this.replication = new ReplicationImpl(node, this, replicationFactor, instance, policy);
   }
@@ -143,17 +146,17 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * @param hint The hint where the id may be
    */
   protected void informClient(final Id id, NodeHandle hint) {
-    log(Logger.FINE, "Telling client to fetch id " + id);
+    if (logger.level <= Logger.FINE) logger.log( "Telling client to fetch id " + id);
   
     final CancellableTask timer = endpoint.scheduleMessage(new TimeoutMessage(id), TIMEOUT_DELAY);
     
     client.fetch(id, hint, new Continuation() {
       public void receiveResult(Object o) {
         if (! (new Boolean(true)).equals(o)) {
-          log(Logger.WARNING, "Fetching of id " + id + " failed with " + o);
+          if (logger.level <= Logger.WARNING) logger.log( "Fetching of id " + id + " failed with " + o);
         }
         
-        log(Logger.FINE, "Successfully fetched id " + id);
+        if (logger.level <= Logger.FINE) logger.log( "Successfully fetched id " + id);
         
         timer.cancel();
         helper.message(id);
@@ -170,7 +173,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    * or simply resets the active flag if there's nothing to be fetched.
    */
   protected void scheduleNext() {
-    log(Logger.FINER, "Scheduling next fetch in " + FETCH_DELAY + " milliseconds");
+    if (logger.level <= Logger.FINER) logger.log( "Scheduling next fetch in " + FETCH_DELAY + " milliseconds");
     
     endpoint.scheduleMessage(new ReminderMessage(), FETCH_DELAY);
   }
@@ -201,7 +204,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    *              responsible  
    */
   public void setRange(final IdRange range) {
-    log(Logger.FINEST, "Removing range " + range + " from the list of pending ids");
+    if (logger.level <= Logger.FINEST) logger.log( "Removing range " + range + " from the list of pending ids");
 
     helper.setRange(range);
     deleter.setRange(range);
@@ -249,13 +252,13 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    */
   public void deliver(Id id, Message message) {
     if (message instanceof ReminderMessage) {
-      log(Logger.FINEST, "Received reminder message");
+      if (logger.level <= Logger.FINEST) logger.log( "Received reminder message");
       helper.wakeup();
     } else if (message instanceof TimeoutMessage) {
-      log(Logger.FINEST, "Received timeout message");
+      if (logger.level <= Logger.FINEST) logger.log( "Received timeout message");
       helper.message(((TimeoutMessage) message).getId());
     } else {
-      log(Logger.WARNING, "Received unknown message " + message);
+      if (logger.level <= Logger.WARNING) logger.log( "Received unknown message " + message);
     }
   }
   
@@ -281,14 +284,6 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
   public Replication getReplication() {
     return replication;
   }
-  
-  private void log(int level, String str) {
-    environment.getLogManager().getLogger(ReplicationImpl.class, instance).log(level, str); 
-  }  
-  
-  private void logException(int level, String str, Exception e) {
-    environment.getLogManager().getLogger(ReplicationImpl.class, instance).logException(level,str, e); 
-  }  
   
   /**
    * Inner class which keeps track of the state we're in- waiting, sleeping, or with
@@ -413,14 +408,14 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      */
     protected synchronized Id getNextId() {      
       if (set.numElements() == 0) {
-        log(Logger.WARNING, "GetNextId called without any ids available - aborting");
+        if (logger.level <= Logger.WARNING) logger.log( "GetNextId called without any ids available - aborting");
         return null;
       }
       
       current = (Id) set.getIterator().next();  
       set.removeId(current);
       
-      log(Logger.FINER, "Returing next id to fetch " + current);
+      if (logger.level <= Logger.FINER) logger.log( "Returing next id to fetch " + current);
       
       if (! client.exists(current))
         return current;
@@ -502,8 +497,8 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         id = (Id) set.getIterator().next();
         set.removeId(id);
         
-        log(Logger.FINER, "Telling client to delete id " + id);
-        log(Logger.FINER, "RMImpl.go " + instance + ": removing id " + id);
+        if (logger.level <= Logger.FINER) logger.log( "Telling client to delete id " + id);
+        if (logger.level <= Logger.FINER) logger.log( "RMImpl.go " + instance + ": removing id " + id);
         
         client.remove(id, this);
       }
@@ -516,10 +511,10 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      */
     public synchronized void receiveResult(Object o) {
       if (id == null) 
-        log(Logger.SEVERE, "ERROR: RMImpl.deleter Received result " + o + " unexpectedly!");
+        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: RMImpl.deleter Received result " + o + " unexpectedly!");
       
       if (! Boolean.TRUE.equals(o)) 
-        log(Logger.SEVERE, "ERROR: RMImpl.deleter Unstore of " + id + " did not succeed '" + o + "'!");
+        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: RMImpl.deleter Unstore of " + id + " did not succeed '" + o + "'!");
       
       id = null;
       go();
@@ -531,7 +526,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
      * @param o The result
      */
     public synchronized void receiveException(Exception e) {
-      logException(Logger.SEVERE, "RMImpl.deleter Unstore of " + id + " caused exception '" + e + "'!", e);
+      if (logger.level <= Logger.SEVERE) logger.logException( "RMImpl.deleter Unstore of " + id + " caused exception '" + e + "'!", e);
       
       id = null;
       go();

@@ -60,6 +60,8 @@ public class SocketChannelWriter {
   // the environment to use
   protected Environment environment;
   
+  protected Logger logger;
+  
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
    * an object to write out.
@@ -79,6 +81,7 @@ public class SocketChannelWriter {
     Parameters p = environment.getParameters();
     MAXIMUM_QUEUE_LENGTH = p.getInt("pastry_socket_writer_max_queue_length");
     statsWriteInterval = p.getLong("pastry_socket_writer_status_interval");
+    logger = environment.getLogManager().getLogger(SocketChannelWriter.class, null);
   }
   
   /**
@@ -124,10 +127,12 @@ public class SocketChannelWriter {
 
       if (queue.size() > MAXIMUM_QUEUE_LENGTH) {
         Object remove = queue.removeLast();
-        log(Logger.WARNING, "(W): Maximum TCP queue length reached to " + path + " - message " + remove + " will be dropped.");
+        if (logger.level <= Logger.WARNING) logger.log(
+             "(W): Maximum TCP queue length reached to " + path + " - message " + remove + " will be dropped.");
         return false;
       } else if (queue.size() > 20) {
-        log(Logger.WARNING,"ERROR: Queue to " + path + " has "+queue.size()+" elements (more than 20) - probably a bad sign - enqueue of " + o);
+        if (logger.level <= Logger.WARNING) logger.log(
+            "ERROR: Queue to " + path + " has "+queue.size()+" elements (more than 20) - probably a bad sign - enqueue of " + o);
       }        
     }
 
@@ -160,7 +165,8 @@ public class SocketChannelWriter {
 		} catch (java.lang.NoClassDefFoundError exc) { }
 
     if (!recorded) {
-      log(Logger.FINER, "COUNT: " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
+      if (logger.level <= Logger.FINER) logger.log(
+          "COUNT: " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
     }
   }
 
@@ -179,7 +185,8 @@ public class SocketChannelWriter {
       synchronized (queue) {
         if (buffer == null) {
           if (! queue.isEmpty()) {
-            log(Logger.FINER,"(W) About to serialize object " + queue.getFirst());
+            if (logger.level <= Logger.FINER) logger.log(
+                "(W) About to serialize object " + queue.getFirst());
             buffer = serialize(queue.getFirst());
             
             if (buffer != null) {
@@ -207,13 +214,14 @@ public class SocketChannelWriter {
                 
         record("Wrote " + i + " of " + j + " bytes of", queue.getFirst(), buffer.limit(), path);
         
-        log(Logger.FINEST,"(W) Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+        if (logger.level <= Logger.FINEST) logger.log(
+            "(W) Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
         
         if (buffer.remaining() != 0) 
           return false;
         
-        if (spn != null) 
-          log(Logger.FINER,"(W) Finished writing message " + queue.getFirst() + " - queue now contains " + (queue.size() - 1) + " items");
+        if (logger.level <= Logger.FINER) logger.log(
+            "(W) Finished writing message " + queue.getFirst() + " - queue now contains " + (queue.size() - 1) + " items");
         
         synchronized (queue) {
           queue.removeFirst();
@@ -243,22 +251,14 @@ public class SocketChannelWriter {
         i++;
       }
       
-      log(Logger.FINER,"COUNT: Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
+      if (logger.level <= Logger.FINER) logger.log(
+          "COUNT: Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
     
       queue.add(i, o);
     } else {
       queue.addLast(o);
     }
   }
-
-  private void log(int level, String s) {
-    environment.getLogManager().getLogger(SocketChannelWriter.class, null).log(level,s);
-  }
-
-  private void logException(int level, String s, Throwable t) {
-    environment.getLogManager().getLogger(SocketChannelWriter.class, null).logException(level,s, t);
-  }
-
 
   /**
    * Method which serializes a given object into a ByteBuffer, in order to
@@ -280,13 +280,15 @@ public class SocketChannelWriter {
       synchronized(statLock) {
         long now = environment.getTimeSource().currentTimeMillis();
         if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
-          log(Logger.INFO,"@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
+          if (logger.level <= Logger.INFO) logger.log(
+              "@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
           statsLastWritten = now;
           
           Iterator ii = msgTypes.keySet().iterator();
           while (ii.hasNext()) {
             String s = (String)ii.next();
-            log(Logger.INFO,"@L.TR   "+s+":"+msgTypes.get(s)+" "+msgSizes.get(s));
+            if (logger.level <= Logger.INFO) logger.log(
+                "@L.TR   "+s+":"+msgTypes.get(s)+" "+msgSizes.get(s));
           }
           
           msgTypes.clear();
@@ -327,16 +329,20 @@ public class SocketChannelWriter {
 
       return ByteBuffer.wrap(baos2.toByteArray());
     } catch (InvalidClassException e) {
-      log(Logger.SEVERE,"PANIC: Object to be serialized was an invalid class!");
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Object to be serialized was an invalid class!");
       throw new IOException("Invalid class during attempt to serialize.");
     } catch (NotSerializableException e) {
-      log(Logger.SEVERE,"PANIC: Object to be serialized was not serializable! [" + o + "]");
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Object to be serialized was not serializable! [" + o + "]");
       throw new IOException("Unserializable class during attempt to serialize.");
     } catch (NullPointerException e) {
-      logException(Logger.SEVERE,"PANIC: Object to be serialized caused null pointer exception! [" + o + "]",e);
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "PANIC: Object to be serialized caused null pointer exception! [" + o + "]",e);
       return null;
     } catch (Exception e) {
-      log(Logger.SEVERE,"PANIC: Object to be serialized caused excception! [" + e + "]");
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Object to be serialized caused excception! [" + e + "]");
       throw new IOException("Exception during attempt to serialize.");
     }
   }

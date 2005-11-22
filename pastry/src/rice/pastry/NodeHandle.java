@@ -1,6 +1,7 @@
 
 package rice.pastry;
 
+import rice.environment.logging.Logger;
 import rice.pastry.messaging.*;
 
 import java.io.*;
@@ -22,6 +23,8 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
     
   // the local pastry node
   protected transient PastryNode localnode;
+  protected transient Logger logger;
+  
   static final long serialVersionUID = 987479397660721015L;
   /**
    * Gets the nodeId of this Pastry node.
@@ -90,6 +93,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    */
   public final void setLocalNode(PastryNode pn) {
     localnode = pn;
+    logger = pn.getEnvironment().getLogManager().getLogger(getClass(), null);
     if (localnode != null) {
       afterSetLocalNode();
     }

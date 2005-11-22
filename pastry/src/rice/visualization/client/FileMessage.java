@@ -40,7 +40,7 @@ public class FileMessage implements Serializable {
     fileName = file.getName();
     FileInputStream reader = new FileInputStream(file);
     bytes = new byte[(int)file.length()];
-    
+    Logger logger = env.getLogManager().getLogger(FileMessage.class, null);
 //    DataInputStream dis = new DataInputStream(reader);
 //    dis.read
     boolean reading = true;
@@ -48,17 +48,17 @@ public class FileMessage implements Serializable {
     while(reading) {
       int num = reader.read(bytes, pos, bytes.length-pos);
       int sum = num+pos;
-      env.getLogManager().getLogger(FileMessage.class, null).log(Logger.INFO, 
+      if (logger.level <= Logger.INFO) logger.log(
           "num:"+num+" pos:"+pos+" bytes.length:"+bytes.length+" sum:"+sum);
       if (num == -1) {
         reading = false;
-        env.getLogManager().getLogger(FileMessage.class, null).log(Logger.SEVERE, 
+        if (logger.level <= Logger.SEVERE) logger.log( 
             "Error reading file "+file);
       }
       pos+=num;
       if (pos == bytes.length) {
         reading = false;
-        env.getLogManager().getLogger(FileMessage.class, null).log(Logger.SEVERE, 
+        if (logger.level <= Logger.SEVERE) logger.log( 
             "Done reading file "+file);
       }              
     }

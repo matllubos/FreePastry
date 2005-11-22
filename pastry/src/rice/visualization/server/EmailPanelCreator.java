@@ -26,7 +26,12 @@ public class EmailPanelCreator implements PanelCreator {
   Vector times = new Vector();
   
   SmtpServer server;
-    
+  
+  /**
+   * Lazilly constructed.
+   */
+  protected Logger logger;
+  
   public EmailPanelCreator(rice.selector.Timer timer, SmtpServer server) {
     this.server = server;
     
@@ -53,7 +58,8 @@ public class EmailPanelCreator implements PanelCreator {
       
       pastPanel.addDataView(dataStorageView);
     } catch (Exception e) {
-      server.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger == null) logger = server.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Exception " + e + " thrown.",e);
     }
     
@@ -101,7 +107,8 @@ public class EmailPanelCreator implements PanelCreator {
         fail.removeElementAt(0);
       }
     } catch (Exception e) {
-      server.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null).logException(Logger.SEVERE,
+      if (logger == null) logger = server.getEnvironment().getLogManager().getLogger(EmailPanelCreator.class, null);
+      if (logger.level <= Logger.SEVERE) logger.logException(
           "Exception " + e + " thrown.",e);
     }
   }

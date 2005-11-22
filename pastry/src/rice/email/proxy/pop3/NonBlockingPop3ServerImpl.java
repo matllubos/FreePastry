@@ -27,9 +27,12 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
   
   InetAddress localHost;
   
+  protected Logger logger;
+
   public NonBlockingPop3ServerImpl(InetAddress localHost, int port, EmailService email, UserManager manager, boolean gateway, boolean acceptNonLocal, Environment env) throws IOException {
     this.localHost = localHost;
     this.environment = env;
+    this.logger = environment.getLogManager().getLogger(NonBlockingPop3ServerImpl.class, null);
     this.acceptNonLocal = acceptNonLocal;
     this.port = port;
     this.manager = manager;
@@ -62,7 +65,7 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
         try {
           environment.getSelectorManager().register(channel, NonBlockingPop3ServerImpl.this, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
-          logException(Logger.WARNING, "ERROR creating POP3 server socket key " , e);
+          if (logger.level <= Logger.WARNING) logger.logException("ERROR creating POP3 server socket key " , e);
         }
       }
     });
@@ -72,7 +75,7 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
     try {
       final Socket socket = ((SocketChannel) ((ServerSocketChannel) key.channel()).accept()).socket();
       
-      log(Logger.INFO, "Accepted connection from " + socket.getInetAddress());
+      if (logger.level <= Logger.INFO) logger.log("Accepted connection from " + socket.getInetAddress());
       
       if (acceptNonLocal || socket.getInetAddress().isLoopbackAddress() ||
           (socket.getInetAddress().equals(getLocalHost()))) {
@@ -82,14 +85,14 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
               Pop3Handler handler = new Pop3Handler(getLocalHost(), registry, manager, environment);
               handler.handleConnection(socket);
             } catch (IOException e) {
-              logException(Logger.WARNING, "IOException occurred during handling of connection - " , e);
+              if (logger.level <= Logger.WARNING) logger.logException("IOException occurred during handling of connection - " , e);
             }
           }
         };
         
         thread.start();
       } else {
-        log(Logger.WARNING, "Connection not local - aborting");
+        if (logger.level <= Logger.WARNING) logger.log("Connection not local - aborting");
         
         OutputStream o = socket.getOutputStream();
         PrintWriter out = new PrintWriter(o, true);
@@ -99,16 +102,7 @@ public class NonBlockingPop3ServerImpl extends SelectionKeyHandler implements Po
         socket.close();
       }      
     } catch (IOException e) {
-      logException(Logger.WARNING, "IOException occurred during accepting of connection - " , e);
+      if (logger.level <= Logger.WARNING) logger.logException("IOException occurred during accepting of connection - " , e);
     }
-  }
-  
-  private void log(int level, String message) {
-    environment.getLogManager().getLogger(NonBlockingPop3ServerImpl.class, null).log(level, message);    
-  }
-  
-  private void logException(int level, String message, Throwable t) {
-    environment.getLogManager().getLogger(NonBlockingPop3ServerImpl.class, null).logException(level, message, t);
-  }
-  
+  }  
 }

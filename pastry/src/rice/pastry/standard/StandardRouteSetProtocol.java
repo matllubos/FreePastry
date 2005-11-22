@@ -31,6 +31,9 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
   private Address address;
 
   private Environment environmet;
+  
+  protected Logger logger;
+
   /**
    * Constructor.
    * 
@@ -48,6 +51,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
     security = sm;
     routeTable = rt;
     address = new RouteProtocolAddress();
+    logger = env.getLogManager().getLogger(getClass(), null);
 
     rt.addObserver(this);
   }
@@ -138,7 +142,7 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
 
   private void maintainRouteSet() {
 
-    environmet.getLogManager().getLogger(StandardRouteSetProtocol.class, null).log(Logger.FINE,
+    if (logger.level <= Logger.FINE) logger.log(
       "maintainRouteSet " + localHandle.getNodeId());
 
     // for each populated row in our routing table

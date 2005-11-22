@@ -96,7 +96,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           stepDone(SUCCESS);
         }
       } catch (Exception e) {
-        environment.getLogManager().getLogger(VisualizationEmailProxy.class, null).logException(Logger.WARNING, "ERROR: Unable to launch Visualization server - continuing - " , e);
+        if (logger.level <= Logger.WARNING) logger.logException( "ERROR: Unable to launch Visualization server - continuing - " , e);
       }
       
       
@@ -133,7 +133,7 @@ public class VisualizationEmailProxy extends EmailProxy {
           t.start();
           stepDone(SUCCESS);
         } catch (Exception e) {
-          environment.getLogManager().getLogger(VisualizationEmailProxy.class, null).logException(Logger.WARNING, "ERROR: Unable to launch Visualization server - continuing - " , e);
+          if (logger.level <= Logger.WARNING) logger.logException( "ERROR: Unable to launch Visualization server - continuing - " , e);
           stepDone(FAILURE);
         }
       }
