@@ -24,6 +24,8 @@ public class SimpleManager implements SmtpManager {
 
   private boolean gateway;
 
+  private boolean relayLocal;
+
   private DnsService dns;
   
   private EmailService email;
@@ -58,8 +60,9 @@ public class SimpleManager implements SmtpManager {
     this.gateway = gateway;
     this.address = address;
     this.server = server;
+    this.relayLocal = environment.getParameters().getBoolean("email_smtp_relay_from_localhost");
     this.logger = environment.getLogManager().getLogger(SimpleManager.class, null);
-    
+
     this.authenticate = environment.getParameters().getBoolean("email_smtp_send_authentication"); 
     if (authenticate) {
       this.smtpUsername = environment.getParameters().getString("email_smtp_username");
@@ -71,15 +74,29 @@ public class SimpleManager implements SmtpManager {
     return email.getLocalHost(); 
   }
 
-  public String checkSender(SmtpState state, MailAddress sender) {
-    if ((! gateway) && (! isPostAddress(sender)))
+  public String checkSender(SmtpConnection conn, SmtpState state, MailAddress sender) {
+	  boolean isLocal = false;
+	  try {
+		  isLocal = conn.isLocal();
+	  } catch (IOException e) {
+		  if (logger.level <= Logger.INFO)
+			  logger.logException("Exception checking local port: ",e);
+	  }
+    if ((!isLocal || !relayLocal) && (! gateway) && (! isPostAddress(sender)))
       return sender + ": Sender address rejected: Relay access denied";
     else 
       return null;
   }
 
-  public String checkRecipient(SmtpState state, MailAddress rcpt) {
-    if (gateway && (! isPostAddress(rcpt)))
+  public String checkRecipient(SmtpConnection conn, SmtpState state, MailAddress rcpt) {
+	  boolean isLocal = false;
+	  try {
+		  isLocal = conn.isLocal();
+	  } catch (IOException e) {
+		  if (logger.level <= Logger.INFO)
+			  logger.logException("Exception checking local port: ",e);
+	  }
+    if ((!isLocal || !relayLocal) && gateway && (! isPostAddress(rcpt)))
       return rcpt + ": Recipient address rejected: Relay access denied";
     else 
       return null;

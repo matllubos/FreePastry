@@ -35,7 +35,7 @@ public class RcptCommand extends SmtpCommand {
           
           MailAddress toAddr = new MailAddress(to);
           
-          String err = manager.checkRecipient(state, toAddr);
+          String err = manager.checkRecipient(conn, state, toAddr);
           
           if (err != null) {
             conn.println("554 Error: " + err);

@@ -32,7 +32,7 @@ public class MailCommand extends SmtpCommand {
         String from = m.group(1);
         MailAddress fromAddr = new MailAddress(from);
         
-        String err = manager.checkSender(state, fromAddr);
+        String err = manager.checkSender(conn, state, fromAddr);
         if (err != null) {
           conn.println("554 Error: " + err);
           conn.quit();
