@@ -95,9 +95,21 @@ public class RingCertificate implements Serializable {
    */
   private void refresh() {
     logServer = refreshAddress(logServer);
-    for (int i = 0; i < bootstraps.length; i++) {
-      bootstraps[i] = refreshAddress(bootstraps[i]);  
-    }    
+    InetSocketAddress oldboots[] = bootstraps;
+    /*
+     * so it breaks down like this:  The old bootstrap lists has IP addresses that may 
+     * be stale.  If we rename bootstraps we'd like to be able to use the new bootstraps,
+     * so we take the names out of the InetSocketAddresses and build new InetSocketAddresses.
+     * There's a problem here, though:  If DNS is down then we're hosed.  Hence we keep
+     * a backup copy of the old InetSocketAddresses with the old cached IPs.
+     * Only downside is we can't kick a bootstrap out by changing DNS.  Shouldn't really
+     * be a problem.
+     */
+    	bootstraps = new InetSocketAddress[oldboots.length*2];
+    	System.arraycopy(oldboots, 0, bootstraps, 0, oldboots.length);
+    for (int i = 0; i < oldboots.length; i++) {
+      bootstraps[i+oldboots.length] = refreshAddress(oldboots[i]);  
+    }
   }
   
   /**
