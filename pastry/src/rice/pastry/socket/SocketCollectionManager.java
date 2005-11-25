@@ -112,7 +112,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param pool DESCRIBE THE PARAMETER
    * @param address The address to claim the node is at (for proxying)
    */
-  public SocketCollectionManager(SocketPastryNode node, SocketNodeHandlePool pool, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
+  public SocketCollectionManager(SocketPastryNode node, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.pastryNode = node;
     this.manager = manager;
     this.localAddress = proxyAddress;

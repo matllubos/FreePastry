@@ -1,10 +1,13 @@
 package rice.pastry.direct;
 
+
+import java.util.Hashtable;
+
 import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.join.InitiateJoin;
 import rice.pastry.messaging.Message;
-import rice.selector.*;
+import rice.selector.Timer;
 
 /**
  * Direct pastry node. Subclasses PastryNode, and does about nothing else.
@@ -116,6 +119,16 @@ public class DirectPastryNode extends PastryNode {
   public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay,
       long period) {
     return simulator.deliverMessageFixedRate(msg, this, (int)delay, (int)period);
+  }
+
+  Hashtable nodeHandles = new Hashtable();
+  public NodeHandle coalesce(NodeHandle newHandle) {
+    NodeHandle ret = (NodeHandle)nodeHandles.get(newHandle);
+    if (ret == null) {
+      nodeHandles.put(newHandle, newHandle); 
+      ret = newHandle;
+    }
+    return ret;
   }
 }
 

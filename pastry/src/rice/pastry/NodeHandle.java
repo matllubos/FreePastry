@@ -14,7 +14,7 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements MessageReceiver, LocalNodeI 
+public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements MessageReceiver 
 {
 
   public static final int LIVENESS_ALIVE = 1;
@@ -87,37 +87,25 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
   public abstract boolean ping();
 
   /**
-   * Set the local PastryNode.
-   *
-   * @param pn local pastrynode
-   */
-  public final void setLocalNode(PastryNode pn) {
-    localnode = pn;
-    logger = pn.getEnvironment().getLogManager().getLogger(getClass(), null);
-    if (localnode != null) {
-      afterSetLocalNode();
-    }
-  }
-
-  /**
-   * Method that can be overridden by handle to set isLocal, etc.
-   */
-  public void afterSetLocalNode() {}
-
-  /**
    * Accessor method.
    */
   public final PastryNode getLocalNode() {
     return localnode;
   }
 
+//  transient Exception ctor;
+//  public NodeHandle() {
+//    ctor = new Exception("ctor"); 
+//  }
+  
   /**
    * May be called from handle etc methods to ensure that local node has
    * been set, either on construction or on deserialization/receivemsg.
    */
   public final void assertLocalNode() {
     if (localnode == null) {
-      throw new RuntimeException("PANIC: localnode is null in " + this);
+//      ctor.printStackTrace();
+      throw new RuntimeException("PANIC: localnode is null in " + this+"@"+System.identityHashCode(this));
     }
   }
 

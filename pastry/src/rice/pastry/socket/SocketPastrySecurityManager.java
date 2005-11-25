@@ -19,7 +19,6 @@ public class SocketPastrySecurityManager implements PastrySecurityManager {
 
   private PastryNode localnode;
   private SocketNodeHandle localhandle;
-  private SocketNodeHandlePool pool;
 
   /**
    * Constructor.
@@ -27,9 +26,8 @@ public class SocketPastrySecurityManager implements PastrySecurityManager {
    * @param snh DESCRIBE THE PARAMETER
    * @param snhp DESCRIBE THE PARAMETER
    */
-  public SocketPastrySecurityManager(SocketNodeHandle snh, SocketNodeHandlePool snhp) {
+  public SocketPastrySecurityManager(SocketNodeHandle snh) {
     localhandle = snh;
-    pool = snhp;
   }
 
   /**
@@ -79,6 +77,6 @@ public class SocketPastrySecurityManager implements PastrySecurityManager {
    * @return the verified node handle
    */
   public NodeHandle verifyNodeHandle(NodeHandle handle) {
-    return pool.coalesce((DistNodeHandle) handle);
+    return localnode.coalesce((SocketNodeHandle) handle);
   }
 }

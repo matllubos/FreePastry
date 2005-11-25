@@ -1,6 +1,7 @@
 package rice.pastry.socket;
 
 import java.io.*;
+import java.lang.ref.WeakReference;
 import java.net.*;
 import java.nio.*;
 import java.nio.channels.*;
@@ -32,14 +33,8 @@ public class SocketSourceRouteManager {
   // the local pastry node
   private SocketPastryNode spn;
   
-  // the list of best routes
-  private Hashtable managers;
-  
   // the socket manager below this manager
   private SocketCollectionManager manager;
-  
-  // the node hanlde pool
-  private SocketNodeHandlePool pool;
   
   // the address of this local node
   private EpochInetSocketAddress localAddress;
@@ -53,31 +48,39 @@ public class SocketSourceRouteManager {
    * @param bindAddress The address which the node should bind to
    * @param proxyAddress The address which the node should advertise as it's address
    */
-  protected SocketSourceRouteManager(SocketPastryNode node, SocketNodeHandlePool pool, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
+  protected SocketSourceRouteManager(SocketPastryNode node, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.spn = node;
     Parameters p = node.getEnvironment().getParameters();
     CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
     
     this.logger = node.getEnvironment().getLogManager().getLogger(SocketSourceRouteManager.class, null);
-    this.pool = pool;
-    this.managers = new Hashtable();
-    this.manager = new SocketCollectionManager(node, pool, this, bindAddress, proxyAddress);
+    this.manager = new SocketCollectionManager(node, this, bindAddress, proxyAddress);
     this.localAddress = bindAddress;
   }
   
   public HashMap getBest() {
     HashMap result = new HashMap();
     
-    Iterator i = managers.keySet().iterator();
-    
-    while (i.hasNext()) {
-      Object addr = i.next();
+    synchronized(spn.nodeHandles) {
+      Iterator i = spn.nodeHandles.keySet().iterator();
       
-      if (((AddressManager) managers.get(addr)).getLiveness() < SocketNodeHandle.LIVENESS_DEAD)
-        result.put(addr, ((AddressManager) managers.get(addr)).best);
-    }
-    
+      while (i.hasNext()) {
+        Object addr = i.next();
+        
+        WeakReference wr = (WeakReference)spn.nodeHandles.get(addr);
+        if (wr != null) {
+          SocketNodeHandle snh = (SocketNodeHandle)wr.get();
+          if (snh != null) {
+            AddressManager am = snh.addressManager;
+            if (am != null) {              
+              if (am.getLiveness() < SocketNodeHandle.LIVENESS_DEAD)
+                result.put(addr, am.best);
+            }
+          }           
+        }
+      }
+    }      
     return result;
   }
   
@@ -105,14 +108,16 @@ public class SocketSourceRouteManager {
    * @param address The remote address
    */
   protected AddressManager getAddressManager(EpochInetSocketAddress address, boolean search) {
-    AddressManager manager = (AddressManager) managers.get(address);
-    
-    if (manager == null) {
-      manager = new AddressManager(address, search);
-      managers.put(address, manager);
+    synchronized(spn.nodeHandles) {
+      AddressManager manager = spn.getAddressManager(address); 
+      
+      if (manager == null) {
+        manager = new AddressManager(address, search);
+        spn.putAddressManager(address, manager);
+      }
+      
+      return manager;
     }
-    
-    return manager;
   }
   
   /**
@@ -142,7 +147,7 @@ public class SocketSourceRouteManager {
    * @param prl DESCRIBE THE PARAMETER
    */
   public void ping(EpochInetSocketAddress address) {
-    AddressManager am = (AddressManager) managers.get(address);
+    AddressManager am = spn.getAddressManager(address);
     
     if (am == null)
       manager.ping(SourceRoute.build(address));
@@ -170,7 +175,7 @@ public class SocketSourceRouteManager {
    * @return The ping value to the remote address
    */
   public int proximity(EpochInetSocketAddress address) {
-    AddressManager am = (AddressManager) managers.get(address);
+    AddressManager am = spn.getAddressManager(address);
     
     if (am == null)
       return SocketNodeHandle.DEFAULT_PROXIMITY;
@@ -197,8 +202,8 @@ public class SocketSourceRouteManager {
    */
   protected void markDead(SourceRoute route) {
     if (logger.level <= Logger.FINE) logger.log( "(SSRM) Found route " + route + " to be dead");
-    
-    AddressManager am = (AddressManager) managers.get(route.getLastHop());
+
+    AddressManager am = spn.getAddressManager(route.getLastHop());
     
     if (am != null)
       am.markDead(route);
@@ -212,7 +217,7 @@ public class SocketSourceRouteManager {
    * @param address The now-dead address
    */
   protected void markDead(EpochInetSocketAddress address) {
-    AddressManager am = (AddressManager) managers.get(address);
+    AddressManager am = spn.getAddressManager(address);
     
     if (am != null)
       am.markDeadForever();
@@ -309,7 +314,7 @@ public class SocketSourceRouteManager {
    * @param address The address
    */
   protected SourceRoute getBestRoute(EpochInetSocketAddress address) {
-    AddressManager am = (AddressManager) managers.get(address);
+    AddressManager am = spn.getAddressManager(address);
     
     if ((am == null) || (am.getLiveness() == SocketNodeHandle.LIVENESS_DEAD) ||
         (am.getLiveness() == SocketNodeHandle.LIVENESS_DEAD_FOREVER))
@@ -438,7 +443,11 @@ public class SocketSourceRouteManager {
         if (logger.level <= Logger.FINE) logger.log( "(SSRM) Route " + route + " is better than previous best route " + best + " - replacing");
             
         best = route;  
-        pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
+        
+        SocketNodeHandle snh = spn.getNodeHandle(address);
+        if (snh != null) {
+          snh.update(SocketNodeHandle.PROXIMITY_CHANGED); 
+        }
       }
       
       // finally, mark this address as alive
@@ -521,8 +530,10 @@ public class SocketSourceRouteManager {
       setAlive();
         
       // next, we update everyone if this is the active route
-      if (route.equals(best))
-        pool.update(address, SocketNodeHandle.PROXIMITY_CHANGED);
+      if (route.equals(best)) {
+        SocketNodeHandle snh = spn.getNodeHandle(address);
+        if (snh != null) snh.update(SocketNodeHandle.PROXIMITY_CHANGED);        
+      }
     }
 
     /**
@@ -624,7 +635,8 @@ public class SocketSourceRouteManager {
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_DEAD:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
-          pool.update(address, SocketNodeHandle.DECLARED_LIVE);
+          SocketNodeHandle snh = spn.getNodeHandle(address);
+          if (snh != null) snh.update(SocketNodeHandle.DECLARED_LIVE);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be alive again.");
           break;
         case SocketNodeHandle.LIVENESS_SUSPECTED:
@@ -680,7 +692,8 @@ public class SocketSourceRouteManager {
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD;
-          pool.update(address, SocketNodeHandle.DECLARED_DEAD);   
+          SocketNodeHandle snh = spn.getNodeHandle(address);
+          if (snh != null) snh.update(SocketNodeHandle.DECLARED_DEAD);   
           manager.declaredDead(address);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead.");
           break;
@@ -706,7 +719,8 @@ public class SocketSourceRouteManager {
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
-          pool.update(address, SocketNodeHandle.DECLARED_DEAD);        
+          SocketNodeHandle snh = spn.getNodeHandle(address);
+          if (snh != null) snh.update(SocketNodeHandle.DECLARED_DEAD);        
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead forever.");
           break;
       }

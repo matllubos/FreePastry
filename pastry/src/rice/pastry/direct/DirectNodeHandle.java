@@ -27,7 +27,7 @@ public class DirectNodeHandle extends NodeHandle {
    * @param sim The current network simulator
    */
   DirectNodeHandle(DirectPastryNode ln, DirectPastryNode rn, NetworkSimulator sim) {
-    setLocalNode(ln);
+    localnode = ln;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
     if (rn == null) throw new IllegalArgumentException("rn must be non-null");
     remoteNode = rn;

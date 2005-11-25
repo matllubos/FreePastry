@@ -42,39 +42,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
 
   protected Logger logger;
   
-  /**
-   * This hash map helps us coalesce the nodeHandles so that there is only one
-   * reference of each
-   * 
-   * maps NodeHandle -> WeakReference(NodeHandle)
-   */
-  // NOTE, the weak map had a nasty reaction with the SocketNodeHandlePool
-  // This needs to be fixed permanently, but for now this produces a long term 
-  // memory leak, but gets rid of the short term one that causes expensive garbage
-  // collections.
-  /*
-  protected WeakHashMap nodeHandleSet = new WeakHashMap();
-
-  public LocalNodeI getLocalNodeI(LocalNodeI lni) {
-    WeakReference wr = (WeakReference) nodeHandleSet.get(lni);
-    if (wr == null) {
-      wr = new WeakReference(lni);
-      nodeHandleSet.put(lni, wr);
-    }
-    return (LocalNodeI) wr.get();
-  }
-*/
-  
-  protected HashMap nodeHandleSet = new HashMap();
-
-  public LocalNodeI getLocalNodeI(LocalNodeI lni) {
-    LocalNodeI wr = (LocalNodeI) nodeHandleSet.get(lni);
-    if (wr == null) {
-      wr = lni;
-      nodeHandleSet.put(lni, wr);
-    }
-    return wr;
-  }
+  public abstract NodeHandle coalesce(NodeHandle newHandle);
   
   
   /**

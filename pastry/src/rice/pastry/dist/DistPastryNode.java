@@ -91,14 +91,6 @@ public abstract class DistPastryNode extends PastryNode {
   }
 
   /**
-   * Method which returns the Dist for this Pastry node.
-   *
-   * @return The node handle pool for this pastry node.
-   */
-  public abstract DistNodeHandlePool getNodeHandlePool();
-
-
-  /**
    * Sends an InitiateJoin message to itself.
    *
    * @param bootstrap Node handle to bootstrap with.

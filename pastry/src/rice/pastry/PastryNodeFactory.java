@@ -199,7 +199,7 @@ public abstract class PastryNodeFactory {
       } while (! currentClosest.equals(nearNode));
       
       if (nearNode.getLocalNode() == null) {
-        nearNode.setLocalNode(local.getLocalNode());
+        nearNode = local.getLocalNode().coalesce(nearNode);
       }
       
       // return the resulting closest node

@@ -1,14 +1,11 @@
 
 package rice.pastry.standard;
 
-import java.util.Hashtable;
+import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.pastry.*;
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeSet;
-import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
@@ -20,7 +17,6 @@ import rice.pastry.messaging.Message;
 import rice.pastry.messaging.MessageReceiver;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.security.*;
-import rice.pastry.security.PastrySecurityManager;
 
 /**
  * An implementation of a periodic-style leafset protocol
@@ -41,7 +37,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
    * NodeHandle -> Long
    * remembers the TIME when we received a BLS from that NodeHandle
    */
-  protected Hashtable lastTimeReceivedBLS;
+  protected WeakHashMap lastTimeReceivedBLS;
   
   /**
    * Related to rapidly determining direct neighbor liveness.
@@ -62,7 +58,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
 		this.security = sm;
 		this.leafSet = ls;
 		this.routeTable = rt;
-    this.lastTimeReceivedBLS = new Hashtable();
+    this.lastTimeReceivedBLS = new WeakHashMap();
     Parameters p = ln.getEnvironment().getParameters();
     PING_NEIGHBOR_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period");
     CHECK_LIVENESS_PERIOD = PING_NEIGHBOR_PERIOD+p.getInt("pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod");

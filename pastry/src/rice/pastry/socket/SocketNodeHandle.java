@@ -9,11 +9,15 @@ import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
+import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
 
 /**
  * Class which represents the address and nodeId of a remote node.  In
  * the socket protocol, it simply represents this information - all 
  * other details are managed by the local nodes.
+ *
+ * SocketNodeHandle can now internally exist without a NodeId.  This is to get
+ * the memory management correct
  *
  * @version $Id$
  * @author Alan Mislove
@@ -29,6 +33,8 @@ public class SocketNodeHandle extends DistNodeHandle {
   public static int DEFAULT_PROXIMITY = Integer.MAX_VALUE;
 
   protected EpochInetSocketAddress eaddress;
+  
+  transient AddressManager addressManager;
   
   /**
    * Constructor
@@ -197,19 +203,11 @@ public class SocketNodeHandle extends DistNodeHandle {
   public boolean ping() {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
-    if (spn != null) 
-      spn.getSocketSourceRouteManager().ping(getEpochAddress());
+    if ((spn != null) && spn.srManager != null) 
+      spn.srManager.ping(getEpochAddress());
 
     return isAlive();
   }  
-
-  /**
-   * Method which registers this handle with the node that it is currently on.
-   *
-   */
-  public void afterSetLocalNode() {
-    ((SocketNodeHandlePool) ((SocketPastryNode) getLocalNode()).getNodeHandlePool()).record(this);
-  }
 
   /**
    * DESCRIBE THE METHOD
@@ -229,6 +227,15 @@ public class SocketNodeHandle extends DistNodeHandle {
   protected void update(Object update) {
     setChanged();
     notifyObservers(update);
+  }
+
+  public void setNodeId(NodeId nodeId) {
+    this.nodeId = nodeId;    
+  }
+  
+  public void setLocalNode(SocketPastryNode spn) {
+    localnode = spn; 
+    this.logger = spn.getEnvironment().getLogManager().getLogger(getClass(),null);
   }
 }
 

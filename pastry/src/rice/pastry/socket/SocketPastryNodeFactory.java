@@ -335,7 +335,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param address The address to claim that this node is at - used for proxies behind NATs
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
+  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
     if (bootstrap == null)
       if (logger.level <= Logger.WARNING) logger.log("No bootstrap node provided, starting a new ring...");
 
@@ -370,7 +370,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
 
     SocketSourceRouteManager srManager = null;
-    SocketNodeHandlePool pool = new SocketNodeHandlePool(pn);
     EpochInetSocketAddress localAddress = null;
     EpochInetSocketAddress proxyAddress = null;
     // NOTE: We _don't_ want to use the environment RandomSource because this will cause
@@ -386,12 +385,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       else
         proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
       
-      srManager = new SocketSourceRouteManager(pn, pool, localAddress, proxyAddress);
+      srManager = new SocketSourceRouteManager(pn, localAddress, proxyAddress);
       port++;
     }
 
-    final SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
-    SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle, pool);
+    SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
+    localhandle = (SocketNodeHandle)pn.coalesce(localhandle);
+    SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle);
     MessageDispatch msgDisp = new MessageDispatch(pn);
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
@@ -404,19 +404,16 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setSocketElements(proxyAddress, srManager, pool, leafSetMaintFreq, routeSetMaintFreq);
+    pn.setSocketElements(proxyAddress, srManager, leafSetMaintFreq, routeSetMaintFreq);
     secureMan.setLocalPastryNode(pn);
 
-
-    pool.coalesce(localhandle);
-    localhandle.setLocalNode(pn);
-    
     PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
 //    msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
     ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);
 
-    if (bootstrap != null) 
-      bootstrap.setLocalNode(pn);
+    if (bootstrap != null) {
+      bootstrap = (SocketNodeHandle)pn.coalesce(bootstrap);
+    }
     
     try {
       Thread.sleep(1000);
