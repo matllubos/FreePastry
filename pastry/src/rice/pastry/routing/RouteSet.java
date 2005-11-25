@@ -119,7 +119,6 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
     if (((Integer) arg) == NodeHandle.PROXIMITY_CHANGED) {
       put((NodeHandle) o);
     } else if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
-      System.out.println("RouteSet "+this+" update removing "+o+" because it is dead.");
       // changed to remove dead handles - AM
       remove((NodeHandle) o);
     }
@@ -160,12 +159,8 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
    * @return the removed handle or null.
    */
   public NodeHandle remove(NodeHandle nh) {
-    NodeHandle ret = null;
     for (int i = 0; i < theSize; i++) {
       if (nodes[i].equals(nh)) {
-        if (ret != null) {
-          System.out.println("WARNING Node was in there twice!!!"); 
-        }
         NodeHandle handle = nodes[i];
 
         nodes[i] = nodes[--theSize];
@@ -176,11 +171,11 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
         // in case we observe this handle, stop doing so
         handle.deleteObserver(this);
 
-        ret = handle;
+        return handle;
       }
     }
 
-    return ret;
+    return null;
   }
 
   /**
