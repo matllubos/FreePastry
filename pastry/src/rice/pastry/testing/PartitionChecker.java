@@ -113,7 +113,7 @@ public class PartitionChecker {
     final HashSet unseen = new HashSet();
     
     
-    unseen.add(factory.getNodeHandle(bootstrap));
+    unseen.add(factory.getNodeHandle(bootstrap, 20000));
 
     synchronized (unseen) {
       while (true) {
