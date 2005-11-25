@@ -209,6 +209,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * initialization phase of the client application.
    *
    * @param address DESCRIBE THE PARAMETER
+   * @param timeout maximum time in milliseconds to return the result
    * @return DESCRIBE THE RETURN VALUE
    */
   public abstract NodeHandle generateNodeHandle(InetSocketAddress address, int timeout);

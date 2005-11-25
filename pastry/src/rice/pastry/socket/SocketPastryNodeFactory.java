@@ -209,7 +209,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * non-blocking version.  However this method behaves as a blocking call.
    * 
    * @param address
-   * @param timeout maximum time to return the result.  <= 0 will use the blocking version.
+   * @param timeout maximum time in millis to return the result.  <= 0 will use the blocking version.
    * @return
    */
   public NodeHandle generateNodeHandle(InetSocketAddress address, int timeout) {
