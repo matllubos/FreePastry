@@ -10,6 +10,7 @@ import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
+import rice.selector.SelectorManager;
 
 /**
  * Class which represents the address and nodeId of a remote node.  In
@@ -105,18 +106,29 @@ public class SocketNodeHandle extends DistNodeHandle {
    *
    * @param msg Message to be delivered, may or may not be routeMessage.
    */
-  public void receiveMessage(Message msg) {
+  public void receiveMessage(final Message msg) {
     assertLocalNode();
 
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    
+    Runnable runnable = new Runnable() {    
+      public void run() {
+        if (spn.getNodeId().equals(nodeId)) {
+          //debug("Sending message " + msg + " locally");
+          spn.receiveMessage(msg);
+        } else {
+          if (logger.level <= Logger.FINER) logger.log(
+              "Passing message " + msg + " to the socket controller for writing");
+          spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
+        }
+      }    
+    };
 
-    if (spn.getNodeId().equals(nodeId)) {
-      //debug("Sending message " + msg + " locally");
-      spn.receiveMessage(msg);
+    SelectorManager sm = spn.getEnvironment().getSelectorManager();
+    if (sm.isSelectorThread()) {
+      runnable.run();      
     } else {
-      if (logger.level <= Logger.FINER) logger.log(
-          "Passing message " + msg + " to the socket controller for writing");
-      spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
+      sm.invoke(runnable);
     }
   }
   

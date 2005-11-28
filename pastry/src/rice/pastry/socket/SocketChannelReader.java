@@ -274,8 +274,9 @@ public class SocketChannelReader {
           "PANIC: Serialized message caused an illegal state exception! " + e.getMessage());
       throw new IOException("Illegal state from deserializing message - closing channel.");
     } catch (NullPointerException e) {
-      if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Serialized message caused a null pointer exception! " + e.getMessage());
+      if (logger.level <= Logger.SEVERE) logger.logException(
+          "PANIC: Serialized message caused a null pointer exception! " , e);
+      
       return null;
     } catch (Exception e) {
       if (logger.level <= Logger.SEVERE) logger.log(
