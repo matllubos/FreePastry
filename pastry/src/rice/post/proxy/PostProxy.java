@@ -1707,6 +1707,7 @@ public class PostProxy {
 
       area = new JTextArea(15,75);
       area.setFont(new Font("Courier", Font.PLAIN, 10));
+      area.setEditable(false);
       scroll = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
       
       GridBagLayout layout = new GridBagLayout();
