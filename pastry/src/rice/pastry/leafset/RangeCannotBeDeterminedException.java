@@ -18,8 +18,8 @@ public class RangeCannotBeDeterminedException extends RuntimeException {
   /**
    * @param string
    */
-  public RangeCannotBeDeterminedException(String string, int r, int pos, int uniqueNodes, NodeHandle nh) {
-    super(string+" replication factor:"+r+" nh position:"+pos+" handle:"+nh+" ls.uniqueNodes():"+uniqueNodes);
+  public RangeCannotBeDeterminedException(String string, int r, int pos, int uniqueNodes, NodeHandle nh, LeafSet ls) {
+    super(string+" replication factor:"+r+" nh position:"+pos+" handle:"+nh+" ls.uniqueNodes():"+uniqueNodes+" "+ls.toString());
     this.r = r;
     this.pos = pos;
     this.nh = nh;
