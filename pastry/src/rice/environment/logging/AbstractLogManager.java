@@ -154,7 +154,7 @@ public abstract class AbstractLogManager implements LogManager {
     }
     
     if (instance != null) {
-      loggerName = loggerName+":"+instance;
+      loggerName = loggerName+"$"+instance;
     }
     
     // see if this logger exists
