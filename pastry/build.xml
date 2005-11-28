@@ -483,6 +483,7 @@
         <include name="jfreechart-0.9.16.jar"/>
         <include name="xmlpull_1_1_3_4a.jar"/>
         <include name="xpp3-1.1.3.4d_b2.jar"/>
+        <include name="epost.png"/>
       </tarfileset>
     </tar>
     <zip destfile="epost-${epost-version}-all.zip">
@@ -496,6 +497,7 @@
         <include name="jfreechart-0.9.16.jar"/>
         <include name="xmlpull_1_1_3_4a.jar"/>
         <include name="xpp3-1.1.3.4d_b2.jar"/>
+        <include name="epost.png"/>
       </zipfileset>
     </zip>
     <tar destfile="epost-${epost-version}-source.tgz" compression="gzip">
