@@ -111,8 +111,8 @@ public class SocketNodeHandle extends DistNodeHandle {
 
     final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
     
-    Runnable runnable = new Runnable() {    
-      public void run() {
+//    Runnable runnable = new Runnable() {    
+//      public void run() {
         if (spn.getNodeId().equals(nodeId)) {
           //debug("Sending message " + msg + " locally");
           spn.receiveMessage(msg);
@@ -121,15 +121,15 @@ public class SocketNodeHandle extends DistNodeHandle {
               "Passing message " + msg + " to the socket controller for writing");
           spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
         }
-      }    
-    };
-
-    SelectorManager sm = spn.getEnvironment().getSelectorManager();
-    if (sm.isSelectorThread()) {
-      runnable.run();      
-    } else {
-      sm.invoke(runnable);
-    }
+//      }    
+//    };
+//
+//    SelectorManager sm = spn.getEnvironment().getSelectorManager();
+//    if (sm.isSelectorThread()) {
+//      runnable.run();      
+//    } else {
+//      sm.invoke(runnable);
+//    }
   }
   
   /**
@@ -213,11 +213,22 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return true if node is currently alive.
    */
   public boolean ping() {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-
-    if ((spn != null) && spn.srManager != null) 
-      spn.srManager.ping(getEpochAddress());
-
+    final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    
+//    Runnable runnable = new Runnable() {    
+//      public void run() {
+        if ((spn != null) && spn.srManager != null) 
+          spn.srManager.ping(getEpochAddress());
+//      }
+//    };
+//    
+//    SelectorManager sm = spn.getEnvironment().getSelectorManager();
+//    if (sm.isSelectorThread()) {
+//      runnable.run();      
+//    } else {
+//      sm.invoke(runnable);
+//    }
+    
     return isAlive();
   }  
 

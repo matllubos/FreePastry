@@ -11,6 +11,7 @@ import rice.environment.params.Parameters;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
+import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
 import rice.pastry.socket.messaging.*;
 import rice.selector.*;
 
@@ -178,9 +179,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param message The message to send
    * @param address The address to send the message to
    */
-  public void send(SourceRoute path, Message message) {
+  public void send(SourceRoute path, Message message, AddressManager am) {
     if (! sendInternal(path, message))
-      new MessageRetry(path, message); 
+      new MessageRetry(path, message, am); 
   }
   
   /**
@@ -365,9 +366,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           closeSocket(toClose);
         }
       } else {
-        if (logger.level <= Logger.WARNING) logger.log( "(SCM) ERROR: Request to record path opening for already-open path " + path);
-        String local = "" + localAddress.getAddress().getAddress().getHostAddress() + localAddress.getAddress().getPort();
-        String remote = "" + path.getLastHop().getAddress().getAddress().getHostAddress() + path.getLastHop().getAddress().getPort();
+        if (logger.level <= Logger.FINE) logger.logException( "(SCM) Request to record path opening for already-open path " + path, new Exception("stack trace"));
+        String local = "" + localAddress.getAddress().getAddress().getHostAddress() +":"+ localAddress.getAddress().getPort();
+        String remote = "" + path.getLastHop().getAddress().getAddress().getHostAddress() +":"+ path.getLastHop().getAddress().getPort();
 
         if (logger.level <= Logger.FINE) logger.log("(SCM) RESOLVE: Comparing paths " + local + " and " + remote);
 
@@ -404,8 +405,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         } else {
           if (logger.level <= Logger.FINE) logger.log("(SCM) SocketClosed called with corrent address, but incorrect manager - not a big deal.");
         }
-      } else {
-        if (logger.level <= Logger.SEVERE) logger.log( "(SCM) SEROUS ERROR: Request to record socket closing for non-existant socket to path " + path);
       }
     }
   }
@@ -571,13 +570,17 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     // The message
     protected Message message;
     
+    // This is to keep a hard link to the AM, so it isn't collected
+    protected AddressManager am;
+    
     /**
      * Constructor, taking a message and the route
      *
      * @param message The message
      * @param route The route
      */
-    public MessageRetry(SourceRoute route, Message message) {
+    public MessageRetry(SourceRoute route, Message message, AddressManager am) {
+      this.am = am;
       this.message = message;
       this.route = route;
       this.timeout = (long) (timeout * (0.8 + (0.4 * pastryNode.getEnvironment().getRandomSource().nextDouble())));
@@ -666,6 +669,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         cancel();
       }
     }
+
+    public boolean cancel() {
+      pingManager.removePingResponseListener(path,this);
+      return super.cancel();
+    }
+    
   }
     
   /**

@@ -389,6 +389,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       port++;
     }
 
+    pn.setSocketSourceRouteManager(srManager);
     SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
     localhandle = (SocketNodeHandle)pn.coalesce(localhandle);
     SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle);
@@ -404,7 +405,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     
 
     pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setSocketElements(proxyAddress, srManager, leafSetMaintFreq, routeSetMaintFreq);
+    pn.setSocketElements(proxyAddress, leafSetMaintFreq, routeSetMaintFreq);
     secureMan.setLocalPastryNode(pn);
 
     PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);

@@ -63,9 +63,8 @@ public class SocketPastryNode extends DistPastryNode {
    * @param pool The new SocketElements value
    */
   public void setSocketElements(EpochInetSocketAddress address,
-      SocketSourceRouteManager srManager, int lsmf, int rsmf) {
+      int lsmf, int rsmf) {
     this.address = address;
-    this.srManager = srManager;
     this.leafSetMaintFreq = lsmf;
     this.routeSetMaintFreq = rsmf;
   }
@@ -118,104 +117,12 @@ public class SocketPastryNode extends DistPastryNode {
     }
   }
 
-  /**
-   * EpochInetSocketAddress -> WeakReference(NodeHandle)
-   * 
-   * Note that it is critical to keep the key == NodeHandle.eaddress.
-   * 
-   * And I mean the same object!!! not .equals(). The whole memory management
-   * will get confused if this is not the case.
-   */
-  WeakHashMap nodeHandles = new WeakHashMap();
-
   public NodeHandle coalesce(NodeHandle newHandle) {
-    SocketNodeHandle snh = (SocketNodeHandle) newHandle;
-    synchronized (nodeHandles) {
-      WeakReference wr = (WeakReference) nodeHandles.get(snh.eaddress);
-      if (wr == null) {
-        addNodeHandle(snh);
-        return snh;
-      } else {
-        SocketNodeHandle ret = (SocketNodeHandle) wr.get();
-        if (ret == null) {
-          // if this happens, then the handle got collected, but not the
-          // eaddress yet. Grumble...
-          addNodeHandle(snh);
-          return snh;
-        } else {
-          // inflates a stub NodeHandle
-          if (ret.getNodeId() == null) {
-            ret.setNodeId(newHandle.getNodeId());
-          }
-          return ret;
-        }
-      }
-    }
+    return srManager.coalesce(newHandle);
   }
 
-  private void addNodeHandle(SocketNodeHandle snh) {
-    WeakReference wr = new WeakReference(snh);
-    nodeHandles.put(snh.eaddress, wr);
-    snh.setLocalNode(this);
+  public void setSocketSourceRouteManager(SocketSourceRouteManager srManager) {
+    this.srManager = srManager;
   }
 
-  public SocketNodeHandle getNodeHandle(EpochInetSocketAddress address) {
-    synchronized (nodeHandles) {
-      WeakReference wr = (WeakReference) nodeHandles.get(address);
-      if (wr == null)
-        return null;
-
-      SocketNodeHandle ret = (SocketNodeHandle) wr.get();
-      if (ret == null)
-        return null;
-      if (ret.getNodeId() == null)
-        return null;
-      return ret;
-    }
-  }
-
-  public AddressManager getAddressManager(EpochInetSocketAddress address) {
-    WeakReference wr = (WeakReference) nodeHandles.get(address);
-    if (wr == null)
-      return null;
-
-    SocketNodeHandle snh = (SocketNodeHandle) wr.get();
-    if (snh == null)
-      return null;
-    return snh.addressManager;
-  }
-
-  /**
-   * Should be called while synchronized on nodeHandles
-   * 
-   * @param address
-   * @param manager
-   */
-  public void putAddressManager(EpochInetSocketAddress address,
-      AddressManager manager) {
-    WeakReference wr = (WeakReference) nodeHandles.get(address);
-    SocketNodeHandle snh;
-    if (wr == null) {
-      snh = new SocketNodeHandle(address, null);
-      snh.setLocalNode(this);
-      wr = new WeakReference(snh);
-      nodeHandles.put(address, wr);
-    } else {
-      snh = (SocketNodeHandle) wr.get();
-      if (snh == null) {
-        // WARNING: this code must be repeated because of a very slight timing
-        // issue with the garbage collector
-        snh = new SocketNodeHandle(address, null);
-        snh.setLocalNode(this);
-        wr = new WeakReference(snh);
-        nodeHandles.put(address, wr);
-      }
-    }
-
-    if (snh.addressManager != null)
-      throw new IllegalStateException("Address manager for address " + address
-          + " already exists.");
-
-    snh.addressManager = manager;
-  }
 }

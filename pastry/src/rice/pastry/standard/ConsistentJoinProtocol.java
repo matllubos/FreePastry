@@ -3,11 +3,7 @@
  */
 package rice.pastry.standard;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Observable;
-import java.util.Observer;
+import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
@@ -50,9 +46,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   protected boolean tryingToGoReady = false;
   
   /**
-   * Contains NodeHandles that know about us. 
+   * Set of NodeHandles that know about us. -> Object
    */
-  HashSet gotResponse;
+  WeakHashMap gotResponse;
   
   /**
    * Nodes that we think are dead.
@@ -76,7 +72,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   public ConsistentJoinProtocol(PastryNode ln, NodeHandle lh,
       PastrySecurityManager sm, RoutingTable rt, LeafSet ls) {
     super(ln, lh, sm, rt, ls);    
-    gotResponse = new HashSet();
+    gotResponse = new WeakHashMap();
     failed = new HashSet();
     observing = new HashSet();
     ls.addObserver(this);
@@ -174,7 +170,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
       if (i != 0) {
         NodeHandle nh = leafSet.get(i);          
-        if (!gotResponse.contains(nh)) {
+        if (gotResponse.get(nh) == null) {
           ret.add(nh);
         }
       }
@@ -264,7 +260,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         // done_probing:
         
         // mark that he knows about us
-        gotResponse.add(j);
+        gotResponse.put(j, new Object());
         doneProbing();
 //      }      
     } else if (msg instanceof RequestFromEveryoneMsg) {
@@ -288,7 +284,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
         if (i != 0) {
           NodeHandle nh = leafSet.get(i);          
-          if (!seen.contains(nh) && !gotResponse.contains(nh)) {
+          if (!seen.contains(nh) && (gotResponse.get(nh) == null)) {
             numToHearFrom++;
             toHearFrom.add(nh);
             toHearFromStr+=nh+":"+nh.getLiveness()+",";
@@ -360,7 +356,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       if (thePastryNode.isReady()) return;
       NodeSetUpdate nsu = (NodeSetUpdate)arg;
       if (nsu.wasAdded()) {
-        if (!gotResponse.contains(nsu.handle())) {
+        if (gotResponse.get(nsu.handle()) == null) {
           sendTheMessage(nsu.handle(),false);
         }
       } else {

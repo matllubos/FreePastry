@@ -14,6 +14,7 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
 import rice.selector.*;
+import rice.selector.TimerTask;
 
 /**
  * Class which keeps track of the best routes to remote nodes.  This class
@@ -40,6 +41,14 @@ public class SocketSourceRouteManager {
   private EpochInetSocketAddress localAddress;
   
   private Logger logger;
+  
+  /**
+   * Invariant: if an AM has a message in its queue, it is in here, if not, it isn't.
+   * 
+   * This prevents outgoing messages from being lost.
+   */
+  HashSet hardLinks = new HashSet();
+
   /**
    * Constructor
    *
@@ -62,13 +71,13 @@ public class SocketSourceRouteManager {
   public HashMap getBest() {
     HashMap result = new HashMap();
     
-    synchronized(spn.nodeHandles) {
-      Iterator i = spn.nodeHandles.keySet().iterator();
+    synchronized(nodeHandles) {
+      Iterator i = nodeHandles.keySet().iterator();
       
       while (i.hasNext()) {
         Object addr = i.next();
         
-        WeakReference wr = (WeakReference)spn.nodeHandles.get(addr);
+        WeakReference wr = (WeakReference)nodeHandles.get(addr);
         if (wr != null) {
           SocketNodeHandle snh = (SocketNodeHandle)wr.get();
           if (snh != null) {
@@ -108,17 +117,135 @@ public class SocketSourceRouteManager {
    * @param address The remote address
    */
   protected AddressManager getAddressManager(EpochInetSocketAddress address, boolean search) {
-    synchronized(spn.nodeHandles) {
-      AddressManager manager = spn.getAddressManager(address); 
+    synchronized(nodeHandles) {
+      AddressManager manager = getAddressManager(address); 
       
       if (manager == null) {
-        manager = new AddressManager(address, search);
-        spn.putAddressManager(address, manager);
+        manager = putAddressManager(address, search);
       }
       
       return manager;
     }
   }
+
+  /**
+   * EpochInetSocketAddress -> WeakReference(NodeHandle)
+   * 
+   * Note that it is critical to keep the key == NodeHandle.eaddress.
+   * 
+   * And I mean the same object!!! not .equals(). The whole memory management
+   * will get confused if this is not the case.
+   */
+  WeakHashMap nodeHandles = new WeakHashMap();
+
+  public NodeHandle coalesce(NodeHandle newHandle) {
+    SocketNodeHandle snh = (SocketNodeHandle) newHandle;
+    synchronized (nodeHandles) {
+      WeakReference wr = (WeakReference) nodeHandles.get(snh.eaddress);
+      if (wr == null) {
+        addNodeHandle(snh);
+        return snh;
+      } else {
+        SocketNodeHandle ret = (SocketNodeHandle) wr.get();
+        if (ret == null) {
+          // if this happens, then the handle got collected, but not the
+          // eaddress yet. Grumble...
+          addNodeHandle(snh);
+          return snh;
+        } else {
+          // inflates a stub NodeHandle
+          if (ret.getNodeId() == null) {
+            ret.setNodeId(newHandle.getNodeId());
+          }
+          return ret;
+        }
+      }
+    }
+  }
+
+  private void addNodeHandle(SocketNodeHandle snh) {
+    WeakReference wr = new WeakReference(snh);
+    nodeHandles.put(snh.eaddress, wr);
+    snh.setLocalNode(spn);
+  }
+
+  public SocketNodeHandle getNodeHandle(EpochInetSocketAddress address) {
+    synchronized (nodeHandles) {
+      WeakReference wr = (WeakReference) nodeHandles.get(address);
+      if (wr == null)
+        return null;
+
+      SocketNodeHandle ret = (SocketNodeHandle) wr.get();
+      if (ret == null)
+        return null;
+      if (ret.getNodeId() == null)
+        return null;
+      return ret;
+    }
+  }
+
+  public AddressManager getAddressManager(EpochInetSocketAddress address) {
+    WeakReference wr = (WeakReference) nodeHandles.get(address);
+    if (wr == null)
+      return null;
+
+    SocketNodeHandle snh = (SocketNodeHandle) wr.get();
+    if (snh == null)
+      return null;
+    return snh.addressManager;
+  }
+
+  /**
+   * Should be called while synchronized on nodeHandles
+   * 
+   * @param address
+   * @param manager
+   */
+  public AddressManager putAddressManager(EpochInetSocketAddress address,
+      boolean search) {
+
+    WeakReference wr = (WeakReference) nodeHandles.get(address);
+    SocketNodeHandle snh;
+    AddressManager manager;
+    if (wr == null) {
+      snh = new SocketNodeHandle(address, null);
+      snh.setLocalNode(spn);
+      wr = new WeakReference(snh);
+      nodeHandles.put(address, wr);
+    } else {
+      snh = (SocketNodeHandle) wr.get();
+      if (snh == null) {
+        // WARNING: this code must be repeated because of a very slight timing
+        // issue with the garbage collector
+        snh = new SocketNodeHandle(address, null);
+        snh.setLocalNode(spn);
+        wr = new WeakReference(snh);
+        nodeHandles.put(address, wr);
+      }
+    }
+
+    if (snh.addressManager != null)
+      throw new IllegalStateException("Address manager for address " + address
+          + " already exists.");
+
+    manager = new AddressManager(snh, search);
+    // TODO make this time configurable
+    this.spn.getEnvironment().getSelectorManager().getTimer().schedule(
+        new HardLinkTimerTask(manager), 30000);
+    snh.addressManager = manager;
+    return manager;
+  }
+  
+  static class HardLinkTimerTask extends TimerTask {
+    AddressManager manager;
+    public HardLinkTimerTask(AddressManager manager) {
+      this.manager = manager;
+    }
+    public void run() {
+      // do nothing, just expire
+    }
+  }
+  
   
   /**
    * Method which sends a bootstrap message across the wire.
@@ -147,7 +274,7 @@ public class SocketSourceRouteManager {
    * @param prl DESCRIBE THE PARAMETER
    */
   public void ping(EpochInetSocketAddress address) {
-    AddressManager am = spn.getAddressManager(address);
+    AddressManager am = getAddressManager(address);
     
     if (am == null)
       manager.ping(SourceRoute.build(address));
@@ -175,7 +302,7 @@ public class SocketSourceRouteManager {
    * @return The ping value to the remote address
    */
   public int proximity(EpochInetSocketAddress address) {
-    AddressManager am = spn.getAddressManager(address);
+    AddressManager am = getAddressManager(address);
     
     if (am == null)
       return SocketNodeHandle.DEFAULT_PROXIMITY;
@@ -203,7 +330,7 @@ public class SocketSourceRouteManager {
   protected void markDead(SourceRoute route) {
     if (logger.level <= Logger.FINE) logger.log( "(SSRM) Found route " + route + " to be dead");
 
-    AddressManager am = spn.getAddressManager(route.getLastHop());
+    AddressManager am = getAddressManager(route.getLastHop());
     
     if (am != null)
       am.markDead(route);
@@ -217,7 +344,7 @@ public class SocketSourceRouteManager {
    * @param address The now-dead address
    */
   protected void markDead(EpochInetSocketAddress address) {
-    AddressManager am = spn.getAddressManager(address);
+    AddressManager am = getAddressManager(address);
     
     if (am != null)
       am.markDeadForever();
@@ -277,7 +404,7 @@ public class SocketSourceRouteManager {
           spn.receiveMessage(m);
         }
       } else {
-        if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop is dead!");
+        if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop "+address+" is dead!");
       }
     }  
   }
@@ -314,7 +441,7 @@ public class SocketSourceRouteManager {
    * @param address The address
    */
   protected SourceRoute getBestRoute(EpochInetSocketAddress address) {
-    AddressManager am = spn.getAddressManager(address);
+    AddressManager am = getAddressManager(address);
     
     if ((am == null) || (am.getLiveness() == SocketNodeHandle.LIVENESS_DEAD) ||
         (am.getLiveness() == SocketNodeHandle.LIVENESS_DEAD_FOREVER))
@@ -331,7 +458,7 @@ public class SocketSourceRouteManager {
   protected class AddressManager {
     
     // the remote address of this manager
-    protected EpochInetSocketAddress address;
+    protected SocketNodeHandle address;
     
     /**
      * the current best route to this remote address
@@ -360,7 +487,7 @@ public class SocketSourceRouteManager {
      * @param address The address
      * @param search Whether or not the manager should try and find a route
      */
-    public AddressManager(EpochInetSocketAddress address, boolean search) {
+    public AddressManager(SocketNodeHandle address, boolean search) {
       this.address = address;
       this.queue = new Vector();
       this.routes = new HashMap();
@@ -370,7 +497,7 @@ public class SocketSourceRouteManager {
       if (logger.level <= Logger.FINE) logger.log( "(SSRM) ADDRESS MANAGER CREATED AT " + localAddress + " FOR " + address);
       
       if (search) {
-        getRouteManager(SourceRoute.build(address)).checkLiveness();
+        getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
         this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       }
     }
@@ -444,9 +571,8 @@ public class SocketSourceRouteManager {
             
         best = route;  
         
-        SocketNodeHandle snh = spn.getNodeHandle(address);
-        if (snh != null) {
-          snh.update(SocketNodeHandle.PROXIMITY_CHANGED); 
+        if (address != null) {
+          address.update(SocketNodeHandle.PROXIMITY_CHANGED); 
         }
       }
       
@@ -531,8 +657,7 @@ public class SocketSourceRouteManager {
         
       // next, we update everyone if this is the active route
       if (route.equals(best)) {
-        SocketNodeHandle snh = spn.getNodeHandle(address);
-        if (snh != null) snh.update(SocketNodeHandle.PROXIMITY_CHANGED);        
+        if (address != null) address.update(SocketNodeHandle.PROXIMITY_CHANGED);        
       }
     }
 
@@ -544,7 +669,7 @@ public class SocketSourceRouteManager {
     public synchronized void send(Message message) {
       // if we're dead, we go ahead and just checkDead on the direct route
       if (liveness == SocketNodeHandle.LIVENESS_DEAD) {
-        getRouteManager(SourceRoute.build(address)).checkLiveness();
+        getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
         this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       }
       
@@ -552,8 +677,10 @@ public class SocketSourceRouteManager {
       // to the queue
       if (best == null) {
         queue.add(message);
+        hardLinks.add(this);
       } else if (! getRouteManager(best).isOpen()) {
         queue.add(message);
+        hardLinks.add(this);
         
         getRouteManager(best).checkLiveness();
         this.best = null;
@@ -575,7 +702,7 @@ public class SocketSourceRouteManager {
             return;
           case SocketNodeHandle.LIVENESS_DEAD:
             if (logger.level <= Logger.FINE) logger.log( "(SSRM) PING: PINGING DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
-            getRouteManager(SourceRoute.build(address)).ping();
+            getRouteManager(SourceRoute.build(address.eaddress)).ping();
             break;
           default:
             if (best != null) {
@@ -583,7 +710,7 @@ public class SocketSourceRouteManager {
               
               // check to see if the direct route is available
               if (! best.isDirect()) 
-                getRouteManager(SourceRoute.build(address)).ping();
+                getRouteManager(SourceRoute.build(address.eaddress)).ping();
             }
             
             break;
@@ -602,7 +729,7 @@ public class SocketSourceRouteManager {
           return;
         case SocketNodeHandle.LIVENESS_DEAD:
           if (logger.level <= Logger.FINE) logger.log( "(SSRM) CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
-          getRouteManager(SourceRoute.build(address)).checkLiveness();
+          getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
           break;
         default:
           if (best != null) {
@@ -610,7 +737,7 @@ public class SocketSourceRouteManager {
             
             // check to see if the direct route is available
             if (! best.isDirect()) 
-              getRouteManager(SourceRoute.build(address)).checkLiveness();
+              getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
           }
           
           break;
@@ -632,11 +759,12 @@ public class SocketSourceRouteManager {
       while (queue.size() > 0)
         getRouteManager(best).send((Message) queue.remove(0));    
       
+      if (queue.isEmpty()) hardLinks.remove(this);      
+      
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_DEAD:
           liveness = SocketNodeHandle.LIVENESS_ALIVE;
-          SocketNodeHandle snh = spn.getNodeHandle(address);
-          if (snh != null) snh.update(SocketNodeHandle.DECLARED_LIVE);
+          if (address != null) address.update(SocketNodeHandle.DECLARED_LIVE);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be alive again.");
           break;
         case SocketNodeHandle.LIVENESS_SUSPECTED:
@@ -672,10 +800,11 @@ public class SocketSourceRouteManager {
       for (int i=0; i<array.length; i++) {
         if (array[i] instanceof RouteMessage) {
           if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + array[i] + " due to suspected next hop " + address);
-          reroute(address, (Message) array[i]);
+          reroute(address.eaddress, (Message) array[i]);
           queue.remove(array[i]);
         }
       }
+      if (queue.isEmpty()) hardLinks.remove(this);
     }
     
     /**
@@ -692,16 +821,13 @@ public class SocketSourceRouteManager {
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD;
-          SocketNodeHandle snh = spn.getNodeHandle(address);
-          if (snh != null) snh.update(SocketNodeHandle.DECLARED_DEAD);   
-          manager.declaredDead(address);
+          if (address != null) address.update(SocketNodeHandle.DECLARED_DEAD);   
+          manager.declaredDead(address.eaddress);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead.");
           break;
       }
-      
-      // and finally we can now send any pending messages
-      while (queue.size() > 0)
-        reroute(address, (Message) queue.remove(0));
+
+      purgeQueue();
     }
     
     /**
@@ -719,15 +845,18 @@ public class SocketSourceRouteManager {
         default:
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD_FOREVER;
-          SocketNodeHandle snh = spn.getNodeHandle(address);
-          if (snh != null) snh.update(SocketNodeHandle.DECLARED_DEAD);        
+          if (address != null) address.update(SocketNodeHandle.DECLARED_DEAD);        
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead forever.");
           break;
       }
-      
+      purgeQueue();
+    }
+    
+    protected void purgeQueue() {
       // and finally we can now send any pending messages
       while (queue.size() > 0)
-        reroute(address, (Message) queue.remove(0));      
+        reroute(address.eaddress, (Message) queue.remove(0));
+      hardLinks.remove(this);      
     }
     
     /**
@@ -840,7 +969,7 @@ public class SocketSourceRouteManager {
        * @param message The message to send
        */
       public synchronized void send(Message message) {
-        manager.send(route, message);
+        manager.send(route, message, AddressManager.this);
       }
       
       /**

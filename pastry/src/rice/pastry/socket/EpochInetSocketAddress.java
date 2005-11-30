@@ -62,7 +62,10 @@ public class EpochInetSocketAddress implements Serializable {
    * @return The equality
    */
   public boolean equals(Object o) {
-    return ((epoch == ((EpochInetSocketAddress) o).epoch) && address.equals(((EpochInetSocketAddress) o).address));
+    if (o == null) return false;
+    EpochInetSocketAddress that = (EpochInetSocketAddress)o;
+    if (this.epoch != that.epoch) return false;
+    return (this.address.equals(that.address));
   }
   
   /**

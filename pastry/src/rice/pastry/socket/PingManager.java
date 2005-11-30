@@ -9,6 +9,7 @@ import java.util.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.environment.time.TimeSource;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.messaging.*;
@@ -21,6 +22,8 @@ import rice.selector.*;
  */
 public class PingManager extends SelectionKeyHandler {
   
+  public static final int PING_THROTTLE = 1500;
+
   // whether or not we should use short pings
   public final boolean USE_SHORT_PINGS;// = false;
   
@@ -44,9 +47,12 @@ public class PingManager extends SelectionKeyHandler {
   // largest message size than can be sent via UDP
   public final int DATAGRAM_SEND_BUFFER_SIZE;
   
-  // InetSocketAddress -> ArrayList of PingResponseListener
-  protected Hashtable pingListeners = new Hashtable();
+  // SourceRoute -> ArrayList of PingResponseListener
+  protected WeakHashMap pingListeners = new WeakHashMap();
 
+  // SourceRoute -> Long 
+  protected WeakHashMap lastPingTime = new WeakHashMap();
+  
   // The list of pending meesages
   protected ArrayList pendingMsgs;
 
@@ -70,6 +76,8 @@ public class PingManager extends SelectionKeyHandler {
   
   private Logger logger;
   
+  private TimeSource timeSource;
+  
   /**
    * @param port DESCRIBE THE PARAMETER
    * @param manager DESCRIBE THE PARAMETER
@@ -78,6 +86,7 @@ public class PingManager extends SelectionKeyHandler {
   public PingManager(SocketPastryNode spn, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.spn = spn;
     this.logger = spn.getEnvironment().getLogManager().getLogger(PingManager.class, null);
+    this.timeSource = spn.getEnvironment().getTimeSource();
     this.manager = manager;
     this.pendingMsgs = new ArrayList();
     this.localAddress = proxyAddress;
@@ -118,10 +127,28 @@ public class PingManager extends SelectionKeyHandler {
    * @param prl The listener which should hear about the response
    */
   protected void ping(SourceRoute path, PingResponseListener prl) {
+    // this code is to throttle pings
+    // I don't know what to do if there is a prl, because it is difficult to know 
+    // if there is still an outstanding ping, so we can only throttle if there is no
+    // prl
+    long curTime = timeSource.currentTimeMillis();
+    if (prl == null) {
+      Long time = (Long)lastPingTime.get(path); 
+      if (time != null) {
+        if ((time.longValue()+PING_THROTTLE) > curTime) {
+          if (logger.level <= Logger.FINE) logger.log(
+              "(PM) Suppressing ping via path " + path + " local " + localAddress);
+          return;          
+        }
+      }
+    }
+    
     if (logger.level <= Logger.FINE) logger.log(
         "(PM) Actually sending ping via path " + path + " local " + localAddress);
 
-    addPingResponseListener(path, prl);
+    lastPingTime.put(path, new Long(curTime));
+    
+    addPingResponseListener(path, prl);    
     
     if (USE_SHORT_PINGS)
       sendShortPing(path);
@@ -193,6 +220,26 @@ public class PingManager extends SelectionKeyHandler {
     notifyPingResponseListeners(from, ping, start);
   }
 
+  /**
+   * Adds a feature to the PingResponseListener attribute of the PingManager
+   * object
+   *
+   * @param address The feature to be added to the PingResponseListener
+   *      attribute
+   * @param prl The feature to be added to the PingResponseListener attribute
+   */
+  protected void removePingResponseListener(SourceRoute path, PingResponseListener prl) {
+    if (prl == null) 
+      return;
+    
+    ArrayList list = (ArrayList) pingListeners.get(path);
+    
+    if (list != null) {
+      // remove all
+      while(list.remove(prl));
+    }
+  }
+  
   /**
    * Adds a feature to the PingResponseListener attribute of the PingManager
    * object

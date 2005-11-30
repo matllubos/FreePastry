@@ -26,5 +26,8 @@ public class ConsistentJoinMsg extends Message {
     this.request = request;
     this.failed = failed;
   }
-
+  
+  public String toString() {
+    return "ConsistenJoinMsg "+ls+" request:"+request; 
+  }
 }
