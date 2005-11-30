@@ -42,8 +42,8 @@ public class Proxy {
     logger = environment.getLogManager().getLogger(Proxy.class, null);
   }
   
-  public void run(String params) throws IOException, InterruptedException {
-    Parameters parameters = new SimpleParameters(DEFAULT_PARAM_FILES, params);
+  public void run() throws IOException, InterruptedException {
+    Parameters parameters = environment.getParameters();
     int count = 0;
     
     if (parameters.getBoolean("proxy_automatic_update_enable")) {
@@ -74,7 +74,7 @@ public class Proxy {
       lm.die();
       
       // re-initialize parameters for debugging purposes
-      parameters = new SimpleParameters(DEFAULT_PARAM_FILES, params);
+      parameters = new SimpleParameters(DEFAULT_PARAM_FILES, PROXY_PARAMETERS_NAME);
       
       if (exit != -1) { 
         if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Child process exited with value " + exit + " - restarting client");
@@ -276,8 +276,8 @@ public class Proxy {
   }
   
   public static void main(String[] args) throws IOException, InterruptedException {
-    Proxy proxy = new Proxy(new Environment());
-    proxy.run(PROXY_PARAMETERS_NAME);
+    Proxy proxy = new Proxy(new Environment(DEFAULT_PARAM_FILES,PROXY_PARAMETERS_NAME));
+    proxy.run();
   }
   
   private class Printer extends Thread {
