@@ -13,6 +13,8 @@ import rice.pastry.messaging.Message;
  * @author Jeff Hoye
  */
 public class ConsistentJoinMsg extends Message {
+  private static final long serialVersionUID = -8942404626084999673L;
+  
   LeafSet ls;
   boolean request;
   HashSet failed;
