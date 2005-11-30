@@ -90,7 +90,7 @@ public abstract class AbstractLogManager implements LogManager {
               }
             } // synchronized
 	      } else if (paramName.endsWith("_loglevel")) {
-            if (newVal.equals("")) {
+            if ((newVal == null) || (newVal.equals(""))) {
               // parameter "removed" 
               // a) set the logger to use defaultlevel, 
               // b) set the level 
