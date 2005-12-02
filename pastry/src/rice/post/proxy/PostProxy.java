@@ -1340,7 +1340,7 @@ public class PostProxy {
         final ExternalContinuation c = new ExternalContinuation();
         environment.getSelectorManager().invoke(new Runnable() {
           public void run() {
-            post.getPostLog(c); 
+            post.getAndVerifyPostLog(c); 
           }
         });
         

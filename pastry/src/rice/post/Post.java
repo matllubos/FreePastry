@@ -44,6 +44,14 @@ public interface Post {
   public void getPostLog(Continuation command);
   
   /**
+   * Shortcut which returns the PostLog of the local user.
+   * This version also verifies all replicas for safety
+   *
+   * @return The PostLog belonging to the this entity,
+   */
+  public void getAndVerifyPostLog(Continuation command);
+  
+  /**
    * Returns and verifies the PostLog of the named entity
    *
    * @return The PostLog belonging to the given entity, eg. to acquire

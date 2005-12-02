@@ -750,6 +750,106 @@ public class PostImpl implements Post, Application, ScribeClient {
     }
   }
 
+  public void getAndVerifyPostLog(Continuation command) {
+    final PostEntityAddress entity = getEntityAddress();
+
+    if (logger.level <= Logger.FINE) logger.log("Looking up all postlogs for : " + entity);
+
+    storage.retrieveAllSigned(new SignedReference(entity.getAddress()), new StandardContinuation(command) {
+      public void receiveResult(Object result) {
+        Object[] results = (Object[]) result;
+
+        if (logger.level <= Logger.FINE) logger.log("Got response logs " + result + " for entity " + entity);
+
+        if (result == null) {
+          if (logger.level <= Logger.WARNING) logger.log("Unable to fetch local POST log");
+          parent.receiveException(new PostException("Unable to locate POST log"));
+          return;
+        }
+
+        Continuation c = new StandardContinuation(parent) {
+          public void receiveResult(Object result) {
+            Object[] results = (Object[]) result;
+            PostLog goodLog = null;
+            for (int i = 0; i < results.length; i++) {
+              if (results[i] instanceof PostLog) {
+                if (logger.level <= Logger.FINEST) logger.log("Got response log " + results[i] + " for entity " + entity);
+                if (goodLog == null)
+                  goodLog = (PostLog)results[i];
+              } else if (results[i] instanceof Throwable) {
+                if (logger.level <= Logger.FINE) logger.logException("Got Exception verifying PostLog ",(Throwable)results[i]);
+              } else if (results[i] != null) {
+                if (logger.level <= Logger.WARNING) logger.log("Got "+results[i].getClass()+" instead of PostLog verifying postlog for "+entity);
+              }
+            }
+            if (goodLog != null) {
+              parent.receiveResult(goodLog);
+            } else {
+              parent.receiveException(new PostException("Could not retrieve and verify PostLog - got 0 of " + results.length + " good replicas"));
+            }
+          }
+        };
+
+        MultiContinuation mc = new MultiContinuation(c, results.length);
+        PostLog alog = null;
+
+        for (int i = 0; i < results.length; i++) {
+          if (results[i] instanceof PostLog) {
+            final PostLog log = (PostLog)results[i];
+            Continuation sc = mc.getSubContinuation(i);
+  
+            if (alog == null) {
+              alog = log;
+            }
+            if ((log.getPublicKey() == null) || (log.getEntityAddress() == null)) {
+              sc.receiveException(new PostException("Malformed PostLog: " + log.getPublicKey() + " " + log.getEntityAddress()));
+              continue;
+            }
+  
+            if (!log.getEntityAddress().equals(entity)) {
+              sc.receiveException(new PostException("Wrong PostLog: Asked for PostLog for " + entity + ", got " + log.getEntityAddress()));
+              continue;
+            }
+  
+            if (!(log.getEntityAddress().equals(log.getCertificate().getAddress()) && log.getPublicKey()
+                .equals(log.getCertificate().getKey()))) {
+              sc.receiveException(new PostException("Malformed PostLog: Certificate does not match log owner."));
+              continue;
+            }
+  
+            if (!alog.getPublicKey().equals(log.getPublicKey())) {
+              sc.receiveException(new PostException("Malformed PostLog: key mismatch between replicas."));
+              continue;
+            }
+  
+            if (!alog.getCertificate().equals(log.getCertificate())) {
+              sc.receiveResult(new PostException("Malformed PostLog: certificate mismatch between replicas."));
+              continue;
+            }
+  
+            security.verify(log.getCertificate(), new StandardContinuation(sc) {
+              public void receiveResult(Object o) {
+                if (Boolean.TRUE.equals(o)) {
+                  if (!storage.verifySigned(log, log.getPublicKey())) {
+                    parent.receiveException(new PostException("PostLog could not verified for entity: " + entity));
+                    return;
+                  }
+                  if (logger.level <= Logger.FINE) logger.log("Successfully retrieved postlog for: " + entity);
+  
+                  parent.receiveResult(log);
+                } else {
+                  parent.receiveException(new PostException("Certificate of PostLog could not verified for entity: " + entity));
+                }
+              }
+            });
+          } else {
+            mc.getSubContinuation(i).receiveResult(results[i]);
+          }
+        }
+      }
+    });
+  }
+  
   /**
    * @return The PostLog belonging to the this entity,
    */
@@ -758,8 +858,8 @@ public class PostImpl implements Post, Application, ScribeClient {
   }
   
   /**
-   * @return The PostLog belonging to the given entity, eg. to acquire
-   * another user's public key.
+   * @return The PostLog belonging to the given entity, eg. to acquire another
+   *         user's public key.
    */
   public void getPostLog(final PostEntityAddress entity, Continuation command) {
     if ((entity.equals(getEntityAddress())) && (log != null)) {
@@ -834,7 +934,11 @@ public class PostImpl implements Post, Application, ScribeClient {
         security.verify(log.getCertificate(), new StandardContinuation(parent) {
           public void receiveResult(Object o) {
             if ((new Boolean(true)).equals(o)) {
-              storage.verifySigned(log, log.getPublicKey());
+              if (!storage.verifySigned(log, log.getPublicKey())) {
+            	  	if (logger.level <= Logger.WARNING) logger.log("PostLog could not be verified for entity " + entity);
+                 passException(new PostException("PostLog could not verified for entity: " + entity), parent);
+                 return;
+              }
               log.setPost(PostImpl.this);
 
               if (entity.equals(getEntityAddress())) {

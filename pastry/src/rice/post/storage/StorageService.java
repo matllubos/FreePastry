@@ -731,10 +731,80 @@ public class StorageService {
   }
 
   /**
-   * This method verifies a signed block of data with the given public key.
+   * This method retrieves a previously-stored block from PAST which was
+   * signed using the private key. THIS METHOD EXPLICITLY DOES NOT PERFORM
+   * ANY VERIFICATION CHECKS ON THE DATA.  YOU MUST CALL verifySigned() IN
+   * ORDER TO VERIFY THE DATA.  This is provided for the case where the
+   * cooresponding key is located in the data.
+   *
+   * Once the data has been stored, the command.receiveResult() method
+   * will be called with an array of PostData and Exceptions as the argument.
    *
    * @param location The location of the data
-   * @return The data
+   * @param command The command to run once the store has completed.
+   */
+  public void retrieveAllSigned(final SignedReference reference, Continuation command) {
+    mutablePast.lookupHandles(reference.getLocation(), mutablePast.getReplicationFactor() + 1, new StandardContinuation(command) {
+      public void receiveResult(Object o) {
+        try {
+          PastContentHandle[] handles = (PastContentHandle[]) o;
+
+          if (handles == null) throw new StorageException("Signed data not found in PAST - null returned!");
+
+          if (logger.level <= Logger.FINEST) logger.log("retrieveAllSigned got "+handles.length+" handles");
+          
+          Continuation c = new StandardContinuation(parent) {
+
+            public void receiveResult(Object result) {
+              Object[] results = (Object[]) result;
+              Object[] data = new Object[results.length];
+
+              for (int i = 0; i < results.length; i++) {
+                if (logger.level <= Logger.FINEST) logger.log("retrieveAllSigned fetched data "+i+" is "+results[i]);
+                SignedData sd = (SignedData)results[i];
+                try {
+                  if (sd != null) {
+                    data[i] = SecurityUtils.deserialize(sd.getData());
+                    pendingVerification.put(data[i], sd);
+                  } else {
+                    data[i] = null;
+                  }
+                } catch (IOException ioe) {
+                  data[i] = new StorageException("IOException while retrieving data at " + reference.getLocation() + ": " + ioe);
+                } catch (ClassNotFoundException cnfe) {
+                  data[i] = new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
+                }
+                if (logger.level <= Logger.FINEST) logger.log("retrieveAllSigned decoded data "+i+" is "+data[i]);
+              }
+
+              parent.receiveResult(data);
+            }
+          };
+
+          MultiContinuation mc = new MultiContinuation(c, handles.length);
+
+          for (int i = 0; i < handles.length; i++) {
+            if (logger.level <= Logger.FINEST) logger.log("retrieveAllSigned handle "+i+" is "+handles[i]);
+            if (handles[i] != null) {
+              mutablePast.fetch(handles[i], mc.getSubContinuation(i));
+            } else {
+              mc.getSubContinuation(i).receiveResult(null);
+            }
+          }
+        } catch (PostException pe) {
+          parent.receiveException(pe);
+        }
+      }
+    });
+  }
+
+  
+  /**
+   * This method verifies a signed block of data with the given public key.
+   *
+   * @param data The data
+   * @param key The public key to verify the data against
+   * @return Whether the key matches the data
    */
   public boolean verifySigned(PostData data, PublicKey key) {
     SignedData sd = (SignedData) pendingVerification.remove(data);
