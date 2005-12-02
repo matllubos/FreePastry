@@ -2,9 +2,9 @@
 package rice.pastry.dist;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.Random;
 
 import rice.Continuation;
 import rice.environment.Environment;
@@ -90,6 +90,10 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     // then boot
     for (int i=0; i<addresses.length; i++) {
       NodeHandle result = getNodeHandle(addresses[i], timeoutMillis);
+      if (result != null)
+        return result;
+      // try re-resolving the address before giving up
+      result = getNodeHandle(new InetSocketAddress(addresses[i].getAddress().getHostName(), addresses[i].getPort()), timeoutMillis);
       if (result != null)
         return result;
     }
