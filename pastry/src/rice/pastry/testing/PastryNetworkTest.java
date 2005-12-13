@@ -178,7 +178,7 @@ public class PastryNetworkTest {
     
     while (i.hasNext()) {
       NodeHandle node = (NodeHandle) i.next();
-      RoutingTable rt = new RoutingTable(node, 1, environment.getParameters().getInt("pastry_rtBaseBitLength"));
+      RoutingTable rt = new RoutingTable(node, 1, environment.getParameters().getInt("pastry_rtBaseBitLength"), environment);
       
       Iterator j = nodes.iterator();
 
