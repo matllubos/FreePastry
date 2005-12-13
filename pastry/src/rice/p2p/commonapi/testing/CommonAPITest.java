@@ -87,7 +87,7 @@ public abstract class CommonAPITest {
   public static int BOOTSTRAP_PORT = 5009;
 
   // the procotol to use when creating nodes
-  public static int PROTOCOL = DistPastryNodeFactory.PROTOCOL_DEFAULT;
+  public static int PROTOCOL = PROTOCOL_DIRECT; //DistPastryNodeFactory.PROTOCOL_DEFAULT;
 
   // the simulator to use in the case of direct
   public static int SIMULATOR = SIMULATOR_SPHERE;
@@ -118,13 +118,13 @@ public abstract class CommonAPITest {
       //idFactory = new IPNodeIdFactory(PORT); 
       idFactory = new RandomNodeIdFactory(environment);
 
-    if (SIMULATOR == SIMULATOR_SPHERE) {
-      simulator = new SphereNetwork(env);
-    } else {
-      simulator = new EuclideanNetwork(env);
-    }
-    
     if (PROTOCOL == PROTOCOL_DIRECT) {
+      if (SIMULATOR == SIMULATOR_SPHERE) {
+        simulator = new SphereNetwork(env);
+      } else {
+        simulator = new EuclideanNetwork(env);
+      }
+      
       factory = new DirectPastryNodeFactory(idFactory, simulator, env);
     } else {
       factory = DistPastryNodeFactory.getFactory(idFactory,
