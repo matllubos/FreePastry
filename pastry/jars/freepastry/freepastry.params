@@ -26,6 +26,10 @@ pastry_messageDispatch_bufferIfNotReady = false
 # number of messages to buffer while an app hasn't yet been registered
 pastry_messageDispatch_bufferSize = 32
 
+# number of rows in the routing table to consider during PNS
+# valid values are ALL, or a number
+pns_num_rows_to_use = 10;
+
 # rice.pastry.socket parameters
 # tells the factory you intend to use multiple nodes
 # this causes the logger to prepend all entries with the nodeid
@@ -37,7 +41,6 @@ pastry_factory_bootsInParallel = 1
 
 pastry_socket_reader_selector_deserialization_max_size = 1000000
 pastry_socket_writer_max_queue_length = 128
-pastry_socket_writer_status_interval = 60000
 pastry_socket_repeater_buffer_size = 65536
 pastry_socket_pingmanager_smallPings=true
 pastry_socket_pingmanager_datagram_receive_buffer_size = 131072
