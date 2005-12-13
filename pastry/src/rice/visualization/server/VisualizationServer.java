@@ -304,11 +304,11 @@ public class VisualizationServer implements Runnable {
 
     protected long lastReceived = environment.getTimeSource().currentTimeMillis();
     
-    public void dataSent(Object message, InetSocketAddress address, int size) {
+    public void dataSent(Object message, InetSocketAddress address, int size, int type) {
       lastSent = environment.getTimeSource().currentTimeMillis();
     }
     
-    public void dataReceived(Object message, InetSocketAddress address, int size) {
+    public void dataReceived(Object message, InetSocketAddress address, int size, int type) {
       lastReceived = environment.getTimeSource().currentTimeMillis();
     }
     
@@ -324,6 +324,12 @@ public class VisualizationServer implements Runnable {
         if (logger.level <= Logger.WARNING) logger.log(
             "WARNING: No message has been received in over " + received + " seconds.");
       }
+    }
+
+    public void channelOpened(InetSocketAddress addr, int reason) {
+    }
+
+    public void channelClosed(InetSocketAddress addr) {
     }
   
   }

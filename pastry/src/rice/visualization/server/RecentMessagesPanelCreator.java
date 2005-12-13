@@ -99,11 +99,17 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
     } 
   }
   
-  public synchronized void dataSent(Object message, InetSocketAddress address, int size) {
+  public synchronized void dataSent(Object message, InetSocketAddress address, int size, int type) {
       addMessage(message, address, size, sentMessages, sentMessageAddresses, sentMessageSizes);
   }
   
-  public synchronized void dataReceived(Object message, InetSocketAddress address, int size) {
+  public synchronized void dataReceived(Object message, InetSocketAddress address, int size, int type) {
     addMessage(message, address, size, receivedMessages, receivedMessageAddresses, receivedMessageSizes);
+  }
+
+  public void channelOpened(InetSocketAddress addr, int reason) {
+  }
+
+  public void channelClosed(InetSocketAddress addr) {
   }
 }
