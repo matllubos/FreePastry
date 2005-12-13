@@ -182,7 +182,18 @@ public abstract class PastryNodeFactory {
       // -- of the routing table, even through some of the rows are probably
       // -- unfilled.  We'll optimize this in a later iteration.
       int depth = (NodeId.nodeIdBitLength / rtBase);
-      int i = (int) (3 * (depth / 4));
+      int i = 0;
+
+      
+      
+      // make "ALL" work
+      if (!environment.getParameters().getString("pns_num_rows_to_use").
+          equalsIgnoreCase("all")) {
+        i = depth-environment.getParameters().getInt("pns_num_rows_to_use");
+      }
+      
+      // fix it up to not throw an error if the number is too big
+      if (i < 0) i = 0;
       
       // now, iteratively walk up the routing table, picking the closest node
       // each time for the next request
@@ -274,8 +285,10 @@ public abstract class PastryNodeFactory {
     for (int i=0; i < handles.length; i++) {
       NodeHandle tempNode = handles[i];
 
-      if ((proximity(local, tempNode) < nearestdist) && tempNode.isAlive()) {
-        nearestdist = proximity(local, tempNode);
+      int prox = proximity(local, tempNode);
+      
+      if ((prox < nearestdist) && tempNode.isAlive()) {
+        nearestdist = prox;
         closestNode = tempNode;
       }
     }
