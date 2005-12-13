@@ -1,5 +1,7 @@
 package rice.pastry.routing;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import java.util.*;
 
@@ -47,6 +49,8 @@ public class RoutingTable extends Observable implements Observer {
 
   private int maxEntries;
 
+  Logger logger;
+  
   /**
    * Constructor.
    * 
@@ -54,7 +58,8 @@ public class RoutingTable extends Observable implements Observer {
    * @param max the maximum number of entries at each table slot.
    */
 
-  public RoutingTable(NodeHandle me, int max, int base) {
+  public RoutingTable(NodeHandle me, int max, int base, Environment env) {
+    logger = env.getLogManager().getLogger(RoutingTable.class,null);
     idBaseBitLength = base;
     myNodeId = me.getNodeId();
     myNodeHandle = me;
@@ -276,11 +281,12 @@ public class RoutingTable extends Observable implements Observer {
    */
 
   public void put(NodeHandle handle) {
+  if (logger.level <= Logger.FINER) logger.log("RT: put("+handle+")"); 
     NodeId nid = handle.getNodeId();
     RouteSet ns = makeBestEntry(nid);
 
     if (ns != null)
-      ns.put(handle);
+      ns.put(handle);    
   }
 
   /**
@@ -326,6 +332,7 @@ public class RoutingTable extends Observable implements Observer {
   //return ns.remove(nid);
   //  }
   public NodeHandle remove(NodeHandle nh) {
+    if (logger.level <= Logger.FINER) logger.log("RT: remove("+nh+")"); 
     RouteSet ns = getBestEntry(nh.getNodeId());
 
     if (ns == null)
@@ -384,4 +391,20 @@ public class RoutingTable extends Observable implements Observer {
     return count;
   }
 
+  public int numUniqueEntries() {
+    HashSet set = new HashSet();
+    int maxr = numRows();
+    int maxc = numColumns();
+    for (int r = 0; r < maxr; r++) {
+      for (int c = 0; c < maxc; c++) {
+        RouteSet rs = routingTable[r][c];
+        if (rs != null) {
+          for (int i = 0; i < rs.size(); i++) {
+            set.add(rs.get(i)); 
+          }
+        }
+      }
+    }
+    return set.size();
+  }
 }

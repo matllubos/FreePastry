@@ -37,6 +37,14 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
     closest = -1;
   }
 
+  public String toString() {
+    String s = "RS: ";
+    for (int i = 0; i < nodes.length; i++) {
+      s+=nodes[i]+","; 
+    }
+    return s;
+  }
+  
   /**
    * Puts a node into the set. The insertion succeeds either if the set is below
    * is maximal size or if the handle is closer than the most distant member in
