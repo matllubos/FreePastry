@@ -12,6 +12,7 @@ import java.util.zip.*;
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -68,6 +69,7 @@ public class SocketChannelReader {
     this.environment = env;
     this.path = path;
     this.logger = env.getLogManager().getLogger(SocketChannelReader.class, null);
+    Parameters p = env.getParameters();
     sizeBuffer = ByteBuffer.allocateDirect(4);
     SELECTOR_DESERIALIZATION_MAX_SIZE = environment.getParameters().getInt(
         "pastry_socket_reader_selector_deserialization_max_size");
@@ -132,7 +134,7 @@ public class SocketChannelReader {
                 "(R) Deserialized bytes into object " + obj);
             
             if ((spn != null) && (spn instanceof SocketPastryNode))
-              ((SocketPastryNode) spn).broadcastReceivedListeners(obj, (path == null ? new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : path.toArray()), size);
+              ((SocketPastryNode) spn).broadcastReceivedListeners(obj, (path == null ? (InetSocketAddress) sc.socket().getRemoteSocketAddress() : path.getLastHop().address), size, NetworkListener.TYPE_TCP);
 
             record(obj, size, path);
             
@@ -155,7 +157,7 @@ public class SocketChannelReader {
           }, new Continuation() {
             public void receiveResult(Object o) {
               if ((spn != null) && (spn instanceof SocketPastryNode))
-                ((SocketPastryNode) spn).broadcastReceivedListeners(o, (path == null ? new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : path.toArray()), size);
+                ((SocketPastryNode) spn).broadcastReceivedListeners(o, (path == null ? (InetSocketAddress) sc.socket().getRemoteSocketAddress() : path.getLastHop().address), size, NetworkListener.TYPE_TCP);
               
               record(o, size, path);
               
@@ -256,7 +258,9 @@ public class SocketChannelReader {
     Object o = null;
 
     try {
-      return ois.readObject();
+      Object ret = ois.readObject();
+
+      return ret;
     } catch (ClassCastException e) {
       if (logger.level <= Logger.SEVERE) logger.log(
           "PANIC: Serialized message was not a pastry message!");
@@ -284,8 +288,4 @@ public class SocketChannelReader {
       throw new IOException("Exception from deserializing message - closing channel.");
     }
   }
-
-
-  
-  
 }

@@ -11,7 +11,6 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.time.TimeSource;
 import rice.pastry.*;
-import rice.pastry.messaging.*;
 import rice.pastry.socket.messaging.*;
 import rice.selector.*;
 
@@ -78,6 +77,8 @@ public class PingManager extends SelectionKeyHandler {
   
   private TimeSource timeSource;
   
+  private Environment environment;
+  
   /**
    * @param port DESCRIBE THE PARAMETER
    * @param manager DESCRIBE THE PARAMETER
@@ -85,12 +86,14 @@ public class PingManager extends SelectionKeyHandler {
    */
   public PingManager(SocketPastryNode spn, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
     this.spn = spn;
-    this.logger = spn.getEnvironment().getLogManager().getLogger(PingManager.class, null);
-    this.timeSource = spn.getEnvironment().getTimeSource();
+    this.environment = spn.getEnvironment();
+    this.logger = environment.getLogManager().getLogger(PingManager.class, null);
+    this.timeSource = environment.getTimeSource();
+    
+    Parameters p = environment.getParameters();
     this.manager = manager;
     this.pendingMsgs = new ArrayList();
     this.localAddress = proxyAddress;
-    Parameters p = spn.getEnvironment().getParameters();
     USE_SHORT_PINGS = p.getBoolean("pastry_socket_pingmanager_smallPings"); 
     DATAGRAM_RECEIVE_BUFFER_SIZE = p.getInt("pastry_socket_pingmanager_datagram_receive_buffer_size");
     DATAGRAM_SEND_BUFFER_SIZE = p.getInt("pastry_socket_pingmanager_datagram_send_buffer_size");
@@ -106,7 +109,7 @@ public class PingManager extends SelectionKeyHandler {
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);
 
-      key = spn.getEnvironment().getSelectorManager().register(channel, this, 0);
+      key = environment.getSelectorManager().register(channel, this, 0);
       key.interestOps(SelectionKey.OP_READ);
     } catch (IOException e) {
       if (logger.level <= Logger.SEVERE) logger.log(
@@ -153,7 +156,7 @@ public class PingManager extends SelectionKeyHandler {
     if (USE_SHORT_PINGS)
       sendShortPing(path);
     else
-      enqueue(path, new PingMessage(path, path.reverse(localAddress), spn.getEnvironment().getTimeSource().currentTimeMillis()));
+      enqueue(path, new PingMessage(path, path.reverse(localAddress), environment.getTimeSource().currentTimeMillis()));
   }
   
   /**
@@ -185,7 +188,7 @@ public class PingManager extends SelectionKeyHandler {
       DataOutputStream dos = new DataOutputStream(baos);
       
       dos.write(HEADER_SHORT_PING);
-      dos.writeLong(spn.getEnvironment().getTimeSource().currentTimeMillis());
+      dos.writeLong(environment.getTimeSource().currentTimeMillis());
       
       dos.flush();
       
@@ -211,7 +214,7 @@ public class PingManager extends SelectionKeyHandler {
     DataInputStream dis = new DataInputStream(new ByteArrayInputStream(payload));
     dis.readFully(new byte[HEADER_SHORT_PING_RESPONSE.length]);
     long start = dis.readLong();
-    int ping = (int) (spn.getEnvironment().getTimeSource().currentTimeMillis() - start);
+    int ping = (int) (environment.getTimeSource().currentTimeMillis() - start);
 
     SourceRoute from = route.reverse();
     
@@ -288,14 +291,14 @@ public class PingManager extends SelectionKeyHandler {
    */
   public void enqueue(SourceRoute path, Object msg) {
     try {
-      byte[] data = addHeader(path, msg, localAddress, logger);
+      byte[] data = addHeader(path, msg, localAddress, environment,logger);
       
       synchronized (pendingMsgs) {
         pendingMsgs.add(new Envelope(path.getFirstHop(), data));
       }
       
-      if ((spn != null) && (spn instanceof SocketPastryNode))
-        ((SocketPastryNode) spn).broadcastSentListeners(msg, path.toArray(), data.length);
+      if (spn != null)
+        ((SocketPastryNode) spn).broadcastSentListeners(msg, path.getLastHop().address, data.length, NetworkListener.TYPE_UDP);
       
       if (! (msg instanceof byte[])) {
         if (logger.level <= Logger.FINER) logger.log(
@@ -308,7 +311,7 @@ public class PingManager extends SelectionKeyHandler {
           "COUNT: Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + data.length  + " to " + path); 
       }
         
-      spn.getEnvironment().getSelectorManager().modifyKey(key);
+      environment.getSelectorManager().modifyKey(key);
     } catch (IOException e) {
       if (logger.level <= Logger.SEVERE) logger.log(
           "ERROR: Received exceptoin " + e + " while enqueuing ping " + msg);
@@ -330,8 +333,8 @@ public class PingManager extends SelectionKeyHandler {
       if (path == null)
         path = SourceRoute.build(new EpochInetSocketAddress(from));
 
-      if ((spn != null) && (spn instanceof SocketPastryNode))
-        ((SocketPastryNode) spn).broadcastReceivedListeners(dm, path.reverse().toArray(), size);
+      if (spn != null)
+        ((SocketPastryNode) spn).broadcastReceivedListeners(dm, path.reverse().getLastHop().address, size, NetworkListener.TYPE_UDP);
             
       if (dm instanceof PingMessage) {
         if (logger.level <= Logger.FINER) logger.log(
@@ -341,7 +344,7 @@ public class PingManager extends SelectionKeyHandler {
       } else if (dm instanceof PingResponseMessage) {
         if (logger.level <= Logger.FINER) logger.log(
             "COUNT: Read message " + message.getClass() + " of size " + size + " from " + dm.getOutboundPath().reverse());      
-        int ping = (int) (spn.getEnvironment().getTimeSource().currentTimeMillis() - start);
+        int ping = (int) (environment.getTimeSource().currentTimeMillis() - start);
         
         manager.markAlive(dm.getOutboundPath());
         manager.markProximity(dm.getOutboundPath(), ping);
@@ -358,7 +361,7 @@ public class PingManager extends SelectionKeyHandler {
         if (logger.level <= Logger.FINER) logger.log(
             "COUNT: Read message " + message.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
         
-        enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, spn.getEnvironment().getTimeSource().currentTimeMillis())); 
+        enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, environment.getTimeSource().currentTimeMillis())); 
       } else {
         if (logger.level <= Logger.WARNING) logger.log(
             "ERROR: Received unknown DatagramMessage " + dm);
@@ -448,14 +451,16 @@ public class PingManager extends SelectionKeyHandler {
    * @return A ByteBuffer containing the object
    * @exception IOException if the object can't be serialized
    */
-  public static byte[] serialize(Object message, Logger logger) throws IOException {
+  public static byte[] serialize(Object message, Environment environment, Logger logger) throws IOException {
     try {
+      
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);      
       oos.writeObject(message);
       oos.close();
       
-      return baos.toByteArray();
+      byte[] ret = baos.toByteArray();
+      return ret;
     } catch (InvalidClassException e) {
       if (logger.level <= Logger.SEVERE) logger.logException(
           "PANIC: Object to be serialized was an invalid class!",e);
@@ -479,7 +484,8 @@ public class PingManager extends SelectionKeyHandler {
     PastryObjectInputStream ois = new PastryObjectInputStream(new ByteArrayInputStream(array), spn);
     
     try {
-      return ois.readObject();
+      Object ret = ois.readObject();
+      return ret;      
     } catch (ClassNotFoundException e) {
       if (logger.level <= Logger.SEVERE) logger.logException(
           "PANIC: Unknown class type in serialized message!",e);
@@ -490,13 +496,13 @@ public class PingManager extends SelectionKeyHandler {
       throw new IOException("Invalid class in message - closing channel.");
     }
   }
-  
+
   /**
    * Method which adds a header for the provided path to the given data.
    *
    * @return The messag with a header attached
    */
-  public static byte[] addHeader(SourceRoute path, Object data, EpochInetSocketAddress localAddress, Logger logger) throws IOException {
+  public static byte[] addHeader(SourceRoute path, Object data, EpochInetSocketAddress localAddress, Environment env, Logger logger) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);      
 
@@ -508,10 +514,10 @@ public class PingManager extends SelectionKeyHandler {
     for (int i=0; i<path.getNumHops(); i++) 
       dos.write(SocketChannelRepeater.encodeHeader(path.getHop(i)));
 
-    if (data instanceof byte[])
+    if (data instanceof byte[]) {
       dos.write((byte[]) data);
-    else
-      dos.write(serialize(data, logger));
+    } else
+      dos.write(serialize(data, env, logger));
     
     dos.flush();
   
@@ -557,6 +563,7 @@ public class PingManager extends SelectionKeyHandler {
         // if the packet is at the end of the route, accept it
         // otherwise, forward it to the next hop (and increment the stamp)
         if (metadata[0] + 1 == metadata[1]) {
+          // The message was meant for me
           byte[] array = new byte[buffer.remaining()];
           buffer.get(array);
           buffer.clear();
@@ -567,17 +574,30 @@ public class PingManager extends SelectionKeyHandler {
           SourceRoute sr = decodeHeader(route).removeLastHop();
           
           if (Arrays.equals(test, HEADER_SHORT_PING)) {
-            if (logger.level <= Logger.FINER) logger.log(
-                "COUNT: Read message rice.pastry.socket.messaging.ShortPingMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+            // the PING was meant for me
+            int len = (header.length + metadata.length + array.length + route.length);
+            if (logger.level <= Logger.FINER) logger.log(                  
+                "COUNT: Read message rice.pastry.socket.messaging.ShortPingMessage of size " + len  + " from " + sr);    
+            if (spn != null) {
+              ((SocketPastryNode) spn).broadcastReceivedListeners(array, address, len, NetworkListener.TYPE_UDP);
+            }            
+            
             shortPingReceived(sr, array);
           } else if (Arrays.equals(test, HEADER_SHORT_PING_RESPONSE)) {
+            // the PING_RESPONSE was meant for me
+            int len = (header.length + metadata.length + array.length + route.length);
             if (logger.level <= Logger.FINER) logger.log(
-                "COUNT: Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + (header.length + metadata.length + array.length + route.length)  + " from " + sr);    
+                "COUNT: Read message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + len  + " from " + sr);    
+            
+            if (spn != null) {
+              ((SocketPastryNode) spn).broadcastReceivedListeners(array, address, len, NetworkListener.TYPE_UDP);
+            }            
             shortPingResponseReceived(sr, array);
           } else {
-            receiveMessage(deserialize(array, spn.getEnvironment(), spn, logger), array.length, address);
+            receiveMessage(deserialize(array, environment, spn, logger), array.length, address);
           }
         } else {
+          // sourceroute hop
           EpochInetSocketAddress next = SocketChannelRepeater.decodeHeader(route, metadata[0] + 1);
           buffer.position(0);
           byte[] packet = new byte[buffer.remaining()];
@@ -585,12 +605,17 @@ public class PingManager extends SelectionKeyHandler {
           
           // increment the hop count
           packet[HEADER_SIZE]++;
+
+          if (spn != null) {
+            ((SocketPastryNode) spn).broadcastReceivedListeners(packet, address, packet.length, NetworkListener.TYPE_SR_UDP);
+            ((SocketPastryNode) spn).broadcastSentListeners(packet, next.address, packet.length, NetworkListener.TYPE_SR_UDP);          
+          }
           
           synchronized (pendingMsgs) {
             pendingMsgs.add(new Envelope(next, packet));
           }
           
-          spn.getEnvironment().getSelectorManager().modifyKey(key);
+          environment.getSelectorManager().modifyKey(key);
         }
       } else {
         // if this is an old epoch of ours, reply with an update
@@ -605,8 +630,11 @@ public class PingManager extends SelectionKeyHandler {
           }
           
           outbound = outbound.append(localAddress);
+//          if (spn != null) {
+//            ((SocketPastryNode) spn).broadcastReceivedListeners(packet, address, packet.length, NetworkListener.TYPE_SR_UDP);
+//          }
 
-          enqueue(back.reverse(), new WrongEpochMessage(outbound, back.reverse(), eisa, localAddress, spn.getEnvironment().getTimeSource().currentTimeMillis()));
+          enqueue(back.reverse(), new WrongEpochMessage(outbound, back.reverse(), eisa, localAddress, environment.getTimeSource().currentTimeMillis()));
         } else {
           if (logger.level <= Logger.WARNING) logger.log(
               "WARNING: Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");
@@ -619,7 +647,7 @@ public class PingManager extends SelectionKeyHandler {
       throw new IOException("Improper message header received - ignoring from "+address+". Read " + ((byte) header[0]) + " " + ((byte) header[1]) + " " + ((byte) header[2]) + " " + ((byte) header[3]));
     }    
   }
-    
+  
   /**
    * Internal class which holds a pending datagram
    *

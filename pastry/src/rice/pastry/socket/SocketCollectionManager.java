@@ -28,7 +28,7 @@ import rice.selector.*;
  * @author Alan Mislove
  */
 public class SocketCollectionManager extends SelectionKeyHandler {
-  
+
   // the number of sockets where we start closing other sockets
   public final int MAX_OPEN_SOCKETS;
   
@@ -104,7 +104,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   
   protected Logger logger;
 
-  
   /**
    * Constructs a new SocketManager.
    *
@@ -125,6 +124,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     this.logger = node.getEnvironment().getLogManager().getLogger(SocketChannelWriter.class, null);
     
     Parameters p = pastryNode.getEnvironment().getParameters();
+    
     MAX_OPEN_SOCKETS = p.getInt("pastry_socket_scm_max_open_sockets");
     MAX_OPEN_SOURCE_ROUTES = p.getInt("pastry_socket_scm_max_open_source_routes");
     SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size");
@@ -405,6 +405,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         } else {
           if (logger.level <= Logger.FINE) logger.log("(SCM) SocketClosed called with corrent address, but incorrect manager - not a big deal.");
         }
+      } else {
+        if (logger.level <= Logger.FINE) logger.log("(SCM) SocketClosed called with socket not in the list: path:"+path+" manager:"+manager);        
       }
     }
   }
@@ -759,6 +761,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         send(path.reverse(localAddress));
     }
     
+    public String toString() {
+      return "SM "+channel; 
+    }
+    
     /**
      * Method which initiates a shutdown of this socket by calling 
      * shutdownOutput().  This has the effect of removing the manager from
@@ -787,7 +793,17 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      */
     public void close() {
       try {
-        if (logger.level <= Logger.FINE) logger.log("Closing connection with path " + path);
+        if (logger.level <= Logger.FINE) {
+          if (path != null) {
+            logger.log("Closing connection with path " + path);
+          } else {
+            logger.log("Closing connection to " + (InetSocketAddress) channel.socket().getRemoteSocketAddress());
+          }
+        }
+        
+        // todo, need to monitor all openings, sourceroute, accepted, etc.
+        if (pastryNode != null)
+          pastryNode.broadcastChannelClosed((InetSocketAddress) channel.socket().getRemoteSocketAddress());
         
         clearTimer();
         
@@ -957,7 +973,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, 0);
       this.key.interestOps(SelectionKey.OP_READ);
       
-      if (logger.level <= Logger.FINE) logger.log("(SM) Accepted connection from " + channel.socket().getRemoteSocketAddress());
+      if (logger.level <= Logger.FINE) logger.log(
+          "(SM) Accepted connection from " + 
+          channel.socket().getRemoteSocketAddress());
     }
 
     /**
@@ -975,6 +993,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       
       if (logger.level <= Logger.FINE) logger.log("(SM) Initiating socket connection to path " + path);
+      
+      pastryNode.broadcastChannelOpened(path.getFirstHop().getAddress(), NetworkListener.REASON_NORMAL);
 
       if (this.channel.connect(path.getFirstHop().getAddress())) 
         this.key.interestOps(SelectionKey.OP_READ);
@@ -1073,7 +1093,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The wrong key
      * @return The right key
      */
-    private SocketChannel otherChannel(SelectableChannel channel) {
+    SocketChannel otherChannel(SelectableChannel channel) {
       return (channel == channel1 ? channel2 : channel1);
     }
     
@@ -1270,7 +1290,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       if (logger.level <= Logger.FINE) logger.log("(SRM) Accepted source route connection from " + ((SocketChannel) key.channel()).socket().getRemoteSocketAddress());
       
       pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, SelectionKey.OP_READ);
-      this.channel1 = (SocketChannel) key.channel();
+      this.channel1 = (SocketChannel) key.channel();      
     }
     
     /**
@@ -1289,6 +1309,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       
       if (logger.level <= Logger.FINE) logger.log("(SRM) " + "Initiating source route connection to " + address);
       
+      pastryNode.broadcastChannelOpened(address.address, NetworkListener.REASON_SR);
+      
       boolean done = channel2.connect(address.getAddress());
 
       if (done)
@@ -1297,6 +1319,34 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         pastryNode.getEnvironment().getSelectorManager().register(channel2, this, SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
       
       if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + "   setting initial ops to " + SelectionKey.OP_READ + " for key 2");
+    }
+
+    public String toString() {
+      String s1 = null;
+      if (channel1 != null) {
+        if (channel1.socket() != null) {
+          if (channel1.socket().getRemoteSocketAddress() != null) {
+            s1 = channel1.socket().getRemoteSocketAddress().toString();
+          } else {
+            s1 = channel1.socket().toString();
+          }
+        } else {
+          s1 = channel1.toString(); 
+        }
+      }
+      String s2 = null;
+      if (channel2 != null) {
+        if (channel2.socket() != null) {
+          if (channel2.socket().getRemoteSocketAddress() != null) {
+            s2 = channel2.socket().getRemoteSocketAddress().toString();
+          } else {
+            s2 = channel2.socket().toString();
+          }
+        } else {
+          s2 = channel2.toString(); 
+        }
+      }
+      return "SourceRouteManager "+s1+" to " +s2;
     }    
   }
   
@@ -1382,7 +1432,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       channel.configureBlocking(false);
       
       if (logger.level <= Logger.FINE) logger.log("(SA) " + "Accepted incoming connection from " + channel.socket().getRemoteSocketAddress());
-      
+      pastryNode.broadcastChannelOpened((InetSocketAddress)channel.socket().getRemoteSocketAddress(), NetworkListener.REASON_ACC_NORMAL);
+
       key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, SelectionKey.OP_READ);
     }
     

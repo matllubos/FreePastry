@@ -8,6 +8,7 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.zip.*;
 
+import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -37,7 +38,7 @@ public class SocketChannelRepeater {
   private boolean connected;
   
   // the local node
-  private PastryNode spn;
+  private SocketPastryNode spn;
   
   // the original socket channel
   private SocketChannel original;
@@ -63,7 +64,7 @@ public class SocketChannelRepeater {
    *
    * @param spn The PastryNode the SocketChannelReader serves.
    */
-  public SocketChannelRepeater(PastryNode spn, SourceRouteManager manager) {
+  public SocketChannelRepeater(SocketPastryNode spn, SourceRouteManager manager) {
     this.spn = spn;
     logger = spn.getEnvironment().getLogManager().getLogger(SocketChannelRepeater.class, null);
     this.manager = manager;
@@ -182,7 +183,8 @@ public class SocketChannelRepeater {
     
     if (logger.level <= Logger.FINER) logger.log(
         "Read " + read + " bytes of data..." + buffer.remaining());
-
+    spn.broadcastReceivedListeners(junk, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), read, NetworkListener.TYPE_SR_TCP);
+    
     // implies that the channel is closed
     if (read == -1) 
       throw new ClosedChannelException();
@@ -195,6 +197,8 @@ public class SocketChannelRepeater {
       return false;
     }
   }
+  
+  static final byte[] junk = new byte[0];
   
   /**
    * Method which is designed to be called when this repeater should write 
@@ -212,6 +216,7 @@ public class SocketChannelRepeater {
     
     if (logger.level <= Logger.FINER) logger.log(
         "Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
+    spn.broadcastSentListeners(junk, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), i, NetworkListener.TYPE_SR_TCP);
     
     // if we've written everything in the buffer, clear it, and return true
     if (buffer.remaining() == 0) {
@@ -223,7 +228,7 @@ public class SocketChannelRepeater {
       return false;
     }
   }  
-
+  
   /**
    * Private method which is designed to read the header of the incoming
    * message, and determine which foriegn address to connect to

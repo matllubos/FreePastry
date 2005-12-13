@@ -14,7 +14,6 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
 
 /**
  * Class which serves as an "writer" for all of the messages sent across the
@@ -31,17 +30,7 @@ import rice.pastry.routing.*;
  * @author Alan Mislove
  */
 public class SocketChannelWriter {
-  
-  /**
-   * Static fields for logging based on the messages we are writing.
-   */  
-  private static Object statLock = new Object();
-  private static HashMap msgTypes = new HashMap();
-  private static HashMap msgSizes = new HashMap();
-  private static long statsLastWritten;
-  private final long statsWriteInterval;
-  private static long numWrites = 0;
-  
+    
   // the maximum length of the queue
   private final int MAXIMUM_QUEUE_LENGTH;
   
@@ -62,6 +51,8 @@ public class SocketChannelWriter {
   
   protected Logger logger;
   
+  static long bytesWritten;
+  
   /**
    * Constructor which creates this SocketChannelWriter with a pastry node and
    * an object to write out.
@@ -75,12 +66,11 @@ public class SocketChannelWriter {
   
   public SocketChannelWriter(Environment env, SourceRoute path) {
     this.environment = env;
-    statsLastWritten = environment.getTimeSource().currentTimeMillis();
     this.path = path;
     queue = new LinkedList();
     Parameters p = environment.getParameters();
     MAXIMUM_QUEUE_LENGTH = p.getInt("pastry_socket_writer_max_queue_length");
-    statsWriteInterval = p.getLong("pastry_socket_writer_status_interval");
+
     logger = environment.getLogManager().getLogger(SocketChannelWriter.class, null);
   }
   
@@ -193,8 +183,8 @@ public class SocketChannelWriter {
               if ((spn != null) && (spn instanceof SocketPastryNode)) {
                 ((SocketPastryNode) spn).broadcastSentListeners(queue.getFirst(), 
                     (path == null ? 
-                        new InetSocketAddress[] {(InetSocketAddress) sc.socket().getRemoteSocketAddress()} : 
-                        path.toArray()), buffer.limit());
+                        (InetSocketAddress) sc.socket().getRemoteSocketAddress() : 
+                        path.getLastHop().address), buffer.limit(), NetworkListener.TYPE_TCP);
               }
               record("Sent", queue.getFirst(), buffer.limit(), path);
             } else {
@@ -276,26 +266,6 @@ public class SocketChannelWriter {
     else if (o instanceof byte[]) 
       return ByteBuffer.wrap((byte[]) o);
     
-    // logWriteTypes
-      synchronized(statLock) {
-        long now = environment.getTimeSource().currentTimeMillis();
-        if ((statsLastWritten/statsWriteInterval) != (now/statsWriteInterval)) {
-          if (logger.level <= Logger.INFO) logger.log(
-              "@L.TR interval="+statsLastWritten+"-"+now+" numWrites="+numWrites);
-          statsLastWritten = now;
-          
-          Iterator ii = msgTypes.keySet().iterator();
-          while (ii.hasNext()) {
-            String s = (String)ii.next();
-            if (logger.level <= Logger.INFO) logger.log(
-                "@L.TR   "+s+":"+msgTypes.get(s)+" "+msgSizes.get(s));
-          }
-          
-          msgTypes.clear();
-          msgSizes.clear();
-        }
-      }
-
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -304,19 +274,6 @@ public class SocketChannelWriter {
       oos.writeObject(o);
       oos.close();
       int len = baos.toByteArray().length;
-
-      // logWriteTypes
-        Object newO = o;
-        if (newO instanceof RouteMessage) {
-          newO = ((RouteMessage)newO).unwrap();
-        }
-        
-        if (newO instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-          newO = ((rice.pastry.commonapi.PastryEndpointMessage)newO).getMessage();
-        }
-        
-        String oType = newO.getClass().getName();
-        logMessageSent(oType, len);
 
       ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos2);
@@ -345,32 +302,5 @@ public class SocketChannelWriter {
           "PANIC: Object to be serialized caused excception! [" + e + "]");
       throw new IOException("Exception during attempt to serialize.");
     }
-  }
-  
-  /**
-   * Records that a message of a certain type and size has been sent
-   * by this node.
-   *
-   * @param className The name of the message class being sent.
-   * @param sizeInBytes The number of bytes after serialization
-   */
-  static void logMessageSent(String className, int sizeInBytes) {
-    synchronized(statLock) {
-      Integer it = (Integer)msgTypes.get(className);
-      if (it == null) {
-        msgTypes.put(className, new Integer(1));
-      } else {
-        msgTypes.put(className, new Integer(it.intValue()+1));        
-      }
-      
-      Long is = (Long)msgSizes.get(className);
-      if (is == null) {
-        msgSizes.put(className, new Long(sizeInBytes));
-      } else {
-        msgSizes.put(className, new Long(is.longValue() + sizeInBytes));
-      }
-      
-      numWrites ++;
-    }
-  }
+  }  
 }

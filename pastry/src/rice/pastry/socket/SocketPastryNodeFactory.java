@@ -189,8 +189,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket = new DatagramSocket(lAddress.getAddress().getPort());
       socket.setSoTimeout(5000);
 
-      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress), environment.getTimeSource().currentTimeMillis()), lAddress, logger);
-      
+      byte[] data = PingManager.addHeader(route, new PingMessage(route, route.reverse(lAddress), environment.getTimeSource().currentTimeMillis()), lAddress, environment, logger);
+
       socket.send(new DatagramPacket(data, data.length, rAddress.getAddress()));
       
       long start = environment.getTimeSource().currentTimeMillis();
@@ -394,7 +394,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     localhandle = (SocketNodeHandle)pn.coalesce(localhandle);
     SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(localhandle);
     MessageDispatch msgDisp = new MessageDispatch(pn);
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase);
+    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, environment);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router = new StandardRouter(pn, secureMan);
@@ -458,8 +458,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       o = reader.read(channel);
     }
 
+    if (logger.level <= Logger.FINER) logger.log("SPNF.getResponse(): Closing "+channel);
     channel.socket().close();
     channel.close();
+    if (logger.level <= Logger.FINER) logger.log("SPNF.getResponse(): Closed "+channel);
 
     return (Message) o;
   }
@@ -635,6 +637,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                 new IPAddressRequestMessage(
                     env.getTimeSource().currentTimeMillis()), 
                 new EpochInetSocketAddress(local), 
+                env,
                 logger);    
         DatagramPacket send = new DatagramPacket(buf, buf.length, existing[i]);
         socket.send(send);
