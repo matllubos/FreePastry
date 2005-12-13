@@ -28,7 +28,7 @@ pastry_messageDispatch_bufferSize = 32
 
 # number of rows in the routing table to consider during PNS
 # valid values are ALL, or a number
-pns_num_rows_to_use = 10;
+pns_num_rows_to_use = 10
 
 # rice.pastry.socket parameters
 # tells the factory you intend to use multiple nodes
