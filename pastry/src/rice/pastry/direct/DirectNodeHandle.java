@@ -17,7 +17,7 @@ import rice.pastry.messaging.*;
 
 public class DirectNodeHandle extends NodeHandle {
   private DirectPastryNode remoteNode;
-  private NetworkSimulator simulator;
+  public NetworkSimulator simulator;
   protected Logger logger;
   /**
    * Constructor for DirectNodeHandle.
@@ -99,7 +99,7 @@ public class DirectNodeHandle extends NodeHandle {
    */
   public int proximity() {
     assertLocalNode();
-    int result = simulator.proximity((DirectNodeHandle)localnode.getLocalHandle(), this);
+    int result = simulator.proximity((DirectNodeHandle)GeometricNetworkSimulator.currentNode.getLocalHandle(), this);
 
     return result;
   }

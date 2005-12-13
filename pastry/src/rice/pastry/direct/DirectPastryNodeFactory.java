@@ -98,7 +98,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
     MessageDispatch msgDisp = new MessageDispatch(pn);
  
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase);
+    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, environment);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router =

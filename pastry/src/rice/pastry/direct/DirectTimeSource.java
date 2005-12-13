@@ -14,8 +14,7 @@ public class DirectTimeSource implements TimeSource {
   }
   
   public long currentTimeMillis() {
-    // TODO Auto-generated method stub
-    return 0;
+    return time;
   }
   
   public void setTime(long newTime) {
