@@ -2,6 +2,7 @@
 package rice.pastry.testing;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
 import rice.pastry.direct.*;
@@ -82,8 +83,11 @@ public class ClosestRegrTest {
       System.out.println("CREATED NODE " + i + " " + node.getNodeId());
 
       pastryNodes.add(node);
-      System.out.println("Avg Num Entries:"+getAvgNumEntries(pastryNodes));
+      double ave = getAvgNumEntries(pastryNodes);
+      System.out.println("Avg Num Entries:"+ave);
     }
+    
+    System.out.println("SO FAR: " + incorrect + "/" + NUM_NODES + " PERCENTAGE: " + (sum/incorrect));
   }
 
   protected double getAvgNumEntries(Collection nds) {
@@ -91,7 +95,7 @@ public class ClosestRegrTest {
     Iterator i = nds.iterator(); 
     while(i.hasNext()) {
       PastryNode pn = (PastryNode)i.next(); 
-      sum+=pn.getRoutingTable().numEntries();
+      sum+=pn.getRoutingTable().numUniqueEntries();
     }
     return sum/nds.size();
   }
@@ -129,7 +133,6 @@ public class ClosestRegrTest {
    * main
    */
   public static void main(String args[]) throws IOException {
-    System.setErr(new PrintStream(new FileOutputStream("prejeff.txt")));
     ClosestRegrTest pt = new ClosestRegrTest();
     pt.run();
     System.out.println("pass:"+pt.pass());
