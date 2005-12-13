@@ -148,8 +148,8 @@ public class SimpleParameters implements Parameters {
   }
 
   public void remove(String name) {
-    fireChangeEvent(name, null);
     properties.remove(name);
+    fireChangeEvent(name, null);
   }
 
   public boolean contains(String name) {

@@ -90,20 +90,21 @@ public abstract class AbstractLogManager implements LogManager {
               }
             } // synchronized
 	      } else if (paramName.endsWith("_loglevel")) {
+            String loggerName = paramName.substring(0,paramName.length()-"_loglevel".length());
             if ((newVal == null) || (newVal.equals(""))) {
               // parameter "removed" 
               // a) set the logger to use defaultlevel, 
               // b) set the level 
-              if (loggers.contains(paramName)) { // perhaps we haven't even created such a logger yet
-                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(paramName);
+              if (loggers.containsKey(loggerName)) { // perhaps we haven't even created such a logger yet
+                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(loggerName);
                 hl.useDefault = true;
                 hl.level = globalLogLevel;
               }
             } else {
               // a) set the logger to not use the defaultlevel, 
               // b) set the level 
-              if (loggers.contains(paramName)) { // perhaps we haven't even created such a logger yet
-                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(paramName);
+              if (loggers.containsKey(loggerName)) { // perhaps we haven't even created such a logger yet
+                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(loggerName);
                 hl.useDefault = false;
                 hl.level = parseVal(paramName);
               }
@@ -158,7 +159,7 @@ public abstract class AbstractLogManager implements LogManager {
     }
     
     // see if this logger exists
-    if (loggers.contains(loggerName)) {
+    if (loggers.containsKey(loggerName)) {
       return (Logger)loggers.get(loggerName);
     }
     
@@ -219,7 +220,7 @@ public abstract class AbstractLogManager implements LogManager {
     // at this point, we didn't find anything that matched, so now return a logger
     // that has the established level
     Logger logger = constructLogger(loggerName, level, useDefault);     
-    loggers.put(clazz, logger);
+    loggers.put(loggerName, logger);
     return logger;
   }
 
