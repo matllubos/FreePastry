@@ -439,6 +439,7 @@
     <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest" compress="true">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
+      <fileset dir="${build.dir}" includes="rice/Destructable*.class"/>
       <fileset dir="${build.dir}" includes="rice/email/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/environment/**/*.class"/>
       <fileset dir="${build.dir}" includes="rice/p2p/commonapi/**/*.class"/>
