@@ -15,6 +15,8 @@ import rice.pastry.messaging.Address;
  */
 public class PastryEndpointMessage extends rice.pastry.messaging.Message {
 
+  private static final long serialVersionUID = 4499456388556140871L;
+  
   protected Message message;
   
   /**
