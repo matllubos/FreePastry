@@ -19,6 +19,9 @@ import java.io.*;
 
 public class RouteSet extends Observable implements NodeSetI, Serializable,
     Observer {
+
+  private static final long serialVersionUID = 8156336294555109590L;
+
   private NodeHandle[] nodes;
 
   private int theSize;
