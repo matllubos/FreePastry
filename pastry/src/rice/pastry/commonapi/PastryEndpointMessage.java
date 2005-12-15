@@ -2,6 +2,7 @@
 package rice.pastry.commonapi;
 
 import rice.p2p.commonapi.Message;
+import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Address;
 
 /**
@@ -21,9 +22,9 @@ public class PastryEndpointMessage extends rice.pastry.messaging.Message {
    *
    * @param pn the pastry node that the application attaches to.
    */
-  public PastryEndpointMessage(Address address, Message message) {
+  public PastryEndpointMessage(Address address, Message message, NodeHandle sender) {
     super(address);
-
+    setSender(sender);
     this.message = message;
     setPriority(message.getPriority());
   }

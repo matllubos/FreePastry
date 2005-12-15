@@ -89,7 +89,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     if (logger.level <= Logger.FINER) logger.log(
       "[" + thePastryNode + "] route " + msg + " to " + key);
 
-    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg);
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
     if ((key == null) && (hint == null)) {
       throw new InvalidParameterException("key and hint are null!");
     }
@@ -117,7 +117,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param delay The number of milliseconds to wait before delivering the message
    */
   public CancellableTask scheduleMessage(Message message, long delay) {
-    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message, thePastryNode.getLocalHandle());
     return thePastryNode.scheduleMsg(pm, delay);
   }
   
@@ -130,7 +130,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param delay The number of milliseconds to wait before delivering subsequent messages
    */
   public CancellableTask scheduleMessage(Message message, long delay, long period) {
-    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message);
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), message, thePastryNode.getLocalHandle());
     return thePastryNode.scheduleMsg(pm, delay, period);
   }
 
@@ -151,7 +151,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    */
   public CancellableTask scheduleMessageAtFixedRate(Message msg,
       long delay, long period) {
-    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg);
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
     return thePastryNode.scheduleMsgAtFixedRate(pm, delay, period);    
   }
     
