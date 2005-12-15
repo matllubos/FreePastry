@@ -264,7 +264,7 @@ public class IdRangeUnit {
   }
 
   public IdRangeUnit() {
-    rng = new SimpleRandomSource();
+    rng = new SimpleRandomSource(null);
 
     System.out.println("IdRangeUnit test starting...");
 

@@ -7,7 +7,7 @@ import rice.p2p.util.*;
 public class BloomFilterUnit {
   
   public static void main(String[] args) {
-    RandomSource rand = new SimpleRandomSource();
+    RandomSource rand = new SimpleRandomSource(null);
     int k = Integer.parseInt(args[0]);
     int l = Integer.parseInt(args[1]);
     int m = Integer.parseInt(args[2]);

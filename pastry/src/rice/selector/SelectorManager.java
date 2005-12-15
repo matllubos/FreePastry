@@ -10,6 +10,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeSet;
 
+import rice.Destructable;
 import rice.environment.logging.*;
 import rice.environment.time.TimeSource;
 
@@ -21,7 +22,7 @@ import rice.environment.time.TimeSource;
  * @version $Id$
  * @author Alan Mislove
  */
-public class SelectorManager extends Thread implements Timer {
+public class SelectorManager extends Thread implements Timer, Destructable {
 
   // the maximal time to sleep on a select operation
   public static int TIMEOUT = 500;

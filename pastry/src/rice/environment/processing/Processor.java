@@ -13,7 +13,7 @@ import rice.selector.SelectorManager;
  * 
  * @author Jeff Hoye
  */
-public interface Processor {
+public interface Processor extends Destructable {
   /**
    * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
    * as encryption, erasure encoding, or bloom filter creation should never be done in the context

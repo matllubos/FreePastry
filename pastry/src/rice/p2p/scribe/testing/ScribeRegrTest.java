@@ -4,10 +4,12 @@ import java.io.IOException;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.messaging.SubscribeMessage;
+import rice.pastry.direct.DirectTimeSource;
 
 /**
  * @(#) DistScribeRegrTest.java Provides regression testing for the Scribe service using distributed
@@ -53,9 +55,13 @@ public class ScribeRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-    parseArgs(args);
-    ScribeRegrTest scribeTest = new ScribeRegrTest(new Environment());
+    Environment env = parseArgs(args);
+    
+    ScribeRegrTest scribeTest = new ScribeRegrTest(env);
+    
+    
     scribeTest.start();
+    env.destroy();
   }
 
   /**

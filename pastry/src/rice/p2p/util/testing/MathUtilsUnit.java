@@ -57,7 +57,7 @@ public class MathUtilsUnit {
 
     System.out.print("    Testing int->byte[]->int conversion\t\t\t");
     
-    RandomSource r = new SimpleRandomSource();
+    RandomSource r = new SimpleRandomSource(null);
     boolean passed = true;
 
   		for (int n=0; n<100000; n++) {

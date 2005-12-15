@@ -61,7 +61,7 @@ public class BloomFilter implements Serializable {
    * @param length The length of the underlying bit set
    */
   public BloomFilter(int num, int length) {
-    RandomSource rand = new SimpleRandomSource();
+    RandomSource rand = new SimpleRandomSource(null);
     this.length = length;
     this.set = new BitSet(length);
     this.parameters = new int[num];

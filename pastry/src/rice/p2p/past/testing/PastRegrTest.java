@@ -730,8 +730,7 @@ public class PastRegrTest extends CommonAPITest {
    */
   public static void main(String args[]) throws IOException {
 //    System.setOut(new PrintStream(new FileOutputStream("pastrtest.txt")));
-    parseArgs(args);
-    Environment env = new Environment();
+    Environment env = parseArgs(args);
     PastRegrTest pastTest = new PastRegrTest(env);
     pastTest.start();
   }

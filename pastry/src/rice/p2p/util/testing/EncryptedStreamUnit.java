@@ -31,7 +31,7 @@ public class EncryptedStreamUnit {
     System.out.println("[ DONE ]");
 
     System.out.print("    Generating random number generator\t\t\t");
-    RandomSource r = new SimpleRandomSource();
+    RandomSource r = new SimpleRandomSource(null);
     System.out.println("[ DONE ]");
 
     System.out

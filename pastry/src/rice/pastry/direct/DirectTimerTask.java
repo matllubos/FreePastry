@@ -3,13 +3,15 @@
  */
 package rice.pastry.direct;
 
+import rice.pastry.ScheduledMessage;
 import rice.selector.TimerTask;
 
-public class DirectTimerTask extends TimerTask {
+public class DirectTimerTask extends ScheduledMessage {
 
   MessageDelivery md;
   
   DirectTimerTask(MessageDelivery md, long nextExecutionTime, int period, boolean fixed) {
+    super(md.node,md.msg);
     this.md = md; 
     this.nextExecutionTime = nextExecutionTime;
     this.period = period;

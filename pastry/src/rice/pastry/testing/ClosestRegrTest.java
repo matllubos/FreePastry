@@ -136,6 +136,7 @@ public class ClosestRegrTest {
     ClosestRegrTest pt = new ClosestRegrTest();
     pt.run();
     System.out.println("pass:"+pt.pass());
+    pt.environment.destroy();
   }
 }
 

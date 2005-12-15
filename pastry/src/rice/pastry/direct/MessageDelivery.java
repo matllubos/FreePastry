@@ -10,8 +10,8 @@ import rice.pastry.messaging.Message;
    * @author amislove
    */
   class MessageDelivery {
-    private Message msg;
-    private DirectPastryNode node;    
+    protected Message msg;
+    protected DirectPastryNode node;    
     protected Logger logger;
     
     /**

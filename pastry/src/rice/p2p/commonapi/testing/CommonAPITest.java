@@ -4,11 +4,17 @@ package rice.p2p.commonapi.testing;
 import rice.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.*;
+import rice.environment.logging.simple.SimpleLogManager;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.TimeSource;
+import rice.environment.time.simple.SimpleTimeSource;
 import rice.p2p.commonapi.*;
 
 import rice.pastry.*;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNode;
 import rice.pastry.commonapi.*;
 import rice.pastry.direct.*;
 import rice.pastry.dist.*;
@@ -17,7 +23,6 @@ import rice.pastry.standard.*;
 import java.util.*;
 import java.net.*;
 import java.io.*;
-import java.io.Serializable;
 
 /**
  * Provides regression testing setup for applications written on top of the
@@ -49,10 +54,12 @@ public abstract class CommonAPITest {
   // the environment
   protected Environment environment;
   
+  protected Parameters params;
+  
   // ----- STATIC FIELDS -----
 
   // the number of nodes to create
-  public static int NUM_NODES = 10;
+  public int NUM_NODES;
 
   // the factory which creates pastry ids
   public final IdFactory FACTORY; //= new PastryIdFactory();
@@ -68,43 +75,34 @@ public abstract class CommonAPITest {
   protected static final int PAD_SIZE = 60;
 
   // the direct protocol
-  public static final int PROTOCOL_DIRECT = -138;
+  public static final String PROTOCOL_DIRECT = "direct";
 
   // the possible network simulation models
-  public static final int SIMULATOR_SPHERE = -1;
-  public static final int SIMULATOR_EUCLIDEAN = -2;
+  public static final String SIMULATOR_SPHERE = "sphere";
+  public static final String SIMULATOR_EUCLIDEAN = "euclidean";
 
 
   // ----- PASTRY SPECIFIC FIELDS -----
 
   // the port to begin creating nodes on
-  public static int PORT = 5009;
+  public int PORT;
 
   // the host to boot the first node off of
-  public static String BOOTSTRAP_HOST = "localhost";
+  public InetSocketAddress BOOTSTRAP;
 
   // the port on the bootstrap to contact
   public static int BOOTSTRAP_PORT = 5009;
 
   // the procotol to use when creating nodes
-  public static int PROTOCOL = PROTOCOL_DIRECT; //DistPastryNodeFactory.PROTOCOL_DEFAULT;
+  public String PROTOCOL;// = PROTOCOL_DIRECT; //DistPastryNodeFactory.PROTOCOL_DEFAULT;
 
   // the simulator to use in the case of direct
-  public static int SIMULATOR = SIMULATOR_SPHERE;
+  public String SIMULATOR; // = SIMULATOR_SPHERE;
 
   // the instance name to use
   public static String INSTANCE_NAME = "DistCommonAPITest";
-
-  // ----- ATTEMPT TO LOAD LOCAL HOSTNAME -----
   
-  static {
-    try {
-      BOOTSTRAP_HOST = InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      System.err.println("Error determining local host: " + e);
-    }
-  }
-  
+  protected Logger logger;
   
   // ----- EXTERNALLY AVAILABLE METHODS -----
   
@@ -114,12 +112,19 @@ public abstract class CommonAPITest {
    */
   public CommonAPITest(Environment env) throws IOException {
     this.environment = env;
+    this.logger = env.getLogManager().getLogger(getClass(),null);
+    params = env.getParameters();
+    NUM_NODES = params.getInt("commonapi_testing_num_nodes");
+    PORT = params.getInt("commonapi_testing_startPort");
+    PROTOCOL = params.getString("commonapi_testing_protocol");
+    SIMULATOR = params.getString("direct_simulator_topology");
+    
       FACTORY = new PastryIdFactory(env);
       //idFactory = new IPNodeIdFactory(PORT); 
       idFactory = new RandomNodeIdFactory(environment);
 
-    if (PROTOCOL == PROTOCOL_DIRECT) {
-      if (SIMULATOR == SIMULATOR_SPHERE) {
+    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
+      if (SIMULATOR.equalsIgnoreCase(SIMULATOR_SPHERE)) {
         simulator = new SphereNetwork(env);
       } else {
         simulator = new EuclideanNetwork(env);
@@ -128,7 +133,7 @@ public abstract class CommonAPITest {
       factory = new DirectPastryNodeFactory(idFactory, simulator, env);
     } else {
       factory = DistPastryNodeFactory.getFactory(idFactory,
-                                                 PROTOCOL,
+          DistPastryNodeFactory.PROTOCOL_SOCKET,
                                                  PORT,
                                                  env);
     }
@@ -171,7 +176,7 @@ public abstract class CommonAPITest {
    * simulates the message passing.
    */
   protected void simulate() {
-    if (PROTOCOL == PROTOCOL_DIRECT) {
+    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
       while (simulator.simulate()) {}
     } else {
       pause(500);
@@ -199,11 +204,15 @@ public abstract class CommonAPITest {
    * @return handle to bootstrap node, or null.
    */
   protected rice.pastry.NodeHandle getBootstrap() {
-    if (PROTOCOL == PROTOCOL_DIRECT) {
+    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
       return ((DirectPastryNode) nodes[0]).getLocalHandle();
     } else {
-      InetSocketAddress address = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
-      return ((DistPastryNodeFactory) factory).getNodeHandle(address);
+      try {
+        InetSocketAddress address = params.getInetSocketAddress("commonapi_testing_bootstrap");
+        return ((DistPastryNodeFactory) factory).getNodeHandle(address);
+      } catch (UnknownHostException uhe) {
+        throw new RuntimeException(uhe); 
+      }
     }
   }
 
@@ -213,7 +222,7 @@ public abstract class CommonAPITest {
    * @param ms The number of milliseconds to pause
    */
   protected synchronized void pause(int ms) {
-    if (PROTOCOL != PROTOCOL_DIRECT)
+    if (!PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT))
       try { wait(ms); } catch (InterruptedException e) {}
   }
 
@@ -223,7 +232,7 @@ public abstract class CommonAPITest {
    * @param n The node to kill
    */
   protected void kill(int n) {
-    if (PROTOCOL == PROTOCOL_DIRECT)
+    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT))
       ((PastryNode)nodes[n]).destroy();
 //      simulator.setAlive((rice.pastry.NodeId) nodes[n].getId(), false);
   }
@@ -366,20 +375,45 @@ public abstract class CommonAPITest {
   /**
    * process command line args
    */
-  protected static void parseArgs(String args[]) {
+  protected static Environment parseArgs(String args[]) throws IOException {
     // process command line arguments
 
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-help")) {
-        System.out.println("Usage: DistCommonAPITest [-port p] [-protocol (direct|socket)] [-bootstrap host[:port]] [-help]");
+        System.out.println("Usage: DistCommonAPITest [-params paramsfile] [-port p] [-protocol (direct|socket)] [-bootstrap host[:port]] [-help]");
         System.exit(1);
       }
     }
 
+    Parameters params = null;
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-params") && i+1 < args.length) {
+        params = new SimpleParameters(Environment.defaultParamFileArray,args[i+1]);
+        break;
+      }
+    }
+    if (params == null) {
+      params = new SimpleParameters(Environment.defaultParamFileArray,null); 
+    }
+    
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-protocol") && i+1 < args.length) {
+        params.setString("commonapi_testing_protocol",args[i+1]);
+        break;
+      }
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-simulator") && i+1 < args.length) {
+        params.setString("direct_simulator_topology",args[i+1]);
+        break;
+      }
+    }
+    
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-nodes") && i+1 < args.length) {
         int p = Integer.parseInt(args[i+1]);
-        if (p > 0) NUM_NODES = p;
+        if (p > 0) params.setInt("commonapi_testing_num_nodes",p);
         break;
       }
     }
@@ -387,54 +421,49 @@ public abstract class CommonAPITest {
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-port") && i+1 < args.length) {
         int p = Integer.parseInt(args[i+1]);
-        if (p > 0) PORT = p;
+        if (p > 0) params.setInt("commonapi_testing_startPort",p);
         break;
       }
     }
-
-    BOOTSTRAP_PORT = PORT;  
+    
     for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-bootstrap") && i+1 < args.length) {
         String str = args[i+1];
         int index = str.indexOf(':');
         if (index == -1) {
-          BOOTSTRAP_HOST = str;
-          BOOTSTRAP_PORT = PORT;
+          // no port specified
+          params.setInetSocketAddress("commonapi_testing_bootstrap", 
+              new InetSocketAddress(InetAddress.getByName(str),
+                  params.getInt("commonapi_testing_startPort")));
+          
         } else {
-          BOOTSTRAP_HOST = str.substring(0, index);
-          BOOTSTRAP_PORT = Integer.parseInt(str.substring(index + 1));
-          if (BOOTSTRAP_PORT <= 0) BOOTSTRAP_PORT = PORT;
+          params.setString("commonapi_testing_bootstrap",str);
         }
         break;
       }
     }
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-protocol") && i+1 < args.length) {
-        String s = args[i+1];
-        if (s.equalsIgnoreCase("socket"))
-          PROTOCOL = DistPastryNodeFactory.PROTOCOL_SOCKET;
-        else if (s.equalsIgnoreCase("direct"))
-          PROTOCOL = PROTOCOL_DIRECT;
-        else
-          System.out.println("ERROR: Unsupported protocol: " + s);
-        break;
+    
+    // ----- ATTEMPT TO LOAD LOCAL HOSTNAME -----
+    if (!params.contains("commonapi_testing_bootstrap")) {
+      try {
+        InetAddress localHost = InetAddress.getLocalHost();      
+        params.setInetSocketAddress("commonapi_testing_bootstrap", 
+            new InetSocketAddress(localHost,
+                params.getInt("commonapi_testing_startPort")));
+      } catch (UnknownHostException e) {
+        System.err.println("Error determining local host: " + e);
       }
     }
-
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("-simulator") && i+1 < args.length) {
-        String s = args[i+1];
-
-        if (s.equalsIgnoreCase("sphere"))
-          SIMULATOR = SIMULATOR_SPHERE;
-        else if (s.equalsIgnoreCase("euclidean"))
-          SIMULATOR = SIMULATOR_EUCLIDEAN;
-        else
-          System.out.println("ERROR: Unsupported simulator: " + s);
-
-        break;
-      }
+    
+    TimeSource timeSource;
+    if (params.getString("commonapi_testing_protocol").equals("direct")) {
+      timeSource = new DirectTimeSource(System.currentTimeMillis());
+    } else {
+      timeSource = new SimpleTimeSource(); 
     }
+
+    LogManager logManager = Environment.generateDefaultLogManager(timeSource, params);
+    
+    return new Environment(null,null,null,timeSource,logManager,params);
   }
 }

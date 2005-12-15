@@ -4,6 +4,7 @@ package rice.p2p.splitstream.testing;
 import java.io.IOException;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
@@ -50,22 +51,11 @@ public class SplitStreamRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,
-        null);
-
-    long seed = params.getLong("random_seed");
-    if (seed == 0) {
-      seed = (int) System.currentTimeMillis();
-      //seed = 1202653027;
-      params.setLong("random_seed", seed);
-    }
-    System.out.println("Seed= " + seed);
 
     // by properly setting the params first, the enviornment will use
     // the specified seed when creating a default RandomSource
-    Environment env = new Environment(null, null, null, null, null, params);
-
-    parseArgs(args);
+    Environment env = parseArgs(args);
+    
     SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest(env);
     splitstreamTest.start();
   }
@@ -183,8 +173,8 @@ public class SplitStreamRegrTest extends CommonAPITest {
       for (int j = 0; j < NUM_NODES - num; j++) {
         totalmsgs = totalmsgs + ssclients[j + num].getNumMesgs();
         if (ssclients[j + num].getNumMesgs() != 16)
-          System.out.println(ssclients[i + num].getId() + " recived "
-              + ssclients[i + num].getNumMesgs());
+          System.out.println(ssclients[j + num].getId() + " recived "
+              + ssclients[j + num].getNumMesgs());
         ssclients[j + num].reset();
       }
       //System.out.println("Expected " + ((NUM_NODES - num) * 16) + " messages,
@@ -391,6 +381,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
     }
 
     private void log(String s) {
+      if (logger.level <= Logger.FINE) logger.log("" + n + " " + s);
       //System.out.println("" + n + " " + s);
     }
 

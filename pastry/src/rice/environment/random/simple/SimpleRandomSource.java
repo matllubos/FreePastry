@@ -6,6 +6,7 @@ package rice.environment.random.simple;
 import java.net.InetAddress;
 import java.util.Random;
 
+import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 
 /**
@@ -14,14 +15,11 @@ import rice.environment.random.RandomSource;
 public class SimpleRandomSource implements RandomSource {
   Random rnd;
   
-  public SimpleRandomSource() {
-    this(0);
+  public SimpleRandomSource(long seed, Logger logger) {
+    init(seed, logger); 
   }
-  
-  public SimpleRandomSource(long seed) {
-    if (seed != 0) {
-      rnd = new Random(seed);
-    } else {
+    
+  public SimpleRandomSource(Logger logger) {      
       // NOTE: Since we are often starting up a bunch of nodes on planetlab
       // at the same time, we need this randomsource to be seeded by more
       // than just the clock, we will include the IP address
@@ -40,9 +38,14 @@ public class SimpleRandomSource implements RandomSource {
         }
       } catch (Exception e) {
         // if there is no NIC, screw it, this is really unlikely anyway  
-      }          
-      rnd = new Random(time); 
-    }
+      }
+      init(time, logger);
+  }
+  
+  private void init(long seed, Logger logger) {
+    if (logger != null) 
+      if (logger.level <= Logger.INFO) logger.log("RNG seed = "+seed);
+    rnd = new Random(seed);    
   }
   
   public boolean nextBoolean() {

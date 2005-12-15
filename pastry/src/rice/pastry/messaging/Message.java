@@ -25,6 +25,10 @@ public abstract class Message implements Serializable {
 
   private NodeHandle sender;
 
+  /**
+   * Potentially needed for reverse compatability with serialization?  
+   * Remove this when move to byte-level protocol.
+   */
   private boolean priority;
 
   private int priorityLevel = DEFAULT_PRIORITY_LEVEL;

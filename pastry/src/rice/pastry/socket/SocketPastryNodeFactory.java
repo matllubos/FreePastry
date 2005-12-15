@@ -337,7 +337,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, InetSocketAddress pAddress) {
     if (bootstrap == null)
-      if (logger.level <= Logger.WARNING) logger.log("No bootstrap node provided, starting a new ring...");
+      if (logger.level <= Logger.WARNING) logger.log("No bootstrap node provided, starting a new ring binding to address "+localAddress+"...");      
+    
 
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
@@ -364,6 +365,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           this.environment.getTimeSource(),
           lman,
           this.environment.getParameters());
+        
+        this.environment.addDestructable(environment);
       }
     }    
     
@@ -459,6 +462,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
 
     if (logger.level <= Logger.FINER) logger.log("SPNF.getResponse(): Closing "+channel);
+    channel.socket().shutdownOutput();
     channel.socket().close();
     channel.close();
     if (logger.level <= Logger.FINER) logger.log("SPNF.getResponse(): Closed "+channel);

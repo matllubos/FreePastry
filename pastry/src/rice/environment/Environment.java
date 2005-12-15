@@ -4,7 +4,9 @@
 package rice.environment;
 
 import java.io.IOException;
+import java.util.*;
 
+import rice.Destructable;
 import rice.environment.logging.*;
 import rice.environment.logging.file.FileLogManager;
 import rice.environment.logging.simple.SimpleLogManager;
@@ -27,7 +29,7 @@ import rice.selector.SelectorManager;
  * 
  * @author Jeff Hoye
  */
-public class Environment {
+public class Environment implements Destructable {
   public static final String[] defaultParamFileArray = {"freepastry"};
    
   private SelectorManager selectorManager;
@@ -37,6 +39,8 @@ public class Environment {
   private LogManager logManager;
   private Parameters params;
   private Logger logger;
+
+  private HashSet destructables = new HashSet();
   
   /**
    * Constructor.  You can provide null values for all/any paramenters, which will result
@@ -50,7 +54,7 @@ public class Environment {
    * @param props the Properties.  Default: empty properties
    */
   public Environment(SelectorManager sm, Processor proc, RandomSource rs, TimeSource time, LogManager lm, Parameters params) {
-    this.selectorManager = sm;
+    this.selectorManager = sm;    
     this.randomSource = rs;
     this.time = time; 
     this.logManager = lm;
@@ -63,6 +67,9 @@ public class Environment {
     
     // choose defaults for all non-specified parameters
     chooseDefaults();
+    
+    addDestructable(this.selectorManager);
+    addDestructable(this.processor);
     
     logger = this.logManager.getLogger(getClass(), null);
   }
@@ -96,15 +103,15 @@ public class Environment {
 //    if (params == null) {      
 //      params = new SimpleParameters("temp"); 
 //    }    
-    if (randomSource == null) {
-      randomSource = generateDefaultRandomSource(params);
-    }    
     if (time == null) {
       time = generateDefaultTimeSource(); 
     }
     if (logManager == null) {
       logManager = generateDefaultLogManager(time, params);
     }
+    if (randomSource == null) {
+      randomSource = generateDefaultRandomSource(params,logManager.getLogger(Environment.class,null));
+    }    
     if (selectorManager == null) {      
       selectorManager = generateDefaultSelectorManager(time, logManager); 
     }
@@ -113,8 +120,15 @@ public class Environment {
     }
   }
   
-  public static RandomSource generateDefaultRandomSource(Parameters params) {
-    return new SimpleRandomSource(params.getInt("random_seed"));
+  public static RandomSource generateDefaultRandomSource(Parameters params, Logger logger) {
+    RandomSource randomSource;
+    if (params.getString("random_seed").equalsIgnoreCase("clock")) {
+      randomSource = new SimpleRandomSource(logger);
+    } else {
+      randomSource = new SimpleRandomSource(params.getLong("random_seed"), logger);      
+    }
+      
+    return randomSource;
   }
   
   public static TimeSource generateDefaultTimeSource() {
@@ -166,8 +180,22 @@ public class Environment {
     } catch (IOException ioe) {      
       if (logger.level <= Logger.WARNING) logger.logException("Error during shutdown",ioe); 
     }
+    Iterator i = destructables.iterator();
+    while(i.hasNext()) {
+      Destructable d = (Destructable)i.next();
+      d.destroy();
+    }
     selectorManager.destroy();
     processor.destroy();
+  }
+
+  public void addDestructable(Destructable destructable) {
+    destructables.add(destructable);
+    
+  }
+  
+  public void removeDestructable(Destructable destructable) {
+    destructables.remove(destructable);
   }
 }
 

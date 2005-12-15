@@ -57,17 +57,12 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-    parseArgs(args);
-    Parameters param = new SimpleParameters(Environment.defaultParamFileArray,null);
+    Environment env = parseArgs(args);
+    Parameters param = env.getParameters();
     param.setString("loglevel","ALL");
     param.setBoolean("environment_logToFile",true);
     param.setString("fileLogManager_filePrefix","retest_");
     param.setString("fileLogManager_fileSuffix",".log");
-    Environment env = new Environment(null,null,null,
-//        null,
-        new DirectTimeSource(System.currentTimeMillis()),
-        null,
-        param);
     ReplicationManagerRegrTest test = new ReplicationManagerRegrTest(env);
     test.start();
   }

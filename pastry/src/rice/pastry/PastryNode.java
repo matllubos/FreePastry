@@ -20,7 +20,7 @@ import rice.pastry.security.*;
  * @author Andrew Ladd
  */
 
-public abstract class PastryNode extends Observable implements MessageReceiver, rice.p2p.commonapi.Node {
+public abstract class PastryNode extends Observable implements MessageReceiver, rice.p2p.commonapi.Node, Destructable {
 
   protected NodeId myNodeId;
 

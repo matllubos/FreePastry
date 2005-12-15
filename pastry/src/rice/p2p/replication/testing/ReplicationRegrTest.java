@@ -56,8 +56,8 @@ public class ReplicationRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-    parseArgs(args);
-    ReplicationRegrTest test = new ReplicationRegrTest(new Environment());
+    Environment env = parseArgs(args);
+    ReplicationRegrTest test = new ReplicationRegrTest(env);
     test.start();
   }
 

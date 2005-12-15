@@ -78,30 +78,33 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
   }
 
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay) {
+    DirectTimerTask dtt = null;
     if (msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      DirectTimerTask dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay);
+      dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay);
       taskQueue.add(dtt);
     }
-    return null;
+    return dtt;
   }
   
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay, int period) {
+    DirectTimerTask dtt = null;
     if (msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      DirectTimerTask dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay, period);
+      dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay, period);
       taskQueue.add(dtt);
     }
-    return null;
+    return dtt;
   }
   
   public ScheduledMessage deliverMessageFixedRate(Message msg, DirectPastryNode node, int delay, int period) {
+    DirectTimerTask dtt = null;
     if (msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      DirectTimerTask dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay, period, true);
+      dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay, period, true);
       taskQueue.add(dtt);
     }
-    return null;
+    return dtt;
   }
   
   public boolean simulate() {

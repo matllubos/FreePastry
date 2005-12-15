@@ -17,7 +17,7 @@ public class StringCacheUnit {
     System.out.println("[ DONE ]");
     
     System.out.print("    Generating random number generator\t\t\t");    
-    RandomSource rng = new SimpleRandomSource();
+    RandomSource rng = new SimpleRandomSource(null);
     System.out.println("[ DONE ]");    
     
     System.out.print("    Generating test strings\t\t\t\t");    

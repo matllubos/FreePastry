@@ -128,21 +128,5 @@ System.outt.println(); */
     result = result + " }]";
     return result;
   }
-
-  public static void main(String arg[]) {
-    BloomFilter b = new BloomFilter(20, 4, new SimpleRandomSource());
-    
-    byte[] a = new byte[1];
-    a[0] = (byte)231;
-    b.add(a);
-    byte[] c = new byte[1];
-    c[0] = (byte)117;
-    b.add(c);
-    System.out.println("Contains 231: "+b.contains(a));
-    System.out.println("Contains 117: "+b.contains(c));
-    byte[] d = new byte[1];
-    d[0] = (byte)71;
-    System.out.println("Contains 71: "+b.contains(d));
-  }
 }    
     
