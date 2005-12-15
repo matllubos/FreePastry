@@ -50,12 +50,28 @@ public interface ReplicationManagerClient {
   
   /**
    * This upcall should return whether or not the given id is currently stored
-   * by the client.
+   * locally by the client.
    *
    * @param id The id in question
    * @return Whether or not the id exists
    */
   public boolean exists(Id id);
   
+  /**
+   * This upcall should return whether or not the given id is currently stored
+   * somewhere in the overlay by the client.
+   * 
+   * @param id The id in question
+   * @return Whether or not the id exists somewhere in the overlay
+   */
+  public void existsInOverlay(Id id, Continuation command);
+  
+  /**
+   * Asks a client to reinsert an object it already holds into the overlay
+   * 
+   * @param id The id in question
+   * @return 
+   */
+  public void reInsert(Id id, Continuation command);
 }
 

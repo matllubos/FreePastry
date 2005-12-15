@@ -874,7 +874,40 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   public boolean exists(Id id) {
     return storage.getStorage().exists(id);
   }
+  
+  public void existsInOverlay(Id id, Continuation command) {
+    lookupHandles(id, replicationFactor, new StandardContinuation(command) {
+      public void receiveResult(Object result) {
+        Object results[] = (Object[]) result;
+        for (int i = 0; i< results.length; i++) {
+          if (results[i] instanceof PastContentHandle) {
+            parent.receiveResult(Boolean.TRUE);
+            return;
+          }
+        }
+        parent.receiveResult(Boolean.FALSE);
+      }
+    });
+  }
 
+  public void reInsert(Id id, Continuation command) {
+    storage.getObject(id, new StandardContinuation(command) {
+      public void receiveResult(final Object o) {
+        insert((PastContent)o, new StandardContinuation(parent) {
+          public void receiveResult(Object result) {
+            Boolean results[] = (Boolean[])result;
+            for (int i = 0; i < results.length; i++) {
+              if (results[i].booleanValue()) {
+                parent.receiveResult(Boolean.TRUE);
+                return;
+              }
+            }
+            parent.receiveResult(Boolean.FALSE);
+          }
+        });
+      }
+    });
+  }
 
   // ----- UTILITY METHODS -----
   

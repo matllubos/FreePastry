@@ -4,9 +4,12 @@ import java.io.IOException;
 
 import rice.Continuation;
 import rice.environment.Environment;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.replication.manager.*;
+import rice.pastry.direct.DirectTimeSource;
 
 /**
  * @(#) ReplicationRegrTest.java Provides regression testing for the replication manager service using distributed
@@ -55,7 +58,17 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
    */
   public static void main(String args[]) throws IOException {
     parseArgs(args);
-    ReplicationManagerRegrTest test = new ReplicationManagerRegrTest(new Environment());
+    Parameters param = new SimpleParameters(Environment.defaultParamFileArray,null);
+    param.setString("loglevel","ALL");
+    param.setBoolean("environment_logToFile",true);
+    param.setString("fileLogManager_filePrefix","retest_");
+    param.setString("fileLogManager_fileSuffix",".log");
+    Environment env = new Environment(null,null,null,
+//        null,
+        new DirectTimeSource(System.currentTimeMillis()),
+        null,
+        param);
+    ReplicationManagerRegrTest test = new ReplicationManagerRegrTest(env);
     test.start();
   }
 
@@ -136,7 +149,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     
     IdRange all = FACTORY.buildIdRange(FACTORY.buildId(new byte[20]), FACTORY.buildId(new byte[20]));
     
-    sectionStart("Testing Basic Functionality");
+    sectionStart("Testing Maintenance Functionality");
     
     stepStart("Inserting Object");
     
@@ -359,6 +372,16 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     
     public boolean exists(Id id) {
       return set.isMemberId(id);
+    }
+
+    public void existsInOverlay(Id id, Continuation command) {
+      // XXX we don't test this new functionality yet
+      command.receiveResult(Boolean.TRUE);
+    }
+
+    public void reInsert(Id id, Continuation command) {
+      // XXX we don't test this new functionality yet
+      command.receiveResult(Boolean.TRUE);
     }
   }
 }

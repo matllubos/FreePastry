@@ -497,10 +497,31 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
         id = (Id) set.getIterator().next();
         set.removeId(id);
         
-        if (logger.level <= Logger.FINER) logger.log( "Telling client to delete id " + id);
-        if (logger.level <= Logger.FINER) logger.log( "RMImpl.go " + instance + ": removing id " + id);
+        if (logger.level <= Logger.FINER) logger.log("Deciding whether to remove "+id);
         
-        client.remove(id, this);
+        client.existsInOverlay(id, new StandardContinuation(this) {
+          public void receiveResult(Object result) {
+            if (Boolean.TRUE.equals(result)) {
+              if (logger.level <= Logger.FINER) logger.log( "Telling client to delete id " + id);
+              if (logger.level <= Logger.FINER) logger.log( "RMImpl.go " + instance + ": removing id " + id);
+              client.remove(id, parent);
+            } else {
+              if (logger.level <= Logger.FINER) logger.log("Object to remove "+id+" not found.  Reinserting.");
+              client.reInsert(id, new StandardContinuation(parent) {
+                public void receiveResult(Object result) {
+                  if (Boolean.TRUE.equals(result)) {
+                    if (logger.level <= Logger.FINER) logger.log( "Telling client to delete id " + id);
+                    if (logger.level <= Logger.FINER) logger.log( "RMImpl.go " + instance + ": removing id " + id);
+                    client.remove(id, parent);
+                  } else {
+                    if (logger.level <= Logger.FINER) logger.log("Object to remove "+id+" Could not be reinserted.  Ignoring remove.");
+                    receiveResult(Boolean.FALSE);
+                  }
+                }
+              });
+            }
+          }
+        });
       }
     }
     
