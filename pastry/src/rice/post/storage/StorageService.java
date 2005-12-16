@@ -360,7 +360,7 @@ public class StorageService {
         ContentHashData chd = (ContentHashData) o;
         
         if (chd == null) {
-          parent.receiveException(new StorageException("Content hash data not found in PAST!"));
+          parent.receiveException(new StorageException(location, "Content hash data not found in PAST!"));
           return;
         }
         
@@ -368,7 +368,7 @@ public class StorageService {
         
         // Verify hash(cipher) == location
         if (! Arrays.equals(SecurityUtils.hash(cipherText), location.toByteArray())) {
-          parent.receiveException(new StorageException("Hash of cipher text does not match location."));
+          parent.receiveException(new StorageException(location, "Hash of cipher text does not match location."));
           return;
         } 
         
@@ -382,7 +382,7 @@ public class StorageService {
                         
             // Verify hash(plain) == key
             if (! Arrays.equals(SecurityUtils.hash(plainText), key)) {
-              parent.receiveException(new StorageException("Hash of retrieved content does not match key."));
+              parent.receiveException(new StorageException(location, "Hash of retrieved content does not match key."));
               return;
             } 
             
@@ -458,9 +458,11 @@ public class StorageService {
         }
         
         if (handle == null) {
-          parent.receiveException(new StorageException("All handles of log backup were null!"));
+          parent.receiveException(new StorageException(location, "All handles of log backup were null!"));
           return;
         }
+        
+        final Id location = handle.getId();
         
         immutablePast.fetch(handle, new StandardContinuation(parent) {
           public void receiveResult(Object o) {
@@ -468,7 +470,7 @@ public class StorageService {
               SignedData data = (SignedData) o;
               
               if (data == null) 
-                throw new StorageException("Log backup not found!");
+                throw new StorageException(location, "Log backup not found!");
 
               if (logger.level <= Logger.FINE) logger.log(
                   "COUNT: Log backup found!");
@@ -495,9 +497,9 @@ public class StorageService {
               
               c.receiveResult(null);
             } catch (IOException ioe) {
-              parent.receiveException(new StorageException("IOException thrown during log recovery: " + ioe));
+              parent.receiveException(new StorageException(location, "IOException thrown during log recovery: " + ioe));
             } catch (ClassNotFoundException cnfe) {
-              parent.receiveException(new StorageException("ClassNotFoundException thrown during log recovery: " + cnfe));
+              parent.receiveException(new StorageException(location, "ClassNotFoundException thrown during log recovery: " + cnfe));
             } catch (PostException pe) {
               parent.receiveException(pe);
             }
@@ -687,7 +689,7 @@ public class StorageService {
           PastContentHandle[] handles = (PastContentHandle[]) o;
           
           if (handles == null) 
-            throw new StorageException("Signed data not found in PAST - null returned!");
+            throw new StorageException(reference.getLocation(), "Signed data not found in PAST - null returned!");
           
           StorageServiceDataHandle handle = null;
           
@@ -699,7 +701,7 @@ public class StorageService {
           }
           
           if (handle == null)
-            throw new StorageException("Signed data not found in PAST - all handles were null!");
+            throw new StorageException(reference.getLocation(), "Signed data not found in PAST - all handles were null!");
           
           mutablePast.fetch(handle, new StandardContinuation(parent) {
             public void receiveResult(Object o) {
@@ -707,7 +709,7 @@ public class StorageService {
                 SignedData sd = (SignedData) o;
                 
                 if (sd == null)
-                  throw new StorageException("Signed data not found in PAST - handle fetch returned null!");
+                  throw new StorageException(reference.getLocation(), "Signed data not found in PAST - handle fetch returned null!");
                   
                 Object data = SecurityUtils.deserialize(sd.getData());
                 
@@ -715,9 +717,9 @@ public class StorageService {
                 
                 parent.receiveResult((PostData) data);
               } catch (IOException ioe) {
-                parent.receiveException(new StorageException("IOException while retrieving data at " + reference.getLocation() + ": " + ioe));
+                parent.receiveException(new StorageException(reference.getLocation(), "IOException while retrieving data: " + ioe));
               } catch (ClassNotFoundException cnfe) {
-                parent.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
+                parent.receiveException(new StorageException(reference.getLocation(), "ClassNotFoundException while retrieving data: " + cnfe));
               } catch (PostException pe) {
                 parent.receiveException(pe);
               }
@@ -749,11 +751,11 @@ public class StorageService {
         try {
           PastContentHandle[] handles = (PastContentHandle[]) o;
 
-          if (handles == null) throw new StorageException("Signed data not found in PAST - null returned!");
+          if (handles == null) throw new StorageException(reference.getLocation(), "Signed data not found in PAST - null returned!");
 
           if (logger.level <= Logger.FINEST) logger.log("retrieveAllSigned got "+handles.length+" handles");
           
-          Continuation c = new StandardContinuation(parent) {
+          Continuation afterFetch = new StandardContinuation(parent) {
 
             public void receiveResult(Object result) {
               Object[] results = (Object[]) result;
@@ -770,9 +772,9 @@ public class StorageService {
                     data[i] = null;
                   }
                 } catch (IOException ioe) {
-                  data[i] = new StorageException("IOException while retrieving data at " + reference.getLocation() + ": " + ioe);
+                  data[i] = new StorageException(reference.getLocation(), "IOException while retrieving data at " + reference.getLocation() + ": " + ioe);
                 } catch (ClassNotFoundException cnfe) {
-                  data[i] = new StorageException("ClassNotFoundException while retrieving data: " + cnfe);
+                  data[i] = new StorageException(reference.getLocation(), "ClassNotFoundException while retrieving data: " + cnfe);
                 }
                 if (logger.level <= Logger.FINEST) logger.log("retrieveAllSigned decoded data "+i+" is "+data[i]);
               }
@@ -781,7 +783,7 @@ public class StorageService {
             }
           };
 
-          MultiContinuation mc = new MultiContinuation(c, handles.length);
+          MultiContinuation mc = new MultiContinuation(afterFetch, handles.length);
 
           for (int i = 0; i < handles.length; i++) {
             if (logger.level <= Logger.FINEST) logger.log("retrieveAllSigned handle "+i+" is "+handles[i]);
@@ -898,24 +900,24 @@ public class StorageService {
           SecureData sd = (SecureData) result;
           
           if (sd == null) 
-            throw new StorageException("Secure data not found in PAST!");
+            throw new StorageException(reference.getLocation(), "Secure data not found in PAST!");
           
           byte[] key = reference.getKey();
           byte[] cipherText = sd.getData();
 
           // Verify hash(cipher) == location
           if (! Arrays.equals(SecurityUtils.hash(cipherText), reference.getLocation().toByteArray()))
-            throw new StorageException("Hash of cipher text does not match location for secure data.");
+            throw new StorageException(reference.getLocation(), "Hash of cipher text does not match location for secure data.");
           
           byte[] plainText = SecurityUtils.decryptSymmetric(cipherText, key);
           
           parent.receiveResult((PostData) SecurityUtils.deserialize(plainText));
         } catch (ClassCastException cce) {
-          parent.receiveException(new StorageException("ClassCastException while retrieving data: " + cce));
+          parent.receiveException(new StorageException(reference.getLocation(), "ClassCastException while retrieving data: " + cce));
         } catch (IOException ioe) {
-          parent.receiveException(new StorageException("IOException while retrieving data: " + ioe));
+          parent.receiveException(new StorageException(reference.getLocation(), "IOException while retrieving data: " + ioe));
         } catch (ClassNotFoundException cnfe) {
-          parent.receiveException(new StorageException("ClassNotFoundException while retrieving data: " + cnfe));
+          parent.receiveException(new StorageException(reference.getLocation(), "ClassNotFoundException while retrieving data: " + cnfe));
         } catch (PostException pe) {
           parent.receiveException(pe);
         }
