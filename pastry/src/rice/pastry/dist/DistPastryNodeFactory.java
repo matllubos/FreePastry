@@ -4,6 +4,7 @@ package rice.pastry.dist;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.*;
 
 import rice.Continuation;
@@ -93,7 +94,11 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
       if (result != null)
         return result;
       // try re-resolving the address before giving up
-      result = getNodeHandle(new InetSocketAddress(addresses[i].getAddress().getHostName(), addresses[i].getPort()), timeoutMillis);
+      try {
+        result = getNodeHandle(new InetSocketAddress(addresses[i].getAddress().getHostName(), addresses[i].getPort()), timeoutMillis);
+      } catch (UnresolvedAddressException uae) {
+        if (logger.level <= Logger.INFO) logger.log("getNodeHandle: Could not resolve hostname "+addresses[i]);
+      }
       if (result != null)
         return result;
     }
