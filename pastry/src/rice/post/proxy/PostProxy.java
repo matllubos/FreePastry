@@ -1431,9 +1431,8 @@ public class PostProxy {
   protected void start2() throws Exception {
 //    parameters = env.getParameters();  // done in start(void)
     startLivenessMonitor();
-    // XXX make this cooler in production code
-    System.setErr(new PSCatcher(environment, System.err));
-    System.setOut(System.err);
+    System.setOut(new PrintStream(new LogOutputStream(environment, Logger.INFO, "out"), true));
+    System.setErr(new PrintStream(new LogOutputStream(environment, Logger.INFO, "err"), true));
     
     startCheckBoot();    
     startDialog(parameters);
