@@ -191,7 +191,7 @@ public class Log implements PostData {
    *
    * Once this method is finished, it will call the command.receiveResult()
    * method with a Boolean value indicating success, or it may call
-   * receiveExcception if an exception occurred.
+   * receiveException if an exception occurred.
    *
    * @param log The log to remove
    * @param command The command to run once done
@@ -209,19 +209,6 @@ public class Log implements PostData {
    */
   public Object[] getChildLogNames() {
     return children.keySet().toArray();
-  }
-
-  /**
-   * This method returns a reference to a specific child log of
-   * this log, given the child log's name.
-   *
-   * @deprecated Use the getChildLog(name, continuation) - Log metadata needs to be set up
-   * @param name The name of the log to return.
-   * @return A reference to the requested log, or null if the name
-   * is unrecognized.
-   */
-  public LogReference getChildLog(Object name) {
-    return (LogReference) children.get(name);
   }
 
   /**
