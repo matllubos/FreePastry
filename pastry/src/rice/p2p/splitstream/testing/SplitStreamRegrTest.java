@@ -58,6 +58,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
     
     SplitStreamRegrTest splitstreamTest = new SplitStreamRegrTest(env);
     splitstreamTest.start();
+    env.destroy();
   }
 
   /**
