@@ -169,6 +169,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
       nodeIsReady(); // deprecate this
       nodeIsReady(true);
 
+      setChanged();
       notifyObservers(new Boolean(true));
 
       if (neverBeenReady) {
@@ -192,6 +193,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
       }
     } else {
       nodeIsReady(false);
+      setChanged();
       notifyObservers(new Boolean(false));
 
       //        Vector tmpApps = new Vector(apps);
