@@ -232,9 +232,15 @@ public abstract class CommonAPITest {
    * @param n The node to kill
    */
   protected void kill(int n) {
-    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT))
+    //if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT))
       ((PastryNode)nodes[n]).destroy();
+    if (!PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
+      // give node time to show up dead
+      pause(60000);
+    }
+      
 //      simulator.setAlive((rice.pastry.NodeId) nodes[n].getId(), false);
+    
   }
 
 
