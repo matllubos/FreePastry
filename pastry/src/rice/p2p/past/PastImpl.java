@@ -876,7 +876,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   }
   
   public void existsInOverlay(Id id, Continuation command) {
-    lookupHandles(id, replicationFactor, new StandardContinuation(command) {
+    lookupHandles(id, replicationFactor+1, new StandardContinuation(command) {
       public void receiveResult(Object result) {
         Object results[] = (Object[]) result;
         for (int i = 0; i< results.length; i++) {
