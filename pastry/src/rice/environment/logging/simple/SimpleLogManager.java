@@ -56,7 +56,7 @@ public class SimpleLogManager extends AbstractLogManager implements CloneableLog
    * @param minPriority the minimum priority to print.
    */  
   public SimpleLogManager(Parameters params) {
-    this(System.out, new SimpleTimeSource(), params);
+    this(null, new SimpleTimeSource(), params);
   }
   
   /**
@@ -80,7 +80,7 @@ public class SimpleLogManager extends AbstractLogManager implements CloneableLog
    * @param minPriority the minimum priority to print
    */
   public SimpleLogManager(TimeSource timeSource, Parameters params) {
-    this(System.out, timeSource, params);
+    this(null, timeSource, params);
   }
   
   protected Logger constructLogger(String clazz, int level, boolean useDefault) {

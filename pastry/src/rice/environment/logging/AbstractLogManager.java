@@ -4,10 +4,7 @@
  */
 package rice.environment.logging;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -49,8 +46,28 @@ public abstract class AbstractLogManager implements LogManager {
 
   public DateFormatter dateFormatter;
   
+  public static final String SYSTEM_OUT = "System.out";
+  public static final String SYSTEM_ERR = "System.err";
+  
   protected AbstractLogManager(PrintStream stream, TimeSource timeSource, Parameters params, String prefix, String df) {
     this.ps = stream;
+    if (ps == null) {
+      ps = System.out;
+      if (params.contains("logging_output_stream")) {
+        String loggingType = params.getString("logging_output_stream");
+        if (loggingType.equals(SYSTEM_OUT)) {
+          ps = System.out; 
+        } else if (loggingType.equals(SYSTEM_ERR)) {
+          ps = System.out; 
+        } else {
+          try {
+            ps = new PrintStream(new FileOutputStream(loggingType, true)); 
+          } catch (FileNotFoundException fnfe) {
+            throw new RuntimeException(fnfe); 
+          }
+        }
+      }        
+    }
     this.time = timeSource;
     this.params = params;
     this.prefix = prefix;
@@ -155,7 +172,7 @@ public abstract class AbstractLogManager implements LogManager {
     }
     
     if (instance != null) {
-      loggerName = loggerName+"$"+instance;
+      loggerName = loggerName+"@"+instance;
     }
     
     // see if this logger exists
@@ -199,7 +216,7 @@ public abstract class AbstractLogManager implements LogManager {
       
       // try to find one matching a specific instance
       if (instance != null) {            
-        String searchString = baseStr+":"+instance+"_loglevel";
+        String searchString = baseStr+"@"+instance+"_loglevel";
         // see if this logger should exist
         if (params.contains(searchString)) {
           level = parseVal(searchString);
