@@ -1516,7 +1516,7 @@ public class PostProxy {
       parameters = new SimpleParameters(DEFAULT_PARAMS_FILES, PROXY_PARAMETERS_NAME);
       TimeSource timeSource = Environment.generateDefaultTimeSource();
       RotatingLogManager logManager = new RotatingLogManager(timeSource, parameters);
-      RandomSource randomSource = Environment.generateDefaultRandomSource(parameters, logManager.getLogger(PostProxy.class, null));
+      RandomSource randomSource = Environment.generateDefaultRandomSource(parameters, logManager);
       SelectorManager selectorManager = Environment.generateDefaultSelectorManager(timeSource, logManager);
       Processor proc = Environment.generateDefaultProcessor();
       logManager.startRotateTask(selectorManager);
