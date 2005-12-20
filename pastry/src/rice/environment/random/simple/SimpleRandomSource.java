@@ -6,7 +6,7 @@ package rice.environment.random.simple;
 import java.net.InetAddress;
 import java.util.Random;
 
-import rice.environment.logging.Logger;
+import rice.environment.logging.*;
 import rice.environment.random.RandomSource;
 
 /**
@@ -15,11 +15,23 @@ import rice.environment.random.RandomSource;
 public class SimpleRandomSource implements RandomSource {
   Random rnd;
   
-  public SimpleRandomSource(long seed, Logger logger) {
-    init(seed, logger); 
+  Logger logger;
+
+  String instance;
+  
+  public SimpleRandomSource(long seed, LogManager manager, String instance) {
+    init(seed, manager, instance); 
   }
     
-  public SimpleRandomSource(Logger logger) {      
+  public SimpleRandomSource(long seed, LogManager manager) {
+    this(seed, manager, null); 
+  }
+    
+  public SimpleRandomSource(LogManager manager) {
+    this(manager, null);
+  }
+  
+  public SimpleRandomSource(LogManager manager, String instance) {
       // NOTE: Since we are often starting up a bunch of nodes on planetlab
       // at the same time, we need this randomsource to be seeded by more
       // than just the clock, we will include the IP address
@@ -39,44 +51,69 @@ public class SimpleRandomSource implements RandomSource {
       } catch (Exception e) {
         // if there is no NIC, screw it, this is really unlikely anyway  
       }
-      init(time, logger);
+      init(time, manager, instance);
   }
   
-  private void init(long seed, Logger logger) {
+  private void init(long seed, LogManager manager, String instance) {
+    if (manager != null)
+      logger = manager.getLogger(SimpleRandomSource.class, instance);
     if (logger != null) 
       if (logger.level <= Logger.INFO) logger.log("RNG seed = "+seed);
     rnd = new Random(seed);    
   }
   
   public boolean nextBoolean() {
-    return rnd.nextBoolean();
+    boolean ret = rnd.nextBoolean();
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextBoolean = "+ret);
+    return ret;
   }
   
   public void nextBytes(byte[] bytes) {
     rnd.nextBytes(bytes);
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextBytes = "+bytes);
   }
   
   public double nextDouble() {
-    return rnd.nextDouble();
+    double ret = rnd.nextDouble();
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextDouble = "+ret);
+    return ret;
   }
   
   public float nextFloat() {
-    return rnd.nextFloat();
+    float ret = rnd.nextFloat();
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextFloat = "+ret);
+    return ret;
   }
   
   public double nextGaussian() {
-    return rnd.nextGaussian();
+    double ret = rnd.nextGaussian();
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextGaussian = "+ret);
+    return ret;
   }
   
   public int nextInt() {
-    return rnd.nextInt();
+    int ret = rnd.nextInt();
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextInt = "+ret);
+    return ret;
   }
   
   public int nextInt(int max) {
-    return rnd.nextInt(max);
+    int ret = rnd.nextInt(max);
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextInt = "+ret);
+    return ret;
   }
   
   public long nextLong() {
-    return rnd.nextLong();
+    long ret = rnd.nextLong();
+    if (logger != null) 
+      if (logger.level <= Logger.FINER) logger.log("nextLong = "+ret);
+    return ret;
   }
 }

@@ -110,7 +110,7 @@ public class Environment implements Destructable {
       logManager = generateDefaultLogManager(time, params);
     }
     if (randomSource == null) {
-      randomSource = generateDefaultRandomSource(params,logManager.getLogger(Environment.class,null));
+      randomSource = generateDefaultRandomSource(params,logManager);
     }    
     if (selectorManager == null) {      
       selectorManager = generateDefaultSelectorManager(time, logManager); 
@@ -120,12 +120,12 @@ public class Environment implements Destructable {
     }
   }
   
-  public static RandomSource generateDefaultRandomSource(Parameters params, Logger logger) {
+  public static RandomSource generateDefaultRandomSource(Parameters params, LogManager logging) {
     RandomSource randomSource;
     if (params.getString("random_seed").equalsIgnoreCase("clock")) {
-      randomSource = new SimpleRandomSource(logger);
+      randomSource = new SimpleRandomSource(logging);
     } else {
-      randomSource = new SimpleRandomSource(params.getLong("random_seed"), logger);      
+      randomSource = new SimpleRandomSource(params.getLong("random_seed"), logging);      
     }
       
     return randomSource;
