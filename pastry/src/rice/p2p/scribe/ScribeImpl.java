@@ -17,7 +17,7 @@ import rice.p2p.scribe.messaging.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class ScribeImpl implements Scribe, Application {
+public class ScribeImpl implements Scribe, Application, Destructable {
   
   /**
    * The interval with which to perform maintenance
@@ -229,6 +229,11 @@ public class ScribeImpl implements Scribe, Application {
 
     endpoint.route(topic.getId(), new SubscribeMessage(handle, topic, previousParent, id, content), null);
     CancellableTask task = endpoint.scheduleMessage(new SubscribeLostMessage(handle, topic, id), MESSAGE_TIMEOUT);
+    
+    if (task == null) {
+      System.out.println("Warning, null task"); 
+      CancellableTask taske = endpoint.scheduleMessage(new SubscribeLostMessage(handle, topic, id), MESSAGE_TIMEOUT);
+    }
     
     lost.put(new Integer(id), task);
   }
@@ -877,7 +882,7 @@ public class ScribeImpl implements Scribe, Application {
    * @version $Id$
    * @author amislove
    */
-  public class TopicManager implements Observer {
+  public class TopicManager implements Observer, Destructable {
 
     /**
      * DESCRIBE THE FIELD
@@ -1135,6 +1140,24 @@ public class ScribeImpl implements Scribe, Application {
       }
 
       return unsub;
+    }
+
+    public void destroy() {
+      if (parent!=null) 
+        parent.deleteObserver(this);
+      Iterator i = children.iterator();
+      while(i.hasNext()) {
+        NodeHandle child = (NodeHandle)i.next();
+        child.deleteObserver(this);
+      }
+    }
+  }
+
+  public void destroy() {
+    Iterator topicIter = topics.values().iterator();
+    while(topicIter.hasNext()) {
+      TopicManager topicManager = (TopicManager)topicIter.next(); 
+      topicManager.destroy();
     }
   }
 }

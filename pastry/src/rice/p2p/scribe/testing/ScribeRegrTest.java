@@ -463,6 +463,7 @@ public class ScribeRegrTest extends CommonAPITest {
 
     stepStart("Killing Nodes");
     for (int i=0; i<NUM_NODES/2; i++) {
+      scribes[i].destroy();
       kill(i);
       simulate();
     }
