@@ -15,7 +15,7 @@ import rice.pastry.messaging.*;
  * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-public class DirectNodeHandle extends NodeHandle {
+public class DirectNodeHandle extends NodeHandle implements Observer {
   private DirectPastryNode remoteNode;
   public NetworkSimulator simulator;
   protected Logger logger;
@@ -32,6 +32,8 @@ public class DirectNodeHandle extends NodeHandle {
     if (rn == null) throw new IllegalArgumentException("rn must be non-null");
     remoteNode = rn;
     simulator = sim;
+    
+    rn.addObserver(this);
   }
 
   /**
@@ -154,5 +156,13 @@ public class DirectNodeHandle extends NodeHandle {
    */
   public String toString() {
     return "[DNH " + getNodeId() + "]";
+  }
+
+  public void update(Observable arg0, Object arg1) {
+    if (remoteNode.alive) {
+      notifyObservers(NodeHandle.DECLARED_LIVE);      
+    } else {
+      notifyObservers(NodeHandle.DECLARED_DEAD);      
+    }
   }
 }

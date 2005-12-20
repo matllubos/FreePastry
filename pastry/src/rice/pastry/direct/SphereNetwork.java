@@ -47,8 +47,8 @@ public class SphereNetwork extends GeometricNetworkSimulator {
      * @param nh DESCRIBE THE PARAMETER
      */
     public SphereNodeRecord() {
-      theta = Math.asin(2.0 * environment.getRandomSource().nextDouble() - 1.0);
-      phi = 2.0 * Math.PI * environment.getRandomSource().nextDouble();
+      theta = Math.asin(2.0 * random.nextDouble() - 1.0);
+      phi = 2.0 * Math.PI * random.nextDouble();
     }
 
     /**

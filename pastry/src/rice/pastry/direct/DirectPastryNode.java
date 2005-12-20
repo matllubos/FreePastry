@@ -44,7 +44,8 @@ public class DirectPastryNode extends PastryNode {
   
   public void destroy() {
     super.destroy();
-    this.alive = false; 
+    alive = false;
+    setReady(false); 
     simulator.removeNode(this);
   }
   

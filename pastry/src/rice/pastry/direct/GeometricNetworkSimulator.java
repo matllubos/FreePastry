@@ -7,6 +7,9 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.pastry.*;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.BroadcastRouteRow;
@@ -14,11 +17,11 @@ import rice.pastry.routing.BroadcastRouteRow;
 public abstract class GeometricNetworkSimulator implements NetworkSimulator {
 
   /**
-   * Used for proximity calculation of DirectNodeHandle.  This will
-   * probably go away when we switch to a byte-level protocol.
+   * Used for proximity calculation of DirectNodeHandle. This will probably go
+   * away when we switch to a byte-level protocol.
    */
   static DirectPastryNode currentNode = null;
-  
+
   Vector nodes = new Vector();
 
   // these are messages that should be delivered immeadiately
@@ -32,11 +35,29 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
   DirectTimeSource timeSource;
 
   private TestRecord testRecord;
- 
+
   protected Logger logger;
-  
+
+  protected RandomSource random;
+
   public GeometricNetworkSimulator(Environment env) {
     this.environment = env;
+    Parameters params = env.getParameters();
+    if (params.contains("pastry_direct_use_own_random")
+        && params.getBoolean("pastry_direct_use_own_random")) {
+
+      if (params.contains("pastry_direct_random_seed")
+          && !params.getString("pastry_direct_random_seed").equalsIgnoreCase(
+              "clock")) {
+        this.random = new SimpleRandomSource(params
+            .getLong("pastry_direct_random_seed"), env.getLogManager(),
+            "direct");
+      } else {
+        this.random = new SimpleRandomSource(env.getLogManager(), "direct");
+      }
+    } else {
+      this.random = env.getRandomSource();
+    }
     this.logger = env.getLogManager().getLogger(getClass(), null);
     try {
       timeSource = (DirectTimeSource) env.getTimeSource();
@@ -47,70 +68,73 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
     }
     testRecord = null;
   }
-  
+
   /**
    * get TestRecord
-   *
+   * 
    * @return the returned TestRecord
    */
   public TestRecord getTestRecord() {
     return testRecord;
   }
 
-  
   /**
    * set TestRecord
-   *
+   * 
    * @param tr input TestRecord
    */
   public void setTestRecord(TestRecord tr) {
     testRecord = tr;
   }
 
-
   public void deliverMessage(Message msg, DirectPastryNode node) {
-    if (logger.level <= Logger.FINE) logger.log(
-        "GNS: deliver "+msg+" to "+node);
+    if (logger.level <= Logger.FINE)
+      logger.log("GNS: deliver " + msg + " to " + node);
     if (msg.getSender() == null || msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       msgQueue.addElement(md);
     }
   }
 
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay) {
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
+      int delay) {
     DirectTimerTask dtt = null;
     if (msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay);
+      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay);
       taskQueue.add(dtt);
     }
     return dtt;
   }
-  
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay, int period) {
+
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
+      int delay, int period) {
     DirectTimerTask dtt = null;
     if (msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay, period);
+      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
+          period);
       taskQueue.add(dtt);
     }
     return dtt;
   }
-  
-  public ScheduledMessage deliverMessageFixedRate(Message msg, DirectPastryNode node, int delay, int period) {
+
+  public ScheduledMessage deliverMessageFixedRate(Message msg,
+      DirectPastryNode node, int delay, int period) {
     DirectTimerTask dtt = null;
     if (msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      dtt = new DirectTimerTask(md,timeSource.currentTimeMillis()+delay, period, true);
+      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
+          period, true);
       taskQueue.add(dtt);
     }
     return dtt;
   }
-  
+
   public boolean simulate() {
     return simulate(Long.MAX_VALUE);
   }
-  
+
   /**
    * Delivers 1 message. Will advance the clock if necessary.
    * 
@@ -153,32 +177,29 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
   }
 
   public boolean simulateFor(int millis) {
-    return simulateUntil(timeSource.currentTimeMillis()+millis);
+    return simulateUntil(timeSource.currentTimeMillis() + millis);
   }
-  
-  
+
   /**
-   * 1) process the msgQueue
-   * 2) see if there is 
-   * a) no scheduled messages between now and then
+   * 1) process the msgQueue 2) see if there is a) no scheduled messages between
+   * now and then
    */
-  public boolean simulateUntil(long targetTime) {    
+  public boolean simulateUntil(long targetTime) {
     if (msgQueue.isEmpty() && taskQueue.isEmpty()) {
       return false;
     }
-        
-    // This loop looks hairy, but the idea is that it calls simulate with targetTime until it returns false.
+
+    // This loop looks hairy, but the idea is that it calls simulate with
+    // targetTime until it returns false.
     // if it ever returns true, then ret = true;
     boolean ret = false;
-    while(simulate(targetTime)) {
-      ret = true; 
+    while (simulate(targetTime)) {
+      ret = true;
     }
     timeSource.setTime(targetTime);
     return ret;
   }
 
-  
-  
   /**
    * testing if a NodeId is alive
    * 
@@ -227,7 +248,7 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
    * @return the proximity between the two input NodeIds
    */
   public int proximity(DirectNodeHandle a, DirectNodeHandle b) {
-    NodeRecord nra = a.getRemote().record;    
+    NodeRecord nra = a.getRemote().record;
     NodeRecord nrb = b.getRemote().record;
 
     if (nra == null || nrb == null) {
@@ -267,13 +288,9 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
     return bestHandle;
   }
 
-
-
   public void registerNode(DirectPastryNode dpn) {
     nodes.add(dpn);
   }
-
-
 
   public void removeNode(DirectPastryNode node) {
     nodes.remove(node);

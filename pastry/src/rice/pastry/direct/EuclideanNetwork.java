@@ -50,8 +50,8 @@ public class EuclideanNetwork extends GeometricNetworkSimulator {
      * @param nh 
      */
     public EuclideanNodeRecord() {
-      x = environment.getRandomSource().nextInt() % 10000;
-      y = environment.getRandomSource().nextInt() % 10000;
+      x = random.nextInt() % 10000;
+      y = random.nextInt() % 10000;
 
       alive = true;
     }
