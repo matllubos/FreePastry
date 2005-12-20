@@ -569,6 +569,44 @@ public class GCPastImpl extends PastImpl implements GCPast {
       return storage.getStorage().exists(id);
   }  
   
+  public void existsInOverlay(Id id, Continuation command) {
+    if (id instanceof GCId) {
+      super.existsInOverlay(((GCId)id).getId(), command);
+    } else {
+      super.existsInOverlay(id, command);
+    }
+  }
+  
+  public void reInsert(final Id id, Continuation command) {
+    if (id instanceof GCId) {
+      // what if the GCId's expiration is different than the metadata's?
+      storage.getObject(((GCId)id).getId(), new StandardContinuation(command) {
+        public void receiveResult(final Object o) {
+          insert((PastContent)o, ((GCId)id).getExpiration(), new StandardContinuation(parent) {
+            public void receiveResult(Object result) {
+              Boolean results[] = (Boolean[])result;
+              for (int i = 0; i < results.length; i++) {
+                if (results[i].booleanValue()) {
+                  parent.receiveResult(Boolean.TRUE);
+                  return;
+                }
+              }
+              parent.receiveResult(Boolean.FALSE);
+            }
+          });
+        }
+      });
+    } else {
+      GCPastMetadata metadata = (GCPastMetadata) storage.getMetadata(id);
+      if (metadata == null) {
+        // no metadata, just reinsert with no expiration
+        super.reInsert(id, command);
+      } else {
+        reInsert(new GCId(id, metadata.getExpiration()), command);
+      }
+    }
+  }
+  
   protected class ReplicaMap {
     protected HashMap map = new HashMap();
     public void addReplica(NodeHandle handle, GCId id) {
