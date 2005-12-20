@@ -4,6 +4,8 @@ import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.pastry.*;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.BroadcastLeafSet;
@@ -51,14 +53,33 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
 
   ScheduledMessage pingNeighborMessage;
 
+  RandomSource random;
+  
   /**
    * Builds a periodic leafset protocol
    * 
    */
   public PeriodicLeafSetProtocol(PastryNode ln, NodeHandle local,
       PastrySecurityManager sm, LeafSet ls, RoutingTable rt) {
-    super(ln);
+    super(ln);    
     this.localNode = ln;
+
+    Parameters params = ln.getEnvironment().getParameters();
+    if (params.contains("pastry_periodic_leafset_protocol_use_own_random")
+        && params.getBoolean("pastry_periodic_leafset_protocol_use_own_random")) {
+      if (params.contains("pastry_periodic_leafset_protocol_random_seed")
+          && !params.getString("pastry_periodic_leafset_protocol_random_seed").equalsIgnoreCase(
+              "clock")) {
+        this.random = new SimpleRandomSource(params
+            .getLong("pastry_periodic_leafset_protocol_random_seed"), ln.getEnvironment().getLogManager(),
+            "socket");
+      } else {
+        this.random = new SimpleRandomSource(ln.getEnvironment().getLogManager(), "periodic_leaf_set");
+      }
+    } else {
+      this.random = ln.getEnvironment().getRandomSource();
+    }
+    
     this.localHandle = local;
     this.security = sm;
     this.leafSet = ls;
@@ -131,13 +152,12 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
       NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
 
       if (set.size() > 1) {
-        NodeHandle handle = set.get(localNode.getEnvironment()
-            .getRandomSource().nextInt(set.size() - 1) + 1);
+        NodeHandle handle = set.get(random.nextInt(set.size() - 1) + 1);
         handle.receiveMessage(new RequestLeafSet(localHandle));
         handle.receiveMessage(new BroadcastLeafSet(localHandle, leafSet,
             BroadcastLeafSet.Update));
 
-        NodeHandle check = set.get(localNode.getEnvironment().getRandomSource()
+        NodeHandle check = set.get(random
             .nextInt(set.size() - 1) + 1);
         check.checkLiveness();
       }
