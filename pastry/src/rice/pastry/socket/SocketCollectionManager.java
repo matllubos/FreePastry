@@ -8,6 +8,7 @@ import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.environment.random.RandomSource;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -103,6 +104,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   private boolean resigned;
   
   protected Logger logger;
+  
+  protected RandomSource random;
 
   /**
    * Constructs a new SocketManager.
@@ -112,7 +115,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param pool DESCRIBE THE PARAMETER
    * @param address The address to claim the node is at (for proxying)
    */
-  public SocketCollectionManager(SocketPastryNode node, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
+  public SocketCollectionManager(SocketPastryNode node, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) {
     this.pastryNode = node;
     this.manager = manager;
     this.localAddress = proxyAddress;
@@ -122,6 +125,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     this.sourceRouteQueue = new LinkedList();
     this.resigned = false;
     this.logger = node.getEnvironment().getLogManager().getLogger(SocketChannelWriter.class, null);
+    this.random = random;
+    if (random == null) {
+      this.random = node.getEnvironment().getRandomSource(); 
+    }
     
     Parameters p = pastryNode.getEnvironment().getParameters();
     
@@ -204,7 +211,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     if (! resigned) {
       if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
       DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);
-      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + pastryNode.getEnvironment().getRandomSource().nextInt(PING_JITTER), PING_DELAY + pastryNode.getEnvironment().getRandomSource().nextInt(PING_JITTER));
+      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
       pingManager.ping(path, checker);
     }
   }
@@ -585,7 +592,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.am = am;
       this.message = message;
       this.route = route;
-      this.timeout = (long) (timeout * (0.8 + (0.4 * pastryNode.getEnvironment().getRandomSource().nextDouble())));
+      this.timeout = (long) (timeout * (0.8 + (0.4 * random.nextDouble())));
 
       pastryNode.getTimer().schedule(this, timeout);
     }
@@ -599,7 +606,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
         if (tries < BACKOFF_LIMIT) {
           tries++;
-          timeout = (long) ((2 * timeout) * (0.8 + (0.4 * pastryNode.getEnvironment().getRandomSource().nextDouble())));
+          timeout = (long) ((2 * timeout) * (0.8 + (0.4 * random.nextDouble())));
           
           pastryNode.getTimer().schedule(this, timeout);
         } else {

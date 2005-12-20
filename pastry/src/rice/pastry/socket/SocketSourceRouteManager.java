@@ -9,6 +9,7 @@ import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.environment.random.RandomSource;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -57,14 +58,14 @@ public class SocketSourceRouteManager {
    * @param bindAddress The address which the node should bind to
    * @param proxyAddress The address which the node should advertise as it's address
    */
-  protected SocketSourceRouteManager(SocketPastryNode node, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
+  protected SocketSourceRouteManager(SocketPastryNode node, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) {
     this.spn = node;
     Parameters p = node.getEnvironment().getParameters();
     CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
     
     this.logger = node.getEnvironment().getLogManager().getLogger(SocketSourceRouteManager.class, null);
-    this.manager = new SocketCollectionManager(node, this, bindAddress, proxyAddress);
+    this.manager = new SocketCollectionManager(node, this, bindAddress, proxyAddress, random);
     this.localAddress = bindAddress;
   }
   
