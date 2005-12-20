@@ -30,6 +30,25 @@ pastry_messageDispatch_bufferSize = 32
 # valid values are ALL, or a number
 pns_num_rows_to_use = 10
 
+# commonapi testing parameters
+
+# direct or socket
+commonapi_testing_protocol = direct
+commonapi_testing_startPort = 5009
+commonapi_testing_num_nodes = 10
+# set this to specify the bootstrap node
+#commonapi_testing_bootstrap = localhost:5009
+
+# random number generator's seed, "CLOCK" uses the current clock time
+random_seed = CLOCK
+
+# sphere or euclidean 
+direct_simulator_topology = sphere
+# -1 starts the simulation with the current time
+direct_simulator_start_time = -1;
+#pastry_direct_use_own_random = true
+#pastry_periodic_leafset_protocol_use_own_random = true
+
 # rice.pastry.socket parameters
 # tells the factory you intend to use multiple nodes
 # this causes the logger to prepend all entries with the nodeid
