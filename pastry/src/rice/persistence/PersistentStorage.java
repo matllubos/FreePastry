@@ -129,9 +129,9 @@ public class PersistentStorage implements Storage {
   *
   * @param factory The factory to use for creating Ids.
   * @param rootDir The root directory of the persisted disk.
-  * @param size the size of the storage in bytes
+  * @param size the size of the storage in bytes, or -1 for unlimited
   */
-  public PersistentStorage(IdFactory factory, String rootDir, int size, Environment env) throws IOException {
+  public PersistentStorage(IdFactory factory, String rootDir, long size, Environment env) throws IOException {
     this(factory, "default", rootDir, size, env);
   }
    
@@ -142,9 +142,9 @@ public class PersistentStorage implements Storage {
   * @param factory The factory to use for creating Ids.
   * @param name the name of this instance
   * @param rootDir The root directory of the persisted disk.
-  * @param size the size of the storage in bytes
+  * @param size the size of the storage in bytes, or -1 for unlimited
   */
-  public PersistentStorage(IdFactory factory, String name, String rootDir, int size, Environment env) throws IOException {
+  public PersistentStorage(IdFactory factory, String name, String rootDir, long size, Environment env) throws IOException {
     this(factory, name, rootDir, size, true, env);
   }
   
@@ -155,10 +155,10 @@ public class PersistentStorage implements Storage {
    * @param factory The factory to use for creating Ids.
    * @param name the name of this instance
    * @param rootDir The root directory of the persisted disk.
-   * @param size the size of the storage in bytes
+   * @param size the size of the storage in bytes, or -1 for unlimited
    * @param index Whether or not to index the objects
    */
-  public PersistentStorage(IdFactory factory, String name, String rootDir, int size, boolean index, Environment env) throws IOException {
+  public PersistentStorage(IdFactory factory, String name, String rootDir, long size, boolean index, Environment env) throws IOException {
     this.environment = env;
     logger = environment.getLogManager().getLogger(PersistentStorage.class, null);
     this.factory = factory;
@@ -1896,7 +1896,7 @@ public class PersistentStorage implements Storage {
   /**
    * gets the amount of storage that the persistence Manager uses
    *
-   * @return int the amount of storage in MB allocated for use
+   * @return int the amount of storage in bytes allocated for use
    */
   public long getStorageSize() {
     if (storageSize > 0)
@@ -1908,10 +1908,10 @@ public class PersistentStorage implements Storage {
   /**
    * Sets the amount of storage that the persistence Manager uses
    *
-   * @param size the amount of storage available to use in MB
+   * @param size the amount of storage available to use in bytes
    * @return boolean, true if the operation suceeds false if it doesn't
    */
-  public boolean setStorageSize(int size) {
+  public boolean setStorageSize(long size) {
     if(storageSize <= size){
         storageSize = size;
         return true;
