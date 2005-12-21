@@ -79,7 +79,7 @@ public class SimpleLogger extends HeirarchyLogger {
         }
       }
       
-      alm.getPrintStream().print(alm.getPrefix()+":"+loggerName+":"+dateString+":"+message);
+      alm.getPrintStream().print(alm.getPrefix()+":"+loggerName+":"+dateString+":"+message+" ");
       exception.printStackTrace(alm.getPrintStream());
     }
   }
