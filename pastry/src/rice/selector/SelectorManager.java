@@ -1,9 +1,7 @@
 package rice.selector;
 
 import java.io.IOException;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
+import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -378,9 +376,12 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 
       wakeupTime = timeSource.currentTimeMillis() + time;
       return selector.select(time);
+    } catch (CancelledKeyException cce) {
+      if (logger.level <= Logger.WARNING) logger.logException("CCE: cause:",cce.getCause());
+      throw cce;
     } catch (IOException e) {
       if (e.getMessage().indexOf("Interrupted system call") >= 0) {
-        System.out.println("Got interrupted system call, continuing anyway...");
+        if (logger.level <= Logger.WARNING) logger.log("Got interrupted system call, continuing anyway...");
         return 1;
       } else {
         throw e;

@@ -815,6 +815,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         clearTimer();
         
         if (key != null) {
+          if (logger.level <= Logger.WARNING) {
+            if (!pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
+              logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
+            }
+          }
           key.cancel();
           key.attach(null);
           key = null;
