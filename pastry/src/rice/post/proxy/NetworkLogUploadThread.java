@@ -114,6 +114,24 @@ public class NetworkLogUploadThread extends Thread {
     for (int i=0; i<files.length; i++) 
       sendFile(files[i], true);
     
+    // for old nohup.out logs
+    if (params.contains("log_network_upload_old_filenames")) {
+      final String other[] = params.getStringArray("log_network_upload_old_filenames");
+
+      files = new File(".").listFiles(new FilenameFilter() {
+        public boolean accept(File parent, String file) {
+          for (int i=0; i<other.length; i++)
+            if (file.startsWith(other[i]))
+              return true;
+          
+          return false;
+        }
+      });
+      
+      for (int i=0; i<files.length; i++) 
+        sendFile(files[i], true);
+    }
+
     if (params.contains("log_network_upload_other_filenames")) {
       final String other[] = params.getStringArray("log_network_upload_other_filenames");
 
@@ -130,6 +148,7 @@ public class NetworkLogUploadThread extends Thread {
       for (int i=0; i<files.length; i++) 
         sendFile(files[i], false);
     }
+  
   }
   
   protected byte[] getHeader(File file) {
