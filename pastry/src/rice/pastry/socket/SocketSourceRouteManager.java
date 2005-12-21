@@ -99,7 +99,15 @@ public class SocketSourceRouteManager {
    * debugging and testing.
    */
   public void destroy() throws IOException {
-    manager.destroy();
+    spn.getEnvironment().getSelectorManager().invoke(new Runnable() {    
+      public void run() {
+        try {
+          manager.destroy();
+        } catch (IOException ioe) {
+          if (logger.level < Logger.WARNING) logger.logException("Exception while destrying SocketSourceRouteManager",ioe);
+        }
+      }
+    });
   }
   
   /**
