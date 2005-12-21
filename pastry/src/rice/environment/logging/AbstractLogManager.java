@@ -42,7 +42,7 @@ public abstract class AbstractLogManager implements LogManager {
   protected boolean packageOnly = true;
   
   protected boolean enabled;
-  private PrintStream nullPrintStream;
+  private static PrintStream nullPrintStream = new PrintStream(new NullOutputStream());
 
   public DateFormatter dateFormatter;
   
@@ -84,7 +84,6 @@ public abstract class AbstractLogManager implements LogManager {
     if (params.contains("logging_packageOnly")) {
       this.packageOnly = params.getBoolean("logging_packageOnly");
     }
-    this.nullPrintStream = new PrintStream(new NullOutputStream());
 
     this.loggers = new Hashtable();
     this.globalLogLevel = parseVal("loglevel");
