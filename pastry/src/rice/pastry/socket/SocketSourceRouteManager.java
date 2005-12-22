@@ -104,7 +104,7 @@ public class SocketSourceRouteManager {
         try {
           manager.destroy();
         } catch (IOException ioe) {
-          if (logger.level < Logger.WARNING) logger.logException("Exception while destrying SocketSourceRouteManager",ioe);
+          if (logger.level <= Logger.WARNING) logger.logException("Exception while destrying SocketSourceRouteManager",ioe);
         }
       }
     });
