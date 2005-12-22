@@ -630,29 +630,29 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         }
 
         public boolean cancel() {
-//          environment.getSelectorManager().invoke(new Runnable() {
-//            public void run() {
+          environment.getSelectorManager().invoke(new Runnable() {
+            public void run() {
 
               try {
                 synchronized (key) {
                   channel.socket().close();
                   channel.close();
-                  if (logger.level <= Logger.WARNING) {
-                    if (!environment.getSelectorManager().isSelectorThread()) {
-                      logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
-                    }
-                  }
+//                  if (logger.level <= Logger.WARNING) {
+//                    if (!environment.getSelectorManager().isSelectorThread()) {
+//                      logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
+//                    }
+//                  }
                   key.cancel();
                 }
-                return true;
+//                return true;
               } catch (Exception ioe) {
                 if (logger.level <= Logger.WARNING)
                   logger.logException("Error cancelling task.", ioe);
-                return false;
+//                return false;
               }
-//            }
-//          });
-//          return true;
+            }
+          });
+          return true;
         }
 
         public long scheduledExecutionTime() {
