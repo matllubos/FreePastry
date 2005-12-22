@@ -116,7 +116,7 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 The software requires a Java runtime, version 1.4.2+. The software was
 developed using Sun's SDK, version 1.4.2_03+
 <h3>Changes since release 1.4.2</h3>
-This release is primarally performance enhancements and bug fixes.  
+This release is primarily performance enhancements and bug fixes.  
 <ul>
   <li><b>Faster logging --</b> Made FreePastry faster by hiding log
 operations behind conditionals.  This prevents a lot of unnecessary
@@ -148,7 +148,7 @@ opened to the local pastry node from another node.</li>
   <li><b>Fixed direct simulator --</b>
        Added a concept of time to the simulator, and fixed the destroy() method to function properly.  ScribeRegrTest and SplitStreamRegr test now work with both "direct" and "socket".</li>
   <li><b>Temporary fix for "large ring" bug in Past replication.</b>
-If a ring grows too quickly or two paritioned rings join replication
+If a ring grows too quickly or two partitioned rings join replication
 can mistakenly discard data that the local node is no longer
 responsible for but no other node has yet replicated.  The temporary
 fix is to do a lookup/insert before deleting a key the local node is no longer responsible for.  Admittedly this doesn't scale, so we are working on a new solution perhaps using bloom-filters or hash trees.
