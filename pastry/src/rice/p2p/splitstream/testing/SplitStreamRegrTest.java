@@ -152,6 +152,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
     stepStart("Killing Nodes");
     for (int i = 0; i < num; i++) {
       System.out.println("Killing " + ssclients[i].getId());
+      ssclients[i].destroy();
       kill(i);
       simulate();
     }
@@ -318,6 +319,10 @@ public class SplitStreamRegrTest extends CommonAPITest {
       this.n = n;
       this.ss = ss;
       log("Client Created " + n);
+    }
+
+    public void destroy() {
+      ss.destroy();
     }
 
     public Channel getChannel() {

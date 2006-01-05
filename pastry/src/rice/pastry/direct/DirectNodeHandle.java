@@ -101,7 +101,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    */
   public int proximity() {
     assertLocalNode();
-    int result = simulator.proximity((DirectNodeHandle)GeometricNetworkSimulator.currentNode.getLocalHandle(), this);
+    int result = simulator.proximity((DirectNodeHandle)DirectPastryNode.currentNode.getLocalHandle(), this);
 
     return result;
   }

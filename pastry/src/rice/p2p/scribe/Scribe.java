@@ -13,7 +13,7 @@ import rice.p2p.commonapi.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public interface Scribe {
+public interface Scribe extends Destructable {
 
   /**
    * Subscribes the given client to the provided topic.  Any message published
@@ -125,6 +125,8 @@ public interface Scribe {
    * @return
    */
   public Environment getEnvironment();
+
+  public void destroy();
 
 }
 

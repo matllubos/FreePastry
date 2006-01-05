@@ -1,6 +1,7 @@
 
 package rice.p2p.splitstream;
 
+import rice.Destructable;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
@@ -13,7 +14,7 @@ import rice.p2p.scribe.*;
  * @author Ansley Post
  * @author Alan Mislove
  */
-public interface SplitStream {
+public interface SplitStream extends Destructable {
 
   /**
    * A SplitStream application calls this method to join a channel.
@@ -43,4 +44,6 @@ public interface SplitStream {
   public int getStripeBaseBitLength();
   
   public Environment getEnvironment();
+
+  public void destroy();
 }

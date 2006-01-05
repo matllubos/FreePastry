@@ -2,6 +2,7 @@ package rice.pastry.testing;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -27,9 +28,9 @@ public class HelloWorld {
 
   private Vector helloClients;
 
-  private static int numnodes = 3;
+  private static int numnodes = 30;
 
-  private static int nummsgs = 3; // total messages
+  private static int nummsgs = 30; // total messages
 
   private static boolean simultaneous_joins = false;
 
@@ -158,8 +159,9 @@ public class HelloWorld {
    * [-simultaneous_joins] [-simultaneous_msgs] [-help]
    */
   public static void main(String args[]) {
-
-    Environment env = new Environment();
+    Environment env = new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
+        new SimpleParameters(Environment.defaultParamFileArray,null));
+    
     env.getParameters().setInt("loglevel", 800);    
     doIinitstuff(args, env);
     
@@ -175,7 +177,7 @@ public class HelloWorld {
       System.out.println("let the joins begin!");
       while (driver.simulate())
         ;
-    }
+    } 
 
     System.out.println(numnodes + " nodes constructed");
 

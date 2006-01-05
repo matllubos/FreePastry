@@ -17,7 +17,7 @@ import rice.p2p.scribe.messaging.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class ScribeImpl implements Scribe, Application, Destructable {
+public class ScribeImpl implements Scribe, Application {
   
   /**
    * The interval with which to perform maintenance
@@ -229,11 +229,6 @@ public class ScribeImpl implements Scribe, Application, Destructable {
 
     endpoint.route(topic.getId(), new SubscribeMessage(handle, topic, previousParent, id, content), null);
     CancellableTask task = endpoint.scheduleMessage(new SubscribeLostMessage(handle, topic, id), MESSAGE_TIMEOUT);
-    
-    if (task == null) {
-      System.out.println("Warning, null task"); 
-      CancellableTask taske = endpoint.scheduleMessage(new SubscribeLostMessage(handle, topic, id), MESSAGE_TIMEOUT);
-    }
     
     lost.put(new Integer(id), task);
   }

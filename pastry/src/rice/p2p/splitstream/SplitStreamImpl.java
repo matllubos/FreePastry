@@ -144,5 +144,9 @@ public class SplitStreamImpl implements SplitStream {
   public Environment getEnvironment() {
     return scribe.getEnvironment();
   }
+
+  public void destroy() {
+    scribe.destroy();
+  }
 }
 

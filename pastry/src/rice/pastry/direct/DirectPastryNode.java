@@ -18,6 +18,12 @@ import rice.selector.Timer;
  */
 
 public class DirectPastryNode extends PastryNode {
+  /**
+   * Used for proximity calculation of DirectNodeHandle. This will probably go
+   * away when we switch to a byte-level protocol.
+   */
+  static DirectPastryNode currentNode = null;
+
   private NetworkSimulator simulator;
   protected boolean alive = true;
   NodeRecord record;
@@ -130,6 +136,12 @@ public class DirectPastryNode extends PastryNode {
       ret = newHandle;
     }
     return ret;
+  }
+
+  public synchronized void receiveMessage(Message msg) {
+    currentNode = this;
+    super.receiveMessage(msg);
+    currentNode = null;
   }
 }
 

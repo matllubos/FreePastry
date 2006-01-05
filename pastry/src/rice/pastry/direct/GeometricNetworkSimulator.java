@@ -16,12 +16,6 @@ import rice.pastry.routing.BroadcastRouteRow;
 
 public abstract class GeometricNetworkSimulator implements NetworkSimulator {
 
-  /**
-   * Used for proximity calculation of DirectNodeHandle. This will probably go
-   * away when we switch to a byte-level protocol.
-   */
-  static DirectPastryNode currentNode = null;
-
   Vector nodes = new Vector();
 
   // these are messages that should be delivered immeadiately

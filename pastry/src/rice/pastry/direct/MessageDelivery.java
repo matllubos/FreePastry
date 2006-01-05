@@ -25,9 +25,7 @@ import rice.pastry.messaging.Message;
 
     public void deliver() {
       if (logger.level <= Logger.FINE) logger.log("MD: deliver "+msg+" to "+node);
-      GeometricNetworkSimulator.currentNode = node;
       node.receiveMessage(msg);
-      GeometricNetworkSimulator.currentNode = null;
       
       
 //      if (isAlive(msg.getSenderId())) {
