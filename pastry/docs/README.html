@@ -5,7 +5,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 1.4.3,&nbsp; 21 December 2005.
+Release 1.4.3_01,&nbsp; 5 January 2006.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -115,6 +115,16 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.4.2+. The software was
 developed using Sun's SDK, version 1.4.2_03+
+<h3>Changes since release 1.4.3</h3>
+This release is fixes some bugs with the direct simulator.  
+<ul>
+  <li><b>Proximity NPE --</b> Fixed a bug that was throwing a null pointer exception in DirectNodeHandle.proximity() if DirectPastryNode.receiveMessage() was called outside of MessageDelivery.  This was based on a hack to make it so that proximity() worked again, which had been broken for some time.  But the hack was not pervasive enough.  It should be fine now.</li>
+  <li><b>SplitStream and Scribe are now Destructable</b> -- Necessary so that when you kill a node in the simulator, these apps give up their observer status on node handles, because they are now dead.  This was causing hashtable exceptions.</li>
+  <li>Fixed Environment Constructor in HelloWorld to use the proper TimeSource for the Direct Simulator.</li>
+  <li><b>Verified that nodes can be killed then re-joined with the same NodeId</b></li>
+</ul>
+
+
 <h3>Changes since release 1.4.2</h3>
 This release is primarily performance enhancements and bug fixes.  
 <ul>
