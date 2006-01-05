@@ -448,7 +448,7 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable,
    */
   public Collection getCollection() {
     ArrayList al = new ArrayList();
-    for (int i = 0; i < nodes.length; i++) {
+    for (int i = 0; i < theSize; i++) {
       NodeHandle nh = nodes[i];
       if (nh != null) {
         al.add(nh);
