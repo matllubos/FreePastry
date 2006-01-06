@@ -1428,59 +1428,59 @@ public class PostProxy {
     }
   }
   
-  protected void start2() throws Exception {
-//    parameters = env.getParameters();  // done in start(void)
-    startLivenessMonitor();
-    System.setOut(new PrintStream(new LogOutputStream(environment, Logger.INFO, "out"), true));
-    System.setErr(new PrintStream(new LogOutputStream(environment, Logger.INFO, "err"), true));
-    
-    startCheckBoot();    
-    startDialog(parameters);
-        
-    if (logger.level <= Logger.INFO) logger.log("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
-    
-    if (dialog != null) 
-      dialog.append("\n-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --\n");
-    
-    sectionStart("Initializing Parameters");
-    startShutdownHooks(parameters);
-    startSecurityManager(parameters);
-    startRetrieveCAKey(parameters);
-    startRetrieveUser(parameters);
-    startLoadRingCertificates(parameters);
-    startDeterminePorts(parameters);
-    startDetermineSMTPServer(parameters);
-    sectionDone();
-    
-    sectionStart("Initializing Disk Storage");
-    startCreateIdFactory();
-    startStorageManagers();
-    sectionDone();
-    
-    sectionStart("Bootstrapping Local Node");
-    startPastryNode();
-    sectionDone();
-    
-    sectionStart("Bootstrapping Multiring Protocol");
-    startMultiringNode();
-    startGlobalNode();
-    sectionDone();
-    
-    sectionStart("Bootstrapping Local Post Applications");
-    startPast();
-    startGlacier();
-    startPost();
-    startInsertLog();
-    startFetchLog();
-    startFetchForwardingLog();
-    startUpdateForwardingLog();
-    
-    sectionDone();
-    
-    sectionStart("Installing Partition Handler");
-    startPartitionHandler();
-    sectionDone();
-  }
+    protected void start2() throws Exception {
+  //    parameters = env.getParameters();  // done in start(void)
+      startLivenessMonitor();
+      System.setOut(new PrintStream(new LogOutputStream(environment, Logger.INFO, "out"), true));
+      System.setErr(new PrintStream(new LogOutputStream(environment, Logger.INFO, "err"), true));
+      
+      startCheckBoot();    
+      startDialog(parameters);
+          
+      if (logger.level <= Logger.INFO) logger.log("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
+      
+      if (dialog != null) 
+        dialog.append("\n-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --\n");
+      
+      sectionStart("Initializing Parameters");
+      startShutdownHooks(parameters);
+      startSecurityManager(parameters);
+      startRetrieveCAKey(parameters);
+      startRetrieveUser(parameters);
+      startLoadRingCertificates(parameters);
+      startDeterminePorts(parameters);
+      startDetermineSMTPServer(parameters);
+      sectionDone();
+      
+      sectionStart("Initializing Disk Storage");
+      startCreateIdFactory();
+      startStorageManagers();
+      sectionDone();
+      
+      sectionStart("Bootstrapping Local Node");
+      startPastryNode();
+      sectionDone();
+      
+      sectionStart("Bootstrapping Multiring Protocol");
+      startMultiringNode();
+      startGlobalNode();
+      sectionDone();
+      
+      sectionStart("Bootstrapping Local Post Applications");
+      startPast();
+      startGlacier();
+      startPost();
+      startInsertLog();
+      startFetchLog();
+      startFetchForwardingLog();
+      startUpdateForwardingLog();
+      
+      sectionDone();
+      
+      sectionStart("Installing Partition Handler");
+      startPartitionHandler();
+      sectionDone();
+    }
   
   /**
    * 
@@ -1903,14 +1903,19 @@ public class PostProxy {
       try {
         while (true) {
           int i = in.read(buffer1);
+          if (logger.level <= Logger.FINEST) logger.log("LivenessThread read "+i+" bytes: "+buffer1+" from in");
 
           if (i > 0) {
             ByteBuffer b1 = ByteBuffer.wrap(buffer1);
-            sink.write(b1);  
+            if (logger.level <= Logger.FINEST) logger.log("LivenessThread writing "+b1+" to sink");
+            int res = sink.write(b1);  
+            if (logger.level <= Logger.FINEST) logger.log("LivenessThread wrote "+res+" bytes to sink");
 
             ByteBuffer b2 = ByteBuffer.wrap(buffer2);
-            source.read(b2);
+            res = source.read(b2);
+            if (logger.level <= Logger.FINEST) logger.log("LivenessThread read "+res+" bytes: "+b2+" from source");
             
+            if (logger.level <= Logger.FINEST) logger.log("LivenessThread writing "+buffer2+" to out");
             out.write(buffer2);
             out.flush();
           } else {
@@ -1951,7 +1956,8 @@ public class PostProxy {
     public void read(SelectionKey key) {
       try {
         buffer.clear();
-        source.read(buffer);
+        int res = source.read(buffer);
+        if (logger.level <= Logger.FINEST) logger.log("LivenessKeyHandler read "+res+" bytes from source: "+buffer);
         sinkKey.interestOps(SelectionKey.OP_WRITE);
       } catch (IOException e) {
         if (logger.level <= Logger.SEVERE) logger.logException( "IOException while reading liveness monitor! " , e);
@@ -1961,7 +1967,9 @@ public class PostProxy {
     public void write(SelectionKey key) {
       try {
         buffer.flip();
-        sink.write(buffer);
+        if (logger.level <= Logger.FINEST) logger.log("LivenessKeyHandler writing to sink: "+buffer);
+        int res = sink.write(buffer);
+        if (logger.level <= Logger.FINEST) logger.log("LivenessKeyHandler wrote "+res+" bytes to sink");
         sinkKey.interestOps(0);
       } catch (IOException e) {
         if (logger.level <= Logger.SEVERE) logger.logException( "IOException while reading liveness monitor! " , e);

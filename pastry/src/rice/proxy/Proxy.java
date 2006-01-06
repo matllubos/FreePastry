@@ -380,12 +380,15 @@ public class Proxy {
       try {
         int i = 27;
         
+        if (logger.level <= Logger.FINEST) logger.log("writing "+i+" to output stream");
         process.getOutputStream().write(i);
         process.getOutputStream().flush();
         int j = 0;
         
-        while ((j != i) && (j >= 0)) 
+        while ((j != i) && (j >= 0)) { 
           j = process.getInputStream().read();
+          if (logger.level <= Logger.FINEST) logger.log("read "+j+" from input stream");
+        }
         
         if (j >= 0)
           monitor.answered();
@@ -395,7 +398,7 @@ public class Proxy {
             e);
         System.exit(-1);
       } catch (NullPointerException e) {
-        if (logger.level <= Logger.SEVERE) logger.logException( "Liveness test ended in NullPointerExceptin " , e);
+        if (logger.level <= Logger.SEVERE) logger.logException( "Liveness test ended in NullPointerException " , e);
       }
     }
   }
