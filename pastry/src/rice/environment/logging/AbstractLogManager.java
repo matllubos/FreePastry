@@ -42,7 +42,7 @@ public abstract class AbstractLogManager implements LogManager {
   protected boolean packageOnly = true;
   
   protected boolean enabled;
-  private static PrintStream nullPrintStream = new PrintStream(new NullOutputStream());
+  protected static PrintStream nullPrintStream = new PrintStream(new NullOutputStream());
 
   public DateFormatter dateFormatter;
   
@@ -58,7 +58,7 @@ public abstract class AbstractLogManager implements LogManager {
         if (loggingType.equals(SYSTEM_OUT)) {
           ps = System.out; 
         } else if (loggingType.equals(SYSTEM_ERR)) {
-          ps = System.out; 
+          ps = System.err; 
         } else {
           try {
             ps = new PrintStream(new FileOutputStream(loggingType, true)); 
@@ -266,6 +266,9 @@ public abstract class AbstractLogManager implements LogManager {
       // do nothing
     }
     public void write(byte[] buf, int a, int b) throws IOException {
+      // do nothing
+    }
+    public void close() {
       // do nothing
     }
   }

@@ -44,7 +44,7 @@ public class RotatingLogManager extends AbstractLogManager {
    */
   public RotatingLogManager(TimeSource timeSource, Parameters params,
       String prefix, String dateFormat) {
-    super(null, timeSource, params, prefix, dateFormat);
+    super(AbstractLogManager.nullPrintStream, timeSource, params, prefix, dateFormat);
     rotate();
   }
 
