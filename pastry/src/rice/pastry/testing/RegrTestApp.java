@@ -227,6 +227,10 @@ public class RegrTestApp extends CommonAPIAppl {
     // getNodeId() + " : leafset is empty!!");
   }
 
+  public PastryNode getPastryNode() {
+    return thePastryNode;
+  }
+
 }
 
 /**

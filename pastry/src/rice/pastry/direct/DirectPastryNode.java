@@ -22,7 +22,7 @@ public class DirectPastryNode extends PastryNode {
    * Used for proximity calculation of DirectNodeHandle. This will probably go
    * away when we switch to a byte-level protocol.
    */
-  static DirectPastryNode currentNode = null;
+  static public DirectPastryNode currentNode = null;
 
   private NetworkSimulator simulator;
   protected boolean alive = true;

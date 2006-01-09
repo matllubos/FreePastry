@@ -1,6 +1,7 @@
 package rice.pastry.testing;
 
 import rice.environment.Environment;
+import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -33,7 +34,8 @@ public class DirectPastryRegrTest extends PastryRegrTest {
    * constructor
    */
   private DirectPastryRegrTest() throws IOException {
-    super(new Environment());
+    super(new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
+        new SimpleParameters(Environment.defaultParamFileArray,null)));
     simulator = new SphereNetwork(environment);
     factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), 
         simulator,

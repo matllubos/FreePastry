@@ -6,6 +6,7 @@ import java.net.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.Id;
@@ -599,7 +600,8 @@ public class MultiringRegrTest {
   
   public static void main(String[] args) throws IOException {
     parseArgs(args);
-    MultiringRegrTest test = new MultiringRegrTest(new Environment());
+    MultiringRegrTest test = new MultiringRegrTest(new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
+        new SimpleParameters(Environment.defaultParamFileArray,null)));
     test.start();
   }
 }

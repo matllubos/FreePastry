@@ -1,6 +1,7 @@
 package rice.pastry.testing;
 
 import rice.environment.Environment;
+import rice.environment.params.simple.SimpleParameters;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -83,7 +84,8 @@ public class PastryTest {
   }
 
   public static void main(String args[]) throws IOException {
-    PastryTest pt = new PastryTest(new Environment());
+    PastryTest pt = new PastryTest(new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
+        new SimpleParameters(Environment.defaultParamFileArray,null)));
 
     int n = 4000;
     int m = 100;

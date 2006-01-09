@@ -376,14 +376,18 @@ public abstract class PastryRegrTest {
       Id nearest = null;
 
       for (int j = -1; j <= maxRank * 2 + 1; j++) {
-        IdRange range;
+        IdRange range = null;
 
         if (j < 0)
           // check the cumulative range
-          range = rta.range(ls.get(k), maxRank, nearest, true);
+          try {
+            range = rta.range(ls.get(k), maxRank, nearest, true);
+          } catch (IllegalArgumentException iae) {}
         else
           // check the individual rank ranges
-          range = rta.range(ls.get(k), j / 2, nearest, false);
+          try {
+            range = rta.range(ls.get(k), j / 2, nearest, false);
+          } catch (RangeCannotBeDeterminedException rcbde) {}
 
         //System.out.println("j=" + j + " maxRank=" + maxRank + " " + range);
 
@@ -502,6 +506,7 @@ public abstract class PastryRegrTest {
           // check entries
 
           // check if closest entry has valid proximity
+          DirectPastryNode.currentNode = (DirectPastryNode)rta.getPastryNode();
           NodeHandle nh = rs.closestNode();
           int bestProximity = Integer.MAX_VALUE;
           ;

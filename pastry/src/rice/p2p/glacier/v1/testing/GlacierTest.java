@@ -195,7 +195,8 @@ public class GlacierTest {
       }
     }
 
-    GlacierTest driver = new GlacierTest(new Environment());
+    GlacierTest driver = new GlacierTest(new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
+        new SimpleParameters(Environment.defaultParamFileArray,null)));
 
     for (int i = 0; i < numnodes; i++) {
       driver.makePastryNode(i);
