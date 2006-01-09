@@ -119,16 +119,6 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     StandardJoinProtocol jProtocol =
       new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);    
     
-    DirectNodeHandle simClosest = simulator.getClosest(localhandle);
-    DirectNodeHandle closest = (DirectNodeHandle)getNearest(localhandle, bootstrap);
-    if (simClosest != null) {
-      int sProx = simulator.proximity(localhandle, simClosest);
-      int prox = simulator.proximity(localhandle, closest);
-      
-      if (sProx != prox) {
-        System.out.println("localhandle:"+localhandle+" closest:"+closest+":"+prox+" simClosest:"+simClosest+":"+sProx);
-      }
-    }    
     // pn.doneNode(bootstrap);
     //pn.doneNode( simulator.getClosest(localhandle) );    
     pn.doneNode(getNearest(localhandle, bootstrap));
