@@ -401,23 +401,80 @@ public class SocketSourceRouteManager {
    * @param m The message
    * @param address The address of the remote node
    */
+//  protected void reroutee(EpochInetSocketAddress address, Message m) {
+//    if (getLiveness(address) == SocketNodeHandle.LIVENESS_ALIVE) {
+//      if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to resend message " + m + " to alive address " + address);
+//      send(address, m);
+//    } else {
+//      if (m instanceof RouteMessage) {
+//        if (((RouteMessage) m).getOptions().multipleHopsAllowed()) {
+//          if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
+//          ((RouteMessage) m).nextHop = null;
+//          // kick it back to pastry
+//          spn.receiveMessage(m);
+//        } else if (getLiveness(address) <= SocketNodeHandle.LIVENESS_SUSPECTED) {
+//          // it's required to go to this address only
+//          send(address, m);
+//        } else {
+//          // this address is dead, and the routemessage is not allowed to go anywhere else
+//          if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop "+address+" is dead!");          
+//        }        
+//      } else {
+//        if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop "+address+" is dead!");
+//      }
+//    }  
+//  }
+  
+   /**
+    * Reroutes the given message. If this node is alive, send() is called. If
+    * this node is not alive and the message is a route message, it is rerouted.
+    * Otherwise, the message is dropped.
+    * 
+    * Can be called when a socket is closed, if for example a different source route is found.  This is 
+    * how non-routemessages may be called here
+    * 
+    * For suspected/dead, it will get called with all RouteMessages
+    *
+    * @param m The message
+    * @param address The address of the remote node
+    */
   protected void reroute(EpochInetSocketAddress address, Message m) {
-    if (getLiveness(address) == SocketNodeHandle.LIVENESS_ALIVE) {
-      if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to resend message " + m + " to alive address " + address);
-      send(address, m);
-    } else {
-      if (m instanceof RouteMessage) {
-        if (((RouteMessage) m).getOptions().multipleHopsAllowed()) {
-          if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
-          ((RouteMessage) m).nextHop = null;
-          spn.receiveMessage(m);
-        }
-      } else {
-        if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop "+address+" is dead!");
-      }
-    }  
-  }
     
+    switch (getLiveness(address)) {
+      case SocketNodeHandle.LIVENESS_ALIVE:
+        if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to resend message " + m + " to alive address " + address);
+        send(address, m);
+        return;
+      case SocketNodeHandle.LIVENESS_SUSPECTED:
+        if (m instanceof RouteMessage) {
+          RouteMessage rm = (RouteMessage)m;
+          if (rm.getOptions().multipleHopsAllowed() && rm.getOptions().rerouteIfSuspected()) {
+            // kick it back to pastry
+            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
+            rm.nextHop = null;
+            spn.receiveMessage(rm);
+            return;
+          }
+        } else {
+          if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to resend message " + m + " to alive address " + address);
+          send(address, m); 
+          return;
+        }
+      case SocketNodeHandle.LIVENESS_DEAD:        
+      case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
+        if (m instanceof RouteMessage) {
+          RouteMessage rm = (RouteMessage)m;
+          if (rm.getOptions().multipleHopsAllowed()) {
+            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
+            rm.nextHop = null; 
+            spn.receiveMessage(rm);
+            return;
+          }
+        }        
+    }
+    if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop "+address+" is dead!");    
+  }
+  
   /**
    * Internal method which returns a list of all possible routes 
    * to a given address. Currently, this method simply sees if any of the
@@ -808,9 +865,12 @@ public class SocketSourceRouteManager {
       
       for (int i=0; i<array.length; i++) {
         if (array[i] instanceof RouteMessage) {
-          if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + array[i] + " due to suspected next hop " + address);
-          reroute(address.eaddress, (Message) array[i]);
-          queue.remove(array[i]);
+          RouteMessage rm = (RouteMessage)array[i];
+          if (rm.getOptions().multipleHopsAllowed() && rm.getOptions().rerouteIfSuspected()) {
+            if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + rm + " due to suspected next hop " + address);
+            reroute(address.eaddress, rm);
+            queue.remove(rm);
+          }
         }
       }
       if (queue.isEmpty()) hardLinks.remove(this);
