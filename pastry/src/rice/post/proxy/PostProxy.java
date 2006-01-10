@@ -35,7 +35,6 @@ import rice.pastry.commonapi.PastryIdFactory;
 import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
-import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.CertifiedNodeIdFactory;
 import rice.persistence.*;
 import rice.post.*;
@@ -599,6 +598,11 @@ public class PostProxy {
               "http://www.epostmail.org/");
       } else {
         parameters.setString("post_username", files[0].substring(0, files[0].length()-6));
+        try {
+          parameters.store();
+        } catch (IOException ioe) {
+          if (logger.level <= Logger.WARNING) logger.logException("Could not store post_username in parameters file",ioe);
+        }
         stepDone(SUCCESS);
       } 
     }
@@ -1505,9 +1509,10 @@ public class PostProxy {
     });
   }
 
-  protected void updateParameters(Parameters parameters) {
+  protected void updateParameters(Parameters parameters) throws IOException {
     if (parameters.getBoolean("post_allow_log_insert") && parameters.getBoolean("post_allow_log_insert_reset")) {
       parameters.setBoolean("post_allow_log_insert", false);
+      parameters.store();
     }
   }
   
@@ -2067,7 +2072,7 @@ public class PostProxy {
         try {
           parameters.store();
         } catch (IOException ioe) {
-          if (logger.level <= Logger.WARNING) logger.logException( "", ioe);
+          if (logger.level <= Logger.WARNING) logger.logException("Error trying to store parameter post_password_remember", ioe);
           JOptionPane.showMessageDialog(this, "Cannot store password: "+ioe); 
         }
         synchronized (parameters) {
