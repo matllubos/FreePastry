@@ -16,7 +16,7 @@ import java.util.*;
  */
 
 public class InitiateJoin extends Message implements Serializable {
-  private NodeHandle handle;
+  private NodeHandle[] handle;
 
   /**
    * Constructor.
@@ -25,6 +25,13 @@ public class InitiateJoin extends Message implements Serializable {
    */
 
   public InitiateJoin(NodeHandle nh) {
+    super(new JoinAddress());
+	handle = new NodeHandle[1];
+    handle[0] = nh;
+  }
+
+
+  public InitiateJoin(NodeHandle[] nh) {
     super(new JoinAddress());
 
     handle = nh;
@@ -39,7 +46,7 @@ public class InitiateJoin extends Message implements Serializable {
    * @param nh the node handle that the join will begin from.
    */
 
-  public InitiateJoin(Date stamp, NodeHandle nh) {
+  public InitiateJoin(Date stamp, NodeHandle[] nh) {
     super(new JoinAddress(), stamp);
 
     handle = nh;
@@ -54,7 +61,7 @@ public class InitiateJoin extends Message implements Serializable {
    * @param nh the node handle that the join will begin from.
    */
 
-  public InitiateJoin(Credentials cred, NodeHandle nh) {
+  public InitiateJoin(Credentials cred, NodeHandle[] nh) {
     super(new JoinAddress(), cred);
 
     handle = nh;
@@ -70,7 +77,7 @@ public class InitiateJoin extends Message implements Serializable {
    * @param nh the node handle that the join will begin from.
    */
 
-  public InitiateJoin(Credentials cred, Date stamp, NodeHandle nh) {
+  public InitiateJoin(Credentials cred, Date stamp, NodeHandle[] nh) {
     super(new JoinAddress(), cred, stamp);
 
     handle = nh;
@@ -79,11 +86,16 @@ public class InitiateJoin extends Message implements Serializable {
   /**
    * Gets the handle for the join.
    * 
+   * Gets the first non-dead handle for the join.
+   * 
    * @return the handle.
    */
 
   public NodeHandle getHandle() {
-    return handle;
+    for (int i = 0; i < handle.length; i++) {
+      if (handle[i].isAlive()) return handle[i];
+    }
+    return null;
   }
 }
 

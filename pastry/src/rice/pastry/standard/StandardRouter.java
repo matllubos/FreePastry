@@ -123,7 +123,7 @@ public class StandardRouter implements MessageReceiver {
             target);
 
         if (handle == null) {
-          // no alternate in RT, take leaf set
+          // no alternate in RT, take leaf set extent
           handle = localNode.getLeafSet().get(lsPos);
 
           if (handle.isAlive() == false) {
