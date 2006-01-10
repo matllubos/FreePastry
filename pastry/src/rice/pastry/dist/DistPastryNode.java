@@ -112,10 +112,10 @@ public abstract class DistPastryNode extends PastryNode {
   public final void initiateJoin(NodeHandle bootstrap) {
     if (logger.level <= Logger.CONFIG) logger.log(
         "DistPN.initiateJoin()");
+//    if (bootstrap != null && bootstrap[0] != null)
     if (bootstrap != null) {
       // schedule (re-)transmission of the join message at an exponential backoff
       joinEvent = scheduleMsgExpBackoff(new InitiateJoin(bootstrap), 0, 15000, 2);
-
     } else {
       setReady();
     }
