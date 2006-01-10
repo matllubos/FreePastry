@@ -17,7 +17,7 @@ import java.io.*;
  * @author Peter Druschel
  */
 
-public class RouteSet extends Observable implements NodeSetI, Serializable,
+public class RouteSet implements NodeSetI, Serializable,
     Observer {
 
   private static final long serialVersionUID = 8156336294555109590L;
@@ -79,7 +79,7 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
     if (theSize < nodes.length) {
       nodes[theSize++] = handle;
 
-      setChanged();
+//      setChanged();
       notifyObservers(new NodeSetUpdate(handle, true));
 
       // ping handles while the set is not full
@@ -98,7 +98,7 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
         return false;
       } else if (handle.proximity() < worstProximity) {
         // remove handle with worst proximity
-        setChanged();
+//        setChanged();
         notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
 
         // in case we observe this handle, stop doing so
@@ -107,7 +107,7 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
         // insert new handle
         nodes[worstIndex] = handle;
 
-        setChanged();
+//        setChanged();
         notifyObservers(new NodeSetUpdate(handle, true));
         handle.addObserver(this);
 
@@ -149,7 +149,7 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
 
         nodes[i] = nodes[--theSize];
 
-        setChanged();
+//        setChanged();
         notifyObservers(new NodeSetUpdate(handle, false));
 
         // in case we observe this handle, stop doing so
@@ -176,7 +176,7 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
 
         nodes[i] = nodes[--theSize];
 
-        setChanged();
+//        setChanged();
         notifyObservers(new NodeSetUpdate(handle, false));
 
         // in case we observe this handle, stop doing so
@@ -189,6 +189,17 @@ public class RouteSet extends Observable implements NodeSetI, Serializable,
     return null;
   }
 
+  RoutingTable observer;
+  
+  private void notifyObservers(Object foo) {
+    if (observer != null)
+      observer.update(this, foo);
+  }
+  
+  public void addObserver(RoutingTable rt) {
+    observer = rt; 
+  }
+  
   /**
    * Membership test.
    * 

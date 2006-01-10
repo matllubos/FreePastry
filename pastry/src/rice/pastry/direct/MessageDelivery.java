@@ -20,7 +20,11 @@ import rice.pastry.messaging.Message;
     public MessageDelivery(Message m, DirectPastryNode pn) {
       msg = m;
       node = pn;
-      logger = pn.getEnvironment().getLogManager().getLogger(MessageDelivery.class, null);
+      
+      // Note: this is done to reduce memory thrashing.  There are a ton of strings created
+      // in getLogger(), and this is a really temporary object.
+      logger = pn.getLogger();
+//      logger = pn.getEnvironment().getLogManager().getLogger(MessageDelivery.class, null);
     }
 
     public void deliver() {

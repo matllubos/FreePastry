@@ -39,7 +39,7 @@ public abstract class PastryNodeFactory {
    * Hashtable which keeps track of temporary ping values, which are
    * only used during the getNearest() method
    */
-  private Hashtable pingCache = new Hashtable();
+  protected Hashtable pingCache = new Hashtable();
 
   protected Environment environment;
   
@@ -134,7 +134,7 @@ public abstract class PastryNodeFactory {
    * @param handle The handle to ping
    * @return The proximity of the handle
    */
-  private int proximity(NodeHandle local, NodeHandle handle) {
+  protected int proximity(NodeHandle local, NodeHandle handle) {
     Hashtable localTable = (Hashtable) pingCache.get(local.getNodeId());
     
     if (localTable == null) {
@@ -150,6 +150,10 @@ public abstract class PastryNodeFactory {
     } else {
       return ((Integer) localTable.get(handle.getNodeId())).intValue();
     }
+  }
+  
+  private void purgeProximityCache(NodeHandle local) {
+    pingCache.remove(local.getNodeId()); 
   }
   
   /**
@@ -219,6 +223,8 @@ public abstract class PastryNodeFactory {
       if (logger.level <= Logger.WARNING) logger.log(
         "ERROR: Exception " + e + " occured while finding best bootstrap.");
       return seed;
+    } finally {
+      purgeProximityCache(local); 
     }
   }
 

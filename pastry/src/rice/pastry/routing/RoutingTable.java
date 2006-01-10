@@ -354,6 +354,12 @@ public class RoutingTable extends Observable implements Observer {
     notifyObservers(arg);
   }
 
+  public void update(RouteSet o, Object arg) {
+    // pass the event to the Observers of this RoutingTable
+    setChanged();
+    notifyObservers(arg);
+  }
+
   /**
    * produces a String representation of the routing table, showing the number
    * of node handles in each entry

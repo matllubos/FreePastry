@@ -4,7 +4,6 @@ package rice.pastry.direct;
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.*;
-import rice.environment.logging.CloneableLogManager;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -196,6 +195,10 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    */
   public int getProximity(NodeHandle local, NodeHandle remote) {
     return simulator.proximity((DirectNodeHandle)local, (DirectNodeHandle)remote);
+  }
+
+  protected int proximity(NodeHandle local, NodeHandle handle) {
+    return getProximity(local, handle);
   }
 
 }

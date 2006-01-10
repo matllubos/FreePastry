@@ -4,6 +4,7 @@ package rice.pastry.direct;
 import java.util.Hashtable;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.join.InitiateJoin;
 import rice.pastry.messaging.Message;
@@ -149,6 +150,10 @@ public class DirectPastryNode extends PastryNode {
     currentNode = this;
     super.receiveMessage(msg);
     currentNode = null;
+  }
+
+  public Logger getLogger() {
+    return logger;
   }
 }
 
