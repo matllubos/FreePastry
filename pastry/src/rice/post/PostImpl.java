@@ -783,9 +783,20 @@ public class PostImpl implements Post, Application, ScribeClient {
               }
             }
             if (goodLog != null) {
+              goodLog.setPost(PostImpl.this);
+              PostImpl.this.log = goodLog;
               parent.receiveResult(goodLog);
             } else {
-              parent.receiveException(new PostException("Could not retrieve and verify PostLog - got 0 of " + results.length + " good replicas"));
+              if (logRewrite) {
+                if (logger.level <= Logger.WARNING) logger.log("Reinserting log head for entity " + entity);
+                createPostLog(new StandardContinuation(parent) {
+                  public void receiveResult(Object o) {
+                    parent.receiveResult(PostImpl.this.log);
+                  }
+                });
+              } else {
+                parent.receiveException(new PostException("Could not retrieve and verify PostLog - got 0 of " + results.length + " good replicas"));
+              }
             }
           }
         };
