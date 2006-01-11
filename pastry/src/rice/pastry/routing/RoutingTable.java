@@ -430,7 +430,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @deprecated use addNodeSetListener
    */
   public void addObserver(Observer o) {
-    if (logger.level <= Logger.WARNING) logger.log("WARNING: Observer on RoutingTable is deprecated");
+    if (logger.level <= Logger.WARNING) logger.logException("WARNING: Observer on RoutingTable is deprecated", new Exception("Stack Trace"));
     super.addObserver(o); 
   }
   
