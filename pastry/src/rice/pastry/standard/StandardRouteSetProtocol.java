@@ -19,7 +19,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class StandardRouteSetProtocol implements Observer, MessageReceiver {
+public class StandardRouteSetProtocol implements MessageReceiver {
   private final int maxTrials;
 
   private NodeHandle localHandle;
@@ -52,8 +52,6 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
     routeTable = rt;
     address = new RouteProtocolAddress();
     logger = env.getLogManager().getLogger(getClass(), null);
-
-    rt.addObserver(this);
   }
 
   /**
@@ -64,16 +62,6 @@ public class StandardRouteSetProtocol implements Observer, MessageReceiver {
 
   public Address getAddress() {
     return address;
-  }
-
-  /**
-   * Observer update.
-   * 
-   * @param obs the observable.
-   * @param arg the argument.
-   */
-
-  public void update(Observable obs, Object arg) {
   }
 
   /**
