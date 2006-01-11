@@ -36,7 +36,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * We currently assume that it is divisible by 32.
    */
   public final static int IdBitLength = 160;
-  protected final static int nlen = IdBitLength / 32;
+  public final static int nlen = IdBitLength / 32;
   
   /**
    * serialver for backwards compatibility
@@ -577,6 +577,19 @@ public class Id implements rice.p2p.commonapi.Id {
     return d;
   }
 
+  public Distance distance(Id nid, Distance d) {
+    int[] dist = d.difference;
+    absDistance(nid, dist);
+
+    if ((dist[nlen - 1] & 0x80000000) != 0) {
+      invert(dist);
+    }
+
+//    Distance d = new Distance(dist);
+
+    return d;
+  }
+
   /**
    * Returns the longer numerical distance on the ring between a pair of Ids.
    *
@@ -846,7 +859,9 @@ public class Id implements rice.p2p.commonapi.Id {
    * @return an int[] containing the distance between this and nid.
    */
   private int[] absDistance(Id nid) {
-    int dist[] = new int[nlen];
+    return absDistance(nid,new int[nlen]);
+  }
+  private int[] absDistance(Id nid, int dist[]) {
     long x;
     long y;
     long diff;
@@ -883,7 +898,6 @@ public class Id implements rice.p2p.commonapi.Id {
         dist[i] = (int) diff;
       }
     }
-
     return dist;
   }
 

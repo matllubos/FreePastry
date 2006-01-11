@@ -391,25 +391,60 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    * @return -1 if the local nodeId is most similar, else the index of the most
    *         similar node.
    */
-
+//  public int mostSimilar(Id nid) {
+//    if (theSize == 0)
+//      return -1;
+//
+//    NodeId.Distance minDist = ln.getNodeId().distance(nid);
+//    int min = -1;
+//
+//    for (int i = 0; i < theSize; i++) {
+//      NodeId.Distance d = nodes[i].getNodeId().distance(nid);
+//      int cmp = d.compareTo(minDist);
+//      if ((!clockwise && cmp < 0) || (clockwise && cmp <= 0)) {
+//        minDist = d;
+//        min = i;
+//      }
+//    }
+//
+//    return min;
+//  }
+  
+  transient Id.Distance d1 = new Id.Distance();
+  transient Id.Distance d = new Id.Distance();
+  /**
+   * Impl that doesn't produce garbage
+   * 
+   * Numerically closest node to a given a node. Returns -1 if the local nodeId
+   * is the most similar and returns an index otherwise.
+   * 
+   * @param nid a node id.
+   * 
+   * @return -1 if the local nodeId is most similar, else the index of the most
+   *         similar node.
+   */
   public int mostSimilar(Id nid) {
     if (theSize == 0)
       return -1;
 
-    NodeId.Distance minDist = ln.getNodeId().distance(nid);
+    Id.Distance other = d;
+    Id.Distance minDist = ln.getNodeId().distance(nid, d1);
     int min = -1;
 
     for (int i = 0; i < theSize; i++) {
-      NodeId.Distance d = nodes[i].getNodeId().distance(nid);
-      int cmp = d.compareTo(minDist);
+      other = nodes[i].getNodeId().distance(nid, other);
+      int cmp = other.compareTo(minDist);
       if ((!clockwise && cmp < 0) || (clockwise && cmp <= 0)) {
-        minDist = d;
+        // swap buffers
+        Id.Distance tmp = minDist;
+        minDist = other;
+        other = tmp;
+        
         min = i;
       }
     }
 
     return min;
-
   }
 
   // Common API Support
@@ -499,6 +534,14 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
       }
     }
     return al;
+  }
+  
+  private void readObject(java.io.ObjectInputStream in)
+    throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    d1 = new Id.Distance();
+    d = new Id.Distance();
+    listeners = new ArrayList();
   }
 }
 
