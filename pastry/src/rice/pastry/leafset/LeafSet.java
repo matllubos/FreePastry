@@ -703,10 +703,10 @@ public class LeafSet extends Observable implements Serializable {
 
     return result;
   }
-
   /**
    * Add observer method.
    *
+   * @deprecated use addNodeSetListener
    * @param o the observer to add.
    */
   public void addObserver(Observer o) {
@@ -717,11 +717,32 @@ public class LeafSet extends Observable implements Serializable {
   /**
    * Delete observer method.
    *
+   * @deprecated use deleteNodeSetListener
    * @param o the observer to delete.
    */
   public void deleteObserver(Observer o) {
     cwSet.deleteObserver(o);
     ccwSet.deleteObserver(o);
+  }
+
+  /**
+   * Add observer method.
+   *
+   * @param o the observer to add.
+   */
+  public void addNodeSetListener(NodeSetListener listener) {
+    cwSet.addNodeSetListener(listener);
+    ccwSet.addNodeSetListener(listener);
+  }
+
+  /**
+   * Delete observer method.
+   *
+   * @param o the observer to delete.
+   */
+  public void deleteNodeSetListener(NodeSetListener listener) {
+    cwSet.removeNodeSetListener(listener);
+    ccwSet.removeNodeSetListener(listener);
   }
 
   /**
@@ -747,7 +768,6 @@ public class LeafSet extends Observable implements Serializable {
   }
 
   protected boolean isProperlyRemoved(NodeHandle handle) {
-    //if (true) return true;
     return !member(handle);
   }
 

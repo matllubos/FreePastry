@@ -193,15 +193,14 @@ public class ConsistencyPLTest /*implements Observer*/ {
       
       System.out.println("STARTUP "+env.getTimeSource().currentTimeMillis()+" "+node);    
       
-      Observer preObserver = 
-        new Observer() {
-          public void update(Observable arg0, Object arg1) {
+      NodeSetListener preObserver = 
+        new NodeSetListener() {
+          public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
             System.out.println("LEAFSET4:"+env.getTimeSource().currentTimeMillis()+":"+ls);
-            NodeSetUpdate nsu = (NodeSetUpdate)arg1;
-            bootAddresses.add(((SocketNodeHandle)nsu.handle()).getAddress());
+            bootAddresses.add(((SocketNodeHandle)handle).getAddress());
           }
         };
-      ls.addObserver(preObserver);  
+      ls.addNodeSetListener(preObserver);  
       // the node may require sending several messages to fully boot into the ring
       long lastTimePrinted = 0;
       while(!node.isReady()) {
@@ -214,13 +213,12 @@ public class ConsistencyPLTest /*implements Observer*/ {
         Thread.sleep(100);
       }
       System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
-      ls.deleteObserver(preObserver);
+      ls.deleteNodeSetListener(preObserver);
   
-      ls.addObserver(new Observer() {
-        public void update(Observable arg0, Object arg1) {
+      ls.addNodeSetListener(new NodeSetListener() {
+        public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
           System.out.println("LEAFSET1:"+env.getTimeSource().currentTimeMillis()+":"+ls);
-          NodeSetUpdate nsu = (NodeSetUpdate)arg1;
-          bootAddresses.add(((SocketNodeHandle)nsu.handle()).getAddress());
+          bootAddresses.add(((SocketNodeHandle)handle).getAddress());
         }
       });
   

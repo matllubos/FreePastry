@@ -230,10 +230,9 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
   /**
    * Add a leaf set observer to the Pastry node.
    * 
-   * @param o
-   *          the observer.
+   * @deprecated use addLeafSetListener
+   * @param o the observer.
    */
-
   public void addLeafSetObserver(Observer o) {
     leafSet.addObserver(o);
   }
@@ -241,21 +240,25 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
   /**
    * Delete a leaf set observer from the Pastry node.
    * 
-   * @param o
-   *          the observer.
+   * @deprecated use deleteLeafSetListener
+   * @param o the observer.
    */
-
   public void deleteLeafSetObserver(Observer o) {
     leafSet.deleteObserver(o);
   }
 
+  public void addLeafSetListener(NodeSetListener listener) {
+    leafSet.addNodeSetListener(listener);
+  }
+  public void deleteLeafSetListener(NodeSetListener listener) {
+    leafSet.deleteNodeSetListener(listener);
+  }
   /**
    * Add a route set observer to the Pastry node.
    * 
-   * @param o
-   *          the observer.
+   * @deprecated use addRouteSetListener
+   * @param o the observer.
    */
-
   public void addRouteSetObserver(Observer o) {
     routeSet.addObserver(o);
   }
@@ -263,12 +266,19 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
   /**
    * Delete a route set observer from the Pastry node.
    * 
-   * @param o
-   *          the observer.
+   * @deprecated use deleteRouteSetListener
+   * @param o the observer.
    */
-
   public void deleteRouteSetObserver(Observer o) {
     routeSet.deleteObserver(o);
+  }
+
+  public void addRouteSetListener(NodeSetListener listener) {
+    routeSet.addNodeSetListener(listener);
+  }
+
+  public void removeRouteSetListener(NodeSetListener listener) {
+    routeSet.removeNodeSetListener(listener);
   }
 
   /**

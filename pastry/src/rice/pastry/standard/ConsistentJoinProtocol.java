@@ -7,9 +7,7 @@ import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeSetUpdate;
-import rice.pastry.PastryNode;
+import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Address;
 import rice.pastry.messaging.Message;
@@ -31,7 +29,7 @@ import rice.selector.TimerTask;
  * 
  * @author Jeff Hoye
  */
-public class ConsistentJoinProtocol extends StandardJoinProtocol implements Observer, LoopObserver {
+public class ConsistentJoinProtocol extends StandardJoinProtocol implements Observer, NodeSetListener, LoopObserver {
 
   /**
    * This variable is set to prevent the process from going to sleep or not
@@ -75,7 +73,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     gotResponse = new WeakHashMap();
     failed = new HashSet();
     observing = new HashSet();
-    ls.addObserver(this);
+    ls.addNodeSetListener(this);
     ln.addObserver(this);
     Parameters p = ln.getEnvironment().getParameters();
     MAX_TIME_TO_BE_SCHEDULED = p.getInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled");
@@ -340,6 +338,19 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     nh.receiveMessage(new ConsistentJoinMsg(getAddress(),leafSet,failed,!reply));      
   }
   
+  public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
+    if (thePastryNode.isReady()) return;
+    if (added) {
+      if (gotResponse.get(handle) == null) {
+        sendTheMessage(handle,false);
+      }
+    } else {
+      doneProbing(); 
+    }
+    
+    return;
+  }
+  
   /**
    * Can be PastryNode updates, leafset updates, or nodehandle updates.
    */
@@ -350,20 +361,6 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       if (((Boolean)arg).booleanValue() == false) {
         setReady();
       }
-    }
-    
-    if (arg instanceof NodeSetUpdate) {
-      if (thePastryNode.isReady()) return;
-      NodeSetUpdate nsu = (NodeSetUpdate)arg;
-      if (nsu.wasAdded()) {
-        if (gotResponse.get(nsu.handle()) == null) {
-          sendTheMessage(nsu.handle(),false);
-        }
-      } else {
-        doneProbing(); 
-      }
-      
-      return;
     }
     
     if (arg0 instanceof NodeHandle) {

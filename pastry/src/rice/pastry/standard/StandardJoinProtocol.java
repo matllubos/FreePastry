@@ -128,7 +128,7 @@ public class StandardJoinProtocol extends PastryAppl {
       int last = jr.lastRow();
 
       for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
-        RouteSet row[] = routeTable.getRow(i);
+        RouteSet[] row = routeTable.getRow(i);
 
         jr.pushRow(row);
       }

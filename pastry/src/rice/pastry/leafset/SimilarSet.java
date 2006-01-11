@@ -15,7 +15,7 @@ import java.io.*;
  * @author Peter Druschel
  */
 
-public class SimilarSet extends Observable implements NodeSetI, Serializable,
+public class SimilarSet extends Observable implements NodeSetEventSource, NodeSetI, Serializable,
     Observer {
 
   private static final long serialVersionUID = 2289610430696506873L;
@@ -122,11 +122,11 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable,
     } else {
       theSize--;
 
-      setChanged();
 
       if (leafSet.isProperlyRemoved(nodes[theSize])) {
-        if (leafSet.observe)
-          notifyObservers(new NodeSetUpdate(nodes[theSize], false));
+        if (leafSet.observe) {
+          notifyListeners(nodes[theSize], false);
+        }
       }
       if (leafSet.observe)
         nodes[theSize].deleteObserver(this);
@@ -152,10 +152,9 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable,
           break;
     }
 
-    setChanged();
     if (!leafSet.testOtherSet(this, handle)) {
       if (leafSet.observe)
-        notifyObservers(new NodeSetUpdate(handle, true));
+        notifyListeners(handle, true);
     }
 
     // register as an observer, so we'll be notified if the handle is declared
@@ -164,6 +163,52 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable,
       handle.addObserver(this);
 
     return true;
+  }
+
+  transient ArrayList listeners = new ArrayList();
+  
+  /**
+   * Generates too many objects to use this interface
+   * @deprecated use addNodeSetListener
+   */
+  public void addObserver(Observer o) {
+//    if (logger.level <= Logger.WARNING) logger.log("WARNING: Observer on RoutingTable is deprecated");
+    super.addObserver(o); 
+  }
+  
+  /**
+   * Generates too many objects to use this interface
+   * @deprecated use removeNodeSetListener
+   */
+  public void deleteObserver(Observer o) {
+//    if (logger.level <= Logger.WARNING) logger.log("WARNING: Observer on RoutingTable is deprecated");
+    super.deleteObserver(o); 
+  }
+  
+  public void addNodeSetListener(NodeSetListener listener) {
+    synchronized (listeners) {
+      listeners.add(listener);
+    }
+  }
+
+  public void removeNodeSetListener(NodeSetListener listener) {
+    synchronized (listeners) {
+      listeners.remove(listener);
+    }
+  }
+  
+  private void notifyListeners(NodeHandle handle, boolean added) {
+    // pass the event to the Observers of this RoutingTable
+    synchronized (listeners) {
+      for (int i = 0; i < listeners.size(); i++) {
+        ((NodeSetListener)listeners.get(i)).nodeSetUpdate(this,handle,added); 
+      }
+    }
+    // handle deprecated interface
+    if (countObservers() > 0) {
+      setChanged();
+      notifyObservers(new NodeSetUpdate(handle, added));
+    }
   }
 
   /**
@@ -293,10 +338,9 @@ public class SimilarSet extends Observable implements NodeSetI, Serializable,
 
     theSize--;
 
-    setChanged();
     if (leafSet.isProperlyRemoved(handle)) {
       if (leafSet.observe)
-        notifyObservers(new NodeSetUpdate(handle, false));
+        notifyListeners(handle, false);
     }
 
     if (leafSet.observe)

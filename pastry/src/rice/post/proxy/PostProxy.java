@@ -31,6 +31,7 @@ import rice.p2p.past.*;
 import rice.p2p.past.gc.GCPastImpl;
 import rice.p2p.util.XMLObjectInputStream;
 import rice.pastry.*;
+import rice.pastry.NodeHandle;
 import rice.pastry.commonapi.PastryIdFactory;
 import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
@@ -1491,10 +1492,9 @@ public class PostProxy {
    */
   private void startPartitionHandler() {
     final LeafSet leafSet = pastryNode.getLeafSet();
-    leafSet.addObserver(new Observer() {
-      public void update(Observable arg0, Object arg1) {
-        NodeSetUpdate nsu = (NodeSetUpdate) arg1;
-        if (!nsu.wasAdded()) {
+    leafSet.addNodeSetListener(new NodeSetListener() {
+      public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
+        if (!added) {
           if (pastryNode.isReady() && !leafSet.isComplete()
               && leafSet.size() < (leafSet.maxSize() / 2)) {
             // kill self

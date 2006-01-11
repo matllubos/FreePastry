@@ -30,25 +30,15 @@ public abstract class PastryAppl implements MessageReceiver
 
   protected Logger logger;
   
-  private class LeafSetObserver implements Observer {
-    public void update(Observable o, Object arg) {
-      NodeSetUpdate nsu = (NodeSetUpdate) arg;
-
-      NodeHandle handle = nsu.handle();
-      boolean wa = nsu.wasAdded();
-
-      leafSetChange(handle, wa);
+  private class LeafSetObserver implements NodeSetListener {
+    public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
+      leafSetChange(handle, added);
     }
   }
 
-  private class RouteSetObserver implements Observer {
-    public void update(Observable o, Object arg) {
-      NodeSetUpdate nsu = (NodeSetUpdate) arg;
-
-      NodeHandle handle = nsu.handle();
-      boolean wa = nsu.wasAdded();
-
-      routeSetChange(handle, wa);
+  private class RouteSetObserver implements NodeSetListener {
+    public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
+      routeSetChange(handle, added);
     }
   }
 
@@ -81,8 +71,8 @@ public abstract class PastryAppl implements MessageReceiver
     thePastryNode = pn;
     thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
 
-    thePastryNode.addLeafSetObserver(new LeafSetObserver());
-    thePastryNode.addRouteSetObserver(new RouteSetObserver());
+    thePastryNode.addLeafSetListener(new LeafSetObserver());
+    thePastryNode.addRouteSetListener(new RouteSetObserver());
 
     thePastryNode.registerApp(this); // just adds it to a list
     logger = pn.getEnvironment().getLogManager().getLogger(getClass(), instance);

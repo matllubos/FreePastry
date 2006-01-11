@@ -80,7 +80,7 @@ public class RouteSet implements NodeSetI, Serializable,
       nodes[theSize++] = handle;
 
 //      setChanged();
-      notifyObservers(new NodeSetUpdate(handle, true));
+      notifyTable(handle, true);
 
       // ping handles while the set is not full
       handle.ping();
@@ -99,7 +99,7 @@ public class RouteSet implements NodeSetI, Serializable,
       } else if (handle.proximity() < worstProximity) {
         // remove handle with worst proximity
 //        setChanged();
-        notifyObservers(new NodeSetUpdate(nodes[worstIndex], false));
+        notifyTable(nodes[worstIndex], false);
 
         // in case we observe this handle, stop doing so
         nodes[worstIndex].deleteObserver(this);
@@ -108,7 +108,7 @@ public class RouteSet implements NodeSetI, Serializable,
         nodes[worstIndex] = handle;
 
 //        setChanged();
-        notifyObservers(new NodeSetUpdate(handle, true));
+        notifyTable(handle, true);
         handle.addObserver(this);
 
         return true;
@@ -149,8 +149,7 @@ public class RouteSet implements NodeSetI, Serializable,
 
         nodes[i] = nodes[--theSize];
 
-//        setChanged();
-        notifyObservers(new NodeSetUpdate(handle, false));
+        notifyTable(handle, false);
 
         // in case we observe this handle, stop doing so
         handle.deleteObserver(this);
@@ -176,8 +175,7 @@ public class RouteSet implements NodeSetI, Serializable,
 
         nodes[i] = nodes[--theSize];
 
-//        setChanged();
-        notifyObservers(new NodeSetUpdate(handle, false));
+        notifyTable(handle, false);
 
         // in case we observe this handle, stop doing so
         handle.deleteObserver(this);
@@ -189,14 +187,14 @@ public class RouteSet implements NodeSetI, Serializable,
     return null;
   }
 
-  RoutingTable observer;
+  transient RoutingTable observer;
   
-  private void notifyObservers(Object foo) {
+  private void notifyTable(NodeHandle handle, boolean added) {
     if (observer != null)
-      observer.update(this, foo);
+      observer.nodeSetUpdate(null, handle, added);
   }
   
-  public void addObserver(RoutingTable rt) {
+  public void setRoutingTable(RoutingTable rt) {
     observer = rt; 
   }
   

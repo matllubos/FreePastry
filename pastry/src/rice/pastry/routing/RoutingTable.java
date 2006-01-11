@@ -3,6 +3,7 @@ package rice.pastry.routing;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
+
 import java.util.*;
 
 /**
@@ -33,7 +34,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class RoutingTable extends Observable implements Observer {
+public class RoutingTable extends Observable implements NodeSetEventSource {
   /**
    * The routing calculations will occur in base <EM>2 <SUP>idBaseBitLength
    * </SUP></EM>
@@ -75,7 +76,7 @@ public class RoutingTable extends Observable implements Observer {
       // insert this node at the appropriate column
       routingTable[i][myCol] = new RouteSet(maxEntries);
       routingTable[i][myCol].put(myNodeHandle);
-      routingTable[i][myCol].addObserver(this);
+      routingTable[i][myCol].setRoutingTable(this);
     }
   }
 
@@ -268,7 +269,7 @@ public class RoutingTable extends Observable implements Observer {
     if (routingTable[diffDigit][digit] == null) {
       // allocate a RouteSet
       routingTable[diffDigit][digit] = new RouteSet(maxEntries);
-      routingTable[diffDigit][digit].addObserver(this);
+      routingTable[diffDigit][digit].setRoutingTable(this);
     }
 
     return routingTable[diffDigit][digit];
@@ -348,16 +349,24 @@ public class RoutingTable extends Observable implements Observer {
    * @param o the RouteSet
    * @param arg the event
    */
-  public void update(Observable o, Object arg) {
-    // pass the event to the Observers of this RoutingTable
-    setChanged();
-    notifyObservers(arg);
-  }
+//  public void update(Observable o, Object arg) {
+//    // pass the event to the Observers of this RoutingTable
+//    setChanged();
+//    notifyObservers(arg);
+//  }
 
-  public void update(RouteSet o, Object arg) {
+  public void nodeSetUpdate(Object o, NodeHandle handle, boolean added) {
     // pass the event to the Observers of this RoutingTable
-    setChanged();
-    notifyObservers(arg);
+    synchronized (listeners) {
+      for (int i = 0; i < listeners.size(); i++) {
+        ((NodeSetListener)listeners.get(i)).nodeSetUpdate(this,handle,added); 
+      }
+    }
+    // handle deprecated interface
+    if (countObservers() > 0) {
+      setChanged();
+      notifyObservers(new NodeSetUpdate(handle, added));
+    }
   }
 
   /**
@@ -412,5 +421,37 @@ public class RoutingTable extends Observable implements Observer {
       }
     }
     return set.size();
+  }
+
+  transient ArrayList listeners = new ArrayList();
+  
+  /**
+   * Generates too many objects to use this interface
+   * @deprecated use addNodeSetListener
+   */
+  public void addObserver(Observer o) {
+    if (logger.level <= Logger.WARNING) logger.log("WARNING: Observer on RoutingTable is deprecated");
+    super.addObserver(o); 
+  }
+  
+  /**
+   * Generates too many objects to use this interface
+   * @deprecated use deleteNodeSetListener
+   */
+  public void deleteObserver(Observer o) {
+    if (logger.level <= Logger.WARNING) logger.log("WARNING: Observer on RoutingTable is deprecated");
+    super.deleteObserver(o); 
+  }
+  
+  public void addNodeSetListener(NodeSetListener listener) {
+    synchronized (listeners) {
+      listeners.add(listener);
+    }
+  }
+
+  public void removeNodeSetListener(NodeSetListener listener) {
+    synchronized (listeners) {
+      listeners.remove(listener);
+    }
   }
 }
