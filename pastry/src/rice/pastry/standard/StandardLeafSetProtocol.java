@@ -43,6 +43,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     localHandle = local;
     security = sm;
     leafSet = ls;
+    cachedSet = new HashSet(leafSet.maxSize() * 2);  
     routeTable = rt;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
     address = new LeafSetProtocolAddress();
@@ -132,6 +133,13 @@ public class StandardLeafSetProtocol implements MessageReceiver {
       throw new Error("message received is of unknown type");
   }
 
+
+  /**
+   * Optimization. 
+   * gc was thrashing due to all of these HashSets being created.  So, now we just reuse one.
+   */
+  HashSet cachedSet = null;
+  
   /**
    * Checks a received leafset advertisement for missing nodes
    * 
@@ -140,7 +148,6 @@ public class StandardLeafSetProtocol implements MessageReceiver {
    * @param notifyMissing if true, notify missing nodes
    * @return true if any nodes where found missing in the received leafset
    */
-
   protected boolean checkLeafSet(LeafSet remotels, NodeHandle from,
       boolean notifyMissing) {
 
@@ -153,9 +160,10 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     // it also ensures recovery in the event of node failures
 
     HashSet insertedHandles;
-    if (notifyMissing)
-      insertedHandles = new HashSet(leafSet.maxSize() * 2);
-    else
+    if (notifyMissing) {
+      cachedSet.clear();
+      insertedHandles = cachedSet;      
+    } else
       insertedHandles = null;
 
     BroadcastLeafSet bl = new BroadcastLeafSet(localHandle, leafSet,
