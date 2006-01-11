@@ -423,7 +423,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     return set.size();
   }
 
-  transient ArrayList listeners = new ArrayList();
+  ArrayList listeners = new ArrayList();
   
   /**
    * Generates too many objects to use this interface
