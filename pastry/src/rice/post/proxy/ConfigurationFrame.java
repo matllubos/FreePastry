@@ -399,7 +399,7 @@ public class ConfigurationFrame extends JFrame {
       super("SMTP Client", layout, 
             new SaveablePanel[][] { 
             { new TextBox("email_ring_" + ((rice.p2p.multiring.RingId) proxy.address.getAddress()).getRingId().toStringFull() + "_smtp_server", "Default SMTP Server", "The default SMTP server to use if an email is sent to a non-ePOST recipient - this is generally the same as your normal SMTP server") },
-            { new EnableBox("email_smtp_send_authenticate", "Use Authentication", "Whether or not the SMTP client should attempt authenication before sending (via CRAM-MD5 or AUTH LOGIN)") },
+            { new EnableBox("email_smtp_send_authentication", "Use Authentication", "Whether or not the SMTP client should attempt authenication before sending (via CRAM-MD5 or AUTH LOGIN)") },
             { new TextBox("email_smtp_username", "Username", "Username to use when logging into remote SMTP servers") },
             { new PasswordBox("email_smtp_password", "Password", "Password to use when logging into remote SMTP servers") } });
     }
