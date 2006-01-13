@@ -802,16 +802,12 @@ public class PostImpl implements Post, Application, ScribeClient {
         };
 
         MultiContinuation mc = new MultiContinuation(c, results.length);
-        PostLog alog = null;
 
         for (int i = 0; i < results.length; i++) {
           if (results[i] instanceof PostLog) {
             final PostLog log = (PostLog)results[i];
             Continuation sc = mc.getSubContinuation(i);
   
-            if (alog == null) {
-              alog = log;
-            }
             if ((log.getPublicKey() == null) || (log.getEntityAddress() == null)) {
               sc.receiveException(new PostException("Malformed PostLog: " + log.getPublicKey() + " " + log.getEntityAddress()));
               continue;
@@ -828,12 +824,12 @@ public class PostImpl implements Post, Application, ScribeClient {
               continue;
             }
   
-            if (!alog.getPublicKey().equals(log.getPublicKey())) {
+            if (!keyPair.getPublic().equals(log.getPublicKey())) {
               sc.receiveException(new PostException("Malformed PostLog: key mismatch between replicas."));
               continue;
             }
   
-            if (!alog.getCertificate().equals(log.getCertificate())) {
+            if (!certificate.equals(log.getCertificate())) {
               sc.receiveResult(new PostException("Malformed PostLog: certificate mismatch between replicas."));
               continue;
             }
