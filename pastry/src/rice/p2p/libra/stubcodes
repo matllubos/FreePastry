@@ -1,0 +1,214 @@
+   anycast() method in MyLibraClient
+
+	} else if(content instanceof MyScribeContent) {
+	
+
+	    // Here we implement the logic to make sure that we are eligible for a good parent just on the basis of local metadat information. Note : The propagation of metadata information to the parents make sure that in directAnycast() we are not chosen in the first place
+	    
+	    
+	    boolean returnValue;
+	    MyScribeContent myContent = (MyScribeContent)content;
+	    //System.out.println("anycastMessageContent at anycast(): " + myContent);
+	    String myTopicName = myContent.topicName;
+	    int topicNumber = topicName2Number(myTopicName);
+	    NodeHandle anycastRequestor = myContent.from;
+	    byte[] requestorIdArray = myContent.getESMIdArray();
+	    
+	    
+	    if(endpoint.getLocalNodeHandle().equals(anycastRequestor)) {
+		// We do not accept the anycast made by ourself
+		return false;
+	    
+	    }
+	    
+	    
+	    // We prevent ESM tree loop formation 
+	    ESMContent esmContent = (ESMContent)esmScribePolicy.leafMetadata.get(topic);
+	    
+	    boolean canAccept = false;
+	    
+	    // This is a hack to force some number of traversals in the NUMTESTGROUPS
+	    //myPrint(" topicNumber= " + topicNumber + " , " + "#refused= " + myContent.numRefused + " , " + " thresh= " + LibraTest.ANYCASTTRAVERSALTHRESHOLD, 850);
+	    if((topicNumber < NUMTESTGROUPS) && (myContent.numRefused < LibraTest.ANYCASTTRAVERSALTHRESHOLD)) {
+		myContent.numRefused ++;
+		canAccept = false;
+	    } else {
+		if(esmContent == null) {
+		    if(printEnable(topicNumber)) {
+			myPrint("anycast(" + endpoint.getLocalNodeHandle() + ", " + "esmContent=null" + ", " + "ret=true", 850);
+		    }
+		    canAccept = true;
+		} else if(!esmContent.hasSpareBandwidth()) {
+		    if(printEnable(topicNumber)) {
+			myPrint("ESMContentRunId= " + esmContent.esmRunId + " anycast(" +  endpoint.getLocalNodeHandle() + ", " + "esmContent=noBandwidth" + ", " + "ret=false", 850);
+		    }
+		    canAccept = false;
+		} else if(!esmContent.hasGoodPerformance()) {
+		    if(!LibraTest.ENABLEFASTCONVERGENCE) {
+			if(printEnable(topicNumber)) {
+			    myPrint("ESMContentRunId= " + esmContent.esmRunId + " anycast(" + endpoint.getLocalNodeHandle() + ", " + "esmContent=highLoss_FastConvergenceFlagDisabled" + ", " + "ret=false", 850);
+			}
+			canAccept = false;
+		    } else {
+			if(!esmContent.allowFastConvergence(myContent.pathLength, myContent.paramsPath)) {
+			    if(printEnable(topicNumber)) {
+				myPrint("ESMContentRunId= " + esmContent.esmRunId + " anycast(" +  endpoint.getLocalNodeHandle() + ", " + "esmContent=highLoss_FastConvergenceFlagEnabled_IMPROPERORDERING" + ", " + "ret=false", 850);
+			    }
+			    canAccept = false;			    
+			}
+		    }
+		} else if(!esmContent.hasNoLoops(requestorIdArray)) {
+		    if(printEnable(topicNumber)) {
+			myPrint("ESMContentRunId= " + esmContent.esmRunId + " anycast(" +  endpoint.getLocalNodeHandle() + ", " + "esmContent=hasLoops" + ", " + "ret=false", 850);
+		    }
+		    canAccept = false;
+		} else {
+		    if(printEnable(topicNumber)) {
+			myPrint("ESMContentRunId= " + esmContent.esmRunId + " anycast(" +  endpoint.getLocalNodeHandle() + ", " + "esmContent=SpareB_LowLossORFastConvergenceProperOrdering_NoLoops" + ", " + "ret=true " + "esmcontent: " + esmContent, 850);
+		    }
+		    canAccept = true;
+		}
+	    }
+	    
+	    
+	    if(canAccept) {
+		int policy = esmScribePolicy.getPolicy(topicNumber);
+		if((policy == ESMScribePolicy.CENTRALRANDOM) || (policy == ESMScribePolicy.CENTRALOPTIMAL) || (policy == ESMScribePolicy.ESMCENTRALRANDOM) || (policy == ESMScribePolicy.ESMCENTRALOPTIMAL)) {
+		    // We check to see if we have other children present
+		    NodeHandle[] children = myScribe.getChildren(topic);
+		    if(children.length > 0) {
+			myPrint("WARNING: In the Centralized policies, the intermediate node being a subscriber refused the anycast although it could have accepted it", 850);
+			returnValue = false;
+		    } else {
+			returnValue = true;
+		    }
+		} else {
+		    returnValue = true; // We accept the anycast
+		}
+	    
+	    } else {
+		if(printEnable(topicNumber)) {
+		    myPrint("SysTime: " + System.currentTimeMillis() +  " Node "+endpoint.getLocalNodeHandle()+" REFUSED anycast from " + anycastRequestor + "for Topic[ "+ myTopicName + " ] " + topic + " for ESM loop formation/Bandwidth/Performance/FORECEDTRAVERSALS", 850);
+		}
+		returnValue = false;
+	    }
+	    
+	    
+	    
+
+	    if(returnValue) {
+		
+		// We will send an ack back to the anycast requestor
+		// We also tell it the hostIp:esmServerPort/dummyesmServerPort depending on the topicNumber
+		
+		
+		int portToReport; // This is the datapath port
+		byte[] idToReport;
+		int tNumber = topicName2Number(myTopicName); 
+		if(tNumber < NUMTESTGROUPS) {
+		    portToReport = dummyesmDatapathPort;
+		    idToReport = dummyesmOverlayId;
+		} else {
+		    portToReport =  ((ESMRegistryState)esmRegistry.get(new Integer(tNumber))).esmDatapathPort;
+		idToReport =  ((ESMRegistryState)esmRegistry.get(new Integer(tNumber))).esmOverlayId;
+		}
+		if(printEnable(topicNumber)) {
+		    myPrint("SysTime: " + System.currentTimeMillis() + " Node "+endpoint.getLocalNodeHandle()+" ACCEPTED anycast from " + anycastRequestor + "for Topic[ "+ myTopicName + " ] " + topic, 850);
+		    
+		    
+		}
+		if (anycastRequestor != null) {
+		    endpoint.route(null, new MyAnycastAckMsg(myContent, endpoint.getLocalNodeHandle(), topic, hostIp, idToReport, portToReport, cachedGNPCoord), anycastRequestor);
+		}
+		reqESMServerProspectiveChild(tNumber,requestorIdArray);
+		
+	    }
+	    return returnValue;
+	}
+	return false;
+    }
+
+
+
+
+
+**********************************************************************************************************
+
+  // Verifies that the handle satisfies the predicate 
+    //   a) does not form ESM tree loops
+    //   b) is not overloaded
+    //   c) has good performance
+    public boolean predicateVerified(String topicName, NodeHandle handle, Topic topic, ESMContent esmContent, byte[] requestorIdArray, GNPCoordinate requestorGNPCoord, int pathLengthRequestor, byte[] paramsPathRequestor) {
+	int topicNumber = myLibraClient.topicName2Number(topicName);
+	boolean printEnable = myLibraClient.printEnable(topicNumber);
+	if(esmContent == null) {
+	    if(printEnable) {
+		myLibraClient.myPrint("pVerify(" + handle + ", " + "esmContent=null" + ", " + "ret=true", 850);
+	    }
+	    return true;
+	}
+
+	// We check here if the handle satisfies the predicate
+	if(esmContent.hasAggregateFlagSet()) {
+	    // Note : Implement the logic for choosing subtrees
+	    // For now we do not do fancy aggregation of metrics
+	    if(!esmContent.hasSpareBandwidth()) {
+		if(printEnable) {
+		    myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" + handle + ", " + "esmContent=Aggreg_noBandwidth" + ", " + "ret=false" + " esmContent= " + esmContent, 850);
+		}
+		return false;
+		//} else if(!esmContent.hasGoodPerformance()) {
+		//if(printEnable) {
+		//  myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" + handle + ", " + "esmContent=Aggreg_highLoss" + ", " + "ret=false" + " esmContent= " + esmContent, 850);
+		//}
+		//return false;
+	    } else {
+		if(printEnable) {
+		    myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" + handle + ", " + "esmContent=Aggreg_SpareB" + ", " + "ret=true " + " esmContent= " + esmContent, 850);
+		}
+		return true;
+	    }
+	} else {
+	    // Leaf
+
+	    if(!esmContent.hasSpareBandwidth()) {
+		if(printEnable) {
+		    myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" + handle + ", " + "esmContent=Leaf_noBandwidth" + ", " + "ret=false" + " esmContent= " + esmContent, 850);
+		}
+		return false;
+	    } else if(!esmContent.hasGoodPerformance()) {
+		if(!LibraTest.ENABLEFASTCONVERGENCE) {
+			if(printEnable) {
+			    myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" + handle + ", " + "esmContent=Leaf_highLoss_FastConvergenceFlagDisabled" + ", " + "ret=false" + " esmContent= " + esmContent, 850);
+			}
+			return false;
+		} else {
+		    if(!esmContent.allowFastConvergence(pathLengthRequestor, paramsPathRequestor)) {
+			if(printEnable) {
+			    myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" +  handle + ", " + "esmContent=Leaf_highLoss_FastConvergenceFlagEnabled_IMPROPERORDERING" + ", " + "ret=false" + " esmContent= " + esmContent, 850);
+			}
+			return false;			    
+		    }
+		}
+	    } else if(!esmContent.hasNoLoops(requestorIdArray)) {
+		if(printEnable) {
+		    myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" + handle + ", " + "esmContent=Leaf_hasLoops" + ", " + "ret=false" + " esmContent= " + esmContent, 850);
+		}
+		return false;
+	    } else {
+		if(printEnable) {
+		    double gnpDist;
+		    if(requestorGNPCoord == null) {
+			gnpDist = Double.MAX_VALUE;
+		    } else {
+			gnpDist = requestorGNPCoord.distance(esmContent.getGNPCoord());
+		    }
+		    myLibraClient.myPrint("ESMContentRunId= " + esmContent.esmRunId + " pVerify(" + handle + ", " + "esmContent=Leaf_SpareB_LowLossORFastConvergenceProperOrdering_NoLoops" + ", " + "ret=true" + " Depth= " + esmContent.getDepth() + " GNPDist= " + gnpDist +  " SpareB= " + esmContent.getSpareBandwidth() + " Time= " + esmContent.time, 850);
+		}
+		return true;
+	    }
+
+	    
+	}
+	
+    }
