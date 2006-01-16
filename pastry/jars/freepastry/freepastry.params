@@ -42,12 +42,14 @@ commonapi_testing_num_nodes = 10
 # random number generator's seed, "CLOCK" uses the current clock time
 random_seed = CLOCK
 
-# sphere or euclidean 
+# sphere, euclidean or gt-itm
 direct_simulator_topology = sphere
 # -1 starts the simulation with the current time
 direct_simulator_start_time = -1;
 #pastry_direct_use_own_random = true
 #pastry_periodic_leafset_protocol_use_own_random = true
+pastry_direct_gtitm_matrix_file=GNPINPUT
+pastry_direct_gtitm_max_overlay_size=1000
 
 # rice.pastry.socket parameters
 # tells the factory you intend to use multiple nodes
