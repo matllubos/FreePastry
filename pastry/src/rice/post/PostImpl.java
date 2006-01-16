@@ -3,7 +3,6 @@ package rice.post;
 import java.io.*; 
 import java.security.*;
 import java.util.*;
-import java.util.logging.* ;
 
 import rice.*;
 import rice.Continuation.*;
@@ -12,11 +11,8 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.past.*;
-import rice.p2p.replication.manager.*;
 import rice.p2p.scribe.*;
 import rice.p2p.util.*;
-
-import rice.persistence.*;
 
 import rice.post.delivery.*;
 import rice.post.log.*;
@@ -399,7 +395,7 @@ public class PostImpl implements Post, Application, ScribeClient {
         // verify message is signed
         if (! verifySignedPostMessage(signedMessage, senderLog.getPublicKey())) {
           if (logger.level <= Logger.WARNING) logger.log("Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor.");
-          parent.receiveException(new PostException("Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor. (ourkey: " + keyPair.getPublic() + " senderkey: " + senderLog.getPublicKey() + ")"));
+          parent.receiveException(new PostException("Problem encountered verifying " + message.getClass().getName() + " from " + sender + " - dropping on floor. (senderkey: " + senderLog.getPublicKey() + ")"));
           return;
         }
 
