@@ -16,7 +16,7 @@ import rice.pastry.messaging.*;
  * @author Y. Charlie Hu
  * @author Rongmei Zhang
  */
-public class SphereNetwork extends GeometricNetworkSimulator {
+public class SphereNetwork extends BasicNetworkSimulator {
 
   /**
    * Constructor.

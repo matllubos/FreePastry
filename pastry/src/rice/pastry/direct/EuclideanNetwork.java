@@ -17,7 +17,7 @@ import rice.pastry.messaging.*;
  * @author Andrew Ladd
  * @author Rongmei Zhang
  */
-public class EuclideanNetwork extends GeometricNetworkSimulator {
+public class EuclideanNetwork extends BasicNetworkSimulator {
 
   /**
    * Constructor.

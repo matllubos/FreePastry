@@ -80,6 +80,7 @@ public abstract class CommonAPITest {
   // the possible network simulation models
   public static final String SIMULATOR_SPHERE = "sphere";
   public static final String SIMULATOR_EUCLIDEAN = "euclidean";
+  public static final String SIMULATOR_GT_ITM = "gt-itm";
 
 
   // ----- PASTRY SPECIFIC FIELDS -----
@@ -126,6 +127,8 @@ public abstract class CommonAPITest {
     if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
       if (SIMULATOR.equalsIgnoreCase(SIMULATOR_SPHERE)) {
         simulator = new SphereNetwork(env);
+      } else if (SIMULATOR.equalsIgnoreCase(SIMULATOR_GT_ITM)){
+        simulator = new GenericNetwork(env);        
       } else {
         simulator = new EuclideanNetwork(env);
       }

@@ -14,7 +14,7 @@ import rice.pastry.*;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.BroadcastRouteRow;
 
-public abstract class GeometricNetworkSimulator implements NetworkSimulator {
+public abstract class BasicNetworkSimulator implements NetworkSimulator {
 
   Vector nodes = new Vector();
 
@@ -34,7 +34,7 @@ public abstract class GeometricNetworkSimulator implements NetworkSimulator {
 
   protected RandomSource random;
 
-  public GeometricNetworkSimulator(Environment env) {
+  public BasicNetworkSimulator(Environment env) {
     this.environment = env;
     Parameters params = env.getParameters();
     if (params.contains("pastry_direct_use_own_random")
