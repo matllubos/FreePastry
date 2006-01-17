@@ -188,9 +188,7 @@ public class SocketChannelWriter {
               }
               record("Sent", queue.getFirst(), buffer.limit(), path);
             } else {
-              synchronized (queue) {
-                queue.removeFirst();
-              }
+              queue.removeFirst();
               
               return write(sc);
             }
@@ -213,10 +211,8 @@ public class SocketChannelWriter {
         if (logger.level <= Logger.FINER) logger.log(
             "(W) Finished writing message " + queue.getFirst() + " - queue now contains " + (queue.size() - 1) + " items");
         
-        synchronized (queue) {
-          queue.removeFirst();
-          buffer = null;
-        }
+        queue.removeFirst();
+        buffer = null;
       }
     }
   }
