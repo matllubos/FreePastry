@@ -18,10 +18,19 @@ import rice.environment.Environment;
  */
 public class LogOutputStream extends OutputStream {
 
+  // the underlying logger to output to
   protected Logger logger;
+  
+  // buffer where we build up output
   protected byte[] buffer;
+  
+  // position where the next write into the buffer would go.
   protected int offset;
+  
+  // log level to output as
   protected int level;
+  
+  // size of the output buffer, in bytes
   public static final int BUFFER_SIZE = 1024;
   
   /**
@@ -50,18 +59,20 @@ public class LogOutputStream extends OutputStream {
 
   public void write(int b) throws IOException {
     if (b == '\n') {
-      if (buffer[offset] == '\r')
+      if ((offset > 0) && (buffer[offset-1] == '\r'))
         offset--;
       flush();
       return;
     }
-    if (buffer[offset]=='\r') {
+    if ((offset > 0) && buffer[offset-1]=='\r') {
       // treat bare \r as a newline
       offset--;
       flush();
     }
-    if (offset == buffer.length)
+    // I don't actually know why it needs to be - 1 but it works
+    if (offset == buffer.length-1)
       flush();
+    // okay, so we're not unicode friendly. Cry me a river.
     buffer[offset++] = (byte)(b & 0xff);
   }
   
