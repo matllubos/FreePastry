@@ -111,6 +111,11 @@ public class NetworkLogUploadThread extends Thread {
       }
     });
 
+    if (files.length == 0) {
+      if (logger.level <= Logger.INFO) logger.log( "No new log files found; skipping upload");
+      return;
+    }
+    
     for (int i=0; i<files.length; i++) 
       sendFile(files[i], true);
     
