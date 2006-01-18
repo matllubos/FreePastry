@@ -283,19 +283,19 @@ public class SocketChannelWriter {
       return ByteBuffer.wrap(baos2.toByteArray());
     } catch (InvalidClassException e) {
       if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Object to be serialized was an invalid class!");
+          "PANIC: Object to be serialized was an invalid class! [" + o + "]"+e);
       throw new IOException("Invalid class during attempt to serialize.");
-    } catch (NotSerializableException e) {
+    } catch (NotSerializableException e) {      
       if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Object to be serialized was not serializable! [" + o + "]");
+          "PANIC: Object to be serialized was not serializable! [" + o + "]"+e);
       throw new IOException("Unserializable class during attempt to serialize.");
     } catch (NullPointerException e) {
-      if (logger.level <= Logger.SEVERE) logger.logException(
-          "PANIC: Object to be serialized caused null pointer exception! [" + o + "]",e);
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "PANIC: Object to be serialized caused null pointer exception! [" + o + "]"+e);
       return null;
     } catch (Exception e) {
       if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Object to be serialized caused excception! [" + e + "]");
+          "PANIC: Object to be serialized caused excception! [" + e + "]"+e);
       throw new IOException("Exception during attempt to serialize.");
     }
   }  
