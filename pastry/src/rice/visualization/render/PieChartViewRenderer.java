@@ -29,7 +29,9 @@ public class PieChartViewRenderer extends ViewRenderer {
       }
       
       public void paintComponent(Graphics g) {
-        PieChartView view = (PieChartView) visualization.getData().getView(v.getName());        
+        PieChartView view = (PieChartView) visualization.getData().getView(v.getName());      
+        if (view == null)
+          return;
         DefaultPieDataset data = new DefaultPieDataset();
         
         for (int i=0; i<view.getItemCount(); i++) {

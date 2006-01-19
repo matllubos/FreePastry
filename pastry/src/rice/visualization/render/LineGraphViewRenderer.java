@@ -32,6 +32,9 @@ public class LineGraphViewRenderer extends ViewRenderer {
       public void paintComponent(Graphics g) {
         if (visualization.getData() != null) {
         LineGraphView view = (LineGraphView) visualization.getData().getView(v.getName());
+        if (view == null)
+          return;
+        
         XYSeries[] data = new XYSeries[view.getSeriesCount()];
         java.awt.Color[] colors = new java.awt.Color[view.getSeriesCount()];
         

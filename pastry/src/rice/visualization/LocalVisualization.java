@@ -36,6 +36,7 @@ public class LocalVisualization implements DataProvider {
 
     this.handle = handle;
     this.frame = new LocalVisualizationFrame(this);
+    this.data = new Data();
     
     Thread t = new Thread() {
       public void run() {

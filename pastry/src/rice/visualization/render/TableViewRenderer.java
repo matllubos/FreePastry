@@ -33,6 +33,8 @@ public class TableViewRenderer extends ViewRenderer {
       
       public void paintComponent(Graphics g) {
         TableView view = (TableView) visualization.getData().getView(v.getName());
+        if (view == null)
+          return;
         int[] widths = getSizes(view);
         
         for (int i=0; i<view.getRowCount(); i++) {
@@ -86,15 +88,15 @@ public class TableViewRenderer extends ViewRenderer {
     return total;
   }
   
-  protected int[] getSizes(TableView view) {
-    if (view.getSizes() != null)
-      return view.getSizes();
-    
-    if (view.getRowCount() > 0)
-      return fillArray(view.getRow(0).length, getCellWidth());
-    
-    return fillArray(1, getCellWidth());
-  }
+    protected int[] getSizes(TableView view) {
+      if (view.getSizes() != null)
+        return view.getSizes();
+      
+      if (view.getRowCount() > 0)
+        return fillArray(view.getRow(0).length, getCellWidth());
+      
+      return fillArray(1, getCellWidth());
+    }
   
   protected int[] fillArray(int num, int fill) {
     int[] result = new int[num];

@@ -29,6 +29,8 @@ public class KeyValueListViewRenderer extends ViewRenderer {
       
       public void paintComponent(Graphics g) {
         KeyValueListView view = (KeyValueListView) visualization.getData().getView(v.getName());
+        if (view == null)
+          return;
         
         Enumeration e = view.getKeyNames();
         int i = 0;
