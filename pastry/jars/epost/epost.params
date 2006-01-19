@@ -156,7 +156,11 @@ log_network_upload_enable=true
 rice.email.proxy.smtp_loglevel=OFF
 rice.email.proxy.imap_loglevel=OFF
 rice.email.proxy.pop3_loglevel=OFF
-loglevel=ALL
+loglevel=FINE
+# to get the bytes in and out counts from SocketChannel*
+rice.pastry.socket_loglevel=FINER
+rice.p2p.replication_loglevel=INFO
+rice.p2p.glacier.v2_loglevel=INFO
 rice.persistence_loglevel=INFO
 rice.pastry.routing_loglevel=INFO
 rice.environment.random_loglevel = WARNING
