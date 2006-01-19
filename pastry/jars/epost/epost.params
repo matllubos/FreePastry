@@ -153,9 +153,9 @@ log_rotating_date_format=yyyyMMdd.HHmmss.SSS
 log_network_upload_other_filenames=aggregation.param
 log_network_upload_old_filenames=nohup.out
 log_network_upload_enable=true
-rice.email.proxy.smtp_loglevel=OFF
-rice.email.proxy.imap_loglevel=OFF
-rice.email.proxy.pop3_loglevel=OFF
+rice.email.proxy.smtp_loglevel=INFO
+rice.email.proxy.imap_loglevel=INFO
+rice.email.proxy.pop3_loglevel=INFO
 loglevel=FINE
 # to get the bytes in and out counts from SocketChannel*
 rice.pastry.socket_loglevel=FINER

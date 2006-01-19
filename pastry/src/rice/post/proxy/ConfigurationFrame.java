@@ -689,11 +689,11 @@ public class ConfigurationFrame extends JFrame {
 	  	  layout.setConstraints(box, gbc2);      
 	  	  add(box);
 
-	  	  box.setSelected(!parameters.getString(parameter).equalsIgnoreCase("OFF"));
+	  	  box.setSelected(!parameters.getString(parameter).equalsIgnoreCase("INFO"));
 	  	}
 	  
 	  	protected String getValue() {
-	  	  return box.isSelected() ? "ALL" : "OFF";
+	  	  return box.isSelected() ? "ALL" : "INFO";
 	  	}
 	}
 
