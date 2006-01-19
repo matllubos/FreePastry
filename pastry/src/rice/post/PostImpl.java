@@ -476,6 +476,8 @@ public class PostImpl implements Post, Application, ScribeClient {
               processSignedPostMessage(message.getEncryptedMessage(), new StandardContinuation(parent) {
                 public void receiveResult(Object o) {
                   if (o.equals(Boolean.TRUE)) {
+                    // the SignedPostMessage has someone else's signature in it
+                    // we need to generate our signature of the message
                     byte[] sig = signPostMessage(message.getEncryptedMessage().getMessage()).getSignature();
                     delivery.delivered(message.getEncryptedMessage(), sig, new StandardContinuation(parent) {
                       public void receiveResult(Object o) {
@@ -1209,9 +1211,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   private SignedPostMessage signPostMessage(PostMessage message) {
     try {
-      byte[] sig = SecurityUtils.sign(SecurityUtils.serialize(message), keyPair.getPrivate());
-      
-      return new SignedPostMessage(message, sig);
+      return new SignedPostMessage(message, keyPair.getPrivate());
     } catch (SecurityException e) {
       if (logger.level <= Logger.WARNING) logger.logException("SecurityException " + e + " occured while siging PostMessage " + message + " - aborting.",e);
       return null;
@@ -1235,15 +1235,9 @@ public class PostImpl implements Post, Application, ScribeClient {
         return false;
       } 
       
-      byte[] plainText = SecurityUtils.serialize(message.getMessage());
-      byte[] sig = message.getSignature();
-
-      return SecurityUtils.verify(plainText, sig, key);
+      return message.verify(key);
     } catch (SecurityException e) {
       if (logger.level <= Logger.WARNING) logger.logException("SecurityException " + e + " occured while verifiying PostMessage " + message + " - aborting.",e);
-      return false;
-    } catch (IOException e) {
-      if (logger.level <= Logger.WARNING) logger.logException("IOException " + e + " occured while verifiying PostMessage " + message + " - aborting.",e);
       return false;
     }
   }

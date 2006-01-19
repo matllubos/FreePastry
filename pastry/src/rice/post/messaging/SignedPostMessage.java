@@ -1,8 +1,12 @@
 package rice.post.messaging;
 
 import java.io.*;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.*;
 
+import rice.p2p.util.MathUtils;
+import rice.p2p.util.SecurityUtils;
 import rice.post.*;
 import rice.post.security.*;
 
@@ -14,7 +18,10 @@ import rice.post.security.*;
 public final class SignedPostMessage implements Serializable {
 
   // the PostMessage
+  // should mark it transient eventually, but preserved for backwards compatibility
   private PostMessage message;
+  
+  private byte[] msg;
 
   // the signature for this message
   private byte[] signature;
@@ -27,9 +34,10 @@ public final class SignedPostMessage implements Serializable {
    *
    * @param sender The sender of this message.
    */
-  public SignedPostMessage(PostMessage message, byte[] signature) {
+  public SignedPostMessage(PostMessage message, PrivateKey key) throws IOException {
     this.message = message;
-    this.signature = signature;
+    this.msg = SecurityUtils.serialize(message);
+    this.signature = SecurityUtils.sign(msg, key);
   }
 
   /**
@@ -39,6 +47,10 @@ public final class SignedPostMessage implements Serializable {
    */
   public PostMessage getMessage() {
     return message;
+  }
+  
+  public byte[] getMessageBytes() {
+    return msg;
   }
 
   /**
@@ -51,6 +63,10 @@ public final class SignedPostMessage implements Serializable {
     return signature;
   }
 
+  public boolean verify(PublicKey key) {
+    return SecurityUtils.verify(getMessageBytes(), getSignature(), key);
+  }
+  
   public boolean equals(Object o) {
     if (o instanceof SignedPostMessage) {
       SignedPostMessage spm = (SignedPostMessage) o;
@@ -60,9 +76,35 @@ public final class SignedPostMessage implements Serializable {
 
     return false;
   }
+  
+  public void dump() {
+    if (msg != null)
+      System.out.println("SignedPostMessage: msg: "+MathUtils.toHex(msg));
+    if (signature != null)
+      System.out.println("SignedPostMessage: signature: "+MathUtils.toHex(signature));
+    if (message != null)
+      System.out.println("SignedPostMessage: message: "+ message);
+  }
 
   public String toString() {
     return "[SPM " + message + "]";
   }
 
+  private void readObject(java.io.ObjectInputStream in)
+    throws IOException, ClassNotFoundException 
+  {
+    in.defaultReadObject();
+    if ((msg == null) && (message == null)) {
+      throw new IOException("can't deserialze signedPostMessage with both fields null");
+    }
+    if (msg == null) {
+      // old-style message
+      System.out.println("SignedPostMessage: Old-style message: "+message);
+      msg = SecurityUtils.serialize(message);
+    } else {
+      // this will someday be a transient field
+      message = (PostMessage)SecurityUtils.deserialize(msg);
+      System.out.println("SignedPostMessage: New-style message: "+message);
+    }
+  }
 }
