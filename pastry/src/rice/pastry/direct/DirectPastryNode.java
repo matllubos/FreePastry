@@ -155,5 +155,9 @@ public class DirectPastryNode extends PastryNode {
   public Logger getLogger() {
     return logger;
   }
+
+  public void send(NodeHandle handle, Message message) {
+    handle.receiveMessage(message);
+  }
 }
 

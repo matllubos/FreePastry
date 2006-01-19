@@ -8,6 +8,7 @@ import rice.environment.logging.Logger;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
+import rice.pastry.routing.RouteMessage;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.security.*;
 
@@ -460,5 +461,8 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
   public void destroy() {
     myMessageDispatch.destroy();
   }
+
+
+  abstract public void send(NodeHandle handle, Message message);
 }
 

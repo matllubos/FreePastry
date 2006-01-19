@@ -6,6 +6,7 @@ import java.net.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.client.*;
 import rice.pastry.dist.*;
@@ -123,6 +124,19 @@ public class SocketPastryNode extends DistPastryNode {
 
   public void setSocketSourceRouteManager(SocketSourceRouteManager srManager) {
     this.srManager = srManager;
+  }
+
+  public void send(NodeHandle handle, Message message) {
+    SocketNodeHandle snh = (SocketNodeHandle) handle;
+    if (getNodeId().equals(snh.getId())) {
+      //debug("Sending message " + msg + " locally");
+      receiveMessage(message);
+    } else {
+      if (logger.level <= Logger.FINER) logger.log(
+          "Passing message " + message + " to the socket controller for writing");
+      getSocketSourceRouteManager().send(snh.getEpochAddress(), message);
+    }
+    
   }
 
 }

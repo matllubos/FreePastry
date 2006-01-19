@@ -165,9 +165,9 @@ public class RouteMessage extends Message implements Serializable,
     nextHop = null;
 
     if (localHandle.equals(handle)) {
-      handle.receiveMessage(internalMsg);
+      localHandle.getLocalNode().send(handle, internalMsg);
     } else
-      handle.receiveMessage(this);
+      localHandle.getLocalNode().send(handle, this);
 
     return true;
   }
