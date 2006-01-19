@@ -221,7 +221,11 @@ public class BodyPart extends FetchPart {
       part.getHeaders(c);
       c.sleep();
 
-      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+      if (c.exceptionThrown()) {
+        String msg = "Error: Unable to fetch data; logmatch "+Long.toString(_conn.getEnvironment().getRandomSource().nextLong(),16);
+        handlePastException(c.getException(),msg);
+        return format(msg);
+      }
 
       EmailData data = (EmailData) c.getResult();
       
@@ -276,7 +280,9 @@ public class BodyPart extends FetchPart {
     part.getContent(c);
     c.sleep();
 
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+    if (c.exceptionThrown()) { 
+      return handlePastException(c.getException(),"Error: Unable to fetch data - did not exist in Past!"); 
+    }
 
     EmailContentPart[] parts = (EmailContentPart[]) c.getResult();
     
@@ -298,7 +304,9 @@ public class BodyPart extends FetchPart {
     part.getContent(c);
     c.sleep();
 
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+    if (c.exceptionThrown()) { 
+      return handlePastException(c.getException(),"Error: Unable to fetch data - did not exist in Past!"); 
+    }
 
     if (c.getResult() == null) {
       return "Unable to fetch data - did not exist in Past!\r\n";
@@ -312,9 +320,13 @@ public class BodyPart extends FetchPart {
     part.getHeaders(c);
     c.sleep();
 
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-    EmailData headers = (EmailData) c.getResult();
+    EmailData headers;
+    
+    if (c.exceptionThrown()) { 
+      headers = new EmailData(handlePastException(c.getException(),"Error: Unable to fetch data - did not exist in Past!").getBytes()); 
+    } else {
+      headers = (EmailData) c.getResult();
+    }
     
     if (headers == null) {
       headers = new EmailData("Error: Unable to fetch data - did not exist in Past!\r\n".getBytes());
@@ -324,11 +336,15 @@ public class BodyPart extends FetchPart {
     part.getContent(c);
     c.sleep();
 
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+    if (c.exceptionThrown()) { 
+      String data = handlePastException(c.getException(),"Error: Unable to fetch data - did not exist in Past!");
+      
+      return new String(headers.getData()).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n" + data; 
+    } else {
+      EmailContentPart data = (EmailContentPart) c.getResult();
 
-    EmailContentPart data = (EmailContentPart) c.getResult();
-
-    return new String(headers.getData()).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n" + fetchAll(data);
+      return new String(headers.getData()).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n" + fetchAll(data);
+    }
   }
 
   private String getRange(BodyPartRequest breq, String content) {
@@ -350,6 +366,24 @@ public class BodyPart extends FetchPart {
       return "\"\"";
     } else {
       return "{" + content.length() + "}\r\n" + content;
+    }
+  }
+  
+  private String handlePastException(Exception e, String msg) throws MailboxException {
+    boolean inmsg = _conn.getEnvironment().getParameters().getBoolean("email_imap_past_exceptions_in_message");
+    if (inmsg) {
+      Logger logger = _conn.getEnvironment().getLogManager().getLogger(BodyPart.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException("Got exception processing BodyPart: ",e);
+      
+      StringWriter sw = new StringWriter();
+      PrintWriter pw = new PrintWriter(sw);
+      
+      e.printStackTrace(pw);
+      pw.close();
+      sw.flush();
+      return msg + ": "+ sw.getBuffer();
+    } else {
+      throw new MailboxException(e);
     }
   }
 }

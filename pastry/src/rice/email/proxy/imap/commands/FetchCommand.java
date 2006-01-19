@@ -78,6 +78,7 @@ public class FetchCommand extends AbstractImapCommand {
       for (Iterator i = parts.iterator(); i.hasNext();) {
         Object part = i.next();
         FetchPart handler = registry.getHandler(part);
+        handler.setConn(_conn);
         result.append(handler.fetch(msg, part));
         
         if (i.hasNext())
