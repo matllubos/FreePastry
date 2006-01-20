@@ -18,8 +18,15 @@ import rice.post.security.*;
 public final class SignedPostMessage implements Serializable {
 
   // the PostMessage
-  // should mark it transient eventually, but preserved for backwards compatibility
+  /**
+   * Can't mess with this field in the deserialization or we
+   * risk breaking PresenceMessages even more than they already
+   * are for older versions of ePOST.
+   * @deprecated
+   */
   private PostMessage message;
+  
+  private transient PostMessage cachedMessage;
   
   private byte[] msg;
 
@@ -36,6 +43,7 @@ public final class SignedPostMessage implements Serializable {
    */
   public SignedPostMessage(PostMessage message, PrivateKey key) throws IOException {
     this.message = message;
+    this.cachedMessage = message;
     this.msg = SecurityUtils.serialize(message);
     this.signature = SecurityUtils.sign(msg, key);
   }
@@ -46,6 +54,8 @@ public final class SignedPostMessage implements Serializable {
    * @return The sender
    */
   public PostMessage getMessage() {
+    if (cachedMessage != null)
+      return cachedMessage;
     return message;
   }
   
@@ -70,7 +80,7 @@ public final class SignedPostMessage implements Serializable {
   public boolean equals(Object o) {
     if (o instanceof SignedPostMessage) {
       SignedPostMessage spm = (SignedPostMessage) o;
-      return (this.message.equals(spm.getMessage()) &&
+      return (getMessage().equals(spm.getMessage()) &&
               Arrays.equals(signature, spm.getSignature()));
     }
 
@@ -84,10 +94,12 @@ public final class SignedPostMessage implements Serializable {
       System.out.println("SignedPostMessage: signature: "+MathUtils.toHex(signature));
     if (message != null)
       System.out.println("SignedPostMessage: message: "+ message);
+    if (cachedMessage != null)
+      System.out.println("SignedPostMessage: cachedMessage: "+ cachedMessage);
   }
 
   public String toString() {
-    return "[SPM " + message + "]";
+    return "[SPM " + getMessage() + "]";
   }
 
   private void readObject(java.io.ObjectInputStream in)
@@ -101,10 +113,10 @@ public final class SignedPostMessage implements Serializable {
       // old-style message
       System.out.println("SignedPostMessage: Old-style message: "+message);
       msg = SecurityUtils.serialize(message);
+      cachedMessage = message;
     } else {
-      // this will someday be a transient field
-      message = (PostMessage)SecurityUtils.deserialize(msg);
-      System.out.println("SignedPostMessage: New-style message: "+message);
+      cachedMessage = (PostMessage)SecurityUtils.deserialize(msg);
+      System.out.println("SignedPostMessage: New-style message: "+cachedMessage);
     }
   }
 }
