@@ -118,21 +118,23 @@ public class DeliveryService implements ScribeClient {
     
     pending.getMessage(message.getSender(), new StandardContinuation(command) {
       public void receiveResult(Object o) {
-        parent.receiveResult((o == null ? null : ((Delivery) o).getSignedMessage()));
+        parent.receiveResult((o == null ? null : ((Delivery) o)));
       }
     });
+  }
+  
+  public Id getIdForMessage(SignedPostMessage message) {
+    return (new Delivery(message, factory)).getId();
   }
   
   /**
    * Determines whether or not the given ENM has been delivered before
    *
-   * @param message The message in question
+   * @param id The Id of the message in question
    * @param command The command to run once finished
    */
-  public void check(SignedPostMessage message, Continuation command) {
-    if (logger.level <= Logger.FINER) logger.log( "Checking for existence of message " + message);
-    Id id = (new Delivery(message, factory)).getId();
-    
+  public void check(Id id, Continuation command) {
+    if (logger.level <= Logger.FINER) logger.log( "Checking for existence of message with id " + id);
     if (cache.contains(id)) {
       command.receiveResult(new Boolean(false));
     } else {
@@ -153,9 +155,9 @@ public class DeliveryService implements ScribeClient {
    * @param signature The signature
    * @param command The command to run once finished
    */
-  public void delivered(SignedPostMessage message, byte[] signature, Continuation command) { 
+  public void delivered(SignedPostMessage message, Id id, byte[] signature, Continuation command) { 
     if (logger.level <= Logger.FINER) logger.log( "Inserting receipt for " + message);
-    final Receipt receipt = new Receipt(message, factory, signature);
+    final Receipt receipt = new Receipt(message, id, signature);
     
     cache.add(receipt.getId());
     
@@ -183,9 +185,9 @@ public class DeliveryService implements ScribeClient {
    * @param message The message that was delivered
    * @param command The command to run once finished
    */
-  public void undeliverable(SignedPostMessage message, Continuation command) { 
+  public void undeliverable(SignedPostMessage message, Id id, Continuation command) { 
     if (logger.level <= Logger.FINER) logger.log( "Inserting undeliverable for " + message);
-    final Undeliverable receipt = new Undeliverable(message, factory);
+    final Undeliverable receipt = new Undeliverable(message, id);
     
     cache.add(receipt.getId());
     

@@ -13,8 +13,10 @@ import rice.p2p.commonapi.*;
  * used after the receipt of a PresenceMessage.
  */
 public class DeliveryMessage extends PostMessage {
+  private static final long serialVersionUID = -863725686248756000L;
 
   private SignedPostMessage message;
+  private Id id;
   private PostEntityAddress destination;
 
   /**
@@ -25,10 +27,12 @@ public class DeliveryMessage extends PostMessage {
    */
   public DeliveryMessage(PostEntityAddress sender,
                          PostEntityAddress destination,
+                         Id id,
                          SignedPostMessage message) {
     super(sender);
     this.destination = destination;
     this.message = message;
+    this.id = id;
   }
   
   /**
@@ -48,6 +52,14 @@ public class DeliveryMessage extends PostMessage {
    */
   public SignedPostMessage getEncryptedMessage() {
     return message;
+  }
+
+  public Id getId() {
+    return id;
+  }
+
+  public void setId(Id id) {
+    this.id = id;
   }
 }
 

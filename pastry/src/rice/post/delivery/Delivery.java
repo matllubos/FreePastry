@@ -55,6 +55,16 @@ public class Delivery extends ContentHashPastContent implements GCPastContent {
   }
   
   /**
+   * Constructor which takes the wrapped message
+   *
+   * @param message The message to deliver
+   */
+  protected Delivery(SignedPostMessage message, Id id) {
+    super(id);
+    this.message = message;
+  }
+
+  /**
    * Returns the internal signed message
    *
    * @return The wrapped message

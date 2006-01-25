@@ -426,7 +426,8 @@ public class PostImpl implements Post, Application, ScribeClient {
     delivery.presence(message, new StandardContinuation(command) {
       public void receiveResult(Object o) {
         if (o != null) {
-          DeliveryMessage dm = new DeliveryMessage(address, message.getSender(), (SignedPostMessage) o);
+          Delivery d = (Delivery)o;
+          DeliveryMessage dm = new DeliveryMessage(address, message.getSender(), d.getId(), d.getSignedMessage());
           endpoint.route(message.getLocation(), new PostPastryMessage(signPostMessage(dm)), message.getHandle());
         }
         
@@ -442,14 +443,18 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   private void processDeliveryMessage(final DeliveryMessage message, final Continuation command) {
     if (logger.level <= Logger.FINE) logger.log("Delivery message from : " + message.getSender());
-
+    if (logger.level <= Logger.FINEST) logger.log("Delivery message contains: "+message.getEncryptedMessage());
+    
     if (! message.getDestination().equals(address)) {
-      if (logger.level <= Logger.FINER) logger.log("Received delivery message at "  + address + " for " + message.getDestination());
+      if (logger.level <= Logger.FINER) logger.log("Incorrectly received delivery message at "  + address + " for " + message.getDestination());
       command.receiveResult(new Boolean(false));
       return;
     }
     
     Runnable buffered = new Runnable() {
+      // this determines whether there's something to run and if so proceeds
+      // makes sure that we process everything, and that we only run once
+      // see below
       public void next() {
         Runnable run = null;
         
@@ -468,7 +473,11 @@ public class PostImpl implements Post, Application, ScribeClient {
       }
       
       public void run() {
-        delivery.check(message.getEncryptedMessage(), new StandardContinuation(command) {
+        if (message.getId() == null) {
+          if (logger.level <= Logger.FINE) logger.log("Got old-style delivery message - filling in Id; value may be bogus");
+          message.setId(delivery.getIdForMessage(message.getEncryptedMessage()));
+        }
+        delivery.check(message.getId(), new StandardContinuation(command) {
           public void receiveResult(Object o) {
             if (((Boolean) o).booleanValue()) {
               if (logger.level <= Logger.FINE) logger.log("Haven't seen message " + message + " before - accepting");
@@ -479,7 +488,7 @@ public class PostImpl implements Post, Application, ScribeClient {
                     // the SignedPostMessage has someone else's signature in it
                     // we need to generate our signature of the message
                     byte[] sig = signPostMessage(message.getEncryptedMessage().getMessage()).getSignature();
-                    delivery.delivered(message.getEncryptedMessage(), sig, new StandardContinuation(parent) {
+                    delivery.delivered(message.getEncryptedMessage(), message.getId(), sig, new StandardContinuation(parent) {
                       public void receiveResult(Object o) {
                         parent.receiveResult(o);
                         next();
@@ -499,7 +508,7 @@ public class PostImpl implements Post, Application, ScribeClient {
                 public void receiveException(final Exception e) {
                   if (e instanceof PostException) {
                     if (logger.level <= Logger.WARNING) logger.log("Marking message " + message + " as undeliverable due to exception " + e);
-                    delivery.undeliverable(message.getEncryptedMessage(), new StandardContinuation(parent) {
+                    delivery.undeliverable(message.getEncryptedMessage(), message.getId(), new StandardContinuation(parent) {
                       public void receiveResult(Object o) {
                         parent.receiveException(e);
                         next();
@@ -532,6 +541,7 @@ public class PostImpl implements Post, Application, ScribeClient {
       }
     };
 
+    // make sure that the buffered.run() method is only called once; see above
     boolean go = false;
     
     synchronized (deliveryBuffer) {

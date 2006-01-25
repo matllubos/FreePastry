@@ -20,6 +20,8 @@ import rice.p2p.commonapi.*;
  */
 public class Receipt extends Delivery {
   
+  private static final long serialVersionUID = -2762703066657973942L;
+
   /**
    * The signature
    */
@@ -30,8 +32,8 @@ public class Receipt extends Delivery {
    *
    * @param message The message to deliver
    */
-  protected Receipt(SignedPostMessage message, IdFactory factory, byte[] signature) {
-    super(message, factory);
+  protected Receipt(SignedPostMessage message, Id id, byte[] signature) {
+    super(message, id);
     this.signature = signature;
   }
   

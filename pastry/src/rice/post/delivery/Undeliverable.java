@@ -18,14 +18,16 @@ import rice.p2p.commonapi.*;
  * @author Peter Druschel
  */
 public class Undeliverable extends Delivery {
-  
+
+  private static final long serialVersionUID = 4077957479096391613L;
+
   /**
    * Constructor which takes the wrapped message
    *
    * @param message The message to deliver
    */
-  protected Undeliverable(SignedPostMessage message, IdFactory factory) {
-    super(message, factory);
+  protected Undeliverable(SignedPostMessage message, Id id) {
+    super(message, id);
   }
 }
 
