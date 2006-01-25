@@ -86,7 +86,18 @@ public class VisualizationEmailProxy extends EmailProxy {
         stepStart("Starting Visualization Server on port " + visualizationPort);
         Thread t = new Thread(server, "Visualization Server Thread");
         t.start();
-        stepDone(SUCCESS);
+        synchronized (server) {
+          for (int i = 0; i < 10; i++) {
+            if (server.running())
+              break;
+            server.wait(1000);
+          }
+          if (server.running()) {
+            stepDone(SUCCESS);
+          } else {
+            stepDone(FAILURE);
+          }
+        }
         
         if (parameters.getBoolean("visualization_client_enable")) {
           stepStart("Launching Visualization Client");
@@ -97,6 +108,7 @@ public class VisualizationEmailProxy extends EmailProxy {
         }
       } catch (Exception e) {
         if (logger.level <= Logger.WARNING) logger.logException( "ERROR: Unable to launch Visualization server - continuing - " , e);
+        stepDone(FAILURE);
       }
       
       

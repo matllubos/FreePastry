@@ -58,6 +58,8 @@ public class VisualizationServer implements Runnable {
   protected Environment environment;
   
   protected Logger logger;
+
+  private boolean running;
   
   public VisualizationServer(InetSocketAddress address, PastryNode node, StorageManager storage, RingCertificate cert, Object[] objects, Environment env) {
     this.environment = env;
@@ -70,6 +72,7 @@ public class VisualizationServer implements Runnable {
     this.panelCreators = new Vector();
     this.NAchecker = new NetworkActivityChecker();
     this.FDSchecker = new FreeDiskSpaceChecker();
+    this.running = false;
     
     ((DistPastryNode) node).addNetworkListener(NAchecker);
     this.debugCommandHandlers = new Vector();
@@ -90,6 +93,11 @@ public class VisualizationServer implements Runnable {
     try {    
       server = new ServerSocket();
       server.bind(address);
+      
+      synchronized (this) {
+        running = true;
+        notifyAll();
+      }
 
       while (true) {
         final Socket socket = server.accept();
@@ -105,6 +113,9 @@ public class VisualizationServer implements Runnable {
     } catch (IOException e) {
       if (logger.level <= Logger.SEVERE) logger.logException(
           "Server: Exception " + e + " thrown.",e);
+      synchronized (this) {
+        running = false;
+      }
     }
   }
   
@@ -375,6 +386,10 @@ public class VisualizationServer implements Runnable {
     environment.getRandomSource().nextBytes(data);
     IdFactory factory = new MultiringIdFactory(node.getId(), new PastryIdFactory(environment));
     return factory.buildId(data);
+  }
+
+  public synchronized boolean running() {
+    return running;
   }
 
 }
