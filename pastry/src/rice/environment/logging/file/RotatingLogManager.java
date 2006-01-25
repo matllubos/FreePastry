@@ -87,7 +87,7 @@ public class RotatingLogManager extends AbstractLogManager {
         oldfile.renameTo(new File(rot_filename));
       }
       try {
-        ps = new PrintStream(new FileOutputStream(oldfile), true);
+        ps = new PrintStream(new FileOutputStream(oldfile, true), true);
         if (oldps != null)
           oldps.close();
       } catch (FileNotFoundException e) {
