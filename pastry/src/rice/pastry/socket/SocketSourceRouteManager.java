@@ -272,8 +272,17 @@ public class SocketSourceRouteManager {
    * @param message The message to send
    * @param address The address to send the message to
    */
-  public void send(EpochInetSocketAddress address, Message message) {
-    getAddressManager(address, true).send(message);
+  public void send(final EpochInetSocketAddress address, final Message message) {
+    if (spn.getEnvironment().getSelectorManager().isSelectorThread()) {
+      getAddressManager(address, true).send(message);
+    } else {
+      if (logger.level <= Logger.FINE) logger.log("Application attempted to send "+message+" to "+address+" on a non-selector thread.");
+      spn.getEnvironment().getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          getAddressManager(address, true).send(message);
+        }
+      });
+    }
   }
   
   /**
