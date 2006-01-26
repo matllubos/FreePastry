@@ -111,18 +111,28 @@ public abstract class AbstractLogManager implements LogManager {
               // parameter "removed" 
               // a) set the logger to use defaultlevel, 
               // b) set the level 
-              if (loggers.containsKey(loggerName)) { // perhaps we haven't even created such a logger yet
-                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(loggerName);
-                hl.useDefault = true;
-                hl.level = globalLogLevel;
+              Iterator i = loggers.keySet().iterator();
+              while(i.hasNext()) {
+                String name = (String)i.next();
+                if (name.startsWith(loggerName)) {
+//              if (loggers.containsKey(loggerName)) { // perhaps we haven't even created such a logger yet
+                  HeirarchyLogger hl = (HeirarchyLogger)loggers.get(name);
+                  hl.useDefault = true;
+                  hl.level = globalLogLevel;
+                }
               }
             } else {
               // a) set the logger to not use the defaultlevel, 
               // b) set the level 
-              if (loggers.containsKey(loggerName)) { // perhaps we haven't even created such a logger yet
-                HeirarchyLogger hl = (HeirarchyLogger)loggers.get(loggerName);
-                hl.useDefault = false;
-                hl.level = parseVal(paramName);
+              Iterator i = loggers.keySet().iterator();
+              while(i.hasNext()) {
+                String name = (String)i.next();
+                if (name.startsWith(loggerName)) {
+//              if (loggers.containsKey(loggerName)) { // perhaps we haven't even created such a logger yet
+                  HeirarchyLogger hl = (HeirarchyLogger)loggers.get(name);
+                  hl.useDefault = false;
+                  hl.level = parseVal(paramName);
+                } 
               }
 	        }
 	      }
