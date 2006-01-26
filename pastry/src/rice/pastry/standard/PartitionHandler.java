@@ -7,10 +7,10 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.join.JoinRequest;
 import rice.pastry.leafset.LeafSet;
-import rice.pastry.routing.RouteSet;
-import rice.pastry.routing.RoutingTable;
-import rice.pastry.security.PastrySecurityManager;
+import rice.pastry.routing.*;
+import rice.pastry.security.*;
 import rice.selector.TimerTask;
 
 public class PartitionHandler extends TimerTask implements NodeSetListener {
@@ -128,25 +128,33 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
       public void receiveResult(Object result) {
         // XXX can't do getNearest() because it will likely stay in our partition
         // have to route a message (like a JoinRequest) to our key via the result node
-        final NodeHandle nearest = factory.getNearest(pastryNode.getLocalHandle(), (NodeHandle)result);
-        if (!nearest.equals(pastryNode.getLocalHandle())) {
-          factory.getLeafSet(nearest, new Continuation() {
+        JoinRequest jr = new JoinRequest(pastryNode.getLocalHandle(), pastryNode
+            .getRoutingTable().baseBitLength());
 
-            public void receiveResult(Object result) {
-              LeafSet nearestLeafSet = (LeafSet)result;
-              HashSet inserted = new HashSet(); 
-              pastryNode.getLeafSet().merge(nearestLeafSet, nearest, pastryNode.getRoutingTable(), sec, false, inserted);
-              Iterator it = inserted.iterator();
-              while(it.hasNext()) {
-                ((NodeHandle)it.next()).checkLiveness(); 
-              }
-            }
-            
-            public void receiveException(Exception result) {
-              // oh well
-            } 
-          });
-        }
+        RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), jr,
+            new PermissiveCredentials(), jr.getDestination());
+        rm.getOptions().setRerouteIfSuspected(false);
+        ((NodeHandle)result).bootstrap(rm);
+        
+//        final NodeHandle nearest = factory.getNearest(pastryNode.getLocalHandle(), (NodeHandle)result);
+//        if (!nearest.equals(pastryNode.getLocalHandle())) {
+//          factory.getLeafSet(nearest, new Continuation() {
+//
+//            public void receiveResult(Object result) {
+//              LeafSet nearestLeafSet = (LeafSet)result;
+//              HashSet inserted = new HashSet(); 
+//              pastryNode.getLeafSet().merge(nearestLeafSet, nearest, pastryNode.getRoutingTable(), sec, false, inserted);
+//              Iterator it = inserted.iterator();
+//              while(it.hasNext()) {
+//                ((NodeHandle)it.next()).checkLiveness(); 
+//              }
+//            }
+//            
+//            public void receiveException(Exception result) {
+//              // oh well
+//            } 
+//          });
+//        }
         
       }
 
