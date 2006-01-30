@@ -1,16 +1,13 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.util.Observable;
 
 import rice.environment.logging.Logger;
-import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.pastry.messaging.*;
+import rice.pastry.NodeId;
+import rice.pastry.dist.DistNodeHandle;
+import rice.pastry.messaging.Message;
 import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
-import rice.selector.SelectorManager;
 
 /**
  * Class which represents the address and nodeId of a remote node.  In
