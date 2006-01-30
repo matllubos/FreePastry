@@ -2,19 +2,15 @@
 package rice.pastry.socket;
 
 import java.io.*;
-import java.net.*;
-import java.nio.*;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.*;
-import java.util.*;
-import java.util.zip.*;
 
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.environment.params.Parameters;
 import rice.pastry.*;
-import rice.pastry.messaging.*;
+import rice.pastry.messaging.Message;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the
@@ -69,7 +65,6 @@ public class SocketChannelReader {
     this.environment = env;
     this.path = path;
     this.logger = env.getLogManager().getLogger(SocketChannelReader.class, null);
-    Parameters p = env.getParameters();
     sizeBuffer = ByteBuffer.allocateDirect(4);
     SELECTOR_DESERIALIZATION_MAX_SIZE = environment.getParameters().getInt(
         "pastry_socket_reader_selector_deserialization_max_size");
