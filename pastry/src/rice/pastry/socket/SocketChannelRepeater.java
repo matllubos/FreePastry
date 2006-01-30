@@ -2,18 +2,12 @@ package rice.pastry.socket;
 
 import java.io.*;
 import java.net.*;
-import java.nio.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.*;
-import java.util.*;
-import java.util.zip.*;
 
-import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.pastry.*;
-import rice.pastry.messaging.*;
-import rice.pastry.socket.*;
-import rice.pastry.socket.SocketCollectionManager.*;
+import rice.pastry.NetworkListener;
+import rice.pastry.socket.SocketCollectionManager.SourceRouteManager;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the
