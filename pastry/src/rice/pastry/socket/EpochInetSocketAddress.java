@@ -1,13 +1,8 @@
 
 package rice.pastry.socket;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
-
-import rice.pastry.*;
-import rice.pastry.dist.*;
-import rice.pastry.messaging.*;
+import java.io.Serializable;
+import java.net.InetSocketAddress;
 
 /**
  * Class which represets a source route to a remote IP address.
@@ -17,6 +12,11 @@ import rice.pastry.messaging.*;
  */
 public class EpochInetSocketAddress implements Serializable {
   
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 2081191512212313338L;
+
   // a static epoch which indicates an unknown (and unmattering) epoch number
   public static final long EPOCH_UNKNOWN = -1;
     
