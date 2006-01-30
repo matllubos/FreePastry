@@ -1,21 +1,12 @@
 package rice.pastry.socket;
 
-import java.io.*;
-import java.lang.ref.WeakReference;
-import java.net.*;
-import java.util.*;
+import java.io.IOException;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
-import rice.pastry.client.*;
-import rice.pastry.dist.*;
-import rice.pastry.join.*;
-import rice.pastry.leafset.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
-import rice.selector.*;
+import rice.pastry.dist.DistPastryNode;
+import rice.pastry.messaging.Message;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
