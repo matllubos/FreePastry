@@ -1,6 +1,5 @@
 package rice.pastry.socket;
 
-import java.net.InetSocketAddress;
 
 /**
  * Interface which represents an object interested in hearing the result
