@@ -32,13 +32,7 @@ public class MessagePropertyPart extends FetchPart {
     }
 
     public String fetchHandler(StoredMessage msg, Object part) throws MailboxException {
-      ExternalContinuation c = new ExternalContinuation();
-      msg.getMessage().getContent(c);
-      c.sleep();
-
-      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-      EmailMessagePart message = (EmailMessagePart) c.getResult();
+      EmailMessagePart message = msg.getMessage().getContent();
 
       if ("ALL".equals(part)) {
         return fetch(msg, "FLAGS") + " " +
@@ -85,11 +79,14 @@ public class MessagePropertyPart extends FetchPart {
         throw new MailboxException("Unrecognized part " + part);
     }
 
-    String fetchBodyStructure(EmailMultiPart part, boolean bodystructure) throws MailboxException {
-      ExternalContinuation c = new ExternalContinuation();
-      part.getContent(c);
-      c.sleep();
-
+    String fetchBodyStructure(final EmailMultiPart part, boolean bodystructure) throws MailboxException {
+      ExternalRunnable c = new ExternalRunnable() {
+        protected void run(Continuation c) {
+            part.getContent(c);
+        }
+      };
+      c.invokeAndSleep(_conn.getEnvironment());
+      
       if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
       EmailContentPart[] parts = (EmailContentPart[]) c.getResult();
@@ -120,22 +117,28 @@ public class MessagePropertyPart extends FetchPart {
       return result.append(")").toString();
     }
 
-    String fetchBodyStructure(EmailHeadersPart part, boolean bodystructure) throws MailboxException {
-      ExternalContinuation c = new ExternalContinuation();
-      part.getHeaders(c);
-      c.sleep();
-
+    String fetchBodyStructure(final EmailHeadersPart part, boolean bodystructure) throws MailboxException {
+      ExternalRunnable c = new ExternalRunnable() {
+        protected void run(Continuation c) {
+            part.getHeaders(c);
+        }
+      };
+      c.invokeAndSleep(_conn.getEnvironment());
+      
       if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
       InternetHeaders headers = getHeaders((EmailData) c.getResult());
 
-      c = new ExternalContinuation();
-      part.getContent(c);
-      c.sleep();
+      ExternalRunnable d = new ExternalRunnable() {
+        protected void run(Continuation d) {
+            part.getContent(d);
+        }
+      };
+      d.invokeAndSleep(_conn.getEnvironment());
+      
+      if (d.exceptionThrown()) { throw new MailboxException(d.getException()); }
 
-      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-      EmailContentPart content = (EmailContentPart) c.getResult();
+      EmailContentPart content = (EmailContentPart) d.getResult();
       
       if (content instanceof EmailMultiPart) 
         return fetchBodyStructure((EmailMultiPart) content, bodystructure);
@@ -187,11 +190,14 @@ public class MessagePropertyPart extends FetchPart {
       return result.append(")").toString();      
     }
 
-    String fetchBodyStructure(EmailMessagePart part, boolean bodystructure) throws MailboxException {
-      ExternalContinuation c = new ExternalContinuation();
-      part.getContent(c);
-      c.sleep();
-
+    String fetchBodyStructure(final EmailMessagePart part, boolean bodystructure) throws MailboxException {
+      ExternalRunnable c = new ExternalRunnable() {
+        protected void run(Continuation c) {
+            part.getContent(c);
+        }
+      };
+      c.invokeAndSleep(_conn.getEnvironment());
+      
       if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
       EmailContentPart data = (EmailContentPart) c.getResult();
@@ -321,20 +327,17 @@ public class MessagePropertyPart extends FetchPart {
       return msg.getFlagList().toFlagString();
     }
 
-    String fetchInternaldate(StoredMessage msg) throws MailboxException {
+    String fetchInternaldate(final StoredMessage msg) throws MailboxException {
       if (msg.getInternalDate() != 0)
         return "\"" + rice.email.proxy.mail.MimeMessage.dateWriter.format(new Date(msg.getInternalDate())) + "\"";
       
-      ExternalContinuation c = new ExternalContinuation();
-      msg.getMessage().getContent(c);
-      c.sleep();
+      ExternalRunnable d = new ExternalRunnable() {
+        protected void run(Continuation d) throws MailboxException {
+            msg.getMessage().getContent().getHeaders(d);
+        }
+      };
+      d.invokeAndSleep(_conn.getEnvironment());
       
-      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-            
-      ExternalContinuation d = new ExternalContinuation();
-      ((EmailMessagePart) c.getResult()).getHeaders(d);
-      d.sleep();
-
       if (d.exceptionThrown()) { throw new MailboxException(d.getException()); }
 
       InternetHeaders headers = getHeaders((EmailData) d.getResult());
@@ -425,12 +428,15 @@ public class MessagePropertyPart extends FetchPart {
       return "NIL";
     }
     
-    public String fetchEnvelope(EmailHeadersPart part) throws MailboxException {
+    public String fetchEnvelope(final EmailHeadersPart part) throws MailboxException {
       try {
-        ExternalContinuation c = new ExternalContinuation();
-        part.getHeaders(c);
-        c.sleep();
-
+        ExternalRunnable c = new ExternalRunnable() {
+          protected void run(Continuation c) {
+                part.getHeaders(c);
+          }
+        };
+        c.invokeAndSleep(_conn.getEnvironment());
+        
         if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
         InternetHeaders headers = getHeaders((EmailData) c.getResult());

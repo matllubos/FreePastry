@@ -163,9 +163,12 @@ public class EmailProxy extends PostProxy {
       boolean done = false;
       
       while (!done) {
-        ExternalContinuation c = new ExternalContinuation();
-        email.getRootFolder(c);
-        c.sleep();
+        ExternalRunnable c = new ExternalRunnable() {
+          protected void run(Continuation c) {
+            email.getRootFolder(c);
+          }
+        };
+        c.invokeAndSleep(environment);
         
         if (c.exceptionThrown()) { 
           stepDone(FAILURE, "Fetching email log caused exception " + c.getException());

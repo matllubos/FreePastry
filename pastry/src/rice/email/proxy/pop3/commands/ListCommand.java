@@ -32,13 +32,7 @@ public class ListCommand extends Pop3Command {
         
         StoredMessage msg = (StoredMessage) msgList.get(0);
         
-        ExternalContinuation c = new ExternalContinuation();
-        msg.getMessage().getContent(c);
-        c.sleep();
-        
-        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-        
-        EmailMessagePart message = (EmailMessagePart) c.getResult();
+        EmailMessagePart message = msg.getMessage().getContent();
         
         conn.println("+OK " + msgNumStr + " " + message.getSize());
       } else {
@@ -48,13 +42,7 @@ public class ListCommand extends Pop3Command {
         for (Iterator i = messages.iterator(); i.hasNext();) {
           StoredMessage msg = (StoredMessage) i.next();
           
-          ExternalContinuation c = new ExternalContinuation();
-          msg.getMessage().getContent(c);
-          c.sleep();
-          
-          if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-          
-          EmailMessagePart message = (EmailMessagePart) c.getResult();
+          EmailMessagePart message = msg.getMessage().getContent();
           
           conn.println(msg.getSequenceNumber() + " " + message.getSize());
         }

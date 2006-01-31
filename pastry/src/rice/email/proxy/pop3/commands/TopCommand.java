@@ -35,17 +35,11 @@ public class TopCommand extends Pop3Command {
       int numLines = Integer.parseInt(cmdLine[2]);
       
       StoredMessage msg = (StoredMessage) msgList.get(0);
-      ExternalContinuation c = new ExternalContinuation();
-      msg.getMessage().getContent(c);
-      c.sleep();
-      
-      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-      
-      EmailMessagePart message = (EmailMessagePart) c.getResult();
+      EmailMessagePart message = msg.getMessage().getContent();
       
       conn.println("+OK");
       
-      String test = RetrCommand.fetchAll(message);
+      String test = RetrCommand.fetchAll(conn, message);
       String[] lines = test.split("\n");
       int i=0;
       

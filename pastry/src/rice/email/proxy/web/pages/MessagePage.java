@@ -41,14 +41,7 @@ public class MessagePage extends WebPage {
         } else {
           StoredMessage message = (StoredMessage) list.get(0);
           
-          Email email = message.getMessage();
-
-          ExternalContinuation c = new ExternalContinuation();
-          email.getContent(c);
-          c.sleep();
-          if (c.exceptionThrown()) throw new MailboxException(c.getException());
-
-          EmailMessagePart real = (EmailMessagePart) c.getResult();
+          EmailMessagePart real = message.getMessage().getContent();
           ExternalContinuation d = new ExternalContinuation();
           real.getHeaders(d);
           d.sleep();

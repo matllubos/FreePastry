@@ -37,6 +37,8 @@ public class PostMailbox implements Mailbox {
 
   // the hierarchy delimiter used by ePOST
   public static String HIERARCHY_DELIMITER = "/";
+  
+  private Environment env;
 
   /**
    * Constructs a PostMailbox given an emailservice
@@ -49,6 +51,7 @@ public class PostMailbox implements Mailbox {
       throw new IllegalArgumentException("EmailService cannot be null in PostMailbox.");
 
     this.email = email;
+    this.env = env;
     
     if (root != null) {
       this.root = new PostFolder(root, null, email);
@@ -181,14 +184,17 @@ public class PostMailbox implements Mailbox {
     if (exists)
       throw new MailboxException("Folder " + new_name + " already exists!"); 
     
-    PostFolder old = (PostFolder) getFolder(old_name); 
+    final PostFolder old = (PostFolder) getFolder(old_name); 
     old.delete(false);
     
-    String[] names = new_name.split(HIERARCHY_DELIMITER);
+    final String[] names = new_name.split(HIERARCHY_DELIMITER);
 
-    ExternalContinuation c = new ExternalContinuation();
-    old.getFolder().setName(names[names.length-1], c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        old.getFolder().setName(names[names.length-1], c);
+      }
+    };
+    c.invokeAndSleep(env);
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
     
@@ -202,9 +208,14 @@ public class PostMailbox implements Mailbox {
       }
     }
     
-    ExternalContinuation d = new ExternalContinuation();
-    parent.getFolder().addChildFolder(old.getFolder(), d);
-    d.sleep();
+    final PostFolder p = parent;
+    
+    ExternalRunnable d = new ExternalRunnable() {
+      protected void run(Continuation d) {
+        p.getFolder().addChildFolder(old.getFolder(), d);
+      }
+    };
+    d.invokeAndSleep(env);
     
     if (d.exceptionThrown()) { throw new MailboxException(d.getException()); } 
     
@@ -238,7 +249,7 @@ public class PostMailbox implements Mailbox {
     }
   }
 
-  public void subscribe(String fullName) throws MailboxException {
+  public void subscribe(final String fullName) throws MailboxException {
     if (listSubscriptions(fullName).length != 0)
 	  return;
 	  
@@ -248,28 +259,37 @@ public class PostMailbox implements Mailbox {
       return;
     }
 	
-    ExternalContinuation c = new ExternalContinuation();
-    email.addSubscription(fullName, c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        email.addSubscription(fullName, c);
+      }
+    };
+    c.invokeAndSleep(env);
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
   }
 
-  public void unsubscribe(String fullName) throws MailboxException {
+  public void unsubscribe(final String fullName) throws MailboxException {
     if (listSubscriptions(fullName).length == 0)
 	  return;
 	  
-    ExternalContinuation c = new ExternalContinuation();
-    email.removeSubscription(fullName, c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        email.removeSubscription(fullName, c);
+      }
+    };
+    c.invokeAndSleep(env);
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
   }
   
   public String[] listSubscriptions(String pattern) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    email.getSubscriptions(c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        email.getSubscriptions(c);
+      }
+    };
+    c.invokeAndSleep(env);
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
     

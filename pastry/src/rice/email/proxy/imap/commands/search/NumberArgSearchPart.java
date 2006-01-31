@@ -17,23 +17,11 @@ public class NumberArgSearchPart extends SearchPart {
   public boolean includes(StoredMessage msg) {
     try {
       if (getType().equals("LARGER")) {
-        ExternalContinuation c = new ExternalContinuation();
-        msg.getMessage().getContent(c);
-        c.sleep();
-
-        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-        EmailMessagePart message = (EmailMessagePart) c.getResult();
+        EmailMessagePart message = msg.getMessage().getContent();
         
         return (message.getSize() > getArgument());
       } else if (getType().equals("SMALLER")) {
-        ExternalContinuation c = new ExternalContinuation();
-        msg.getMessage().getContent(c);
-        c.sleep();
-
-        if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-        EmailMessagePart message = (EmailMessagePart) c.getResult();
+        EmailMessagePart message = msg.getMessage().getContent();
         
         return (message.getSize() < getArgument());
       } else {

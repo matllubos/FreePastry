@@ -65,13 +65,7 @@ public class BodyPart extends FetchPart {
   }
 
   protected String fetchHandler(StoredMessage msg, Object part) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    msg.getMessage().getContent(c);
-    c.sleep();
-
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-    EmailMessagePart message = (EmailMessagePart) c.getResult();
+    EmailMessagePart message = msg.getMessage().getContent();
     
     if (part instanceof RFC822PartRequest) {
       RFC822PartRequest rreq = (RFC822PartRequest) part;
@@ -137,14 +131,17 @@ public class BodyPart extends FetchPart {
     }
   }
 
-  protected String fetchPart(BodyPartRequest breq, List types, EmailHeadersPart part) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    part.getContent(c);
-    c.sleep();
+  protected String fetchPart(BodyPartRequest breq, List types, final EmailHeadersPart part) throws MailboxException {
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        part.getContent(c);
+      }
+    };
+    c.invokeAndSleep(_conn.getEnvironment());
 
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
 
-    EmailContentPart content = (EmailContentPart) c.getResult();
+    final EmailContentPart content = (EmailContentPart) c.getResult();
 
     if (types.size() == 0) {
       return fetchAll(breq, content);
@@ -157,9 +154,12 @@ public class BodyPart extends FetchPart {
       int i = Integer.parseInt(type);
 
       if (content instanceof EmailMultiPart) {
-        c = new ExternalContinuation();
-        ((EmailMultiPart) content).getContent(c);
-        c.sleep();
+        c = new ExternalRunnable() {
+          protected void run(Continuation c) {
+            ((EmailMultiPart) content).getContent(c);
+          }
+        };
+        c.invokeAndSleep(_conn.getEnvironment());
 
         if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
@@ -215,11 +215,14 @@ public class BodyPart extends FetchPart {
     return fetchHeader(part, parts, true);
   }
 
-  protected String fetchHeader(EmailHeadersPart part, String[] parts, boolean exclude) throws MailboxException {
+  protected String fetchHeader(final EmailHeadersPart part, String[] parts, boolean exclude) throws MailboxException {
     try {
-      ExternalContinuation c = new ExternalContinuation();
-      part.getHeaders(c);
-      c.sleep();
+      ExternalRunnable c = new ExternalRunnable() {
+        protected void run(Continuation c) {
+          part.getHeaders(c);
+        }
+      };
+      c.invokeAndSleep(_conn.getEnvironment());
 
       if (c.exceptionThrown()) {
         String msg = "Error: Unable to fetch data; logmatch "+Long.toString(_conn.getEnvironment().getRandomSource().nextLong(),16);
@@ -272,13 +275,16 @@ public class BodyPart extends FetchPart {
     return seperator.replaceAll("\"", "").replaceAll("'", "");
   }
 
-  public String fetchAll(EmailMultiPart part) throws MailboxException {
+  public String fetchAll(final EmailMultiPart part) throws MailboxException {
     String seperator = getBoundary(part.getType());
     StringBuffer result = new StringBuffer();
 
-    ExternalContinuation c = new ExternalContinuation();
-    part.getContent(c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        part.getContent(c);
+      }
+    };
+    c.invokeAndSleep(_conn.getEnvironment());
 
     if (c.exceptionThrown()) { 
       return handlePastException(c.getException(),"Error: Unable to fetch data - did not exist in Past!"); 
@@ -299,10 +305,13 @@ public class BodyPart extends FetchPart {
     return result.toString();
   }
 
-  public String fetchAll(EmailSinglePart part) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    part.getContent(c);
-    c.sleep();
+  public String fetchAll(final EmailSinglePart part) throws MailboxException {
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        part.getContent(c);
+      }
+    };
+    c.invokeAndSleep(_conn.getEnvironment());
 
     if (c.exceptionThrown()) { 
       return handlePastException(c.getException(),"Error: Unable to fetch data - did not exist in Past!"); 
@@ -315,10 +324,13 @@ public class BodyPart extends FetchPart {
     }
   }
 
-  public String fetchAll(EmailHeadersPart part) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    part.getHeaders(c);
-    c.sleep();
+  public String fetchAll(final EmailHeadersPart part) throws MailboxException {
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        part.getHeaders(c);
+      }
+    };
+    c.invokeAndSleep(_conn.getEnvironment());
 
     EmailData headers;
     
@@ -332,9 +344,12 @@ public class BodyPart extends FetchPart {
       headers = new EmailData("Error: Unable to fetch data - did not exist in Past!\r\n".getBytes());
     }
     
-    c = new ExternalContinuation();
-    part.getContent(c);
-    c.sleep();
+    c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        part.getContent(c);
+      }
+    };
+    c.invokeAndSleep(_conn.getEnvironment());
 
     if (c.exceptionThrown()) { 
       String data = handlePastException(c.getException(),"Error: Unable to fetch data - did not exist in Past!");

@@ -114,13 +114,14 @@ public class SimpleManager implements SmtpManager {
     }
   }
   
-  public boolean isPostAddress(MailAddress addr) {
-    ExternalContinuation c = new ExternalContinuation();
-
-    isPostAddress(addr, c);
-
-    c.sleep();
-
+  public boolean isPostAddress(final MailAddress addr) {
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        isPostAddress(addr, c);
+      }
+    };
+    c.invokeAndSleep(environment);
+    
     if (c.exceptionThrown()) {
       return false;
     } else {
@@ -160,7 +161,7 @@ public class SimpleManager implements SmtpManager {
   }
 
   public void send(SmtpState state, boolean local) throws Exception {
-    HashSet postRecps = new HashSet();
+    final HashSet postRecps = new HashSet();
     HashSet nonPostRecps = new HashSet();
     Iterator i = state.getMessage().getRecipientIterator();
 
@@ -175,9 +176,12 @@ public class SimpleManager implements SmtpManager {
     }
 
     // now, do the expansion to the full mailing lists    
-    ExternalContinuation c = new ExternalContinuation();
-    this.email.expand((PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]), this, c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        SimpleManager.this.email.expand((PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]), SimpleManager.this, c);
+      }
+    };
+    c.invokeAndSleep(environment);
     
     if (c.exceptionThrown())
       throw c.getException();
@@ -195,12 +199,15 @@ public class SimpleManager implements SmtpManager {
     if (logger.level <= Logger.FINER) logger.log(
         "Sending message of size " + state.getMessage().getResource().getSize() + " to " + postRecps.size() + " POST recipeints and " + nonPostRecps.size() + " normal recipients.");
     
-    Email email = PostMessage.parseEmail(getLocalHost(), state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
+    final Email email = PostMessage.parseEmail(getLocalHost(), state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
     
-    ExternalContinuation d = new ExternalContinuation();
-    this.email.sendMessage(email, d);
-    d.sleep();
-
+    ExternalRunnable d = new ExternalRunnable() {
+      protected void run(Continuation d) throws PostException {
+        SimpleManager.this.email.sendMessage(email, d);
+      }
+    };
+    d.invokeAndSleep(environment);
+    
     if (d.exceptionThrown())
       throw d.getException(); 
     

@@ -65,11 +65,11 @@ public class Email implements java.io.Serializable {
 
   /**
    * Returns the header of this message. Should be text.
-   *
-   * @param command The command to run once the header are available
+   * 
+   * @return the content of the email
    */
-  public void getContent(final Continuation command) {
-    command.receiveResult(content);
+  public EmailMessagePart getContent() {
+    return content;
   }
   
   /**

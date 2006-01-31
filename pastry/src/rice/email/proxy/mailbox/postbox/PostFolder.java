@@ -100,11 +100,14 @@ public class PostFolder implements MailFolder {
       if (getChildren().length > 0)
         throw new MailboxException("Folder contains child folders, unable to delete.");
     
-    ExternalContinuation c = new ExternalContinuation();
     parent.folders.remove(folder.getName());
-    parent.getFolder().removeFolder(folder.getName(), c);
-    c.sleep();
-
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        parent.getFolder().removeFolder(folder.getName(), c);
+      }
+    };
+    c.invokeAndSleep(parent.getFolder().getPost().getEnvironment());
+    
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
   }
 
@@ -112,15 +115,16 @@ public class PostFolder implements MailFolder {
     put(msg, new LinkedList(), folder.getPost().getEnvironment().getTimeSource().currentTimeMillis());
   }
 
-  public void put(MovingMessage msg, List lflags, long internaldate) throws MailboxException {
+  public void put(MovingMessage msg, List lflags, final long internaldate) throws MailboxException {
     try {
-      Email email = msg.getEmail();
+      Email anEmail = msg.getEmail();
 
-      if (email == null) {
-        email = PostMessage.parseEmail(this.email.getLocalHost(), null, msg.getResource(), folder.getPost().getEnvironment());
+      if (anEmail == null) {
+        anEmail = PostMessage.parseEmail(this.email.getLocalHost(), null, msg.getResource(), folder.getPost().getEnvironment());
       }
       
-      Flags flags = new Flags();
+      final Email email = anEmail;
+      final Flags flags = new Flags();
 
       Iterator i = lflags.iterator();
 
@@ -128,10 +132,13 @@ public class PostFolder implements MailFolder {
         flags.setFlag((String) i.next(), true);
       }
 
-      ExternalContinuation c = new ExternalContinuation();
-      folder.addMessage(email, flags, internaldate, c);
-      c.sleep();
-
+      ExternalRunnable c = new ExternalRunnable() {
+        protected void run(Continuation c) {
+            folder.addMessage(email, flags, internaldate, c);
+        }
+      };
+      c.invokeAndSleep(folder.getPost().getEnvironment());
+      
       if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
       
       List all = getMessages(MsgFilter.ALL);
@@ -142,10 +149,13 @@ public class PostFolder implements MailFolder {
   }
  
   public List getMessages(MsgFilter range) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    folder.getMessages(c);
-    c.sleep();
-    
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        folder.getMessages(c);
+      }
+    };
+    c.invokeAndSleep(folder.getPost().getEnvironment());
+
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
     LinkedList list = new LinkedList();
@@ -170,12 +180,12 @@ public class PostFolder implements MailFolder {
     return list;
   }
   
-  public void copy(MovingMessage[] messages, List[] flags, long[] internaldates) throws MailboxException {
+  public void copy(MovingMessage[] messages, List[] flags, final long[] internaldates) throws MailboxException {
     if (messages.length == 0)
       return;
     
-    Email[] emails = new Email[flags.length];
-    Flags[] realFlags = new Flags[flags.length];
+    final Email[] emails = new Email[flags.length];
+    final Flags[] realFlags = new Flags[flags.length];
     
     for (int i=0; i<realFlags.length; i++) {
       emails[i] = messages[i].getEmail();
@@ -189,9 +199,12 @@ public class PostFolder implements MailFolder {
         internaldates[i] = folder.getPost().getEnvironment().getTimeSource().currentTimeMillis();
     }
     
-    ExternalContinuation c = new ExternalContinuation();
-    folder.addMessages(emails, realFlags, internaldates, c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        folder.addMessages(emails, realFlags, internaldates, c);
+      }
+    };
+    c.invokeAndSleep(folder.getPost().getEnvironment());
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
     
@@ -205,14 +218,17 @@ public class PostFolder implements MailFolder {
     if (messages.length == 0)
       return;
     
-    StoredEmail[] emails = new StoredEmail[messages.length];
+    final StoredEmail[] emails = new StoredEmail[messages.length];
     
     for (int i=0; i<messages.length; i++)
       emails[i] = ((PostMessage) messages[i]).getStoredEmail();
     
-    ExternalContinuation c = new ExternalContinuation();
-    folder.updateMessages(emails, c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        folder.updateMessages(emails, c);
+      }
+    };
+    c.invokeAndSleep(folder.getPost().getEnvironment());
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
   }
@@ -221,14 +237,17 @@ public class PostFolder implements MailFolder {
     if (messages.length == 0)
       return;
     
-    StoredEmail[] emails = new StoredEmail[messages.length];
+    final StoredEmail[] emails = new StoredEmail[messages.length];
     
     for (int i=0; i<messages.length; i++)
       emails[i] = ((PostMessage) messages[i]).getStoredEmail();
     
-    ExternalContinuation c = new ExternalContinuation();
-    folder.removeMessages(emails, c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        folder.removeMessages(emails, c);
+      }
+    };
+    c.invokeAndSleep(folder.getPost().getEnvironment()); 
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
   }
@@ -237,10 +256,13 @@ public class PostFolder implements MailFolder {
     return folder.getCreationTime() + "";
   }
   
-  public MailFolder createChild(String name) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    folder.createChildFolder(name, c);
-    c.sleep();
+  public MailFolder createChild(final String name) throws MailboxException {
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        folder.createChildFolder(name, c);
+      }
+    };
+    c.invokeAndSleep(folder.getPost().getEnvironment());
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }    
     
@@ -249,7 +271,7 @@ public class PostFolder implements MailFolder {
     return getChild(name);
   }
   
-  public MailFolder getChild(String name) throws MailboxException {
+  public MailFolder getChild(final String name) throws MailboxException {
     String[] names = folder.getChildren();
     Arrays.sort(names);
     
@@ -261,9 +283,12 @@ public class PostFolder implements MailFolder {
       return (MailFolder) folders.get(name);
     }
     
-    ExternalContinuation c = new ExternalContinuation();
-    folder.getChildFolder(name, c);
-    c.sleep();
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        folder.getChildFolder(name, c);
+      }
+    };
+    c.invokeAndSleep(folder.getPost().getEnvironment());
     
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
     

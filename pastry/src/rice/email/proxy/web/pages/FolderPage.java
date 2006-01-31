@@ -73,14 +73,8 @@ public class FolderPage extends WebPage {
         for (int i=messages.size()-1; i>=0; i--) {
           conn.println("<tr><td colspan=3 height=1 bgcolor=\"#AAAAAA\"></td></tr>");
           StoredMessage message = (StoredMessage) messages.get(i);
-          Email email = message.getMessage();
-          
-          ExternalContinuation c = new ExternalContinuation();
-          email.getContent(c);
-          c.sleep();
-          if (c.exceptionThrown()) throw new MailboxException(c.getException());
-          
-          EmailMessagePart real = (EmailMessagePart) c.getResult();
+
+          EmailMessagePart real = message.getMessage().getContent();
           ExternalContinuation d = new ExternalContinuation();
           real.getHeaders(d);
           d.sleep();

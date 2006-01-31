@@ -99,4 +99,8 @@ public class Pop3Connection {
   public String getClientAddress() {
     return _clientAddress.toString();
   }
+
+  public Environment getEnvironment() {
+    return environment;
+  }
 }

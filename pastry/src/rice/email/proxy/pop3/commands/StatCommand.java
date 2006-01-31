@@ -34,15 +34,7 @@ public class StatCommand extends Pop3Command {
     for (Iterator i = messages.iterator(); i.hasNext();) {
       StoredMessage msg = (StoredMessage) i.next();
       
-      ExternalContinuation c = new ExternalContinuation();
-      msg.getMessage().getContent(c);
-      c.sleep();
-      
-      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-      
-      EmailMessagePart message = (EmailMessagePart) c.getResult();
-      
-      total += (long) message.getSize();
+      total += (long) msg.getMessage().getContent().getSize();
     }
     
     return total;

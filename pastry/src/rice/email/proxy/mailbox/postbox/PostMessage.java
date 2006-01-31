@@ -92,10 +92,13 @@ public class PostMessage implements StoredMessage {
   }
 
   public void purge() throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    folder.removeMessage(email, c);
-    c.sleep();
-
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        folder.removeMessage(email, c);
+      }
+    };
+    c.invokeAndSleep(folder.getPost().getEnvironment());
+    
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
   }
   
@@ -250,21 +253,27 @@ public class PostMessage implements StoredMessage {
     }
   }
   
-  private static Object getContent(EmailContentPart part) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    part.getContent(c);
-    c.sleep();
-
+  private static Object getContent(final EmailContentPart part, Environment env) throws MailboxException {
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        part.getContent(c);
+      }
+    };
+    c.invokeAndSleep(env); 
+    
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
 
     return c.getResult();
   }
 
-  private static String getHeaders(EmailMessagePart part) throws MailboxException {
-    ExternalContinuation c = new ExternalContinuation();
-    part.getHeaders(c);
-    c.sleep();
-
+  private static String getHeaders(final EmailMessagePart part, Environment env) throws MailboxException {
+    ExternalRunnable c = new ExternalRunnable() {
+      protected void run(Continuation c) {
+        part.getHeaders(c);
+      }
+    };
+    c.invokeAndSleep(env);
+    
     if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
     
     return new String(((EmailData) c.getResult()).getData());
@@ -294,29 +303,29 @@ public class PostMessage implements StoredMessage {
     return "text/plain";
   }
 
-  public static javax.mail.internet.MimeMessage processEmailMessagePartSpecial(EmailMessagePart part) throws MailboxException, MessagingException {
+  public static javax.mail.internet.MimeMessage processEmailMessagePartSpecial(EmailMessagePart part, Environment env) throws MailboxException, MessagingException {
     Properties props = new Properties();
     Session session = Session.getDefaultInstance(props, null);
     javax.mail.internet.MimeMessage mm = new javax.mail.internet.MimeMessage(session);
     
-    String contentType = getContentType(getHeaders(part), mm);
-    setHeaders(getHeaders(part), mm);
+    String contentType = getContentType(getHeaders(part, env), mm);
+    setHeaders(getHeaders(part, env), mm);
     
-    processEmailContentPart(mm, (EmailContentPart) getContent(part), contentType);
+    processEmailContentPart(mm, (EmailContentPart) getContent(part, env), contentType, env);
       
     return mm;
   }
 
-  private static void processEmailContentPart(MimePart message, EmailContentPart part, String contentType)
+  private static void processEmailContentPart(MimePart message, EmailContentPart part, String contentType, Environment env)
     throws MailboxException, MessagingException {
     Object result = null;
     
     if (part instanceof EmailSinglePart) {
-      result = processEmailSinglePart((EmailSinglePart) part);
+      result = processEmailSinglePart((EmailSinglePart) part, env);
     } else if (part instanceof EmailMultiPart) {
-      result = processEmailMultiPart((EmailMultiPart) part);
+      result = processEmailMultiPart((EmailMultiPart) part, env);
     } else if (part instanceof EmailMessagePart) {
-      result = processEmailMessagePart((EmailMessagePart) part);
+      result = processEmailMessagePart((EmailMessagePart) part, env);
     } else {
       throw new MailboxException("Found unknown EmailContentPart subtype " + part);
     }
@@ -328,36 +337,36 @@ public class PostMessage implements StoredMessage {
     }
   }
 
-  private static MimeBodyPart processEmailMessagePart(EmailMessagePart part) throws MailboxException, MessagingException {
+  private static MimeBodyPart processEmailMessagePart(EmailMessagePart part, Environment env) throws MailboxException, MessagingException {
     MimeBodyPart body = new MimeBodyPart();
-    String contentType = getContentType(getHeaders(part), body);
-    EmailContentPart content = (EmailContentPart) getContent(part);
-    setHeaders(getHeaders(part), body);
+    String contentType = getContentType(getHeaders(part, env), body);
+    EmailContentPart content = (EmailContentPart) getContent(part, env);
+    setHeaders(getHeaders(part, env), body);
     
     // special thingy for embedded message
     if (content instanceof EmailMessagePart) {
-      body.setContent(processEmailMessagePartSpecial((EmailMessagePart) content), contentType);
+      body.setContent(processEmailMessagePartSpecial((EmailMessagePart) content, env), contentType);
     } else {
-      processEmailContentPart(body, content, contentType);
+      processEmailContentPart(body, content, contentType, env);
     }
 
     return body;
   }
 
-  private static MimeMultipart processEmailMultiPart(EmailMultiPart part) throws MailboxException, MessagingException {
+  private static MimeMultipart processEmailMultiPart(EmailMultiPart part, Environment env) throws MailboxException, MessagingException {
     MimeMultipart multi = new MimeMultipart();
-    EmailMessagePart[] parts = (EmailMessagePart[]) getContent(part);
+    EmailMessagePart[] parts = (EmailMessagePart[]) getContent(part, env);
 
     for (int i=0; i<parts.length; i++) {
       EmailMessagePart thisPart = parts[i];
-      multi.addBodyPart(processEmailMessagePart(thisPart));
+      multi.addBodyPart(processEmailMessagePart(thisPart, env));
     }
 
     return multi;
   }
 
-  private static String processEmailSinglePart(EmailSinglePart part) throws MailboxException, MessagingException {
-    return new String(((EmailData) getContent(part)).getData());
+  private static String processEmailSinglePart(EmailSinglePart part, Environment env) throws MailboxException, MessagingException {
+    return new String(((EmailData) getContent(part, env)).getData());
   }
       
 }

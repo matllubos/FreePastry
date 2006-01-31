@@ -1,20 +1,16 @@
 package rice.email.proxy.imap.commands.search;
 
-import java.util.*;
+import java.io.ByteArrayInputStream;
+import java.util.Enumeration;
 
-import rice.*;
-import rice.Continuation.*;
+import javax.mail.MessagingException;
+import javax.mail.internet.InternetHeaders;
 
-import rice.email.*;
-import rice.email.proxy.imap.ImapConnection;
+import rice.Continuation.ExternalContinuation;
+import rice.email.EmailData;
+import rice.email.EmailMessagePart;
 import rice.email.proxy.mail.StoredMessage;
-import rice.email.proxy.mail.*;
-import rice.email.proxy.mailbox.*;
-
-import javax.mail.*;
-import javax.mail.internet.*;
-
-import java.io.*;
+import rice.email.proxy.mailbox.MailboxException;
 
 public class HeaderSearchPart extends SearchPart {
 
@@ -28,15 +24,9 @@ public class HeaderSearchPart extends SearchPart {
 
   public boolean includes(StoredMessage msg) {
     try {
-      ExternalContinuation c = new ExternalContinuation();
-      msg.getMessage().getContent(c);
-      c.sleep();
-
-      if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-      EmailMessagePart message = (EmailMessagePart) c.getResult();
+      final EmailMessagePart message = msg.getMessage().getContent();
       
-      c = new ExternalContinuation();
+      ExternalContinuation c = new ExternalContinuation();
       message.getHeaders(c);
       c.sleep();
 
