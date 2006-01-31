@@ -1,6 +1,0 @@
-export JAVA_DEV_ROOT=/home/ssiyer/pastry
-export JAVA_HOME=/usr/java/jdk1.3.1_01
-export PATH=$JAVA_HOME/bin:$PATH
-export IS_UNIX=true
-#export CVSROOT=:ext:aladd@dosa.cs.rice.edu:/net/madras/FreePastry/cvsroot
-#export CVSRSH=ssh

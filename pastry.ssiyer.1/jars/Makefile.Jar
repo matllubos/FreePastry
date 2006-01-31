@@ -1,6 +1,0 @@
-JAR_CONTENT = \
-       no/geosoft/directory \
-
-MANIFEST = Manifest.directory.jar
-
-include $(JAVA_DEV_ROOT)/Makefile
