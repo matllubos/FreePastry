@@ -3,6 +3,7 @@ package rice;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.selector.SelectorManager;
 
 /**
  * Asynchronously receives the result to a given method call, using
@@ -217,6 +218,61 @@ public interface Continuation {
     
     public boolean exceptionThrown() {
       return (exception != null);
+    }
+  }
+  
+  /**
+   * This class is used when you want to run some task on the selector thread
+   * and wait for it to return its result in a Continuation.  It is essentially
+   * a covnenience object which combines the functionality of a Runnable that
+   * can be invoked on the Selector with an ExternalContinuation that it will
+   * wait on.  Typical use is to construct an anonymous class overriding the
+   * run(Continuation) method and then call invokeAndSleep() to wait on the 
+   * result.  The result can then be fetched with getResult() or getException().
+   * 
+   * @author jstewart
+   *
+   */
+  public static abstract class ExternalRunnable implements Runnable {
+    private ExternalContinuation e;
+
+    public ExternalRunnable() {
+      e = new ExternalContinuation();
+    }
+    
+    public void run() {
+      try {
+        run(e);
+      } catch (Exception exc) {
+        e.receiveException(exc);
+      }
+    }
+    
+    protected abstract void run(Continuation c) throws Exception;
+    
+    public void sleep() {
+      e.sleep();
+    }
+    
+    public Object getResult() {
+      return e.getResult();
+    }
+    
+    public Exception getException() {
+      return e.getException();
+    }
+    
+    public boolean exceptionThrown() {
+      return e.exceptionThrown();
+    }
+    
+    public void invokeAndSleep(SelectorManager sm) {
+      sm.invoke(this);
+      sleep();
+    }
+ 
+    public void invokeAndSleep(Environment env) {
+      invokeAndSleep(env.getSelectorManager());
     }
   }
   
