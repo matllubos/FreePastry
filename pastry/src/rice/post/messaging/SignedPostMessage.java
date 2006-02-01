@@ -111,12 +111,12 @@ public final class SignedPostMessage implements Serializable {
     }
     if (msg == null) {
       // old-style message
-      System.out.println("SignedPostMessage: Old-style message: "+message);
+//      System.out.println("SignedPostMessage: Old-style message: "+message);
       msg = SecurityUtils.serialize(message);
       cachedMessage = message;
     } else {
       cachedMessage = (PostMessage)SecurityUtils.deserialize(msg);
-      System.out.println("SignedPostMessage: New-style message: "+cachedMessage);
+//      System.out.println("SignedPostMessage: New-style message: "+cachedMessage);
     }
   }
 }
