@@ -74,16 +74,17 @@ public class RotatingLogManager extends AbstractLogManager {
       }
 
       String filename = params.getString("log_rotate_filename");
-      String rot_filename = filename + "." + time.currentTimeMillis();
-      if (dateFormatter != null) {
-        try {
-          rot_filename = filename + "." + dateFormatter.valueToString(new Date(time.currentTimeMillis()));         
-        } catch (ParseException pe) {
-          pe.printStackTrace();
-        }
-      }
       File oldfile = new File(filename);
       if (oldfile.exists()) {
+        long filedate = oldfile.lastModified();
+        String rot_filename = filename + "." + filedate;
+        if (dateFormatter != null) {
+          try {
+            rot_filename = filename + "." + dateFormatter.valueToString(new Date(filedate));         
+          } catch (ParseException pe) {
+            pe.printStackTrace();
+          }
+        }
         oldfile.renameTo(new File(rot_filename));
       }
       try {
