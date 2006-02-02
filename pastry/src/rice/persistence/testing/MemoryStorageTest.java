@@ -574,11 +574,11 @@ public class MemoryStorageTest extends Test {
       public void receiveResult(Object o) {
         stepStart("Checking exists for all 50 objects");
         
-        for (int count = START_NUM - SKIP; count < END_NUM; count+=SKIP) {
+        for (int count = START_NUM; count < END_NUM; count+=SKIP) {
           boolean b = storage.exists(data[13 + count]);
           
           if (! b) {
-            stepDone(FAILURE, "Element " + count + " did exist - should not have.");
+            stepDone(FAILURE, "Element " + count + " did exist (" + data[13+count].toStringFull() + ") - should not have (START " + START_NUM + " END " + END_NUM + ").");
             return;
           }
         }
@@ -617,7 +617,7 @@ public class MemoryStorageTest extends Test {
         int num = count;
         count += SKIP;
         
-        storage.store(data[13 + num], null, new byte[num * num * num], this);
+        storage.store(data[13 + num], null, new byte[num * num], this);
       }
 
       public void receiveException(Exception e) {
@@ -629,7 +629,7 @@ public class MemoryStorageTest extends Test {
   }
 
 
-  private void testErrors() {
+  private void testErrors(final Continuation c) {
     final Continuation validateNullValue = new Continuation() {
 
       public void receiveResult(Object o) {
@@ -639,8 +639,9 @@ public class MemoryStorageTest extends Test {
         }
 
         stepDone(SUCCESS);
-
-        sectionEnd();        
+        sectionEnd();  
+        
+        c.receiveResult(new Boolean(true));
       }
 
       public void receiveException(Exception e) {
@@ -690,8 +691,93 @@ public class MemoryStorageTest extends Test {
     testRandomInserts(insertNullKey);
   }
   
+  public void testVariableLength() {
+    final HashSet tmp = new HashSet();
+    final HashSet all = new HashSet();
+    
+    testErrors(new Continuation() {
+      public void receiveResult(Object o) {
+        if (o.equals(new Boolean(false))) {
+          stepDone(FAILURE, "Error tests failed");
+          return;
+        }
+        
+        sectionStart("Testing variable-length Ids");
+        stepStart("Inserting a whole bunch of Ids");
+        
+        new Continuation() {
+          int num = 0;
+          
+          public void receiveResult(Object o) {
+            if (o.equals(new Boolean(false))) {
+              stepDone(FAILURE, "Insert of Id #" + num + " failed");
+              return;
+            }
+            
+            if (num < 1000) {
+              num++;
+              storage.store(new VariableId(num), null, num + " length", this);
+            } else {
+              stepDone(SUCCESS);
+              stepStart("Reinserting same Ids");
+
+              new Continuation() {
+                int num = 0;
+                
+                public void receiveResult(Object o) {
+                  if (o.equals(new Boolean(false))) {
+                    stepDone(FAILURE, "Reinsert of Id #" + num + " failed");
+                    return;
+                  }
+                  
+                  if (num < 1000) {
+                    num++;
+                    VariableId id = new VariableId(num);
+                    all.add(id);
+                    tmp.add(id);
+                    storage.store(new VariableId(num), null, num + " length", this);
+                  } else {
+                    stepDone(SUCCESS);
+                    stepStart("Deleting all Ids again");
+
+                    new Continuation() {
+                      Id id = null;
+                      
+                      public void receiveResult(Object o) {
+                        if (o.equals(new Boolean(false))) {
+                          stepDone(FAILURE, "Delete of Id " + id + " failed");
+                          return;
+                        }
+                  
+                        if (tmp.size() > 0) {
+                          id = (Id) tmp.iterator().next();
+                          tmp.remove(id);
+                          storage.unstore(id, this);
+                        } else {
+                          stepDone(SUCCESS);
+                          sectionEnd();
+                          
+                          System.out.println("All tests completed successfully - exiting.");
+                          System.exit(0);
+                        }
+                      }
+                      public void receiveException(Exception e) { stepException(e); }
+                    }.receiveResult(Boolean.TRUE);
+                  }
+                }
+                public void receiveException(Exception e) { stepException(e); }
+              }.receiveResult(Boolean.TRUE);
+            }
+          }
+          public void receiveException(Exception e) { stepException(e); }
+        }.receiveResult(Boolean.TRUE);
+      }
+      public void receiveException(Exception e) { stepException(e); }
+    });
+  }
+  
   public void start() {
-    testErrors();
+    testVariableLength();
 	try{	Thread.sleep(20000);}catch(InterruptedException ie){;}
   }
 
@@ -699,5 +785,26 @@ public class MemoryStorageTest extends Test {
     MemoryStorageTest test = new MemoryStorageTest(true, new Environment());
 
     test.start();
+  }
+  
+  public class VariableId implements Id {
+    protected int num;    
+    public static final String STRING = "0123456789ABCDEF";
+    public VariableId(int num) { this.num = num; }
+    public boolean isBetween(Id ccw, Id cw) { return false; }
+    public boolean clockwise(Id nid) { return false; }
+    public Id addToId(Distance offset) { return null; }
+    public Distance distanceFromId(Id nid) { return null; }
+    public Distance longDistanceFromId(Id nid) { return null; }
+    public byte[] toByteArray() { return null; }
+    public void toByteArray(byte[] array, int offset) {}
+    public int getByteArrayLength() { return 0; }
+    public String toStringFull() { 
+      if (num <= STRING.length())
+        return STRING.substring(0, num);
+      else
+        return STRING + num;
+    }
+    public int compareTo(Object o) { return 0; }
   }
 }
