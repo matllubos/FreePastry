@@ -33,7 +33,9 @@ import rice.p2p.util.*;
  * method returns a String of constant length.  It has been exteneded to
  * support variable-length toString()s, but we have the caveat that
  * not toString() can be a substring of another toString() - this 
- * will cause undefined behavior.
+ * will cause undefined behavior.  <b>Additionally, the toString() method on the key Ids
+ * *CANNOT* have the period ('.') or exclamation point ('!') 
+ * characters in them - these are used for internal purposes.<b>
  *
  * The serialized objects are stored on-disk in a GZIPed XML format,
  * which provides extensibility with reasonable storage and processing
@@ -99,6 +101,11 @@ public class PersistentStorage implements Storage {
    * The amount of time before re-writing the metadata file
    */
   public static final int METADATA_SYNC_TIME = 300000;
+  
+  /**
+   * Special placeholder for the file whose name should be zero-length
+   */
+   public static final String ZERO_LENGTH_NAME = "!";
   
   private IdFactory factory;			  // the factory used for creating ids
   
@@ -277,6 +284,11 @@ public class PersistentStorage implements Storage {
    * <code>false</code>.
    */
   public void store(final Id id, final Serializable metadata, final Serializable obj, Continuation c) {
+    if (id == null || obj == null) {
+      c.receiveResult(new Boolean(false));
+      return;
+    }
+    
     printStats();
     
     environment.getProcessor().processBlockingIO(new WorkRequest(c, environment.getSelectorManager()) { 
@@ -284,16 +296,18 @@ public class PersistentStorage implements Storage {
       public Object doWork() throws Exception {
         synchronized(statLock) { numWrites++; }
         
-        if (logger.level <= Logger.FINER) logger.log("Storing object " + obj + " under id " + id + " in root " + appDirectory);
+        if (logger.level <= Logger.FINER) logger.log("Storing object " + obj + " under id " + id.toStringFull() + " in root " + appDirectory);
         
         /* first, create a temporary file */
         File objFile = getFile(id);
         File transcFile = makeTemporaryFile(id);
         
+        if (logger.level <= Logger.FINER) logger.log("Writing object " + obj + " to temporary file " + transcFile + " and renaming to " + objFile);
+
         /* next, write out the data to a new copy of the original file */
         try {
           writeObject(obj, metadata, id, environment.getTimeSource().currentTimeMillis(), transcFile);
-          if (logger.level <= Logger.FINER) logger.log("Done writing object " + obj + " under id " + id + " in root " + appDirectory);
+          if (logger.level <= Logger.FINER) logger.log("Done writing object " + obj + " under id " + id.toStringFull() + " in root " + appDirectory);
 
           /* abort if this will put us over quota */
           if (getUsedSpace() + getFileLength(transcFile) > getStorageSize()) 
@@ -482,7 +496,7 @@ public class PersistentStorage implements Storage {
             if ((objFile == null) || (! objFile.exists())) 
               return null;
 
-            if (logger.level <= Logger.FINER) logger.log("COUNT: Fetching data under " + id + " of size " + objFile.length() + " in " + name);
+            if (logger.level <= Logger.FINER) logger.log("COUNT: Fetching data under " + id.toStringFull() + " of size " + objFile.length() + " in " + name);
             return readData(objFile);
           } catch (Exception e) {
             /* remove our index for this file */
@@ -735,8 +749,6 @@ public class PersistentStorage implements Storage {
           /* if there are directories in the dir, then move the file */
           if (dirs.length > 0)
             moveFileToCorrectDirectory(dir, files[i]);
-          else
-            upgradeFile(dir, files[i]);
         }
       } catch (Exception e) {
         if (logger.level <= Logger.WARNING) logger.logException("Got exception " + e + " initting file " + files[i] + " - moving to lost+found.",e);
@@ -771,20 +783,6 @@ public class PersistentStorage implements Storage {
     
     moveToLost(new File(parent, name));
     return true;
-  }
-  
-  /**
-   * Method which checks to see if the given file needs to be upgraded to a
-   * new version of the persistent storage layout.
-   *
-   * @param parent The parent directory
-   * @param name The name of the file
-   */
-  private void upgradeFile(File parent, String name) throws IOException {
-    if (name.startsWith(getPrefix(parent)) && (! parent.equals(appDirectory))) {
-      if (logger.level <= Logger.FINE) logger.log("Upgrading file " + name + " to new version " + name.substring(getPrefix(parent).length()));
-      renameFile(new File(parent, name), new File(parent, name.substring(getPrefix(parent).length())));
-    }
   }
   
   /**
@@ -836,7 +834,7 @@ public class PersistentStorage implements Storage {
           /* if the file is newer than the metadata file, update the metadata 
           if we don't have the metadata for this file, update it */
           if (index && ((! metadata.containsKey(id)) || (files[i].lastModified() > modified))) {
-            if (logger.level <= Logger.FINER) logger.log("Reading newer metadata out of file " + files[i] + " id " + id + " " + files[i].lastModified() + " " + modified + " " + metadata.containsKey(id));
+            if (logger.level <= Logger.FINER) logger.log("Reading newer metadata out of file " + files[i] + " id " + id.toStringFull() + " " + files[i].lastModified() + " " + modified + " " + metadata.containsKey(id));
             metadata.put(id, readMetadata(files[i]));
             dirty.add(dir);
           }
@@ -855,8 +853,12 @@ public class PersistentStorage implements Storage {
       }
     }
     
+    /* now recurse and check all of the children */
     for (int i=0; i<dirs.length; i++) 
       initFileMap(dirs[i]);
+      
+    /* and finally see if this directory needs to be pruned or expanded */
+    checkDirectory(dir);
   }
 
   /**
@@ -962,7 +964,7 @@ public class PersistentStorage implements Storage {
    */
   private void reformatDirectory(File dir) throws IOException {
     if (logger.level <= Logger.FINE) logger.log("Expanding directory " + dir + " due to too many subdirectories");
-    /* first, determine what directories we should create */
+    /* first, determine what directories we should create (ignoring the ! directories) */
     String[] newDirNames = getDirectories(dir.list(new DirectoryFilter()));
     reformatDirectory(dir, newDirNames);
     if (logger.level <= Logger.FINE) logger.log("Done expanding directory " + dir);
@@ -983,7 +985,7 @@ public class PersistentStorage implements Storage {
     for (int i=0; i<newDirNames.length; i++) {
       newDirs[i] = new File(dir, newDirNames[i]);
       createDirectory(newDirs[i]);
-      if (logger.level <= Logger.FINE) logger.log("creating directory " + newDirNames[i]);
+      if (logger.level <= Logger.FINE) logger.log("Creating directory " + newDirNames[i]);
 
       /* now look through the original directory and move any matching dirs */
       String[] subDirNames = getMatchingDirectories(newDirNames[i], dirNames);
@@ -993,7 +995,7 @@ public class PersistentStorage implements Storage {
         /* move the directory */
         File oldDir = new File(dir, subDirNames[j]);
         newSubDirs[j] = new File(newDirs[i], subDirNames[j].substring(newDirNames[i].length()));
-        if (logger.level <= Logger.FINE) logger.log("moving the old direcotry " + oldDir + " to " + newSubDirs[j]);
+        if (logger.level <= Logger.FINE) logger.log("Moving the old direcotry " + oldDir + " to " + newSubDirs[j]);
         renameFile(oldDir, newSubDirs[j]);
 
         /* remove the stale entry, add the new one */        
@@ -1047,8 +1049,12 @@ public class PersistentStorage implements Storage {
     for (int i=0; i<dirNames.length; i++) {
       dirs[i] = new File(dir, dirNames[i]);
       directories.put(dirs[i], new File[0]);
+      
+      if (dirs[i].exists() && dirs[i].isFile())
+        renameFile(dirs[i], new File(dir, dirs[i].getName() + ZERO_LENGTH_NAME));
+      
       createDirectory(dirs[i]);
-      if (logger.level <= Logger.FINE) logger.log("creating directory " + dirNames[i]);
+      if (logger.level <= Logger.FINE) logger.log("Creating directory " + dirNames[i]);
       
       /* mark this directory for metadata syncing */
       if (index) 
@@ -1063,6 +1069,7 @@ public class PersistentStorage implements Storage {
     for (int i = 0; i < files.length; i++) {
       for (int j = 0; j < dirs.length; j++) {
         if (files[i].getName().startsWith(dirs[j].getName())) {
+          if (logger.level <= Logger.FINEST) logger.log("Renaming file " + files[i] + " to " + new File(dirs[j], files[i].getName().substring(dirs[j].getName().length())));
           renameFile(files[i], new File(dirs[j], files[i].getName().substring(dirs[j].getName().length())));
           break;
         }
@@ -1088,8 +1095,10 @@ public class PersistentStorage implements Storage {
     String prefix = names[0].substring(0, length);
     CharacterHashSet set = new CharacterHashSet();
     
-    for (int i=0; i<names.length; i++) 
-      set.put(names[i].charAt(length));
+    for (int i=0; i<names.length; i++) {
+      if (names[i].length() > length)
+        set.put(names[i].charAt(length));
+    }
     
     char[] splits = set.get();
     String[] result = new String[splits.length];
@@ -1108,11 +1117,11 @@ public class PersistentStorage implements Storage {
    * @return The longest common prefix of all of the names
    */
   private int getPrefixLength(String[] names) {
-    int length = names[0].length();
+    int length = names[0].length()-1;
     
     for (int i=0; i<names.length; i++)
       length = getPrefixLength(names[0], names[i], length);
-    
+      
     return length;
   }
   
@@ -1127,7 +1136,7 @@ public class PersistentStorage implements Storage {
   private int getPrefixLength(String a, String b, int max) {
     int i=0;
     
-    for (; (i<a.length()) && (i<b.length()) && (i<max); i++) 
+    for (; (i<a.length()-1) && (i<b.length()-1) && (i<max); i++) 
       if (a.charAt(i) != b.charAt(i))
         return i;
     
@@ -1144,7 +1153,7 @@ public class PersistentStorage implements Storage {
   private void moveFileToCorrectDirectory(File parent, String name) throws IOException { 
     File file = new File(parent, name);
     Id id = readKeyFromFile(file);
-    File dest = getDirectoryForName(id.toStringFull());
+    File dest = getDirectoryForId(id);
     
     /* if it's in the wrong directory, then move it and resolve the conflict if necessary */
     if (! dest.equals(parent)) {
@@ -1204,7 +1213,7 @@ public class PersistentStorage implements Storage {
    * @return Whether the directory is successfully created.
    */
   private static void createDirectory(File directory) throws IOException {
-    if ((directory != null) && (! directory.exists()) && (! directory.mkdir()))
+    if ((directory == null) || (directory.exists() && directory.isFile()) || (! (directory.exists()) && (! directory.mkdir())))
       throw new IOException("Creation of directory " + directory + " failed!");
   }
   
@@ -1315,7 +1324,15 @@ public class PersistentStorage implements Storage {
    */
   private File getFile(Id id) throws IOException {
     File dir = getDirectoryForId(id);
-    return new File(dir, id.toStringFull().substring(getPrefix(dir).length()));
+    String name = id.toStringFull().substring(getPrefix(dir).length());    
+    if (name.equals("")) name = ZERO_LENGTH_NAME;
+    
+    // check for ! directory
+    File file = new File(dir, name);
+    if (file.exists() && file.isDirectory())
+      file = new File(file, ZERO_LENGTH_NAME);
+
+    return file;
   }
 
   /**
@@ -1352,12 +1369,14 @@ public class PersistentStorage implements Storage {
       return dir;
     } else {
       for (int i=0; i<subDirs.length; i++) 
-        if (name.startsWith(subDirs[i].getName())) 
+        if (name.startsWith(subDirs[i].getName()))
           return getDirectoryForName(name.substring(subDirs[i].getName().length()), subDirs[i]);
-      
+        else if ((name.length() == 0) && subDirs[i].getName().equals(ZERO_LENGTH_NAME))
+          return getDirectoryForName(name, subDirs[i]);
+
       /* here, we must create the appropriate directory */
-      if (name.length() >= subDirs[0].getName().length()) {
-        File newDir = new File(dir, name.substring(0, subDirs[0].getName().length()));
+      if ((name.length() >= subDirs[0].getName().length()) || ((name.length() == 0) && (subDirs[0].getName().length() == 1))) {
+        File newDir = new File(dir, (name.length() == 0 ? ZERO_LENGTH_NAME : name.substring(0, subDirs[0].getName().length())));
         if (logger.level <= Logger.FINE) logger.log("Necessarily creating dir " + newDir.getName());
         createDirectory(newDir);
         this.directories.put(dir, append(subDirs, newDir));
@@ -1372,13 +1391,13 @@ public class PersistentStorage implements Storage {
         }
       } else {
         /* here, we have to handle a wierd case where the filename is less than that of
-           an existing directory.  To handle this, we pretend like we're doing a directory
-           split, and create new subdirs so we can accomidate everything. */
+        an existing directory.  To handle this, we pretend like we're doing a directory
+        split, and create new subdirs so we can accomidate everything. */
         String[] dirs = new String[subDirs.length + 1];
         
         for (int i=0; i<subDirs.length; i++)
           dirs[i] = subDirs[i].getName();
-        dirs[subDirs.length] = name;
+        dirs[subDirs.length] = (name.length() == 0 ? ZERO_LENGTH_NAME : name);
         
         /* now reformat the directory, creating an entry for this name */
         reformatDirectory(dir, getDirectories(dirs));
@@ -1412,7 +1431,7 @@ public class PersistentStorage implements Storage {
     
     StringBuffer buffer = new StringBuffer();
     while (! file.equals(appDirectory)) {
-      buffer.insert(0, file.getName());
+      buffer.insert(0, file.getName().replaceAll(ZERO_LENGTH_NAME, ""));
       file = file.getParentFile();
     }
     prefixes.put(file, buffer.toString());
@@ -1730,7 +1749,7 @@ public class PersistentStorage implements Storage {
    * @return The key that was read in
    */
   private Id readKey(File file) {
-    String s = getPrefix(file.getParentFile()) + file.getName();
+    String s = getPrefix(file.getParentFile()) + file.getName().replaceAll(ZERO_LENGTH_NAME, "");
     
     if (s.indexOf(".") >= 0) {
       return factory.buildIdFromToString(s.toCharArray(), 0, s.indexOf("."));
