@@ -489,6 +489,7 @@ public class PostProxy {
         stepStart("Installing Custom System Security Manager");
         System.setSecurityManager(new SecurityManager() {
           public void checkPermission(java.security.Permission perm) {}
+          public void checkMemberAccess(Class arg0, int arg1) {}
           public void checkDelete(String file) {}
           public void checkRead(FileDescriptor fd) {}
           public void checkRead(String file) {}
