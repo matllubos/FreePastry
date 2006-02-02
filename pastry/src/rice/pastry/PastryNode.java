@@ -447,7 +447,13 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    */
   public void process(Executable task, Continuation command) {
     try {
-      command.receiveResult(task.execute());
+      myEnvironment.getProcessor().process(task, 
+          command, 
+          myEnvironment.getSelectorManager(), 
+          myEnvironment.getTimeSource(), 
+          myEnvironment.getLogManager());
+      
+//      command.receiveResult(task.execute());
     } catch (final Exception e) {
       command.receiveException(e);
     }
