@@ -5,6 +5,7 @@ import java.util.*;
 
 import rice.Continuation;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.join.JoinRequest;
@@ -24,6 +25,8 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   
   PastrySecurityManager sec;
   
+  Logger logger;
+  
   double bootstrapRate;
   int maxGoneSize;
   int maxGoneAge;
@@ -32,6 +35,8 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   
   Environment env;
   
+  // XXX think about multiring
+  
   public PartitionHandler(PastryNode pn, DistPastryNodeFactory factory, PastrySecurityManager sec, InetSocketAddress[] bootstraps) {
     pastryNode = pn;
     this.factory = factory;
@@ -39,6 +44,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     this.bootstraps = bootstraps;
     env = pastryNode.getEnvironment();
     gone = new HashMap();
+    this.logger = pn.getEnvironment().getLogManager().getLogger(PartitionHandler.class,"");
     
     maxGoneSize = env.getParameters().getInt("partition_handler_max_history_size");
     maxGoneAge = env.getParameters().getInt("partition_handler_max_history_age");
@@ -51,18 +57,28 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   private synchronized void doGoneMaintainence() {
     Iterator it = gone.values().iterator();
     long now = env.getTimeSource().currentTimeMillis();
-    
+
+    if (logger.level <= Logger.FINE) logger.log("Doing maintainence in PartitionHandler "+now);
+
+    if (logger.level <= Logger.FINER) logger.log("gone size 1 is "+gone.size()+" of "+maxGoneSize);
+
     while (it.hasNext()) {
       GoneSetEntry g = (GoneSetEntry)it.next();
-      if ((now - g.timestamp > maxGoneAge) || // toss if too old
-          (g.nh.getLiveness() > NodeHandle.LIVENESS_DEAD)) { // toss if epoch changed
+      if (now - g.timestamp > maxGoneAge) { // toss if too old
+        if (logger.level <= Logger.FINEST) logger.log("Removing "+g+" from gone due to expiry");
         it.remove();
-      } 
+      } else if (g.nh.getLiveness() > NodeHandle.LIVENESS_DEAD) { // toss if epoch changed
+        if (logger.level <= Logger.FINEST) logger.log("Removing "+g+" from gone due to death");
+        it.remove();
+      }
     }
     
+    if (logger.level <= Logger.FINER) logger.log("gone size 2 is "+gone.size()+" of "+maxGoneSize);
+
     while (gone.size() > maxGoneSize) {
       gone.entrySet().iterator().remove();
     }
+    if (logger.level <= Logger.FINER) logger.log("gone size 3 is "+gone.size()+" of "+maxGoneSize);
   }
 
   private NodeHandle getGone() {
@@ -82,12 +98,14 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   
       if (it.hasNext()) {
         // assert which==0
+        if (logger.level <= Logger.FINEST) logger.log("getGone chose node from gone "+which);
         return ((GoneSetEntry)it.next()).nh;
       }
     }
 
     // pick a new random one, since we don't just want to pick the top few
     // entries of the routing table.
+    if (logger.level <= Logger.FINEST) logger.log("getGone choosing node from routing table");
     
     int which = env.getRandomSource().nextInt(rt.numEntries());
     // else look in routing table
@@ -103,6 +121,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
       }  
     }
     
+    if (logger.level <= Logger.INFO) logger.log("getGone returning null; oops!");
     // oops, routing table has less entries than it claims
     return null;
   }
@@ -111,11 +130,13 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   private void getNodeHandleToProbe(Continuation c) {
     if (env.getRandomSource().nextDouble() > bootstrapRate) {
       NodeHandle nh = getGone();
+      if (logger.level <= Logger.FINEST) logger.log("getGone chose "+nh);
       if (nh != null) {
         c.receiveResult(nh);
         return;
       }
     }
+    if (logger.level <= Logger.FINEST) logger.log("getNodeHandleToProbe choosing bootstrap");
     
     factory.getNodeHandle(bootstraps, c);
   }
@@ -126,8 +147,6 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     getNodeHandleToProbe(new Continuation() {
 
       public void receiveResult(Object result) {
-        // XXX can't do getNearest() because it will likely stay in our partition
-        // have to route a message (like a JoinRequest) to our key via the result node
         JoinRequest jr = new JoinRequest(pastryNode.getLocalHandle(), pastryNode
             .getRoutingTable().baseBitLength());
 
@@ -135,26 +154,6 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
             new PermissiveCredentials(), jr.getDestination());
         rm.getOptions().setRerouteIfSuspected(false);
         ((NodeHandle)result).bootstrap(rm);
-        
-//        final NodeHandle nearest = factory.getNearest(pastryNode.getLocalHandle(), (NodeHandle)result);
-//        if (!nearest.equals(pastryNode.getLocalHandle())) {
-//          factory.getLeafSet(nearest, new Continuation() {
-//
-//            public void receiveResult(Object result) {
-//              LeafSet nearestLeafSet = (LeafSet)result;
-//              HashSet inserted = new HashSet(); 
-//              pastryNode.getLeafSet().merge(nearestLeafSet, nearest, pastryNode.getRoutingTable(), sec, false, inserted);
-//              Iterator it = inserted.iterator();
-//              while(it.hasNext()) {
-//                ((NodeHandle)it.next()).checkLiveness(); 
-//              }
-//            }
-//            
-//            public void receiveException(Exception result) {
-//              // oh well
-//            } 
-//          });
-//        }
         
       }
 
@@ -177,9 +176,12 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
       synchronized (this) {
         if (handle.getLiveness() == NodeHandle.LIVENESS_DEAD) {
           if (gone.containsKey(handle.getId())) {
+            if (logger.level <= Logger.FINEST) logger.log("PartitionHandler updating node "+handle);
             ((GoneSetEntry)gone.get(handle.getId())).nh = handle;
           } else {
-            gone.put(handle.getId(),new GoneSetEntry(handle, env.getTimeSource().currentTimeMillis()));
+            GoneSetEntry g = new GoneSetEntry(handle, env.getTimeSource().currentTimeMillis());
+            if (logger.level <= Logger.FINEST) logger.log("PartitionHandler adding node "+g);
+            gone.put(handle.getId(),g);
           }
         }
       }
@@ -199,7 +201,10 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
       GoneSetEntry other = (GoneSetEntry)o;
       return other.nh.getId().equals(nh.getId());
     }
-    
+
+    public String toString() {
+      return nh.toString() + " "+timestamp;
+    }    
   }
 
 }
