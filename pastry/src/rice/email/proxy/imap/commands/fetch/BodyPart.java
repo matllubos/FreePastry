@@ -227,7 +227,7 @@ public class BodyPart extends FetchPart {
       if (c.exceptionThrown()) {
         String msg = "Error: Unable to fetch data; logmatch "+Long.toString(_conn.getEnvironment().getRandomSource().nextLong(),16);
         handlePastException(c.getException(),msg);
-        return format(msg);
+        throw new MailboxException(msg,c.getException());
       }
 
       EmailData data = (EmailData) c.getResult();
@@ -389,6 +389,7 @@ public class BodyPart extends FetchPart {
     if (inmsg) {
       Logger logger = _conn.getEnvironment().getLogManager().getLogger(BodyPart.class, null);
       if (logger.level <= Logger.WARNING) logger.logException("Got exception processing BodyPart: ",e);
+      if (logger.level <= Logger.FINE) logger.logException("BodyPart local backtrace: ",new Exception());
       
       StringWriter sw = new StringWriter();
       PrintWriter pw = new PrintWriter(sw);
@@ -398,7 +399,7 @@ public class BodyPart extends FetchPart {
       sw.flush();
       return msg + ": "+ sw.getBuffer();
     } else {
-      throw new MailboxException(e);
+      throw new MailboxException(msg, e);
     }
   }
 }
