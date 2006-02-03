@@ -409,22 +409,29 @@ public class PingManager extends SelectionKeyHandler {
    * @param key DESCRIBE THE PARAMETER
    */
   public void write(SelectionKey key) {
+    Envelope write = null;
+    
     try {
       synchronized (pendingMsgs) {
         Iterator i = pendingMsgs.iterator();
 
         while (i.hasNext()) {
-          Envelope write = (Envelope) i.next();
+          write = (Envelope) i.next();
           
-          if (channel.send(ByteBuffer.wrap(write.data), write.destination.getAddress()) == write.data.length)
+          try {
+            if (channel.send(ByteBuffer.wrap(write.data), write.destination.getAddress()) == write.data.length)
+              i.remove();
+            else 
+              break;
+          } catch (IOException e) {
             i.remove();
-          else
-            break;
+            throw e;
+          }
         }
       }
     } catch (IOException e) {
-      if (logger.level <= Logger.WARNING) logger.log(
-          "ERROR (datagrammanager:write): " + e);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "ERROR (datagrammanager:write) to " + (write == null ? null : write.destination.getAddress()), e);
     } finally {
       if (pendingMsgs.isEmpty()) 
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
