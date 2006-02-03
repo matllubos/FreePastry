@@ -7,8 +7,6 @@ import java.util.*;
 
 import rice.p2p.util.MathUtils;
 import rice.p2p.util.SecurityUtils;
-import rice.post.*;
-import rice.post.security.*;
 
 /**
  * This class is the representation of a PostMessage and
@@ -28,7 +26,9 @@ public final class SignedPostMessage implements Serializable {
   
   private transient PostMessage cachedMessage;
   
-  private byte[] msg;
+  private transient byte[] msg;
+  
+  private int version;
 
   // the signature for this message
   private byte[] signature;
@@ -46,6 +46,7 @@ public final class SignedPostMessage implements Serializable {
     this.cachedMessage = message;
     this.msg = SecurityUtils.serialize(message);
     this.signature = SecurityUtils.sign(msg, key);
+    this.version = 1;
   }
 
   /**
@@ -54,13 +55,32 @@ public final class SignedPostMessage implements Serializable {
    * @return The sender
    */
   public PostMessage getMessage() {
-    if (cachedMessage != null)
+    if (cachedMessage != null) {
       return cachedMessage;
+    } else if (msg != null) {
+      try {
+        cachedMessage = (PostMessage) SecurityUtils.deserialize(msg);
+      } catch (Exception e) {
+        System.out.println("SignedPostMessage: Exception in getMessage "+e);
+        return null;
+      }
+      return cachedMessage;
+    }
     return message;
   }
   
   public byte[] getMessageBytes() {
-    return msg;
+    if (msg == null) {
+      return msg;
+    } else {
+      try {
+        msg = SecurityUtils.serialize(message);
+      } catch (IOException e) {
+        System.out.println("SignedPostMessage: Exception in getMessageBytes "+e);
+        return new byte[0];
+      }
+      return msg;
+    }
   }
 
   /**
@@ -102,21 +122,29 @@ public final class SignedPostMessage implements Serializable {
     return "[SPM " + getMessage() + "]";
   }
 
-  private void readObject(java.io.ObjectInputStream in)
-    throws IOException, ClassNotFoundException 
-  {
-    in.defaultReadObject();
-    if ((msg == null) && (message == null)) {
-      throw new IOException("can't deserialze signedPostMessage with both fields null");
-    }
-    if (msg == null) {
-      // old-style message
-//      System.out.println("SignedPostMessage: Old-style message: "+message);
-      msg = SecurityUtils.serialize(message);
-      cachedMessage = message;
-    } else {
-      cachedMessage = (PostMessage)SecurityUtils.deserialize(msg);
-//      System.out.println("SignedPostMessage: New-style message: "+cachedMessage);
-    }
+  /**
+   * Internal method for writing out this data object
+   *
+   * @param oos The current output stream
+   */
+  private void writeObject(ObjectOutputStream oos) throws IOException {
+    oos.defaultWriteObject();
+    
+    oos.writeInt(msg.length);
+    oos.write(msg);
   }
+  
+  /**
+    * Internal method for reading in this data object
+   *
+   * @param ois The current input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    if (version != 0) {
+      msg = new byte[ois.readInt()];
+      ois.readFully(msg, 0, msg.length);
+    }
+  }  
 }
