@@ -298,10 +298,11 @@ public class Proxy {
         while (true) {
           String line = reader.readLine();
 
-          if (line != null) 
+          if (line != null) {
             if (logger.level <= Logger.INFO) logger.log(prefix + line);
-          else
+          } else {
             break;
+          }
         }
       } catch (IOException e) {
         if (logger.level <= Logger.WARNING) logger.logException("",e);
