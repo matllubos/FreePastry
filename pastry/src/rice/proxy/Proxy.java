@@ -286,6 +286,7 @@ public class Proxy {
     protected String prefix;
     
     public Printer(InputStream input, String prefix) {
+      super("Printer Thread");
       this.reader = new BufferedReader(new InputStreamReader(input));
       this.prefix = prefix;
       
@@ -323,6 +324,7 @@ public class Proxy {
     protected boolean answered;
     
     public LivenessMonitor(Parameters parameters, Process process) {
+      super("LivenessMonitor");
       this.alive = true;
       this.process = process;
       this.sleep = parameters.getInt("proxy_liveness_monitor_sleep");
@@ -372,6 +374,7 @@ public class Proxy {
     protected LivenessMonitor monitor;
     
     public LivenessMonitorTest(LivenessMonitor monitor, Process process) {
+      super("LivenessMonitorTest");
       this.monitor = monitor;
       this.process = process;
     }
@@ -413,6 +416,7 @@ public class Proxy {
     protected Parameters parameters;
     
     public AutomaticUpdater(Parameters parameters) {
+      super("AutomaticUpdater");
       this.interval = parameters.getInt("proxy_automatic_update_interval");
       this.root = parameters.getString("proxy_automatic_update_root");
       this.url = root + parameters.getString("proxy_automatic_update_latest_filename");
@@ -576,6 +580,7 @@ public class Proxy {
     protected long last;
         
     public SleepMonitor(Parameters parameters) {
+      super("SleepMonitor");
       this.sleep = parameters.getInt("proxy_sleep_monitor_sleep");
       this.timeout = parameters.getInt("proxy_sleep_monitor_timeout");
     }
