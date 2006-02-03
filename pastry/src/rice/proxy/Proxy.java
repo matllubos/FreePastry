@@ -295,15 +295,13 @@ public class Proxy {
     
     public void run() {
       try {
-        boolean done = false;
-       
-        while (! done) {
+        while (true) {
           String line = reader.readLine();
 
           if (line != null) 
             if (logger.level <= Logger.INFO) logger.log(prefix + line);
           else
-            done = true;
+            break;
         }
       } catch (IOException e) {
         if (logger.level <= Logger.WARNING) logger.logException("",e);
