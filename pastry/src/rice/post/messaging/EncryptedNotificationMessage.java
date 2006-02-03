@@ -9,6 +9,8 @@ import rice.post.*;
  */
 public class EncryptedNotificationMessage extends PostMessage {
 
+  private static final long serialVersionUID = -6105218787584438214L;
+
   private byte[] key;
   
   private byte[] data;
