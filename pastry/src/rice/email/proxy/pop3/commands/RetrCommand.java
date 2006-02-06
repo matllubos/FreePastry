@@ -65,7 +65,7 @@ public class RetrCommand extends Pop3Command {
     EmailContentPart[] parts;
     try {
       ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       };
@@ -87,7 +87,7 @@ public class RetrCommand extends Pop3Command {
   public static String fetchAll(Pop3Connection conn, final EmailSinglePart part) throws MailboxException {
     try {
       ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       };
@@ -101,7 +101,7 @@ public class RetrCommand extends Pop3Command {
   public static String fetchAll(Pop3Connection conn, final EmailHeadersPart part) throws MailboxException {
     try {
       ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getHeaders(c);
         }
       };
@@ -109,7 +109,7 @@ public class RetrCommand extends Pop3Command {
       EmailData headers = (EmailData) c.invoke(conn.getEnvironment());
       
       c = new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       };

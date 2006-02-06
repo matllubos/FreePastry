@@ -94,7 +94,7 @@ public class PostMessage implements StoredMessage {
   public void purge() throws MailboxException {
     try {
     ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-      protected void run(Continuation c) {
+      protected void execute(Continuation c) {
         folder.removeMessage(email, c);
       }
     };
@@ -258,7 +258,7 @@ public class PostMessage implements StoredMessage {
   private static Object getContent(final EmailContentPart part, Environment env) throws MailboxException {
     try {
       ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       };
@@ -271,7 +271,7 @@ public class PostMessage implements StoredMessage {
   private static String getHeaders(final EmailMessagePart part, Environment env) throws MailboxException {
     try {
       ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getHeaders(c);
         }
       };

@@ -103,7 +103,7 @@ public class PostFolder implements MailFolder {
     parent.folders.remove(folder.getName());
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           parent.getFolder().removeFolder(folder.getName(), c);
         }
       }.invoke(parent.getFolder().getPost().getEnvironment());
@@ -135,7 +135,7 @@ public class PostFolder implements MailFolder {
 
       try {
         new ExternalContinuationRunnable() {
-          protected void run(Continuation c) {
+          protected void execute(Continuation c) {
               folder.addMessage(email, flags, internaldate, c);
           }
         }.invoke(folder.getPost().getEnvironment());
@@ -154,7 +154,7 @@ public class PostFolder implements MailFolder {
     StoredEmail[] emails; 
     try {
       emails = (StoredEmail[])(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           folder.getMessages(c);
         }
       }).invoke(folder.getPost().getEnvironment());
@@ -204,7 +204,7 @@ public class PostFolder implements MailFolder {
     
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           folder.addMessages(emails, realFlags, internaldates, c);
         }
       }.invoke(folder.getPost().getEnvironment());
@@ -229,7 +229,7 @@ public class PostFolder implements MailFolder {
     
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           folder.updateMessages(emails, c);
         }
       }.invoke(folder.getPost().getEnvironment());
@@ -249,7 +249,7 @@ public class PostFolder implements MailFolder {
     
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           folder.removeMessages(emails, c);
         }
       }.invoke(folder.getPost().getEnvironment());
@@ -266,7 +266,7 @@ public class PostFolder implements MailFolder {
     Folder f;
     try {
       f = (Folder)(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           folder.createChildFolder(name, c);
         }
       }).invoke(folder.getPost().getEnvironment());
@@ -294,7 +294,7 @@ public class PostFolder implements MailFolder {
     Folder f;
     try {
       f = (Folder)(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           folder.getChildFolder(name, c);
         }
       }).invoke(folder.getPost().getEnvironment());

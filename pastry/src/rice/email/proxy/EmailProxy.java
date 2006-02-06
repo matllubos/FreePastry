@@ -165,7 +165,7 @@ public class EmailProxy extends PostProxy {
       while (!done) {
         try {
           emailFolder = (rice.email.Folder)(new ExternalContinuationRunnable() {
-            protected void run(Continuation c) {
+            protected void execute(Continuation c) {
               email.getRootFolder(c);
             }
           }).invoke(environment);

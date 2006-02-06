@@ -62,7 +62,7 @@ public class PostFlagList implements FlagList {
   public void commit() throws MailboxException {
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           message.getFolder().updateMessage(message.getStoredEmail(), c);
         }
       }.invoke(message.getFolder().getPost().getEnvironment());

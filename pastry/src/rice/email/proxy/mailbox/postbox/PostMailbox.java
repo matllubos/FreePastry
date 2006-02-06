@@ -191,7 +191,7 @@ public class PostMailbox implements Mailbox {
 
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           old.getFolder().setName(names[names.length-1], c);
         }
       }.invoke(env);
@@ -213,7 +213,7 @@ public class PostMailbox implements Mailbox {
     
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation d) {
+        protected void execute(Continuation d) {
           p.getFolder().addChildFolder(old.getFolder(), d);
         }
       }.invoke(env);
@@ -263,7 +263,7 @@ public class PostMailbox implements Mailbox {
 	
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           email.addSubscription(fullName, c);
         }
       }.invoke(env);
@@ -278,7 +278,7 @@ public class PostMailbox implements Mailbox {
 
     try {
       new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           email.removeSubscription(fullName, c);
         }
       }.invoke(env);
@@ -291,7 +291,7 @@ public class PostMailbox implements Mailbox {
     String[] subscriptions;
     try {
       subscriptions = (String[])(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           email.getSubscriptions(c);
         }
       }).invoke(env);

@@ -242,13 +242,13 @@ public interface Continuation {
     
     public void run() {
       try {
-        run(e);
+        execute(e);
       } catch (Exception exc) {
         e.receiveException(exc);
       }
     }
     
-    protected abstract void run(Continuation c) throws Exception;
+    protected abstract void execute(Continuation c) throws Exception;
     
     public Object invoke(SelectorManager sm) throws Exception {
       sm.invoke(this);
@@ -275,7 +275,7 @@ public interface Continuation {
   public abstract class ExternalRunnable extends ExternalContinuationRunnable {
     public abstract Object execute() throws Exception;
     
-    protected void run(Continuation c) throws Exception {
+    protected void execute(Continuation c) throws Exception {
       c.receiveResult(execute());
     }
   }

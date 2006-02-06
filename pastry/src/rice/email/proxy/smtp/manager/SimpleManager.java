@@ -117,7 +117,7 @@ public class SimpleManager implements SmtpManager {
   public boolean isPostAddress(final MailAddress addr) {
     try {
       ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           isPostAddress(addr, c);
         }
       };
@@ -175,7 +175,7 @@ public class SimpleManager implements SmtpManager {
 
     // now, do the expansion to the full mailing lists    
     ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
-      protected void run(Continuation c) {
+      protected void execute(Continuation c) {
         SimpleManager.this.email.expand((PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]), SimpleManager.this, c);
       }
     };
@@ -196,7 +196,7 @@ public class SimpleManager implements SmtpManager {
     final Email email = PostMessage.parseEmail(getLocalHost(), state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
     
     ExternalContinuationRunnable d = new ExternalContinuationRunnable() {
-      protected void run(Continuation d) throws PostException {
+      protected void execute(Continuation d) throws PostException {
         SimpleManager.this.email.sendMessage(email, d);
       }
     };

@@ -83,7 +83,7 @@ public class MessagePropertyPart extends FetchPart {
       EmailContentPart[] parts;
       try {
         parts = (EmailContentPart[])(new ExternalContinuationRunnable() {
-          protected void run(Continuation c) {
+          protected void execute(Continuation c) {
               part.getContent(c);
           }
         }).invoke(_conn.getEnvironment());
@@ -121,7 +121,7 @@ public class MessagePropertyPart extends FetchPart {
       InternetHeaders headers;
       try {
         headers = getHeaders((EmailData)(new ExternalContinuationRunnable() {
-          protected void run(Continuation c) {
+          protected void execute(Continuation c) {
               part.getHeaders(c);
           }
         }).invoke(_conn.getEnvironment()));
@@ -132,7 +132,7 @@ public class MessagePropertyPart extends FetchPart {
       EmailContentPart content;
       try {
         content = (EmailContentPart)(new ExternalContinuationRunnable() {
-          protected void run(Continuation d) {
+          protected void execute(Continuation d) {
               part.getContent(d);
           }
         }).invoke(_conn.getEnvironment());
@@ -194,7 +194,7 @@ public class MessagePropertyPart extends FetchPart {
       EmailContentPart data; 
       try {
         data = (EmailContentPart)(new ExternalContinuationRunnable() {
-          protected void run(Continuation c) {
+          protected void execute(Continuation c) {
               part.getContent(c);
           }
         }).invoke(_conn.getEnvironment());
@@ -334,7 +334,7 @@ public class MessagePropertyPart extends FetchPart {
       InternetHeaders headers;
       try {
         headers = getHeaders((EmailData)(new ExternalContinuationRunnable() {
-          protected void run(Continuation d) throws MailboxException {
+          protected void execute(Continuation d) throws MailboxException {
               msg.getMessage().getContent().getHeaders(d);
           }
         }).invoke(_conn.getEnvironment()));
@@ -433,7 +433,7 @@ public class MessagePropertyPart extends FetchPart {
         InternetHeaders headers;
         try {
           headers = getHeaders((EmailData)(new ExternalContinuationRunnable() {
-            protected void run(Continuation d) throws MailboxException {
+            protected void execute(Continuation d) throws MailboxException {
               part.getHeaders(d);
             }
           }).invoke(_conn.getEnvironment()));

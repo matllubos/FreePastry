@@ -135,7 +135,7 @@ public class BodyPart extends FetchPart {
     final EmailContentPart content;
     try {
       content = (EmailContentPart)(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       }).invoke(_conn.getEnvironment());
@@ -157,7 +157,7 @@ public class BodyPart extends FetchPart {
         EmailHeadersPart[] parts;
         try {
           parts = (EmailHeadersPart[])(new ExternalContinuationRunnable() {
-            protected void run(Continuation c) {
+            protected void execute(Continuation c) {
               ((EmailMultiPart) content).getContent(c);
             }
           }).invoke(_conn.getEnvironment());
@@ -220,7 +220,7 @@ public class BodyPart extends FetchPart {
       EmailData data;
       try {
         data = (EmailData)(new ExternalContinuationRunnable() {
-          protected void run(Continuation c) {
+          protected void execute(Continuation c) {
             part.getHeaders(c);
           }
         }).invoke(_conn.getEnvironment());
@@ -280,7 +280,7 @@ public class BodyPart extends FetchPart {
     EmailContentPart[] parts;
     try {
       parts = (EmailContentPart[])(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       }).invoke(_conn.getEnvironment());
@@ -305,7 +305,7 @@ public class BodyPart extends FetchPart {
     EmailData data;
     try {
       data = (EmailData)(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       }).invoke(_conn.getEnvironment());
@@ -324,7 +324,7 @@ public class BodyPart extends FetchPart {
     EmailData headers;
     try {
       headers = (EmailData)(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getHeaders(c);
         }
       }).invoke(_conn.getEnvironment());
@@ -339,7 +339,7 @@ public class BodyPart extends FetchPart {
     EmailContentPart data;
     try {
       data = (EmailContentPart)(new ExternalContinuationRunnable() {
-        protected void run(Continuation c) {
+        protected void execute(Continuation c) {
           part.getContent(c);
         }
       }).invoke(_conn.getEnvironment());
