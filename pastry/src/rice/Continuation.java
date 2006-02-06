@@ -273,7 +273,7 @@ public interface Continuation {
    *
    */
   public abstract class ExternalRunnable extends ExternalContinuationRunnable {
-    public abstract Object execute() throws Exception;
+    protected abstract Object execute() throws Exception;
     
     protected void execute(Continuation c) throws Exception {
       c.receiveResult(execute());
