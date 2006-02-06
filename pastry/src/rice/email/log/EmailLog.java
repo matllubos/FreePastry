@@ -100,9 +100,20 @@ public class EmailLog extends CoalescedLog {
    * @return The subscriptions
    */
   public void getSubscriptions(Continuation command) {
+    if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(EmailLog.class, null);
     if (subscriptions == null) {
+      if (logger.level <= Logger.FINER) logger.log("EmailLog: getSubscriptions: subscriptions are null");
       command.receiveResult(new String[0]);
     } else {      
+      if (logger.level <= Logger.FINER) {
+        logger.log("EmailLog: getSubscriptions: ");
+        Iterator i = subscriptions.iterator();
+        while (i.hasNext()) {
+          logger.log("  subscription "+i.next());
+          
+        }
+        logger.log("EmailLog: all Subscriptions");
+      }
       command.receiveResult(subscriptions.toArray(new String[0]));
     }
   }

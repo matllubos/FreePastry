@@ -115,17 +115,15 @@ public class SimpleManager implements SmtpManager {
   }
   
   public boolean isPostAddress(final MailAddress addr) {
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        isPostAddress(addr, c);
-      }
-    };
-    c.invokeAndSleep(environment);
-    
-    if (c.exceptionThrown()) {
+    try {
+      ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          isPostAddress(addr, c);
+        }
+      };
+      return ((Boolean)c.invoke(environment)).booleanValue();
+    } catch (Exception e) {
       return false;
-    } else {
-      return ((Boolean)c.getResult()).booleanValue();
     }
   }
   
@@ -176,17 +174,13 @@ public class SimpleManager implements SmtpManager {
     }
 
     // now, do the expansion to the full mailing lists    
-    ExternalRunnable c = new ExternalRunnable() {
+    ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
       protected void run(Continuation c) {
         SimpleManager.this.email.expand((PostUserAddress[]) postRecps.toArray(new PostUserAddress[0]), SimpleManager.this, c);
       }
     };
-    c.invokeAndSleep(environment);
     
-    if (c.exceptionThrown())
-      throw c.getException();
-    
-    Object[] all = (Object[]) c.getResult();
+    Object[] all = (Object[]) c.invoke(environment);
     
     for (int j=0; j<all.length; j++) 
       if (all[j] instanceof PostUserAddress)
@@ -201,18 +195,15 @@ public class SimpleManager implements SmtpManager {
     
     final Email email = PostMessage.parseEmail(getLocalHost(), state.getRemote(), recipients, state.getMessage().getResource(), address, state.getEnvironment());
     
-    ExternalRunnable d = new ExternalRunnable() {
+    ExternalContinuationRunnable d = new ExternalContinuationRunnable() {
       protected void run(Continuation d) throws PostException {
         SimpleManager.this.email.sendMessage(email, d);
       }
     };
-    d.invokeAndSleep(environment);
     
-    if (d.exceptionThrown())
-      throw d.getException(); 
-    
-    if (! d.getResult().equals(Boolean.TRUE)) 
-      throw new RuntimeException("Sending of email did not succeed: " + d.getResult());
+    Object result = d.invoke(environment);
+    if (! result.equals(Boolean.TRUE)) 
+      throw new RuntimeException("Sending of email did not succeed: " + result);
 
     Iterator it = nonPostRecps.iterator();
     

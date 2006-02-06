@@ -226,17 +226,17 @@ public interface Continuation {
    * and wait for it to return its result in a Continuation.  It is essentially
    * a covnenience object which combines the functionality of a Runnable that
    * can be invoked on the Selector with an ExternalContinuation that it will
-   * wait on.  Typical use is to construct an anonymous class overriding the
-   * run(Continuation) method and then call invokeAndSleep() to wait on the 
-   * result.  The result can then be fetched with getResult() or getException().
+   * wait on.  Override the run(Continuation) method then call invoke() to
+   * get the result or Exception from the operation.  The current thread will
+   * block on invoke until the continuation returns a result or an exception.
    * 
    * @author jstewart
    *
    */
-  public static abstract class ExternalRunnable implements Runnable {
+  public static abstract class ExternalContinuationRunnable implements Runnable {
     private ExternalContinuation e;
 
-    public ExternalRunnable() {
+    public ExternalContinuationRunnable() {
       e = new ExternalContinuation();
     }
     
@@ -250,32 +250,36 @@ public interface Continuation {
     
     protected abstract void run(Continuation c) throws Exception;
     
-    public void sleep() {
+    public Object invoke(SelectorManager sm) throws Exception {
+      sm.invoke(this);
       e.sleep();
-    }
-    
-    public Object getResult() {
+      if (e.exceptionThrown())
+        throw e.getException();
       return e.getResult();
     }
-    
-    public Exception getException() {
-      return e.getException();
-    }
-    
-    public boolean exceptionThrown() {
-      return e.exceptionThrown();
-    }
-    
-    public void invokeAndSleep(SelectorManager sm) {
-      sm.invoke(this);
-      sleep();
-    }
  
-    public void invokeAndSleep(Environment env) {
-      invokeAndSleep(env.getSelectorManager());
+    public Object invoke(Environment env) throws Exception {
+      return invoke(env.getSelectorManager());
     }
   }
-  
+
+  /**
+   * This class is used when you want to run some task on the selector thread
+   * and wait for it to return its result.  Override execute() to perform the
+   * operation and then use invoke to schedule its operation.  The current
+   * thread will block until the operation returns a result or an exception.
+   * 
+   * @author jstewart
+   *
+   */
+  public abstract class ExternalRunnable extends ExternalContinuationRunnable {
+    public abstract Object execute() throws Exception;
+    
+    protected void run(Continuation c) throws Exception {
+      c.receiveResult(execute());
+    }
+  }
+
   /**
    * This class represents a Continuation which is used when multiple 
    * results are expected, which can come back at different times.  The

@@ -189,14 +189,15 @@ public class PostMailbox implements Mailbox {
     
     final String[] names = new_name.split(HIERARCHY_DELIMITER);
 
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        old.getFolder().setName(names[names.length-1], c);
-      }
-    };
-    c.invokeAndSleep(env);
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+    try {
+      new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          old.getFolder().setName(names[names.length-1], c);
+        }
+      }.invoke(env);
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
     
     PostFolder parent = (PostFolder) getRootFolder();
     
@@ -210,14 +211,15 @@ public class PostMailbox implements Mailbox {
     
     final PostFolder p = parent;
     
-    ExternalRunnable d = new ExternalRunnable() {
-      protected void run(Continuation d) {
-        p.getFolder().addChildFolder(old.getFolder(), d);
-      }
-    };
-    d.invokeAndSleep(env);
-    
-    if (d.exceptionThrown()) { throw new MailboxException(d.getException()); } 
+    try {
+      new ExternalContinuationRunnable() {
+        protected void run(Continuation d) {
+          p.getFolder().addChildFolder(old.getFolder(), d);
+        }
+      }.invoke(env);
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
     
     old.setParent(parent);
     
@@ -259,42 +261,45 @@ public class PostMailbox implements Mailbox {
       return;
     }
 	
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        email.addSubscription(fullName, c);
-      }
-    };
-    c.invokeAndSleep(env);
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+    try {
+      new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          email.addSubscription(fullName, c);
+        }
+      }.invoke(env);
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
 
   public void unsubscribe(final String fullName) throws MailboxException {
     if (listSubscriptions(fullName).length == 0)
 	  return;
-	  
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        email.removeSubscription(fullName, c);
-      }
-    };
-    c.invokeAndSleep(env);
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+
+    try {
+      new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          email.removeSubscription(fullName, c);
+        }
+      }.invoke(env);
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
   
   public String[] listSubscriptions(String pattern) throws MailboxException {
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        email.getSubscriptions(c);
-      }
-    };
-    c.invokeAndSleep(env);
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+    String[] subscriptions;
+    try {
+      subscriptions = (String[])(new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          email.getSubscriptions(c);
+        }
+      }).invoke(env);
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
     
     Vector result = new Vector();
-    String[] subscriptions = (String[]) c.getResult();
     
     pattern = pattern.replaceAll("\\*", ".*").replaceAll("\\%", "[^" + HIERARCHY_DELIMITER + "]*");
     

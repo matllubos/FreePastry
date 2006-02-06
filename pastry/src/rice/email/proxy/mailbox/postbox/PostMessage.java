@@ -92,14 +92,16 @@ public class PostMessage implements StoredMessage {
   }
 
   public void purge() throws MailboxException {
-    ExternalRunnable c = new ExternalRunnable() {
+    try {
+    ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
       protected void run(Continuation c) {
         folder.removeMessage(email, c);
       }
     };
-    c.invokeAndSleep(folder.getPost().getEnvironment());
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); } 
+    c.invoke(folder.getPost().getEnvironment());
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
   
   protected static PostUserAddress[] getAddresses(MimeParser parser, String field, Environment env) throws MailboxException {
@@ -254,29 +256,30 @@ public class PostMessage implements StoredMessage {
   }
   
   private static Object getContent(final EmailContentPart part, Environment env) throws MailboxException {
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        part.getContent(c);
-      }
-    };
-    c.invokeAndSleep(env); 
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-
-    return c.getResult();
+    try {
+      ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          part.getContent(c);
+        }
+      };
+      return c.invoke(env); 
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
 
   private static String getHeaders(final EmailMessagePart part, Environment env) throws MailboxException {
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        part.getHeaders(c);
-      }
-    };
-    c.invokeAndSleep(env);
+    try {
+      ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          part.getHeaders(c);
+        }
+      };
     
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-    
-    return new String(((EmailData) c.getResult()).getData());
+      return new String(((EmailData) c.invoke(env)).getData());
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
 
   private static void setHeaders(String header, MimePart mm) throws MessagingException {

@@ -61,17 +61,19 @@ public class RetrCommand extends Pop3Command {
     
     seperator = seperator.replaceAll("\"", "").replaceAll("'", "");
     StringBuffer result = new StringBuffer();
-    
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        part.getContent(c);
-      }
-    };
-    c.invokeAndSleep(conn.getEnvironment());
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-    
-    EmailContentPart[] parts = (EmailContentPart[]) c.getResult();
+
+    EmailContentPart[] parts;
+    try {
+      ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          part.getContent(c);
+        }
+      };
+      
+      parts = (EmailContentPart[]) c.invoke(conn.getEnvironment());
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
     
     for (int i=0; i<parts.length; i++) {
       result.append("--" + seperator + "\r\n" + fetchAll(conn, parts[i]) + "\r\n");
@@ -83,42 +85,41 @@ public class RetrCommand extends Pop3Command {
   }
   
   public static String fetchAll(Pop3Connection conn, final EmailSinglePart part) throws MailboxException {
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        part.getContent(c);
-      }
-    };
-    c.invokeAndSleep(conn.getEnvironment());
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-    
-    return new String(((EmailData) c.getResult()).getData());
+    try {
+      ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          part.getContent(c);
+        }
+      };
+      
+      return new String(((EmailData) c.invoke(conn.getEnvironment())).getData());
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
   
   public static String fetchAll(Pop3Connection conn, final EmailHeadersPart part) throws MailboxException {
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        part.getHeaders(c);
-      }
-    };
-    c.invokeAndSleep(conn.getEnvironment()); 
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-    
-    EmailData headers = (EmailData) c.getResult();
-    
-    c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        part.getContent(c);
-      }
-    };
-    c.invokeAndSleep(conn.getEnvironment());
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
-    
-    EmailContentPart data = (EmailContentPart) c.getResult();
-    
-    return new String(headers.getData()) + "\r\n" + fetchAll(conn, data);
+    try {
+      ExternalContinuationRunnable c = new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          part.getHeaders(c);
+        }
+      };
+       
+      EmailData headers = (EmailData) c.invoke(conn.getEnvironment());
+      
+      c = new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          part.getContent(c);
+        }
+      };
+  
+      EmailContentPart data = (EmailContentPart) c.invoke(conn.getEnvironment());
+      
+      return new String(headers.getData()) + "\r\n" + fetchAll(conn, data);
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }
   
 }

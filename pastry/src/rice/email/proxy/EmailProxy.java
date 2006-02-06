@@ -163,25 +163,22 @@ public class EmailProxy extends PostProxy {
       boolean done = false;
       
       while (!done) {
-        ExternalRunnable c = new ExternalRunnable() {
-          protected void run(Continuation c) {
-            email.getRootFolder(c);
-          }
-        };
-        c.invokeAndSleep(environment);
-        
-        if (c.exceptionThrown()) { 
-          stepDone(FAILURE, "Fetching email log caused exception " + c.getException());
+        try {
+          emailFolder = (rice.email.Folder)(new ExternalContinuationRunnable() {
+            protected void run(Continuation c) {
+              email.getRootFolder(c);
+            }
+          }).invoke(environment);
+          done = true;
+        } catch (Exception e) {
+          stepDone(FAILURE, "Fetching email log caused exception " + e);
           stepStart("Sleeping and then retrying to fetch email log (" + retries + "/" + parameters.getInt("email_fetch_log_retries"));
           if (retries < parameters.getInt("email_fetch_log_retries")) {
             retries++;
             Thread.sleep(parameters.getInt("email_fetch_log_retry_sleep"));
           } else {
-            throw c.getException(); 
+            throw e; 
           }
-        } else {
-          emailFolder = (rice.email.Folder) c.getResult();
-          done = true;
         }
       }
       stepDone(SUCCESS);

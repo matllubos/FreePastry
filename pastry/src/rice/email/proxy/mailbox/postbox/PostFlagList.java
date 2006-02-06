@@ -60,14 +60,15 @@ public class PostFlagList implements FlagList {
    * into one disk write, one SQL command, etc.
    */
   public void commit() throws MailboxException {
-    ExternalRunnable c = new ExternalRunnable() {
-      protected void run(Continuation c) {
-        message.getFolder().updateMessage(message.getStoredEmail(), c);
-      }
-    };
-    c.invokeAndSleep(message.getFolder().getPost().getEnvironment());
-    
-    if (c.exceptionThrown()) { throw new MailboxException(c.getException()); }
+    try {
+      new ExternalContinuationRunnable() {
+        protected void run(Continuation c) {
+          message.getFolder().updateMessage(message.getStoredEmail(), c);
+        }
+      }.invoke(message.getFolder().getPost().getEnvironment());
+    } catch (Exception e) {
+      throw new MailboxException(e);
+    }
   }   
   
   /**
