@@ -180,7 +180,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * @throws IOException If an error occurs
    */
   public void readFully(byte[] b, int offset, int length) throws IOException {
-    read(b, 0, b.length);
+    read(b, offset, length);
   }
   
   /**
