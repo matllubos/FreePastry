@@ -149,6 +149,10 @@ shutdown_hooks_enable=true
 log_network_upload_interval = 1800000
 log_network_buffer_size = 128000
 log_rotate_filename=epost.log
+# 1 gigabytes
+log_rotate_max_size=1000000000
+# 5 minutes
+log_rotate_size_check_interval=300000
 log_network_upload_filename=epost.log
 log_rotating_date_format=yyyyMMdd.HHmmss.SSS
 log_network_upload_other_filenames=aggregation.param

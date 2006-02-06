@@ -31,7 +31,8 @@ import rice.selector.TimerTask;
  */
 public class RotatingLogManager extends AbstractLogManager {
 
-  TimerTask rotateTask;
+  protected TimerTask rotateTask;
+  protected TimerTask sizeRotateTask;
 
   public RotatingLogManager(TimeSource timeSource, Parameters params) {
     this(timeSource, params, "", null);
@@ -53,6 +54,12 @@ public class RotatingLogManager extends AbstractLogManager {
       rotateTask = new LogRotationTask();
       sm.getTimer().schedule(rotateTask, params.getInt("log_rotate_interval"),
           params.getInt("log_rotate_interval"));
+      if (params.contains("log_rotate_size_check_interval") && sizeRotateTask == null) {
+        sizeRotateTask = new LogSizeRotationTask();
+        sm.getTimer().schedule(sizeRotateTask, 
+            params.getInt("log_rotate_size_check_interval"), 
+            params.getInt("log_rotate_size_check_interval"));
+      }
     } else {
       throw new RuntimeException("Task already started");
     }
@@ -105,6 +112,15 @@ public class RotatingLogManager extends AbstractLogManager {
   private class LogRotationTask extends TimerTask {
     public void run() {
       rotate();
+    }
+  }
+
+  private class LogSizeRotationTask extends TimerTask {
+    public void run() {
+      synchronized (RotatingLogManager.this) {
+        if (new File(params.getString("log_rotate_filename")).length() >= params.getLong("log_rotate_max_size"))
+          rotate();
+      }
     }
   }
 
