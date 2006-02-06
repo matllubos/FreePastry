@@ -29,6 +29,7 @@ public final class SignedPostMessage implements Serializable {
   private transient byte[] msg;
   
   private int version;
+  private static int VERSION = 1;
 
   // the signature for this message
   private byte[] signature;
@@ -46,7 +47,7 @@ public final class SignedPostMessage implements Serializable {
     this.cachedMessage = message;
     this.msg = SecurityUtils.serialize(message);
     this.signature = SecurityUtils.sign(msg, key);
-    this.version = 1;
+    this.version = VERSION;
   }
 
   /**
@@ -70,14 +71,14 @@ public final class SignedPostMessage implements Serializable {
   }
   
   public byte[] getMessageBytes() {
-    if (msg == null) {
+    if (msg != null) {
       return msg;
     } else {
       try {
         msg = SecurityUtils.serialize(message);
       } catch (IOException e) {
         System.out.println("SignedPostMessage: Exception in getMessageBytes "+e);
-        return new byte[0];
+        return null;
       }
       return msg;
     }
@@ -128,8 +129,22 @@ public final class SignedPostMessage implements Serializable {
    * @param oos The current output stream
    */
   private void writeObject(ObjectOutputStream oos) throws IOException {
-    oos.defaultWriteObject();
+    if (msg == null) {
+      if (version == 0) {
+        // old-style; promote to newest-style
+        version = VERSION;
+        msg = SecurityUtils.serialize(message);
+      } else {
+        throw new IOException("SignedPostMessage is new style, but has no msg field!");
+      }
+    } else {
+      // has msg field, but was not base64 serialized
+      if (version == 0)
+        version = VERSION;
+    }
     
+    oos.defaultWriteObject();
+
     oos.writeInt(msg.length);
     oos.write(msg);
   }
