@@ -434,9 +434,24 @@
   </target>
   
   <!-- ********************** epost section ********************* -->
+
+  <target name="epost-manifest-version" if="epost-version">
+  	<copy file="${jar.dir}/epost/Manifest.tmpl" tofile="${build.dir}/Manifest">
+  	  <filterset>
+  		<filter token="version" value="${epost-version}" />
+  	  </filterset>
+	</copy>
+  </target>
   
-  <target name="epost-jar" depends="compile-epost">
-    <jar destfile="epost.jar" manifest="${jar.dir}/epost/Manifest" compress="true">
+  <target name="epost-manifest-noversion" unless="epost-version">
+  	<copy file="${jar.dir}/epost/Manifest.tmpl" tofile="${build.dir}/Manifest">
+	</copy>
+  </target>
+  
+  <target name="epost-manifest" depends="epost-manifest-version,epost-manifest-noversion"/>
+  
+  <target name="epost-jar" depends="compile-epost,epost-manifest">
+    <jar destfile="epost.jar" manifest="${build.dir}/Manifest" compress="true">
       <fileset dir="${build.dir}" includes="rice/Continuation*.class"/>
       <fileset dir="${build.dir}" includes="rice/Executable*.class"/>
       <fileset dir="${build.dir}" includes="rice/Destructable*.class"/>
@@ -470,8 +485,12 @@
   <target name="epost" depends="epost-jar">
     <signjar jar="epost.jar" alias="ePOST" storepass="monkey" keystore="jars/ePOST_keystore" />
   </target>
+	
+  <target name="epost-beta" depends="clean,epost" >
+  	<move file="epost.jar" tofile="epost-${epost-version}.jar"/>
+  </target>
 
-  <target name="epost-release" depends="epost">
+  <target name="epost-release" depends="clean,epost">
     <move file="epost.jar" tofile="epost-${epost-version}.jar"/>
     <tar destfile="epost-${epost-version}-all.tgz" compression="gzip">
       <tarfileset dir="." includes="epost-${epost-version}.jar" prefix="epost/"/>

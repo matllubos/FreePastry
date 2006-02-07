@@ -2,6 +2,7 @@ package rice.post.proxy;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.Rectangle2D;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -303,6 +304,8 @@ public class PostProxy {
   protected InetAddress localHost;
   
   protected Logger logger;
+
+  private String version = "undefined";
   
   /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
@@ -1434,11 +1437,20 @@ public class PostProxy {
     }
   }
   
+  protected void setVersion() {
+    String pkgVersion = getClass().getPackage().getImplementationVersion();
+    if (pkgVersion != null && !pkgVersion.startsWith("@")) {
+      this.version = pkgVersion;
+    }
+  }
+  
     protected void start2() throws Exception {
   //    parameters = env.getParameters();  // done in start(void)
       startLivenessMonitor();
       System.setOut(new PrintStream(new LogOutputStream(environment, Logger.INFO, "out"), true));
       System.setErr(new PrintStream(new LogOutputStream(environment, Logger.INFO, "err"), true));
+      
+      setVersion();
       
       startCheckBoot();    
       startDialog(parameters);
@@ -1446,13 +1458,14 @@ public class PostProxy {
       if (logger.level <= Logger.INFO) logger.log("-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --");
       
       if (dialog != null) 
-        dialog.append("\n-- Booting ePOST 2.0 with classpath " + System.getProperty("java.class.path") + " --\n");
+        dialog.append("\n-- Booting ePOST "+version +" with classpath " + System.getProperty("java.class.path") + " --\n");
       
       sectionStart("Initializing Parameters");
       startShutdownHooks(parameters);
       startSecurityManager(parameters);
       startRetrieveCAKey(parameters);
       startRetrieveUser(parameters);
+      dialog.repaint();  // update user info
       startLoadRingCertificates(parameters);
       startDeterminePorts(parameters);
       startDetermineSMTPServer(parameters);
@@ -1708,29 +1721,17 @@ public class PostProxy {
     public PostDialog(PostProxy proxy) {
       panel = new PostPanel();
       kill = new KillPanel(proxy);
-      setResizable(false);
 
       area = new JTextArea(15,75);
       area.setFont(new Font("Courier", Font.PLAIN, 10));
       area.setEditable(false);
-      scroll = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+      scroll = new JScrollPane(area, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
       
-      GridBagLayout layout = new GridBagLayout();
-      getContentPane().setLayout(layout);
+      getContentPane().setLayout(new BorderLayout());
       
-      GridBagConstraints c = new GridBagConstraints();
-      layout.setConstraints(panel, c);      
-      getContentPane().add(panel);
-      
-      GridBagConstraints d = new GridBagConstraints();
-      d.gridy=1;
-      layout.setConstraints(scroll, d);      
-      getContentPane().add(scroll);
-      
-      GridBagConstraints e = new GridBagConstraints();
-      e.gridy=2;
-      layout.setConstraints(kill, e);      
-      getContentPane().add(kill);
+      getContentPane().add(panel, BorderLayout.NORTH);
+      getContentPane().add(scroll, BorderLayout.CENTER);
+      getContentPane().add(kill, BorderLayout.SOUTH);
       
       setTitle("ePOST");
       pack();
@@ -1768,17 +1769,35 @@ public class PostProxy {
   }
   
   protected class PostPanel extends JPanel {
-    public Dimension getPreferredSize() {
-      return new Dimension(300,80); 
+    public Dimension getMinimumSize() {
+      return new Dimension(300,120); 
     }
     
-    public void paint(Graphics g) {
+    public Dimension getPreferredSize() {
+      return getMinimumSize();
+    }
+    
+    private int drawStringCentered(Graphics g, String s, int y) {
+      Rectangle2D bounds = g.getFontMetrics().getStringBounds(s,g);
+      
+      g.drawString(s,(int)(getWidth()/2-bounds.getCenterX()), y);
+      
+      return y+(int)(bounds.getHeight()*1.1);
+    }
+    
+    public void paintComponent(Graphics g) {
       g.setFont(new Font("Times", Font.BOLD, 24));
-      g.drawString("Welcome to ePOST!", 50, 40);
+      drawStringCentered(g, "Welcome to ePOST!", 40);
       
       g.setFont(new Font("Times", Font.PLAIN, 12));
-      g.drawString("The status of your node is shown below.", 52, 60);
-      
+      int y = 60;
+      y = drawStringCentered(g, "version "+version, y);
+      if (address != null) {
+        g.setFont(new Font("Courier", Font.PLAIN, 10));
+        y = drawStringCentered(g, address.toString(), y);
+        g.setFont(new Font("Times", Font.PLAIN, 12));
+      }
+      y += drawStringCentered(g, "The status of your node is shown below.", y+10);
     }
   }
   
@@ -1869,10 +1888,6 @@ public class PostProxy {
       d.gridx=3;
       layout.setConstraints(kill, d);      
       add(kill);
-    }
-    
-    public Dimension getPreferredSize() {
-      return new Dimension(300, 30);
     }
     
   }
