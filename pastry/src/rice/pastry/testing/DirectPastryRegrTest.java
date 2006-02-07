@@ -2,6 +2,7 @@ package rice.pastry.testing;
 
 import rice.environment.Environment;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -34,8 +35,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
    * constructor
    */
   private DirectPastryRegrTest() throws IOException {
-    super(new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
-        new SimpleParameters(Environment.defaultParamFileArray,null)));
+    super(Environment.directEnvironment());
     simulator = new SphereNetwork(environment);
     factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), 
         simulator,
@@ -69,10 +69,12 @@ public class DirectPastryRegrTest extends PastryRegrTest {
    * send one simulated message
    */
   protected boolean simulate() {
-    boolean res = simulator.simulate();
-    if (res)
-      msgCount++;
-    return res;
+    try { Thread.sleep(300); } catch (InterruptedException ie) {}
+    return false;
+//    boolean res = simulator.simulate();
+//    if (res)
+//      msgCount++;
+//    return res;
   }
 
   // do nothing in the simulated world

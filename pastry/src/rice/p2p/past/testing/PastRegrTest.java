@@ -730,6 +730,24 @@ public class PastRegrTest extends CommonAPITest {
    */
   public static void main(String args[]) throws IOException {
 //    System.setOut(new PrintStream(new FileOutputStream("pastrtest.txt")));
+//    System.setErr(System.out);
+    LinkedList delme = new LinkedList();
+    delme.add(new File("FreePastry-Storage-Root"));
+    while(!delme.isEmpty()) {
+      File f = (File)delme.removeFirst();
+      if (f.isDirectory()) {
+        File[] subs = f.listFiles();
+        if (subs.length == 0) {
+          f.delete(); 
+        } else {
+          delme.addAll(Arrays.asList(subs));          
+          delme.addLast(f);          
+        }
+      } else {
+        f.delete(); 
+      }
+    }
+    
     Environment env = parseArgs(args);
     PastRegrTest pastTest = new PastRegrTest(env);
     pastTest.start();

@@ -76,6 +76,7 @@ public class PingClient extends PastryAppl {
   }
 
   public void leafSetChange(NodeHandle nh, boolean wasAdded) {
+    if (true) return;
     System.out.println("at... " + getNodeId() + "'s leaf set");
     System.out.print("node " + nh.getNodeId() + " was ");
     if (wasAdded)
@@ -85,6 +86,7 @@ public class PingClient extends PastryAppl {
   }
 
   public void routeSetChange(NodeHandle nh, boolean wasAdded) {
+    if (true) return;
     System.out.println("at... " + getNodeId() + "'s route set");
     System.out.print("node " + nh.getNodeId() + " was ");
     if (wasAdded)

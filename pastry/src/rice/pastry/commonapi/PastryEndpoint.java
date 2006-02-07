@@ -40,10 +40,11 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param pn the pastry node that the application attaches to.
    */
   public PastryEndpoint(PastryNode pn, Application application, String instance) {
-    super(pn, application.getClass().getName() + instance);
+    super(pn, application.getClass().getName() + instance, null);
     
     this.instance = application.getClass().getName() + instance;
     this.application = application;
+    register();
   }
   
   /**

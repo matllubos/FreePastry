@@ -47,7 +47,8 @@ public class HelloWorldApp extends PastryAppl {
   }
 
   public HelloWorldApp(PastryNode pn) {
-    super(pn);
+    super(pn, null, addr);
+    register();
   }
 
   /**

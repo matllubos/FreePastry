@@ -182,7 +182,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
         // for now, conservatively send to everyone
         // broadcast(BroadcastLeafSet.Correction);
 
-        Iterator it = insertedHandles.iterator();
+        Iterator it = new ArrayList(insertedHandles).iterator();
         while (it.hasNext()) {
           // send leafset to missing node
           NodeHandle nh = (NodeHandle) it.next();

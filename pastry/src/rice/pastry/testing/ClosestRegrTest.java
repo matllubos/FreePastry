@@ -4,6 +4,7 @@ package rice.pastry.testing;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -47,8 +48,7 @@ public class ClosestRegrTest {
    * constructor
    */
   private ClosestRegrTest() throws IOException {
-    environment = new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
-        new SimpleParameters(Environment.defaultParamFileArray,null));
+    environment = Environment.directEnvironment();
     simulator = new SphereNetwork(environment);
     factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator, environment);
     pastryNodes = new Vector();
@@ -75,10 +75,19 @@ public class ClosestRegrTest {
   protected void run() {
     for (int i=0; i<NUM_NODES; i++) {
       PastryNode node = factory.newNode(getBootstrap());
+      synchronized(node) {
+        while(!node.isReady()) {
+          try {
+            node.wait(500);          
+          } catch (InterruptedException ie) {
+            return; 
+          }
+        }
+      }
       if (i > 0)
         test(i, (DirectNodeHandle)node.getLocalHandle());
 
-      while (simulator.simulate()) {}
+//      while (simulator.simulate()) {}
 
       System.out.println("CREATED NODE " + i + " " + node.getNodeId());
 

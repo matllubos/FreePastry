@@ -93,6 +93,13 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
   public boolean ping() {
     return isAlive();
   }
+  
+  public final void assertLocalNode() {
+    if (DirectPastryNode.currentNode == null) {
+//      ctor.printStackTrace();
+      throw new RuntimeException("PANIC: localnode is null in " + this+"@"+System.identityHashCode(this));
+    }
+  }
 
   /**
    * DESCRIBE THE METHOD
@@ -101,6 +108,8 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    */
   public int proximity() {
     assertLocalNode();
+    if (!simulator.getEnvironment().getSelectorManager().isSelectorThread()) 
+      throw new RuntimeException("Must be called on selector thread.");
     int result = simulator.proximity((DirectNodeHandle)DirectPastryNode.currentNode.getLocalHandle(), this);
 
     return result;
@@ -112,6 +121,13 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    * @param msg DESCRIBE THE PARAMETER
    */
   public void receiveMessage(Message msg) {
+    // shortcut if called on the local node
+    if (simulator.getEnvironment().getSelectorManager().isSelectorThread() &&
+        (remoteNode == DirectPastryNode.currentNode)) {
+      remoteNode.receiveMessage(msg);
+      return; 
+    }
+    
     if (! remoteNode.isAlive()) {
       if (logger.level <= Logger.WARNING) logger.log(
           "DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");              

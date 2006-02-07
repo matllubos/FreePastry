@@ -3,6 +3,7 @@ package rice.pastry.testing;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -75,6 +76,15 @@ public class HelloWorld {
 
     HelloWorldApp app = new HelloWorldApp(pn);
     helloClients.addElement(app);
+    
+    synchronized (pn) {
+      while(!pn.isReady()) {
+        try {
+          pn.wait(300);
+        } catch (InterruptedException ie) {}
+      }
+    }
+    
     System.out.println("created " + pn);
   }
 
@@ -103,7 +113,8 @@ public class HelloWorld {
    * Process one message.
    */
   private boolean simulate() {
-    return simulator.simulate();
+    return false;
+//    return simulator.simulate();
   }
 
   private static void doIinitstuff(String args[], Environment env) {
@@ -159,10 +170,9 @@ public class HelloWorld {
    * [-simultaneous_joins] [-simultaneous_msgs] [-help]
    */
   public static void main(String args[]) {
-    Environment env = new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
-        new SimpleParameters(Environment.defaultParamFileArray,null));
+    Environment env = Environment.directEnvironment();
     
-    env.getParameters().setInt("loglevel", 800);    
+//    env.getParameters().setInt("loglevel", 800);    
     doIinitstuff(args, env);
     
     HelloWorld driver = new HelloWorld(env);

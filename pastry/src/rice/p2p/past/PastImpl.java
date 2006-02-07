@@ -245,7 +245,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param command The command to run once a result is received
    */
   protected void sendRequest(Id id, PastMessage message, NodeHandle hint, Continuation command) {
-    if (logger.level <= Logger.FINER) logger.log("Sending request message " + message + " to id " + id + " via " + hint);
+    if (logger.level <= Logger.FINER) logger.log("Sending request message " + message + " {"+message.getUID()+"} to id " + id + " via " + hint);
     CancellableTask timer = endpoint.scheduleMessage(new MessageLostMessage(message.getUID(), getLocalNodeHandle(), id, message, hint), MESSAGE_TIMEOUT);
     insertPending(message.getUID(), timer, command);
     endpoint.route(id, message, hint);

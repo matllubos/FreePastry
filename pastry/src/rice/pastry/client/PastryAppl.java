@@ -48,6 +48,9 @@ public abstract class PastryAppl implements MessageReceiver
    * Constructor. 
    *
    * @param pn the pastry node that client will attach to.
+   * @deprecated This method does an implicit registration, which can cause 
+   * problems because messages can be received before the Subclass is initialized
+   * Use PastryAppl(pn, instance, address), and then call register()
    */
   public PastryAppl(PastryNode pn) {
     this(pn, null);
@@ -61,21 +64,34 @@ public abstract class PastryAppl implements MessageReceiver
    *
    * @param pn the pastry node that client will attach to.
    * @param instance The instance name of this appl.
+   * @deprecated This method does an implicit registration, which can cause 
+   * problems because messages can be received before the Subclass is initialized
+   * Use PastryAppl(pn, instance, address), and then call register()
    */
   public PastryAppl(PastryNode pn, String instance) {
+    this(pn, instance, null);
+    register();
+  }
+  
+  public PastryAppl(PastryNode pn, String instance, Address address) {
+    this.address = address;
     if (instance != null) {
       this.instance = instance;
-      this.address = new StandardAddress(this.getClass(), instance, pn.getEnvironment());
+      if (address == null)
+        this.address = new StandardAddress(this.getClass(), instance, pn.getEnvironment());
     }
     
     thePastryNode = pn;
+    logger = pn.getEnvironment().getLogManager().getLogger(getClass(), instance);
+  }
+  
+  protected void register() {
     thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
 
     thePastryNode.addLeafSetListener(new LeafSetObserver());
     thePastryNode.addRouteSetListener(new RouteSetObserver());
 
-    thePastryNode.registerApp(this); // just adds it to a list
-    logger = pn.getEnvironment().getLogManager().getLogger(getClass(), instance);
+    thePastryNode.registerApp(this); // just adds it to a list    
   }
   
   /**

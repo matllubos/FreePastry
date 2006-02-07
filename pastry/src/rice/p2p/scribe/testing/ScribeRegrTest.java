@@ -5,11 +5,11 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.messaging.SubscribeMessage;
-import rice.pastry.direct.DirectTimeSource;
 
 /**
  * @(#) DistScribeRegrTest.java Provides regression testing for the Scribe service using distributed

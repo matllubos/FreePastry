@@ -13,7 +13,7 @@ import rice.selector.SelectorManager;
  * 
  * @author Jeff Hoye
  */
-public abstract class WorkRequest {
+public abstract class WorkRequest implements Runnable {
   private Continuation c;
   private SelectorManager selectorManager;
   

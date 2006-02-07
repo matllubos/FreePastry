@@ -12,7 +12,7 @@ import rice.selector.SelectorManager;
 /**
  * @author Jeff Hoye
  */
-public class ProcessingRequest {
+public class ProcessingRequest implements Runnable {
   Continuation c;
   Executable r;
   

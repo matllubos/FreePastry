@@ -6,10 +6,10 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.replication.manager.*;
-import rice.pastry.direct.DirectTimeSource;
 
 /**
  * @(#) ReplicationRegrTest.java Provides regression testing for the replication manager service using distributed
@@ -59,8 +59,8 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
   public static void main(String args[]) throws IOException {
     Environment env = parseArgs(args);
     Parameters param = env.getParameters();
-    param.setString("loglevel","ALL");
-    param.setBoolean("environment_logToFile",true);
+//    param.setString("loglevel","ALL");
+//    param.setBoolean("environment_logToFile",true);
     param.setString("fileLogManager_filePrefix","retest_");
     param.setString("fileLogManager_fileSuffix",".log");
     ReplicationManagerRegrTest test = new ReplicationManagerRegrTest(env);

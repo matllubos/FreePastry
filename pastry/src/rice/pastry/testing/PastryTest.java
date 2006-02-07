@@ -2,6 +2,7 @@ package rice.pastry.testing;
 
 import rice.environment.Environment;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
@@ -58,6 +59,15 @@ public class PastryTest {
 
     PingClient pc = new PingClient(pn);
     pingClients.addElement(pc);
+    
+    synchronized (pn) {
+      while(!pn.isReady()) {
+        try {
+          pn.wait(300);
+        } catch (InterruptedException ie) {}
+      }
+    }
+    
   }
 
   public void sendPings(int k) {
@@ -80,12 +90,13 @@ public class PastryTest {
   }
 
   public boolean simulate() {
-    return simulator.simulate();
+    try { Thread.sleep(300); } catch (InterruptedException ie) {}    
+    return false;
+//    return simulator.simulate();
   }
 
   public static void main(String args[]) throws IOException {
-    PastryTest pt = new PastryTest(new Environment(null,null,null,new DirectTimeSource(System.currentTimeMillis()),null,
-        new SimpleParameters(Environment.defaultParamFileArray,null)));
+    PastryTest pt = new PastryTest(Environment.directEnvironment());
 
     int n = 4000;
     int m = 100;
@@ -97,7 +108,9 @@ public class PastryTest {
 
     for (int i = 0; i < n; i++) {
       pt.makePastryNode();
-      while (pt.simulate())
+      if(i%100 == 0)
+        System.out.println("Created node "+i+"/"+n);
+//      while (pt.simulate())
         msgCount++;
 
       if ((i + 1) % m == 0) {

@@ -29,4 +29,9 @@ public class DirectTimerTask extends ScheduledMessage {
   public void run() {
     md.deliver();
   }
+  
+  public String toString() {
+    return "DirectTT for " + msg + " to "+md.node;
+  }
+  
 }

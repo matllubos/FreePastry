@@ -3,6 +3,7 @@
  */
 package rice.pastry.direct;
 
+import java.nio.channels.Selector;
 import java.util.*;
 
 import rice.environment.Environment;
@@ -10,16 +11,16 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.pastry.*;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.BroadcastRouteRow;
+import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 public abstract class BasicNetworkSimulator implements NetworkSimulator {
 
   Vector nodes = new Vector();
-
-  // these are messages that should be delivered immeadiately
-  protected Vector msgQueue = new Vector();
 
   // these messages should be delivered when the timer expires
   protected TreeSet taskQueue = new TreeSet();
@@ -34,8 +35,13 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 
   protected RandomSource random;
 
+  protected int MIN_DELAY = 1;
+  
+  protected SelectorManager manager;
+    
   public BasicNetworkSimulator(Environment env) {
     this.environment = env;
+    manager = environment.getSelectorManager();
     Parameters params = env.getParameters();
     if (params.contains("pastry_direct_use_own_random")
         && params.getBoolean("pastry_direct_use_own_random")) {
@@ -60,9 +66,45 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
           "env.getTimeSource() must return a DirectTimeSource instead of a "
               + env.getTimeSource().getClass().getName());
     }
-    testRecord = null;
+    testRecord = null;    
+    start();
   }
 
+  boolean running = false; // Invariant: only modified on the selector
+  public void start() {
+    // this makes things single threaded
+    manager.invoke(new Runnable() {      
+      public void run() {
+        if (running) return;
+        running = true;
+        manager.invoke(new Runnable() {    
+          public void run() {
+            if (!running) return;            
+            if (!simulate()) {
+              Selector sel = manager.getSelector();
+              synchronized(sel) {
+                try {
+                  sel.wait(100); // must wait on the real clock, because the simulated clock can only be advanced by simulate()
+                } catch (InterruptedException ie) {
+                  logger.logException("BasicNetworkSimulator interrupted.",ie); 
+                }
+              }
+            }
+            manager.invoke(this);
+          }
+        });
+      }
+    });
+  }
+    
+  public void stop() {
+    manager.invoke(new Runnable() {      
+      public void run() {
+        running = false;
+      }
+    });
+  }
+  
   /**
    * get TestRecord
    * 
@@ -81,13 +123,26 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     testRecord = tr;
   }
 
-  public void deliverMessage(Message msg, DirectPastryNode node) {
+  private void addTask(DirectTimerTask dtt) {
+    if (logger.level <= Logger.FINE) logger.log("addTask("+dtt+")");
+//    System.out.println("addTask("+dtt+")");
+    synchronized(taskQueue) {
+      taskQueue.add(dtt);
+    }
+//    start();
+//    if (!manager.isSelectorThread()) Thread.yield();
+  }
+  
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node) {
     if (logger.level <= Logger.FINE)
       logger.log("GNS: deliver " + msg + " to " + node);
+    DirectTimerTask dtt = null;
     if (msg.getSender() == null || msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      msgQueue.addElement(md);
+      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + MIN_DELAY);
+      addTask(dtt);
     }
+    return dtt;
   }
 
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
@@ -96,7 +151,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     if (msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay);
-      taskQueue.add(dtt);
+      addTask(dtt);
     }
     return dtt;
   }
@@ -108,7 +163,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period);
-      taskQueue.add(dtt);
+      addTask(dtt);
     }
     return dtt;
   }
@@ -120,13 +175,9 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period, true);
-      taskQueue.add(dtt);
+      addTask(dtt);
     }
     return dtt;
-  }
-
-  public boolean simulate() {
-    return simulate(Long.MAX_VALUE);
   }
 
   /**
@@ -135,65 +186,34 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    * If there is a message in the queue, deliver that and return true. If there
    * is a message in the taskQueue, update the clock if necessary, deliver that,
    * then return true. If both are empty, return false;
-   */
-  protected boolean simulate(long maxTime) {
-    if (msgQueue.isEmpty() && taskQueue.isEmpty()) {
-      return false;
-    }
-
-    // take a message from the msgQueue if possible
-    if (!msgQueue.isEmpty()) {
-      MessageDelivery md = (MessageDelivery) msgQueue.firstElement();
-
-      msgQueue.removeElementAt(0);
-
-      md.deliver();
-
-      return true;
-    } else {
+   */  
+  private boolean simulate() {
+    if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be on selector thread");
+    
+    DirectTimerTask task;
+    synchronized(taskQueue) {
       // take a task from the taskQueue
-      DirectTimerTask task = (DirectTimerTask) taskQueue.first();
-      if (task.scheduledExecutionTime() > maxTime) {
+      if (taskQueue.isEmpty()) {
+        if (logger.level <= Logger.INFO) logger.log("taskQueue is empty");
         return false;
       }
+      task = (DirectTimerTask) taskQueue.first();
+      if (logger.level <= Logger.INFO) logger.log("simulate():"+task);
+      taskQueue.remove(task);
+    }
       // increment the clock if needed
       if (task.scheduledExecutionTime() > timeSource.currentTimeMillis()) {
+        if (logger.level <= Logger.FINER) logger.log("the time is now "+task.scheduledExecutionTime());        
         timeSource.setTime(task.scheduledExecutionTime());
       }
-
-      taskQueue.remove(task);
-
+  
+  
       if (task.execute(timeSource)) {
-        taskQueue.add(task);
-      }
+        addTask(task);
+      }    
       return true;
-    }
   }
-
-  public boolean simulateFor(int millis) {
-    return simulateUntil(timeSource.currentTimeMillis() + millis);
-  }
-
-  /**
-   * 1) process the msgQueue 2) see if there is a) no scheduled messages between
-   * now and then
-   */
-  public boolean simulateUntil(long targetTime) {
-    if (msgQueue.isEmpty() && taskQueue.isEmpty()) {
-      return false;
-    }
-
-    // This loop looks hairy, but the idea is that it calls simulate with
-    // targetTime until it returns false.
-    // if it ever returns true, then ret = true;
-    boolean ret = false;
-    while (simulate(targetTime)) {
-      ret = true;
-    }
-    timeSource.setTime(targetTime);
-    return ret;
-  }
-
+  
   /**
    * testing if a NodeId is alive
    * 

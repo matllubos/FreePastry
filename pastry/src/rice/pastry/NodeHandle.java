@@ -102,7 +102,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * May be called from handle etc methods to ensure that local node has
    * been set, either on construction or on deserialization/receivemsg.
    */
-  public final void assertLocalNode() {
+  public void assertLocalNode() {
     if (localnode == null) {
 //      ctor.printStackTrace();
       throw new RuntimeException("PANIC: localnode is null in " + this+"@"+System.identityHashCode(this));

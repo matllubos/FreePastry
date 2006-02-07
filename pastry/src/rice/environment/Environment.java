@@ -13,11 +13,13 @@ import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.processing.Processor;
+import rice.environment.processing.sim.SimProcessor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.selector.SelectorManager;
 
 
@@ -82,6 +84,18 @@ public class Environment implements Destructable {
    */
   public Environment(String[] orderedDefaultFiles, String paramFileName) {
     this(null,null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName));
+  }
+  
+  public static Environment directEnvironment() {
+    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
+    DirectTimeSource dts = new DirectTimeSource(params);
+    LogManager lm = generateDefaultLogManager(dts,params);
+    dts.setLogManager(lm);
+    SelectorManager selector = generateDefaultSelectorManager(dts,lm);
+    Processor proc = new SimProcessor(selector);
+    Environment ret = new Environment(selector,proc,null,dts,lm,
+        params);
+    return ret;
   }
   
   public Environment(String paramFileName) {

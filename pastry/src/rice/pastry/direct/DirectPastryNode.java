@@ -71,7 +71,8 @@ public class DirectPastryNode extends PastryNode {
    */
   public final void initiateJoin(NodeHandle[] bootstrap) {
     if (bootstrap != null && bootstrap[0] != null)
-      this.receiveMessage(new InitiateJoin(bootstrap));
+      simulator.deliverMessage(new InitiateJoin(bootstrap), this);
+//      this.receiveMessage(new InitiateJoin(bootstrap));
     else
       setReady(); // no bootstrap node, so ready immediately
   }
@@ -147,9 +148,19 @@ public class DirectPastryNode extends PastryNode {
   }
 
   public synchronized void receiveMessage(Message msg) {
+//    System.out.println("setting currentNode from "+currentNode+" to "+this+" on "+Thread.currentThread());   
+    if (!getEnvironment().getSelectorManager().isSelectorThread()) {
+      simulator.deliverMessage(msg, this); 
+      return;
+    }
+    
+    DirectPastryNode temp = currentNode;
+//    if ((currentNode != null) && (currentNode != this))
+//      throw new RuntimeException("receiveMessage called recursively!");
+//    System.out.println("currentNode != null");
     currentNode = this;
     super.receiveMessage(msg);
-    currentNode = null;
+    currentNode = temp;
   }
 
   public Logger getLogger() {

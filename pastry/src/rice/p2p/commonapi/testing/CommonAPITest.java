@@ -8,10 +8,13 @@ import rice.environment.logging.*;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.Parameters;
 import rice.environment.params.simple.SimpleParameters;
+import rice.environment.processing.Processor;
+import rice.environment.processing.sim.SimProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
 
 import rice.pastry.*;
@@ -19,6 +22,7 @@ import rice.pastry.commonapi.*;
 import rice.pastry.direct.*;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
+import rice.selector.SelectorManager;
 
 import java.util.*;
 import java.net.*;
@@ -150,7 +154,7 @@ public abstract class CommonAPITest {
   public void createNodes() {
     for (int i=0; i<NUM_NODES; i++) {
       nodes[i] = createNode(i);
-    
+      
       simulate();
     
       processNode(i, nodes[i]);
@@ -164,6 +168,7 @@ public abstract class CommonAPITest {
    * Method which starts the creation of nodes
    */
   public void start() {
+//    simulator.start();
     createNodes();
 
     System.out.println("\nTest Beginning\n");
@@ -179,11 +184,14 @@ public abstract class CommonAPITest {
    * simulates the message passing.
    */
   protected void simulate() {
-    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
-      while (simulator.simulate()) {}
-    } else {
-      pause(500);
-    }
+    if (environment.getSelectorManager().isSelectorThread()) return;
+    synchronized(this) {try { wait(300); } catch (InterruptedException e) {}}
+    
+//    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
+//      while (simulator.simulate()) {}
+//    } else {
+//      pause(500);
+//    }
   }
 
   /**
@@ -194,11 +202,27 @@ public abstract class CommonAPITest {
    * @return The created node
    */
   protected Node createNode(int num) {
+    PastryNode ret;
     if (num == 0) {
-      return factory.newNode((rice.pastry.NodeHandle) null);
+      ret = factory.newNode((rice.pastry.NodeHandle) null);
     } else {
-      return factory.newNode(getBootstrap());
+      ret = factory.newNode(getBootstrap());
     }
+    synchronized(ret) {
+      while(!ret.isReady()) {
+        try {
+          ret.wait(1000);
+        } catch (InterruptedException ie) {
+          ie.printStackTrace();
+          return null;
+        }
+        if (!ret.isReady()) {
+          if (logger.level <= Logger.INFO) logger.log("Node "+ret+" is not yet ready.");
+        }
+      }
+    }
+    
+    return ret;
   }
 
   /**
@@ -465,14 +489,19 @@ public abstract class CommonAPITest {
     }
     
     TimeSource timeSource;
+    SelectorManager selector = null;
+    Processor proc = null;
+    LogManager logManager = null;
     if (params.getString("commonapi_testing_protocol").equals("direct")) {
-      timeSource = new DirectTimeSource(System.currentTimeMillis());
+      timeSource = new DirectTimeSource(params);
+      logManager = Environment.generateDefaultLogManager(timeSource, params);
+      ((DirectTimeSource)timeSource).setLogManager(logManager);
+      selector = Environment.generateDefaultSelectorManager(timeSource,logManager);
+      proc = new SimProcessor(selector);
     } else {
       timeSource = new SimpleTimeSource(); 
     }
 
-    LogManager logManager = Environment.generateDefaultLogManager(timeSource, params);
-    
-    return new Environment(null,null,null,timeSource,logManager,params);
+    return new Environment(selector,proc,null,timeSource,logManager,params);
   }
 }

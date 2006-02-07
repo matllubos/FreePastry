@@ -1,5 +1,7 @@
 package rice.pastry.testing;
 
+import rice.Continuation;
+import rice.Continuation.*;
 import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.direct.*;
@@ -198,7 +200,27 @@ public abstract class PastryRegrTest {
       System.out.println("created " + rta[i].getNodeId());
 
       checkLeafSet(rta[i]);
-      checkRoutingTable(rta[i]);
+      if (!environment.getSelectorManager().isSelectorThread() && (this instanceof DirectPastryRegrTest)) {
+        final RegrTestApp theRta = rta[i];
+        final DirectPastryNode dpn = (DirectPastryNode)theRta.getPastryNode();
+        
+        // check if closest entry has valid proximity
+        ExternalRunnable er = new ExternalRunnable() {          
+          protected Object execute() throws Exception {
+            DirectPastryNode.currentNode = dpn;
+            checkRoutingTable(theRta);
+            DirectPastryNode.currentNode = null;
+            return null;
+          }          
+        };
+        try {
+          er.invoke(environment);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      } else {
+        checkRoutingTable(rta[i]);
+      }
     }
 
     System.out.println("messages: " + msgCount);
@@ -382,7 +404,8 @@ public abstract class PastryRegrTest {
           // check the cumulative range
           try {
             range = rta.range(ls.get(k), maxRank, nearest, true);
-          } catch (IllegalArgumentException iae) {}
+          } catch (IllegalArgumentException iae) {
+          } catch (RangeCannotBeDeterminedException rcbde) {}
         else
           // check the individual rank ranges
           try {
@@ -463,7 +486,7 @@ public abstract class PastryRegrTest {
    * verify the correctness of the routing table
    */
 
-  private void checkRoutingTable(RegrTestApp rta) {
+  private void checkRoutingTable(final RegrTestApp rta) {
     RoutingTable rt = rta.getRoutingTable();
 
     // check routing table
@@ -476,7 +499,7 @@ public abstract class PastryRegrTest {
         // skip if local nodeId digit
         // if (j == rta.getNodeId().getDigit(i,rt.baseBitLength())) continue;
 
-        RouteSet rs = rt.getRouteSet(i, j);
+        final RouteSet rs = rt.getRouteSet(i, j);
 
         Id domainFirst = rta.getNodeId().getDomainPrefix(i, j, 0,
             rt.baseBitLength());
@@ -504,12 +527,32 @@ public abstract class PastryRegrTest {
           }
         } else {
           // check entries
-
-          // check if closest entry has valid proximity
-          DirectPastryNode.currentNode = (DirectPastryNode)rta.getPastryNode();
-          NodeHandle nh = rs.closestNode();
+          NodeHandle nh;
+          if (!environment.getSelectorManager().isSelectorThread() && (this instanceof DirectPastryRegrTest)) {
+            // check if closest entry has valid proximity
+            ExternalRunnable er = new ExternalRunnable() {          
+              protected Object execute() throws Exception {
+                DirectPastryNode temp = DirectPastryNode.currentNode;
+                DirectPastryNode.currentNode = (DirectPastryNode)rta.getPastryNode();
+                Object ret = rs.closestNode();
+                DirectPastryNode.currentNode = temp;
+                return ret;
+              }          
+            };
+            try {
+              nh = (NodeHandle)er.invoke(environment);
+            } catch (Exception e) {
+              e.printStackTrace();
+              System.exit(0);
+              return;
+            }
+          } else {
+            nh = (NodeHandle)rs.closestNode();            
+          }
+          
+          
+          
           int bestProximity = Integer.MAX_VALUE;
-          ;
           if (nh != null) {
             bestProximity = nh.proximity();
             if (nh.proximity() == Integer.MAX_VALUE) {

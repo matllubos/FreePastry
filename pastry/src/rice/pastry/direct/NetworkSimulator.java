@@ -79,30 +79,7 @@ public interface NetworkSimulator {
    * @param msg message to deliver.
    * @param node the Pastry node to deliver it to.
    */
-  public void deliverMessage(Message msg, DirectPastryNode node);
-
-  /**
-   * Simulate one message delivery.
-   * 
-   * @return true if a message was delivered, false otherwise.
-   */
-  public boolean simulate();
-
-  /**
-   * Deliver messages until the clock reaches time
-   * 
-   * @param time the time to simulate until
-   * @return
-   */
-  public boolean simulateUntil(long time);
-
-  /**
-   * Simulate for that many millis
-   * 
-   * @param millis the amount of time to simulate until
-   * @return
-   */
-  public boolean simulateFor(int millis);
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node);
 
   public void setTestRecord(TestRecord tr);
 
@@ -126,4 +103,6 @@ public interface NetworkSimulator {
   public NodeRecord generateNodeRecord();
 
   public void removeNode(DirectPastryNode node);
+
+  public void start();
 }

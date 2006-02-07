@@ -61,6 +61,21 @@ public class SinglePingTest {
 
     Ping pc = new Ping(pn);
     pingClients.addElement(pc);
+
+    long start = System.currentTimeMillis();
+    synchronized (pn) {
+      while(!pn.isReady()) {
+        try {
+          pn.wait(300);
+//          if (!pn.isReady()){
+//            System.out.println("Still waiting for "+pn+ " to be ready.");
+//          }
+        } catch (InterruptedException ie) {}
+      }
+    }    
+    long now = System.currentTimeMillis();
+    if (now-start > 2000) 
+      System.out.println("Took "+(now-start)+" to create node "+pn);
     
     return pn;
   }
@@ -81,7 +96,8 @@ public class SinglePingTest {
   }
 
   public boolean simulate() {
-    return simulator.simulate();
+    return false;
+//    return simulator.simulate();
   }
 
   public void checkRoutingTable() {
