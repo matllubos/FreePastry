@@ -65,6 +65,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     param.setString("fileLogManager_fileSuffix",".log");
     ReplicationManagerRegrTest test = new ReplicationManagerRegrTest(env);
     test.start();
+    env.destroy();
   }
 
   /**

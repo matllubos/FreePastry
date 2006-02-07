@@ -205,5 +205,7 @@ public class HelloWorld {
       while (driver.simulate())
         ;
     }
+    try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+    env.destroy();
   }
 }

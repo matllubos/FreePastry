@@ -137,13 +137,13 @@ public class MultiringRegrTest {
    */
   public MultiringRegrTest(Environment env) throws IOException {
     this.environment = env;
-    if (SIMULATOR == SIMULATOR_SPHERE) {
-      simulator = new SphereNetwork(env);
-    } else {
-      simulator = new EuclideanNetwork(env);
-    }
     
     if (PROTOCOL == PROTOCOL_DIRECT) {
+      if (SIMULATOR == SIMULATOR_SPHERE) {
+        simulator = new SphereNetwork(env);
+      } else {
+        simulator = new EuclideanNetwork(env);
+      }
       factory = new DirectPastryNodeFactory(new RandomNodeIdFactory(environment), simulator, env);
     } else {
       factory = DistPastryNodeFactory.getFactory(new RandomNodeIdFactory(environment),
@@ -239,11 +239,28 @@ public class MultiringRegrTest {
    * @return The created node
    */
   protected MultiringNode createNode(Id ringId, MultiringNode bootstrap) {
+    MultiringNode mn;
+    
     if (bootstrap == null) {
-      return new MultiringNode(ringId, factory.newNode(null));
+      mn = new MultiringNode(ringId, factory.newNode(null));
     } else {
-      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())));
+      mn = new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())));
     }
+    
+    PastryNode pn = (PastryNode)mn.getNode();
+    synchronized(pn) {
+      while(!pn.isReady()) {
+        try {
+          pn.wait(500);
+        } catch (InterruptedException ie) {
+          return null; 
+        }
+      }  
+      if (!pn.isReady()) {
+        System.out.println("Still waiting for node "+pn+" in ring "+ringId+" to be ready."); 
+      }
+    }
+    return mn;
   }
   
   /**
@@ -602,7 +619,14 @@ public class MultiringRegrTest {
   
   public static void main(String[] args) throws IOException {
     parseArgs(args);
-    MultiringRegrTest test = new MultiringRegrTest(Environment.directEnvironment());
+    Environment env;
+    if (PROTOCOL == PROTOCOL_DIRECT) {
+      env = Environment.directEnvironment();
+    } else {
+      env = new Environment();
+    }
+    MultiringRegrTest test = new MultiringRegrTest(env);
     test.start();
+    env.destroy();
   }
 }

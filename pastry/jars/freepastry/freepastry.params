@@ -6,9 +6,6 @@
 # typically, you will want to be able to pass this file name from the command 
 # line
 
-# random number generator's seed
-random_seed = 0
-
 # max number of handles stored per routing table entry
 pastry_rtMax = 1
 pastry_rtBaseBitLength = 4
@@ -45,7 +42,7 @@ random_seed = CLOCK
 # sphere, euclidean or gt-itm
 direct_simulator_topology = sphere
 # -1 starts the simulation with the current time
-direct_simulator_start_time = -1;
+direct_simulator_start_time = -1
 #pastry_direct_use_own_random = true
 #pastry_periodic_leafset_protocol_use_own_random = true
 pastry_direct_gtitm_matrix_file=GNPINPUT

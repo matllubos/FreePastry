@@ -59,6 +59,8 @@ public class ReplicationRegrTest extends CommonAPITest {
     Environment env = parseArgs(args);
     ReplicationRegrTest test = new ReplicationRegrTest(env);
     test.start();
+    env.destroy();
+
   }
 
   /**
