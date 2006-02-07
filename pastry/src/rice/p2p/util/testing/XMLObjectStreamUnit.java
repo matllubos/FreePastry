@@ -2,6 +2,7 @@
 package rice.p2p.util.testing;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.zip.*;
 import rice.p2p.util.*;
@@ -175,6 +176,48 @@ public class XMLObjectStreamUnit {
       e.printStackTrace();
     }
   }
+
+  protected boolean compare(Object o1, Object o2) {
+    if (o1.equals(o2))
+      return true;
+    
+//    System.out.println("comparing: "+o1.getClass()+": "+o1+" "+o2.getClass()+" "+o2);
+    
+    if (o1.getClass().isArray() && o2.getClass().isArray() &&
+        o1.getClass().getComponentType().equals(o2.getClass().getComponentType())) {
+      if (Array.getLength(o1) != Array.getLength(o2))
+        return false;
+      if (o2.getClass().getComponentType().isPrimitive()) {
+        Class c = o2.getClass().getComponentType();
+        if (c.equals(Integer.TYPE)) {
+          return Arrays.equals((int[])o1,(int[])o2);
+        } else if (c.equals(Boolean.TYPE)) {
+          return Arrays.equals((boolean[])o1,(boolean[])o2);
+        } else if (c.equals(Byte.TYPE)) {
+          return Arrays.equals((byte[])o1,(byte[])o2);
+        } else if (c.equals(Character.TYPE)) {
+          return Arrays.equals((char[])o1,(char[])o2);
+        } else if (c.equals(Double.TYPE)) {
+          return Arrays.equals((double[])o1,(double[])o2);
+        } else if (c.equals(Float.TYPE)) {
+          return Arrays.equals((float[])o1,(float[])o2);
+        } else if (c.equals(Long.TYPE)) {
+          return Arrays.equals((long[])o1,(long[])o2);
+        } else if (c == Short.TYPE) {
+          return Arrays.equals((short[])o1,(short[])o2);
+        } else {
+          throw new IllegalArgumentException("Class " + c + " is not primitive!");
+        }
+      } else {
+        for (int i = 0; i < Array.getLength(o1); i++)
+          if (!compare(Array.get(o1,i),Array.get(o2,i)))
+            return false;
+        return true;
+      }
+    }
+    
+    return false;
+  }
   
   protected void test(Object o) {
     try {
@@ -190,8 +233,10 @@ public class XMLObjectStreamUnit {
       if (o == o2)
         throw new IOException("Returned object is identicial to first!");
       
-      if (! (o.equals(o2)))
+      if (!compare(o,o2)) {
+        System.out.println("XML IS: " + (new String(baos.toByteArray())));
         throw new IOException("Object " + o2 + " was not equal to " + o);
+      }
 
       reset();
     } catch (IOException e) {
@@ -641,6 +686,7 @@ public class XMLObjectStreamUnit {
     testInheritedWriteReplace();
     testInheritedReadResolve();
     test(new byte[7847]);
+    test(new byte[4][6]);
   }
   
   public static void main(String[] args) throws IOException {
