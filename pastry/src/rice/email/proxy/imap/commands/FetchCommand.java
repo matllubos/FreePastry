@@ -68,23 +68,30 @@ public class FetchCommand extends AbstractImapCommand {
     }
   }
 
-  String fetchMessage(StoredMessage msg) throws MailboxException {
-    StringBuffer result = new StringBuffer();
-    result.append("* ");
-    result.append(msg.getSequenceNumber());
-    result.append(" FETCH (");
-    
-    for (Iterator i = parts.iterator(); i.hasNext();) {
-      Object part = i.next();
-      FetchPart handler = registry.getHandler(part);
-      handler.setConn(_conn);
-      result.append(handler.fetch(msg, part));
+  String fetchMessage(StoredMessage msg) {
+    try {
+      StringBuffer result = new StringBuffer();
+      result.append("* ");
+      result.append(msg.getSequenceNumber());
+      result.append(" FETCH (");
       
-      if (i.hasNext())
-        result.append(" ");
+      for (Iterator i = parts.iterator(); i.hasNext();) {
+        Object part = i.next();
+        FetchPart handler = registry.getHandler(part);
+        handler.setConn(_conn);
+        result.append(handler.fetch(msg, part));
+        
+        if (i.hasNext())
+          result.append(" ");
+      }
+      
+      return result.toString() +")\r\n";
+    } catch (MailboxException e) {
+      Logger logger = _state.getEnvironment().getLogManager().getLogger(FetchCommand.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "Got exception " + e + " while fetching data - not returning anything.",e);
+      return "";
     }
-    
-    return result.toString() +")\r\n";
   }
 
   public void appendPartRequest(String string) {
