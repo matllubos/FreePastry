@@ -48,9 +48,6 @@ public abstract class PastryAppl implements MessageReceiver
    * Constructor. 
    *
    * @param pn the pastry node that client will attach to.
-   * @deprecated This method does an implicit registration, which can cause 
-   * problems because messages can be received before the Subclass is initialized
-   * Use PastryAppl(pn, instance, address), and then call register()
    */
   public PastryAppl(PastryNode pn) {
     this(pn, null);
@@ -64,9 +61,6 @@ public abstract class PastryAppl implements MessageReceiver
    *
    * @param pn the pastry node that client will attach to.
    * @param instance The instance name of this appl.
-   * @deprecated This method does an implicit registration, which can cause 
-   * problems because messages can be received before the Subclass is initialized
-   * Use PastryAppl(pn, instance, address), and then call register()
    */
   public PastryAppl(PastryNode pn, String instance) {
     this(pn, instance, null);
