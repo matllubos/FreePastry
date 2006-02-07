@@ -970,6 +970,8 @@ public class XMLObjectInputStream extends ObjectInputStream {
     while (! reader.isEndTag()) {
       if (reader.getStartTag().equals("primitive")) {
         reader.readEndTag("primitive");
+      } else if (reader.getStartTag().equals("base64")) {
+        reader.readEndTag("base64");
       } else {
         readObjectHelper();
       }
