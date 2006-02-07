@@ -71,7 +71,8 @@ public class XMLParser implements XmlPullParser {
   /**
    * If the tag parsed was a start tag, the list of attribute-> value pairs
    */
-  protected String[] attributes = new String[2*MAX_ATTRIBUTES];
+  protected String[] attributeKeys = new String[MAX_ATTRIBUTES];
+  protected String[] attributeValues = new String[MAX_ATTRIBUTES];
   protected int numAttributes;
   
   /**
@@ -168,8 +169,8 @@ public class XMLParser implements XmlPullParser {
    */
   public String getAttributeValue(String namespace, String name) {
     for (int i=0; i<numAttributes; i++)
-      if (attributes[2*i].equals(name))
-        return attributes[2*i + 1];
+      if (attributeKeys[i].equals(name))
+        return attributeValues[i];
     
     return null;
   }
@@ -324,11 +325,12 @@ public class XMLParser implements XmlPullParser {
    * Internal method which adds an attributes
    */
   protected void addAttribute(String key, String value) {
-    if (numAttributes * 2 == attributes.length)
-      throw new RuntimeException("More than 100 attributes encountered - unsupported!");
+    if (numAttributes == attributeKeys.length)
+      throw new RuntimeException("More than "+attributeKeys.length+" attributes encountered - unsupported!");
     
-    attributes[numAttributes++] = key;
-    attributes[numAttributes++] = value;
+    attributeKeys[numAttributes] = key;
+    attributeValues[numAttributes] = value;
+    numAttributes++;
   }
   
   /**

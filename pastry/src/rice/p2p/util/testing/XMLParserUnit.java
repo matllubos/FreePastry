@@ -235,6 +235,44 @@ public class XMLParserUnit {
       System.out.println("    Output(1):\t" + i + " " + parser.getName());
     }    
     
+    System.out.print("    Testing Missing Attribute\t\t\t");
+    
+    parser = new XMLParser();
+    parser.setInput(new StringReader("<test foo=\"bar\" baz=blah goo=29.33   ></test>"));
+    i = parser.next();
+    
+    if ((i == XMLParser.START_TAG) && (parser.getName().equals("test"))) {
+      
+      if (parser.getAttributeValue(null, "foo").equals("bar") && 
+          parser.getAttributeValue(null, "baz").equals("blah") && 
+          parser.getAttributeValue(null, "goo").equals("29.33") &&
+          parser.getAttributeValue(null, "bar") == null) {
+        i = parser.next();
+        
+        if ((i == XMLParser.END_TAG) && (parser.getName().equals("test"))) {
+          i = parser.next();
+          
+          if (i == XMLParser.END_DOCUMENT) {
+            System.out.println("[ PASSED ]");
+          } else {
+            System.out.println("[ FAILED ]");
+            System.out.println("    Output(4):\t" + i);
+          }      
+        } else {
+          System.out.println("[ FAILED ]");
+          System.out.println("    Output(3):\t" + i + " " + parser.getName());
+        }
+      } else {
+        System.out.println("[ FAILED ]");
+        System.out.println("    Output(2):\t" + i + " " + parser.getAttributeValue(null, "foo").equals("bar") + " " + 
+                           parser.getAttributeValue(null, "baz").equals("blah") + " " + 
+                           parser.getAttributeValue(null, "goo").equals("29.33"));
+      }  
+    } else {
+      System.out.println("[ FAILED ]");
+      System.out.println("    Output(1):\t" + i + " " + parser.getName());
+    }    
+
     System.out.print("    Testing Recursive\t\t\t\t\t");
     
     parser = new XMLParser();
