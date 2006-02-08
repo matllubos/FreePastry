@@ -12,6 +12,7 @@ import rice.pastry.join.JoinRequest;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.*;
 import rice.pastry.security.*;
+import rice.selector.Timer;
 import rice.selector.TimerTask;
 
 public class PartitionHandler extends TimerTask implements NodeSetListener {
@@ -22,8 +23,6 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   InetSocketAddress[] bootstraps;
   
   DistPastryNodeFactory factory;
-  
-  PastrySecurityManager sec;
   
   Logger logger;
   
@@ -37,10 +36,9 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   
   // XXX think about multiring
   
-  public PartitionHandler(PastryNode pn, DistPastryNodeFactory factory, PastrySecurityManager sec, InetSocketAddress[] bootstraps) {
+  public PartitionHandler(PastryNode pn, DistPastryNodeFactory factory, InetSocketAddress[] bootstraps) {
     pastryNode = pn;
     this.factory = factory;
-    this.sec = sec;
     this.bootstraps = bootstraps;
     env = pastryNode.getEnvironment();
     gone = new HashMap();
@@ -205,6 +203,11 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     public String toString() {
       return nh.toString() + " "+timestamp;
     }    
+  }
+
+  public void start(Timer timer) {
+    timer.schedule(this, env.getParameters().getInt("partition_handler_check_interval"), 
+        env.getParameters().getInt("partition_handler_check_interval"));
   }
 
 }
