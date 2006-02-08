@@ -95,6 +95,16 @@ pastry_protocol_periodicLeafSet_ping_neighbor_period = 20000
 # liveness
 pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
 
+# how many entries are kept in the partition handler's table
+partition_handler_max_history_size=20
+# how long entries in the partition handler's table are kept
+# 90 minutes
+partition_handler_max_history_age=5400000
+# what fraction of the time a bootstrap host is checked
+partition_handler_bootstrap_check_rate=0.05
+# how often to run the partition handler
+# 5 minutes
+partition_handler_check_interval=300000
 
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
