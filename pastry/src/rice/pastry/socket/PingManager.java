@@ -430,14 +430,24 @@ public class PingManager extends SelectionKeyHandler {
         }
       }
     } catch (IOException e) {
-      if (logger.level <= Logger.WARNING) logger.logException(
+      if (logger.level <= Logger.WARNING) {
+        // This code prevents this line from filling up logs during some kinds of network outages
+        // it makes this error only be printed 1ce/second
+        long now = timeSource.currentTimeMillis();
+        if (lastTimePrinted+1000 > now) return;
+        lastTimePrinted = now;
+        
+        logger.logException(
           "ERROR (datagrammanager:write) to " + (write == null ? null : write.destination.getAddress()), e);
+      }        
     } finally {
       if (pendingMsgs.isEmpty()) 
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
     }
   }
 
+  long lastTimePrinted = 0;
+  
   /**
    * DESCRIBE THE METHOD
    *
