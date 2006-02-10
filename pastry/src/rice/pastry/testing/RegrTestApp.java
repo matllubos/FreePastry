@@ -87,15 +87,15 @@ public class RegrTestApp extends CommonAPIAppl {
     if (localId != key) {
       int inBetween;
       if (localId.compareTo(key) < 0) {
-        int i1 = prg.pastryNodesSorted.subMap(localId, key).size();
-        int i2 = prg.pastryNodesSorted.tailMap(key).size()
-            + prg.pastryNodesSorted.headMap(localId).size();
+        int i1 = prg.pastryNodesSortedReady.subMap(localId, key).size();
+        int i2 = prg.pastryNodesSortedReady.tailMap(key).size()
+            + prg.pastryNodesSortedReady.headMap(localId).size();
 
         inBetween = (i1 < i2) ? i1 : i2;
       } else {
-        int i1 = prg.pastryNodesSorted.subMap(key, localId).size();
-        int i2 = prg.pastryNodesSorted.tailMap(localId).size()
-            + prg.pastryNodesSorted.headMap(key).size();
+        int i1 = prg.pastryNodesSortedReady.subMap(key, localId).size();
+        int i2 = prg.pastryNodesSortedReady.tailMap(localId).size()
+            + prg.pastryNodesSortedReady.headMap(key).size();
 
         inBetween = (i1 < i2) ? i1 : i2;
       }

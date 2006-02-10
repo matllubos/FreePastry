@@ -29,7 +29,7 @@ public class HelloWorld {
 
   private Vector helloClients;
 
-  private static int numnodes = 30;
+  private static int numnodes = 3;
 
   private static int nummsgs = 30; // total messages
 

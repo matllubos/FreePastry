@@ -35,6 +35,7 @@ public abstract class PastryRegrTest {
    * of NodeId
    */
   public SortedMap pastryNodesSorted;
+  public SortedMap pastryNodesSortedReady;
 
   public Vector pastryNodesLastAdded;
 
@@ -48,7 +49,7 @@ public abstract class PastryRegrTest {
 
   public NodeId lastNode;
 
-  int msgCount = 0;
+//  int msgCount = 0;
 
   // abstract methods
 
@@ -90,6 +91,7 @@ public abstract class PastryRegrTest {
     this.environment = env;
     pastryNodes = new Vector();
     pastryNodesSorted = new TreeMap();
+    pastryNodesSortedReady = new TreeMap();
     pastryNodesLastAdded = new Vector();
     inConcJoin = false;
     rtApps = new Vector();
@@ -113,11 +115,11 @@ public abstract class PastryRegrTest {
 
     registerapp(pn, rta);
 
-    int msgCount = 0;
+//    int msgCount = 0;
 
-    if (bootstrap != null)
-      while (simulate())
-        msgCount++;
+//    if (bootstrap != null)
+//      while (simulate())
+//        msgCount++;
 
     //System.out.println("created " + pn + " messages: " + msgCount);
 
@@ -168,28 +170,36 @@ public abstract class PastryRegrTest {
         if (n == 0) {
           // we have to join the first batch of nodes
           // sequentially, else we create multiple rings
-          while (simulate())
-            msgCount++;
+//          while (simulate())
+//            msgCount++;
 
           // ADDED FOR WIRE PROTOCOL...
-          while (!pn.isReady()) {
-            pause(500);
+          synchronized(pn) {
+            while (!pn.isReady()) {                          
+              try {
+                pn.wait(500);
+              } catch (InterruptedException ie) {}
+            }
           }
         }
     }
 
-    int msgCount = 0;
+//    int msgCount = 0;
 
     // now simulate concurrent joins
-    while (simulate())
-      msgCount++;
+//    while (simulate())
+//      msgCount++;
 
     // ADDED FOR WIRE PROTOCOL...
     // wait until all nodes are ready
     for (int i = 0; i < pastryNodesLastAdded.size(); i++) {
       PastryNode pn = (PastryNode) pastryNodesLastAdded.get(i);
-      while (!pn.isReady()) {
-        pause(500);
+      synchronized(pn) {
+        while (!pn.isReady()) {                          
+          try {
+            pn.wait(500);
+          } catch (InterruptedException ie) {}
+        }
       }
     }
     pause(2500);
@@ -198,6 +208,8 @@ public abstract class PastryRegrTest {
 
     for (int i = 0; i < num; i++) {
       System.out.println("created " + rta[i].getNodeId());
+      PastryNode pn = rta[i].getPastryNode();
+      pastryNodesSortedReady.put(pn.getNodeId(), pn);
 
       checkLeafSet(rta[i]);
       if (!environment.getSelectorManager().isSelectorThread() && (this instanceof DirectPastryRegrTest)) {
@@ -223,7 +235,7 @@ public abstract class PastryRegrTest {
       }
     }
 
-    System.out.println("messages: " + msgCount);
+//    System.out.println("messages: " + msgCount);
 
     for (int i = 0; i < rtApps.size(); i++) {
       //checkLeafSet((RegrTestApp)rtApps.get(i));
@@ -259,13 +271,11 @@ public abstract class PastryRegrTest {
 
       // send to a random node
       rta.sendTrace(pn.getNodeId());
-      while (simulate())
-        ;
+//      while (simulate());
 
       // send to a random key
       rta.sendTrace(key);
-      while (simulate())
-        ;
+//      while (simulate());
 
       //System.out.println("-------------------");
     }
@@ -661,8 +671,8 @@ public abstract class PastryRegrTest {
         //if ((i + numConcJoins) % m == 0) {
         Date now = new Date();
         System.out.println(pt.pastryNodes.size() + " "
-            + (now.getTime() - old.getTime()) + " " + pt.msgCount);
-        pt.msgCount = 0;
+            + (now.getTime() - old.getTime()));// + " " + pt.msgCount);
+//        pt.msgCount = 0;
         old = now;
       }
 
