@@ -70,11 +70,12 @@ public class DirectPastryNode extends PastryNode {
    *          Node handle to bootstrap with.
    */
   public final void initiateJoin(NodeHandle[] bootstrap) {
-    if (bootstrap != null && bootstrap[0] != null)
+    if (bootstrap != null && bootstrap[0] != null) {
       simulator.deliverMessage(new InitiateJoin(bootstrap), this);
 //      this.receiveMessage(new InitiateJoin(bootstrap));
-    else
+    } else {
       setReady(); // no bootstrap node, so ready immediately
+    }
   }
 
   /**
