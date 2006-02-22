@@ -74,6 +74,7 @@ pastry_socket_scm_num_ping_tries = 3
 pastry_socket_scm_write_wait_time = 30000
 pastry_socket_scm_backoff_initial = 250
 pastry_socket_scm_backoff_limit = 5
+pastry_socket_pingmanager_testSourceRouting = false
 
 # if we are not scheduled for time on cpu in this time, we setReady(false)
 # otherwise there could be message inconsistency, because
