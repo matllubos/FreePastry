@@ -122,18 +122,20 @@ public class StandardJoinProtocol extends PastryAppl {
 
       jh = security.verifyNodeHandle(jh);
 
-      int base = thePastryNode.getRoutingTable().baseBitLength();
-
-      int msdd = localId.indexOfMSDD(nid, base);
-      int last = jr.lastRow();
-
-      for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
-        RouteSet[] row = routeTable.getRow(i);
-
-        jr.pushRow(row);
+      if (!jh.equals(localHandle)) {
+        int base = thePastryNode.getRoutingTable().baseBitLength();
+  
+        int msdd = localId.indexOfMSDD(nid, base);
+        int last = jr.lastRow();
+  
+        for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
+          RouteSet[] row = routeTable.getRow(i);
+  
+          jr.pushRow(row);
+        }
+  
+        rm.routeMessage(localHandle);
       }
-
-      rm.routeMessage(localHandle);
     } else if (msg instanceof InitiateJoin) { // request from the local node to
                                               // join
       InitiateJoin ij = (InitiateJoin) msg;
