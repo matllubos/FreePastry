@@ -105,6 +105,7 @@ public class PingManager extends SelectionKeyHandler {
       // bind to the appropriate port
       channel = DatagramChannel.open();
       channel.configureBlocking(false);
+      channel.socket().setReuseAddress(true);
       channel.socket().bind(bindAddress.getAddress());
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);

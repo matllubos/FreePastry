@@ -149,6 +149,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       // bind to port
       final ServerSocketChannel channel = ServerSocketChannel.open();
       channel.configureBlocking(false);
+      channel.socket().setReuseAddress(true);
       channel.socket().bind(bindAddress.getAddress());
       
       this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
