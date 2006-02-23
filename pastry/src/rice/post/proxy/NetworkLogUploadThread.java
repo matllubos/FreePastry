@@ -95,7 +95,7 @@ public class NetworkLogUploadThread extends Thread {
     }
   }
   
-  protected void sendFiles() throws IOException {
+  public void sendFiles() throws IOException {
     final String filename;
     
     if (params.contains("log_network_upload_filename")) {
