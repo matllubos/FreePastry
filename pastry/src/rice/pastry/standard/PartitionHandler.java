@@ -164,9 +164,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
           RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), jr,
               new PermissiveCredentials(), jr.getDestination());
           rm.getOptions().setRerouteIfSuspected(false);
-          // XXX is this the way to set the local node? - broken if we don't use socket...
-          NodeHandle nh = (NodeHandle)result;
-          ((SocketNodeHandle)nh).setLocalNode((SocketPastryNode)pastryNode);
+          NodeHandle nh = pastryNode.coalesce((NodeHandle)result);
           nh.bootstrap(rm);
         } else {
           if (logger.level <= Logger.INFO) logger.log("getNodeHandleToProbe returned null");
