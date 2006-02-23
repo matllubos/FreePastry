@@ -12,6 +12,8 @@ import rice.pastry.join.JoinRequest;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.*;
 import rice.pastry.security.*;
+import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.socket.SocketPastryNode;
 import rice.selector.Timer;
 import rice.selector.TimerTask;
 
@@ -79,14 +81,33 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     if (logger.level <= Logger.FINER) logger.log("gone size 3 is "+gone.size()+" of "+maxGoneSize);
   }
 
-  private NodeHandle getGone() {
+
+  private List getRoutingTableAsList() {
     RoutingTable rt = pastryNode.getRoutingTable();
+    List rtHandles = new ArrayList(rt.numEntries());
+
+    for (int r = 0; r < rt.numRows(); r++) {
+      RouteSet[] row = rt.getRow(r);
+      for (int c = 0; c < rt.numColumns(); c++) {
+        RouteSet entry = row[c];
+        if (entry != null) {
+          for (int i = 0; i < entry.size(); i++) {
+            NodeHandle nh = entry.get(i);
+            if (!nh.equals(pastryNode.getLocalHandle())) {
+              rtHandles.add(nh);
+            }
+          }
+        }
+      }
+    }
+
+    return rtHandles;
+  }
+  
+  private NodeHandle getGone() {
     synchronized (this) {
-      int size = gone.size()+rt.numEntries();
-      if (size > maxGoneSize)
-        size = maxGoneSize;
-      
-      int which = env.getRandomSource().nextInt(size);
+      int which = env.getRandomSource().nextInt(maxGoneSize);
+      if (logger.level <= Logger.FINEST) logger.log("getGone choosing node "+which+" from gone or routing table");
       
       Iterator it = gone.values().iterator();
       while (which>0 && it.hasNext()) {
@@ -95,33 +116,23 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
       }
   
       if (it.hasNext()) {
-        // assert which==0
+        // assert which==0;
         if (logger.level <= Logger.FINEST) logger.log("getGone chose node from gone "+which);
         return ((GoneSetEntry)it.next()).nh;
       }
     }
 
-    // pick a new random one, since we don't just want to pick the top few
-    // entries of the routing table.
-    if (logger.level <= Logger.FINEST) logger.log("getGone choosing node from routing table");
+    List rtHandles = getRoutingTableAsList();
+    int which = env.getRandomSource().nextInt(rtHandles.size());
     
-    int which = env.getRandomSource().nextInt(rt.numEntries());
-    // else look in routing table
-    for (int r = 0; r < rt.numRows(); r++) {
-      RouteSet[] row = rt.getRow(r);
-      for (int c = 0; c < rt.numColumns(); c++) {
-        RouteSet entry = row[c];
-        if (which > entry.size()) {
-          which -= entry.size();
-        } else {
-          return entry.get(which);
-        }
-      }  
+    if (rtHandles.isEmpty()) {
+      if (logger.level <= Logger.INFO) logger.log("getGone returning null; routing table is empty!");
+      return null;
     }
-    
-    if (logger.level <= Logger.INFO) logger.log("getGone returning null; oops!");
-    // oops, routing table has less entries than it claims
-    return null;
+
+    if (logger.level <= Logger.FINEST) logger.log("getGone choosing node "+which+" from routing table");
+
+    return (NodeHandle)rtHandles.get(which);
   }
   
   // possibly make this abstract
@@ -140,23 +151,31 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   }
   
   public void run() {
+    if (logger.level <= Logger.INFO) logger.log("running partition handler");
     doGoneMaintainence();
     
     getNodeHandleToProbe(new Continuation() {
 
       public void receiveResult(Object result) {
-        JoinRequest jr = new JoinRequest(pastryNode.getLocalHandle(), pastryNode
-            .getRoutingTable().baseBitLength());
-
-        RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), jr,
-            new PermissiveCredentials(), jr.getDestination());
-        rm.getOptions().setRerouteIfSuspected(false);
-        ((NodeHandle)result).bootstrap(rm);
-        
+        if (result != null) {
+          JoinRequest jr = new JoinRequest(pastryNode.getLocalHandle(), pastryNode
+              .getRoutingTable().baseBitLength());
+  
+          RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), jr,
+              new PermissiveCredentials(), jr.getDestination());
+          rm.getOptions().setRerouteIfSuspected(false);
+          // XXX is this the way to set the local node? - broken if we don't use socket...
+          NodeHandle nh = (NodeHandle)result;
+          ((SocketNodeHandle)nh).setLocalNode((SocketPastryNode)pastryNode);
+          nh.bootstrap(rm);
+        } else {
+          if (logger.level <= Logger.INFO) logger.log("getNodeHandleToProbe returned null");
+        }
       }
 
       public void receiveException(Exception result) {
         // oh well
+        if (logger.level <= Logger.INFO) logger.logException("exception in PartitionHandler",result);
       }
       
     });
@@ -206,6 +225,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   }
 
   public void start(Timer timer) {
+    if (logger.level <= Logger.INFO) logger.log("installing partition handler");
     timer.schedule(this, env.getParameters().getInt("partition_handler_check_interval"), 
         env.getParameters().getInt("partition_handler_check_interval"));
   }
