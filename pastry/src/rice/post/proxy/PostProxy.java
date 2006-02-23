@@ -9,7 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.security.*;
 import java.util.*;
-import java.util.List;
 import java.util.zip.GZIPInputStream;
 
 import javax.swing.*;
@@ -32,12 +31,11 @@ import rice.p2p.past.*;
 import rice.p2p.past.gc.GCPastImpl;
 import rice.p2p.util.XMLObjectInputStream;
 import rice.pastry.*;
-import rice.pastry.NodeHandle;
 import rice.pastry.commonapi.PastryIdFactory;
 import rice.pastry.dist.*;
-import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
 import rice.pastry.standard.CertifiedNodeIdFactory;
+import rice.pastry.standard.PartitionHandler;
 import rice.persistence.*;
 import rice.post.*;
 import rice.post.delivery.DeliveryPastImpl;
@@ -937,7 +935,11 @@ public class PostProxy {
     String prefix = ((RingId) address.getAddress()).getRingId().toStringFull();
 
     if (parameters.getBoolean("log_network_upload_enable")) {
-      (new NetworkLogUploadThread(getLocalHost(), port, cert.getKey(), cert.getLogServer(), environment)).start(); 
+      NetworkLogUploadThread nlut = (new NetworkLogUploadThread(getLocalHost(), port, cert.getKey(), cert.getLogServer(), environment));
+      if (parameters.contains("log_network_upload_immediately") && parameters.getBoolean("log_network_upload_immediately")) {
+        nlut.sendFiles();
+      }
+      nlut.start();
     }
 
     factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(getLocalHost(), port, environment), cert.getProtocol(), port, environment);
@@ -967,7 +969,10 @@ public class PostProxy {
     node = factory.newNode(bootHandle, proxyAddress);
     pastryNode = (PastryNode) node;
     timer = ((DistPastryNode) node).getTimer();
-    
+
+    PartitionHandler ph = new PartitionHandler(pastryNode, factory, bootsNotMe);
+    ph.start(timer);
+
     ((PersistentStorage) immutableStorage.getStorage()).setTimer(timer);
     ((PersistentStorage) ((LRUCache) immutableStorage.getCache()).getStorage()).setTimer(timer);
     
@@ -1002,7 +1007,7 @@ public class PostProxy {
               "in both UDP and TCP on port " + port);
       }
     } while ((! parameters.getBoolean("pastry_ring_" + prefix+ "_allow_new_ring")) &&
-             (pastryNode.getLeafSet().size() == 0));
+             !pastryNode.isReady());
     
     stepDone(SUCCESS);
   }  
@@ -1495,33 +1500,7 @@ public class PostProxy {
       startUpdateForwardingLog();
       
       sectionDone();
-      
-      sectionStart("Installing Partition Handler");
-      startPartitionHandler();
-      sectionDone();
     }
-  
-  /**
-   * 
-   */
-  private void startPartitionHandler() {
-    final LeafSet leafSet = pastryNode.getLeafSet();
-    leafSet.addNodeSetListener(new NodeSetListener() {
-      public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
-        if (!added) {
-          if (pastryNode.isReady() && !leafSet.isComplete()
-              && leafSet.size() < (leafSet.maxSize() / 2)) {
-            // kill self
-            if (logger.level <= Logger.SEVERE) logger.log(
-                "PostProxy: "
-                    + environment.getTimeSource().currentTimeMillis()
-                    + " Killing self due to leafset collapse. " + leafSet);
-            System.exit(20);
-          }
-        }
-      }
-    });
-  }
 
   protected void updateParameters(Parameters parameters) throws IOException {
     if (parameters.getBoolean("post_allow_log_insert") && parameters.getBoolean("post_allow_log_insert_reset")) {
