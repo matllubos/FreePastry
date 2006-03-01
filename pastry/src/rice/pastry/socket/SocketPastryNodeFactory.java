@@ -436,7 +436,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
       srManager = new SocketSourceRouteManager(pn, localAddress, proxyAddress,
           random);
-      port++;
+      if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
+        port++;
     }
 
     pn.setSocketSourceRouteManager(srManager);

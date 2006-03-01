@@ -75,6 +75,7 @@ pastry_socket_scm_write_wait_time = 30000
 pastry_socket_scm_backoff_initial = 250
 pastry_socket_scm_backoff_limit = 5
 pastry_socket_pingmanager_testSourceRouting = false
+pastry_socket_increment_port_after_construction = true
 
 # if we are not scheduled for time on cpu in this time, we setReady(false)
 # otherwise there could be message inconsistency, because

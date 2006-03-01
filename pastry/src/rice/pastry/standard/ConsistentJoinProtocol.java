@@ -311,10 +311,24 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         if (logger.level <= Logger.FINE) logger.log("CJP: still need to hear from:"+toHearFromStr);
       }
     } else {
-      if (logger.level <= Logger.FINE) logger.log("CJP: LS is not complete: "+leafSet);
-      // need to poll left and right neighbors
+      if (logger.level <= Logger.FINE) logger.log("CJP: LS is not complete: "+leafSet);      
       // sendTheMessage to leftmost and rightmost?
-      // send leafsetMaintenance to self?
+      
+      NodeHandle left = null;
+      NodeHandle right = null;
+      
+      synchronized(leafSet) {
+        int index = -leafSet.ccwSize();
+        if (index != -leafSet.maxSize()/2) {
+          left = leafSet.get(index);
+        }
+        index = leafSet.cwSize();
+        if (index != leafSet.maxSize()/2) {
+          right = leafSet.get(index);
+        }
+      }
+      if (left != null) sendTheMessage(left, true);
+      if (right != null) sendTheMessage(right, true);
     }
   }
   
