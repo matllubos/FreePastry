@@ -1470,7 +1470,10 @@ public class PostProxy {
       startSecurityManager(parameters);
       startRetrieveCAKey(parameters);
       startRetrieveUser(parameters);
-      dialog.repaint();  // update user info
+      if (dialog != null) {
+        // might be headless
+        dialog.repaint();  // update user info
+      }
       startLoadRingCertificates(parameters);
       startDeterminePorts(parameters);
       startDetermineSMTPServer(parameters);
