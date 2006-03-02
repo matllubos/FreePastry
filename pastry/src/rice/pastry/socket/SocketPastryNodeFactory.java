@@ -72,6 +72,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
     if (localAddress == null) {
       localAddress = InetAddress.getLocalHost();
+      try {
+        ServerSocket test = new ServerSocket();
+        test.bind(new InetSocketAddress(localAddress,port));
+      } catch (SocketException e) {
+        Socket temp = new Socket("yahoo.com", 80);
+        localAddress = temp.getLocalAddress();
+        temp.close();
+
+        if (logger.level <= Logger.WARNING)
+          logger.log("Error binding to default IP, using " + localAddress);
+      }
     }
 
     environment = env;
@@ -676,33 +687,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   private EpochInetSocketAddress getEpochAddress(int portNumber, long epoch) {
     EpochInetSocketAddress result = null;
 
-    try {
-      result = new EpochInetSocketAddress(new InetSocketAddress(localAddress,
-          portNumber), epoch);
-      ServerSocket test = new ServerSocket();
-
-      try {
-        test.bind(result.getAddress());
-      } catch (SocketException e) {
-        Socket temp = new Socket("yahoo.com", 80);
-        result = new EpochInetSocketAddress(new InetSocketAddress(temp
-            .getLocalAddress(), portNumber), epoch);
-        temp.close();
-
-        if (logger.level <= Logger.WARNING)
-          logger.log("Error binding to original IP, using " + result);
-      }
-
-      test.close();
-      return result;
-    } catch (UnknownHostException e) {
-      if (logger.level <= Logger.SEVERE)
-        logger.log("PANIC: Unknown host in getAddress. " + e);
-    } catch (IOException e) {
-      if (logger.level <= Logger.SEVERE)
-        logger.log("PANIC: IOException in getAddress. " + e);
-    }
-
+    result = new EpochInetSocketAddress(new InetSocketAddress(localAddress,
+        portNumber), epoch);
     return result;
   }
 
