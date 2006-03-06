@@ -225,9 +225,9 @@ public class BodyPart extends FetchPart {
           }
         }).invoke(_conn.getEnvironment());
       } catch (Exception e) {
-        String msg = "Error: Unable to fetch data; logmatch "+Long.toString(_conn.getEnvironment().getRandomSource().nextLong(),16);
+        String msg = "Unable to fetch data; logmatch "+Long.toString(_conn.getEnvironment().getRandomSource().nextLong(),16);
         handlePastException(e,msg);
-        throw new MailboxException(msg,e);
+        return headerError(parts,msg);
       }
 
       if (data == null) {
@@ -243,10 +243,25 @@ public class BodyPart extends FetchPart {
         headers = iHeaders.getNonMatchingHeaderLines(parts);
       }
       
-      return format(collapse(headers).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n");
+      return format(collapse(headers).replaceAll("[\\u0080-\\uffff\\u001b]", "?") + "\r\n");
     } catch (MessagingException e) {
       throw new MailboxException(e);
     }
+  }
+
+  private String headerError(String[] parts, String msg) {
+    StringBuffer ret = new StringBuffer();
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].equalsIgnoreCase("date")) {
+        ret.append(parts[i]+": Thu, 01 Apr 1971 23:59:59 -0100 ("+msg+")");
+      } else if (parts[i].equalsIgnoreCase("to") || parts[i].equalsIgnoreCase("from")
+          || parts[i].equalsIgnoreCase("reply-to") || parts[i].equalsIgnoreCase("cc")) {
+        ret.append(parts[i]+ ": \"" + msg + "\" <missing-data@epostmail.org>\r\n");
+      } else if (parts[i].equalsIgnoreCase("subject")) {
+        ret.append(parts[i] + ": " + msg + "\r\n");
+      }
+    }
+    return format(ret.toString());
   }
 
   public String fetchAll(BodyPartRequest breq, EmailContentPart part) throws MailboxException {
@@ -346,10 +361,10 @@ public class BodyPart extends FetchPart {
     } catch (Exception e) {
       String str = handlePastException(e,"Error: Unable to fetch data - did not exist in Past!");
       
-      return new String(headers.getData()).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n" + str; 
+      return new String(headers.getData()).replaceAll("[\\u0080-\\uffff\\u001b]", "?") + "\r\n" + str; 
     }
 
-    return new String(headers.getData()).replaceAll("[\\u0080-\\uffff]", "?") + "\r\n" + fetchAll(data);
+    return new String(headers.getData()).replaceAll("[\\u0080-\\uffff\\u001b]", "?") + "\r\n" + fetchAll(data);
   }
 
   private String getRange(BodyPartRequest breq, String content) {
