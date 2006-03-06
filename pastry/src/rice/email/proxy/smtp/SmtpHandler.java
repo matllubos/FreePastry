@@ -6,6 +6,7 @@ import rice.email.proxy.util.*;
 import rice.email.proxy.user.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.post.proxy.PostProxy;
 
 import java.io.IOException;
 
@@ -67,7 +68,7 @@ class SmtpHandler {
   }
 
   protected void sendGreetings() {
-    _conn.println("220 " + _conn.getServerGreetingsName() + " Simple Mail Transfer Service Ready");
+    _conn.println("220 " + _conn.getServerGreetingsName() + " SMTP ePOST "+ PostProxy.version);
   }
 
   protected void handleCommand() throws IOException {

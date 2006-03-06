@@ -303,7 +303,7 @@ public class PostProxy {
   
   protected Logger logger;
 
-  private String version = "undefined";
+  public static String version = "undefined";
   
   /**
     * Method which sees if we are using a liveness monitor, and if so, sets up this
