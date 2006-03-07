@@ -89,16 +89,14 @@ pastry_protocol_consistentJoin_max_time_to_be_scheduled = 20000
 # send the consistent join message, to get verification from the entire
 # leafset
 pastry_protocol_consistentJoin_retry_interval = 30000
-
 # parameter to control how long dead nodes are retained in the "failed set" in
-# CJP (see ConsistentJoinProtocol ctor)
-pastry_protocol_consistentJoin_failedRetentionTime = 90000
-
-# size of "failed set" (see ConsistentJoinProtocol ctor)
+# CJP (see ConsistentJoinProtocol ctor) (15 minutes)
+pastry_protocol_consistentJoin_failedRetentionTime = 900000
+# how often to cleanup the failed set (5 mins) (see ConsistentJoinProtocol ctor)
+pastry_protocol_consistentJoin_cleanup_interval = 300000
+# the maximum number of entries to send in the failed set, only sends the most 
+recent detected failures (see ConsistentJoinProtocol ctor)
 pastry_protocol_consistentJoin_maxFailedToSend = 20
-
-# how often to clean up the CJP failed set (see ConsistentJoinProtocol ctor)
-pastry_protocol_consistentJoin_cleanup_interval = 30000
 
 # how often we send/expect to be sent updates
 pastry_protocol_periodicLeafSet_ping_neighbor_period = 20000
