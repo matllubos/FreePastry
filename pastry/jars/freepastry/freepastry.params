@@ -67,6 +67,10 @@ pastry_socket_srm_check_dead_throttle = 300000
 pastry_socket_srm_ping_throttle = 300000
 pastry_socket_scm_max_open_sockets = 40
 pastry_socket_scm_max_open_source_routes = 20
+# the maximum number of source routes to attempt, setting this to 0 will 
+# effectively eliminate source route attempts
+# setting higher than the leafset does no good, it will be bounded by the leafset
+pastry_socket_srm_num_source_route_attempts = 1000
 pastry_socket_scm_socket_buffer_size = 32768
 pastry_socket_scm_ping_delay = 2500
 pastry_socket_scm_ping_jitter = 1000

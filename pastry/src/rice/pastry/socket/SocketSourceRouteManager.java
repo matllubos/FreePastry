@@ -32,6 +32,8 @@ public class SocketSourceRouteManager {
   // the minimum amount of time between pings
   public long PING_THROTTLE;
   
+  public int NUM_SOURCE_ROUTE_ATTEMPTS;
+  
   // the local pastry node
   private SocketPastryNode spn;
   
@@ -63,6 +65,7 @@ public class SocketSourceRouteManager {
     Parameters p = node.getEnvironment().getParameters();
     CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
+    NUM_SOURCE_ROUTE_ATTEMPTS = p.getInt("pastry_socket_srm_num_source_route_attempts");
     
     this.logger = node.getEnvironment().getLogManager().getLogger(SocketSourceRouteManager.class, null);
     this.manager = new SocketCollectionManager(node, this, bindAddress, proxyAddress, random);
@@ -493,7 +496,7 @@ public class SocketSourceRouteManager {
    * @return All possible source routes to the destination
    */
   protected SourceRoute[] getAllRoutes(EpochInetSocketAddress destination) {
-    NodeSet nodes = spn.getLeafSet().neighborSet(Integer.MAX_VALUE);
+    NodeSet nodes = spn.getLeafSet().neighborSet(NUM_SOURCE_ROUTE_ATTEMPTS);
     nodes.randomize(spn.getEnvironment().getRandomSource());
     Vector result = new Vector();
     result.add(SourceRoute.build(destination));
@@ -665,7 +668,8 @@ public class SocketSourceRouteManager {
       getRouteManager(route).markSuspected();
       
       // mark this address as suspected, if this is currently the best route
-      if ((best != null) && (best.equals(route)))
+      if (((best == null) || (best.equals(route))) && // because we set the best == null when we didn't have a route
+          (liveness < SocketNodeHandle.LIVENESS_DEAD)) // don't promote the node
           setSuspected();
     }
     
