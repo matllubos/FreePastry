@@ -26,7 +26,7 @@ public class SplitStreamDistTest {
   public static String INSTANCE = "DistSplitStreamTest";
 
 //  public static final String BOOTNODE = "ricepl-3.cs.rice.edu";
-  public static final String BOOTNODE = "jeffh.cs.rice.edu";
+  public static final String BOOTNODE = "swsao9509";
   
   public static final boolean nameSelf = true;
   
@@ -184,9 +184,9 @@ public class SplitStreamDistTest {
     }   
     
     app.subscribeToAllChannels();    
-    if (isBootNode) {
+//    if (isBootNode) {
       app.startPublishTask(); 
-    }
+//    }
   
     // this is to cause different connections to open
     if (artificialChurn) {
