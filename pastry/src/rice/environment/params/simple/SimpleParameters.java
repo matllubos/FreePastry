@@ -53,8 +53,8 @@ public class SimpleParameters implements Parameters {
 
     for (int ctr = 0; ctr < orderedDefaults.length; ctr++) {
       try {
-        this.defaults.load(ClassLoader.getSystemResource(
-            orderedDefaults[ctr] + FILENAME_EXTENSION).openStream());
+        this.defaults.load(this.getClass().getClassLoader().getResource(
+            orderedDefaults[ctr] + FILENAME_EXTENSION).openStream()); 
       } catch (Exception ioe) {
         String errorString = "Warning, couldn't load param file:"
           + (orderedDefaults[ctr] + FILENAME_EXTENSION);
