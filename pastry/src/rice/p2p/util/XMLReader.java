@@ -137,7 +137,7 @@ public class XMLReader {
     assertStartTag();
     
     if (! xpp.getName().equals(name))
-      throw new IOException("Expected start tag " + name + ", got a " + xpp.getName());
+      throw new IOException("Expected start tag '" + name + "', got a '" + xpp.getName()+"'");
   }
   
   /**
@@ -150,7 +150,7 @@ public class XMLReader {
     assertEvent(xpp.END_TAG);
     
     if (! xpp.getName().equals(name))
-      throw new IOException("Expected end tag " + name + ", got a " + xpp.getName());
+      throw new IOException("Expected end tag '" + name + "', got a '" + xpp.getName()+"'");
   }
   
   /**
@@ -207,7 +207,7 @@ public class XMLReader {
       throw new IOException("Expected attribute " + name + ", found none");
     
     if (! getAttribute(name).equals(value))
-      throw new IOException("Expected attribute " + name + " to be " + value + ", got " + getAttribute(name));
+      throw new IOException("Expected attribute " + name + " to be '" + value + "', got '" + getAttribute(name)+"'");
   }
   
   /**
