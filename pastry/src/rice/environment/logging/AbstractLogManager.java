@@ -91,7 +91,7 @@ public abstract class AbstractLogManager implements LogManager {
     params.addChangeListener(new ParameterChangeListener() {
 	    public void parameterChange(String paramName, String newVal) {
 	      if (paramName.equals("logging_enable")) {
-	        enabled = Boolean.getBoolean(newVal);
+            enabled = Boolean.valueOf(newVal).booleanValue();
 	      } else if (paramName.equals("loglevel")) {            
             synchronized(this) {
               // iterate over all loggers, if they are default loggers,
