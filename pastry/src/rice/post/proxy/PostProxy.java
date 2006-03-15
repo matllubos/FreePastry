@@ -330,29 +330,6 @@ public class PostProxy {
   protected void startCheckBoot() throws Exception {
     Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("proxy_compatibility_check_enable")) {
-      String address = getLocalHost().getHostAddress();
-      
-      if (! CompatibilityCheck.testIPAddress(address)) {
-        if (parameters.getBoolean("pastry_proxy_connectivity_show_message")) {
-          int i = message("You computer appears to have the non-routable address " + address + ".\n" +
-                          "This is likely because you are connected from behind a NAT - ePOST can\n" + 
-                          "run from behind a NAT, but you must set up port forwarding on port 10001\n" +
-                          "for both TCP and UDP to your internal address '" + address + "'.\n\n" +
-                          "If you have set up your NAT box, select 'NAT is Set Up' to test your\n" + 
-                          "connection, otherwise, select 'Kill ePOST Proxy'.", 
-                          new String[] {"Kill ePOST Proxy", "NAT is Set Up"}, "Kill ePOST Proxy");
-          
-          if (i == 0) {
-            System.exit(-1);
-          } else {
-            startCheckNAT();
-          }
-        } else {
-          startCheckNAT();
-        }
-      } 
-          
-      
       String version = System.getProperty("java.version");
       
       if (! CompatibilityCheck.testJavaVersion(version))
@@ -390,13 +367,39 @@ public class PostProxy {
     
     return result;
   }
+
+  protected void startCheckNAT() throws Exception {
+    String address = getLocalHost().getHostAddress();
+    
+    if (! CompatibilityCheck.testIPAddress(address)) {
+      if (parameters.getBoolean("pastry_proxy_connectivity_show_message")) {
+        int i = message("You computer appears to have the non-routable address " + address + ".\n" +
+                        "This is likely because you are connected from behind a NAT - ePOST can\n" + 
+                        "run from behind a NAT, but you must set up port forwarding on port 10001\n" +
+                        "for both TCP and UDP to your internal address '" + address + "'.\n\n" +
+                        "If you have set up your NAT box, select 'NAT is Set Up' to test your\n" + 
+                        "connection, otherwise, select 'Kill ePOST Proxy'.", 
+                        new String[] {"Kill ePOST Proxy", "NAT is Set Up"}, "Kill ePOST Proxy");
+        
+        if (i == 0) {
+          System.exit(-1);
+        } else {
+          startCheckNATisSetup();
+        }
+      } else {
+        startCheckNATisSetup();
+      }
+    } 
+        
+
+  }
   
   /**
    * Method which checks the NAT connection
    *
    * @param parameters The parameters to use
    */
-  protected void startCheckNAT() throws Exception {
+  protected void startCheckNATisSetup() throws Exception {
     Parameters parameters = environment.getParameters();
     if (logger.level <= Logger.FINE) logger.log( "Starting parsing...");
     InetSocketAddress[] addresses = parameters.getInetSocketAddressArray("pastry_proxy_connectivity_hosts");
@@ -404,32 +407,32 @@ public class PostProxy {
     
     try {
       natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/4,
-                                                            new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
+                                                            new InetSocketAddress(getLocalHost(), port),
                                                             randomSubset(addresses, 5), environment, logger).getAddress();
     } catch (SocketTimeoutException e) {}
   
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout")/2,
-                                                              new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
+                                                              new InetSocketAddress(getLocalHost(), port),
                                                               randomSubset(addresses, 5), environment, logger).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) 
       try {
         natAddress = SocketPastryNodeFactory.verifyConnection(parameters.getInt("pastry_proxy_connectivity_timeout"),
-                                                              new InetSocketAddress(getLocalHost(), parameters.getInt("pastry_proxy_connectivity_port")),
+                                                              new InetSocketAddress(getLocalHost(), port),
                                                               randomSubset(addresses, 5), environment, logger).getAddress();
       } catch (SocketTimeoutException e) {}
     
     if (natAddress == null) {
       int j = message("ePOST attempted to determine the NAT IP address, but was unable to.  This\n" +
                       "is likely caused by an incorrectly configured NAT - make sure that your NAT\n" +
-                      "is set up to forward both TCP and UDP packets on port " + parameters.getInt("pastry_proxy_connectivity_port") + " to '" + getLocalHost() + "'.\n\n" + 
+                      "is set up to forward both TCP and UDP packets on port " + port + " to '" + getLocalHost() + "'.\n\n" + 
                       "Error: java.net.SocketTimeoutException", new String[] {"Kill ePOST Proxy", "Retry"}, "Kill ePOST Proxy");
     
       if (j == 1)
-        startCheckNAT();
+        startCheckNATisSetup();
       else
         System.exit(-1);
     } else {
@@ -1476,6 +1479,7 @@ public class PostProxy {
       }
       startLoadRingCertificates(parameters);
       startDeterminePorts(parameters);
+      startCheckNAT();
       startDetermineSMTPServer(parameters);
       sectionDone();
       

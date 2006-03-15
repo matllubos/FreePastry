@@ -98,8 +98,7 @@ pastry_ring_0000000000000000000000000000000000000000_allow_new_ring=false
 pastry_ring_094B000000000000000000000000000000000000_allow_new_ring=false
 # open ring
 pastry_ring_A3B7000000000000000000000000000000000000_allow_new_ring=false
-pastry_proxy_connectivity_hosts=planetlab2.eecs.umich.edu:10003,planetlab1.csail.mit.edu:10003,planetlab1.csres.utexas.edu:10003,planetlab1.eecs.umich.edu:10003,planetlab10.millennium.berkeley.edu:10003,planetlab11.millennium.berkeley.edu:10003,planetlab12.millennium.berkeley.edu:10003,planetlab13.millennium.berkeley.edu:10003,planetlab14.millennium.berkeley.edu:10003,planetlab15.millennium.berkeley.edu:10003,planetlab16.millennium.berkeley.edu:10003,planetlab3.csail.mit.edu:10003,planetlab4.csail.mit.edu:10003,planetlab5.csail.mit.edu:10003,planetlab6.csail.mit.edu:10003,planetlab7.csail.mit.edu:10003,planlab1.cs.caltech.edu:10003,planlab2.cs.caltech.edu:10003
-pastry_proxy_connectivity_port=10001
+pastry_proxy_connectivity_hosts=planetlab2.eecs.umich.edu:10103,planetlab1.csail.mit.edu:10103,planetlab1.csres.utexas.edu:10103,planetlab1.eecs.umich.edu:10103,planetlab10.millennium.berkeley.edu:10103,planetlab11.millennium.berkeley.edu:10103,planetlab12.millennium.berkeley.edu:10103,planetlab13.millennium.berkeley.edu:10103,planetlab14.millennium.berkeley.edu:10103,planetlab15.millennium.berkeley.edu:10103,planetlab16.millennium.berkeley.edu:10103,planetlab3.csail.mit.edu:10103,planetlab4.csail.mit.edu:10103,planetlab5.csail.mit.edu:10103,planetlab6.csail.mit.edu:10103,planetlab7.csail.mit.edu:10103,planlab1.cs.caltech.edu:10103,planlab2.cs.caltech.edu:10103
 pastry_proxy_connectivity_show_message=true
 pastry_proxy_connectivity_timeout=10000
 pastry_socket_pingmanager_smallPings=true
@@ -178,6 +177,4 @@ storage_root_location=.
 visualization_client_enable=false
 visualization_enable=true
 visualization_global_enable=true
-visualization_global_port_offset=10002
-visualization_port=10002
-visualization_port_offset=10002
+
