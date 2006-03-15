@@ -74,6 +74,8 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * The stack of putFields which are currently being written to the stream
    */
   protected Stack currentPutFields;
+
+  private String debugstr;
   
   /**
    * Constructor which writes data from the given output stream in order
@@ -88,14 +90,23 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     super();
     try {
       this.writer = new XMLWriter(out);
+      int hash = 0;
+      if (writer != null) hash = writer.hashCode();
+      this.debugstr = "writer after new, in try: "+writer+" "+hash+"\n";
     } catch (NoClassDefFoundError ncdfe) {
       System.err.println("ERROR: Make sure to add xmlpull.jar to the classpath");
       throw ncdfe; 
     }
+    int hash = 0;
+    if (writer != null) hash = writer.hashCode();
+    this.debugstr += "writer after try: "+writer+" "+hash+"\n";
     this.references = new Hashtable();
     this.currentObjects = new Stack();
     this.currentClasses = new Stack();
     this.currentPutFields = new Stack();
+    hash = 0;
+    if (writer != null) hash = writer.hashCode();
+    this.debugstr += "writer before writeStreamHeader: "+writer+" "+hash+"\n";
     writeStreamHeader();
   }
   
@@ -108,11 +119,24 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    * @throws IOException If an error occurs
    */
   protected void writeStreamHeader() throws IOException {
-    writer.writeHeader();
-    writer.start("jsx");
-    writer.attribute("major", 1);
-    writer.attribute("minor", 1);
-    writer.attribute("format", "JSX.DataReader");
+    if (writer == null) {
+      System.out.println("FLUGLE writer is null in writeStreamHeader()...");
+      System.out.println(debugstr);
+    }
+    try {
+      writer.writeHeader();
+      writer.start("jsx");
+      writer.attribute("major", 1);
+      writer.attribute("minor", 1);
+      writer.attribute("format", "JSX.DataReader");
+    } catch (NullPointerException npe) {
+      System.out.println("FLUGLE writer NPE'd in writeStreamHeader()...");
+      int hash = 0;
+      if (writer != null) hash = writer.hashCode();
+      this.debugstr += "writer in NPE handler: "+writer+" "+hash+"\n";
+      System.out.println(debugstr);
+      throw npe;
+    }
   }  
   
   /**
