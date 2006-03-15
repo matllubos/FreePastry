@@ -225,9 +225,9 @@ public class BodyPart extends FetchPart {
           }
         }).invoke(_conn.getEnvironment());
       } catch (Exception e) {
-        String msg = "Unable to fetch data; logmatch "+Long.toString(_conn.getEnvironment().getRandomSource().nextLong(),16);
+        String msg = "Unable to fetch data; logmatch "+part.headersReference.toString();
         handlePastException(e,msg);
-        return headerError(parts,msg);
+        return headerError(parts,msg,exclude);
       }
 
       if (data == null) {
@@ -249,19 +249,28 @@ public class BodyPart extends FetchPart {
     }
   }
 
-  private String headerError(String[] parts, String msg) {
-    StringBuffer ret = new StringBuffer();
-    for (int i = 0; i < parts.length; i++) {
-      if (parts[i].equalsIgnoreCase("date")) {
-        ret.append(parts[i]+": Thu, 01 Apr 1971 23:59:59 -0100 ("+msg+")");
-      } else if (parts[i].equalsIgnoreCase("to") || parts[i].equalsIgnoreCase("from")
-          || parts[i].equalsIgnoreCase("reply-to") || parts[i].equalsIgnoreCase("cc")) {
-        ret.append(parts[i]+ ": \"" + msg + "\" <missing-data@epostmail.org>\r\n");
-      } else if (parts[i].equalsIgnoreCase("subject")) {
-        ret.append(parts[i] + ": " + msg + "\r\n");
+  private String headerError(String[] parts, String msg, boolean exclude) throws MessagingException {
+    String fakeheaders = "Date: Thu, 01 Apr 1971 11:59:59 -0100 ("+msg+")\r\n" +
+    "To: \"" + msg + "\" <missing-data@epostmail.org>\r\n" +
+    "From: \"" + msg + "\" <missing-data@epostmail.org>\r\n" +
+    "Subject: " + msg + "\r\n";
+
+    try {
+      InternetHeaders iHeaders;
+      iHeaders = new InternetHeaders(new ByteArrayInputStream(fakeheaders.getBytes("US-ASCII")));
+      Enumeration headers;
+
+      if (exclude) {
+        headers = iHeaders.getMatchingHeaderLines(parts);
+      } else {
+        headers = iHeaders.getNonMatchingHeaderLines(parts);
       }
+      
+      return format(collapse(headers).replaceAll("[\\u0080-\\uffff\\u001b]", "?") + "\r\n");
+    } catch (UnsupportedEncodingException e) {
+      // should never happen, and we're in an error handler already ...
+      return "";
     }
-    return format(ret.toString());
   }
 
   public String fetchAll(BodyPartRequest breq, EmailContentPart part) throws MailboxException {
