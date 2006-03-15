@@ -6,6 +6,7 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
+import rice.pastry.routing.RouteMessage;
 
 /**
  * An object which remembers the mapping from names to MessageReceivers
@@ -126,6 +127,12 @@ public class MessageDispatch {
       mr.receiveMessage(msg); 
       return true;
     } else {
+      // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
+//      if (msg instanceof RouteMessage) {
+//        RouteMessage rm = (RouteMessage)msg;
+//        rm.routeMessage(this.localNode.getLocalHandle());
+//        return true;
+//      }
       // we should consider buffering the message
       if ((bufferCount <= bufferSize) && // we have enough memory to buffer
           (localNode.isReady() || bufferIfNotReady)) { // the node is ready, or we are supposed to buffer if not ready
