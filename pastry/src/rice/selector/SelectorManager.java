@@ -2,11 +2,7 @@ package rice.selector;
 
 import java.io.IOException;
 import java.nio.channels.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.TreeSet;
+import java.util.*;
 
 import rice.Destructable;
 import rice.environment.logging.*;
@@ -263,6 +259,27 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 
   protected void doSelections() throws IOException {
     SelectionKey[] keys = selectedKeys();
+    
+    // to debug weird selection bug
+    if (keys.length > 1000 && logger.level <= Logger.FINE) {
+      logger.log("lots of selection keys!");
+      HashMap histo = new HashMap();
+      for (int i = 0; i < keys.length; i++) {
+        String keyclass = keys[i].getClass().getName();
+        if (histo.containsKey(keyclass)) {
+          histo.put(keyclass, new Integer(((Integer)histo.get(keyclass)).intValue() + 1));
+        } else {
+          histo.put(keyclass, new Integer(1));
+        }
+      }
+      logger.log("begin selection keys by class");
+      Iterator it = histo.keySet().iterator();
+      while (it.hasNext()) {
+        String name = (String)it.next();
+        logger.log("Selection Key: " + name + ": "+histo.get(name));
+      }
+      logger.log("end selection keys by class");
+    }
 
     for (int i = 0; i < keys.length; i++) {
       selector.selectedKeys().remove(keys[i]);
