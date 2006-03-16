@@ -383,6 +383,10 @@ public class SocketSourceRouteManager {
     getAddressManager(route.getLastHop(), false).markAlive(route);
   }
   
+  protected int proximity(SourceRoute route) {
+    return getAddressManager(route.getLastHop(), false).proximity();    
+  }
+  
   /**
    * This method should be called when a known route is declared
    * suspected.

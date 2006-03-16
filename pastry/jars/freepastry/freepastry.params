@@ -70,11 +70,13 @@ pastry_socket_scm_max_open_source_routes = 20
 # the maximum number of source routes to attempt, setting this to 0 will 
 # effectively eliminate source route attempts
 # setting higher than the leafset does no good, it will be bounded by the leafset
-pastry_socket_srm_num_source_route_attempts = 1000
+# a larger number tries more source routes, which could give you a more accurate 
+# determination, however, is more likely to lead to congestion collapse
+pastry_socket_srm_num_source_route_attempts = 8
 pastry_socket_scm_socket_buffer_size = 32768
-pastry_socket_scm_ping_delay = 2500
+pastry_socket_scm_ping_delay = 500
 pastry_socket_scm_ping_jitter = 1000
-pastry_socket_scm_num_ping_tries = 3
+pastry_socket_scm_num_ping_tries = 5
 pastry_socket_scm_write_wait_time = 30000
 pastry_socket_scm_backoff_initial = 250
 pastry_socket_scm_backoff_limit = 5

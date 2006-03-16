@@ -211,8 +211,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   protected void checkLiveness(SourceRoute path) {    
     if (! resigned) {
       if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
-      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);
-      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
+      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);      
+//      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
+      
+      int delay = manager.proximity(path)*2;
+      if (delay > PING_DELAY) delay = PING_DELAY;      
+      ((SocketPastryNode) pastryNode).getTimer().schedule(checker, delay);
       pingManager.ping(path, checker);
     }
   }
@@ -673,6 +677,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
           manager.markSuspected(path);
         
         pingManager.ping(path, this);
+        ((SocketPastryNode) pastryNode).getTimer().schedule(this,(int)(PING_DELAY*Math.pow(2,tries-1) + random.nextInt(PING_JITTER)));
       } else {
         if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + path + ") expired - marking as dead.");
         manager.markDead(path);
