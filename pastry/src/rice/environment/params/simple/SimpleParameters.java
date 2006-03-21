@@ -52,9 +52,13 @@ public class SimpleParameters implements Parameters {
     this.changeListeners = new HashSet();
 
     for (int ctr = 0; ctr < orderedDefaults.length; ctr++) {
-      try {
-        this.defaults.load(this.getClass().getClassLoader().getResource(
-            orderedDefaults[ctr] + FILENAME_EXTENSION).openStream()); 
+      try {        
+        ClassLoader loader = this.getClass().getClassLoader();
+        // some VMs report the bootstrap classloader via null-return
+        if (loader == null)
+          loader = ClassLoader.getSystemClassLoader();
+        this.defaults.load(loader.getResource(
+            orderedDefaults[ctr] + FILENAME_EXTENSION).openStream());
       } catch (Exception ioe) {
         String errorString = "Warning, couldn't load param file:"
           + (orderedDefaults[ctr] + FILENAME_EXTENSION);
