@@ -1,6 +1,7 @@
 
 package rice.pastry.socket;
 
+import java.net.InetSocketAddress;
 import java.util.*;
 
 import rice.environment.logging.Logger;
@@ -65,8 +66,16 @@ public class SocketNodeHandle extends DistNodeHandle {
     } else {
       if (isLocal()) 
         return LIVENESS_ALIVE;
-      else
+      else {
+        // make sure this isn't an old existance of ourself:
+        EpochInetSocketAddress localEaddr = ((SocketNodeHandle)getLocalNode().getLocalHandle()).getEpochAddress();
+        InetSocketAddress localAddress = localEaddr.getAddress();
+        InetSocketAddress myAddress = getEpochAddress().getAddress();
+        if (localAddress.equals(myAddress) && (!getEpochAddress().equals(localEaddr)))
+          return LIVENESS_DEAD_FOREVER;
+        
         return spn.getSocketSourceRouteManager().getLiveness(getEpochAddress());
+      }
     }
   }
   
@@ -95,7 +104,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public boolean isLocal() {
     assertLocalNode();
-    return getLocalNode().getNodeId().equals(nodeId);
+    return getLocalNode().getLocalHandle().equals(this);
   }
   
   /**
