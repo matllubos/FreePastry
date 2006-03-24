@@ -270,7 +270,7 @@ public class RouteMessage extends Message implements Serializable,
   }
 
   public void setNextHopHandle(rice.p2p.commonapi.NodeHandle nextHop) {
-    nextHop = (NodeHandle) nextHop;
+    this.nextHop = (NodeHandle) nextHop;
   }
 
   public void setMessage(rice.p2p.commonapi.Message message) {
