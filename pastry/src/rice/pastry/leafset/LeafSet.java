@@ -420,7 +420,7 @@ public class LeafSet extends Observable implements Serializable {
    * @return x mod y
    */
   private int mod(int x, int y) {
-    if (x < 0)
+    if ((x < 0) ^ (y < 0))
       return y + (x % y);
     else
       return x % y;
