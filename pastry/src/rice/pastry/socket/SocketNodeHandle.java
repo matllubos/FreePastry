@@ -61,7 +61,7 @@ public class SocketNodeHandle extends DistNodeHandle {
   public int getLiveness() {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 
-    if (spn == null) {
+    if (spn == null || getLocalNode().getLocalHandle() == null) {
       return LIVENESS_ALIVE;
     } else {
       if (isLocal()) 
