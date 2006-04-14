@@ -62,5 +62,20 @@ public class SnapShotLogEntry extends EmailLogEntry {
     
     return Arrays.equals(((SnapShotLogEntry) o)._emails, _emails);
   }
+
+  public long getInternalDate() {
+    return ((EmailLogEntry)entry).getInternalDate();
+  }
   
+  // not sure if this is the right approach for snapshots
+  public int getMaxUID() {
+    int n = 0;
+    for (int i=0; i<_emails.length; i++) {
+      int d = _emails[i].getUID();
+      if (d > n)
+        n = d;
+    }
+    return n;
+  }
+
 }

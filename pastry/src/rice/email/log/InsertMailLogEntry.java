@@ -52,6 +52,14 @@ public class InsertMailLogEntry extends EmailLogEntry {
     
     return ((InsertMailLogEntry) o)._storedEmail.equals(_storedEmail);
   }
+
+  public long getInternalDate() {
+    return _storedEmail.getInternalDate();
+  }
+
+  public int getMaxUID() {
+    return _storedEmail.getUID();
+  }
 }
 
 

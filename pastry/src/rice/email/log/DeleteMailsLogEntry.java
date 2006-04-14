@@ -60,5 +60,27 @@ public class DeleteMailsLogEntry extends EmailLogEntry {
     
     return Arrays.equals(((DeleteMailsLogEntry) o)._storedEmails, _storedEmails);
   }
+
+  public long getInternalDate() {
+    // XXX newest or oldest?
+    long n = 0;
+    for (int i=0; i<_storedEmails.length; i++) {
+      long d = _storedEmails[i].getInternalDate();
+      if (d < n)
+        n = d;
+    }
+    return n;
+  }
+
+  public int getMaxUID() {
+    int n = 0;
+    for (int i=0; i<_storedEmails.length; i++) {
+      int d = _storedEmails[i].getUID();
+      if (d > n)
+        n = d;
+    }
+    return n;
+  }
+
 }
 

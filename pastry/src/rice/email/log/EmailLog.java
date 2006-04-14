@@ -3,6 +3,8 @@ package rice.email.log;
 import java.security.*;
 import java.util.*;
 
+import org.jfree.chart.labels.StandardContourToolTipGenerator;
+
 import rice.*;
 import rice.Continuation.*;
 import rice.email.*;
@@ -73,6 +75,22 @@ public class EmailLog extends CoalescedLog {
     numRecent = 0;
     numEntries = 0;
     subscriptions = new Vector();
+  }
+  
+  /**
+   * This constructor should only be used for constructing a reconciled log
+   * 
+   * @param unreconciled
+   * @param base
+   * @param pair
+   */
+  protected EmailLog(EmailLog unreconciled, KeyPair pair) {
+    super(unreconciled.name,unreconciled.location,unreconciled.post,pair,unreconciled.cipherKey);
+    creation = post.getEnvironment().getTimeSource().currentTimeMillis();
+    subscriptions = (Vector)unreconciled.subscriptions.clone();
+    numRecent = 0;
+    numExist = 0; // Folder must fix this up
+    nextUID = DEFAULT_UID;
   }
   
   /**
@@ -257,6 +275,89 @@ public class EmailLog extends CoalescedLog {
       command.receiveResult(null);
     }
   }
+  
+  public void dump() {
+    if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null);
+    if (logger.level <= Logger.WARNING) logger.log("BEGIN DUMPING ENTRIES");
+    
+    Continuation c = new Continuation() {
+      
+      public void receiveResult(Object result) {
+        EmailLogEntry entry = null;
+        try {
+          entry = (EmailLogEntry) result;
+        } catch (ClassCastException cce) {
+          if (logger.level <= Logger.WARNING) logger.logException("CCE; actual class "+result.getClass().getName() + "; toString "+result.toString(),cce);
+        }
+        
+        while (entry != null) {
+          if (logger.level <= Logger.WARNING) logger.log("entry: "+entry);
+          
+          if (entry.hasPreviousEntry()) {
+            EmailLogEntry tmp = (EmailLogEntry) entry.getCachedPreviousEntry();
+            
+            if (tmp != null) {
+              entry = tmp;
+            } else {
+              entry.getPreviousEntry(this);
+              return;
+            }
+          } else {
+            // break if there isn't a next entry
+            break;
+          }
+        }
+        if (logger.level <= Logger.WARNING) logger.log("END DUMPING ENTRIES");
+      }
+
+      public void receiveException(Exception result) {
+        if (logger.level <= Logger.WARNING) logger.logException("Received exception while dumping log: ",result);
+      }
+    };
+    
+    if (pending != null)
+      getTopEntry(c);
+    else
+      getActualTopEntry(c);
+    
+    getSnapshot(new Continuation() {
+      public void receiveResult(Object result) {
+        SnapShot[] shots = (SnapShot[]) result;
+        if (shots == null) {
+          if (logger.level <= Logger.WARNING) logger.log("getSnapshot returned null");
+          return;
+        }
+        if (logger.level <= Logger.WARNING) logger.log("dump: "+shots.length+" snapshots");
+        for (int i=0; i< shots.length; i++) {
+          if (logger.level <= Logger.WARNING) logger.log("shot "+i+" topEntry: "+ shots[i].getTopEntry());
+        }
+      }
+
+      public void receiveException(Exception result) {
+        if (logger.level <= Logger.WARNING) logger.logException("Received exception while dumping snapshots: ",result);
+      }
+    });
+  }
+  
+  // dumps self and children
+  public void dumpAll() {
+    if (logger == null) logger = post.getEnvironment().getLogManager().getLogger(CoalescedLog.class, null);
+    if (logger.level <= Logger.WARNING) logger.log("BEGIN DUMPALL for "+getName());
+    dump();
+    Object[] names = getChildLogNames();
+    for (int i = 0; i < names.length; i++) {
+      getChildLog(names[i], new Continuation() {
+        public void receiveResult(Object result) {
+          EmailLog l = (EmailLog)result;
+          l.dumpAll();
+        }
+
+        public void receiveException(Exception result) {
+          if (logger.level <= Logger.WARNING) logger.logException("Received exception while dumping log",result);
+        }
+      });
+    }
+  }
 
   /**
    * Returns the number of messages which exist in this folder
@@ -356,5 +457,217 @@ public class EmailLog extends CoalescedLog {
    */
   public long getCreationTime() {
     return creation;
+  }
+
+  private static void getCommonParent(final EmailLogEntry aTop, final EmailLogEntry bTop, final Collection aEntries, final Collection bEntries, final Continuation command) {
+    if (aTop.equals(bTop)) {
+      command.receiveResult(aTop);
+    } else {
+      if (aTop.compareTo(bTop) > 0  || !bTop.hasPreviousEntry()) {
+        if (aTop.hasPreviousEntry()) {
+          aEntries.add(aTop);
+          aTop.getPreviousEntry(new StandardContinuation(command) {
+            public void receiveResult(Object result) {
+              getCommonParent((EmailLogEntry)result,bTop,aEntries,bEntries,command);
+            }
+          });
+        } else {
+          command.receiveResult(null);
+        }
+      } else {
+        bEntries.add(bTop);
+        bTop.getPreviousEntry(new StandardContinuation(command) {
+          public void receiveResult(Object result) {
+            getCommonParent(aTop,(EmailLogEntry)result,aEntries,bEntries,command);
+          }
+        });
+      }
+    }
+  }
+
+  // I hate these kinds of methods... all this should go in the classes themselves
+  private void replayEntry(HashSet seen, List aEntries, List bEntries, EmailLogEntry current, Continuation command) {
+
+    if (current instanceof DeleteMailLogEntry) {
+      // for now toss all deletes out. in the future we can process deletes that exist in both branches
+    } else if (current instanceof DeleteMailsLogEntry) {
+      // for now toss all deletes out. in the future we can process deletes that exist in both branches
+    } else if (current instanceof InsertMailLogEntry) {
+      InsertMailLogEntry entry = (InsertMailLogEntry)current;
+      if (!seen.contains(entry.getStoredEmail().getEmail())) {
+        seen.add(entry.getStoredEmail().getEmail());
+        addLogEntry(new InsertMailLogEntry(new StoredEmail(entry.getStoredEmail(),getNextUID())),command);
+      }
+    } else if (current instanceof InsertMailsLogEntry) {
+      InsertMailsLogEntry entry = (InsertMailsLogEntry)current;
+      ArrayList newEmails = new ArrayList(entry.getStoredEmails().length);
+      for (int i=0; i<entry.getStoredEmails().length; i++) {
+        if (!seen.contains(entry.getStoredEmails()[i].getEmail())) {
+          seen.add(entry.getStoredEmails()[i].getEmail());
+          newEmails.add(new StoredEmail(entry.getStoredEmails()[i],getNextUID()));
+        }
+      }
+      addLogEntry(new InsertMailsLogEntry((StoredEmail[])newEmails.toArray(new StoredEmail[0])),command);
+    } else if (current instanceof UpdateMailLogEntry) {
+      // for now toss updates out
+      // we could accept updates on messages we've seen
+      // we could even add messages that we see an update to if we haven't seen them
+    } else if (current instanceof UpdateMailsLogEntry) {
+      // for now toss updates out
+    } else if (current instanceof SnapShotLogEntry) {
+      // for now toss out snapshots
+      // they should be redundant anyway
+    }
+  }
+
+  private void merge(final HashSet seen, final List aEntries, final List bEntries, Continuation command) {
+    Continuation nextIter = new StandardContinuation(command) {
+      public void receiveResult(Object result) {
+        merge(seen,aEntries,bEntries,parent);
+      }
+    };
+    
+    if (!(aEntries.isEmpty() && bEntries.isEmpty())) {
+      command.receiveResult(this);
+    } else if (aEntries.isEmpty()) {
+      EmailLogEntry b = (EmailLogEntry)bEntries.remove(0);
+      replayEntry(seen,aEntries,bEntries,b,nextIter);
+    } else if (bEntries.isEmpty()) {
+      EmailLogEntry a = (EmailLogEntry)aEntries.remove(0);
+      replayEntry(seen,aEntries,bEntries,a,nextIter);
+    } else {
+      EmailLogEntry a = (EmailLogEntry)aEntries.get(0);
+      EmailLogEntry b = (EmailLogEntry)bEntries.get(0);
+      if (a.equals(b)) {
+        aEntries.remove(0);
+        bEntries.remove(0);
+        replayEntry(seen,aEntries,bEntries,a,nextIter);
+      } else if (a.compareTo(b) < 0) {
+        aEntries.remove(0);
+        replayEntry(seen,aEntries,bEntries,a,nextIter);
+      } else {
+        bEntries.remove(0);
+        replayEntry(seen,aEntries,bEntries,b,nextIter);
+      }
+    }
+  }
+
+  
+  // I hate these kinds of methods... all this should go in the classes themselves
+  private void copyEntry(EmailLogEntry src, final Continuation command) {
+
+    if (src instanceof DeleteMailLogEntry) {
+      DeleteMailLogEntry entry = (DeleteMailLogEntry)src;
+      command.receiveResult(new DeleteMailLogEntry(entry.getStoredEmail()));
+    } else if (src instanceof DeleteMailsLogEntry) {
+      DeleteMailsLogEntry entry = (DeleteMailsLogEntry)src;
+      command.receiveResult(new DeleteMailsLogEntry(entry.getStoredEmails()));
+    } else if (src instanceof InsertMailLogEntry) {
+      InsertMailLogEntry entry = (InsertMailLogEntry)src;
+      command.receiveResult(new InsertMailLogEntry(entry.getStoredEmail()));
+    } else if (src instanceof InsertMailsLogEntry) {
+      InsertMailsLogEntry entry = (InsertMailsLogEntry)src;
+      command.receiveResult(new InsertMailsLogEntry(entry.getStoredEmails()));
+    } else if (src instanceof UpdateMailLogEntry) {
+      UpdateMailLogEntry entry = (UpdateMailLogEntry)src;
+      command.receiveResult(new UpdateMailLogEntry(entry.getStoredEmail()));
+    } else if (src instanceof UpdateMailsLogEntry) {
+      UpdateMailsLogEntry entry = (UpdateMailsLogEntry)src;
+      command.receiveResult(new UpdateMailsLogEntry(entry.getStoredEmails()));
+    } else if (src instanceof SnapShotLogEntry) {
+      final SnapShotLogEntry entry = (SnapShotLogEntry)src;
+      getTopEntry(new StandardContinuation(command) {
+        public void receiveResult(Object result) {
+          command.receiveResult(new SnapShotLogEntry(entry.getStoredEmails(), (LogEntry)result));
+        }
+      });
+    }
+  }
+
+  private void copyEntries(EmailLogEntry startingEntry, final Continuation command) {
+    if (!startingEntry.hasPreviousEntry()) {
+      command.receiveResult(null);
+    } else {
+      startingEntry.getPreviousEntry(new StandardContinuation(command) {
+        public void receiveResult(Object result) {
+          final EmailLogEntry ent = (EmailLogEntry)result;
+          copyEntries(ent,new StandardContinuation(parent) {
+            public void receiveResult(Object result) {
+              copyEntry(ent, new StandardContinuation(parent) {
+                public void receiveResult(Object result) {
+                  int uid = ((EmailLogEntry)result).getMaxUID()+1;
+                  if (uid > EmailLog.this.nextUID) {
+                    EmailLog.this.nextUID = uid;
+                  }
+                  addLogEntry((LogEntry)result,command);
+                }
+              });
+            }
+          });
+        } 
+      });
+    }
+  }
+  
+  public void reconcile(final EmailLog otherLog, final KeyPair keyPair, final Continuation command) {
+    Continuation c = new StandardContinuation(command) {
+      
+      public void receiveResult(Object result) {
+        final EmailLogEntry thisLogEntry = (EmailLogEntry)result;
+        
+        Continuation d = new StandardContinuation(parent) {
+          public void receiveResult(Object result) {
+            final EmailLogEntry otherLogEntry = (EmailLogEntry)result;
+            
+            final List theseEntries = new ArrayList();
+            final List otherEntries = new ArrayList();
+            final HashSet seen = new HashSet();
+            getCommonParent(thisLogEntry, otherLogEntry, theseEntries, otherEntries, 
+                new StandardContinuation(parent) {
+                  public void receiveResult(Object result) {
+                    if (result == null) {
+                      // oops, these logs have nothing in common -- should probably be an error
+                      parent.receiveException(new Exception("trying to reconcile logs that have no common ancestor"));
+                    } else {
+                      if (otherEntries.isEmpty()) {
+                        parent.receiveResult(this);
+                      } else if (theseEntries.isEmpty()) {
+                        parent.receiveResult(otherLog);
+                      } else {
+                        EmailLogEntry base = (EmailLogEntry)result;
+                        final EmailLog reconciled = new EmailLog(EmailLog.this,keyPair);
+                        reconciled.copyEntries(base, new StandardContinuation(parent) {
+                          public void receiveResult(Object result) {
+                            reconciled.merge(seen, theseEntries, otherEntries, new StandardContinuation(parent) {
+                              public void receiveResult(Object result) {
+                                final EmailLog reconciled = (EmailLog)result;
+                                reconciled.sync(new StandardContinuation(parent) {
+                                  public void receiveResult(Object result) {
+                                    // XXX check to make sure sync sunk
+                                    command.receiveResult(reconciled);
+                                  }
+                                });
+                              }
+                            });
+                          }
+                        });
+                      }
+                    }
+                  }
+                });
+          }   
+        };
+        
+        if (otherLog.pending != null)
+          otherLog.getTopEntry(d);
+        else
+          otherLog.getActualTopEntry(d);
+      }
+    };
+    
+    if (pending != null)
+      getTopEntry(c);
+    else
+      getActualTopEntry(c);
   }
 }

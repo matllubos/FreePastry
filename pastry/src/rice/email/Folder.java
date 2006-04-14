@@ -849,6 +849,10 @@ public class Folder {
     });
   }
   
+  public void dump() {
+    _log.dumpAll();
+  }
+  
   public String toString() {
     return getName();
   }

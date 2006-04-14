@@ -52,5 +52,13 @@ public class DeleteMailLogEntry extends EmailLogEntry {
     
     return ((DeleteMailLogEntry) o)._storedEmail.equals(_storedEmail);
   }
+
+  public long getInternalDate() {
+    return _storedEmail.getInternalDate();
+  }
+
+  public int getMaxUID() {
+    return _storedEmail.getUID();
+  }
 }
 

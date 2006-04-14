@@ -59,6 +59,13 @@ public class StoredEmail implements Serializable, Comparable, Cloneable {
     this.internaldate = internaldate;
   }
   
+  public StoredEmail(StoredEmail other, int uid) {
+    this._uid = uid;
+    this._email = other._email;
+    this._flags = other._flags;
+    this.internaldate = other.internaldate;
+  }
+
   /**
    * Return the UID for the current email
    *

@@ -22,6 +22,8 @@ import rice.post.security.*;
  */
 public class EncryptedLog extends Log {
 
+  private static final long serialVersionUID = 369232753739190225L;
+
   // the key which is used to encrypt and decrypt this log's entries
   protected transient byte[] key;
 
@@ -38,6 +40,13 @@ public class EncryptedLog extends Log {
     super(name, location, post);
 
     initializeKey(keyPair);
+  }
+
+  public EncryptedLog(Object name, Id location, Post post, KeyPair keyPair, byte[] cipherKey) {
+    super(name, location, post);
+
+    this.cipherKey = cipherKey;
+    retrieveKey(keyPair);
   }
 
   /**

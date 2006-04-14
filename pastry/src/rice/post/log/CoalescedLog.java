@@ -24,6 +24,8 @@ import rice.post.security.*;
  */
 public class CoalescedLog extends EncryptedLog {
   
+  private static final long serialVersionUID = -8781290016130834529L;
+
   // the number of log entries to coalece into a single entry
   public static int COALESCE_NUM = 50;
   
@@ -52,6 +54,20 @@ public class CoalescedLog extends EncryptedLog {
     this.cbuffer = new Vector();
   }
   
+  /**
+   * Constructs a Log for use in POST, with the provided number of 
+   * coalesced log entries.
+   *
+   * @param name Some unique identifier for this log
+   * @param location The location of this log in PAST
+   */
+  public CoalescedLog(Object name, Id location, Post post, KeyPair keyPair, byte[] cipherKey) {
+    super(name, location, post, keyPair, cipherKey);
+
+    resetPending();
+    this.cbuffer = new Vector();
+  }
+
   /**
    * This method appends an entry into the user's log, and updates the pointer 
    * to the top of the log to reflect the new object. This method returns a 
