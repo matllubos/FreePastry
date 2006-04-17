@@ -165,8 +165,11 @@ public class PingManager extends SelectionKeyHandler {
    * debugging and testing.
    */
   protected void resign() throws IOException {
-    key.channel().close();
-    key.cancel();
+    if (key != null) {
+      if (key.channel() != null)
+        key.channel().close();
+      key.cancel();
+    }
   }
   
   /**
