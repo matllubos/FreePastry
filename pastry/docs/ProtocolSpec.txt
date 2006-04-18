@@ -1,0 +1,61 @@
+
+
+FreePastry 2.0 Serialized Message description version 0:
+
+BroadcastLeafSet:
+  address: 0xf921def1 (Leafset Protocol)
+  type: 2
+  use: Leafset Maintenance
+  package: rice.pastry.leafset
+
+  format:
+	  byte version (0)
+	  NodeHandle fromNode
+	  LeafSet leafSet
+	  int theType
+  
+BroadcastRouteRow:
+  address: 0x89ce110e (Route Protocol)
+  type: 2
+  use: Routing Table Maintenance
+  package rice.pastry.routing
+  
+  
+  format:
+	  byte version (0)
+	  NodeHandle fromNode  
+	  byte numRows
+	    byte null? (0 if null, 1 if non-null)
+	      RouteSet row // if non-null
+
+ConsistentJoinMessage:
+  address: 0xe80c17e8 (Join Protocol)
+  type: 2
+  use: During Join.  To verify that every node in leafset is aware of your existance, and gossip Leafset
+  package: rice.pastry.standard
+  
+  format:
+	  byte version (0)
+    LeafSet ls
+    boolean request
+    int numInFailedSet
+      NodeHandle failedHandle
+      
+ConsistentJoinMessage:
+  address: 0xe80c17e8 (Join Protocol)
+  type: 2
+  use: During bootstrap, to find the nearest node to you in Id Space.
+  package: rice.pastry.standard
+  
+  format:
+	  byte version (0)
+    byte rtBaseBitLength
+    NodeHandle handle
+    boolean hasJoinHandle
+      NodeHandle joinHandle // if hasJoinHandle
+    // the table
+    byte numRows
+        
+      ... incomplete
+      
+      consider making OutputBuffer return the input, will make some statements more concise
