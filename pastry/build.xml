@@ -544,6 +544,7 @@
       <tarfileset dir="ant" includes="**/*" prefix="epost-${epost-version}/ant"/>
       <tarfileset dir="${lib.dir}" includes="*.jar" prefix="epost-${epost-version}/${lib.dir}"/>
       <tarfileset dir="${jar.dir}/epost/" includes="**/*" prefix="epost-${epost-version}/${jar.dir}/epost/"/>
+      <tarfileset dir="${jar.dir}/freepastry/" includes="**/*" prefix="epost-${epost-version}/${jar.dir}/freepastry/"/>
       <tarfileset dir="license" includes="**/*" prefix="epost-${epost-version}/license"/>
       <tarfileset dir="." includes="build.xml" prefix="epost-${epost-version}"/>
     </tar>
