@@ -70,7 +70,9 @@ public class Proxy {
       
       Printer error = new Printer(process.getErrorStream(), "[Error Stream ]: ");
       
-      int exit = process.waitFor();    
+      // have to do the byte cast below because java 5 only returns low 8 bits
+      // probably we should change all our status codes to be 0..255 some day
+      int exit = (byte)process.waitFor();    
       lm.die();
       
       // re-initialize parameters for debugging purposes
