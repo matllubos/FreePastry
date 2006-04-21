@@ -1,13 +1,16 @@
+
 FreePastry 2.0 Serialized Message description version 0:
 
 All numbers are in Network (Big) Endian
 byte = 8 bits
+boolean 1 byte
 sort = 2 bytes
 int = 4 bytes
 long = 8 bytes
 float = 4 bytes
 double = 8 bytes
 
+/********** FreePastry Core ************/
 Hard Coded values: 
 
 NodeId bit length 160
@@ -36,13 +39,30 @@ background:
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
       
-With this information, here is the TCP stream header:
+TCP stream header:
 
-  0 or more of the following based on the number of hops in the sourceroute:
+Overview:
+  1) Magic Number
+  2) Version Number
+  3) Source Route Header
+  4) Application ID
+  5) Application Stream
+
+
+	// Magic Number
+	byte[4] PASTRY_MAGIC_NUMBER = {0x27, 0x40, 0x75, 0x3A}
+		
+	// Protocol Version (0) for now, but this may become more interesting in the future, such as being in part, a bitwise selection
+	int 0
+
+  // Source Route Header
+  // 0 or more of the following based on the number of hops in the sourceroute:
   byte[4] HEADER_SOURCE_ROUTE = {0x19, 0x53, 0x13, 0x00}
   EpochInetSocketAddress next hop
   
+  // indicates that this is the end of the source route header
   byte[4] HEADER_DIRECT = {0x06, 0x1B, 0x49, 0x74}
+  
   int appID // 0 is normal pastry socket, needed for both direct or source routed sockets
   // non-zero then opens up the socket to the app
 
@@ -63,27 +83,164 @@ With this information, here is the TCP stream header:
   +                                                               + 
   +                           ...                                 + 
 
-  
+Here I discuss the protocol for AppId 0 The Normal Pastry socket.  
+
+The Application stream is broken up into Messages.
+
+Each message has the following:
+payload size (int): The size of the rest of the message, including the rest of the header, but not the size itself  
 address (int) : the application in the Overlay that the message goes to
 type (short): the type of message (application dependent)
   however type 0 is reserved for Java Serialized (or platform dependent) messages
-
-Any message has an optional parameter: Sender  
+Sender (NodeHandle) This parameter is optional
   
-Route Messages are special messages that wrap other messages.  Here is their format.  
 
 
-/********** FreePastry Core ************/
+/********** Message Header **************/
+int payloadSize
+int address
+boolean hasSender
+byte priority
+short type (app specific)
+// if hasSender
+  NodeHandle sender // defined in the next section
+<Message Contents>  
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+  +           Total Message Size (not including this)             + 
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+  +              Address (which app to send it to)                +  
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+  +   hasSender?  +   priority    +     type (app specific)       +            
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+  +                                                               +            
+  +                                                               +            
+  +             NodeHandle Sender (if has one)                    +   
+
+  +                                                               +   
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   
+  +                                                               + 
+  +                    <Message Contents>                         + 
+  +                                                               + 
+  +                           ...                                 + 
+
+Due to their complexity the rest of the messages are not Word Aligned
+
 
 /********** Objects ***************/
-NodeHandle
+
+FreePastry has several Objects that are often sent over the wire, here is their serialization format:  
+The version is so fundamental to FreePastry that it is tied to the protocol version defined at the beginning of the stream.
+
+Id: 
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    +   160 Bit (20 byte)                                           +
+    +                                                               +
+    +                                                               +
+    +                                                               +
+    +                                                               +
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+NodeId // format inherited from Id (identical)
+  
+NodeHandle:
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    + Epoch InetSocketAddress                                       +
+    +                                                               +           
+    +                                                               +           
+    +                                                               +           
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    +   Id                                                          +
+    +                                                               +
+    +                                                               +
+    +                                                               +
+    +                                                               +
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
 Leafset
-RouteSet
-Id
-NodeId
+    So that small LeafSets (who have overlapping nodes) don't waste bandwidth, 
+    leafset first defines the NodeHandles to be loaded into an array, then 
+    specifies their locations. We do this because
+    a NodeHandle takes up a lot more space than the index in the leafset, and 
+    it may be in the leafset 1 or 2 times.    
+    A leafset consists of a clockwise and counterclockwise "SimilarSet"  If the ring is very small,
+    thse values will overlap.
+    
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      + byte theSize  +numUniqueHandls+ byte cwSize   + byte ccwSize  +
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      + NodeHandle baseHandle                                         +
+                       ...                                             
+      +                                                               +
+      +                                                               +
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      + NodeHandle 1st                                                +
+                       ...                                             
+      +                                                               +
+      +                                                               +
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                       ...                                             
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      + NodeHandle numUniqueHandls-th                                 +
+                       ...                                             
+      +                                                               +
+      +                                                               +
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      + byte cw 1st   +  cw  2nd      + ...           + ccw 1st       +
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      + ccw 2nd       +  ...          + ...           + ccw Nth       +
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-/********** Messages **************/
+  byte theSize // the total capacity of the leafset, not including the baseHandle  (usually 24)
+  byte numUniqueHandles // the number of NodeHandles to read (in the next step, does not include the baseHandle)
+  byte cwSize // the number of elements of the clockwise SimilarSet
+  byte ccwSize // the number of elements of the counterclockwise SimilarSet    
+  NodeHandle baseHandle
+  // iterate numUniqueHandles times
+    NodeHandle handle
+  // iterate cwSize
+    byte handleIndex // in a clockwise direction
+  // iterate ccwSize
+    byte handleIndex // in a counterclockwise direction
+      
+RouteSet:
+ A set of nodes typically stored in the routing table. The set contains a
+ bounded number of the closest node handles. Since proximity value can change
+ unpredictably, we don't keep the set in sorted order.
 
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     +    maxSize    +    theSize    +    closest    +
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     + NodeHandle 1st                                                +
+                      ...                                             
+     +                                                               +
+     +                                                               +
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                      ...                                             
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     + NodeHandle theSize-th                                         +
+                      ...                                             
+     +                                                               +
+     +                                                               +
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  byte maxSize // the capacity
+  byte theSize // the number of elements in this set
+  byte closest // the index of the closest node (often useful for routing decisions)
+  // iterate theSize times
+    NodeHandle entry
+
+
+    
+// the rest of the protocol is not defined with pictures, as many of the elements have 
+// complicated iterations or conditions that can be more well expressed in pseudocode than pictures    
+// (read: I'm Lazy)
+
+/***************** Higher level objects **********************/
+These objects are not used by the "core" pastry protocol, but may be used by applications
+IdRange: Represents a contiguous range of Pastry ids.
+  Id Clockwise
+  Id CounterClockwise
+  boolean empty
+  
 /******************* Route Message ******************/
 RoueMessage:
   address: 0xACBDFE17 (Router)
@@ -206,4 +363,93 @@ PastryEndpointMessage:
     short type (the type of the sub message)
     CommonAPIMessage message
     
+/*************** Transport Layer Messages ****************/
+These are messages used internal to the transport layer, for all of them the address is 0
+    
+/*************** Bootstrapping Messages ******************/
+LeafSetRequestMessage:
+  type: 4
+  use: request a LeafSet from a node
+  format:
+	  byte version (0)
+
+LeafSetResponseMessage:
+  type: 5
+  use: respond to a LeafSetRequest
+  format:
+	  byte version (0)
+	  LeafSet leafset
+
+NodeIdRequestMessage:
+  type: 6
+  use: request a NodeId from a node
+  format:
+	  byte version (0)
+
+NodeIdResponseMessage:
+  type: 7
+  use: respond to a NodeIdRequest
+  format:
+	  byte version (0)
+		NodeId nodeId
+		long epoch
+	  
+RouteRowRequestMessage:
+  type: 10
+  use: request a Row from a Routing Table
+  format:
+	  byte version (0)
+	  int row (the row requested)
+
+RouteRowResponseMessage:
+  type: 11
+  use: respond to a RouteRowRequest
+  format:
+	  byte version (0)
+		// encoding a sparse array
+		int numRouteSets
+		// for each routeSet
+		  boolean notNull
+		  // if (notNull)
+		    RouteSet set
+		    
+RoutesRequestMessage:
+  type: 12
+  use: request SourceRoutes from another node
+  format:
+	  byte version (0)
+
+RoutesResponseMessage:
+  type: 13
+  use: respond to a RoutesRequest
+  format:
+	  byte version (0)
+		int numRoutes
+		// for each route
+      SourceRoute sourceRoute
+		    
+SourceRoute:
+  // source route is a Message type for convienience (otherwise we'd have to have special headers and stuff)  Sometimes the protocol just sends a SourceRoute	  	  
+	type: 1
+	use: Holds a SourceRoute
+  format:
+	  byte version (0)
+		int numInPath
+		// for each hop
+		  EpochInetSocketAddress address
+
+/************ UDP Messages ***************/
+For Liveness and NAT (Network Address Translator) handling
+Note that this doesn't make NAT traversal automatic, but just allows FreePastry to detect the external address, port forwarding must be set up
+
+The format of these messages is a bit different because they are UDP and need to carry source route info at each step:	
+Header:
+
+{0x49, 0x3A, 0x09, 0x5C}	  			      
+byte 1 // the current hop counter (incremented at each step)
+byte numHops // for source routing
+EpochInetSocketAddress localAddress
+// for each hop
+  EpochInetSocketAddress hop
+
     
