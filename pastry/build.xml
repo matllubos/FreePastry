@@ -574,6 +574,7 @@
       <zipfileset dir="ant" includes="**/*" prefix="epost-${epost-version}/ant"/>
       <zipfileset dir="${lib.dir}" includes="*.jar" prefix="epost-${epost-version}/${lib.dir}"/>
       <zipfileset dir="${jar.dir}/epost/" includes="**/*" prefix="epost-${epost-version}/${jar.dir}/epost/"/>
+      <zipfileset dir="${jar.dir}/freepastry/" includes="**/*" prefix="epost-${epost-version}/${jar.dir}/freepastry/"/>
       <zipfileset dir="license" includes="**/*" prefix="epost-${epost-version}/license"/>
       <zipfileset dir="." includes="build.xml" prefix="epost-${epost-version}/" />
     </zip>
