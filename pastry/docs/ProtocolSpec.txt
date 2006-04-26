@@ -1,22 +1,59 @@
 FreePastry 2.0 Serialized Message description version 0:
 
-All numbers are in Network (Big) Endian
-byte = 8 bits
-boolean 1 byte
-sort = 2 bytes
-int = 4 bytes
-long = 8 bytes
-float = 4 bytes
-double = 8 bytes
+Table of contents:
 
-/********** FreePastry Core ************/
-Hard Coded values: 
+1 : FreePastry 2.0 Core Serialization
+  1.1: Overview of the features of the protocol
+  1.2: Data Types
+    byte
+    boolean
+    short
+    int
+    long
+    float
+    double
+    String
+    EpochInetSocketAddress
+  1.3: TCP Stream Header
+  1.4: Message Header 
+  1.5: FreePastry Objects 
+    Id 
+    NodeId
+    NodeHandle
+    Leafset
+    RouteSet
+  1.6: Other FP objects
+    IdRange
+  1.7: Core Messages
+    1.7.1: RouteMessage
+    1.7.2: Join Protocol 
+      JoinRequest
+      ConsistentJoinMessage
+    1.7.3: LeafSet Maintenance 
+      RequestLeafSet:
+      BroadcastLeafSet:
+    1.7.4: Routing Table Maintenance 
+      RequestRouteRow:
+      BroadcastRouteRow:
+    1.7.5 CommonAPI impl 
+      PastryEndpointMessage:
+  1.8: Direct Access Messages 
+    LeafSetRequestMessage
+    LeafSetResponseMessage
+    NodeIdRequestMessage
+    NodeIdResponseMessage
+    RouteRowRequestMessage
+    RouteRowResponseMessage
+    RoutesRequestMessage
+    RoutesResponseMessage
+    SourceRoute
+  1.9: Liveness Messages (UDP)
+    1.9.1: Liveness Header
+    1.9.2: Liveness Content
+        
+        
 
-NodeId bit length 160
-Routing Table Base Bit Length 4 
-
-
-background:
+1.1: Overview of some of the features of the protocol. ************************
   FreePastry provides a structured peer to peer routing overlay, but is not necessarally useful in of itself.  Application layers must be written on top of FreePastry.  We will call the layer above FreePastry an Application.  This application may implement a DHT (such as Past) or a Multicast Network (such as Scribe) which higher level applications may further be written on.
   FreePastry uses Source Routing to handle temporary network anomlies.  
   FreePastry uses TCP for all overlay maintenance and application traffic.
@@ -24,9 +61,25 @@ background:
   FreePastry provides a mechanism for Applications to open thier own sockets through the source routes.  This allows applications to manage their own congestion control without interfering with overlay maintenance.  However normal messages may be sent on the same sockets as overlay maintenance traffic.  Application 0 is a FreePastry control socket, and is not delivered to an application.
   From an application's perspective, the abstraction for an node in FreePastry is the NodeHandle.  
   FreePastry interacts with other nodes in the network using EpochInetSocketAddresses.  The EpochInetSocketAddress is based on IPv4 and encodes an IP address, a port, and an 8byte epoch.  The purpose of the epoch is to know if the node has rebooted since last communication.  This gives information to the applications (that may be stateful) about the state of the node.
-
-  Here is the format for an EpochInetSocketAddress:
   
+1.2: Data Types ***************************************************************
+
+All numbers are in Network (Big) Endian
+byte = 8 bits
+boolean 1 byte
+short = 2 bytes
+int = 4 bytes
+long = 8 bytes
+float = 4 bytes
+double = 8 bytes
+time = long (the difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC.)
+
+String is represented as Java's UTF-8:  See here http://en.wikipedia.org/wiki/UTF-8#Java
+// From wikipedia:
+The Java programming language, which uses UTF-16 for its internal text representation, supports a non-standard modification of UTF-8 for string serialization. This encoding is called modified UTF-8. There are two differences between modified and standard UTF-8. The first difference is that the null character (U+0000) is encoded with two bytes instead of one, specifically as 11000000 10000000. This ensures that there are no embedded nulls in the encoded string, presumably to address the concern that if the encoded string is processed in a language such as C where a null byte signifies the end of a string, an embedded null would cause the string to be truncated.
+The second difference is in the way characters outside the BMP are encoded. In standard UTF-8 these characters are encoded using the four-byte format above. In modified UTF-8 these characters are first represented as surrogate pairs (as in UTF-16), and then the surrogate pairs are encoded individually in sequence as in CESU-8. The reason for this modification is more subtle. In Java a character is 16 bits long; therefore some Unicode characters require two Java characters in order to be represented. This aspect of the language predates the supplementary planes of Unicode; however, it is important for performance as well as backwards compatibility, and is unlikely to change. The modified encoding ensures that an encoded string can be decoded one UTF-16 code unit at a time, rather than one Unicode code point at a time. Unfortunately, this also means that characters requiring four bytes in UTF-8 require six bytes in modified UTF-8.
+
+EpochInetSocketAddress:  
   EpochInetSocketAddress: (IPV4 FreePastry Version 0):
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   + Inet Address                                                  +
@@ -37,8 +90,14 @@ background:
   +                                                               +
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+Hard Coded values: 
+
+NodeId bit length 160
+Routing Table Base Bit Length 4 
+
+
       
-TCP stream header:
+1.3: TCP Stream Header ********************************************************
 
 Overview:
   1) Magic Number
@@ -95,7 +154,7 @@ Sender (NodeHandle) This parameter is optional
   
 
 
-/********** Message Header **************/
+1.4: Message Header ***********************************************************
 int payloadSize
 int address
 boolean hasSender
@@ -125,7 +184,7 @@ short type (app specific)
 Due to their complexity the rest of the messages are not Word Aligned
 
 
-/********** Objects ***************/
+1.5: FreePastry Objects *******************************************************
 
 FreePastry has several Objects that are often sent over the wire, here is their serialization format:  
 The version is so fundamental to FreePastry that it is tied to the protocol version defined at the beginning of the stream.
@@ -140,9 +199,9 @@ Id:
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 NodeId // format inherited from Id (identical)
   
-NodeHandle:
+NodeHandle: // associates an Id with an EpochInetSocketAddress
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    + Epoch InetSocketAddress                                       +
+    + EpochInetSocketAddress                                        +
     +                                                               +           
     +                                                               +           
     +                                                               +           
@@ -233,15 +292,15 @@ RouteSet:
 // complicated iterations or conditions that can be more well expressed in pseudocode than pictures    
 // (read: I'm Lazy)
 
-/***************** Higher level objects **********************/
+1.6: Other Objects ************************************************************
 These objects are not used by the "core" pastry protocol, but may be used by applications
 IdRange: Represents a contiguous range of Pastry ids.
   Id Clockwise
   Id CounterClockwise
   boolean empty
-  
-/******************* Route Message ******************/
-RoueMessage:
+
+1.7: Core Messages ************************************************************   
+1.7.1: RoueMessage ************************************************************
   address: 0xACBDFE17 (Router)
   type: -23525
   use: To route messages using prefix-based-routing.
@@ -261,7 +320,7 @@ RoueMessage:
       NodeHandle internalSender
     Message internalMsg
 
-/****************** Join Protocol ******************/	      
+1.7.2: Join Protocol **********************************************************
 JoinRequest:
   address: 0xe80c17e8 (Join Protocol)
   type: 2
@@ -304,7 +363,7 @@ ConsistentJoinMessage:
     int numInFailedSet
       NodeHandle failedHandle
       
-/************* LeafSet Maintenance **************/
+1.7.3: LeafSet Maintenance ****************************************************
 RequestLeafSet:
   address: 0xf921def1 (Leafset Protocol)
   type: 1
@@ -326,7 +385,7 @@ BroadcastLeafSet:
 	  LeafSet leafSet
 	  int theType
 
-/*************** Routing Table Maintenance **************/	    
+1.7.4: Routing Table Maintenance **********************************************
 RequestRouteRow:
   address: 0x89ce110e (Route Protocol)
   type: 1
@@ -350,7 +409,7 @@ BroadcastRouteRow:
 	    byte null? (0 if null, 1 if non-null)
 	      RouteSet row // if non-null
 
-/*************** CommonAPI impl ***************/
+1.7.5 CommonAPI impl **********************************************************
 PastryEndpointMessage:
   address: taken from the underlieing endpoint
   type: 2
@@ -362,10 +421,10 @@ PastryEndpointMessage:
     short type (the type of the sub message)
     CommonAPIMessage message
     
-/*************** Transport Layer Messages ****************/
-These are messages used internal to the transport layer, for all of them the address is 0
-    
-/*************** Bootstrapping Messages ******************/
+1.8: Direct Access Messages ***************************************************
+These are messages used to directly read the state of the pastry node remotely.  They are used during bootstrap, and to check the liveness.  
+They are all address 0.
+
 LeafSetRequestMessage:
   type: 4
   use: request a LeafSet from a node
@@ -437,24 +496,63 @@ SourceRoute:
 		// for each hop
 		  EpochInetSocketAddress address
 
-/************ UDP Messages ***************/
+1.9: Liveness Messages (UDP) **************************************************
 For Liveness and NAT (Network Address Translator) handling
 Note that this doesn't make NAT traversal automatic, but just allows FreePastry to detect the external address, port forwarding must be set up
 
+1.9.1 Header overview *********************************************************
 The format of these messages is a bit different because they are UDP and need to carry source route info at each step:	
-Header:
+Header contains 3 things:
+  1) Magic Number byte[4]
+  2) Protocol version int (0)
+  3) Source Route
 
-// Magic Number
-byte[4] PASTRY_MAGIC_NUMBER = {0x27, 0x40, 0x75, 0x3A}
-		
-// Protocol Version (0) for now, but this may become more interesting in the future, such as being in part, a bitwise selection
-int 0
+1.9.2 Header specification ****************************************************  
+Detail:  
+	// Magic Number
+	byte[4] PASTRY_MAGIC_NUMBER = {0x27, 0x40, 0x75, 0x3A}
+			
+	// Protocol Version (0) for now, but this may become more interesting in the future, such as being in part, a bitwise selection
+	int 0
 
-{0x49, 0x3A, 0x09, 0x5C}	  			      
-byte 1 // the current hop counter (incremented at each step)
-byte numHops // for source routing
-EpochInetSocketAddress localAddress
-// for each hop
-  EpochInetSocketAddress hop
+	// source route part
+	byte 1 // the current hop counter (incremented at each step)
+	byte numHops // in the source route
+	EpochInetSocketAddress localAddress
+	// for each hop
+	  EpochInetSocketAddress hop
 
-    
+1.9.3 Messages
+  IPAddressRequestMessage:
+    type: 2
+    use:  Used to figure out your external address (like if you are behind a NAT)
+    format:
+      time sentTime
+      
+  IPaddressResponseMessage:
+    type: 3
+    use: Used to respond to the IpAddress
+    format:
+      time sentTime
+      byte[4] inetaddress // the address that this message came from
+      int port // the port that this message came from
+      
+  PingMessage:
+    type: 8
+    use: Determine Round Trip Time (RTT)
+    format:
+      time sentTime
+      
+  PingResponseMessage:
+    type: 9
+    use: respond to determine RTT
+    format:
+      time requestTime
+      
+  WrongEpochMessage:    
+    type 14
+    use: notify that this process is not who you think it is
+    format:
+      time sentTime
+      EpochInetSocketAddress incorrect
+      EpochInetSocketAddress correct
