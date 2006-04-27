@@ -198,7 +198,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   }
 
   /**
-   * This method determines and returns the proximity of the current local node
+   * This method determines and returns the proximity of the current local node to
    * the provided NodeHandle. This will need to be done in a protocol- dependent
    * fashion and may need to be done in a special way.
    * 
