@@ -132,7 +132,7 @@ public abstract class CommonAPITest {
       if (SIMULATOR.equalsIgnoreCase(SIMULATOR_SPHERE)) {
         simulator = new SphereNetwork(env);
       } else if (SIMULATOR.equalsIgnoreCase(SIMULATOR_GT_ITM)){
-        simulator = new GenericNetwork(env);        
+        simulator = new GenericNetwork(env, null);        
       } else {
         simulator = new EuclideanNetwork(env);
       }

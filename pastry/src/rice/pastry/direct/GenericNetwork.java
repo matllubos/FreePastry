@@ -81,12 +81,16 @@ public class GenericNetwork extends BasicNetworkSimulator
 
   // The static variable MAXOVERLAYSIZE should be set to the n, where its input
   // is a N*N matrix
-  public GenericNetwork(Environment env) {
+  public GenericNetwork(Environment env, String inFile) {
     super(env);
     
     MAXOVERLAYSIZE = env.getParameters().getInt("pastry_direct_gtitm_max_overlay_size");
-    inFile_Matrix = env.getParameters().getString("pastry_direct_gtitm_matrix_file");
     
+    inFile_Matrix = inFile;
+    if (inFile_Matrix == null) {
+      inFile_Matrix = env.getParameters().getString("pastry_direct_gtitm_matrix_file");
+    }
+      
 //    System.out.println("TOPOLOGY : Generic toplogy");
     // rng = new Random(PastrySeed.getSeed());
     readOverlayMatrix();
@@ -97,7 +101,6 @@ public class GenericNetwork extends BasicNetworkSimulator
   }
 
   public void readOverlayMatrix() {
-    distance = new int[MAXOVERLAYSIZE][MAXOVERLAYSIZE];
     FileReader fr = null;
     try {
       fr = new FileReader(inFile_Matrix);
@@ -114,6 +117,10 @@ public class GenericNetwork extends BasicNetworkSimulator
       while ((line = in.readLine()) != null) {
         String[] words;
         words = line.split("[ \t]+");
+        if (distance == null) {
+          MAXOVERLAYSIZE = words.length;
+          distance = new int[MAXOVERLAYSIZE][MAXOVERLAYSIZE]; 
+        }
         int nodeCount = 0;
 //        for (int i = 0; i < words.length; i++) {
         for (int i = 0; i < MAXOVERLAYSIZE; i++) {
