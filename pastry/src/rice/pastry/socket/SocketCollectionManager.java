@@ -42,8 +42,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // how long to wait for a ping response to come back before declaring lost
   public final int PING_DELAY;
   
-  // how much jitter to add to the ping waits - we may wait up to this time before giving up
-  public final int PING_JITTER;
+  // factor of jitter to adjust to the ping waits - we may wait up to this time before giving up
+  public final float PING_JITTER;
   
   // how many tries to ping before giving up
   public final int NUM_PING_TRIES;
@@ -136,7 +136,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     MAX_OPEN_SOURCE_ROUTES = p.getInt("pastry_socket_scm_max_open_source_routes");
     SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size");
     PING_DELAY = p.getInt("pastry_socket_scm_ping_delay");
-    PING_JITTER = p.getInt("pastry_socket_scm_ping_jitter");
+    PING_JITTER = p.getFloat("pastry_socket_scm_ping_jitter");
     NUM_PING_TRIES = p.getInt("pastry_socket_scm_num_ping_tries");
     WRITE_WAIT_TIME = p.getInt("pastry_socket_scm_write_wait_time");
     BACKOFF_INITIAL = p.getInt("pastry_socket_scm_backoff_initial");
@@ -669,6 +669,15 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
     /**
      * Main processing method for the DeadChecker object
+     * 
+     * value of tries before run() is called:the time since ping was called:the time since deadchecker was started 
+     * 
+     * 1:500:500
+     * 2:1000:1500
+     * 3:2000:3500
+     * 4:4000:7500
+     * 5:8000:15500 // ~15 seconds to find 1 path faulty, using source routes gives us 30 seconds to find a node faulty
+     * 
      */
     public void run() {
       if (tries < numTries) {
@@ -676,8 +685,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         if (manager.getLiveness(path.getLastHop()) == SocketNodeHandle.LIVENESS_ALIVE)
           manager.markSuspected(path);
         
+        
         pingManager.ping(path, this);
-        ((SocketPastryNode) pastryNode).getTimer().schedule(this,(int)(PING_DELAY*Math.pow(2,tries-1) + random.nextInt(PING_JITTER)));
+        int absPD = (int)(PING_DELAY*Math.pow(2,tries-1));
+        int jitterAmt = (int)(((float)absPD)*PING_JITTER);
+        int scheduledTime = absPD-jitterAmt+random.nextInt(jitterAmt*2);
+        ((SocketPastryNode) pastryNode).getTimer().schedule(this,scheduledTime);
       } else {
         if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + path + ") expired - marking as dead.");
         manager.markDead(path);
