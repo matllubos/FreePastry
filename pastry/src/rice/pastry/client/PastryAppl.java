@@ -92,12 +92,14 @@ public abstract class PastryAppl implements MessageReceiver
    * Constructor.  This constructor will perform the same tasks as the
    * above constructor, but will also create a Pastry address for this
    * application, using the specified port.
+   * 
+   * Need to call register on this.
    *
    * @param pn the pastry node that client will attach to.
    * @param instance The instance name of this appl.
    */
   public PastryAppl(PastryNode pn, int port) {
-    this(pn, "[PORT " + port + "]");
+    this(pn, "[PORT " + port + "]", new StandardAddress(port));
   }
   
   /**

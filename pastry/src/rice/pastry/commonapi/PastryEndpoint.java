@@ -57,6 +57,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     
     this.instance = "[PORT " + port + "]";
     this.application = application;
+    register();
   }
 
   // API methods to be invoked by applications
