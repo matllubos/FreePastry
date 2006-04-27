@@ -122,7 +122,7 @@ public class SocketChannelWriter {
         return false;
       } else if (queue.size() > 20) {
         if (logger.level <= Logger.WARNING) logger.log(
-            "ERROR: Queue to " + path + " has "+queue.size()+" elements (more than 20) - probably a bad sign - enqueue of " + o);
+            "ERROR: Queue to " + path + " has "+queue.size()+" elements (more than "+MAXIMUM_QUEUE_LENGTH+") - probably a bad sign - enqueue of " + o);
       }        
     }
 
