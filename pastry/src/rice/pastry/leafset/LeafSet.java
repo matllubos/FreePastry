@@ -439,7 +439,7 @@ public class LeafSet extends Observable implements Serializable {
   public IdRange range(NodeHandle n, int r) { 
    // first, we check the arguments
    if (r < 0) throw new IllegalArgumentException("Range must be greater than or equal to zero. Attempted "+r);
-   if (! (member(n) || baseHandle.equals(n))) throw new RangeCannotBeDeterminedException("Node "+n+" is not in this leafset.",r,Integer.MIN_VALUE, getUniqueCount(), n, this);
+   if (! (member(n) || baseHandle.equals(n))) throw new LSRangeCannotBeDeterminedException("Node "+n+" is not in this leafset.",r,Integer.MIN_VALUE, getUniqueCount(), n, this);
 
    // get the position of the node and the number of nodes in the network
    int pos = getIndex(n);
@@ -477,7 +477,7 @@ public class LeafSet extends Observable implements Serializable {
 
    // if either of it's pair nodes are null, then we cannot determine the range
    if ((ccw == null) || (cw == null)) {
-     throw new RangeCannotBeDeterminedException("This leafset doesn't have enough information to provide the correct range.",r,pos, getUniqueCount(), n, this);
+     throw new LSRangeCannotBeDeterminedException("This leafset doesn't have enough information to provide the correct range.",r,pos, getUniqueCount(), n, this);
    }
 
    // otherwise, we then construct the ranges which comprise the main range, and finally
@@ -506,7 +506,7 @@ public class LeafSet extends Observable implements Serializable {
     IdRange rprev = null;
     try {
       rprev = range(n, r-1);
-    } catch (RangeCannotBeDeterminedException rcbde) {
+    } catch (LSRangeCannotBeDeterminedException rcbde) {
       // keeps previous functionality now that we are throwing rcbde rather than returning null
     }
     if (rr == null || rprev == null) return rr;

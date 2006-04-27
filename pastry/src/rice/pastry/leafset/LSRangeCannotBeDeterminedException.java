@@ -3,12 +3,12 @@
  */
 package rice.pastry.leafset;
 
-import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.*;
 
 /**
  * @author Jeff Hoye
  */
-public class RangeCannotBeDeterminedException extends RuntimeException {
+public class LSRangeCannotBeDeterminedException extends RangeCannotBeDeterminedException {
 
   public int r;
   public int pos;
@@ -18,7 +18,7 @@ public class RangeCannotBeDeterminedException extends RuntimeException {
   /**
    * @param string
    */
-  public RangeCannotBeDeterminedException(String string, int r, int pos, int uniqueNodes, NodeHandle nh, LeafSet ls) {
+  public LSRangeCannotBeDeterminedException(String string, int r, int pos, int uniqueNodes, NodeHandle nh, LeafSet ls) {
     super(string+" replication factor:"+r+" nh position:"+pos+" handle:"+nh+" ls.uniqueNodes():"+uniqueNodes+" "+ls.toString());
     this.r = r;
     this.pos = pos;

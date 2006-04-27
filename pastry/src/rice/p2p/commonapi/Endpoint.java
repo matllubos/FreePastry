@@ -100,7 +100,7 @@ public interface Endpoint {
    * @param rank The root rank.
    * @param lkey An "index" in case of multiple ranges.
    */
-  IdRange range(NodeHandle handle, int rank, Id lkey);
+  IdRange range(NodeHandle handle, int rank, Id lkey) throws RangeCannotBeDeterminedException;
   
   /**
    * This operation provides information about ranges of keys for which the node is currently
@@ -118,7 +118,7 @@ public interface Endpoint {
    * @param lkey An "index" in case of multiple ranges.
    * @param cumulative Whether to return the cumulative or single range
    */
-  IdRange range(NodeHandle handle, int rank, Id lkey, boolean cumulative);
+  IdRange range(NodeHandle handle, int rank, Id lkey, boolean cumulative) throws RangeCannotBeDeterminedException;
 
   /**
    * Returns a handle to the local node below this endpoint.  This node handle is serializable,

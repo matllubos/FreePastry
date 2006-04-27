@@ -13,7 +13,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.replication.ReplicationPolicy.*;
 import rice.p2p.replication.messaging.*;
 import rice.p2p.util.*;
-import rice.pastry.leafset.RangeCannotBeDeterminedException;
+import rice.pastry.leafset.LSRangeCannotBeDeterminedException;
 
 /**
  * @(#) ReplicationImpl.java
@@ -155,11 +155,18 @@ public class ReplicationImpl implements Replication, Application {
   /**
    * Returns the range for which the local node is an i root, where i can range between
    * 0 and replicationFactor
+   * 
+   * can return null if the range can't be determined
    *
    * @return The *total* range
    */
   protected IdRange getTotalRange() {
-    return endpoint.range(handle, replicationFactor, handle.getId(), true);
+    try {
+      return endpoint.range(handle, replicationFactor, handle.getId(), true);
+    } catch (RangeCannotBeDeterminedException rcbde) {
+      if (logger.level <= Logger.WARNING) logger.log("ReplicationImpl.getTotalRange():"+rcbde+" returning null.");
+      return null; 
+    }
   }
     
   /**
@@ -204,7 +211,7 @@ public class ReplicationImpl implements Replication, Application {
 	              }
 	            });
             }
-          } catch (RangeCannotBeDeterminedException re) {
+          } catch (LSRangeCannotBeDeterminedException re) {
             // not an error 99.99% of the time, since we're probably just at one end of the range
           }
         }
