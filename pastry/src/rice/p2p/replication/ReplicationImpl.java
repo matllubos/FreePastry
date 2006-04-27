@@ -13,7 +13,6 @@ import rice.p2p.commonapi.*;
 import rice.p2p.replication.ReplicationPolicy.*;
 import rice.p2p.replication.messaging.*;
 import rice.p2p.util.*;
-import rice.pastry.leafset.LSRangeCannotBeDeterminedException;
 
 /**
  * @(#) ReplicationImpl.java
@@ -211,7 +210,7 @@ public class ReplicationImpl implements Replication, Application {
 	              }
 	            });
             }
-          } catch (LSRangeCannotBeDeterminedException re) {
+          } catch (RangeCannotBeDeterminedException re) {
             // not an error 99.99% of the time, since we're probably just at one end of the range
           }
         }

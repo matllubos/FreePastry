@@ -4,12 +4,9 @@
 package rice.p2p.splitstream.testing;
 
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.IdRange;
 import rice.p2p.splitstream.*;
 import rice.p2p.util.MathUtils;
-import rice.pastry.*;
-import rice.pastry.leafset.LSRangeCannotBeDeterminedException;
+import rice.pastry.PastryNode;
 import rice.selector.TimerTask;
 
 /**
@@ -85,7 +82,7 @@ public class MySplitStreamClient implements SplitStreamClient {
       IdRange range = n.getLeafSet().range(n.getLocalHandle(), 0);
      
       return range.containsId(rice.pastry.Id.build());
-    } catch (LSRangeCannotBeDeterminedException rcbde) {
+    } catch (RangeCannotBeDeterminedException rcbde) {
       return true; 
     }
   }

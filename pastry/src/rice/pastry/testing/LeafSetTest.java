@@ -5,6 +5,7 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.RangeCannotBeDeterminedException;
 import rice.pastry.*;
 import rice.pastry.leafset.*;
 import rice.pastry.messaging.Message;

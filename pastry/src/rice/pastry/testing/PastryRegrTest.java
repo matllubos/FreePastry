@@ -3,6 +3,7 @@ package rice.pastry.testing;
 import rice.Continuation;
 import rice.Continuation.*;
 import rice.environment.Environment;
+import rice.p2p.commonapi.RangeCannotBeDeterminedException;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
