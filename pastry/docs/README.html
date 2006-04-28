@@ -5,7 +5,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 1.4.3_02,&nbsp; 31 January 2006.
+Release 1.4.4,&nbsp; 28 April 2006.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -115,6 +115,17 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.4.2+. The software was
 developed using Sun's SDK, version 1.4.2_03+
+<h3>Changes since release 1.4.3_02</h3>
+<ul>
+  <li>Numerous bug fixes.</li>
+  <li>Added GT-ITM topology model.  See rice.pastry.dist.GenericNetwork.  It takes a file name which is the NxN array of proximities, tab or space delimited.</li>
+  <li>Made liveness checks work via random exponential backoff.</li>
+  <li>Can specify (max is leafset size) the number of Source Routes to use.  24 is probably too many and can lead to congestion collapse.  pastry_socket_srm_num_source_route_attempts is the parameter to set.  Default is 8.</li>
+  <li>Endpoint.range() now throws a RuntimeException (RangeCannotBeDeterminedException) if it doesn't have enough information to produce the requested range.</li>
+  <li>This is expected to be the last release that uses Java Serialization as the message format.</li>
+</ul>
+
+
 <h3>Changes since release 1.4.3_01</h3>
 This release is fixes some bugs with the direct simulator.  
 <ul>
