@@ -204,7 +204,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   protected void setReady() {    
     if (tryingToGoReady) return;
     tryingToGoReady = true;
-    if (logger.level <= Logger.INFO) logger.log("ChurnJonProtocol.setReady()");
+    if (logger.level <= Logger.INFO) logger.log("ConsistentJonProtocol.setReady()");
     gotResponse.clear();
     //failed.clear(); // done by cleanup task as of March 6th, 2006
     // send a probe to everyone in the leafset
