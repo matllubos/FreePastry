@@ -50,9 +50,16 @@ Table of contents:
   1.9: Liveness Messages (UDP)
     1.9.1: Liveness Header
     1.9.2: Liveness Content
-        
-        
-
+2 : CommonApi Apps:
+  2.1: Scribe
+  2.2: Past
+    2.2.1: GCPast        
+  2.3: Replication
+  2.4: Multiring      
+  2.5: Glacier
+  2.6: Aggregation
+  2.7: Splitstream
+  
 1.1: Overview of some of the features of the protocol. ************************
   FreePastry provides a structured peer to peer routing overlay, but is not necessarally useful in of itself.  Application layers must be written on top of FreePastry.  We will call the layer above FreePastry an Application.  This application may implement a DHT (such as Past) or a Multicast Network (such as Scribe) which higher level applications may further be written on.
   FreePastry uses Source Routing to handle temporary network anomlies.  
@@ -556,3 +563,140 @@ Detail:
       time sentTime
       EpochInetSocketAddress incorrect
       EpochInetSocketAddress correct
+
+
+Chapter 2 CommonApi Apps ******************************************************
+2.1 Scribe ********************************************************************
+2.1.1 Scribe Objects **********************************************************
+  Topic:
+    use:  This class represents a specific topic in the Scribe system.
+    format:
+      short idType
+      Id id
+  ScribeContent:
+    use: The "user-defined" payload of the scribe message.  (Note: User is a 
+      developer who uses scribe in their higher level application.)
+    format: user defined, no required fields, but must declare a type
+    
+2.1.2 Content Messages *********************************************************
+          
+  PublishRequestMessage:    
+    type 9
+    use: request publication of a ScribeContent    
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      short contentType
+      ScribeContent payload
+      
+  PublishMessage:    
+    type 8
+    use: multicast of a ScribeContent    
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      short contentType
+      ScribeContent payload
+      
+  AnycastMessage:    
+    type 1
+    use: anycast a ScribeContent, has a list of nodes to visit, and a "passport" of visited nodes
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      
+      // array of NodeHandles to visit
+      int toVisitLength
+        // for each toVisitLength
+        NodeHandle node
+      
+      // array of NodeHandles to visit
+      int visitedLength
+        // for each visitedLength
+        NodeHandle node
+      
+      boolean hasContent
+        // if hasContent
+        short contentType
+        ScribeContent payload
+      
+2.1.3 Tree Formation Messages *************************************************
+  SubscribeMessage:    
+    type 2
+    use: anycast a request to join a tree, format is very similar to an AnycastMessage and can likely share the code path
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      
+      // array of NodeHandles to visit
+      int toVisitLength
+        // for each toVisitLength
+        NodeHandle node
+      
+      // array of NodeHandles to visit
+      int visitedLength
+        // for each visitedLength
+        NodeHandle node
+      
+      boolean hasContent (false)
+
+      int id // uniqe id of the request
+      
+			boolean hasPreviousParent
+			// if hasPreviousParent
+			  Id previousParent  
+			          
+			NodeHandle subscriber
+			      
+  SubscribeAckMessage:    
+    type 3
+    use: Acknowledge a SubscribeMessaege. (sent by the node that accepts the anycasted subscribe)    
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      int id // matches the id of the request
+      
+      // list of the path to the root
+      int lengthOfPath
+      // for each lengthOfPath
+        Id nodeId
+      
+  SubscribeFailedMessage:    
+    type 4
+    use: Sent when the subscribe attempt fails, (based on the ScribePolicy, there are no available candidates to join from)
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      int id // matches the id of the request
+      
+  UnsubscribeMessage:    
+    type 10
+    use: Unsubscribe from a topic.    
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      
+  DropMessage:    
+    type 6
+    use: Tells a child that it's parent can no longer support it.    
+    format:
+      byte version (0)
+      NodeHandle source
+      Topic topic
+      
+  2.2: Past
+    2.2.1: GCPast        
+  2.3: Replication
+  2.4: Multiring      
+  2.5: Glacier
+  2.6: Aggregation
+  2.7: Splitstream
+  
+  
