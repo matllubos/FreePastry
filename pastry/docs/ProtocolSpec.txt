@@ -626,7 +626,8 @@ Chapter 2 CommonApi Apps ******************************************************
 2.1.3 Tree Formation Messages *************************************************
   SubscribeMessage:    
     type 2
-    use: anycast a request to join a tree, format is very similar to an AnycastMessage and can likely share the code path
+    use: anycast a request to join a tree, format is very similar to an 
+      AnycastMessage and can likely use a common code path
     format:
       byte version (0)
       NodeHandle source
@@ -642,8 +643,6 @@ Chapter 2 CommonApi Apps ******************************************************
         // for each visitedLength
         NodeHandle node
       
-      boolean hasContent (false)
-
       int id // uniqe id of the request
       
 			boolean hasPreviousParent
@@ -691,7 +690,26 @@ Chapter 2 CommonApi Apps ******************************************************
       NodeHandle source
       Topic topic
       
-  2.2: Past
+2.2 Past **********************************************************************
+2.2.1 Past Objects ************************************************************
+  PastContent:
+    use: The "user-defined" content of the DHT.  (Note: User is a 
+      developer who uses Past in their higher level application.)
+    format: user defined, no required fields, but must declare a type
+  
+2.1.2 Past Messages ***********************************************************
+  CacheMessage:    
+    type 1
+    use: Pushes an object forward one hop in order to be cached.   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+      PastContent content // the content of this cache request
+      
+  
     2.2.1: GCPast        
   2.3: Replication
   2.4: Multiring      
