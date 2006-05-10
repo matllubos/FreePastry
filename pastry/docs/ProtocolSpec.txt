@@ -24,6 +24,7 @@ Table of contents:
     RouteSet
   1.6: Other FP objects
     IdRange
+    NodeHandleSet
   1.7: Core Messages
     1.7.1: RouteMessage
     1.7.2: Join Protocol 
@@ -305,7 +306,8 @@ IdRange: Represents a contiguous range of Pastry ids.
   Id Clockwise
   Id CounterClockwise
   boolean empty
-
+NodeHandleSet
+  <todo>
 1.7: Core Messages ************************************************************   
 1.7.1: RoueMessage ************************************************************
   address: 0xACBDFE17 (Router)
@@ -696,6 +698,10 @@ Chapter 2 CommonApi Apps ******************************************************
     use: The "user-defined" content of the DHT.  (Note: User is a 
       developer who uses Past in their higher level application.)
     format: user defined, no required fields, but must declare a type
+  PastContentHandle:
+    use: The "user-defined" content identifier of the DHT.  (Note: User is a 
+      developer who uses Past in their higher level application.)
+    format: user defined, no required fields, but must declare a type
   
 2.1.2 Past Messages ***********************************************************
   CacheMessage:    
@@ -709,8 +715,193 @@ Chapter 2 CommonApi Apps ******************************************************
 			boolean isResponse // if this is a response			
       PastContent content // the content of this cache request
       
+  FetchHandleMessage:    
+    type 2
+    use: Request a PastContentHandle based on an Id (both request/response).   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte hasContentHandle // 0=empty; 1=true; 2=error; 3=platform dependent PastContentHandle
+			  // if hasContentHandle = 1
+        PastContentHandle handle 
+        // else, if hasContentHandle = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+        
+			short idType
+			Id id // the Id to fetch     
   
-    2.2.1: GCPast        
+  FetchMessage:    
+    type 3
+    use: Request a PastContent based on a PastContentHandle (both request/response).   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte hasContent // 0=empty; 1=true; 2=error; 3=platform dependent PastContent
+			  // if hasContent = 1
+        PastContent content 
+        // else, if hasContent = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+        
+      boolean cached // if this is a cached copy  
+			short contentHandleType
+			PastContentHandle handle // the content to fetch     
+  
+  InsertMessage:    
+    type 4
+    use: Inserts a PastContent (both request/response), the request has a content, the response doesn't.   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte responseType // 0=empty; 1=non-empty; 2=error
+			  // if responseType = 1
+        boolean success 
+        // else, if responseType = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+        
+      boolean hasContent
+      // if hasContent
+        short contentType
+        PastContent content        
+  
+  LookupHandlesMessage:    
+    type 5
+    use: Gets all the handles of an Id.   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte hasNodeHandleSet // 0=empty; 1=non-empty; 2=error
+			  // if hasNodeHandleSet = 1
+			  short setType
+				NodeHandleSet set			  
+        // else, if hasNodeHandleSet = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+                
+			int max // the number of replicas to fetch
+			short idType
+			Id id // the Id to fetch     
+  
+  LookupMessage:    
+    type 6
+    use: Looks up a PastContent from an id (both request/response), the response has a content, the request doesn't.   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte hasPastContent // 0=empty; 1=non-empty; 2=error
+			  // if hasPastContent = 1
+			  short contentType
+				PastContent pastContent			  
+        // else, if hasNodeHandleSet = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+                
+      boolean hasHandle
+        NodeHandle handle // where this message has been        
+      short idType
+      Id id // the id to fetch
+      boolean cached // whether or not this message has been cached
+  
+2.2.1 GCPast ******************************************************************    
+  GCId 
+    type 3
+    use: Holds an id and an expiration, used to refresh Ids
+    Id id
+    time expriation
+
+  GCRefreshMessage:    
+    type 11
+    use: A request to extend the lifetime of a set of keys stored in GCPast.   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte responseType // 0=empty; 1=non-empty; 2=error
+			  // if responseType = 1
+			  int numResponses
+        boolean[] success 
+        // else, if responseType = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+        
+
+      int numKeys
+      // for each numKey
+        GCId id 
+        
+        
+  GCInsertMessage:    
+    type 9
+    use: Inserts a PastContent (both request/response), the request has a content, the response doesn't.   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte responseType // 0=empty; 1=non-empty; 2=error
+			  // if responseType = 1
+        boolean success 
+        // else, if responseType = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+        
+
+      boolean hasContent
+      // if hasContent
+        short contentType
+        PastContent content   
+      
+      time expiration     
+        
+  GCLookupHandlesMessage:    
+    type 10
+    use: Gets all the handles of an Id.   
+    format:
+      byte version (0)
+			int id // unique id of this message
+			Id dest // the destination of this request
+			NodeHandle source // the source of this request
+			boolean isResponse // if this is a response			
+			
+			byte hasNodeHandleSet // 0=empty; 1=non-empty; 2=error
+			  // if hasNodeHandleSet = 1
+			  short setType
+				NodeHandleSet set			  
+        // else, if hasNodeHandleSet = 2
+        int errorLength 
+        byte[errorLength] // platform dependent error message
+                
+			int max // the number of replicas to fetch
+			short idType
+			Id id // the Id to fetch     
+  
   2.3: Replication
   2.4: Multiring      
   2.5: Glacier
