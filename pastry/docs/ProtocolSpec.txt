@@ -1225,7 +1225,51 @@ appropriate ring.
       BloomFilter bloomFilter
                 
           
-  2.6: Aggregation
-  2.7: Splitstream
+2.6 Aggregation ***************************************************************
+Note that Aggregation doesn't define any new messages, but it does define a GCPastContent.
+
+  Aggregate (A GCPastContent):
+    use: convert lots of small GCPastContents into a larger one
+    type 1
+    format:
+      byte version (0)
+      short idType
+      Id myId
+      int numPointers
+        short idType
+        Id pointer
+      int numComponents
+        short GCPastContentType
+        GCPastContent
+        
+  NonAggregate (A GCPastContent):
+    use: wrap a GCPastContent (to prevent type space collision)
+    type 2
+    format:
+      byte version (0)
+      short GCPastContentType
+      GCPastContentType content
+        
+2.7 Splitstream ***************************************************************
+Doesn't define any new messages, but does define 2 ScribeContents
+
+  SplitStreamContent (A ScribeContent)
+    use: Send data through scribe for Splitstream
+    format:
+      byte version (0)
+      int numBytes
+      byte[numBytes] data
   
+  SplitStreamSubscribeContent (A ScribeContent)
+    use: Send data through scribe for Splitstream
+    format:
+      byte version (0)
+      int stage
+
+        
+      
+  
+    
+
+    
   
