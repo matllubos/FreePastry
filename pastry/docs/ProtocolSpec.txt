@@ -25,6 +25,7 @@ Table of contents:
   1.6: Other FP objects
     IdRange
     NodeHandleSet
+    BloomFilter
   1.7: Core Messages
     1.7.1: RouteMessage
     1.7.2: Join Protocol 
@@ -306,8 +307,20 @@ IdRange: Represents a contiguous range of Pastry ids.
   Id Clockwise
   Id CounterClockwise
   boolean empty
-NodeHandleSet
-  <todo>
+  
+NodeHandleSet: Represents a set of NodeHandles
+  short size
+  // for each size
+    NodeHandle handle
+
+BloomFilter: 
+  int length
+  int numParams
+    int param
+  int numBits
+    bit b
+  // note this will trail zeros to 1 byte if !(numBits % 8 == 0)
+        
 1.7: Core Messages ************************************************************   
 1.7.1: RoueMessage ************************************************************
   address: 0xACBDFE17 (Router)
@@ -902,9 +915,57 @@ Chapter 2 CommonApi Apps ******************************************************
 			short idType
 			Id id // the Id to fetch     
   
-  2.3: Replication
-  2.4: Multiring      
-  2.5: Glacier
+2.3 Replication ***************************************************************
+  RequestMessage:    
+    type 2
+    use: Requests a set of keys.   
+    format:
+      byte version (0)
+      NodeHandle source
+      int numFilters
+        BloomFilter filter
+      int ranges
+        IdRange range
+  
+  ResponseMessage:    
+    type 3
+    use: Response to a RequestMessage.   
+    format:
+      byte version (0)
+      NodeHandle source
+      // a 2D matrix of Ids
+      int numRows
+        int numCols
+          short idType
+          Id id
+      // list of IdRange
+      int numRanges
+        IdRange range
+          
+            
+2.4 Multiring *****************************************************************    
+Multiring doesn't use any specific messages, but it does define a new object: 
+RingId and a ScribeContent (RingMessage) which is anycasted to get to the 
+appropriate ring.
+
+  RingId:
+		short ringIdType
+		Id ringId // the ring
+		short idType
+		Id id // the id in the ring
+
+  RingMessage (a ScribeContent):
+    type 
+    format:
+      RingId id
+      String application
+      short messageType
+      byte priority
+      Message message
+  
+2.5 Glacier *******************************************************************
+  
+  
   2.6: Aggregation
   2.7: Splitstream
   
