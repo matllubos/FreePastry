@@ -116,11 +116,11 @@ Overview:
   5) Application Stream
 
 
-	// Magic Number
-	byte[4] PASTRY_MAGIC_NUMBER = {0x27, 0x40, 0x75, 0x3A}
-		
-	// Protocol Version (0) for now, but this may become more interesting in the future, such as being in part, a bitwise selection
-	int 0
+  // Magic Number
+  byte[4] PASTRY_MAGIC_NUMBER = {0x27, 0x40, 0x75, 0x3A}
+    
+  // Protocol Version (0) for now, but this may become more interesting in the future, such as being in part, a bitwise selection
+  int 0
 
   // Source Route Header
   // 0 or more of the following based on the number of hops in the sourceroute:
@@ -350,7 +350,7 @@ JoinRequest:
   package: rice.pastry.standard
   
   format:
-	  byte version (0)
+    byte version (0)
     byte rtBaseBitLength
     NodeHandle handle
     boolean hasJoinHandle
@@ -359,18 +359,18 @@ JoinRequest:
     byte lastRow // decremented on a push call
     // the routing table has this many rows: (NodeId bit length)/rtBaseBitLength = 160/4 = 40
     // and this many columns 2^rtBaseBitLength = 2^4=16
-		// each entry is a RouteSet
-		// for each row
-		  boolean hasRow?
-		  // if (hasRow) for each column {
-		    boolean hasColumn
-  		  // if (hasColumn) for each entry {
-  		    RouteSet entry
-  		  // }
-  		// }    
+    // each entry is a RouteSet
+    // for each row
+      boolean hasRow?
+      // if (hasRow) for each column {
+        boolean hasColumn
+        // if (hasColumn) for each entry {
+          RouteSet entry
+        // }
+      // }    
     boolean hasLeafset
-		// if (hasLeafset) 
-		  LeafSet leafset
+    // if (hasLeafset) 
+      LeafSet leafset
           
 ConsistentJoinMessage:
   address: 0xe80c17e8 (Join Protocol)
@@ -379,7 +379,7 @@ ConsistentJoinMessage:
   package: rice.pastry.standard
   
   format:
-	  byte version (0)
+    byte version (0)
     LeafSet ls
     boolean request
     int numInFailedSet
@@ -393,7 +393,7 @@ RequestLeafSet:
   package: rice.pastry.leafset
 
   format: 
-		byte version (0)
+    byte version (0)
       
 BroadcastLeafSet:
   address: 0xf921def1 (Leafset Protocol)
@@ -402,10 +402,10 @@ BroadcastLeafSet:
   package: rice.pastry.leafset
 
   format:
-	  byte version (0)
-	  NodeHandle fromNode
-	  LeafSet leafSet
-	  int theType
+    byte version (0)
+    NodeHandle fromNode
+    LeafSet leafSet
+    int theType
 
 1.7.4: Routing Table Maintenance **********************************************
 RequestRouteRow:
@@ -415,9 +415,9 @@ RequestRouteRow:
   package: rice.pastry.routing
 
   format: 
-		byte version (0)
-		byte row // the row requested
-		
+    byte version (0)
+    byte row // the row requested
+    
 BroadcastRouteRow:
   address: 0x89ce110e (Route Protocol)
   type: 2
@@ -425,11 +425,11 @@ BroadcastRouteRow:
   package rice.pastry.routing
     
   format:
-	  byte version (0)
-	  NodeHandle fromNode  
-	  byte numRows
-	    byte null? (0 if null, 1 if non-null)
-	      RouteSet row // if non-null
+    byte version (0)
+    NodeHandle fromNode  
+    byte numRows
+      byte null? (0 if null, 1 if non-null)
+        RouteSet row // if non-null
 
 1.7.5 CommonAPI impl **********************************************************
 PastryEndpointMessage:
@@ -451,79 +451,79 @@ LeafSetRequestMessage:
   type: 4
   use: request a LeafSet from a node
   format:
-	  byte version (0)
+    byte version (0)
 
 LeafSetResponseMessage:
   type: 5
   use: respond to a LeafSetRequest
   format:
-	  byte version (0)
-	  LeafSet leafset
+    byte version (0)
+    LeafSet leafset
 
 NodeIdRequestMessage:
   type: 6
   use: request a NodeId from a node
   format:
-	  byte version (0)
+    byte version (0)
 
 NodeIdResponseMessage:
   type: 7
   use: respond to a NodeIdRequest
   format:
-	  byte version (0)
-		NodeId nodeId
-		long epoch
-	  
+    byte version (0)
+    NodeId nodeId
+    long epoch
+    
 RouteRowRequestMessage:
   type: 10
   use: request a Row from a Routing Table
   format:
-	  byte version (0)
-	  int row (the row requested)
+    byte version (0)
+    int row (the row requested)
 
 RouteRowResponseMessage:
   type: 11
   use: respond to a RouteRowRequest
   format:
-	  byte version (0)
-		// encoding a sparse array
-		int numRouteSets
-		// for each routeSet
-		  boolean notNull
-		  // if (notNull)
-		    RouteSet set
-		    
+    byte version (0)
+    // encoding a sparse array
+    int numRouteSets
+    // for each routeSet
+      boolean notNull
+      // if (notNull)
+        RouteSet set
+        
 RoutesRequestMessage:
   type: 12
   use: request SourceRoutes from another node
   format:
-	  byte version (0)
+    byte version (0)
 
 RoutesResponseMessage:
   type: 13
   use: respond to a RoutesRequest
   format:
-	  byte version (0)
-		int numRoutes
-		// for each route
+    byte version (0)
+    int numRoutes
+    // for each route
       SourceRoute sourceRoute
-		    
+        
 SourceRoute:
-  // source route is a Message type for convienience (otherwise we'd have to have special headers and stuff)  Sometimes the protocol just sends a SourceRoute	  	  
-	type: 1
-	use: Holds a SourceRoute
+  // source route is a Message type for convienience (otherwise we'd have to have special headers and stuff)  Sometimes the protocol just sends a SourceRoute       
+  type: 1
+  use: Holds a SourceRoute
   format:
-	  byte version (0)
-		int numInPath
-		// for each hop
-		  EpochInetSocketAddress address
+    byte version (0)
+    int numInPath
+    // for each hop
+      EpochInetSocketAddress address
 
 1.9: Liveness Messages (UDP) **************************************************
 For Liveness and NAT (Network Address Translator) handling
 Note that this doesn't make NAT traversal automatic, but just allows FreePastry to detect the external address, port forwarding must be set up
 
 1.9.1 Header overview *********************************************************
-The format of these messages is a bit different because they are UDP and need to carry source route info at each step:	
+The format of these messages is a bit different because they are UDP and need to carry source route info at each step:  
 Header contains 3 things:
   1) Magic Number byte[4]
   2) Protocol version int (0)
@@ -531,18 +531,18 @@ Header contains 3 things:
 
 1.9.2 Header specification ****************************************************  
 Detail:  
-	// Magic Number
-	byte[4] PASTRY_MAGIC_NUMBER = {0x27, 0x40, 0x75, 0x3A}
-			
-	// Protocol Version (0) for now, but this may become more interesting in the future, such as being in part, a bitwise selection
-	int 0
+  // Magic Number
+  byte[4] PASTRY_MAGIC_NUMBER = {0x27, 0x40, 0x75, 0x3A}
+      
+  // Protocol Version (0) for now, but this may become more interesting in the future, such as being in part, a bitwise selection
+  int 0
 
-	// source route part
-	byte 1 // the current hop counter (incremented at each step)
-	byte numHops // in the source route
-	EpochInetSocketAddress localAddress
-	// for each hop
-	  EpochInetSocketAddress hop
+  // source route part
+  byte 1 // the current hop counter (incremented at each step)
+  byte numHops // in the source route
+  EpochInetSocketAddress localAddress
+  // for each hop
+    EpochInetSocketAddress hop
 
 1.9.3 Messages
   IPAddressRequestMessage:
@@ -660,12 +660,12 @@ Chapter 2 CommonApi Apps ******************************************************
       
       int id // uniqe id of the request
       
-			boolean hasPreviousParent
-			// if hasPreviousParent
-			  Id previousParent  
-			          
-			NodeHandle subscriber
-			      
+      boolean hasPreviousParent
+      // if hasPreviousParent
+        Id previousParent  
+                
+      NodeHandle subscriber
+            
   SubscribeAckMessage:    
     type 3
     use: Acknowledge a SubscribeMessaege. (sent by the node that accepts the anycasted subscribe)    
@@ -722,10 +722,10 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Pushes an object forward one hop in order to be cached.   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
       PastContent content // the content of this cache request
       
   FetchHandleMessage:    
@@ -733,54 +733,54 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Request a PastContentHandle based on an Id (both request/response).   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte hasContentHandle // 0=empty; 1=true; 2=error; 3=platform dependent PastContentHandle
-			  // if hasContentHandle = 1
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte hasContentHandle // 0=empty; 1=true; 2=error; 3=platform dependent PastContentHandle
+        // if hasContentHandle = 1
         PastContentHandle handle 
         // else, if hasContentHandle = 2
         int errorLength 
         byte[errorLength] // platform dependent error message
         
-			short idType
-			Id id // the Id to fetch     
+      short idType
+      Id id // the Id to fetch     
   
   FetchMessage:    
     type 3
     use: Request a PastContent based on a PastContentHandle (both request/response).   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte hasContent // 0=empty; 1=true; 2=error; 3=platform dependent PastContent
-			  // if hasContent = 1
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte hasContent // 0=empty; 1=true; 2=error; 3=platform dependent PastContent
+        // if hasContent = 1
         PastContent content 
         // else, if hasContent = 2
         int errorLength 
         byte[errorLength] // platform dependent error message
         
       boolean cached // if this is a cached copy  
-			short contentHandleType
-			PastContentHandle handle // the content to fetch     
+      short contentHandleType
+      PastContentHandle handle // the content to fetch     
   
   InsertMessage:    
     type 4
     use: Inserts a PastContent (both request/response), the request has a content, the response doesn't.   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte responseType // 0=empty; 1=non-empty; 2=error
-			  // if responseType = 1
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte responseType // 0=empty; 1=non-empty; 2=error
+        // if responseType = 1
         boolean success 
         // else, if responseType = 2
         int errorLength 
@@ -796,37 +796,37 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Gets all the handles of an Id.   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte hasNodeHandleSet // 0=empty; 1=non-empty; 2=error
-			  // if hasNodeHandleSet = 1
-			  short setType
-				NodeHandleSet set			  
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte hasNodeHandleSet // 0=empty; 1=non-empty; 2=error
+        // if hasNodeHandleSet = 1
+        short setType
+        NodeHandleSet set       
         // else, if hasNodeHandleSet = 2
         int errorLength 
         byte[errorLength] // platform dependent error message
                 
-			int max // the number of replicas to fetch
-			short idType
-			Id id // the Id to fetch     
+      int max // the number of replicas to fetch
+      short idType
+      Id id // the Id to fetch     
   
   LookupMessage:    
     type 6
     use: Looks up a PastContent from an id (both request/response), the response has a content, the request doesn't.   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte hasPastContent // 0=empty; 1=non-empty; 2=error
-			  // if hasPastContent = 1
-			  short contentType
-				PastContent pastContent			  
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte hasPastContent // 0=empty; 1=non-empty; 2=error
+        // if hasPastContent = 1
+        short contentType
+        PastContent pastContent       
         // else, if hasNodeHandleSet = 2
         int errorLength 
         byte[errorLength] // platform dependent error message
@@ -849,14 +849,14 @@ Chapter 2 CommonApi Apps ******************************************************
     use: A request to extend the lifetime of a set of keys stored in GCPast.   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte responseType // 0=empty; 1=non-empty; 2=error
-			  // if responseType = 1
-			  int numResponses
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte responseType // 0=empty; 1=non-empty; 2=error
+        // if responseType = 1
+        int numResponses
         boolean[] success 
         // else, if responseType = 2
         int errorLength 
@@ -873,13 +873,13 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Inserts a PastContent (both request/response), the request has a content, the response doesn't.   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte responseType // 0=empty; 1=non-empty; 2=error
-			  // if responseType = 1
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte responseType // 0=empty; 1=non-empty; 2=error
+        // if responseType = 1
         boolean success 
         // else, if responseType = 2
         int errorLength 
@@ -898,22 +898,22 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Gets all the handles of an Id.   
     format:
       byte version (0)
-			int id // unique id of this message
-			Id dest // the destination of this request
-			NodeHandle source // the source of this request
-			boolean isResponse // if this is a response			
-			
-			byte hasNodeHandleSet // 0=empty; 1=non-empty; 2=error
-			  // if hasNodeHandleSet = 1
-			  short setType
-				NodeHandleSet set			  
+      int id // unique id of this message
+      Id dest // the destination of this request
+      NodeHandle source // the source of this request
+      boolean isResponse // if this is a response     
+      
+      byte hasNodeHandleSet // 0=empty; 1=non-empty; 2=error
+        // if hasNodeHandleSet = 1
+        short setType
+        NodeHandleSet set       
         // else, if hasNodeHandleSet = 2
         int errorLength 
         byte[errorLength] // platform dependent error message
                 
-			int max // the number of replicas to fetch
-			short idType
-			Id id // the Id to fetch     
+      int max // the number of replicas to fetch
+      short idType
+      Id id // the Id to fetch     
   
 2.3 Replication ***************************************************************
   RequestMessage:    
@@ -949,10 +949,10 @@ RingId and a ScribeContent (RingMessage) which is anycasted to get to the
 appropriate ring.
 
   RingId:
-		short ringIdType
-		Id ringId // the ring
-		short idType
-		Id id // the id in the ring
+    short ringIdType
+    Id ringId // the ring
+    short idType
+    Id id // the id in the ring
 
   RingMessage (a ScribeContent):
     type 
@@ -1008,12 +1008,12 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			int numFragments
-			  Fragment fragment
-			int numFragmentKeys
-			  FragmentKey fragmentKey
-			int numManifests
-			  Manifest manifest
+      int numFragments
+        Fragment fragment
+      int numFragmentKeys
+        FragmentKey fragmentKey
+      int numManifests
+        Manifest manifest
             
   GlacierFetchMessage:
     use:
@@ -1027,9 +1027,9 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			int request
-			int numFragmentKeys
-			  FragmentKey fragmentKey            
+      int request
+      int numFragmentKeys
+        FragmentKey fragmentKey            
   
   GlacierNeighborRequestMessage:
     use:
@@ -1089,8 +1089,8 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			IdRange requestedRange
-			NodeHandle requestor      
+      IdRange requestedRange
+      NodeHandle requestor      
   
   GlacierRangeQueryMessage:
     use:
@@ -1104,7 +1104,7 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			IdRange requestedRange
+      IdRange requestedRange
   
   GlacierRangeResponseMessage:
     use:
@@ -1118,7 +1118,7 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			IdRange commonRange
+      IdRange commonRange
   
   GlacierRefreshCompleteMessage:
     use:
@@ -1132,10 +1132,10 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			int numUpdates
-			  int update
-			int numVersionKeys
-			  VersionKey versionKey
+      int numUpdates
+        int update
+      int numVersionKeys
+        VersionKey versionKey
   
   GlacierRefreshPatchMessage:
     use:
@@ -1149,13 +1149,13 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			int numLifeTimes
-			  long lifeTime
-			int numVersionKeys
-			  VersionKey versionKey
-			int numSignatures
-			  int signatureLength
-			  byte[signatureLength] signature
+      int numLifeTimes
+        long lifeTime
+      int numVersionKeys
+        VersionKey versionKey
+      int numSignatures
+        int signatureLength
+        byte[signatureLength] signature
   
   GlacierRefreshProbeMessage:
     use:
@@ -1184,8 +1184,8 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			IdRange range
-			boolean online        
+      IdRange range
+      boolean online        
   
   GlacierResponseMessage:
     use:
@@ -1220,9 +1220,9 @@ appropriate ring.
       Id dest
       NodeHandle source
       
-			int offsetFID
-			IdRange range
-			BloomFilter bloomFilter
+      int offsetFID
+      IdRange range
+      BloomFilter bloomFilter
                 
           
   2.6: Aggregation
