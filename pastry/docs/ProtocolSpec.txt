@@ -120,11 +120,11 @@ Table of contents:
   SplitStreamSubscribeContent
   
 1.1: Overview of some of the features of the protocol. ************************
-  FreePastry provides a structured peer to peer routing overlay, but is not necessarally useful in of itself.  Application layers must be written on top of FreePastry.  We will call the layer above FreePastry an Application.  This application may implement a DHT (such as Past) or a Multicast Network (such as Scribe) which higher level applications may further be written on.
-  FreePastry uses Source Routing to handle temporary network anomlies.  
+  FreePastry provides a structured peer to peer routing overlay, but is not necessarily useful in of itself.  Application layers must be written on top of FreePastry.  We will call the layer above FreePastry an Application.  This application may implement a DHT (such as Past) or a Multicast Network (such as Scribe) which higher level applications may further be written on.
+  FreePastry uses Source Routing to handle temporary network anomalies.  
   FreePastry uses TCP for all overlay maintenance and application traffic.
   FreePastry uses UDP for liveness checks.
-  FreePastry provides a mechanism for Applications to open thier own sockets through the source routes.  This allows applications to manage their own congestion control without interfering with overlay maintenance.  However normal messages may be sent on the same sockets as overlay maintenance traffic.  Application 0 is a FreePastry control socket, and is not delivered to an application.
+  FreePastry provides a mechanism for Applications to open their own sockets through the source routes.  This allows applications to manage their own congestion control without interfering with overlay maintenance.  However normal messages may be sent on the same sockets as overlay maintenance traffic.  Application 0 is a FreePastry control socket, and is not delivered to an application.
   From an application's perspective, the abstraction for an node in FreePastry is the NodeHandle.  
   FreePastry interacts with other nodes in the network using EpochInetSocketAddresses.  The EpochInetSocketAddress is based on IPv4 and encodes an IP address, a port, and an 8byte epoch.  The purpose of the epoch is to know if the node has rebooted since last communication.  This gives information to the applications (that may be stateful) about the state of the node.
   
@@ -287,7 +287,7 @@ Leafset
     a NodeHandle takes up a lot more space than the index in the leafset, and 
     it may be in the leafset 1 or 2 times.    
     A leafset consists of a clockwise and counterclockwise "SimilarSet"  If the ring is very small,
-    thse values will overlap.
+    these values will overlap.
     
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       + byte theSize  +numUniqueHandls+ byte cwSize   + byte ccwSize  +
@@ -432,7 +432,7 @@ JoinRequest:
 ConsistentJoinMessage:
   address: 0xe80c17e8 (Join Protocol)
   type: 2
-  use: During Join.  To verify that every node in leafset is aware of your existance, and gossip Leafset
+  use: During Join.  To verify that every node in leafset is aware of your existence, and gossip Leafset
   package: rice.pastry.standard
   
   format:
@@ -566,7 +566,7 @@ RoutesResponseMessage:
       SourceRoute sourceRoute
         
 SourceRoute:
-  // source route is a Message type for convienience (otherwise we'd have to have special headers and stuff)  Sometimes the protocol just sends a SourceRoute       
+  // source route is a Message type for convenience (otherwise we'd have to have special headers and stuff)  Sometimes the protocol just sends a SourceRoute       
   type: 1
   use: Holds a SourceRoute
   format:
@@ -715,7 +715,7 @@ Chapter 2 CommonApi Apps ******************************************************
         // for each visitedLength
         NodeHandle node
       
-      int id // uniqe id of the request
+      int id // unique id of the request
       
       boolean hasPreviousParent
       // if hasPreviousParent
@@ -900,7 +900,7 @@ Chapter 2 CommonApi Apps ******************************************************
     type 3
     use: Holds an id and an expiration, used to refresh Ids
     Id id
-    time expriation
+    time expiration
 
 2.2.2 GCPast Messages *********************************************************
   GCRefreshMessage:    
