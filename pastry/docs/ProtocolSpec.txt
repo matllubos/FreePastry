@@ -964,8 +964,267 @@ appropriate ring.
       Message message
   
 2.5 Glacier *******************************************************************
+2.5.1 Glacier Objects *********************************************************
+  Fragment:
+    use:
+    format:
+      int length
+      byte[length] payload
+      
+  VersionKey:    
+    use:
+    format:
+      long version
+      Id id
+      
+  FragmentKey:
+    use:
+    format:
+      int id
+      VersionKey key
+      
+  Manifest:
+    use:
+    format:
+      int objectHashLength
+      int fragmentHashArrayLength
+      int fragmentHashLength
+      int signatureLength
+      byte[objectHashLength] objectHash
+      // for each fragmentHashArrayLength
+        byte[fragmentHashLength] fragmentHash
+      byte[signatureLength] signature
+
+2.5.2 Glacier Messages ********************************************************      
+  GlacierDataMessage:
+    use:
+    type 1    
+    format:
+      byte version (0)      
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			int numFragments
+			  Fragment fragment
+			int numFragmentKeys
+			  FragmentKey fragmentKey
+			int numManifests
+			  Manifest manifest
+            
+  GlacierFetchMessage:
+    use:
+    type 2    
+    format:
+      byte version (0)      
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			int request
+			int numFragmentKeys
+			  FragmentKey fragmentKey            
   
+  GlacierNeighborRequestMessage:
+    use:
+    type 3    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+      IdRange requestedRange
   
+  GlacierNeighborResponseMessage:
+    use:
+    type 4    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+      int numLastSeen
+        long lastSeen
+      int numNeighbors
+        Id neighbor  
+  
+  GlacierNeighborResponseMessage:
+    use:
+    type 5    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+      int numFragmentKeys
+        FragmentKey fragmentKey
+  
+  GlacierRangeForwardMessage:
+    use:
+    type 6    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			IdRange requestedRange
+			NodeHandle requestor      
+  
+  GlacierRangeQueryMessage:
+    use:
+    type 7    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			IdRange requestedRange
+  
+  GlacierRangeResponseMessage:
+    use:
+    type 8    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			IdRange commonRange
+  
+  GlacierRefreshCompleteMessage:
+    use:
+    type 9    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			int numUpdates
+			  int update
+			int numVersionKeys
+			  VersionKey versionKey
+  
+  GlacierRefreshPatchMessage:
+    use:
+    type 10    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			int numLifeTimes
+			  long lifeTime
+			int numVersionKeys
+			  VersionKey versionKey
+			int numSignatures
+			  int signatureLength
+			  byte[signatureLength] signature
+  
+  GlacierRefreshProbeMessage:
+    use:
+    type 11    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+      short idType
+      Id requestedId
+  
+  GlacierRefreshResponseMessage:
+    use:
+    type 12    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			IdRange range
+			boolean online        
+  
+  GlacierResponseMessage:
+    use:
+    type 13    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+      int numFragmentKeys
+        FragmentKey fragmentKey
+      int numLifetimes
+        long lifetime
+      int numAuthoritatives
+        boolean authoritative
+      int numHaveIts
+        boolean haveIt
+        
+  GlacierSyncMessage:
+    use:
+    type 14    
+    format:
+      byte version (0)            
+      int id
+      char tag
+      boolean isResponse
+      short idType
+      Id dest
+      NodeHandle source
+      
+			int offsetFID
+			IdRange range
+			BloomFilter bloomFilter
+                
+          
   2.6: Aggregation
   2.7: Splitstream
   
