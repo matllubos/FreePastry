@@ -37,7 +37,7 @@ Table of contents:
     1.7.4: Routing Table Maintenance 
       RequestRouteRow:
       BroadcastRouteRow:
-    1.7.5 CommonAPI impl 
+    1.7.5: CommonAPI impl 
       PastryEndpointMessage:
   1.8: Direct Access Messages 
     LeafSetRequestMessage
@@ -52,15 +52,72 @@ Table of contents:
   1.9: Liveness Messages (UDP)
     1.9.1: Liveness Header
     1.9.2: Liveness Content
-2 : CommonApi Apps:
-  2.1: Scribe
-  2.2: Past
-    2.2.1: GCPast        
-  2.3: Replication
-  2.4: Multiring      
-  2.5: Glacier
-  2.6: Aggregation
-  2.7: Splitstream
+2 : CommonApi Apps 
+2.1: Scribe 
+2.1.1: Scribe Objects 
+  Topic
+  ScribeContent   
+2.1.2: Content Messages 
+  PublishRequestMessage
+  PublishMessage
+  AnycastMessage
+2.1.3: Tree Formation Messages 
+  SubscribeMessage
+  SubscribeAckMessage
+  SubscribeFailedMessage
+  UnsubscribeMessage
+  DropMessage
+2.2: Past 
+2.2.1: Past Objects 
+  PastContent
+  PastContentHandle  
+2.1.2: Past Messages 
+  CacheMessage    
+  FetchHandleMessage 
+  FetchMessage    
+  InsertMessage
+  LookupHandlesMessage
+  LookupMessage    
+2.2: GCPast 
+2.2.1: GCPast Objects 
+  GCId 
+2.2.2: GCPast Messages 
+  GCRefreshMessage
+  GCInsertMessage
+  GCLookupHandlesMessage  
+2.3: Replication 
+  RequestMessage
+  ResponseMessage            
+2.4: Multiring 
+  RingId
+  RingMessage  
+2.5: Glacier 
+2.5.1: Glacier Objects 
+  Fragment
+  VersionKey    
+  FragmentKey
+  Manifest
+2.5.2: Glacier Messages      
+  GlacierDataMessage
+  GlacierFetchMessage
+  GlacierNeighborRequestMessage
+  GlacierNeighborResponseMessage
+  GlacierNeighborResponseMessage
+  GlacierRangeForwardMessage
+  GlacierRangeQueryMessage
+  GlacierRangeResponseMessage
+  GlacierRefreshCompleteMessage
+  GlacierRefreshPatchMessage
+  GlacierRefreshProbeMessage
+  GlacierRefreshResponseMessage
+  GlacierResponseMessage
+  GlacierSyncMessage          
+2.6: Aggregation 
+  Aggregate
+  NonAggregate         
+2.7: Splitstream 
+  SplitStreamContent
+  SplitStreamSubscribeContent
   
 1.1: Overview of some of the features of the protocol. ************************
   FreePastry provides a structured peer to peer routing overlay, but is not necessarally useful in of itself.  Application layers must be written on top of FreePastry.  We will call the layer above FreePastry an Application.  This application may implement a DHT (such as Past) or a Multicast Network (such as Scribe) which higher level applications may further be written on.
@@ -837,13 +894,15 @@ Chapter 2 CommonApi Apps ******************************************************
       Id id // the id to fetch
       boolean cached // whether or not this message has been cached
   
-2.2.1 GCPast ******************************************************************    
+2.2 GCPast ********************************************************************
+2.2.1 GCPast Objects **********************************************************
   GCId 
     type 3
     use: Holds an id and an expiration, used to refresh Ids
     Id id
     time expriation
 
+2.2.2 GCPast Messages *********************************************************
   GCRefreshMessage:    
     type 11
     use: A request to extend the lifetime of a set of keys stored in GCPast.   
@@ -1253,23 +1312,15 @@ Note that Aggregation doesn't define any new messages, but it does define a GCPa
 2.7 Splitstream ***************************************************************
 Doesn't define any new messages, but does define 2 ScribeContents
 
-  SplitStreamContent (A ScribeContent)
-    use: Send data through scribe for Splitstream
+  SplitStreamContent (A ScribeContent):
+    use: Send data through scribe
     format:
       byte version (0)
       int numBytes
       byte[numBytes] data
   
-  SplitStreamSubscribeContent (A ScribeContent)
-    use: Send data through scribe for Splitstream
+  SplitStreamSubscribeContent (A ScribeContent):
+    use: Send data through scribe during a subscribe
     format:
       byte version (0)
       int stage
-
-        
-      
-  
-    
-
-    
-  
