@@ -60,7 +60,7 @@ public class SocketSourceRouteManager {
    * @param bindAddress The address which the node should bind to
    * @param proxyAddress The address which the node should advertise as it's address
    */
-  protected SocketSourceRouteManager(SocketPastryNode node, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) {
+  protected SocketSourceRouteManager(SocketPastryNode node, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) throws IOException {
     this.spn = node;
     Parameters p = node.getEnvironment().getParameters();
     CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");

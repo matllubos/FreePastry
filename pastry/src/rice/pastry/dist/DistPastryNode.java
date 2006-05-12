@@ -56,7 +56,6 @@ public abstract class DistPastryNode extends PastryNode {
    */
   protected DistPastryNode(NodeId id, Environment e) {    
     super(id, e);
-    SignalHandler s;
     timer = e.getSelectorManager().getTimer();
 //    timer = new Timer(true);
     // uses deamon thread, so it terminates once other threads have terminated

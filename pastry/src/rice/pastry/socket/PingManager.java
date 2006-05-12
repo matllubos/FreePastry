@@ -84,7 +84,7 @@ public class PingManager extends SelectionKeyHandler {
    * @param manager DESCRIBE THE PARAMETER
    * @param pool DESCRIBE THE PARAMETER
    */
-  public PingManager(SocketPastryNode spn, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) {
+  public PingManager(SocketPastryNode spn, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress) throws IOException {
     this.spn = spn;
     this.environment = spn.getEnvironment();
     this.logger = environment.getLogManager().getLogger(PingManager.class, null);
@@ -113,8 +113,9 @@ public class PingManager extends SelectionKeyHandler {
       key = environment.getSelectorManager().register(channel, this, 0);
       key.interestOps(SelectionKey.OP_READ);
     } catch (IOException e) {
-      if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Error binding datagram server to address " + localAddress + ": " + e);
+//      if (logger.level <= Logger.SEVERE) logger.log(
+//          "PANIC: Error binding datagram server to address " + localAddress + ": " + e);
+      throw e;
     }
   }
   

@@ -115,7 +115,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param pool DESCRIBE THE PARAMETER
    * @param address The address to claim the node is at (for proxying)
    */
-  public SocketCollectionManager(SocketPastryNode node, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) {
+  public SocketCollectionManager(SocketPastryNode node, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) throws IOException {
     this.pastryNode = node;
     this.manager = manager;
     this.localAddress = proxyAddress;
@@ -145,9 +145,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
     if (logger.level <= Logger.FINE) logger.log("BINDING TO ADDRESS " + bindAddress + " AND CLAIMING " + localAddress);
     
+    ServerSocketChannel temp = null; // just to clean up after the exception
     try {
       // bind to port
       final ServerSocketChannel channel = ServerSocketChannel.open();
+      temp = channel;
       channel.configureBlocking(false);
       channel.socket().setReuseAddress(true);
       channel.socket().bind(bindAddress.getAddress());
@@ -155,7 +157,15 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       this.key.interestOps(SelectionKey.OP_ACCEPT);
     } catch (IOException e) {
-      if (logger.level <= Logger.WARNING) logger.logException("ERROR creating server socket channel ",e);
+//      if (logger.level <= Logger.WARNING) logger.logException("ERROR creating server socket channel ",e);
+      try {
+        if (temp != null)
+          temp.close(); 
+      } catch (IOException e2) {
+      }
+      
+      pingManager.resign();
+      throw e;
     }
   }  
   

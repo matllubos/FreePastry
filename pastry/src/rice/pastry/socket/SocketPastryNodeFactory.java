@@ -392,6 +392,35 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    */
   public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId,
       InetSocketAddress pAddress) {
+    try {
+      return newNode(bootstrap, nodeId, pAddress, true); // fix the method just below if you change this
+    } catch (IOException e) {
+      
+      if (logger.level <= Logger.WARNING) logger.log("Warning: "+e); 
+      
+      if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction")) {
+        port++;
+        try {
+          return newNode(bootstrap, nodeId, pAddress); // recursion, this will prevent from things getting too out of hand in
+          // case the node can't bind to anything, expect a StackOverflowException
+        } catch (StackOverflowError soe) {
+          if (logger.level <= Logger.SEVERE) logger.log("SEVERE: SocketPastryNodeFactory: Could not bind on any ports!"+soe); 
+          throw soe;
+        }
+      } else {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+  
+  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId,
+      InetSocketAddress pAddress, boolean throwException) throws IOException {
+    if (!throwException) return newNode(bootstrap, nodeId, pAddress); // yes, this is sort of bizarre
+    // the idea is that we can't throw an exception by default because it will break reverse compatibility
+    // so this method gets called twice if throwException is false.  But the second time, 
+    // it will be called with true, but will be 
+    // wrapped with the above function which will catch the exception.
+    // -Jeff May 12, 2006
     if (bootstrap == null)
       if (logger.level <= Logger.WARNING)
         logger
@@ -425,72 +454,83 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       }
     }
 
-    final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
-
-    SocketSourceRouteManager srManager = null;
-    EpochInetSocketAddress localAddress = null;
-    EpochInetSocketAddress proxyAddress = null;
-    // NOTE: We _don't_ want to use the environment RandomSource because this
-    // will cause
-    // problems if we run the same node twice quickly with the same seed. Epochs
-    // should really
-    // be different every time.
-    long epoch = random.nextLong();
-
-    synchronized (this) {
-      localAddress = getEpochAddress(port, epoch);
-
-      if (pAddress == null)
-        proxyAddress = localAddress;
-      else
-        proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
-
-      srManager = new SocketSourceRouteManager(pn, localAddress, proxyAddress,
-          random);
-      if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
-        port++;
+    try {      
+      final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
+  
+      SocketSourceRouteManager srManager = null;
+      EpochInetSocketAddress localAddress = null;
+      EpochInetSocketAddress proxyAddress = null;
+      // NOTE: We _don't_ want to use the environment RandomSource because this
+      // will cause
+      // problems if we run the same node twice quickly with the same seed. Epochs
+      // should really
+      // be different every time.
+      long epoch = random.nextLong();
+  
+      synchronized (this) {
+        localAddress = getEpochAddress(port, epoch);
+  
+        if (pAddress == null)
+          proxyAddress = localAddress;
+        else
+          proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
+  
+        srManager = new SocketSourceRouteManager(pn, localAddress, proxyAddress,
+            random);
+        if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
+          port++;
+      }
+      
+      pn.setSocketSourceRouteManager(srManager);
+      SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
+      localhandle = (SocketNodeHandle) pn.coalesce(localhandle);
+      SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(
+          localhandle);
+      MessageDispatch msgDisp = new MessageDispatch(pn);
+      RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
+          environment);
+      LeafSet leafSet = new LeafSet(localhandle, lSetSize);
+  
+      StandardRouter router = new StandardRouter(pn, secureMan);
+      msgDisp.registerReceiver(router.getAddress(), router);
+  
+      StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(
+          localhandle, secureMan, routeTable, environment);
+      msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
+  
+      pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+      pn.setSocketElements(proxyAddress, leafSetMaintFreq, routeSetMaintFreq);
+      secureMan.setLocalPastryNode(pn);
+  
+      PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
+          localhandle, secureMan, leafSet, routeTable);
+      // msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
+      ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
+          localhandle, secureMan, routeTable, leafSet);
+  
+      if (bootstrap != null) {
+        bootstrap = (SocketNodeHandle) pn.coalesce(bootstrap);
+      }
+  
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+      }
+  
+      pn.doneNode(getNearest(localhandle, bootstrap));
+      // pn.doneNode(bootstrap);
+  
+      return pn;
+    } catch (IOException ioe) {
+      // this will useually be a bind exception
+      
+      // clean up Environment
+      if (this.environment.getParameters().getBoolean(
+      "pastry_factory_multipleNodes")) {
+         environment.destroy(); 
+      }
+      throw ioe; 
     }
-
-    pn.setSocketSourceRouteManager(srManager);
-    SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
-    localhandle = (SocketNodeHandle) pn.coalesce(localhandle);
-    SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(
-        localhandle);
-    MessageDispatch msgDisp = new MessageDispatch(pn);
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
-        environment);
-    LeafSet leafSet = new LeafSet(localhandle, lSetSize);
-
-    StandardRouter router = new StandardRouter(pn, secureMan);
-    msgDisp.registerReceiver(router.getAddress(), router);
-
-    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(
-        localhandle, secureMan, routeTable, environment);
-    msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
-
-    pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setSocketElements(proxyAddress, leafSetMaintFreq, routeSetMaintFreq);
-    secureMan.setLocalPastryNode(pn);
-
-    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-        localhandle, secureMan, leafSet, routeTable);
-    // msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
-    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-        localhandle, secureMan, routeTable, leafSet);
-
-    if (bootstrap != null) {
-      bootstrap = (SocketNodeHandle) pn.coalesce(bootstrap);
-    }
-
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-    }
-
-    pn.doneNode(getNearest(localhandle, bootstrap));
-    // pn.doneNode(bootstrap);
-
-    return pn;
   }
 
   /**
