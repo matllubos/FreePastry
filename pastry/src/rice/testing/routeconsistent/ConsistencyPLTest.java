@@ -9,25 +9,36 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.simple.SimpleLogManager;
+import rice.environment.params.simple.SimpleParameters;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.splitstream.ChannelId;
 import rice.p2p.splitstream.testing.MySplitStreamClient;
 import rice.pastry.*;
+import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
-import rice.pastry.standard.RandomNodeIdFactory;
+import rice.pastry.standard.*;
 
 /**
  * @author Jeff Hoye
  */
 public class ConsistencyPLTest /*implements Observer*/ {
-  public static final int startPort = 12000;
+  public static final int startPort = 21854;
   public static final int WAIT_TO_SUBSCRIBE_DELAY = 60000;
   
   public static final boolean useScribe = false;
-  public static final boolean useSplitStream = true;
+  public static boolean useSplitStream = false;
   public static String INSTANCE = "ConsPLSplitStreamTest";
 
-  public static final boolean artificialChurn = true;
+  public static String BOOTPREFIX = "ricepl-1";
+  public static String BOOTNODE = "ricepl-1.cs.rice.edu";
+  public static String ALT_BOOTNODE = "ricepl-2.cs.rice.edu";
+  public static final int BASE_DELAY = 30000;
+  public static final int RND_DELAY = 500000;
+  
+  
+  public static boolean artificialChurn = true;
   
   //the object is just to implement the destruction policy.
   PastryNode localNode;
@@ -74,41 +85,105 @@ public class ConsistencyPLTest /*implements Observer*/ {
     System.setErr(ps);
     System.setOut(ps);
 
+    System.out.println("start of log");
+    
     boolean isBootNode = false;
     InetAddress localAddress = InetAddress.getLocalHost();
-    if (localAddress.getHostName().startsWith("ricepl-1")) {
-      isBootNode = true;
+    if (localAddress.getHostName().startsWith(BOOTPREFIX)) {
+      isBootNode = true;      
     }
-    System.out.println("Ricenode:"+isBootNode);
+    if (args.length > 1) {
+      artificialChurn = Boolean.valueOf(args[1]).booleanValue(); 
+    }    
+    
+    if (args.length > 2) {
+      useSplitStream = Boolean.valueOf(args[2]).booleanValue(); 
+    }    
+    
+    if (args.length > 3) {
+      MySplitStreamClient.SEND_PERIOD = Integer.parseInt(args[3]);
+      if (MySplitStreamClient.SEND_PERIOD < 100)
+        MySplitStreamClient.SEND_PERIOD = 100;
+    }    
+    
+    if (args.length > 4) {
+      MySplitStreamClient.msgSize = Integer.parseInt(args[4]);
+      if (MySplitStreamClient.msgSize < 24)
+        MySplitStreamClient.msgSize = 24;
+    }    
+    
+    System.out.println("bootNode:"+isBootNode);
 
+    System.out.println("artificialChurn = "+artificialChurn+" useSplitStream = "+useSplitStream);
+    
     {
       InetAddress bootaddr;
       // build the bootaddress from the command line args
-      if (args.length > 1) {
-        bootaddr = InetAddress.getByName(args[1]); 
+      if (args.length > 6) {
+        bootaddr = InetAddress.getByName(args[6]); 
       } else {
         // this code makes ricepl-1 try to boot off of ricepl-3
         // everyone else boots off of ricepl-1
         if (isBootNode) {
-          bootaddr = InetAddress.getByName("ricepl-2.cs.rice.edu"); 
+          bootaddr = InetAddress.getByName(ALT_BOOTNODE); 
         } else {
-          bootaddr = InetAddress.getByName("ricepl-1.cs.rice.edu");
+          bootaddr = InetAddress.getByName(BOOTNODE);
         }
       }
       int bootport = startPort;
-      if (args.length > 2) {
-        bootport = Integer.parseInt(args[2]);
+      if (args.length > 7) {
+        bootport = Integer.parseInt(args[7]);
       }
       InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
       bootAddresses.add(bootaddress);
       
     }
     
+    if (!isBootNode) {
+      // NOTE: Since we are often starting up a bunch of nodes on planetlab
+      // at the same time, we need this randomsource to be seeded by more
+      // than just the clock, we will include the IP address
+      // as amazing as this sounds, it happened in a network of 20 on 7/19/2005
+      // also, if you think about it, I was starting all of the nodes at the same 
+      // instant, and they had synchronized clocks, if they all started within 1/10th of
+      // a second, then there is only 100 different numbers to seed the generator with
+      // -Jeff
+      long time = System.currentTimeMillis();
+      try {
+        byte[] foo = InetAddress.getLocalHost().getAddress();
+        for (int ctr = 0; ctr < foo.length; ctr++) {
+          int i = (int)foo[ctr];
+          i <<= (ctr*8);
+          time ^= i; 
+        }
+      } catch (Exception e) {
+        // if there is no NIC, screw it, this is really unlikely anyway  
+      }
+      Thread.sleep(BASE_DELAY+new Random(time).nextInt(RND_DELAY));
+    }
+    
     while(true) { // to allow churn
       final Environment env = new Environment();
+
+      if (args.length > 0) {
+        int theVal = Integer.parseInt(args[0]);
+        if (theVal >= 0) {
+          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", theVal);           
+        } else {    // it's negative, try varying it based on time      
+          long now = env.getTimeSource().currentTimeMillis();
+          now/=1000; 
+          now%=86400; //1 day's seconds
+          now/=3600; // hour 0-23
+          now/=2; // 0-11;
+          now*=2; // 0-22 by 2
+        
+          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", (int)now); 
+        }
+      }
       
       System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
       System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
+      System.out.println("Ping Num Source Route attempts:"+env.getParameters().getInt("pastry_socket_srm_num_source_route_attempts"));
       
       final BooleanHolder imaliveRunning = new BooleanHolder();
       new Thread(new Runnable() {
@@ -116,7 +191,7 @@ public class ConsistencyPLTest /*implements Observer*/ {
           while(imaliveRunning.running) {
             System.out.println("ImALIVE:"+env.getTimeSource().currentTimeMillis());
             try {
-              Thread.sleep(1000);
+              Thread.sleep(15000);
             } catch (Exception e) {}
           } 
         }
@@ -124,8 +199,8 @@ public class ConsistencyPLTest /*implements Observer*/ {
       
       // the port to use locally    
       int bindport = startPort;
-      if (args.length > 0) {
-        bindport = Integer.parseInt(args[0]);
+      if (args.length > 5) {
+        bindport = Integer.parseInt(args[5]);
       }
       
       // test port bindings before proceeding
@@ -180,7 +255,19 @@ public class ConsistencyPLTest /*implements Observer*/ {
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
       final PastryNode node = factory.newNode(bootHandle);
+            
       
+      InetSocketAddress[] boots = new InetSocketAddress[6];
+      boots[0] = new InetSocketAddress(InetAddress.getByName("ricepl-1.cs.rice.edu"), startPort);
+      boots[1] = new InetSocketAddress(InetAddress.getByName("ricepl-2.cs.rice.edu"), startPort);
+      boots[2] = new InetSocketAddress(InetAddress.getByName("ricepl-3.cs.rice.edu"), startPort);
+      boots[3] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.umass.edu"), startPort);
+      boots[4] = new InetSocketAddress(InetAddress.getByName("planet1.scs.cs.nyu.edu"), startPort);
+      boots[5] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.cornell.edu"), startPort);
+                                                        
+      
+      PartitionHandler ph = new PartitionHandler(node, (DistPastryNodeFactory)factory, boots);
+
       Thread shutdownHook = new Thread() {
         public void run() { System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node); }
       };
@@ -189,7 +276,7 @@ public class ConsistencyPLTest /*implements Observer*/ {
       
       final LeafSet ls = node.getLeafSet();
       new ConsistencyPLTest(node, ls);
-      
+     
       
       System.out.println("STARTUP "+env.getTimeSource().currentTimeMillis()+" "+node);    
       

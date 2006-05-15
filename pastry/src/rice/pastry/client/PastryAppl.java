@@ -2,13 +2,15 @@
 package rice.pastry.client;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.appsocket.*;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 import rice.pastry.standard.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -19,16 +21,23 @@ import java.util.*;
  *
  * @author Peter Druschel
  */
-public abstract class PastryAppl implements MessageReceiver
+public abstract class PastryAppl implements Observer
 {
+  protected MessageDeserializer deserializer;
+  
   // private block
   protected String instance;
 
   protected PastryNode thePastryNode;
 
-  protected Address address;
+  protected int address;
 
   protected Logger logger;
+  
+  /**
+   * Buffered while node is not ready to prevent inconsistent routing.
+   */
+  LinkedList undeliveredMessages = new LinkedList();
   
   private class LeafSetObserver implements NodeSetListener {
     public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
@@ -63,31 +72,25 @@ public abstract class PastryAppl implements MessageReceiver
    * @param instance The instance name of this appl.
    */
   public PastryAppl(PastryNode pn, String instance) {
-    this(pn, instance, null);
+    this(pn, instance, 0, null);
     register();
   }
   
-  public PastryAppl(PastryNode pn, String instance, Address address) {
+  public PastryAppl(PastryNode pn, String instance, int address, MessageDeserializer md) {
     this.address = address;
     if (instance != null) {
       this.instance = instance;
-      if (address == null)
-        this.address = new StandardAddress(this.getClass(), instance, pn.getEnvironment());
+      if (address == 0)
+        this.address = StandardAddress.getAddress(this.getClass(), instance, pn.getEnvironment());
     }
     
     thePastryNode = pn;
     logger = pn.getEnvironment().getLogManager().getLogger(getClass(), instance);
+    deserializer = md;
+    if (deserializer == null)
+      deserializer = new JavaSerializedDeserializer(pn);
   }
-  
-  protected void register() {
-    thePastryNode.registerReceiver(getCredentials(), getAddress(), this);
-
-    thePastryNode.addLeafSetListener(new LeafSetObserver());
-    thePastryNode.addRouteSetListener(new RouteSetObserver());
-
-    thePastryNode.registerApp(this); // just adds it to a list    
-  }
-  
+    
   /**
    * Constructor.  This constructor will perform the same tasks as the
    * above constructor, but will also create a Pastry address for this
@@ -99,7 +102,18 @@ public abstract class PastryAppl implements MessageReceiver
    * @param instance The instance name of this appl.
    */
   public PastryAppl(PastryNode pn, int port) {
-    this(pn, "[PORT " + port + "]", new StandardAddress(port));
+    this(pn, null, port, null);
+  }
+  
+  public void register() {
+    thePastryNode.registerReceiver(getAddress(), this);
+
+    thePastryNode.addLeafSetListener(new LeafSetObserver());
+    thePastryNode.addRouteSetListener(new RouteSetObserver());
+
+    thePastryNode.registerApp(this); // just adds it to a list    
+    
+    thePastryNode.addObserver(this);
   }
   
   /**
@@ -107,43 +121,54 @@ public abstract class PastryAppl implements MessageReceiver
    *
    * @return the address.
    */
-  public Address getAddress() {
+  public int getAddress() {
     return address;
   }
 
   // internal methods
 
-  /**
-   * Registers a message receiver with the pastry node.  This binds the given address
-   * to a message receiver.  This binding is certified by the given credentials.  Messages
-   * that are delivered to this node with the given address as a destination are forwarded
-   * to the supplied receiver.
-   *
-   * @param cred credentials which verify the binding
-   * @param addr an address
-   * @param mr a message receiver which will be bound the address.
-   */
-  public final void registerReceiver(Credentials cred, Address addr, MessageReceiver mr) {
-    thePastryNode.registerReceiver(cred, addr, mr);
+  public void receiveMessageInternal(RawMessageDelivery msg) {
+    Message m;
+    try {
+      m = msg.deserialize(deserializer);
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.SEVERE) logger.logException("Error deserializing "+msg+" in "+this+".  Message will be dropped.", ioe);
+      return;
+    } catch (RuntimeException re) {
+      if (logger.level <= Logger.SEVERE) logger.logException("Error deserializing "+msg+" in "+this+".  Message will be dropped.", re);
+      throw re;
+    }
+    receiveMessage(m);
   }
-
-  /**
-   * Sends a message directly to the local pastry node.
-   *
-   * @param msg a message.
-   */
-  public final void sendMessage(Message msg) {
-    if (logger.level <= Logger.FINER) logger.log(
-        "[" + thePastryNode + "] send " + msg);
-    thePastryNode.receiveMessage(msg);
+  
+  protected void setDeserializer(MessageDeserializer deserializer) {
+    this.deserializer = deserializer; 
   }
-
+  
   /**
    * Called by pastry to deliver a message to this client.
    *
    * @param msg the message that is arriving.
    */
   public void receiveMessage(Message msg) {
+    // NOTE: the idea is to synchronize on undeliveredMessages while making the check as to whether or not to add to the queue
+    // the other part of the synchronization is just below, in update()
+    // we don't want to hold the lock to undeliveredMessages when calling receiveMessage()
+    synchronized(undeliveredMessages) {
+      if (deliverWhenNotReady() || thePastryNode.isReady()) {
+        // continue to receiveMessage()
+      } else {
+        // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
+//      if (msg instanceof RouteMessage) {
+//        RouteMessage rm = (RouteMessage)msg;
+//        rm.routeMessage(this.localNode.getLocalHandle());
+//        return;
+//      }
+        undeliveredMessages.add(msg);
+        return;
+      }
+    }    
+    
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] recv " + msg);
     if (msg instanceof RouteMessage) {
@@ -155,6 +180,24 @@ public abstract class PastryAppl implements MessageReceiver
     else messageForAppl(msg);
   }
 
+  public void update(Observable arg0, Object arg1) {
+    if (arg0 == thePastryNode) {
+      Boolean b = (Boolean)arg1;
+      if (b.booleanValue()) {
+        Collection copy;
+        synchronized(undeliveredMessages) {
+          copy = new ArrayList(undeliveredMessages); 
+          undeliveredMessages.clear();
+        }
+        Iterator i = copy.iterator();
+        while(i.hasNext()) {
+          Message m = (Message)i.next(); 
+          receiveMessage(m);
+        }
+      }
+    }
+  }
+  
   // useful API methods
 
   /**
@@ -162,7 +205,7 @@ public abstract class PastryAppl implements MessageReceiver
    *
    * @return the node id.
    */
-  public final NodeId getNodeId() { return thePastryNode.getNodeId(); }
+  public final Id getNodeId() { return thePastryNode.getNodeId(); }
 
   /**
    * Gets the handle of the Pastry node associated with this client
@@ -185,7 +228,7 @@ public abstract class PastryAppl implements MessageReceiver
    * @param cred credentials that verify the authenticity of the message.
    * @param opt send options that describe how the message is to be routed.  
    */
-  public boolean routeMsgDirect(NodeHandle dest, Message msg, Credentials cred, SendOptions opt) {
+  public boolean routeMsgDirect(NodeHandle dest, Message msg, SendOptions opt) {
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] routemsgdirect " + msg + " to " + dest);
     if (!dest.isAlive()) return false;
@@ -213,10 +256,10 @@ public abstract class PastryAppl implements MessageReceiver
    * @param cred credentials that verify the authenticity of the message.
    * @param opt send options that describe how the message is to be routed.
    */
-  public void routeMsg(Id key, Message msg, Credentials cred, SendOptions opt) {
+  public void routeMsg(Id key, Message msg, SendOptions opt) {
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] routemsg " + msg + " to " + key);
-    RouteMessage rm = new RouteMessage(key, msg, cred, opt, getAddress());
+    RouteMessage rm = new RouteMessage(key, msg, opt);
     thePastryNode.receiveMessage(rm);
   }
 
@@ -257,18 +300,11 @@ public abstract class PastryAppl implements MessageReceiver
    *
    * @return true if the local node is currently the closest to the key.
    */
-  public boolean isClosest(NodeId key) {
+  public boolean isClosest(Id key) {
     return thePastryNode.isClosest(key);
   }
 
   // abstract methods, to be overridden by the derived application object
-
-  /**
-   * Returns the credentials of this application.
-   *
-   * @return the credentials.
-   */
-  public abstract Credentials getCredentials();
 
   /**
    * Called by pastry when a message arrives for this application.
@@ -337,6 +373,48 @@ public abstract class PastryAppl implements MessageReceiver
    * Called when PastryNode is destroyed.  Can be overloaded by applications.
    */
   public void destroy() {}
+  
+
+  // *******************  Applicatoin Socket Interface *****************
+  /**
+   * Called to open an ApplicationLevelSocket
+   */
+  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout) {
+    thePastryNode.connect(handle, receiver, this, timeout);    
+  }  
+
+  /**
+   * Sets an AppSocketReceiver to be called when the next socket arrives.
+   * @param receiver
+   */
+  public void accept(AppSocketReceiver receiver) {        
+    this.receiver = receiver;
+  }  
+  
+  /**
+   * holds the receiverSocket
+   */
+  protected AppSocketReceiver receiver;
+  
+  /**
+   * Calls receiver.receiveSocket(), then sets receiver to null.
+   * 
+   * It sets it to null to allow the application to provide SocketInitiationBackpressure
+   * 
+   * @param socket the new socket from the network
+   * @return false if receiver was null, true receiveSocket() was called
+   */
+  public boolean receiveSocket(AppSocket socket) {
+    AppSocketReceiver theReceiver = receiver;
+    receiver = null;
+    if (theReceiver == null) {
+      return false;
+    } else {
+      theReceiver.receiveSocket(socket);
+      return true;
+    }
+  }
+  
 }
 
 

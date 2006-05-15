@@ -1,7 +1,10 @@
 package rice.post;
 
+import java.io.IOException;
+
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 
 /**
@@ -12,6 +15,8 @@ import rice.p2p.past.*;
  */
 public class PostGroupAddress extends PostEntityAddress {
 
+  public static final short TYPE = 1;
+  
   private Id id;
   
   /**
@@ -41,5 +46,21 @@ public class PostGroupAddress extends PostEntityAddress {
 
   public int hashCode() {
     return id.hashCode();
+  }
+  
+  public PostGroupAddress(InputBuffer buf, Endpoint endpoint) throws IOException {
+    id = endpoint.readId(buf, buf.readShort()); 
+  }
+  
+  /**
+   * Note that the TYPE is read in PostEntityAddress.build()
+   */
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(id.getType());
+    id.serialize(buf); 
+  }
+
+  public short getType() {
+    return TYPE;
   }
 }

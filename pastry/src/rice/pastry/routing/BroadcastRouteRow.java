@@ -1,8 +1,8 @@
 package rice.pastry.routing;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.util.*;
 import java.io.*;
@@ -15,30 +15,17 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class BroadcastRouteRow extends Message implements Serializable {
+public class BroadcastRouteRow extends PRawMessage implements Serializable {
+
+  
   private NodeHandle fromNode;
 
   private RouteSet[] row;
 
-  private static final Address addr = new RouteProtocolAddress();
+  public static final short TYPE = 2;
 
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials
-   * @param stamp the timestamp
-   * @param from the node id
-   * @param r the row
-   */
-  public BroadcastRouteRow(Credentials cred, Date stamp, NodeHandle from,
-      RouteSet[] r) {
-    super(addr, cred, stamp);
-
-    fromNode = from;
-    row = r;
-    setPriority(0);
-  }
-
+  
+  
   /**
    * Constructor.
    * 
@@ -47,26 +34,10 @@ public class BroadcastRouteRow extends Message implements Serializable {
    * @param r the row
    */
   public BroadcastRouteRow(Date stamp, NodeHandle from, RouteSet[] r) {
-    super(addr, stamp);
-
+    super(RouteProtocolAddress.getCode(), stamp);
     fromNode = from;
     row = r;
-    setPriority(0);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials
-   * @param from the node id
-   * @param r the row
-   */
-  public BroadcastRouteRow(Credentials cred, NodeHandle from, RouteSet[] r) {
-    super(addr, cred);
-
-    fromNode = from;
-    row = r;
-    setPriority(0);
+    setPriority(MAX_PRIORITY);
   }
 
   /**
@@ -76,11 +47,7 @@ public class BroadcastRouteRow extends Message implements Serializable {
    * @param r the row
    */
   public BroadcastRouteRow(NodeHandle from, RouteSet[] r) {
-    super(addr);
-
-    fromNode = from;
-    row = r;
-    setPriority(0);
+    this(null, from, r);
   }
 
   /**
@@ -107,5 +74,42 @@ public class BroadcastRouteRow extends Message implements Serializable {
     s += "BroadcastRouteRow(of " + fromNode.getNodeId() + ")";
 
     return s;
+  }
+  
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version
+    fromNode.serialize(buf);
+    buf.writeByte((byte) row.length);
+    for (int i=0; i<row.length; i++) {
+      if (row[i] != null) {
+        buf.writeBoolean(true);
+        row[i].serialize(buf);
+      } else {
+        buf.writeBoolean(false);
+      }
+    }
+  }
+
+  public BroadcastRouteRow(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+    super(RouteProtocolAddress.getCode(), null);    
+    
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        fromNode = nhf.readNodeHandle(buf);
+        row = new RouteSet[buf.readByte()];
+        for (int i=0; i<row.length; i++)
+          if (buf.readBoolean()) {
+            row[i] = new RouteSet(buf, nhf);
+          }
+        break;
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }      
   }
 }

@@ -1,7 +1,9 @@
 package rice.p2p.glacier;
 
+import java.io.IOException;
 import java.util.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * DESCRIBE THE CLASS
@@ -128,6 +130,14 @@ public class VersionKeyRange implements IdRange {
    */
   public String toString() {
     return "[VKRange " + range + "]";
+  }
+  
+  public void VersionKeyRange(InputBuffer buf, Endpoint endpoint) throws IOException {
+    range = endpoint.readIdRange(buf); 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    range.serialize(buf);
   }
 }
 

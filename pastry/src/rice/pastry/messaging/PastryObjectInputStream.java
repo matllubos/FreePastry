@@ -4,17 +4,18 @@
  * To change the template for this generated file go to
  * Window>Preferences>Java>Code Generation>Code and Comments
  */
-package rice.pastry;
+package rice.pastry.messaging;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 
+import rice.pastry.*;
+
 /**
- * @author jeffh
+ * coalesces NodeHandles on the fly during java deserialization
  * 
- * To change the template for this generated type comment go to
- * Window>Preferences>Java>Code Generation>Code and Comments
+ * @author Jeff Hoye
  */
 public class PastryObjectInputStream extends ObjectInputStream {
 

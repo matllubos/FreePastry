@@ -9,6 +9,7 @@ import rice.p2p.commonapi.*;
 
 import rice.post.log.*;
 import rice.post.messaging.*;
+import rice.post.rawserialization.NotificationMessageDeserializer;
 import rice.post.storage.*;
 import rice.post.security.*;
 
@@ -146,4 +147,10 @@ public interface Post {
    * @return the environment
    */
   public Environment getEnvironment();
+  
+  public NotificationMessageDeserializer getNotificationMessageDeserializer();
+  
+  public void setNotificationMessageDeserializer(
+      NotificationMessageDeserializer notificationMessageDeserializer);
+
 }

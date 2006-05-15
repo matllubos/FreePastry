@@ -4,6 +4,8 @@ import java.io.*;
 
 import java.lang.Comparable;
 
+import rice.p2p.commonapi.rawserialization.*;
+
 /**
  * @(#) Id.java This interface is an abstraction of an Id (or key) from the CommonAPI paper.
  *
@@ -101,6 +103,15 @@ public interface Id extends Comparable, Serializable {
    * @return A string with all of this Id
    */
   public String toStringFull();
+  
+  /**
+   * Serialize
+   * @param buf
+   * @throws IOException
+   */
+  public void serialize(OutputBuffer buf) throws IOException;
 
+  public short getType();
+  
 }
 

@@ -4,6 +4,8 @@ package rice.p2p.commonapi;
 import java.io.*;
 import java.util.*;
 
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+
 /**
  * @(#) NodeHandle.java
  *
@@ -59,6 +61,8 @@ public abstract class NodeHandle extends Observable implements Serializable  {
    * @return Whether or not the node is currently alive
    */
   public abstract boolean checkLiveness();
+
+  public abstract void serialize(OutputBuffer buf) throws IOException;
   
 }
 

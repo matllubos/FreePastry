@@ -1,13 +1,16 @@
 
 package rice.p2p.multiring;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.messaging.*;
 import rice.p2p.scribe.*;
+import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
 
 /**
  * @(#) MultiringNode.java
@@ -78,6 +81,18 @@ public class MultiringNode implements Node, ScribeClient {
     this.ringId = ringId;
     this.endpoints = new Hashtable();
     this.scribe = new ScribeImpl(this, "Multiring");
+    scribe.setContentDeserializer(new ScribeContentDeserializer() {
+      
+      public ScribeContent deserializeScribeContent(InputBuffer buf, Endpoint endpoint, short type) throws IOException {
+        switch (type) {
+          case RingMessage.TYPE:
+            return new RingMessage(buf, endpoint, endpoints);
+        }
+        throw new IllegalArgumentException("Invalid type:"+type);
+      }
+    
+    });
+
     this.collection = new MultiringNodeCollection(this, environment.getParameters().getInt("p2p_multiring_base"));
     this.factory = (MultiringIdFactory) getIdFactory();
   }
@@ -111,7 +126,14 @@ public class MultiringNode implements Node, ScribeClient {
    * for message sending/receiving.
    */
   public Endpoint registerApplication(Application application, String instance) {
-    Endpoint endpoint = new MultiringEndpoint(this, node.registerApplication(new MultiringApplication(getRingId(), application), application.getClass() + "-" + instance), application);
+    Endpoint endpoint = new MultiringEndpoint(this, node.buildEndpoint(new MultiringApplication(getRingId(), application), application.getClass() + "-" + instance), application);
+    endpoints.put(endpoint.getInstance(), endpoint);
+    endpoint.register();
+    return endpoint;
+  }
+  
+  public Endpoint buildEndpoint(Application application, String instance) {
+    Endpoint endpoint = new MultiringEndpoint(this, node.buildEndpoint(new MultiringApplication(getRingId(), application), application.getClass() + "-" + instance), application);
     endpoints.put(endpoint.getInstance(), endpoint);
     
     return endpoint;
@@ -135,12 +157,12 @@ public class MultiringNode implements Node, ScribeClient {
    * @return The endpoint specific to this applicationk, which can be used for
    *         message sending/receiving.
    */
-  public Endpoint registerApplication(Application application, int port) {
-    Endpoint endpoint = new MultiringEndpoint(this, node.registerApplication(new MultiringApplication(getRingId(), application), port), application);
-    endpoints.put(endpoint.getInstance(), endpoint);
-  
-    return endpoint;
-  }
+//  public Endpoint registerApplication(Application application, int port) {
+//    Endpoint endpoint = new MultiringEndpoint(this, node.registerApplication(new MultiringApplication(getRingId(), application), port), application);
+//    endpoints.put(endpoint.getInstance(), endpoint);
+//  
+//    return endpoint;
+//  }
   
   /**
    * Returns the Id of this node
@@ -218,7 +240,7 @@ public class MultiringNode implements Node, ScribeClient {
    * @param message The message to deliver
    * @param hint The first node to send this message to, optional
    */
-  void route(RingId id, Message message, String application) {    
+  void route(RingId id, RawMessage message, String application) {    
     if (id.getRingId().equals(ringId)) {
       MultiringEndpoint endpoint = (MultiringEndpoint) endpoints.get(application);
       endpoint.route(id, message, null);

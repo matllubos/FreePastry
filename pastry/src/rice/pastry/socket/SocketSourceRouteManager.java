@@ -10,6 +10,11 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+//import rice.p2p.commonapi.MessageDeserializer;
+//import rice.p2p.commonapi.AppSocketReceiver;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.exception.NodeIsDeadException;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -52,6 +57,7 @@ public class SocketSourceRouteManager {
    */
   HashSet hardLinks = new HashSet();
 
+  
   /**
    * Constructor
    *
@@ -265,8 +271,49 @@ public class SocketSourceRouteManager {
    * @param message The message to send
    * @param address The address to send the message to
    */
-  public void bootstrap(EpochInetSocketAddress address, Message message) {
-    manager.bootstrap(SourceRoute.build(address), message);
+  public void bootstrap(EpochInetSocketAddress address, Message msg) throws IOException {
+//    PRawMessage rm;
+//    if (msg instanceof PRawMessage) {
+//      rm = (PRawMessage)msg; 
+//    } else {
+//      rm = new PJavaSerializedMessage(msg); 
+//    }
+//    // todo, pool
+//    final SocketBuffer message = new SocketBuffer(defaultDeserializer);
+//    message.serialize(rm, logger);
+    manager.bootstrap(SourceRoute.build(address), msg);
+  }
+  
+  public void send(EpochInetSocketAddress address, Message msg) throws IOException {    
+    PRawMessage rm;
+    if (msg instanceof PRawMessage) {
+      rm = (PRawMessage)msg; 
+    } else {
+      rm = new PJavaSerializedMessage(msg); 
+    }
+    // todo, pool
+    final SocketBuffer buffer = new SocketBuffer(manager.defaultDeserializer, manager.pastryNode);
+    buffer.serialize(rm, true);
+    send(address, buffer);
+  }  
+  
+  /**
+   * Method which sends a message across the wire.
+   *
+   * @param message The message to send
+   * @param address The address to send the message to
+   */
+  public void send(final EpochInetSocketAddress address, final SocketBuffer message) {    
+    if (spn.getEnvironment().getSelectorManager().isSelectorThread()) {
+      getAddressManager(address, true).send(message);
+    } else {
+      if (logger.level <= Logger.FINE) logger.log("Application attempted to send "+message+" to "+address+" on a non-selector thread.");
+      spn.getEnvironment().getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          getAddressManager(address, true).send(message);
+        }
+      });
+    }
   }
   
   /**
@@ -275,14 +322,14 @@ public class SocketSourceRouteManager {
    * @param message The message to send
    * @param address The address to send the message to
    */
-  public void send(final EpochInetSocketAddress address, final Message message) {
+  public void connect(final EpochInetSocketAddress address, final int appAddress, final AppSocketReceiver receiver, final int timeout) {
     if (spn.getEnvironment().getSelectorManager().isSelectorThread()) {
-      getAddressManager(address, true).send(message);
+      getAddressManager(address, true).connect(appAddress, receiver, timeout);
     } else {
-      if (logger.level <= Logger.FINE) logger.log("Application attempted to send "+message+" to "+address+" on a non-selector thread.");
+      if (logger.level <= Logger.FINE) logger.log("Application "+appAddress+" attempted to open a connection to "+address+" on a non-selector thread.");
       spn.getEnvironment().getSelectorManager().invoke(new Runnable() {      
         public void run() {
-          getAddressManager(address, true).send(message);
+          getAddressManager(address, true).connect(appAddress, receiver, timeout);
         }
       });
     }
@@ -454,7 +501,11 @@ public class SocketSourceRouteManager {
     * @param m The message
     * @param address The address of the remote node
     */
-  protected void reroute(EpochInetSocketAddress address, Message m) {
+  protected void reroute(EpochInetSocketAddress address, SocketBuffer m) {
+    if (m.discard) {
+      if (logger.level <= Logger.FINE) logger.log( "(SSRM) Dropping garbage in resend message " + m + " address " + address+" with liveness "+getLiveness(address));
+      return;
+    }
     
     switch (getLiveness(address)) {
       case SocketNodeHandle.LIVENESS_ALIVE:
@@ -462,12 +513,12 @@ public class SocketSourceRouteManager {
         send(address, m);
         return;
       case SocketNodeHandle.LIVENESS_SUSPECTED:
-        if (m instanceof RouteMessage) {
-          RouteMessage rm = (RouteMessage)m;
-          if (rm.getOptions().multipleHopsAllowed() && rm.getOptions().rerouteIfSuspected()) {
+        if (m.isRouteMessage()) {
+          if (m.getOptions().multipleHopsAllowed() && m.getOptions().rerouteIfSuspected()) {
             // kick it back to pastry
-            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
-            rm.nextHop = null;
+            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);            
+            RouteMessage rm = m.getRouteMessage();            
+            rm.nextHop = null; 
             spn.receiveMessage(rm);
             return;
           }
@@ -478,10 +529,10 @@ public class SocketSourceRouteManager {
         }
       case SocketNodeHandle.LIVENESS_DEAD:        
       case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
-        if (m instanceof RouteMessage) {
-          RouteMessage rm = (RouteMessage)m;
-          if (rm.getOptions().multipleHopsAllowed()) {
+        if (m.isRouteMessage()) {
+          if (m.getOptions().multipleHopsAllowed()) {
             if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
+            RouteMessage rm = m.getRouteMessage();
             rm.nextHop = null; 
             spn.receiveMessage(rm);
             return;
@@ -550,8 +601,15 @@ public class SocketSourceRouteManager {
      */
     protected SourceRoute best;
     
-    // the queue of messages waiting for a route
-    protected Vector queue;
+    /** 
+     *  the queue of messages waiting for a route
+     *  
+     *  of SocketBuffer
+     */
+    protected LinkedList queue;
+    
+    // the queue of appSockets waiting for a connection
+    protected LinkedList pendingAppSockets;
     
     // the list of known route -> managers for this manager
     protected HashMap routes;
@@ -571,7 +629,8 @@ public class SocketSourceRouteManager {
      */
     public AddressManager(SocketNodeHandle address, boolean search) {
       this.address = address;
-      this.queue = new Vector();
+      this.queue = new LinkedList();
+      this.pendingAppSockets = new LinkedList();
       this.routes = new HashMap();
       this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
       this.updated = 0L;
@@ -749,7 +808,7 @@ public class SocketSourceRouteManager {
      *
      * @param message The message to send
      */
-    public synchronized void send(Message message) {
+    public synchronized void send(SocketBuffer message) {
       // if we're dead, we go ahead and just checkDead on the direct route
       if (liveness == SocketNodeHandle.LIVENESS_DEAD) {
         getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
@@ -759,10 +818,10 @@ public class SocketSourceRouteManager {
       // and in any case, we either send if we have a best route or add the message
       // to the queue
       if (best == null) {
-        queue.add(message);
+        queue.addLast(message);
         hardLinks.add(this);
       } else if (! getRouteManager(best).isOpen()) {
-        queue.add(message);
+        queue.addLast(message);
         hardLinks.add(this);
         
         getRouteManager(best).checkLiveness();
@@ -770,6 +829,36 @@ public class SocketSourceRouteManager {
         this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       } else {
         getRouteManager(best).send(message);
+      }
+    }
+    
+    /**
+     * Method which opens an app socket to this address
+     *
+     * @param message The message to send
+     */
+    public synchronized void connect(int appAddress, AppSocketReceiver receiver, int timeout) {
+      // if we're dead, we go ahead and just checkDead on the direct route
+      if (liveness == SocketNodeHandle.LIVENESS_DEAD) {
+        getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
+        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
+      }
+      
+      // and in any case, we either send if we have a best route or add the message
+      // to the queue
+      
+      if (best == null) {
+        pendingAppSockets.addLast(new PendingAppSocket(appAddress, receiver));
+        hardLinks.add(this);
+      } else if (! getRouteManager(best).isOpen()) {
+        pendingAppSockets.addLast(new PendingAppSocket(appAddress, receiver));
+        hardLinks.add(this);
+        
+        getRouteManager(best).checkLiveness();
+        this.best = null;
+        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
+      } else {
+        getRouteManager(best).connect(appAddress, receiver, timeout);
       }
     }
     
@@ -839,10 +928,14 @@ public class SocketSourceRouteManager {
       if (best == null) throw new IllegalStateException("best is null in "+toString());
       
       // we can now send any pending messages
-      while (queue.size() > 0)
-        getRouteManager(best).send((Message) queue.remove(0));    
-      
-      if (queue.isEmpty()) hardLinks.remove(this);      
+      while (!queue.isEmpty())
+        getRouteManager(best).send((SocketBuffer) queue.removeFirst());          
+      // we can now send any pending messages
+      while (!pendingAppSockets.isEmpty()) {
+        PendingAppSocket pas = (PendingAppSocket)pendingAppSockets.removeFirst();
+        getRouteManager(best).connect(pas.appAddress, pas.receiver, 0);          
+      }
+      if (queue.isEmpty() && pendingAppSockets.isEmpty()) hardLinks.remove(this);      
       
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_DEAD:
@@ -881,16 +974,16 @@ public class SocketSourceRouteManager {
       Object[] array = queue.toArray();
       
       for (int i=0; i<array.length; i++) {
-        if (array[i] instanceof RouteMessage) {
-          RouteMessage rm = (RouteMessage)array[i];
-          if (rm.getOptions().multipleHopsAllowed() && rm.getOptions().rerouteIfSuspected()) {
-            if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + rm + " due to suspected next hop " + address);
-            reroute(address.eaddress, rm);
-            queue.remove(rm);
+        SocketBuffer sb = (SocketBuffer)array[i];
+        if (sb.isRouteMessage()) {
+          if (sb.getOptions().multipleHopsAllowed() && sb.getOptions().rerouteIfSuspected()) {
+            if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + sb + " due to suspected next hop " + address);
+            reroute(address.eaddress, sb);
+            queue.remove(sb);
           }
         }
       }
-      if (queue.isEmpty()) hardLinks.remove(this);
+      if (queue.isEmpty() && pendingAppSockets.isEmpty()) hardLinks.remove(this);
     }
     
     /**
@@ -940,8 +1033,12 @@ public class SocketSourceRouteManager {
     
     protected void purgeQueue() {
       // and finally we can now send any pending messages
-      while (queue.size() > 0)
-        reroute(address.eaddress, (Message) queue.remove(0));
+      while (!queue.isEmpty())
+        reroute(address.eaddress, (SocketBuffer) queue.removeFirst());
+      while (!pendingAppSockets.isEmpty()) {
+        PendingAppSocket pas = (PendingAppSocket)pendingAppSockets.removeFirst();
+        pas.receiver.receiveException(null, new NodeIsDeadException());
+      }
       hardLinks.remove(this);      
     }
     
@@ -1054,8 +1151,17 @@ public class SocketSourceRouteManager {
        *
        * @param message The message to send
        */
-      public synchronized void send(Message message) {
+      public synchronized void send(SocketBuffer message) {
         manager.send(route, message, AddressManager.this);
+      }
+      
+      /**
+       * Method which opens a socket along this route
+       *
+       * @param message The message to send
+       */
+      public synchronized void connect(int appId, AppSocketReceiver receiver, int timeout) {
+        manager.connect(route, appId, receiver, timeout);
       }
       
       /**

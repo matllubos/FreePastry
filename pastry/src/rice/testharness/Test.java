@@ -42,10 +42,11 @@ public abstract class Test implements Application, Serializable {
     *              TestHarness nodes.
     */
   public Test(PrintStream out, PastryNode localNode, TestHarness harness, String instance) {
-    endpoint = localNode.registerApplication(this, instance);
+    endpoint = localNode.buildEndpoint(this, instance);
     _localNode = localNode;
     _out = out;
     _harness = harness;
+    endpoint.register();
   }
 
 

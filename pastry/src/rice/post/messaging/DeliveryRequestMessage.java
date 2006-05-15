@@ -7,13 +7,15 @@ import rice.post.messaging.*;
 import rice.post.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * This message is broadcast to the sender of a NotificationMessage in
  * order to inform the sender that the message has been received.
  */
 public class DeliveryRequestMessage extends PostMessage {
-  
+  public static final short TYPE = 5;
+ 
   private PostUserAddress destination;
   private SignedPostMessage message;
   private Id id;
@@ -35,7 +37,7 @@ public class DeliveryRequestMessage extends PostMessage {
     this.message = message;
     this.id = id;
   }
-    
+
   /**
    * Gets the destination of this notification
    *
@@ -62,6 +64,29 @@ public class DeliveryRequestMessage extends PostMessage {
    */
   public Id getId() {
     return id;
+  }
+  
+  public DeliveryRequestMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint);
+    
+    id = endpoint.readId(buf, buf.readShort());
+    
+    destination = new PostUserAddress(buf, endpoint);
+    message = new SignedPostMessage(buf, endpoint);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf); 
+
+    buf.writeShort(id.getType());
+    id.serialize(buf);
+    
+    destination.serialize(buf);
+    message.serialize(buf);    
+  }
+  
+  public short getType() {
+    return TYPE;
   }
 }
 

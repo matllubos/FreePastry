@@ -4,9 +4,13 @@ import java.io.IOException;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.exception.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.*;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.dist.DistPastryNode;
-import rice.pastry.messaging.Message;
+import rice.pastry.messaging.*;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
@@ -29,7 +33,7 @@ public class SocketPastryNode extends DistPastryNode {
    * 
    * @param id The NodeId of this Pastry node.
    */
-  public SocketPastryNode(NodeId id, Environment e) {
+  public SocketPastryNode(Id id, Environment e) {
     super(id, e);
   }
 
@@ -89,7 +93,6 @@ public class SocketPastryNode extends DistPastryNode {
    * super.destroy() !!!
    */
   public void destroy() {
-    super.destroy();
     if (getEnvironment().getSelectorManager().isSelectorThread()) {
       // destroy now
       try {
@@ -125,9 +128,30 @@ public class SocketPastryNode extends DistPastryNode {
     } else {
       if (logger.level <= Logger.FINER) logger.log(
           "Passing message " + message + " to the socket controller for writing");
-      getSocketSourceRouteManager().send(snh.getEpochAddress(), message);
+      try {
+        getSocketSourceRouteManager().send(snh.getEpochAddress(), message);
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe); 
+      }
     }
     
+  }
+
+  public void connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
+    SocketNodeHandle snh = (SocketNodeHandle) handle;
+      if (logger.level <= Logger.FINER) logger.log(
+          "Opening app socket "+appl.getAddress()+" to "+handle);
+      getSocketSourceRouteManager().connect(snh.getEpochAddress(), appl.getAddress(), receiver, timeout);
+  }
+
+  public void acceptAppSocket(SocketAppSocket socket, int appId) throws AppSocketException {
+    PastryAppl acceptorAppl = getMessageDispatch().getDestinationByAddress(appId);
+    if (acceptorAppl == null) throw new AppNotRegisteredException();
+    if (!acceptorAppl.receiveSocket(socket)) throw new NoReceiverAvailableException();
+  }
+
+  public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {    
+    return coalesce(SocketNodeHandle.build(buf));
   }
 
 }

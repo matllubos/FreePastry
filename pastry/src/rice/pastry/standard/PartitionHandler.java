@@ -1,5 +1,6 @@
 package rice.pastry.standard;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 
@@ -9,11 +10,7 @@ import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.join.JoinRequest;
-import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.*;
-import rice.pastry.security.*;
-import rice.pastry.socket.SocketNodeHandle;
-import rice.pastry.socket.SocketPastryNode;
 import rice.selector.Timer;
 import rice.selector.TimerTask;
 
@@ -123,12 +120,13 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     }
 
     List rtHandles = getRoutingTableAsList();
-    int which = env.getRandomSource().nextInt(rtHandles.size());
     
     if (rtHandles.isEmpty()) {
       if (logger.level <= Logger.INFO) logger.log("getGone returning null; routing table is empty!");
       return null;
     }
+    
+    int which = env.getRandomSource().nextInt(rtHandles.size());
 
     if (logger.level <= Logger.FINEST) logger.log("getGone choosing node "+which+" from routing table");
 
@@ -161,11 +159,16 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
           JoinRequest jr = new JoinRequest(pastryNode.getLocalHandle(), pastryNode
               .getRoutingTable().baseBitLength());
   
-          RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), jr,
-              new PermissiveCredentials(), jr.getDestination());
+          RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), 
+              jr);
+          rm.setPrevNode(pastryNode.getLocalHandle());
           rm.getOptions().setRerouteIfSuspected(false);
           NodeHandle nh = pastryNode.coalesce((NodeHandle)result);
-          nh.bootstrap(rm);
+          try {
+            nh.bootstrap(rm);
+          } catch (IOException ioe) {
+            if (logger.level <= Logger.WARNING) logger.logException("Error bootstrapping.",ioe); 
+          }
         } else {
           if (logger.level <= Logger.INFO) logger.log("getNodeHandleToProbe returned null");
         }

@@ -2,6 +2,7 @@
 package rice.pastry;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.messaging.*;
 
 import java.io.*;
@@ -14,7 +15,7 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements MessageReceiver 
+public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle 
 {
 
   public static final int LIVENESS_ALIVE = 1;
@@ -31,7 +32,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    *
    * @return the node id.
    */
-  public abstract NodeId getNodeId();
+  public abstract Id getNodeId();
 
   public rice.p2p.commonapi.Id getId() {
     return getNodeId();
@@ -125,8 +126,9 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * not technically part of the ring yet.
    *
    * @param msg the bootstrap message.
+   * @throws IOException 
    */
-  public void bootstrap(Message msg) {
+  public void bootstrap(Message msg) throws IOException {
     receiveMessage(msg);
   }
 
@@ -136,7 +138,10 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * @return a hash code.
    */
   public abstract int hashCode();
+  
+  public abstract void receiveMessage(Message msg);
 
+  public abstract void serialize(OutputBuffer buf) throws IOException;
 }
 
 

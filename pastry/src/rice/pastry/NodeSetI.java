@@ -30,7 +30,7 @@ public interface NodeSetI extends rice.p2p.commonapi.NodeHandleSet
      * @return the handle associated with that id or null if no such handle is found.
      */
     
-    public NodeHandle get(NodeId nid);
+    public NodeHandle get(Id nid);
 
 
     /**
@@ -77,7 +77,7 @@ public interface NodeSetI extends rice.p2p.commonapi.NodeHandleSet
      * @return the index or throws a NoSuchElementException.
      */
 
-  public int getIndex(NodeId nid) throws NoSuchElementException;
+  public int getIndex(Id nid) throws NoSuchElementException;
 
   public int getIndex(NodeHandle nh) throws NoSuchElementException;
 }

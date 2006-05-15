@@ -2,6 +2,7 @@
 package rice.p2p.past;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.logging.*;
 
@@ -11,10 +12,15 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.appsocket.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.PastPolicy.*;
 import rice.p2p.past.messaging.*;
+import rice.p2p.past.rawserialization.*;
 import rice.p2p.replication.*;
 import rice.p2p.replication.manager.*;
+import rice.p2p.util.MathUtils;
+import rice.p2p.util.rawserialization.*;
 import rice.persistence.*;
 
 /**
@@ -84,6 +90,11 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   
   protected Environment environment;
   protected Logger logger;
+
+  protected PastContentDeserializer contentDeserializer;
+  protected PastContentHandleDeserializer contentHandleDeserializer;
+  
+  public SocketStrategy socketStrategy;
   
   /**
    * Constructor for Past, using the default policy
@@ -110,6 +121,50 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   }
   
   
+  protected class PastDeserializer implements MessageDeserializer {
+    public Message deserialize(InputBuffer buf, short type, byte priority,
+        NodeHandle sender) throws IOException {
+      try {
+        switch(type) {
+          case CacheMessage.TYPE:
+            return CacheMessage.build(buf, endpoint, contentDeserializer);
+          case FetchHandleMessage.TYPE:
+            return FetchHandleMessage.build(buf, endpoint, contentHandleDeserializer);
+          case FetchMessage.TYPE:
+            return FetchMessage.build(buf, endpoint, contentDeserializer, contentHandleDeserializer);
+          case InsertMessage.TYPE:
+            return InsertMessage.build(buf, endpoint, contentDeserializer);
+          case LookupHandlesMessage.TYPE:
+            return LookupHandlesMessage.build(buf, endpoint);
+          case LookupMessage.TYPE:
+            return LookupMessage.build(buf, endpoint, contentDeserializer);
+        }
+      } catch (IOException e) {
+        if (logger.level <= Logger.SEVERE) logger.log("Exception in deserializer in "+PastImpl.this.endpoint.toString()+":"+instance+" "+e);
+        throw e;
+      }
+      throw new IllegalArgumentException("Unknown type:"+type+" in "+PastImpl.this.toString());
+    }     
+  }
+  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash) {
+    this(node, manager, backup, replicas, instance, policy, trash, false);
+  }
+  
+  /**
+   * 
+   * @param node
+   * @param manager
+   * @param backup
+   * @param replicas
+   * @param instance
+   * @param policy
+   * @param trash
+   * @param useOwnSocket send all inserts/fetches over a socket (default is false)
+   */
+  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash, boolean useOwnSocket) {
+    this(node, manager, backup, replicas, instance, policy, trash, new DefaultSocketStrategy(useOwnSocket));
+  }
+  
   /**
    * Constructor for Past
    *
@@ -118,15 +173,19 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param replicas The number of object replicas
    * @param instance The unique instance name of this Past
    */
-  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash) {
+  public PastImpl(Node node, StorageManager manager, Cache backup, int replicas, String instance, PastPolicy policy, StorageManager trash, SocketStrategy strategy) {
     this.environment = node.getEnvironment();
     logger = environment.getLogManager().getLogger(getClass(), instance);
     Parameters p = environment.getParameters();
     MESSAGE_TIMEOUT = p.getInt("p2p_past_messageTimeout");// = 30000;
     SUCCESSFUL_INSERT_THRESHOLD = p.getDouble("p2p_past_successfulInsertThreshold");// = 0.5;
+    this.socketStrategy = strategy;
     this.storage = manager;
     this.backup = backup;
-    this.endpoint = node.registerApplication(this, instance);
+    this.contentDeserializer = new JavaPastContentDeserializer();
+    this.contentHandleDeserializer = new JavaPastContentHandleDeserializer();
+    this.endpoint = node.buildEndpoint(this, instance);
+    this.endpoint.setDeserializer(new PastDeserializer());
     this.factory = node.getIdFactory();
     this.policy = policy;
     this.instance = instance;
@@ -142,8 +201,99 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     //   log.getHandlers()[0].setLevel(Level.FINE);
     
     this.replicaManager = buildReplicationManager(node, instance);
+    
+    this.endpoint.accept(new AppSocketReceiver() {
+      
+      public void receiveSocket(AppSocket socket) {
+        if (logger.level <= Logger.FINE) logger.log("Received Socket from "+socket);
+        socket.register(true, false, 10000, this);
+        endpoint.accept(this);
+      }    
+      
+      public void receiveSelectResult(AppSocket socket, boolean canRead,
+          boolean canWrite) {        
+        if (logger.level <= Logger.FINER) logger.log("Reading from "+socket);
+        try {
+          ByteBuffer[] bb = (ByteBuffer[])pendingSocketTransactions.get(socket);
+          if (bb == null) {
+            // this is a new message
+            
+            // read the size
+            bb = new ByteBuffer[1];
+            bb[0] = ByteBuffer.allocate(4);
+            if (socket.read(bb,0,1) == -1) {
+              close(socket);
+              return;
+            }
+            
+            // TODO: need to handle the condition where we don't read the whole size...          
+            byte[] sizeArr = bb[0].array();            
+            int size = MathUtils.byteArrayToInt(sizeArr);
+                        
+            if (logger.level <= Logger.FINER) logger.log("Found object of size "+size+" from "+socket);
+            
+            // allocate a buffer to store the object, save it in the pst
+            bb[0] = ByteBuffer.allocate(size);
+            pendingSocketTransactions.put(socket,bb);
+          }
+          
+          // now we have a bb
+          
+          // read some bytes
+          if (socket.read(bb,0,1) == -1) {
+            close(socket);
+          }
+          
+          // deserialize or reregister
+          if (bb[0].remaining() == 0) {
+            // make sure to clear things up so we can keep receiving          
+            pendingSocketTransactions.remove(socket);
+            
+            if (logger.level <= Logger.FINEST) logger.log("bb[0].limit() "+bb[0].limit()+" bb[0].remaining() "+bb[0].remaining()+" from "+socket);
+            
+            // deserialize the object
+            SimpleInputBuffer sib = new SimpleInputBuffer(bb[0].array());
+            
+            short type = sib.readShort();
+            
+            PastMessage result = (PastMessage)endpoint.getDeserializer().deserialize(sib,type,(byte)0,null);
+            deliver(null,result);
+            
+          } 
+            
+          // there will be more data on the socket if we haven't received everything yet
+          // need to register either way to be able to read from the sockets when they are closed remotely, could alternatively close early
+          // cause we are currently only sending 1 message per socket, but it's better to just keep reading in case we one day reuse sockets
+            socket.register(true, false, 10000, this);
+
+            // recursive call to handle next object
+            // cant do this becasue calling read when not ready throws an exception
+//          receiveSelectResult(socket, canRead, canWrite);        
+        } catch (IOException ioe) {
+          receiveException(socket, ioe);
+        }
+      }
+
+      public void receiveException(AppSocket socket, Exception e) {
+        if (logger.level <= Logger.WARNING) logger.logException("Error receiving message",e);
+        close(socket);
+      }
+    
+      public void close(AppSocket socket) {
+        if (socket == null) return;
+        //System.out.println("Closing "+socket);
+        pendingSocketTransactions.remove(socket); 
+        socket.close();
+      }
+      
+    });
+    endpoint.register();
   }
 
+  public String toString() {
+    if (endpoint == null) return super.toString();
+    return "PastImpl["+endpoint.getInstance()+"]";
+  }
   
   public Environment getEnvironment() {
     return environment; 
@@ -210,6 +360,108 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
       }
     };
   }
+  
+  /**
+   * Do like above, but use a socket
+   * @param msg
+   * @return
+   */
+  protected Continuation getFetchResponseContinuation(final PastMessage msg) {
+    final ContinuationMessage cmsg = (ContinuationMessage) msg;
+    
+    return new Continuation() {
+      public void receiveResult(Object o) {
+        cmsg.receiveResult(o);
+        PastContent content = (PastContent)o;
+        if (socketStrategy.sendAlongSocket(SocketStrategy.TYPE_FETCH, content)) {
+          sendViaSocket(msg.getSource(), cmsg, null);
+        } else {
+          endpoint.route(null, cmsg, msg.getSource());
+        }
+      }
+
+      public void receiveException(Exception e) {
+        cmsg.receiveException(e);
+        endpoint.route(null, cmsg, msg.getSource());
+      }
+    };    
+  }
+  
+  /**
+   * AppSocket -> ByteBuffer[]
+   * 
+   * Used for receiving the objects.
+   */
+  WeakHashMap pendingSocketTransactions = new WeakHashMap();
+  
+  private void sendViaSocket(final NodeHandle handle, final PastMessage m, final Continuation c) {
+    if (c != null) {
+      CancellableTask timer = endpoint.scheduleMessage(new MessageLostMessage(m.getUID(), getLocalNodeHandle(), null, m, handle), MESSAGE_TIMEOUT);
+      insertPending(m.getUID(), timer, c);
+    }
+    
+    // create a bb[] to be written    
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    try {
+      sob.writeInt(0); // place holder for size...
+      sob.writeShort(m.getType());
+      m.serialize(sob);
+    } catch (IOException ioe) {
+      if (c != null) c.receiveException(ioe); 
+    }
+    
+    // add the size back to the beginning...
+    int size = sob.getWritten()-4; // remove the size of the size :)
+    if (logger.level <= Logger.FINER) logger.log("Sending size of "+size+" to "+handle+" to send "+m);
+    byte[] bytes = sob.getBytes();
+    MathUtils.intToByteArray(size,bytes,0);
+    
+    // prepare the bytes for writing
+    final ByteBuffer[] bb = new ByteBuffer[1];
+    bb[0] = ByteBuffer.wrap(bytes, 0, sob.getWritten()); // the whole thing
+    
+
+    if (logger.level <= Logger.FINE) logger.log("Opening socket to "+handle+" to send "+m);
+    endpoint.connect(handle, new AppSocketReceiver() {
+    
+      public void receiveSocket(AppSocket socket) {
+        if (logger.level <= Logger.FINER) logger.log("Opened socket to "+handle+":"+socket+" to send "+m);
+        socket.register(false, true, 10000, this);
+      }
+      
+      public void receiveSelectResult(AppSocket socket, boolean canRead,
+          boolean canWrite) {
+        if (logger.level <= Logger.FINEST) logger.log("Writing to "+handle+":"+socket+" to send "+m);
+        
+        
+        try {
+//          ByteBuffer[] outs = new ByteBuffer[1];    
+//          ByteBuffer out = ByteBuffer.wrap(endpoint.getLocalNodeHandle().getId().toByteArray());
+//          outs[0] = out;
+//          socket.write(outs, 0, 1);
+          
+          socket.write(bb,0,1);
+        } catch (IOException ioe) {
+          if (c != null) 
+            c.receiveException(ioe);
+          else
+            if (logger.level <= Logger.WARNING) logger.logException("Error sending "+m,ioe);
+          return; // don't continue to try to send
+        }
+        if (bb[0].remaining() > 0) {
+          socket.register(false, true, 10000, this);        
+        } else {
+          socket.close(); 
+        }
+      }
+      
+      public void receiveException(AppSocket socket, Exception e) {
+        if (c != null) c.receiveException(e);
+      }        
+    },
+    10000);    
+  }
+  
   
   /**
    * Sends a request message across the wire, and stores the appropriate
@@ -354,8 +606,9 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param obj The object to insert
    * @param builder The object which builds the messages
    * @param command The command to call once done
+   * 
    */
-  protected void doInsert(final Id id, final MessageBuilder builder, Continuation command) {
+  protected void doInsert(final Id id, final MessageBuilder builder, Continuation command, final boolean useSocket) {
     // first, we get all of the replicas for this id
     getHandles(id, replicationFactor+1, new StandardContinuation(command) {
       public void receiveResult(Object o) {
@@ -374,9 +627,13 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
             if (numSuccess >= (SUCCESSFUL_INSERT_THRESHOLD * haveResult.length)) 
               return true;
             
-            if (super.isDone())
+            if (super.isDone()) {
+              for (int i=0; i<result.length; i++) 
+                if (result[i] instanceof Exception)
+                  if (logger.level <= Logger.WARNING) logger.logException("result["+i+"]:",(Exception)result[i]);
+              
               throw new PastException("Had only " +  numSuccess + " successful inserts out of " + result.length + " - aborting.");
-            
+            }
             return false;
           }
           
@@ -389,9 +646,16 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           }
         };
         
-        for (int i=0; i<replicas.size(); i++) 
-          sendRequest(replicas.getHandle(i), builder.buildMessage(), 
-                      new NamedContinuation("InsertMessage to " + replicas.getHandle(i) + " for " + id, multi.getSubContinuation(i)));
+        for (int i=0; i<replicas.size(); i++) {
+          NodeHandle handle = replicas.getHandle(i);
+          PastMessage m = builder.buildMessage();
+          Continuation c = new NamedContinuation("InsertMessage to " + replicas.getHandle(i) + " for " + id, multi.getSubContinuation(i));
+          if (useSocket) { 
+            sendViaSocket(handle, m, c);
+          } else {
+            sendRequest(handle, m, c);
+          }
+        }
       }
     });
   }
@@ -426,7 +690,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           }
         });
       }
-    });
+    },
+    socketStrategy.sendAlongSocket(SocketStrategy.TYPE_INSERT, obj));
   }
 
   /**
@@ -653,8 +918,15 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @return Whether or not to forward the message further
    */
   public boolean forward(final RouteMessage message) {
-    if (message.getMessage() instanceof LookupMessage) {
-      final LookupMessage lmsg = (LookupMessage) message.getMessage();
+    Message internal;
+    try {
+      internal = message.getMessage(endpoint.getDeserializer());
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe); 
+    }
+      
+    if (internal instanceof LookupMessage) {
+      final LookupMessage lmsg = (LookupMessage)internal;
       Id id = lmsg.getId();
 
       // if it is a request, look in the cache
@@ -667,8 +939,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           return false;
         }
       } 
-    } else if (message.getMessage() instanceof LookupHandlesMessage) {
-      LookupHandlesMessage lmsg = (LookupHandlesMessage) message.getMessage();
+    } else if (internal instanceof LookupHandlesMessage) {
+      LookupHandlesMessage lmsg = (LookupHandlesMessage) internal;
       
       if (! lmsg.isResponse()) {
         if (endpoint.replicaSet(lmsg.getId(), lmsg.getMax()).size() == lmsg.getMax()) {          
@@ -728,7 +1000,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         storage.getObject(lmsg.getId(), new StandardContinuation(getResponseContinuation(lmsg)) {
           public void receiveResult(Object o) {
             if (logger.level <= Logger.FINE) logger.log("Received object " + o + " for id " + lmsg.getId());
-            
+
             // send result back
             parent.receiveResult(o);
             
@@ -752,8 +1024,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
       } else if (msg instanceof FetchMessage) {
         FetchMessage fmsg = (FetchMessage) msg;
         lookups++;
+
+        Continuation c;
+//        c = getResponseContinuation(msg);
+        c = getFetchResponseContinuation(msg); // has to be special to determine how to send the message
         
-        storage.getObject(fmsg.getHandle().getId(), getResponseContinuation(msg));
+        storage.getObject(fmsg.getHandle().getId(), c);
       } else if (msg instanceof FetchHandleMessage) {
         final FetchHandleMessage fmsg = (FetchHandleMessage) msg;
         fetchHandles++;
@@ -942,5 +1218,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     return instance;
   }
   
+  public void setContentDeserializer(PastContentDeserializer deserializer) {
+    contentDeserializer = deserializer;
+  }
+
+  public void setContentHandleDeserializer(PastContentHandleDeserializer deserializer) {
+    contentHandleDeserializer = deserializer;
+  }
 
 }

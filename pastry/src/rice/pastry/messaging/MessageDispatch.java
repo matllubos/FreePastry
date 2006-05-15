@@ -4,9 +4,8 @@ package rice.pastry.messaging;
 import java.util.*;
 
 import rice.environment.logging.Logger;
-import rice.pastry.PastryNode;
+import rice.pastry.*;
 import rice.pastry.client.PastryAppl;
-import rice.pastry.routing.RouteMessage;
 
 /**
  * An object which remembers the mapping from names to MessageReceivers
@@ -78,22 +77,28 @@ public class MessageDispatch {
    * @param name a name for a receiver.
    * @param receiver the receiver.
    */
-  public void registerReceiver(Address address, MessageReceiver receiver) {
-    if (addressBook.get(address) != null) {
-      if (logger.level <= Logger.SEVERE) logger.log(
-          "ERROR - Registering receiver for already-registered address " + address);
+  public void registerReceiver(int address, PastryAppl receiver) {
+    // the stack trace is to figure out who registered for what, it is not an error
+    
+    if (logger.level <= Logger.FINE) logger.log(
+        "Registering "+receiver+" for address " + address);
+    if (logger.level <= Logger.FINEST) logger.logException(
+        "Registering receiver for address " + address, new Exception("stack trace"));
+    if (addressBook.get(new Integer(address)) != null) {
+      throw new IllegalArgumentException("Registering receiver for already-registered address " + address);
+//      if (logger.level <= Logger.SEVERE) logger.logException(
+//          "ERROR - Registering receiver for already-registered address " + address, new Exception("stack trace"));
     }
 
-    addressBook.put(address, receiver);
+    addressBook.put(new Integer(address), receiver);
   }
   
-  public MessageReceiver getDestination(Message msg) {
-    MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());    
-    return mr;
+  public PastryAppl getDestination(Message msg) {
+    return getDestinationByAddress(msg.getDestination());    
   }
 
-  public MessageReceiver getDestinationByAddress(Address addr) {
-    MessageReceiver mr = (MessageReceiver) addressBook.get(addr);    
+  public PastryAppl getDestinationByAddress(int addr) {
+    PastryAppl mr = (PastryAppl) addressBook.get(new Integer(addr));    
     return mr;
   }
 
@@ -109,7 +114,7 @@ public class MessageDispatch {
    * @return true if message could be dispatched, false otherwise.
    */
   public boolean dispatchMessage(Message msg) {
-    if (msg.getDestination() == null) {
+    if (msg.getDestination() == 0) {
       Logger logger = localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null);
       if (logger.level <= Logger.WARNING) logger.logException(
           "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
@@ -117,100 +122,44 @@ public class MessageDispatch {
     }
     // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
     // PastryThread, and the only way to set a node ready is also on the ready thread.
-    MessageReceiver mr = (MessageReceiver) addressBook.get(msg.getDestination());
-        
-    if ((mr != null) && (!(mr instanceof PastryAppl) || (((PastryAppl)mr).deliverWhenNotReady()) || localNode.isReady())) {
-      Address address = msg.getDestination();
-      // note we want to deliver the buffered messages first, otherwise we 
-      // can get out of order messages
-      deliverBuffered(address);
+    PastryAppl mr = (PastryAppl) addressBook.get(new Integer(msg.getDestination()));
+
+    if (mr == null) {
+      if (logger.level <= Logger.WARNING) logger.log(
+          "Dropping message " + msg + " because the application address " + msg.getDestination() + " is unknown.");
+      return false;
+    } else {
       mr.receiveMessage(msg); 
       return true;
-    } else {
-      // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
-//      if (msg instanceof RouteMessage) {
-//        RouteMessage rm = (RouteMessage)msg;
-//        rm.routeMessage(this.localNode.getLocalHandle());
-//        return true;
-//      }
-      // we should consider buffering the message
-      if ((bufferCount <= bufferSize) && // we have enough memory to buffer
-          (localNode.isReady() || bufferIfNotReady)) { // the node is ready, or we are supposed to buffer if not ready
-        // buffer
-        Vector vector = (Vector) buffer.get(msg.getDestination());
-        
-        if (vector == null) {
-          vector = new Vector();
-          buffer.put(msg.getDestination(), vector);
-        }
-        
-        if (logger.level <= Logger.INFO) logger.log(
-            "Buffering message " + msg + " because the application address " + msg.getDestination() + " is unknown." + "Message will be delivered when the an application with that address is registered.");
-        
-        vector.add(msg);
-        bufferCount++;
-      } else { 
-        // give an excuse
-        if (localNode.isReady()) {
-          if (logger.level <= Logger.WARNING) logger.log(
-              "Could not dispatch message " + msg + " because the application address " + msg.getDestination() + " was unknown." + "Message is going to be dropped on the floor.");
-        } else {
-          if (logger.level <= Logger.WARNING) logger.log(
-              "Could not dispatch message " + msg + " because the pastry node is not yet ready." + "Message is going to be dropped on the floor.");          
-        }
-      }    
-      return false;
     }
   }  
   
-  /**
-   * Deliveres all buffered messages for the address.
-   * 
-   * Unless:
-   *   1)  The MR for the address is still null.
-   *   2)  The MR is a PastryAppl and localNode.isReady() == false
-   * 
-   * @param address
-   */
-  protected void deliverBuffered(Address address) {
-    // deliver any buffered messages
-    MessageReceiver mr = (MessageReceiver) addressBook.get(address);
-    if (mr != null) {    
-      if (!(mr instanceof PastryAppl) || (((PastryAppl)mr).deliverWhenNotReady()) || localNode.isReady()) {
-        Vector vector = (Vector) buffer.remove(address);
-        
-        if (vector != null) {
-          
-          for (int i=0; i<vector.size(); i++) {
-            mr.receiveMessage((Message) vector.elementAt(i));
-            bufferCount--;
-          }
-        } 
-      }
+  public boolean dispatchMessage(RawMessageDelivery msg) {
+    if (msg.getAddress() == 0) {
+      Logger logger = localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null);
+      if (logger.level <= Logger.WARNING) logger.logException(
+          "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
+      return false;
     }
-  }
-  
-  /**
-   * Called when PastryNode.isReady() becomes true.  Delivers all buffered
-   * messages.
-   */
-  public void deliverAllBufferedMessages() {
-    // need to clone the buffer table because it may change during 
-    // the loop
-    Iterator i = ((Hashtable)(buffer.clone())).keySet().iterator();
-    while(i.hasNext()) {
-      Address addr = (Address)i.next(); 
-      deliverBuffered(addr);
+    // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
+    // PastryThread, and the only way to set a node ready is also on the ready thread.
+    PastryAppl mr = (PastryAppl) addressBook.get(new Integer(msg.getAddress()));
+
+    if (mr == null) {
+      if (logger.level <= Logger.WARNING) logger.log(
+          "Dropping message " + msg + " because the application address " + msg.getAddress() + " is unknown.");
+      return false;
+    } else {
+      mr.receiveMessageInternal(msg); 
+      return true;
     }
-  }
+  }  
   
   public void destroy() {
     Iterator i = addressBook.values().iterator();
     while(i.hasNext()) {
-      MessageReceiver mr = (MessageReceiver)i.next();
-      if (mr instanceof PastryAppl) {
-        ((PastryAppl)mr).destroy(); 
-      }
+      PastryAppl mr = (PastryAppl)i.next();
+      mr.destroy(); 
     }      
     addressBook.clear();
   }

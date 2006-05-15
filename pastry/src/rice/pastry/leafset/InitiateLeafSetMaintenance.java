@@ -2,10 +2,8 @@ package rice.pastry.leafset;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.io.*;
-import java.util.*;
 
 /**
  * Initiate leaf set maintenance on the local node.
@@ -24,7 +22,7 @@ public class InitiateLeafSetMaintenance extends Message implements Serializable 
    */
 
   public InitiateLeafSetMaintenance() {
-    super(new LeafSetProtocolAddress());
+    super(LeafSetProtocolAddress.getCode());
   }
 
 }

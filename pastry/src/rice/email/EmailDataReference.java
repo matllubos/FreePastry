@@ -1,8 +1,10 @@
 package rice.email;
 
+import java.io.IOException;
 import java.security.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.post.storage.*;
 
 /**
@@ -27,6 +29,10 @@ public class EmailDataReference extends ContentHashReference {
    */
   protected EmailDataReference(Id[] location, byte[][] key) {
     super(location, key);
+  }
+  
+  public EmailDataReference(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint); 
   }
 }
 

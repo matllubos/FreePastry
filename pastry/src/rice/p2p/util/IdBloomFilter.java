@@ -6,6 +6,7 @@ import java.math.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) IdBloomFilter.java
@@ -114,5 +115,19 @@ public class IdBloomFilter implements Serializable {
         count++;
       }
     }
+  }
+
+  public IdBloomFilter(InputBuffer buf) throws IOException {
+//    array = new byte[buf.readInt()];
+//    buf.read(array);
+
+    filter = new BloomFilter(buf);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+//    buf.writeInt(array.length);
+//    buf.write(array, 0, array.length);
+    
+    filter.serialize(buf); 
   }
 }

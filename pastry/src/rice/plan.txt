@@ -1,0 +1,540 @@
+TODO:
+  Test AppSockets with bigger messages
+    regression test for:
+      sim/real
+        dead node
+        timeout
+          connection, read, write
+        open/write, rather than open/read
+        other exceptions:
+          app not registered
+          acceptor not registered
+  Add wait etc to simulator, maybe this needs to go onto the timesource
+  Add actual proximity delays to simulator
+
+*************** Application Level Sockets: ***************
+****  !!!!  How does this work with Multi-Ring?  Do you need to have sockets that open across the rings now?  Is this an argument to go back to a chunking scheme
+
+PastryAppl and Endpoint get 2 new methods: connect and accept
+
+New commonAPI interface:
+
+interface AppSocketReceiver() {
+  /**
+   * Called when we have a new socket (due to a call to connect or accept)
+   */
+  void receiveSocket(AppSocket socket);
+  /**
+   * Called when a socket is available for read/write
+   */
+  void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite);
+  /**
+   * Called when there is an error
+   */
+  void receiveException(Exception e); 
+}
+
+
+PastryAppl and commonAPI.Endpoint:
+
+/**
+ * Set's the acceptor for this application.  If no acceptor is set, then when a remote
+ * node's application opens a socket here, they will get an *Exception*
+ *
+ * @param receiver calls receiveSocket() when a new AppSocket is opened to this application
+ * from a remote node.
+ * Note that you must call accept() again after each socket is received to properly handle
+ * socket backlogging
+ */
+public void accept(AppSocketReceiver receiver);
+
+/**
+ * Opens a connection to this application on a remote node.
+ * If no acceptor is set, then receiver will get an *Exception*
+ *
+ * @param receiver calls receiveSocket() when a new AppSocket is opened to this application
+ * on a remote node.
+ */
+public void connect(NodeHandle handle, AppSocketReceiver receiver);
+
+/**
+ * Interface for sending bulk data from the application.  Mimics 
+ * java's non-blocking SocketChannel interface this should make it
+ * easier to implement in any Java-based p2p overlay.
+ */ 
+interface AppSocket {
+  /**
+   * Reads a sequence of bytes from this channel into a subsequence of the given buffers.
+   */
+  long read(ByteBuffer[] dsts, int offset, int length); 
+  /**
+   * Writes a sequence of bytes to this channel from a subsequence of the given buffers.
+   */  
+  long write(ByteBuffer[] srcs, int offset, int length); 
+  
+  /**
+   * Must be called every time a Read/Write occurs to continue operation.
+   *
+   * @receiver will have receiveSelectResult() called on it
+   * note that you must call select() each time receiveSelectResult() is called.  This is so
+   * your application can properly handle flow control
+   */
+  void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver);
+  
+  /**
+   * Disables the output stream for this socket.  Used to properly close down a socket
+   * used for bi-directional communication that can be initated by either side.   
+   */
+  void shutdownOutput();
+  
+  /**
+   * Closes this socket.
+   */
+  void close(); 
+
+}
+
+NEW: Timeout is perhaps an exception 
+
+Header in Socket:
+
+0 or more of the following based on the number of hops in the sourceroute:
+  byte[4] HEADER_SOURCE_ROUTE = {0x19, 0x53, 0x13, 0x00}
+  EpochInetSocketAddress next hop
+  
+  byte[4] HEADER_DIRECT = {0x06, 0x1B, 0x49, 0x74}
+  int appID // 0 is normal pastry socket, needed for both direct or source routed sockets
+  // non-zero then opens up the socket to the app
+
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ =}
+  +                   HEADER_SOURCE_ROUTE                         +   }
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   }
+  +            Next Hop (EpochInetSocketAddress)                  +    > // zero or more 
+  +                                                               +    >           
+  +                                                               +   }           
+  +                                                               +   }           
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ =}
+  +                      HEADER_DIRECT                            +   
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   
+  +                          AppId                                +   
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   
+  +                                                               + 
+  +                  <Application Stream>                         + 
+  +                                                               + 
+  +                           ...                                 + 
+  
+
+A single byte is returned before turning the socket over to the application:
+0 = OK
+1 = No application with that ID was registered
+2 = The application was registered, but there is no acceptor.  This could be on purpose to manage backpressure    
+
+  
+  
+  
+******************* Byte level interface: *********************
+Based on conversations with Andreas: found how to make zero copy and more user friendly at the same time.
+New plan is to make our own serialization on a per-message basis to make this look more like the existing interface, and Replay.  Propose new interface RawMessage (name is debatable) which extends Message.
+
+interface RawMessage extends Message {
+// And usually has a constructor that takes in an InputBuffer, (but that is actually up to the application)
+
+  public short getType();
+  public void serialize(OutputBuffer buf);
+}
+
+// similar to java's DataOutputStream
+// all will throw an exception ...
+interface OutputBuffer {
+ void   write(byte[] b, int off, int len)
+ void   writeBoolean(boolean v)
+ void   writeByte(byte v)
+ void   writeChar(char v)
+ void 	writeDouble(double v)
+ void 	writeFloat(float v)
+ void 	writeInt(int v)
+ void 	writeLong(long v)
+ void 	writeShort(short v)
+ void 	writeUTF(String str) // based on java's modified UTF format
+ 
+ int bytesRemaining() // how much space is left in the buffer
+}
+
+// similar to Java's DataInputStream
+// i'm considering adding a "peek" interface as well
+interface InputBuffer {
+ int 	    read(byte[] b, int off, int len)
+ int 	    read(byte[] b)
+ boolean  readBoolean()
+ void 	  readByte()
+ char     readChar()
+ double   readDouble()
+ float    readFloat()
+ int      readInt()
+ long     readLong()
+ short    readShort()
+ String   readUTF() // based on java's modified UTF format
+ 
+ int bytesRemaining() // how much space is left in the buffer
+}
+
+
+Addition to Endpoint:
+
+  //(Note, we _could_ leave this interface exactly the same and do an instanceof in the implementation to cast it to a RawMessage):
+  // in fact, if they set a custom deserializer, then we can assume the message is a RawMessage, and then catch the exception
+  boolean route(Id id, RawMessage message, NodeHandle hint);
+
+  NodeHandle readNodeHandle(InputBuffer)
+  NodeId readNodeId(InputBuffer)
+    
+  setDeserializer(MessageDeserializer md); // knows the application specific message constructors
+  setForward(boolean); // default is true, calling false bypasses the forward method call and deserialization
+
+Application.deliver() is called as normal  
+    
+Addition to PastryNode (we could add convienience methods to PastryAppl):
+Additon to PastryAppl
+  public boolean routeMsg(Id key, RawMessage msg, Credentials cred, SendOptions opt)
+  public boolean routeMsgDirect(NodeHandle dest, RawMessage msg, Credentials cred, SendOptions opt)
+  public final void sendMessage(RawMessage msg);
+
+  // strips off type and calls receiveMessage(buf, type)
+  void receiveMessageInternal(InputBuffer buf); // to replace the default one based on java serialization
+  RawMessage deserialize(InputBuffer buf, int type); // return true if you handled it
+
+  
+PastryObjects:
+	LeafSet.serialize(OutputBuffer);
+	NodeHandle.serialize(OutputBuffer); 
+	  ...
+	
+In PastryNode (can add convienience methods to PastryAppl, any votes?)	
+  NodeHandle readNodeHandle(InputBuffer);
+  NodeHandle readNodeId(InputBuffer);
+	LeafSet readLeafSet(InputBuffer);  
+	RouteSet readRouteSet(InputBuffer);
+	  ...
+	  
+	  
+/**
+ * Because Pastry/Transport layer cannot know about all messge types, each app needs to 
+ * provide a deserializer.  Default, there is a Java Serializer 
+ */	  
+interface MessageDeserializer {
+  /**
+   * RawMessage ret = super.deserialize();
+   * if (ret != null) return ret;
+   *
+   * Endpoint endpoint;
+   * switch(type) {
+   *    case 1:
+   *      return new MyMessage(buf, endpoint);
+   * }
+   */
+  Message deserialize(InputBuffer buf, int type, int priority, NodeHandle sender);
+}	  
+	  
+RouteMessage (commonapi and Pastry)	  
+  change getMessage() to return InputBuffer instead of Message
+  change getMessage() to take a MessageInterpreter
+
+class AndreasMessage : ApplicationMessage {
+  NodeHandle nh;
+  int blah[50]; /* variable size */
+  boolean blubb;
+  int len;
+
+  void serialize(OutputBuffer buf)
+  {
+    super.serialize(buf);
+    nh.serializeYourself(buf);
+    buf.writeInt(len);
+    for (int i=0; i<len; i++)
+      buf.writeInt(blah[i]);
+    buf.writeBoolean(blubb);
+  }
+
+  AndreasMessage(InputBuffer buf)
+  {
+    nh = endpoint.readNodeHandle(buf);
+    len = buf.readInt();
+    for (int i=0; i<len; i++)
+      blah[i] = buf.readInt();
+    blubb = buf.readBoolean();
+  }
+
+  int getType()
+  {
+    return 42;
+  }
+}
+
+class ApplicationMessage {
+
+  void serialize(Buffer buf)
+  {
+    buf.writeInt(getType());
+    buf.write(someotherfields);
+  }
+}
+
+class AndreasApp : PastryAppl {
+
+  void start()
+  {
+    endpoint.send(new AndreasMessage());
+  }
+
+  RawMessage deserialize(InputBuffer buf, int type, NodeHandle sender, int priority)
+  {
+    RawMessage ret = super.deserialize(buf, type, sender, priority);
+    if (ret != null) return ret;
+
+    switch (type) {
+      case AndreasMessageType :
+        return new AndreasMessage(buf));
+      case OtherType:
+        return new OtherType(buf));
+      default:
+        return null;
+    }
+  }
+
+class PastryAppl {
+
+  boolean forward(Message msg, int type) {
+    case ...
+      ret
+  }
+  
+  receiveMessage(Message msg, type) {
+    switch(type) {
+      case Foo.TYPE:
+        receiveFoo((Foo)msg);
+    }
+  }
+
+  void receiveMessageInternal(Buffer buf) {
+    int type = buf.readInt();
+    byte priority = buf.readByte();
+    NodeHandle sender
+    // handle sender option ...
+    receiveMessage(deserialize(buf, type, sender, priority), type);
+  }
+  
+  bool receiveMessage(InputBuffer buf, int type) {
+    if (type != JAVA_SERIALIZED_OBJECT)
+      return false;
+
+    app.receiveMessage(serializer.deserialize(buf.getByteArray());
+    return true;
+  }
+}
+
+note on RouteMessage forwarding:
+  When a RouteMessage comes in on an intermediate node
+    Check the forward bit on the appl // perhaps this isn't as important any more
+      true: Construct a RouteMessage such that getMessage() calls the serializer, and marks the routeMessage() as "dirty"
+        if the RouteMessage was dirty then the transport layer needs to call serialize() on the internal message before sending  this keeps the same semantics as we currently have
+        // note that this needs to create a RouteMessage each time.  A future optimization could be to add Endpoint.recycleRouteMessage(boolean) that if set
+        // could not construct a new RouteMessage every time, and instead, just fill in the values        
+      false: just pass it on
+      
+      
+      
+New Protocol:
+  header
+
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +    Version    +  Next Header  +          Reserved             +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +               Payload Length                                  +           
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +               Option or Payload ...                           +           
+  +                                                               +           
+  +                                                               +           
+
+  option
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +Option Version +  Next Header  +          Opt Length           +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +               Option Payload ...                              +           
+  +                                                               +           
+  +                                                               +           
+      
+  +                                                               +           
+  +                                                               +           
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +               Option or Payload ...                           +           
+  +                                                               +           
+  +                                                               +           
+
+  Next Header -- (unsigned byte)
+    zero = actual payload
+    first 2 bits: what to do if don't understand option:
+      a -- how to procede
+       0 = route as normal
+       1 = drop
+      b -- send error?
+       0 = no
+       1 = yes
+           
+    
+    Error (only on UDP msgs) option 0x00000001 
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +    Version    +  0x00000001   +          Reserved             +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +                         0                                     +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + 0 (Version)   +Next Err Header+              Length           +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +offending optn +  Reserved                                     + 
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + first X bytes of offending message                            + // what is X?
+  +                                                               +           
+  +                                                               +           
+  +                                                               +           
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+  options (specific):
+  
+    Source Route (only on UDP msgs) option 0xXX000010 // first 2 bit reserved for error instructions
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + 0 (Version)   +  Next Header  +              Length           +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +#Hops(Inc self)+  Reserved     +  Individual EIAddress Length  + // useful to upgrade to ipv6?
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + Epoch InetSocketAddress  (self)                               +
+  +                                                               +           
+  +                                                               +           
+  +                                                               +           
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + Epoch InetSocketAddress  (first hop)                          +
+  +                                                               +           
+  +                                                               +           
+  +                                                               +           
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    
+  EpochInetSocketAddress: (IPV4 FreePastry Version 0):
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + Inet Address                                                  +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + port (int)                                                    +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + epoch (long)                                                  +
+  +                                                               +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  
+  Id (FreePastry Version 0)
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +   160 Bit                                                     +
+  +                                                               +
+  +                                                               +
+  +                                                               +
+  +                                                               +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      
+  NodeHandle (FreePastry Version 0)
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  + Epoch InetSocketAddress                                       +
+  +                                                               +           
+  +                                                               +           
+  +                                                               +           
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +   Id                                                          +
+  +                                                               +
+  +                                                               +
+  +                                                               +
+  +                                                               +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  
+  
+  Message:
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +  Next Header  +   Priority    +  Type (Application specifc)   + // zero is java serialization
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +            Appl   Address    (0 is the router)                +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +  Payload Or Option                                            +
+  +                                                               +
+  
+  Message.sender (option 1) // could be included as standard in a message, but if it is null, then we have to have a flag to call it null
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +  Next Header  +         Reserved                              +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +            NodeHandle sender                                  + 
+  +                                                               +
+                    ...  flexable size  
+  +                                                               +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    
+  Route Message: // getting rid of auxAddress, use forward mechanism, which gets address from underlieing message
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +            Id    target                                       +
+  +                                                               +
+  +                                                               +
+  +                                                               +
+  +                                                               +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +            NodeHandle prev                                    + 
+  +  (used to repair routing table during routing)                +
+  +                                                               +
+                   ... flexable size
+  +                                                               +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +  Payload Internal Message                                     +
+  +                                                               +
+  +                                                               +
+    
+      
+      
+// backburnered...
+      
+KeyValueMessage extends RawMessage:
+Subclass of RawMessage that implements a key/value interface, to make things easier on developers who want to make more flexible, adaptable objects.  This interface makes it less challenging to develop sparse datatypes, unions, or forward/backward-compatible messages.   For simplicity, the keys are represented as ints (using hashCode ()); the value types are the same primitive value types that are used for RawMessage, with the addition of Object which uses RawMessage if available, otherwise it uses Java Serialization.  
+
+
+example use:
+MyMessage extends KeyValueMessage {
+  void serialize(OutputHashtable table) {
+  
+  }
+}
+
+interface OutputHashtable {
+  putInt(String key, int value);
+  putString(String key, String value);
+  putObject(String key, Object value);
+    ...
+}
+
+interface InputHashtable {
+  int getInt(String key);
+  String getString(Object obj);
+  Object getObject(String key);
+   ...
+}
+
+interface KVMessageInterpreter {
+  Message deserialize(InputHashtable table, int type, int priority, NodeHandle sender);
+}	  
+
+/**
+ * deserialize invokes KVMessageInterpreter
+ */ 
+class KVMessageDeserializer implements MessageDeserializer {
+  public KVMessageDeserializer(KVMessageInterpreter interpreter) {
+  
+  }
+
+  /**
+   * builds the Hashtable
+   */
+  Message deserialize(InputBuffer buf, int type, int priority, NodeHandle sender);
+}	  
+
+binary format of a KVMessage:
+
+What should the binary format of the KVMessage be?

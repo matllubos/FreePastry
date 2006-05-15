@@ -1,13 +1,17 @@
 package rice.post.messaging;
 
+import java.io.IOException;
 import java.util.*;
 
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.post.*;
 
 /**
  * This class represents a notification message which is in encrypted state.
  */
 public class EncryptedNotificationMessage extends PostMessage {
+  public static final short TYPE = 6;
 
   private static final long serialVersionUID = -6105218787584438214L;
 
@@ -29,7 +33,7 @@ public class EncryptedNotificationMessage extends PostMessage {
     this.key = key;
     this.destination = destination;
   }
-  
+
   /**
    * Returns the destination of this message.
    *
@@ -64,4 +68,37 @@ public class EncryptedNotificationMessage extends PostMessage {
     return Arrays.equals(data, ((EncryptedNotificationMessage) o).getData());
   }
 
+  
+  public EncryptedNotificationMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint);
+    
+//    System.out.println("EncryptedNotificationMessage.deserialize()");
+    
+    destination = PostEntityAddress.build(buf, endpoint, buf.readShort());
+    
+    key = new byte[buf.readInt()];
+    buf.read(key);
+    
+    data = new byte[buf.readInt()];
+    buf.read(data);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf);
+    
+//    System.out.println("EncryptedNotificationMessage.serialize()");
+    
+    buf.writeShort(destination.getType()); 
+    destination.serialize(buf);
+
+    buf.writeInt(key.length);
+    buf.write(key, 0, key.length);
+    
+    buf.writeInt(data.length);
+    buf.write(data, 0, data.length);
+  }
+
+  public short getType() {
+    return TYPE;
+  }
 }

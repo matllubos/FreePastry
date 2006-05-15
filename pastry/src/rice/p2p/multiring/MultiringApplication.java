@@ -79,6 +79,10 @@ public class MultiringApplication implements Application {
     application.update(new MultiringNodeHandle(ringId, handle), joined);
   }
   
+  public String toString() {
+    return "MultiringApplication<"+application+">:"+ringId; 
+  }
+  
 }
 
 

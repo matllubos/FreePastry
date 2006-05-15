@@ -1,9 +1,12 @@
 
 package rice.p2p.past.gc.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
 
@@ -18,7 +21,8 @@ import rice.p2p.past.messaging.*;
  * @author Alan Mislove
  */
 public class GCCollectMessage extends PastMessage {
-  
+  public static final short TYPE = 8;
+
   /**
    * Constructor
    *
@@ -29,7 +33,7 @@ public class GCCollectMessage extends PastMessage {
   public GCCollectMessage(int id, NodeHandle source, Id dest) {
     super(id, source, dest);
   }
-  
+
   /**
    * Method by which this message is supposed to return it's response -
    * in this case, it lets the continuation know that a the message was
@@ -48,6 +52,14 @@ public class GCCollectMessage extends PastMessage {
    */
   public String toString() {
     return "[GCCollectMessage]";
+  }
+  
+  public short getType() {
+    return TYPE; 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    throw new RuntimeException("serialize() not supported in MessageLostMessage"); 
   }
 }
 

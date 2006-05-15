@@ -36,7 +36,7 @@ public class MyMsg implements Message {
   /**
    * Use low priority to prevent interference with overlay maintenance traffic.
    */
-  public int getPriority() {
+  public byte getPriority() {
     return Message.LOW_PRIORITY;
   }
 }

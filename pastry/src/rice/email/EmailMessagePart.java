@@ -6,6 +6,8 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.*;
 import rice.post.storage.*;
 
@@ -15,6 +17,7 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public class EmailMessagePart extends EmailHeadersPart {
+  public static final short TYPE = 2;
 
   /**
    * Constructor. Takes in a emailData representing the headers and
@@ -25,6 +28,14 @@ public class EmailMessagePart extends EmailHeadersPart {
    */
   public EmailMessagePart(EmailData headers, EmailContentPart content) {
     super(headers, content);
+  }
+  
+  public EmailMessagePart(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint); 
+  }
+  
+  public short getRawType() {
+    return TYPE; 
   }
 
 }

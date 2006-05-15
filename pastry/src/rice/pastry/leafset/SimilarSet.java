@@ -6,8 +6,8 @@ import java.util.*;
 import java.io.*;
 
 /**
- * A set of nodes, ordered by numerical distance of their nodeId from the local
- * nodeId
+ * A set of nodes, ordered by numerical distance of their Id from the local
+ * Id
  * 
  * @version $Id$
  * 
@@ -15,7 +15,7 @@ import java.io.*;
  * @author Peter Druschel
  */
 
-public class SimilarSet extends Observable implements NodeSetEventSource, NodeSetI, Serializable,
+public class SimilarSet extends Observable implements NodeSetEventSource, Serializable,
     Observer {
 
   private static final long serialVersionUID = 2289610430696506873L;
@@ -68,6 +68,14 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
     nodes = new NodeHandle[size];
   }
 
+  public SimilarSet(LeafSet leafSet, NodeHandle localNode, int size, boolean cw, NodeHandle[] handles) {
+    this.leafSet = leafSet;
+    ln = localNode;
+    clockwise = cw;
+    theSize = handles.length;
+    nodes = handles;
+  }
+
   /**
    * Test if a NodeHandle belongs into the set. Predicts if a put would succeed.
    * 
@@ -77,7 +85,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    */
 
   public boolean test(NodeHandle handle) {
-    NodeId nid = handle.getNodeId();
+    Id nid = handle.getNodeId();
 
     if (nid.equals(ln.getNodeId()))
       return false;
@@ -109,7 +117,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    */
 
   public boolean put(NodeHandle handle) {
-    NodeId nid = handle.getNodeId();
+    Id nid = handle.getNodeId();
     //int index;
 
     if (!test(handle))
@@ -230,13 +238,13 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
   }
 
   /**
-   * Finds the NodeHandle associated with the NodeId.
+   * Finds the NodeHandle associated with the Id.
    * 
    * @param nid a node id.
    * @return the handle associated with that id or null if no such handle is
    *         found.
    */
-  public NodeHandle get(NodeId nid) {
+  public NodeHandle get(Id nid) {
     for (int i = 0; i < theSize; i++)
       if (nodes[i].getNodeId().equals(nid))
         return nodes[i];
@@ -286,7 +294,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
   /**
    *  
    */
-  public boolean member(NodeId nid) {
+  public boolean member(Id nid) {
     for (int i = 0; i < theSize; i++)
       if (nodes[i].getId().equals(nid))
         return true;
@@ -300,7 +308,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    * @param nid the node to remove.
    * @return the node handle removed or null if nothing.
    */
-  public NodeHandle remove(NodeId nid) {
+  public NodeHandle remove(Id nid) {
     for (int i = 0; i < theSize; i++) {
       if (nodes[i].getNodeId().equals(nid)) {
         return remove(i);
@@ -356,7 +364,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    * @return the index or -1 if the element does not exist.
    */
 
-  public int getIndex(NodeId nid) {
+  public int getIndex(Id nid) {
     for (int i = 0; i < theSize; i++)
       if (nodes[i].getNodeId().equals(nid))
         return i;
@@ -383,23 +391,23 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
   }
 
   /**
-   * Numerically closest node to a given a node. Returns -1 if the local nodeId
+   * Numerically closest node to a given a node. Returns -1 if the local Id
    * is the most similar and returns an index otherwise.
    * 
    * @param nid a node id.
    * 
-   * @return -1 if the local nodeId is most similar, else the index of the most
+   * @return -1 if the local Id is most similar, else the index of the most
    *         similar node.
    */
 //  public int mostSimilar(Id nid) {
 //    if (theSize == 0)
 //      return -1;
 //
-//    NodeId.Distance minDist = ln.getNodeId().distance(nid);
+//    Id.Distance minDist = ln.getNodeId().distance(nid);
 //    int min = -1;
 //
 //    for (int i = 0; i < theSize; i++) {
-//      NodeId.Distance d = nodes[i].getNodeId().distance(nid);
+//      Id.Distance d = nodes[i].getNodeId().distance(nid);
 //      int cmp = d.compareTo(minDist);
 //      if ((!clockwise && cmp < 0) || (clockwise && cmp <= 0)) {
 //        minDist = d;
@@ -415,12 +423,12 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
   /**
    * Impl that doesn't produce garbage
    * 
-   * Numerically closest node to a given a node. Returns -1 if the local nodeId
+   * Numerically closest node to a given a node. Returns -1 if the local Id
    * is the most similar and returns an index otherwise.
    * 
    * @param nid a node id.
    * 
-   * @return -1 if the local nodeId is most similar, else the index of the most
+   * @return -1 if the local Id is most similar, else the index of the most
    *         similar node.
    */
   public int mostSimilar(Id nid) {
@@ -461,14 +469,14 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
   }
 
   /**
-   * Finds the NodeHandle associated with the NodeId.
+   * Finds the NodeHandle associated with the Id.
    * 
    * @param id a node id.
    * @return the handle associated with that id or null if no such handle is
    *         found.
    */
   public rice.p2p.commonapi.NodeHandle getHandle(rice.p2p.commonapi.Id id) {
-    return getHandle((NodeId) id);
+    return getHandle((Id) id);
   }
 
   /**
@@ -489,7 +497,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    * @return true if that node id is in the set, false otherwise.
    */
   public boolean memberHandle(rice.p2p.commonapi.Id id) {
-    return member((NodeId) id);
+    return member((Id) id);
   }
 
   /**
@@ -500,7 +508,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    * @return the node handle removed or null if nothing.
    */
   public rice.p2p.commonapi.NodeHandle removeHandle(rice.p2p.commonapi.Id id) {
-    return remove((NodeId) id);
+    return remove((Id) id);
   }
 
   /**
@@ -512,7 +520,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, NodeSe
    */
   public int getIndexHandle(rice.p2p.commonapi.Id id)
       throws NoSuchElementException {
-    return getIndex((NodeId) id);
+    return getIndex((Id) id);
   }
 
   SimilarSet copy(LeafSet newLeafSet) {

@@ -12,6 +12,7 @@ import java.util.zip.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -35,7 +36,7 @@ public class SocketChannelWriter {
   private final int MAXIMUM_QUEUE_LENGTH;
   
   // the pastry node
-  private PastryNode spn;
+  private SocketPastryNode spn;
 
   // internal buffer for storing the serialized object
   private ByteBuffer buffer;
@@ -59,7 +60,7 @@ public class SocketChannelWriter {
    *
    * @param spn The spn the SocketChannelWriter servers
    */
-  public SocketChannelWriter(PastryNode spn, SourceRoute path) {
+  public SocketChannelWriter(SocketPastryNode spn, SourceRoute path) {
     this(spn.getEnvironment(),path);
     this.spn = spn;
   }
@@ -102,7 +103,22 @@ public class SocketChannelWriter {
   public LinkedList getQueue() {
     return queue;
   }
-    
+
+  public boolean enqueue(Message msg) throws IOException {
+    PRawMessage rm;
+    if (msg instanceof PRawMessage) {
+      rm = (PRawMessage)msg; 
+    } else {
+      rm = new PJavaSerializedMessage(msg); 
+    }
+    // don't put this one in the pool, it doesn't have a proper deserializer
+    return enqueue(new SocketBuffer(rm));
+  }
+  
+  public boolean enqueue(byte[] msg) {
+    return enqueue(new SocketBuffer(msg)); 
+  }
+  
   /**
    * Adds an object to this SocketChannelWriter's queue of pending objects to
    * write. This methos is synchronized and therefore safe for use by multiple
@@ -111,7 +127,7 @@ public class SocketChannelWriter {
    * @param o The object to be written.
    * @return DESCRIBE THE RETURN VALUE
    */
-  public boolean enqueue(Object o) {
+  public boolean enqueue(SocketBuffer o) {
     synchronized (queue) {
       addToQueue(o);
 
@@ -177,11 +193,11 @@ public class SocketChannelWriter {
           if (! queue.isEmpty()) {
             if (logger.level <= Logger.FINER) logger.log(
                 "(W) About to serialize object " + queue.getFirst());
-            buffer = serialize(queue.getFirst());
+            buffer = ((SocketBuffer)queue.getFirst()).getBuffer();
             
             if (buffer != null) {
-              if ((spn != null) && (spn instanceof SocketPastryNode)) {
-                ((SocketPastryNode) spn).broadcastSentListeners(queue.getFirst(), 
+              if (spn != null) {
+                spn.broadcastSentListeners(queue.getFirst(), 
                     (path == null ? 
                         (InetSocketAddress) sc.socket().getRemoteSocketAddress() : 
                         path.getLastHop().address), buffer.limit(), NetworkListener.TYPE_TCP);
@@ -222,81 +238,25 @@ public class SocketChannelWriter {
    *
    * @param o The feature to be added to the ToQueue attribute
    */
-  private void addToQueue(Object o) {
-    record("Enqueued", o, -1, path);
-
-    if ((queue.size() > 0) && (o instanceof Message)) {
+  private void addToQueue(SocketBuffer buf) {    
+    if ((queue.size() > 0)) {
       int i=1;
       
       while (i < queue.size()) {
-        Object obj = queue.get(i);
+        SocketBuffer p = (SocketBuffer)queue.get(i);
 
-        if ((obj instanceof Message) && (((Message) obj).getPriority() > ((Message) o).getPriority()))
+        if (p.priority > buf.priority)
           break;
         
         i++;
       }
       
       if (logger.level <= Logger.FINER) logger.log(
-          "COUNT: Enqueueing message " + o.getClass().getName() + " at location " + i + " in the pending queue (priority " + ((Message) o).getPriority() + ")");
+          "COUNT: Enqueueing message " + buf + " at location " + i + " in the pending queue (priority " + buf.priority + ")");
     
-      queue.add(i, o);
+      queue.add(i, buf);
     } else {
-      queue.addLast(o);
+      queue.addLast(buf);
     }
   }
-
-  /**
-   * Method which serializes a given object into a ByteBuffer, in order to
-   * prepare it for writing. This is necessary because the size of the object
-   * must be prepended to the to the front of the buffer in order to tell the
-   * reciever how long the object is.
-   *
-   * @param o The object to serialize
-   * @return A ByteBuffer containing the object prepended with its size.
-   * @exception IOException DESCRIBE THE EXCEPTION
-   */
-  public ByteBuffer serialize(Object o) throws IOException {
-    if (o == null) 
-      return null;
-    else if (o instanceof byte[]) 
-      return ByteBuffer.wrap((byte[]) o);
-    
-    try {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-      // write out object and find its length
-      oos.writeObject(o);
-      oos.close();
-      int len = baos.toByteArray().length;
-
-      ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-      DataOutputStream dos = new DataOutputStream(baos2);
-
-      // write out length of the object, followed by the object itself
-      dos.writeInt(len);
-      dos.flush();
-      dos.write(baos.toByteArray());
-      dos.flush();
-
-      return ByteBuffer.wrap(baos2.toByteArray());
-    } catch (InvalidClassException e) {
-      if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Object to be serialized was an invalid class! [" + o + "]"+e);
-      throw new IOException("Invalid class during attempt to serialize.");
-    } catch (NotSerializableException e) {      
-      if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Object to be serialized was not serializable! [" + o + "]"+e);
-      throw new IOException("Unserializable class during attempt to serialize.");
-    } catch (NullPointerException e) {
-      if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Object to be serialized caused null pointer exception! [" + o + "]"+e);
-      return null;
-    } catch (Exception e) {
-      if (logger.level <= Logger.SEVERE) logger.log(
-          "PANIC: Object to be serialized caused excception! [" + e + "]"+e);
-      throw new IOException("Exception during attempt to serialize.");
-    }
-  }  
 }

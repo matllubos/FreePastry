@@ -9,8 +9,9 @@ import rice.p2p.commonapi.*;
  * in GCPast
  */
 public class RefreshMessage implements Message {
-  
-  public int getPriority() {
+  public static final short TYPE = 12;
+
+  public byte getPriority() {
     return MEDIUM_PRIORITY;
   }
   

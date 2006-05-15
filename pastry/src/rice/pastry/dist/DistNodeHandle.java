@@ -20,7 +20,7 @@ import java.util.*;
 public abstract class DistNodeHandle extends NodeHandle implements Observer {
     static final long serialVersionUID = 6030505652558872412L;
     // the nodeId of this node handle's remote node
-    protected NodeId nodeId;
+    protected Id nodeId;
 
     // the address (ip + port) of this node
     protected InetSocketAddress address;
@@ -37,7 +37,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
      *
      * @param nodeId This node handle's node Id.
      */
-    public DistNodeHandle(NodeId nodeId, InetSocketAddress address) {
+    public DistNodeHandle(Id nodeId, InetSocketAddress address) {
       this.nodeId = nodeId;
       this.address = address;
       // note that we always want the epoch to be random, there is no reason to ever
@@ -50,7 +50,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
      *
      * @return the node id.
      */
-    public final NodeId getNodeId() {
+    public final Id getNodeId() {
       return nodeId;
     }
     

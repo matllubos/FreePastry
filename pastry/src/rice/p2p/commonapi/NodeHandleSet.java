@@ -4,6 +4,8 @@ package rice.p2p.commonapi;
 import java.io.*;
 import java.util.*;
 
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+
 /**
  * @(#) NodeHandleSet.java
  *
@@ -11,6 +13,7 @@ import java.util.*;
  *
  * @version $Id$
  *
+ * @author Jeff Hoye
  * @author Alan Mislove
  */
 public interface NodeHandleSet extends Serializable {
@@ -73,4 +76,7 @@ public interface NodeHandleSet extends Serializable {
    */
   public int getIndexHandle(Id id) throws NoSuchElementException;
   
+  public void serialize(OutputBuffer buf) throws IOException;  
+  
+  public short getType();
 }

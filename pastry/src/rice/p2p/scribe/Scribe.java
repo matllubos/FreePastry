@@ -4,6 +4,7 @@ package rice.p2p.scribe;
 import rice.*;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.scribe.rawserialization.*;
 
 /**
  * @(#) Scribe.java
@@ -33,6 +34,7 @@ public interface Scribe extends Destructable {
    * @param content The content to include in the subscribe
    */
   public void subscribe(Topic topic, ScribeClient client, ScribeContent content);
+  public void subscribe(Topic topic, ScribeClient client, RawScribeContent content);
 
   /**
    * Unsubscribes the given client from the provided topic. 
@@ -49,6 +51,7 @@ public interface Scribe extends Destructable {
    * @param content The content to publish
    */
   public void publish(Topic topic, ScribeContent content);
+  public void publish(Topic topic, RawScribeContent content);
 
   /**
    * Anycasts the given content to a member of the given topic
@@ -57,6 +60,7 @@ public interface Scribe extends Destructable {
    * @param content The content to anycast
    */
   public void anycast(Topic topic, ScribeContent content);
+  public void anycast(Topic topic, RawScribeContent content);
 
   /**
    * Returns the current policy for this scribe object
@@ -127,6 +131,8 @@ public interface Scribe extends Destructable {
   public Environment getEnvironment();
 
   public void destroy();
+
+  public void setContentDeserializer(ScribeContentDeserializer deserializer);
 
 }
 

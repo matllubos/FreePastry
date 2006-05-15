@@ -1,9 +1,13 @@
 
 package rice.p2p.past.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
+import rice.p2p.past.rawserialization.*;
 
 /**
  * @(#) InsertMessage.java
@@ -17,12 +21,13 @@ import rice.p2p.past.*;
  * @author Peter Druschel
  */
 public class InsertMessage extends ContinuationMessage {
+  public static final short TYPE = 4;
 
   // serailver for bward compatibility
   static final long serialVersionUID = -7027957470028259605L;
   
   // the data to insert
-  protected PastContent content;
+  protected RawPastContent content;
   
   /**
    * Constructor which takes a unique integer Id, as well as the
@@ -34,6 +39,10 @@ public class InsertMessage extends ContinuationMessage {
    * @param dest The destination address
    */
   public InsertMessage(int uid, PastContent content, NodeHandle source, Id dest) {
+    this(uid, content instanceof RawPastContent ? (RawPastContent)content : new JavaSerializedPastContent(content), source, dest);
+  }
+  
+  public InsertMessage(int uid, RawPastContent content, NodeHandle source, Id dest) {
     super(uid, source, dest);
 
     this.content = content;
@@ -45,6 +54,8 @@ public class InsertMessage extends ContinuationMessage {
    * @return The contained content
    */
   public PastContent getContent() {
+//  if (content == null) 
+    if (content.getType() == 0) return ((JavaSerializedPastContent)content).getContent();
     return content;
   }
   
@@ -77,6 +88,64 @@ public class InsertMessage extends ContinuationMessage {
    */
   public String toString() {
     return "[InsertMessage for " + content + "]";
+  }
+  
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE; 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version        
+    serializeHelper(buf);
+  }
+  
+  /**
+   * So that it can be subclassed without serializing a version here
+   * @param buf
+   * @throws IOException
+   */
+  protected void serializeHelper(OutputBuffer buf) throws IOException {
+    if (response != null && response instanceof Boolean) {
+      super.serialize(buf, false); 
+      buf.writeBoolean(((Boolean)response).booleanValue());
+    } else {
+      super.serialize(buf, true);       
+    }
+    
+    buf.writeBoolean(content != null);
+    if (content != null) {
+      buf.writeShort(content.getType());
+      content.serialize(buf);
+    }
+  }
+  
+  public static InsertMessage build(InputBuffer buf, Endpoint endpoint, PastContentDeserializer pcd) throws IOException {
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        return new InsertMessage(buf, endpoint, pcd);
+      default:
+        throw new IOException("Unknown Version: "+version);        
+    }
+  }  
+  
+  protected InsertMessage(InputBuffer buf, Endpoint endpoint, PastContentDeserializer pcd) throws IOException {
+    super(buf, endpoint);
+    
+    if (serType == S_SUB) {
+      response = new Boolean(buf.readBoolean());
+    }
+        
+    // this can be done lazilly to be more efficient, must cache remaining bits, endpoint, cd, and implement own InputBuffer
+    if (buf.readBoolean()) {
+      short contentType = buf.readShort();
+      if (contentType == 0) {
+        content = new JavaSerializedPastContent(pcd.deserializePastContent(buf, endpoint, contentType));
+      } else {
+        content = (RawPastContent)pcd.deserializePastContent(buf, endpoint, contentType); 
+      }
+    }
   }
 }
 

@@ -1,20 +1,23 @@
 
 package rice.pastry.commonapi;
 
+import java.io.IOException;
 import java.security.InvalidParameterException;
 
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
-import rice.pastry.NodeId;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.rawserialization.*;
+import rice.pastry.NodeSet;
 import rice.pastry.PastryNode;
+import rice.pastry.NodeHandleFactory;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.SendOptions;
-import rice.pastry.security.Credentials;
-import rice.pastry.security.PermissiveCredentials;
 import rice.selector.TimerTask;
 
 /**
@@ -28,23 +31,18 @@ import rice.selector.TimerTask;
  */
 public class PastryEndpoint extends PastryAppl implements Endpoint {
 
-  protected Credentials credentials = new PermissiveCredentials();
-
   protected Application application;
   
   protected String instance;
   
-  /**
-   * Constructor.
-   *
-   * @param pn the pastry node that the application attaches to.
-   */
-  public PastryEndpoint(PastryNode pn, Application application, String instance) {
-    super(pn, application.getClass().getName() + instance, null);
-    
-    this.instance = application.getClass().getName() + instance;
-    this.application = application;
-    register();
+  
+  class PEDeserializer implements MessageDeserializer {
+    public Message deserialize(InputBuffer buf, short type, byte priority,
+        NodeHandle sender) throws IOException {
+      if (type == PastryEndpointMessage.TYPE)
+        return new PastryEndpointMessage(getAddress(),buf,appDeserializer,(rice.pastry.NodeHandle)sender);
+      return null;
+    }    
   }
   
   /**
@@ -52,14 +50,34 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    *
    * @param pn the pastry node that the application attaches to.
    */
-  public PastryEndpoint(PastryNode pn, Application application, int port) {
-    super(pn, port);
-    
-    this.instance = "[PORT " + port + "]";
-    this.application = application;
-    register();
+  public PastryEndpoint(PastryNode pn, Application application, String instance, boolean register) {
+    this(pn, application, instance, 0, register);
   }
+  
+  /**
+   * Constructor.
+   *
+   * @param pn the pastry node that the application attaches to.
+   */
+//  public PastryEndpoint(PastryNode pn, Application application, int address) {
+//    this(pn, application, "[PORT " + address + "]", address, true);    
+//  }
+  
+  public PastryEndpoint(PastryNode pn, Application application, String instance, int address, boolean register) {
+    super(pn, application.getClass().getName() + instance, address, null);
+    appDeserializer = deserializer; // use this as the apps default deserializer
+    deserializer = new PEDeserializer();
+    this.application = application;
+    if (register)
+      register();
+  }
+  
 
+  /**
+   * The commonapi's deserializer.  Java Deserializer by default.
+   */
+  MessageDeserializer appDeserializer;
+  
   // API methods to be invoked by applications
 
   /**
@@ -102,14 +120,37 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     }
     rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
                                                                                pm,
-                                                                               (rice.pastry.NodeHandle) hint,
-                                                                               getAddress());
+                                                                               (rice.pastry.NodeHandle) hint);
                                                                               
     if (noKey) {
       rm.getOptions().setMultipleHopsAllowed(false);                                                                               
     }
     thePastryNode.receiveMessage(rm);
   }
+  
+  public void route(Id key, RawMessage msg, NodeHandle hint) {
+    if (logger.level <= Logger.FINER) logger.log(
+        "[" + thePastryNode + "] route " + msg + " to " + key);
+
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
+    if ((key == null) && (hint == null)) {
+      throw new InvalidParameterException("key and hint are null!");
+    }
+    boolean noKey = false;
+    if (key == null) {
+      noKey = true;
+      key = hint.getId();
+    }
+    rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
+                                                                               pm,
+                                                                               (rice.pastry.NodeHandle) hint);
+                                                                              
+    if (noKey) {
+      rm.getOptions().setMultipleHopsAllowed(false);                                                                               
+    }
+    thePastryNode.receiveMessage(rm);
+  }
+  
 
   /**
    * Schedules a message to be delivered to this application after the provided number of
@@ -341,16 +382,6 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   }
 
   // PastryAppl support
-  
-  /**
-   * Returns the credentials of this application.
-   *
-   * @return the credentials.
-   */
-  public Credentials getCredentials() {
-    return credentials;
-  }
-
   /**
    * Called by pastry to deliver a message to this client.  Not to be overridden.
    *
@@ -361,6 +392,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
         "[" + thePastryNode + "] recv " + msg);
       
     if (msg instanceof rice.pastry.routing.RouteMessage) {
+      try {
       rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
 
       // call application
@@ -372,7 +404,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 
           // if the message is for the local node, deliver it here
           if (getNodeId().equals(nextHop.getNodeId())) {
-            PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap();
+            PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap(deserializer);
             if (logger.level <= Logger.FINER) logger.log(
                 "[" + thePastryNode + "] deliver " + pMsg + " from " + pMsg.getSenderId());
             application.deliver(rm.getTarget(), pMsg.getMessage());
@@ -382,6 +414,9 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
             rm.routeMessage((rice.pastry.NodeHandle)getLocalNodeHandle());
           }
         }
+      }
+      } catch (IOException ioe) {
+        if (logger.level <= Logger.SEVERE) logger.logException(this.toString(),ioe); 
       }
     } else {
       // if the message is not a RouteMessage, then it is for the local node and
@@ -419,6 +454,52 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     return thePastryNode.getEnvironment();
   }
 
+  /**
+   * Translate to a pastry.NodeHandle, otherwise, this is a passthrough function.
+   */
+  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout) {
+    connect((rice.pastry.NodeHandle)handle, receiver, timeout);
+  }
+
+  public String toString() {
+    return "PastryEndpoint "+application+" "+instance+" "+getAddress();
+  }
+
+  public void setDeserializer(MessageDeserializer md) {
+    appDeserializer = md; 
+  }
+
+  public MessageDeserializer getDeserializer() {
+    return appDeserializer; 
+  }
+
+  public Id readId(InputBuffer buf, short type) throws IOException {
+    if (type != rice.pastry.Id.TYPE) throw new IllegalArgumentException("Invalid type:"+type);
+    return rice.pastry.Id.build(buf);
+  }
+
+  public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
+    return thePastryNode.readNodeHandle(buf);
+  }
+
+  public IdRange readIdRange(InputBuffer buf) throws IOException {
+    return new rice.pastry.IdRange(buf);
+  }
+  
+  public NodeHandle coalesce(NodeHandle newHandle) {
+    return thePastryNode.coalesce((rice.pastry.NodeHandle)newHandle);
+  }
+
+  public NodeHandleSet readNodeHandleSet(InputBuffer buf, short type) throws IOException {
+    switch(type) {
+      case NodeSet.TYPE:
+        return new NodeSet(buf, thePastryNode);
+      case RouteSet.TYPE:
+        return new RouteSet(buf, thePastryNode);
+    }
+    throw new IllegalArgumentException("Unknown type: "+type);
+  }
+  
 }
 
 

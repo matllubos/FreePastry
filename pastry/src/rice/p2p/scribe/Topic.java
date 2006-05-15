@@ -5,11 +5,12 @@ import java.io.*;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) Topic.java
  *
- * This interface represents a specific topic in the Scribe system.
+ * This class represents a specific topic in the Scribe system.
  *
  * @version $Id$
  * @author Alan Mislove
@@ -90,7 +91,15 @@ public class Topic implements Serializable {
    */
   public String toString() {
     return "[TOPIC " + id + "]";
+  }  
+
+  public Topic(InputBuffer buf, Endpoint endpoint) throws IOException {
+    id = endpoint.readId(buf, buf.readShort());
   }
   
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(id.getType());
+    id.serialize(buf); 
+  }
 }
 

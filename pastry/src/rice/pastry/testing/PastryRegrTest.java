@@ -6,11 +6,7 @@ import rice.environment.Environment;
 import rice.p2p.commonapi.RangeCannotBeDeterminedException;
 import rice.pastry.*;
 import rice.pastry.direct.*;
-import rice.pastry.standard.*;
-import rice.pastry.join.*;
-import rice.pastry.client.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
@@ -33,7 +29,7 @@ public abstract class PastryRegrTest {
   public Vector pastryNodes;
 
   /**
-   * of NodeId
+   * of Id
    */
   public SortedMap pastryNodesSorted;
   public SortedMap pastryNodesSortedReady;
@@ -46,9 +42,9 @@ public abstract class PastryRegrTest {
 
   public Message lastMsg;
 
-  public NodeId.Distance lastDist;
+  public Id.Distance lastDist;
 
-  public NodeId lastNode;
+  public Id lastNode;
 
 //  int msgCount = 0;
 
@@ -252,7 +248,7 @@ public abstract class PastryRegrTest {
    * Send messages among random message pairs. In each round, one message is
    * sent from a random source node to a random destination; then, a second
    * message is sent from a random source node with a random key (key is not
-   * necessaily the nodeId of an existing node)
+   * necessaily the Id of an existing node)
    * 
    * @param k the number of rounds
    */
@@ -265,7 +261,7 @@ public abstract class PastryRegrTest {
       int to = environment.getRandomSource().nextInt(n);
       byte[] keyBytes = new byte[Id.IdBitLength / 8];
       environment.getRandomSource().nextBytes(keyBytes);
-      NodeId key = NodeId.buildNodeId(keyBytes);
+      Id key = Id.build(keyBytes);
 
       RegrTestApp rta = (RegrTestApp) rtApps.get(from);
       PastryNode pn = (PastryNode) pastryNodes.get(to);
@@ -288,7 +284,7 @@ public abstract class PastryRegrTest {
 
   private void checkLeafSet(RegrTestApp rta) {
     LeafSet ls = rta.getLeafSet();
-    NodeId localId = rta.getNodeId();
+    Id localId = rta.getNodeId();
 
     // check size
     if (ls.size() < ls.maxSize()
@@ -306,7 +302,7 @@ public abstract class PastryRegrTest {
         System.out.println("checkLeafSet: dead node handle " + nh.getNodeId()
             + " in leafset at " + rta.getNodeId() + "\n" + ls);
 
-      NodeId nid = ls.get(i).getNodeId();
+      Id nid = ls.get(i).getNodeId();
       int inBetween;
 
       if (localId.compareTo(nid) > 0) // local > nid ?
@@ -328,7 +324,7 @@ public abstract class PastryRegrTest {
         System.out.println("checkLeafSet: dead node handle " + nh.getNodeId()
             + " in leafset at " + rta.getNodeId() + "\n" + ls);
 
-      NodeId nid = ls.get(i).getNodeId();
+      Id nid = ls.get(i).getNodeId();
       int inBetween;
 
       if (localId.compareTo(nid) < 0) // localId < nid?
@@ -346,22 +342,22 @@ public abstract class PastryRegrTest {
 
     // a comparator that orders nodeIds by distance from the localId
     class DistComp implements Comparator {
-      NodeId id;
+      Id id;
 
-      public DistComp(NodeId id) {
+      public DistComp(Id id) {
         this.id = id;
       }
 
       public int compare(Object o1, Object o2) {
-        NodeId nid1 = (NodeId) o1;
-        NodeId nid2 = (NodeId) o2;
+        Id nid1 = (Id) o1;
+        Id nid2 = (Id) o2;
         return nid1.distance(id).compareTo(nid2.distance(id));
       }
     }
 
     for (int k = -ls.ccwSize(); k <= ls.cwSize(); k++) {
       // for each id in the leafset
-      NodeId id = ls.get(k).getNodeId();
+      Id id = ls.get(k).getNodeId();
       TreeSet distanceSet = new TreeSet(new DistComp(id));
 
       // compute a representation of the leafset, sorted by distance from the id
@@ -383,7 +379,7 @@ public abstract class PastryRegrTest {
       // now verify the replicaSet
       for (int i = 0; i < rs.size(); i++) {
         NodeHandle nh = rs.get(i);
-        NodeId nid = nh.getNodeId();
+        Id nid = nh.getNodeId();
         int inBetween = distanceSet.subSet(id, nid).size();
 
         if (inBetween != i)
@@ -507,7 +503,7 @@ public abstract class PastryRegrTest {
       for (int j = 0; j < rt.numColumns(); j++) {
         // next column
 
-        // skip if local nodeId digit
+        // skip if local Id digit
         // if (j == rta.getNodeId().getDigit(i,rt.baseBitLength())) continue;
 
         final RouteSet rs = rt.getRouteSet(i, j);
@@ -582,7 +578,7 @@ public abstract class PastryRegrTest {
             }
 
             NodeHandle nh2 = rs.get(k);
-            NodeId id = nh2.getNodeId();
+            Id id = nh2.getNodeId();
             
             // check if node exists
             if (!pastryNodesSorted.containsKey(id)) {

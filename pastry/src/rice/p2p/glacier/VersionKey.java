@@ -1,7 +1,9 @@
 package rice.p2p.glacier;
 
-import java.io.Serializable;
-import rice.p2p.commonapi.Id;
+import java.io.*;
+
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.RingId;
 import rice.p2p.util.MathUtils;
 
@@ -12,6 +14,8 @@ import rice.p2p.util.MathUtils;
  * @author ahae
  */
 public class VersionKey implements Id, Serializable, Comparable {
+  public static final short TYPE = 41;
+  
   /**
    * DESCRIBE THE FIELD
    */
@@ -170,5 +174,20 @@ public class VersionKey implements Id, Serializable, Comparable {
   public static VersionKey build(String s) {
     String[] sArray = s.split("v");
     return new VersionKey(RingId.build(sArray[0]), Long.parseLong(sArray[1]));
+  }
+
+  public VersionKey(InputBuffer buf, Endpoint endpoint) throws IOException {
+    version = buf.readLong();
+    id = endpoint.readId(buf, buf.readShort());
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeLong(version);
+    buf.writeShort(id.getType());
+    id.serialize(buf);
+  }
+  
+  public short getType() {
+    return TYPE;
   }
 }

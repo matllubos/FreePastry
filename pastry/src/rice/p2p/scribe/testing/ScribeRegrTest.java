@@ -7,6 +7,7 @@ import rice.environment.Environment;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.messaging.SubscribeMessage;
@@ -612,6 +613,10 @@ public class ScribeRegrTest extends CommonAPITest {
       return message;
     }
 
+    public Message getMessage(MessageDeserializer md) {
+      return message;
+    }
+
     /**
      * Sets the DestinationId attribute of the TestRouteMessage object
      *
@@ -636,6 +641,10 @@ public class ScribeRegrTest extends CommonAPITest {
      * @param message The new Message value
      */
     public void setMessage(Message message) {
+      this.message = message;
+    }
+    
+    public void setMessage(RawMessage message) {
       this.message = message;
     }
   }

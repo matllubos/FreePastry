@@ -1,7 +1,9 @@
 package rice.p2p.glacier;
 
+import java.io.*;
 import java.util.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * DESCRIBE THE CLASS
@@ -128,6 +130,14 @@ public class FragmentKeyRange implements IdRange {
    */
   public String toString() {
     throw new RuntimeException("FragmentKeyRange.toString() is not supported!");
+  }
+
+  public void FragmentKeyRange(InputBuffer buf, Endpoint endpoint) throws IOException {
+    range = endpoint.readIdRange(buf); 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    range.serialize(buf);
   }
 }
 

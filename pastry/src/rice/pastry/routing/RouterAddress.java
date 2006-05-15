@@ -13,25 +13,10 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class RouterAddress implements Address {
+public class RouterAddress {
   private static final int myCode = 0xACBDFE17;
 
-  /**
-   * Constructor.
-   */
-
-  public RouterAddress() {
-  }
-
-  public boolean equals(Object obj) {
-    return (obj instanceof RouterAddress);
-  }
-
-  public int hashCode() {
-    return myCode;
-  }
-
-  public String toString() {
-    return "[RouterAddress]";
-  }
+  public static int getCode() {
+    return myCode; 
+  }  
 }

@@ -1,8 +1,8 @@
 package rice.pastry.leafset;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.io.*;
 import java.util.*;
@@ -15,7 +15,9 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class BroadcastLeafSet extends Message implements Serializable {
+public class BroadcastLeafSet extends PRawMessage {
+  public static final short TYPE = 2;
+  
   public static final int Update = 0;
 
   public static final int JoinInitial = 1;
@@ -35,27 +37,7 @@ public class BroadcastLeafSet extends Message implements Serializable {
    */
 
   public BroadcastLeafSet(NodeHandle from, LeafSet leafSet, int type) {
-    super(new LeafSetProtocolAddress());
-    fromNode = from;
-    theLeafSet = leafSet;
-    theType = type;
-    setPriority(0);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials.
-   */
-
-  public BroadcastLeafSet(Credentials cred, NodeHandle from, LeafSet leafSet,
-      int type) {
-    super(new LeafSetProtocolAddress(), cred);
-
-    fromNode = from;
-    theLeafSet = leafSet;
-    theType = type;
-    setPriority(0);
+    this(null, from, leafSet, type);
   }
 
   /**
@@ -65,29 +47,12 @@ public class BroadcastLeafSet extends Message implements Serializable {
    */
 
   public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet, int type) {
-    super(new LeafSetProtocolAddress(), stamp);
+    super(LeafSetProtocolAddress.getCode(), stamp);
 
     fromNode = from;
     theLeafSet = leafSet;
     theType = type;
-    setPriority(0);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials.
-   * @param stamp the timestamp
-   */
-
-  public BroadcastLeafSet(Credentials cred, Date stamp, NodeHandle from,
-      LeafSet leafSet, int type) {
-    super(new LeafSetProtocolAddress(), cred, stamp);
-
-    fromNode = from;
-    theLeafSet = leafSet;
-    theType = type;
-    setPriority(0);
+    setPriority(MAX_PRIORITY);
   }
 
   /**
@@ -124,4 +89,31 @@ public class BroadcastLeafSet extends Message implements Serializable {
     String s = "BroadcastLeafSet(of " + fromNode.getNodeId() + ":" + theLeafSet + ")";
     return s;
   }
+  
+  /***************** Raw Serialization ***************************************/  
+  public short getType() {
+    return TYPE; 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version
+    fromNode.serialize(buf);
+    theLeafSet.serialize(buf);
+    buf.writeByte((byte) theType);
+  }
+  
+  public BroadcastLeafSet(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+    super(LeafSetProtocolAddress.getCode());
+    
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        fromNode = nhf.readNodeHandle(buf);
+        theLeafSet = LeafSet.build(buf, nhf);
+        theType = buf.readByte();
+        break;
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }
+  }  
 }

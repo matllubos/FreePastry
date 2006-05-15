@@ -10,7 +10,6 @@ import java.util.*;
 
 import javax.swing.*;
 
-import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.data.Data;
 
@@ -42,7 +41,7 @@ public class InformationPanel extends JPanel {
     combo.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent state) { 
         if ((state.getStateChange() == state.SELECTED) && (! changing)) {
-          InformationPanel.this.visualization.setSelected((NodeId) state.getItem(),InformationPanel.this.visualization.getSelectedRing());
+          InformationPanel.this.visualization.setSelected((rice.pastry.Id) state.getItem(),InformationPanel.this.visualization.getSelectedRing());
         }
       }
     });

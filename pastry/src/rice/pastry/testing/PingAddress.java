@@ -16,13 +16,9 @@ import java.util.*;
  * @author Rongmei Zhang
  */
 
-public class PingAddress implements Address {
-    private int myCode = 0x9219d8ff;
+public class PingAddress {
+    private static int myCode = 0x9219d8ff;
 	
-    public int hashCode() { return myCode; }
-
-    public boolean equals(Object obj) { return (obj instanceof PingAddress); }
-
-    public String toString() { return "[PingAddress]"; }
+    public static int getCode() { return myCode; }
 }
 

@@ -7,12 +7,7 @@ import java.util.*;
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.pastry.ExponentialBackoffScheduledMessage;
-import rice.pastry.NetworkListener;
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeId;
-import rice.pastry.PastryNode;
-import rice.pastry.ScheduledMessage;
+import rice.pastry.*;
 import rice.pastry.join.InitiateJoin;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
 import rice.pastry.messaging.Message;
@@ -54,7 +49,7 @@ public abstract class DistPastryNode extends PastryNode {
    *
    * @param id DESCRIBE THE PARAMETER
    */
-  protected DistPastryNode(NodeId id, Environment e) {    
+  protected DistPastryNode(Id id, Environment e) {    
     super(id, e);
     timer = e.getSelectorManager().getTimer();
 //    timer = new Timer(true);

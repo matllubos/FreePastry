@@ -275,9 +275,9 @@ public class MultiringRegrTest {
       throw new IllegalArgumentException("EXISTING WAS NULL! " + ringId + " " + bootstrap);
     
     if (bootstrap == null) {
-      return new MultiringNode(ringId, factory.newNode(null, (NodeId) existing.getNodeId()), existing);
+      return new MultiringNode(ringId, factory.newNode(null, (rice.pastry.Id)existing.getNodeId()), existing);
     } else {
-      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode()), (NodeId) existing.getNodeId()), existing);
+      return new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode()), (rice.pastry.Id)existing.getNodeId()), existing);
     }
   }
 
@@ -370,7 +370,8 @@ public class MultiringRegrTest {
     protected Endpoint endpoint;
     
     public MultiringTestApp(Node node) {
-      this.endpoint = node.registerApplication(this, "BLAH");
+      this.endpoint = node.buildEndpoint(this, "BLAH");
+      this.endpoint.register();
     }
     
     public void send(Id target) {
@@ -396,7 +397,7 @@ public class MultiringRegrTest {
       this.source = source;
     }
     
-    public int getPriority() {
+    public byte getPriority() {
       return MEDIUM_PRIORITY;
     }
   }

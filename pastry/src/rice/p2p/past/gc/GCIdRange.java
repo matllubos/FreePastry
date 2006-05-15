@@ -4,6 +4,7 @@ package rice.p2p.past.gc;
 import java.io.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) GCIdRange.java
@@ -123,6 +124,14 @@ public class GCIdRange implements IdRange {
    */
   public String toString() {
     return "{GC " + range + "}"; 
+  }
+
+  public GCIdRange(InputBuffer buf, Endpoint endpoint) throws IOException {
+    range = endpoint.readIdRange(buf); 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    range.serialize(buf);
   }
 }
 

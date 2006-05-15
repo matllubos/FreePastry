@@ -1,10 +1,13 @@
 package rice.p2p.glacier.v2.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.glacier.*;
 
-public abstract class GlacierMessage implements Message {
+public abstract class GlacierMessage implements RawMessage {
   
   // serialver for backward compatibility
   private static final long serialVersionUID = -5849182107707420256L;
@@ -50,7 +53,7 @@ public abstract class GlacierMessage implements Message {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return LOW_PRIORITY;
   }
 
@@ -88,5 +91,22 @@ public abstract class GlacierMessage implements Message {
   public char getTag() {
     return tag;
   }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(id); 
+    buf.writeChar(tag);
+    buf.writeBoolean(isResponse);
+    buf.writeShort(dest.getType());
+    dest.serialize(buf);
+    source.serialize(buf);
+  }
+  
+  public GlacierMessage(InputBuffer buf, Endpoint endpoint) throws IOException {    
+    id = buf.readInt();
+    tag = buf.readChar();
+    isResponse = buf.readBoolean();
+    dest = endpoint.readId(buf, buf.readShort()); 
+    source = endpoint.readNodeHandle(buf);
+  }  
 }
 

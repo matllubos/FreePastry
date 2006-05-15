@@ -55,7 +55,7 @@ public class IPNodeIdFactory implements NodeIdFactory {
    * @return the new nodeId
    */
 
-  public NodeId generateNodeId() {
+  public Id generateNodeId() {
     byte rawIP[] = localIP.getAddress();
 
     byte rawPort[] = new byte[2];
@@ -92,7 +92,7 @@ public class IPNodeIdFactory implements NodeIdFactory {
     //	for (int i=0; i<4; i++)
     //	    digest[i] = rand[i];
 
-    NodeId nodeId = NodeId.buildNodeId(digest);
+    Id nodeId = Id.build(digest);
 
     return nodeId;
   }

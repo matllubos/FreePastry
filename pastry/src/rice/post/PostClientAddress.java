@@ -1,5 +1,6 @@
 package rice.post;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 
 import java.io.*;
@@ -52,5 +53,13 @@ public final class PostClientAddress implements Serializable {
 
   public String toString() {
     return "PostClientAddress[" + name + "]";
+  }
+  
+  public PostClientAddress(InputBuffer buf) throws IOException {
+    name = buf.readUTF(); 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeUTF(name); 
   }
 }

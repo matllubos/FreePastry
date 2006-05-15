@@ -1,9 +1,11 @@
 
 package rice.pastry.direct;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -50,7 +52,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    *
    * @return The NodeId value
    */
-  public NodeId getNodeId() {
+  public Id getNodeId() {
     return remoteNode.getNodeId();
   }
 
@@ -180,5 +182,9 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
     } else {
       notifyObservers(NodeHandle.DECLARED_DEAD);      
     }
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    throw new RuntimeException("Should not be called.");
   }
 }

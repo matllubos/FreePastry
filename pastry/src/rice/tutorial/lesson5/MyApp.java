@@ -50,15 +50,18 @@ public class MyApp implements Application {
    * NotSerializableException!
    */
   class MessageToSelf implements Message {
-    public int getPriority() {
-      return 0;
+    public byte getPriority() {
+      return MAX_PRIORITY;
     }    
   }
   
   public MyApp(Node node) {
     this.environment = node.getEnvironment();
     // We are only going to use one instance of this application on each PastryNode
-    this.endpoint = node.registerApplication(this, "myinstance");
+    this.endpoint = node.buildEndpoint(this, "myinstance");
+    
+    endpoint.register();
+    
     // Send MessageToSelf every 5 seconds, starting in 3 seconds
     messageToSelfTask = endpoint.scheduleMessage(new MessageToSelf(), 3000, 5000);
   }

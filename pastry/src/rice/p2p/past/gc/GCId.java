@@ -1,7 +1,10 @@
 
 package rice.p2p.past.gc;
 
+import java.io.IOException;
+
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.util.*;
 
 /**
@@ -16,6 +19,7 @@ import rice.p2p.util.*;
  * @author Alan Mislove
  */
 public class GCId implements Id {
+  public static final short TYPE = 3;
   
   /**
    * The id which this ringId represents
@@ -187,6 +191,25 @@ public class GCId implements Id {
    */
   public int compareTo(Object o) {
     return id.compareTo(((GCId) o).id);
+  }
+
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    // to be peeked
+    buf.writeShort(getType());
+    buf.writeLong(expiration);
+    buf.writeShort(id.getType());
+    id.serialize(buf);
+  }
+
+  public GCId(InputBuffer buf, Endpoint endpoint) throws IOException {
+    buf.readShort();
+    expiration = buf.readLong();     
+    id = endpoint.readId(buf, buf.readShort());
   }
 }
 

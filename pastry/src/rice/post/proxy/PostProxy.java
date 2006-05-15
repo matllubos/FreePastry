@@ -24,11 +24,13 @@ import rice.environment.random.RandomSource;
 import rice.environment.time.TimeSource;
 import rice.p2p.aggregation.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v2.*;
 import rice.p2p.multiring.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.GCPastImpl;
+import rice.p2p.past.rawserialization.*;
 import rice.p2p.util.XMLObjectInputStream;
 import rice.pastry.*;
 import rice.pastry.commonapi.PastryIdFactory;
@@ -39,6 +41,7 @@ import rice.pastry.standard.PartitionHandler;
 import rice.persistence.*;
 import rice.post.*;
 import rice.post.delivery.DeliveryPastImpl;
+import rice.post.rawserialization.JavaSerializedErasureCodec;
 import rice.post.security.PostCertificate;
 import rice.post.security.ca.*;
 import rice.post.storage.*;
@@ -138,6 +141,11 @@ public class PostProxy {
   protected Past immutablePast;
   
   /**
+   * The local Past service, for immutable objects (binary version)
+   */
+  protected Past binaryImmutablePast;
+
+  /**
     * The local Past service, for immutable objects
    */
   protected Past realImmutablePast;
@@ -163,6 +171,11 @@ public class PostProxy {
   protected GlacierImpl immutableGlacier;
 
   /**
+   * The local Glacier service
+  */
+ protected GlacierImpl binaryImmutableGlacier;
+
+  /**
    * The local Post service
    */
   protected Post post;
@@ -176,6 +189,11 @@ public class PostProxy {
    * The local storage manager, for immutable objects
    */
   protected StorageManagerImpl immutableStorage;
+  
+  /**
+   * The local storage manager, for immutable objects (binary version)
+   */
+  protected StorageManagerImpl binaryImmutableStorage;
   
   /**
    * The local storage manager, for mutable objects
@@ -198,10 +216,10 @@ public class PostProxy {
   protected StorageManagerImpl trashStorage;
   
   /**
-   * The local storage for mutable glacier fragments
+   * The local trash can, if in use (binary version)
    */
-  protected StorageManagerImpl glacierMutableStorage;
-
+  protected StorageManagerImpl binaryTrashStorage;
+  
   /**
    * The local storage for immutable glacier fragments
    */
@@ -218,15 +236,40 @@ public class PostProxy {
   protected StorageManagerImpl glacierTrashStorage;
 
   /**
+   * The local storage for immutable glacier fragments (binary version)
+   */
+  protected StorageManagerImpl binaryGlacierImmutableStorage;
+
+  /**
+   * The local storage for glacier neighbor certificates (binary version)
+   */
+  protected StorageManagerImpl binaryGlacierNeighborStorage;
+
+  /**
+   * The local storage for glacier's 'trash can' (binary version)
+   */
+  protected StorageManagerImpl binaryGlacierTrashStorage;
+
+  /**
    * The local storage for objects waiting to be aggregated
    */
   protected StorageManagerImpl aggrWaitingStorage;
+  
+  /**
+   * The local storage for objects waiting to be aggregated (binary version)
+   */
+  protected StorageManagerImpl binaryAggrWaitingStorage;
   
   /**
     * The local backup cache, for immutable objects
    */
   protected Cache immutableBackupCache;
   
+  /**
+   * The local backup cache, for immutable objects
+  */
+ protected Cache binaryImmutableBackupCache;
+ 
   /**
     * The local backup cache, for pending deliveries
    */
@@ -855,6 +898,12 @@ public class PostProxy {
                                               new LRUCache(new PersistentStorage(FACTORY, prefix + "cache", ".", diskLimit, environment), cacheLimit, environment));
     stepDone(SUCCESS);
     
+    stepStart("Starting Binary Immutable Storage");
+    binaryImmutableStorage = new StorageManagerImpl(FACTORY,
+                                              new PersistentStorage(FACTORY, prefix + "binary-immutable", location, diskLimit, environment),
+                                              new LRUCache(new PersistentStorage(FACTORY, prefix + "binary-cache", ".", diskLimit, environment), cacheLimit, environment));
+    stepDone(SUCCESS);
+    
     stepStart("Starting Mutable Storage");
     mutableStorage = new StorageManagerImpl(FACTORY,
                                             new PersistentStorage(FACTORY, prefix + "mutable", location, diskLimit, environment),
@@ -879,32 +928,46 @@ public class PostProxy {
                                             new PersistentStorage(FACTORY, prefix + "trash", location, diskLimit, false, environment),
                                             new EmptyCache(FACTORY));
       stepDone(SUCCESS);
+      stepStart("Starting Binary Trashcan Storage");
+      binaryTrashStorage = new StorageManagerImpl(FACTORY,
+                                            new PersistentStorage(FACTORY, prefix + "binary-trash", location, diskLimit, false, environment),
+                                            new EmptyCache(FACTORY));
+      stepDone(SUCCESS);
     }
     
     if (parameters.getBoolean("glacier_enable")) {
       FragmentKeyFactory KFACTORY = new FragmentKeyFactory((MultiringIdFactory) FACTORY);
       VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
-      PastryIdFactory PFACTORY = new PastryIdFactory(environment);
 
       stepStart("Starting Glacier Storage");
-      glacierMutableStorage = new StorageManagerImpl(KFACTORY,
-                                              new PersistentStorage(KFACTORY, prefix + "glacier-mutable", location, diskLimit, environment),
-                                              new EmptyCache(KFACTORY));
       glacierImmutableStorage = new StorageManagerImpl(KFACTORY,
                                               new PersistentStorage(KFACTORY, prefix + "glacier-immutable", location, diskLimit, environment),
                                               new EmptyCache(KFACTORY));
       glacierNeighborStorage = new StorageManagerImpl(FACTORY,
                                               new PersistentStorage(FACTORY, prefix + "glacier-neighbor", location, diskLimit, environment),
                                               new EmptyCache(FACTORY));
+      binaryGlacierImmutableStorage = new StorageManagerImpl(KFACTORY,
+          new PersistentStorage(KFACTORY, prefix + "binary-glacier-immutable", location, diskLimit, environment),
+          new EmptyCache(KFACTORY));
+      binaryGlacierNeighborStorage = new StorageManagerImpl(FACTORY,
+          new PersistentStorage(FACTORY, prefix + "binary-glacier-neighbor", location, diskLimit, environment),
+          new EmptyCache(FACTORY));
       aggrWaitingStorage = new StorageManagerImpl(VFACTORY,
                                               new PersistentStorage(VFACTORY, prefix + "aggr-waiting", location, diskLimit, environment),
                                               new EmptyCache(VFACTORY));
+      binaryAggrWaitingStorage = new StorageManagerImpl(VFACTORY,
+          new PersistentStorage(VFACTORY, prefix + "binary-aggr-waiting", location, diskLimit, environment),
+          new EmptyCache(VFACTORY));
       if (parameters.getBoolean("glacier_use_trashcan")) {
         glacierTrashStorage = new StorageManagerImpl(KFACTORY,
                                               new PersistentStorage(KFACTORY, prefix + "glacier-trash", location, diskLimit, false, environment),
                                               new EmptyCache(KFACTORY));
+        binaryGlacierTrashStorage = new StorageManagerImpl(KFACTORY,
+            new PersistentStorage(KFACTORY, prefix + "binary-glacier-trash", location, diskLimit, false, environment),
+            new EmptyCache(KFACTORY));
       } else {
         glacierTrashStorage = null;
+        binaryGlacierTrashStorage = null;
       }
       
       stepDone(SUCCESS);
@@ -915,6 +978,10 @@ public class PostProxy {
       
       stepStart("Starting Immutable Backup Cache");
       immutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "immutable-cache", ".", diskLimit, environment), cacheLimit, environment);
+      stepDone(SUCCESS);
+      
+      stepStart("Starting BinaryImmutable Backup Cache");
+      binaryImmutableBackupCache = new LRUCache(new PersistentStorage(FACTORY, prefix + "binary-immutable-cache", ".", diskLimit, environment), cacheLimit, environment);
       stepDone(SUCCESS);
       
       stepStart("Starting Pending Backup Cache");
@@ -979,19 +1046,28 @@ public class PostProxy {
     ((PersistentStorage) immutableStorage.getStorage()).setTimer(timer);
     ((PersistentStorage) ((LRUCache) immutableStorage.getCache()).getStorage()).setTimer(timer);
     
+    ((PersistentStorage) binaryImmutableStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) ((LRUCache) binaryImmutableStorage.getCache()).getStorage()).setTimer(timer);
+
     ((PersistentStorage) mutableStorage.getStorage()).setTimer(timer);
     ((PersistentStorage) pendingStorage.getStorage()).setTimer(timer);
     ((PersistentStorage) deliveredStorage.getStorage()).setTimer(timer);
-    if (trashStorage != null)
+    if (trashStorage != null) {
       ((PersistentStorage) trashStorage.getStorage()).setTimer(timer);
+      ((PersistentStorage) binaryTrashStorage.getStorage()).setTimer(timer);
+    }
     
     ((PersistentStorage) glacierImmutableStorage.getStorage()).setTimer(timer);
-    ((PersistentStorage) glacierMutableStorage.getStorage()).setTimer(timer);
     ((PersistentStorage) glacierNeighborStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) binaryGlacierImmutableStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) binaryGlacierNeighborStorage.getStorage()).setTimer(timer);
     ((PersistentStorage) aggrWaitingStorage.getStorage()).setTimer(timer);
+    ((PersistentStorage) binaryAggrWaitingStorage.getStorage()).setTimer(timer);
     
     if (glacierTrashStorage != null)
       ((PersistentStorage) glacierTrashStorage.getStorage()).setTimer(timer);
+    if (binaryGlacierTrashStorage != null)
+      ((PersistentStorage) binaryGlacierTrashStorage.getStorage()).setTimer(timer);
     
     int maxcount = (parameters.getInt("pastry_node_boot_wait")+1500)/3000;
 
@@ -1073,7 +1149,7 @@ public class PostProxy {
     
     InetSocketAddress[] bootsNotMe = getBootstrapsThatAreNotMe(globalCert.getBootstraps(),globalPort);
     
-    globalNode = factory.newNode(factory.getNodeHandle(bootsNotMe, parameters.getInt("bootstrap_contact_time")), (rice.pastry.NodeId) ((RingId) node.getId()).getId(), proxyAddress);
+    globalNode = factory.newNode(factory.getNodeHandle(bootsNotMe, parameters.getInt("bootstrap_contact_time")), (rice.pastry.Id) ((RingId) node.getId()).getId(), proxyAddress);
     globalPastryNode = (PastryNode) globalNode;
 
     int maxcount = (parameters.getInt("pastry_node_boot_wait")+1500)/3000;
@@ -1151,70 +1227,96 @@ public class PostProxy {
     if (parameters.getBoolean("glacier_enable")) {
       stepStart("Starting Glacier service");
 
-      String prefix = getLocalHost().getHostName() + "-" + port;
-      VersionKeyFactory VFACTORY = new VersionKeyFactory((MultiringIdFactory) FACTORY);
-
       String instance = parameters.getString("application_instance_name") + "-glacier-immutable";
       
-      immutableGlacier = new GlacierImpl(
-        node, glacierImmutableStorage, glacierNeighborStorage,
-        parameters.getInt("glacier_num_fragments"),
-        parameters.getInt("glacier_num_survivors"),
-        (MultiringIdFactory)FACTORY, 
-        instance,
-        new GlacierDefaultPolicy(
-          new ErasureCodec(
-            parameters.getInt("glacier_num_fragments"),
-            parameters.getInt("glacier_num_survivors"),
-            environment
-          ), 
-          instance, 
-          environment
-        )
-      );
+      immutableGlacier = buildGlacier(instance, glacierImmutableStorage, glacierNeighborStorage, glacierTrashStorage);
+      instance = parameters.getString("application_instance_name") + "-binary-glacier-immutable";
+      binaryImmutableGlacier = buildGlacier(instance, binaryGlacierImmutableStorage, binaryGlacierNeighborStorage, binaryGlacierTrashStorage);
       
-      immutableGlacier.setSyncInterval(parameters.getInt("glacier_sync_interval"));
-      immutableGlacier.setSyncMaxFragments(parameters.getInt("glacier_sync_max_fragments"));
-      immutableGlacier.setRateLimit(parameters.getInt("glacier_max_requests_per_second"));
-      immutableGlacier.setNeighborTimeout(parameters.getInt("glacier_neighbor_timeout"));
-      immutableGlacier.setBandwidthLimit(1024*parameters.getInt("glacier_max_kbytes_per_sec"), 1024*parameters.getInt("glacier_max_kbytes_per_sec")*parameters.getInt("glacier_max_burst_factor"));
-      immutableGlacier.setTrashcan(glacierTrashStorage);
+      AggregationImpl immutableAggregation = buildAggregation(
+          parameters.getString("application_instance_name") + "-aggr-immutable",
+          immutableGlacier,
+          immutablePast,
+          aggrWaitingStorage,
+          new JavaSerializedAggregateFactory());
+      AggregationImpl binaryImmutableAggregation = buildAggregation(
+          parameters.getString("application_instance_name") + "-binary-aggr-immutable",
+          binaryImmutableGlacier,
+          binaryImmutablePast,
+          binaryAggrWaitingStorage,
+          new JavaSerializedAggregateFactory());
 
-      final Integer[] done = new Integer[1];
-      environment.getSelectorManager().invoke(new Runnable() {
-        public void run() {
-          immutableGlacier.startup();
-          done[0] = new Integer(1);
-        }
-      });
-      
-      while (done[0] == null)
-        Thread.sleep(1000);
-
-      AggregationImpl immutableAggregation = new AggregationImpl(
-        node, 
-        immutableGlacier,  
-        immutablePast,
-        aggrWaitingStorage,
-        "aggregation.param",
-        (MultiringIdFactory) FACTORY,
-        parameters.getString("application_instance_name") + "-aggr-immutable",
-        new PostAggregationPolicy()
-      );
-
-      immutableAggregation.setFlushInterval(parameters.getInt("aggregation_flush_interval"));
-      immutableAggregation.setMaxAggregateSize(parameters.getInt("aggregation_max_aggregate_size"));
-      immutableAggregation.setMaxObjectsInAggregate(parameters.getInt("aggregation_max_objects_per_aggregate"));
-      immutableAggregation.setRenewThreshold(parameters.getInt("aggregation_renew_threshold"));
-      immutableAggregation.setConsolidationInterval(parameters.getInt("aggregation_consolidation_interval"));
-      immutableAggregation.setConsolidationThreshold(parameters.getInt("aggregation_consolidation_threshold"));
-      immutableAggregation.setConsolidationMinObjectsPerAggregate(parameters.getInt("aggregation_min_objects_per_aggregate"));
-      immutableAggregation.setConsolidationMinUtilization(parameters.getDouble("aggregation_min_aggregate_utilization"));
-
-      immutablePast = immutableAggregation;
+      immutablePast = new Moraine(binaryImmutableAggregation, immutableAggregation);
 
       stepDone(SUCCESS);
     }
+  }
+
+  private AggregationImpl buildAggregation(String instance, Past glacier, Past past, StorageManager waitingStorage, JavaSerializedAggregateFactory aggregateFactory) throws IOException {
+    Parameters parameters = environment.getParameters();
+    
+    AggregationImpl aggr = new AggregationImpl(
+      node, 
+      glacier,
+      past,
+      waitingStorage,
+      "aggregation.param",
+      (MultiringIdFactory) FACTORY,
+      instance,
+      new PostAggregationPolicy(),
+      aggregateFactory
+    );
+
+    aggr.setFlushInterval(parameters.getInt("aggregation_flush_interval"));
+    aggr.setMaxAggregateSize(parameters.getInt("aggregation_max_aggregate_size"));
+    aggr.setMaxObjectsInAggregate(parameters.getInt("aggregation_max_objects_per_aggregate"));
+    aggr.setRenewThreshold(parameters.getInt("aggregation_renew_threshold"));
+    aggr.setConsolidationInterval(parameters.getInt("aggregation_consolidation_interval"));
+    aggr.setConsolidationThreshold(parameters.getInt("aggregation_consolidation_threshold"));
+    aggr.setConsolidationMinObjectsPerAggregate(parameters.getInt("aggregation_min_objects_per_aggregate"));
+    aggr.setConsolidationMinUtilization(parameters.getDouble("aggregation_min_aggregate_utilization"));
+    return aggr;
+  }
+
+  private GlacierImpl buildGlacier(String instance, StorageManager immutableStorage, StorageManager neighborStorage, StorageManager trashStorage) throws InterruptedException {
+    Parameters parameters = environment.getParameters();
+    final GlacierImpl glacier = new GlacierImpl(
+      node, immutableStorage, neighborStorage,
+      parameters.getInt("glacier_num_fragments"),
+      parameters.getInt("glacier_num_survivors"),
+      (MultiringIdFactory)FACTORY, 
+      instance,
+      new GlacierDefaultPolicy(
+        new JavaSerializedErasureCodec(
+          parameters.getInt("glacier_num_fragments"),
+          parameters.getInt("glacier_num_survivors"),
+          environment,
+          false
+        ), 
+        instance, 
+        environment
+      )
+    );
+    
+    glacier.setSyncInterval(parameters.getInt("glacier_sync_interval"));
+    glacier.setSyncMaxFragments(parameters.getInt("glacier_sync_max_fragments"));
+    glacier.setRateLimit(parameters.getInt("glacier_max_requests_per_second"));
+    glacier.setNeighborTimeout(parameters.getInt("glacier_neighbor_timeout"));
+    glacier.setBandwidthLimit(1024*parameters.getInt("glacier_max_kbytes_per_sec"), 1024*parameters.getInt("glacier_max_kbytes_per_sec")*parameters.getInt("glacier_max_burst_factor"));
+    glacier.setTrashcan(trashStorage);
+
+    final Integer[] done = new Integer[1];
+    environment.getSelectorManager().invoke(new Runnable() {
+      public void run() {
+        glacier.startup();
+        done[0] = new Integer(1);
+      }
+    });
+    
+    while (done[0] == null)
+      Thread.sleep(1000);
+    
+    return glacier;
   }
   
   /**
@@ -1233,11 +1335,21 @@ public class PostProxy {
                                      new PastPolicy.DefaultPastPolicy(),
                                      parameters.getLong("past_garbage_collection_interval"),
                                      trashStorage);
+      binaryImmutablePast = new GCPastImpl(node, binaryImmutableStorage, binaryImmutableBackupCache, 
+          parameters.getInt("past_replication_factor"), 
+          parameters.getString("application_instance_name") + "-binary-immutable",
+          new PastPolicy.DefaultPastPolicy(),
+          parameters.getLong("past_garbage_collection_interval"),
+          binaryTrashStorage);
     } else {
       immutablePast = new PastImpl(node, immutableStorage, immutableBackupCache,
                                    parameters.getInt("past_replication_factor"), 
                                    parameters.getString("application_instance_name") + "-immutable", 
                                    new PastPolicy.DefaultPastPolicy(), trashStorage);
+      binaryImmutablePast = new PastImpl(node, binaryImmutableStorage, binaryImmutableBackupCache,
+          parameters.getInt("past_replication_factor"), 
+          parameters.getString("application_instance_name") + "-binary-immutable", 
+          new PastPolicy.DefaultPastPolicy(), binaryTrashStorage);
     }
     
     realImmutablePast = immutablePast;
@@ -1479,7 +1591,11 @@ public class PostProxy {
       }
       startLoadRingCertificates(parameters);
       startDeterminePorts(parameters);
-      startCheckNAT();
+      if (parameters.contains("proxy_suppress_nat_check") && parameters.getBoolean("proxy_suppress_nat_check")) {
+        // don't check nat 
+      } else {
+        startCheckNAT();
+      }
       startDetermineSMTPServer(parameters);
       sectionDone();
       

@@ -17,7 +17,8 @@ import rice.p2p.past.*;
  * @version $Id$
  */
 public class GroupData implements PostData {
-  
+  public static final short TYPE = 3;
+
   // The list of Postdata objects we are storing
   protected PostData[] data;
   

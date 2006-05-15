@@ -29,7 +29,12 @@ public class MyApp implements Application {
 
   public MyApp(Node node) {
     // We are only going to use one instance of this application on each PastryNode
-    this.endpoint = node.registerApplication(this, "myinstance");
+    this.endpoint = node.buildEndpoint(this, "myinstance");
+    
+    // the rest of the initialization code could go here
+    
+    // now we can receive messages
+    this.endpoint.register();
   }
 
   /**

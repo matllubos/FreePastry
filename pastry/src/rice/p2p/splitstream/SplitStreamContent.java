@@ -1,9 +1,12 @@
 package rice.p2p.splitstream;
 
+import java.io.IOException;
 import java.util.StringTokenizer;
 
 import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.scribe.ScribeContent;
+import rice.p2p.scribe.rawserialization.RawScribeContent;
 
 /**
  * This represents data sent through scribe for splitstream
@@ -11,7 +14,8 @@ import rice.p2p.scribe.ScribeContent;
  * @version $Id$
  * @author Alan Mislove
  */
-public class SplitStreamContent implements ScribeContent {
+public class SplitStreamContent implements RawScribeContent {
+  public static final short TYPE = 1;
 
   /**
    * The internal data - just the bytes
@@ -59,5 +63,27 @@ public class SplitStreamContent implements ScribeContent {
   }
   
   */
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0);
+    buf.writeInt(data.length);
+    buf.write(data,0,data.length);
+  }
+  
+  public SplitStreamContent(InputBuffer buf) throws IOException {
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        data = new byte[buf.readInt()];
+        buf.read(data);
+        break;
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }
+  }
 }
 

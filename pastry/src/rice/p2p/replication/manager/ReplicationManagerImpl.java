@@ -100,7 +100,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
    */
   public ReplicationManagerImpl(Node node, ReplicationManagerClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
     this.environment = node.getEnvironment();
-    logger = environment.getLogManager().getLogger(ReplicationImpl.class, instance);
+    logger = environment.getLogManager().getLogger(ReplicationManagerImpl.class, instance);
     Parameters p = environment.getParameters();
     
     FETCH_DELAY = p.getInt("p2p_replication_manager_fetch_delay");
@@ -109,7 +109,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     
     this.client = client;
     this.factory = node.getIdFactory();
-    this.endpoint = node.registerApplication(this, instance);
+    this.endpoint = node.buildEndpoint(this, instance);
     this.helper = new ReplicationManagerHelper();
     this.deleter = new ReplicationManagerDeleter();
     this.instance = instance;
@@ -117,6 +117,7 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     if (logger.level <= Logger.FINE) logger.log( "Starting up ReplicationManagerImpl with client " + client);
     
     this.replication = new ReplicationImpl(node, this, replicationFactor, instance, policy);
+    endpoint.register();
   }
   
   
@@ -153,7 +154,11 @@ public class ReplicationManagerImpl implements ReplicationManager, ReplicationCl
     client.fetch(id, hint, new Continuation() {
       public void receiveResult(Object o) {
         if (! (new Boolean(true)).equals(o)) {
-          if (logger.level <= Logger.WARNING) logger.log( "Fetching of id " + id + " failed with " + o);
+          if (o instanceof Throwable) {
+            if (logger.level <= Logger.WARNING) logger.logException( "Fetching of id " + id + " failed with ", (Throwable)o);
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log( "Fetching of id " + id + " failed with "+o);            
+          }
         }
         
         if (logger.level <= Logger.FINE) logger.log( "Successfully fetched id " + id);

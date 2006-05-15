@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.*;
 
 import rice.environment.Environment;
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.socket.*;
 import rice.pastry.*;
 
@@ -21,28 +23,40 @@ public abstract class DatagramMessage extends SocketMessage {
   
   protected long start;
   
-  protected SourceRoute outbound;
-  
-  protected SourceRoute inbound;
+//  protected SourceRoute outbound;
+//  
+//  protected SourceRoute inbound;
 
   /**
    * Constructor
    */
-  public DatagramMessage(SourceRoute outbound, SourceRoute inbound, long start) {
-    this.outbound = outbound;
-    this.inbound = inbound;
+  public DatagramMessage(/*SourceRoute outbound, SourceRoute inbound, */long start) {
+//    this.outbound = outbound;
+//    this.inbound = inbound;
     this.start = start;
   }
+  
+  protected DatagramMessage(InputBuffer buf) throws IOException {
+    this(/*SourceRoute.build(buf), SourceRoute.build(buf), */buf.readLong());
+  }
+
   
   public long getStartTime() {
     return start;
   }
   
-  public SourceRoute getOutboundPath() {
-    return outbound;
-  }
+//  public SourceRoute getOutboundPath() {
+//    return outbound;
+//  }
   
-  public SourceRoute getInboundPath() {
-    return inbound;
-  }
+//  public SourceRoute getInboundPath() {
+//    return inbound;
+//  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+//    outbound.serialize(buf);
+//    inbound.serialize(buf);
+    buf.writeLong(start);
+  }  
+
 }

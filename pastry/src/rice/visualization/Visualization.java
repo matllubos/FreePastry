@@ -11,7 +11,6 @@ import java.security.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.UpdateJarResponse;
 import rice.visualization.client.VisualizationClient;
@@ -219,7 +218,7 @@ public class Visualization implements DataProvider {
 //    setSelected(id,selectedRing);
 //  }  
 
-  public void setSelected(NodeId id, Ring r) {
+  public void setSelected(rice.pastry.Id id, Ring r) {
     Node[] handles = r.getNodes();
       
     for (int i=0; i<handles.length; i++) {

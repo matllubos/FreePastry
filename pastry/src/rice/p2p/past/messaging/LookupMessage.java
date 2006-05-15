@@ -1,14 +1,21 @@
 
 package rice.p2p.past.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
+import rice.p2p.past.gc.GCId;
+import rice.p2p.past.rawserialization.*;
 
 /**
  * @(#) LookupMessage.java
  *
  * This class is the representation of a lookup request (by Id) in Past.
+ *
+ * response should be PastContent
  *
  * @version $Id$
  *
@@ -17,6 +24,7 @@ import rice.p2p.past.*;
  * @author Peter Druschel
  */
 public class LookupMessage extends ContinuationMessage {
+  public static final short TYPE = 6;
 
   // the id to fetch
   private Id id;
@@ -93,6 +101,56 @@ public class LookupMessage extends ContinuationMessage {
    */
   public String toString() {
     return "[LookupMessage for " + id + " data " + response + "]";
+  }
+  
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version        
+    if (response != null && response instanceof RawPastContent) {
+      super.serialize(buf, false); 
+      RawPastContent rpc = (RawPastContent)response;
+      buf.writeShort(rpc.getType());
+      rpc.serialize(buf);
+    } else {
+      super.serialize(buf, true);       
+    }
+    
+    buf.writeBoolean(handle != null);
+    if (handle != null) handle.serialize(buf);
+    
+    buf.writeShort(id.getType());
+    id.serialize(buf);      
+    buf.writeBoolean(cached);
+  }
+
+  public static LookupMessage build(InputBuffer buf, Endpoint endpoint, PastContentDeserializer pcd) throws IOException {
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        return new LookupMessage(buf, endpoint, pcd);
+      default:
+        throw new IOException("Unknown Version: "+version);        
+    }
+  }  
+  
+  private LookupMessage(InputBuffer buf, Endpoint endpoint, PastContentDeserializer pcd) throws IOException {
+    super(buf, endpoint);
+    if (serType == S_SUB) {
+      short contentType = buf.readShort();
+      response = pcd.deserializePastContent(buf, endpoint, contentType);
+    }
+    if (buf.readBoolean())handle = endpoint.readNodeHandle(buf); 
+    try {
+      id = endpoint.readId(buf, buf.readShort());
+    } catch (IllegalArgumentException iae) {
+      System.out.println(iae+" "+this+" serType:"+serType+" UID:"+getUID()+" d:"+dest+" s:"+source);
+      throw iae; 
+    }
+    cached = buf.readBoolean();
   }
 }
 

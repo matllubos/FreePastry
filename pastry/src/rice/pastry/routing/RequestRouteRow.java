@@ -1,8 +1,8 @@
 package rice.pastry.routing;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.io.*;
 import java.util.*;
@@ -15,10 +15,10 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class RequestRouteRow extends Message implements Serializable {
-  private NodeHandle handle;
+public class RequestRouteRow extends PRawMessage implements Serializable {
+  public static final short TYPE = 1;
 
-  private int row;
+  private byte row;
 
   /**
    * Constructor.
@@ -27,26 +27,8 @@ public class RequestRouteRow extends Message implements Serializable {
    * @param r which row
    */
 
-  public RequestRouteRow(NodeHandle nh, int r) {
-    super(new RouteProtocolAddress());
-    handle = nh;
-    row = r;
-    setPriority(0);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials.
-   * @param nh the return handle.
-   * @param r which row
-   */
-
-  public RequestRouteRow(Credentials cred, NodeHandle nh, int r) {
-    super(new RouteProtocolAddress(), cred);
-    handle = nh;
-    row = r;
-    setPriority(0);
+  public RequestRouteRow(NodeHandle nh, byte r) {
+    this(null, nh, r);
   }
 
   /**
@@ -56,28 +38,11 @@ public class RequestRouteRow extends Message implements Serializable {
    * @param nh the return handle
    * @param r which row
    */
-
-  public RequestRouteRow(Date stamp, NodeHandle nh, int r) {
-    super(new RouteProtocolAddress(), stamp);
-    handle = nh;
+  public RequestRouteRow(Date stamp, NodeHandle nh, byte r) {
+    super(RouteProtocolAddress.getCode(), stamp);
+    setSender(nh);
     row = r;
-    setPriority(0);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials.
-   * @param stamp the timestamp
-   * @param nh the return handle.
-   * @param r which row
-   */
-
-  public RequestRouteRow(Credentials cred, Date stamp, NodeHandle nh, int r) {
-    super(new RouteProtocolAddress(), cred, stamp);
-    handle = nh;
-    row = r;
-    setPriority(0);
+    setPriority(MAX_PRIORITY);
   }
 
   /**
@@ -87,7 +52,7 @@ public class RequestRouteRow extends Message implements Serializable {
    */
 
   public NodeHandle returnHandle() {
-    return handle;
+    return getSender();
   }
 
   /**
@@ -103,8 +68,33 @@ public class RequestRouteRow extends Message implements Serializable {
   public String toString() {
     String s = "";
 
-    s += "RequestRouteRow(row " + row + " by " + handle.getNodeId() + ")";
+    s += "RequestRouteRow(row " + row + " by " + getSender().getNodeId() + ")";
 
     return s;
+  }
+  
+  /***************** Raw Serialization ***************************************/  
+  public short getType() {
+    return TYPE;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version    
+    buf.writeByte(row);
+  }
+  
+  public RequestRouteRow(NodeHandle sender, InputBuffer buf) throws IOException {
+    super(RouteProtocolAddress.getCode(), null);
+    setSender(sender);
+    
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        row = buf.readByte();
+        setPriority(MAX_PRIORITY);
+        break;
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }
   }
 }

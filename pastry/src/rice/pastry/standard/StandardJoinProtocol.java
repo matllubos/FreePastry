@@ -1,14 +1,15 @@
 package rice.pastry.standard;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
-import rice.pastry.security.*;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.join.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -25,14 +26,24 @@ import java.util.*;
 public class StandardJoinProtocol extends PastryAppl {
   protected NodeHandle localHandle;
 
-  protected PastrySecurityManager security;
-
   protected RoutingTable routeTable;
 
   protected LeafSet leafSet;
+  
+  static class SJPDeserializer extends PJavaSerializedDeserializer {
+    public SJPDeserializer(PastryNode pn) {
+      super(pn);
+    }
 
-  protected Credentials cred = new PermissiveCredentials();
-
+    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+      switch(type) {
+        case JoinRequest.TYPE:
+          return new JoinRequest(buf,pn, (NodeHandle)sender);
+      }      
+      return null;
+    }
+  }
+  
   /**
    * Constructor.
    * 
@@ -40,14 +51,16 @@ public class StandardJoinProtocol extends PastryAppl {
    * @param sm the Pastry security manager.
    */
 
-  public StandardJoinProtocol(PastryNode ln, NodeHandle lh,
-      PastrySecurityManager sm, RoutingTable rt, LeafSet ls) {
-    super(ln);
+  public StandardJoinProtocol(PastryNode ln, NodeHandle lh,RoutingTable rt, LeafSet ls) {
+    this(ln, lh, rt, ls, null);
+  }
+  
+  public StandardJoinProtocol(PastryNode ln, NodeHandle lh,RoutingTable rt, LeafSet ls, MessageDeserializer md) {
+    super(ln, null, JoinAddress.getCode(), md == null ? new SJPDeserializer(ln) : md);
     localHandle = lh;
-    security = sm;
 
     routeTable = rt;
-    leafSet = ls;
+    leafSet = ls;    
   }
 
   /**
@@ -55,8 +68,8 @@ public class StandardJoinProtocol extends PastryAppl {
    * 
    * @return gets the address.
    */
-  public Address getAddress() {
-    return new JoinAddress();
+  public int getAddress() {
+    return JoinAddress.getCode();
   }
 
   /**
@@ -64,14 +77,11 @@ public class StandardJoinProtocol extends PastryAppl {
    * 
    * @param msg the message that was received.
    */
-
   public void receiveMessage(Message msg) {
     if (msg instanceof JoinRequest) {
       JoinRequest jr = (JoinRequest) msg;
 
       NodeHandle nh = jr.getHandle();
-
-      nh = security.verifyNodeHandle(nh);
 
       // if (nh.isAlive() == true) // the handle is alive
       if (jr.accepted() == false) {
@@ -88,8 +98,6 @@ public class StandardJoinProtocol extends PastryAppl {
       } else { // this is the node that initiated the join request in the first
                 // place
         NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
-
-        jh = security.verifyNodeHandle(jh);
 
         if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
           if (logger.level <= Logger.WARNING) logger.log(
@@ -114,27 +122,29 @@ public class StandardJoinProtocol extends PastryAppl {
       // a join request message at an intermediate node
       RouteMessage rm = (RouteMessage) msg;
 
-      JoinRequest jr = (JoinRequest) rm.unwrap();
-
-      NodeId localId = localHandle.getNodeId();
-      NodeHandle jh = jr.getHandle();
-      NodeId nid = jh.getNodeId();
-
-      jh = security.verifyNodeHandle(jh);
-
-      if (!jh.equals(localHandle)) {
-        int base = thePastryNode.getRoutingTable().baseBitLength();
+      try {
+        JoinRequest jr = (JoinRequest) rm.unwrap(deserializer);
   
-        int msdd = localId.indexOfMSDD(nid, base);
-        int last = jr.lastRow();
+        Id localId = localHandle.getNodeId();
+        NodeHandle jh = jr.getHandle();
+        Id nid = jh.getNodeId();
   
-        for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
-          RouteSet[] row = routeTable.getRow(i);
-  
-          jr.pushRow(row);
-        }
-  
-        rm.routeMessage(localHandle);
+        if (!jh.equals(localHandle)) {
+          int base = thePastryNode.getRoutingTable().baseBitLength();
+    
+          int msdd = localId.indexOfMSDD(nid, base);
+          int last = jr.lastRow();
+    
+          for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
+            RouteSet[] row = routeTable.getRow(i);
+    
+            jr.pushRow(row);
+          }
+    
+          rm.routeMessage(localHandle);
+        }      
+      } catch (IOException ioe) {
+        if (logger.level <= Logger.SEVERE) logger.logException("StandardJoinProtocol.receiveMessage()",ioe); 
       }
     } else if (msg instanceof InitiateJoin) { // request from the local node to
                                               // join
@@ -147,15 +157,18 @@ public class StandardJoinProtocol extends PastryAppl {
         if (logger.level <= Logger.SEVERE) logger.log(
             "ERROR: Cannot join ring.  All bootstraps are faulty.");        
       } else {
-        nh = security.verifyNodeHandle(nh);
         if (nh.isAlive() == true) {
           JoinRequest jr = new JoinRequest(localHandle, thePastryNode
               .getRoutingTable().baseBitLength());
   
-          RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr,
-              new PermissiveCredentials(), getAddress());
+          RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr);
           rm.getOptions().setRerouteIfSuspected(false);
-          nh.bootstrap(rm);
+          rm.setPrevNode(localHandle);
+          try {
+            nh.bootstrap(rm);
+          } catch (IOException ioe) {
+            if (logger.level <= Logger.SEVERE) logger.logException("Error bootstrapping.",ioe); 
+          }
         }
       }
     }
@@ -207,8 +220,6 @@ public class StandardJoinProtocol extends PastryAppl {
 
         NodeHandle nh = rs.closestNode();
         if (nh != null)
-          nh = security.verifyNodeHandle(nh);
-        if (nh != null)
           nh.receiveMessage(brr);
 
         /*
@@ -227,10 +238,6 @@ public class StandardJoinProtocol extends PastryAppl {
    */
   public void messageForAppl(Message msg) {
     throw new RuntimeException("Should not be called.");
-  }
-
-  public Credentials getCredentials() {
-    return cred;
   }
 
   /**

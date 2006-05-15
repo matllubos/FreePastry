@@ -29,13 +29,15 @@ public class JeffReader implements Runnable {
     is = new FileInputStream(f);
     r = new BufferedReader(new InputStreamReader(is));
     st = new JeffStreamTokenizer(r);
-    new Thread(this,"Reader Thread").start();
+    new Thread(this,"Reader Thread").start();    
   }
   
   Object pauseLock = new Object();
   boolean paused = false;
+  boolean firstTime = true;
   
   public void run() {
+    System.out.println("start loading");
     try {
       double nextTime = 0;
       double timeStep = 1;
@@ -88,6 +90,10 @@ public class JeffReader implements Runnable {
         case JeffStreamTokenizer.TT_EOF:
           handleEvent(event);
           event = null;
+          if (firstTime) {
+            firstTime = false;
+            System.out.println("done loading");
+          }
           try {
             Thread.sleep(readRate);
           } catch (InterruptedException ie) {

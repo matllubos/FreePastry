@@ -1,8 +1,10 @@
 package rice.p2p.multiring;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
 * @(#) MultiringNodeHandleSet.java
@@ -14,7 +16,8 @@ import rice.p2p.commonapi.*;
  * @author Alan Mislove
  */
 public class MultiringNodeHandleSet implements NodeHandleSet {
-  
+  public static final short TYPE = 10;
+
   /**
    * The actual node handle set
    */
@@ -160,5 +163,21 @@ public class MultiringNodeHandleSet implements NodeHandleSet {
   public String toString() {
     return "{RingId " + ringId + " " + set.toString() + "}";
   }
+
+  public MultiringNodeHandleSet(InputBuffer buf, Endpoint endpoint) throws IOException {
+    ringId = endpoint.readId(buf, buf.readShort());
+    short type = buf.readShort();
+    set = endpoint.readNodeHandleSet(buf, type);
+  }
   
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(ringId.getType());
+    ringId.serialize(buf);
+    buf.writeShort(set.getType());
+    set.serialize(buf);
+  }
+  
+  public short getType() {
+    return TYPE; 
+  }
 }

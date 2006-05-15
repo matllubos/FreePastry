@@ -1,7 +1,7 @@
 package rice.pastry.routing;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
-import rice.pastry.NodeSetI;
 
 import java.util.*;
 import java.io.*;
@@ -19,6 +19,7 @@ import java.io.*;
 
 public class RouteSet implements NodeSetI, Serializable,
     Observer {
+  public static final short TYPE = 2;
 
   private static final long serialVersionUID = 8156336294555109590L;
 
@@ -142,7 +143,7 @@ public class RouteSet implements NodeSetI, Serializable,
    * 
    * @return the removed handle or null.
    */
-  public NodeHandle remove(NodeId nid) {
+  public NodeHandle remove(Id nid) {
     for (int i = 0; i < theSize; i++) {
       if (nodes[i].getNodeId().equals(nid)) {
         NodeHandle handle = nodes[i];
@@ -220,7 +221,7 @@ public class RouteSet implements NodeSetI, Serializable,
    * 
    * @return true if it is a member, false otherwise.
    */
-  public boolean member(NodeId nid) {
+  public boolean member(Id nid) {
     for (int i = 0; i < theSize; i++)
       if (nodes[i].getNodeId().equals(nid))
         return true;
@@ -304,7 +305,7 @@ public class RouteSet implements NodeSetI, Serializable,
    * 
    * @return the node handle.
    */
-  public NodeHandle get(NodeId nid) {
+  public NodeHandle get(Id nid) {
     for (int i = 0; i < theSize; i++)
       if (nodes[i].getNodeId().equals(nid))
         return nodes[i];
@@ -317,7 +318,7 @@ public class RouteSet implements NodeSetI, Serializable,
    * 
    * @return the node.
    */
-  public int getIndex(NodeId nid) {
+  public int getIndex(Id nid) {
     for (int i = 0; i < theSize; i++)
       if (nodes[i].getNodeId().equals(nid))
         return i;
@@ -397,14 +398,14 @@ public class RouteSet implements NodeSetI, Serializable,
   }
 
   /**
-   * Finds the NodeHandle associated with the NodeId.
+   * Finds the NodeHandle associated with the Id.
    * 
    * @param id a node id.
    * @return the handle associated with that id or null if no such handle is
    *         found.
    */
   public rice.p2p.commonapi.NodeHandle getHandle(rice.p2p.commonapi.Id id) {
-    return getHandle((NodeId) id);
+    return getHandle((Id) id);
   }
 
   /**
@@ -425,7 +426,7 @@ public class RouteSet implements NodeSetI, Serializable,
    * @return true if that node id is in the set, false otherwise.
    */
   public boolean memberHandle(rice.p2p.commonapi.Id id) {
-    return member((NodeId) id);
+    return member((Id) id);
   }
 
   /**
@@ -436,7 +437,7 @@ public class RouteSet implements NodeSetI, Serializable,
    * @return the node handle removed or null if nothing.
    */
   public rice.p2p.commonapi.NodeHandle removeHandle(rice.p2p.commonapi.Id id) {
-    return remove((NodeId) id);
+    return remove((Id) id);
   }
 
   /**
@@ -448,6 +449,47 @@ public class RouteSet implements NodeSetI, Serializable,
    */
   public int getIndexHandle(rice.p2p.commonapi.Id id)
       throws NoSuchElementException {
-    return getIndex((NodeId) id);
+    return getIndex((Id) id);
   }
+    
+  public short getType() {
+    return TYPE; 
+  }
+  
+ /**
+  *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  *   +    maxSize    +    theSize    +    closest    +
+  *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  *   + NodeHandle 1st                                                +
+  *                    ...                                             
+  *   +                                                               +
+  *   +                                                               +
+  *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  *                    ...                                             
+  *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  *   + NodeHandle theSize-th                                         +
+  *                    ...                                             
+  *   +                                                               +
+  *   +                                                               +
+  *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  */
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)nodes.length);    
+    buf.writeByte((byte)theSize);    
+    buf.writeByte((byte)closest);    
+    for (int i = 0; i < theSize; i++) {
+      nodes[i].serialize(buf);
+    }       
+  }
+  
+  public RouteSet(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+    byte maxSize = buf.readByte();
+    theSize = buf.readByte();
+    closest = buf.readByte();
+    nodes = new NodeHandle[maxSize];
+    for (int i = 0; i < theSize; i++) {
+      nodes[i] = nhf.readNodeHandle(buf);
+    }           
+  }
+  
 }

@@ -7,12 +7,14 @@ import rice.post.messaging.*;
 import rice.post.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * This class wraps an EncrypedNotificationMessage and is
  * used after the receipt of a PresenceMessage.
  */
 public class DeliveryMessage extends PostMessage {
+  public static final short TYPE = 4;
   private static final long serialVersionUID = -863725686248756000L;
 
   private SignedPostMessage message;
@@ -61,5 +63,32 @@ public class DeliveryMessage extends PostMessage {
   public void setId(Id id) {
     this.id = id;
   }
+
+  public DeliveryMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint);
+    
+    id = endpoint.readId(buf, buf.readShort());
+    
+    destination = PostEntityAddress.build(buf, endpoint, buf.readShort());     
+    
+    message = new SignedPostMessage(buf, endpoint);
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf); 
+    
+    buf.writeShort(id.getType());
+    id.serialize(buf);
+    
+    buf.writeShort(destination.getType());     
+    destination.serialize(buf);     
+    
+    message.serialize(buf);
+  }
+
+  public short getType() {
+    return TYPE;
+  }
+  
 }
 

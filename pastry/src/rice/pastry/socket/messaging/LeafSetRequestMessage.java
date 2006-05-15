@@ -3,6 +3,7 @@ package rice.pastry.socket.messaging;
 
 import java.io.*;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.leafset.*;
 
@@ -15,6 +16,7 @@ import rice.pastry.leafset.*;
 */
 public class LeafSetRequestMessage extends SocketMessage {
 
+  public static final short TYPE = 4;
   /**
   * Constructor
   *
@@ -22,4 +24,15 @@ public class LeafSetRequestMessage extends SocketMessage {
   */
   public LeafSetRequestMessage() {
   }
+  
+  /***************** Raw Serialization ***************************************/  
+  public short getType() {
+    return TYPE;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version    
+  }
+  
+  // Note: Deserialized in SocketManager.SMDeserializer.deserialize()  
 }

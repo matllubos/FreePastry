@@ -9,7 +9,7 @@ import rice.pastry.messaging.Message;
    * @version $Id: EuclideanNetwork.java 2561 2005-06-09 16:22:02Z jeffh $
    * @author amislove
    */
-  class MessageDelivery {
+  class MessageDelivery implements Delivery {
     protected Message msg;
     protected DirectPastryNode node;    
     protected Logger logger;

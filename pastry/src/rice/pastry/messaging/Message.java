@@ -1,7 +1,5 @@
 package rice.pastry.messaging;
 
-import rice.pastry.security.Credentials;
-
 import java.io.*;
 import java.util.*;
 
@@ -16,12 +14,12 @@ import rice.pastry.*;
  * @author Sitaram Iyer
  */
 
-public abstract class Message implements Serializable {
+public abstract class Message implements Serializable, rice.p2p.commonapi.Message {
   private static final long serialVersionUID = 8921944904321235696L;
 
   public static final int DEFAULT_PRIORITY_LEVEL = 5;
 
-  private Address destination;
+  private int destination;
 
   private NodeHandle sender;
 
@@ -31,9 +29,7 @@ public abstract class Message implements Serializable {
    */
   private boolean priority;
 
-  private int priorityLevel = DEFAULT_PRIORITY_LEVEL;
-
-  private transient Credentials credentials;
+  private byte priorityLevel = DEFAULT_PRIORITY_LEVEL;
 
   private transient Date theStamp;
 
@@ -42,17 +38,8 @@ public abstract class Message implements Serializable {
    * 
    * @return the destination id.
    */
-  public Address getDestination() {
+  public int getDestination() {
     return destination;
-  }
-
-  /**
-   * Gets the credentials of the sender.
-   * 
-   * @return credentials or null if the sender has no credentials.
-   */
-  public Credentials getCredentials() {
-    return credentials;
   }
 
   /**
@@ -69,7 +56,7 @@ public abstract class Message implements Serializable {
    * 
    * @return the immediate sender's NodeId.
    */
-  public NodeId getSenderId() {
+  public Id getSenderId() {
     if (sender == null)
       return null;
     return sender.getNodeId();
@@ -99,7 +86,7 @@ public abstract class Message implements Serializable {
    * 
    * @return the priority of this message.
    */
-  public int getPriority() {
+  public byte getPriority() {
     return priorityLevel;
   }
 
@@ -108,7 +95,7 @@ public abstract class Message implements Serializable {
    * 
    * @param the new priority.
    */
-  protected void setPriority(int prio) {
+  protected void setPriority(byte prio) {
     priorityLevel = prio;
   }
 
@@ -134,43 +121,8 @@ public abstract class Message implements Serializable {
    * @param dest the destination.
    */
 
-  public Message(Address dest) {
-    destination = dest;
-    sender = null;
-    credentials = null;
-    theStamp = null;
-    priority = false;
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param dest the destination.
-   * @param cred the credentials.
-   */
-
-  public Message(Address dest, Credentials cred) {
-    destination = dest;
-    sender = null;
-    credentials = cred;
-    theStamp = null;
-    priority = false;
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param dest the destination.
-   * @param cred the credentials.
-   * @param timestamp the timestamp
-   */
-
-  public Message(Address dest, Credentials cred, Date timestamp) {
-    destination = dest;
-    sender = null;
-    credentials = cred;
-    this.theStamp = timestamp;
-    priority = false;
+  public Message(int dest) {
+    this(dest, null);
   }
 
   /**
@@ -180,7 +132,7 @@ public abstract class Message implements Serializable {
    * @param timestamp the timestamp
    */
 
-  public Message(Address dest, Date timestamp) {
+  public Message(int dest, Date timestamp) {
     destination = dest;
     this.theStamp = timestamp;
     sender = null;

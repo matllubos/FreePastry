@@ -1,8 +1,11 @@
 
 package rice.p2p.scribe.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.scribe.*;
 
 /**
@@ -14,7 +17,7 @@ import rice.p2p.scribe.*;
  *
  * @author Alan Mislove
  */
-public abstract class ScribeMessage implements Message {
+public abstract class ScribeMessage implements RawMessage {
   
   // serialver for backward compatibility
   private static final long serialVersionUID = 4593674882226544604L;
@@ -47,7 +50,7 @@ public abstract class ScribeMessage implements Message {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return MEDIUM_HIGH_PRIORITY;
   }
 
@@ -76,6 +79,20 @@ public abstract class ScribeMessage implements Message {
    */
   public Topic getTopic() {
     return topic;
+  }
+  
+  /**
+   * Protected because it should only be called from an extending class, to get version
+   * numbers correct.
+   */
+  protected ScribeMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    source = endpoint.readNodeHandle(buf);
+    topic = new Topic(buf, endpoint);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    source.serialize(buf);
+    topic.serialize(buf);
   }
   
 }

@@ -3,7 +3,10 @@ package rice.pastry.socket.messaging;
 
 import java.io.*;
 
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
+import rice.pastry.Id;
 
 /**
  * A response message to a NodeIdRequestMessage, containing the remote
@@ -14,8 +17,9 @@ import rice.pastry.*;
  * @author Alan Mislove
  */
 public class NodeIdResponseMessage extends SocketMessage {
+  public static final short TYPE = 7;
 
-  private NodeId nid;
+  private Id nid;
   
   private long epoch;
 
@@ -24,7 +28,7 @@ public class NodeIdResponseMessage extends SocketMessage {
    *
    * @param nid The nodeId of the receiver of the NodeIdRequestMessage.
    */
-  public NodeIdResponseMessage(NodeId nid, long epoch) {
+  public NodeIdResponseMessage(Id nid, long epoch) {
     this.nid = nid;
     this.epoch = epoch;
   }
@@ -34,7 +38,7 @@ public class NodeIdResponseMessage extends SocketMessage {
    *
    * @return The NodeId of the receiver node.
    */
-  public NodeId getNodeId() {
+  public Id getNodeId() {
     return nid;
   }
   
@@ -45,5 +49,32 @@ public class NodeIdResponseMessage extends SocketMessage {
    */
   public long getEpoch() {
     return epoch;
+  }
+  
+  public String toString() {
+    return "NodeIdResponseMessage["+nid+","+epoch+"]";
+  }
+
+  /***************** Raw Serialization ***************************************/  
+  public short getType() {
+    return TYPE;
+  }
+
+  public NodeIdResponseMessage(InputBuffer buf) throws IOException {
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        nid = Id.build(buf);
+        epoch = buf.readLong();
+        break;
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }     
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {    
+    buf.writeByte((byte)0); // version    
+    nid.serialize(buf);
+    buf.writeLong(epoch);
   }
 }

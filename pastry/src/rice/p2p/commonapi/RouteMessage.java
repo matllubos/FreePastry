@@ -3,6 +3,8 @@ package rice.p2p.commonapi;
 
 import java.io.*;
 
+import rice.p2p.commonapi.rawserialization.*;
+
 /**
  * @(#) RouteMessage.java
  *
@@ -34,8 +36,11 @@ public interface RouteMessage extends Serializable {
    * Returns the enclosed message inside of this message
    *
    * @return The enclosed message
+   * @deprecated use getMesage(MessageDeserializer)
    */
   public Message getMessage();
+  
+  public Message getMessage(MessageDeserializer md) throws IOException;
 
   /**
    * Sets the destination Id for this message
@@ -57,6 +62,17 @@ public interface RouteMessage extends Serializable {
    * @param message The internal message
    */
   public void setMessage(Message message);
+  
+  /**
+   * Sets the internal message for this message
+   *
+   * Does the same as setMessage(Message) but with better
+   * performance, because it doesn't have to introspect 
+   * if the message is a RawMessage
+   *
+   * @param message The internal message
+   */
+  public void setMessage(RawMessage message);
   
 }
 

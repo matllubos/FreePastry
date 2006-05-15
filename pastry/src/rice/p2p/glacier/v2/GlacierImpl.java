@@ -1,6 +1,6 @@
 package rice.p2p.glacier.v2;
 
-import java.io.Serializable;
+import java.io.*;
 import java.security.*;
 import java.util.*;
 
@@ -10,6 +10,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.glacier.*;
 import rice.p2p.glacier.v2.messaging.*;
 import rice.p2p.past.Past;
@@ -17,12 +18,13 @@ import rice.p2p.past.PastContent;
 import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPast;
 import rice.p2p.past.gc.GCPastContent;
+import rice.p2p.past.rawserialization.*;
 import rice.p2p.util.DebugCommandHandler;
 import rice.persistence.Storage;
 import rice.persistence.StorageManager;
 import rice.persistence.PersistentStorage;
 
-public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Application, DebugCommandHandler {
+public class GlacierImpl implements Glacier, GCPast, VersioningPast, Application, DebugCommandHandler {
   protected final StorageManager fragmentStorage;
   protected final StorageManager neighborStorage;
   protected final GlacierPolicy policy;
@@ -142,6 +144,9 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   private Environment environment;
   protected Logger logger;
   
+  protected PastContentDeserializer contentDeserializer;
+  protected PastContentHandleDeserializer contentHandleDeserializer;
+   
   public GlacierImpl(Node nodeArg, StorageManager fragmentStorageArg, StorageManager neighborStorageArg, int numFragmentsArg, int numSurvivorsArg, IdFactory factoryArg, String instanceArg, GlacierPolicy policyArg) {
     this.environment = nodeArg.getEnvironment();
     this.logger = environment.getLogManager().getLogger(GlacierImpl.class, instanceArg);
@@ -225,7 +230,47 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     this.policy = policyArg;
     this.node = nodeArg;
     this.instance = instanceArg;
-    this.endpoint = node.registerApplication(this, instance);
+    this.endpoint = node.buildEndpoint(this, instance);
+    this.endpoint.setDeserializer(new MessageDeserializer() {
+    
+      public Message deserialize(InputBuffer buf, short type, byte priority,
+          NodeHandle sender) throws IOException {
+        switch(type) {
+          case GlacierDataMessage.TYPE:
+            return GlacierDataMessage.build(buf, endpoint);
+          case GlacierFetchMessage.TYPE:
+            return GlacierFetchMessage.build(buf, endpoint);
+          case GlacierNeighborRequestMessage.TYPE:
+            return GlacierNeighborRequestMessage.build(buf, endpoint);
+          case GlacierNeighborResponseMessage.TYPE:
+            return GlacierNeighborResponseMessage.build(buf, endpoint);
+          case GlacierQueryMessage.TYPE:
+            return GlacierQueryMessage.build(buf, endpoint);
+          case GlacierRangeForwardMessage.TYPE:
+            return GlacierRangeForwardMessage.build(buf, endpoint);
+          case GlacierRangeQueryMessage.TYPE:
+            return GlacierRangeQueryMessage.build(buf, endpoint);
+          case GlacierRangeResponseMessage.TYPE:
+            return GlacierRangeResponseMessage.build(buf, endpoint);
+          case GlacierRefreshCompleteMessage.TYPE:
+            return GlacierRefreshCompleteMessage.build(buf, endpoint);
+          case GlacierRefreshPatchMessage.TYPE:
+            return GlacierRefreshPatchMessage.build(buf, endpoint);
+          case GlacierRefreshProbeMessage.TYPE:
+            return GlacierRefreshProbeMessage.build(buf, endpoint);
+          case GlacierRefreshResponseMessage.TYPE:
+            return GlacierRefreshResponseMessage.build(buf, endpoint);
+          case GlacierResponseMessage.TYPE:
+            return GlacierResponseMessage.build(buf, endpoint);
+          case GlacierSyncMessage.TYPE:
+            return GlacierSyncMessage.build(buf, endpoint);
+        }
+        throw new IllegalArgumentException("Unknown type:"+type);
+      }
+    
+    });
+    this.contentDeserializer = new JavaPastContentDeserializer();
+    this.contentHandleDeserializer = new JavaPastContentHandleDeserializer();
     this.numFragments = numFragmentsArg;
     this.numSurvivors = numSurvivorsArg;
     this.factory = factoryArg;
@@ -243,6 +288,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
     this.tokenBucket = 0;
     this.bucketLastUpdated = environment.getTimeSource().currentTimeMillis();
     determineResponsibleRange();
+    endpoint.register();
   }
   
   public void startup() {
@@ -1309,7 +1355,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "refresh("+id+", "+expiration+")="+ret[0];
     }
@@ -1342,7 +1388,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       
       c.receiveResult(null);
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
 
       result.append(ret[0]+"\n");              
       return result.toString();
@@ -1410,7 +1456,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "delete("+id+")="+ret[0];
     }
@@ -1460,7 +1506,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       });
         
       while (done[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "burst("+id+")="+ret[0];
     }
@@ -1485,7 +1531,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "manifest("+vkey+")="+ret[0];
     }
@@ -1522,7 +1568,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "retrieve("+id+")="+ret[0];
     }
@@ -1568,7 +1614,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
         });
         
         while (ret[0] == null)
-          Thread.currentThread().yield();
+          Thread.yield();
       
         return "validate="+ret[0]+"\n\n"+result.toString();
       }
@@ -1634,7 +1680,7 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
       });
         
       while ((ret[0] == null) && (environment.getTimeSource().currentTimeMillis() < (now + 5*SECONDS)))
-        Thread.currentThread().yield();
+        Thread.yield();
       
       if (ret[0] == null)
         ret[0] = "Timeout";
@@ -2693,10 +2739,11 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
             }
 
             if (logger.level <= Logger.FINE) logger.log( "Decode object: " + key);
-            Serializable theObject = policy.decodeObject(material);
+            PastContent theObject = policy.decodeObject(material, endpoint, contentDeserializer);
             if (logger.level <= Logger.FINE) logger.log( "Decode complete: " + key);
 
-            if ((theObject == null) || !(theObject instanceof PastContent)) {
+            if (theObject == null) {
+//              if ((theObject == null) || !(theObject instanceof PastContent)) {
               if (logger.level <= Logger.WARNING) logger.log("retrieveObject: Decoder delivered "+theObject+", unexpected -- failed");
               c.receiveException(new GlacierException("Decoder delivered "+theObject+", unexpected -- failed"));
             } else {
@@ -3766,6 +3813,14 @@ public class GlacierImpl implements Glacier, Past, GCPast, VersioningPast, Appli
   public String getInstance() {
     return instance;
   }
-  
+
+  public void setContentDeserializer(PastContentDeserializer deserializer) {
+    contentDeserializer = deserializer;
+  }
+
+  public void setContentHandleDeserializer(PastContentHandleDeserializer deserializer) {
+    contentHandleDeserializer = deserializer;
+  }
+
 
 }

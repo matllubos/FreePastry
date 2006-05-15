@@ -1,13 +1,8 @@
 package rice.pastry.testing;
 
-import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.pastry.*;
-import rice.pastry.direct.*;
-import rice.pastry.standard.*;
-import rice.pastry.join.*;
 import rice.pastry.client.*;
-import rice.pastry.security.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
@@ -26,28 +21,18 @@ public class HelloWorldApp extends PastryAppl {
 
   private int msgid = 0;
 
-  private static Address addr = new HelloAddress();
+  private static int addr = HelloAddress.getCode();
 
-  private static Credentials cred = new PermissiveCredentials();
+  private static class HelloAddress {
+    private static int myCode = 0x1984abcd;
 
-  private static class HelloAddress implements Address {
-    private int myCode = 0x1984abcd;
-
-    public int hashCode() {
+    public static int getCode() {
       return myCode;
-    }
-
-    public boolean equals(Object obj) {
-      return (obj instanceof HelloAddress);
-    }
-
-    public String toString() {
-      return "[HelloAddress]";
     }
   }
 
   public HelloWorldApp(PastryNode pn) {
-    super(pn, null, addr);
+    super(pn, null, addr, null);
     register();
   }
 
@@ -61,7 +46,7 @@ public class HelloWorldApp extends PastryAppl {
     System.out.println("Sending message from " + getNodeId() + " to random dest " + rndid);
     Message msg = new HelloMsg(addr, thePastryNode.getLocalHandle(), rndid,
         ++msgid);
-    routeMsg(rndid, msg, cred, new SendOptions());
+    routeMsg(rndid, msg, new SendOptions());
   }
 
   // The remaining methods override abstract methods in the PastryAppl API.
@@ -71,17 +56,8 @@ public class HelloWorldApp extends PastryAppl {
    * 
    * @return the address of this application.
    */
-  public Address getAddress() {
+  public int getAddress() {
     return addr;
-  }
-
-  /**
-   * Get credentials.
-   * 
-   * @return credentials.
-   */
-  public Credentials getCredentials() {
-    return cred;
   }
 
   /**

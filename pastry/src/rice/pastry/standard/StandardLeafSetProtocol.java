@@ -3,7 +3,7 @@ package rice.pastry.standard;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
@@ -18,45 +18,24 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class StandardLeafSetProtocol implements MessageReceiver {
+public class StandardLeafSetProtocol extends PastryAppl {
   protected final boolean failstop = true;
 
   // nodes are assumed to fail silently
-
-  protected NodeHandle localHandle;
-
-  protected PastryNode localNode;
-
-  protected PastrySecurityManager security;
 
   protected LeafSet leafSet;
 
   protected RoutingTable routeTable;
 
-  private Address address;
-  
   protected Logger logger;
 
   public StandardLeafSetProtocol(PastryNode ln, NodeHandle local,
-      PastrySecurityManager sm, LeafSet ls, RoutingTable rt) {
-    localNode = ln;
-    localHandle = local;
-    security = sm;
+      LeafSet ls, RoutingTable rt) {
+    super(ln, LeafSetProtocolAddress.getCode());
     leafSet = ls;
     cachedSet = new HashSet(leafSet.maxSize() * 2);  
     routeTable = rt;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
-    address = new LeafSetProtocolAddress();
-  }
-
-  /**
-   * Gets the address.
-   * 
-   * @return the address.
-   */
-
-  public Address getAddress() {
-    return address;
   }
 
   /**
@@ -64,8 +43,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
    * 
    * @param msg the message.
    */
-
-  public void receiveMessage(Message msg) {
+  public void messageForAppl(Message msg) {
     if (msg instanceof BroadcastLeafSet) {
       // receive a leafset from another node
       BroadcastLeafSet bls = (BroadcastLeafSet) msg;
@@ -115,10 +93,9 @@ public class StandardLeafSetProtocol implements MessageReceiver {
       RequestLeafSet rls = (RequestLeafSet) msg;
 
       NodeHandle returnHandle = rls.returnHandle();
-      returnHandle = security.verifyNodeHandle(returnHandle);
 
       if (returnHandle.isAlive()) {
-        BroadcastLeafSet bls = new BroadcastLeafSet(localHandle, leafSet,
+        BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
             BroadcastLeafSet.Update);
 
         returnHandle.receiveMessage(bls);
@@ -166,14 +143,13 @@ public class StandardLeafSetProtocol implements MessageReceiver {
     } else
       insertedHandles = null;
 
-    BroadcastLeafSet bl = new BroadcastLeafSet(localHandle, leafSet,
+    BroadcastLeafSet bl = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
         BroadcastLeafSet.Correction);
-    boolean changed = remotels.merge(leafSet, localHandle, null, security,
+    boolean changed = remotels.merge(leafSet, thePastryNode.getLocalHandle(), null,
         true, insertedHandles);
 
     if (changed) {
       // nodes where missing, send update to "from"
-      from = security.verifyNodeHandle(from);
       from.receiveMessage(bl);
 
       if (notifyMissing) {
@@ -203,7 +179,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
    */
 
   protected boolean mergeLeafSet(LeafSet remotels, NodeHandle from) {
-    return leafSet.merge(remotels, from, routeTable, security, false, null);
+    return leafSet.merge(remotels, from, routeTable, false, null);
   }
 
   /**
@@ -221,7 +197,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
    */
 
   protected void broadcast(int type) {
-    BroadcastLeafSet bls = new BroadcastLeafSet(localHandle, leafSet, type);
+    BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet, type);
 
     int cwSize = leafSet.cwSize();
     int ccwSize = leafSet.ccwSize();
@@ -251,7 +227,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
    */
 
   protected void broadcast(LeafSet ls, NodeHandle from) {
-    BroadcastLeafSet bls = new BroadcastLeafSet(localHandle, leafSet,
+    BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
         BroadcastLeafSet.JoinAdvertise);
 
     int cwSize = ls.cwSize();
@@ -268,8 +244,6 @@ public class StandardLeafSetProtocol implements MessageReceiver {
       if (nh == null || nh.isAlive() == false)
         continue;
 
-      nh = security.verifyNodeHandle(nh);
-
       nh.receiveMessage(bls);
 
     }
@@ -282,7 +256,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
    */
   public void maintainLeafSet() {
     if (logger.level <= Logger.FINE) logger.log(
-        "maintainLeafSet " + localHandle.getNodeId());
+        "maintainLeafSet " + thePastryNode.getLocalHandle().getNodeId());
 
     boolean lostMembers = false;
 
@@ -325,7 +299,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
   private void requestLeafSet() {
 
-    RequestLeafSet rls = new RequestLeafSet(localHandle);
+    RequestLeafSet rls = new RequestLeafSet(thePastryNode.getLocalHandle());
     int cwSize = leafSet.cwSize();
     int ccwSize = leafSet.ccwSize();
     boolean allDead = true;
@@ -342,7 +316,7 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
     if (allDead && leafSet.size() > 0)
       if (logger.level <= Logger.SEVERE) logger.log(
-          "Ring failure at" + localHandle.getNodeId()
+          "Ring failure at" + thePastryNode.getLocalHandle().getNodeId()
               + "all ccw leafset entries failed");
 
     allDead = true;
@@ -358,9 +332,13 @@ public class StandardLeafSetProtocol implements MessageReceiver {
 
     if (allDead && leafSet.size() > 0)
       if (logger.level <= Logger.SEVERE) logger.log(
-          "Ring failure at" + localHandle.getNodeId()
+          "Ring failure at" + thePastryNode.getLocalHandle().getNodeId()
               + "all cw leafset entries failed");
 
+  }
+
+  public boolean deliverWhenNotReady() {
+    return true;
   }
 
 }

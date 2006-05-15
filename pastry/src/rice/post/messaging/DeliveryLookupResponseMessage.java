@@ -3,6 +3,8 @@ package rice.post.messaging;
 import java.io.*;
 import java.security.*;
 
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.post.messaging.*;
 import rice.post.*;
 
@@ -11,6 +13,7 @@ import rice.post.*;
  * order to inform the sender that the message has been received.
  */
 public class DeliveryLookupResponseMessage extends PostMessage {
+  public static final short TYPE = 3;
 
   private DeliveryRequestMessage message;
 
@@ -34,5 +37,23 @@ public class DeliveryLookupResponseMessage extends PostMessage {
   public DeliveryRequestMessage getEncryptedMessage() {
     return message;
   }
+  
+  public DeliveryLookupResponseMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint); 
+    
+    message = new DeliveryRequestMessage(buf, endpoint);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf);
+    
+    message.serialize(buf);
+  }
+
+  public short getType() {
+    return TYPE;
+  }
+
+
 }
 

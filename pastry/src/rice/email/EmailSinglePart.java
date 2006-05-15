@@ -7,6 +7,8 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.post.storage.*;
 
@@ -16,7 +18,8 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public class EmailSinglePart extends EmailContentPart {
-  
+  public static final short TYPE = 4;
+
   // serialver
   private static final long serialVersionUID = -8701317817146783297L;
 
@@ -50,7 +53,7 @@ public class EmailSinglePart extends EmailContentPart {
     this.unstoredContent = content;
     this.lines = new String(content.getData()).split("\n").length;
   }
-  
+
   /**
    * This method returns a list of all the handles stored in this part
    * by adding them to the specified set.
@@ -155,5 +158,21 @@ public class EmailSinglePart extends EmailContentPart {
     
     if ((unstoredContent == null) && (contentReference == null))
       throw new NullPointerException("Unstored Content and Reference NULL in EmailsinglePart!");
+  }
+  
+  public EmailSinglePart(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf);
+    lines = buf.readInt();
+    contentReference = new EmailDataReference(buf, endpoint);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf);
+    buf.writeInt(lines);
+    contentReference.serialize(buf);
+  }
+  
+  public short getRawType() {
+    return TYPE;
   }
 }

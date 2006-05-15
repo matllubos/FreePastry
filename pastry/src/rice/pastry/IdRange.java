@@ -1,7 +1,9 @@
 package rice.pastry;
 
 import java.util.*;
-import java.io.Serializable;
+import java.io.*;
+
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * Represents a contiguous range of Pastry ids. *
@@ -421,6 +423,18 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
   public rice.p2p.commonapi.IdRange intersectRange(
       rice.p2p.commonapi.IdRange range) {
     return intersect((IdRange) range);
+  }
+
+  public IdRange(InputBuffer buf) throws IOException {    
+    cw = Id.build(buf);
+    ccw = Id.build(buf);
+    empty = buf.readBoolean();
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    cw.serialize(buf);
+    ccw.serialize(buf);
+    buf.writeBoolean(empty);
   }
 }
 

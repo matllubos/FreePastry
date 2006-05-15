@@ -1,10 +1,14 @@
 
 package rice.p2p.past.messaging;
 
+import java.io.*;
+
 import rice.*;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
+import rice.p2p.util.JavaDeserializer;
 
 /**
  * @(#) ContinuationMessage.java
@@ -27,7 +31,7 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
 
   // the response exception, if one is thrown
   protected Exception exception;
-
+  
   /**
     * Constructor which takes a unique integer Id, as well as the
    * data to be stored
@@ -59,6 +63,8 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
    */
   public void receiveException(Exception e) {
     setResponse();
+//    System.out.println("ContinuationMessage.receiveException("+e+")");
+//    e.printStackTrace();
     exception = e;
   }
 
@@ -81,6 +87,118 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
    */
   public Object getResponse() {
     return response;
+  }
+  
+  /**
+   * No response or exception.
+   */
+  public static byte S_EMPTY = 0;
+  /**
+   * Subclass handled serialization.
+   */
+  public static byte S_SUB = 1; 
+  /**
+   * Java Serialized Response
+   */
+  public static byte S_JAVA_RESPONSE = 3;
+  /**
+   * Java Serialized Exception
+   */
+  public static byte S_JAVA_EXCEPTION = 2;
+  
+  
+  /**
+   * The serialization stategy is that usually the subtype will have an optimal
+   * serialization strategy, but sometimes we will have to revert to java serialization
+   * 
+   * @param buf
+   * @param endpoint
+   * @throws IOException
+   */
+  public ContinuationMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint); 
+    serType = buf.readByte();
+    if (serType > S_SUB) deserialize(buf, endpoint); // not empty, and not handled by the sub
+  }
+  
+  /**
+   * 
+   * @param buf
+   * @throws IOException
+   */
+  public void deserialize(InputBuffer buf, Endpoint endpoint) throws IOException {
+    byte[] array = new byte[buf.readInt()];
+    buf.read(array);
+    ObjectInputStream ois = new JavaDeserializer(new ByteArrayInputStream(array), endpoint);
+    Object content;     
+    try {
+      content = ois.readObject();
+      if (serType == S_JAVA_RESPONSE) {
+        response = content;
+      } else {
+        exception = (Exception)content; 
+      }
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Unknown class type in message - closing channel.", e);
+    }          
+  }
+
+  /**
+   * Deprecated to cause warnings.
+   * 
+   * @deprecated use serialize(OutputBuffer buf, boolean javaSerialize)
+   */
+  public void serialize(OutputBuffer buf) throws IOException {
+    throw new RuntimeException("Illegal call.  Must call serialize(OutputBuffer, boolean");
+  }
+  
+  
+  protected byte serType;
+  
+  /**
+   * If you want this class to serialize itself, set javaSerialize to true,
+   * otherwise, the subclass is expected to do an optimal serializatoin
+   * 
+   * @param buf
+   * @param javaSerialize
+   * @throws IOException
+   */
+  public void serialize(OutputBuffer buf, boolean javaSerialize) throws IOException {
+//    System.out.println("ContinuationMessage<"+getClass().getName()+">.serialize("+javaSerialize+") resp:"+response+" exc:"+exception+" id:"+id+" src:"+source+" dst:"+dest);
+    super.serialize(buf);
+    
+    serType = S_EMPTY;
+    
+    if (javaSerialize) {
+      Object content = response;
+      if (response != null) {
+        serType = S_JAVA_RESPONSE;
+      } else {
+        serType = S_JAVA_EXCEPTION;
+        content = exception;
+      }
+      
+      if (content == null) {
+        serType = S_EMPTY;
+        buf.writeByte(serType);
+      } else {      
+//      if (true) throw new IOException("Test");
+//        System.out.println("ContinuationMessage<"+getClass().getName()+">.serialize():"+serType+" "+response+" "+exception);
+        buf.writeByte(serType);        
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        
+        // write out object and find its length
+        oos.writeObject(content);
+        oos.close();
+        
+        byte[] temp = baos.toByteArray();
+        buf.writeInt(temp.length);
+        buf.write(temp, 0, temp.length);
+      }
+    } else {
+      buf.writeByte(S_SUB); 
+    }
   }
 }
 

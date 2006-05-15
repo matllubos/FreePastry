@@ -4,7 +4,6 @@ import rice.pastry.*;
 import rice.pastry.client.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.util.*;
 
@@ -17,48 +16,34 @@ import java.util.*;
  */
 
 public class PingClient extends PastryAppl {
-  private static class PingAddress implements Address {
-    private int myCode = 0x9219d8ff;
+  private static class PingAddress {
+    private static int myCode = 0x9219d8ff;
 
-    public int hashCode() {
+    public static int getCode() {
       return myCode;
-    }
-
-    public boolean equals(Object obj) {
-      return (obj instanceof PingAddress);
-    }
-
-    public String toString() {
-      return "[PingAddress]";
     }
   }
 
-  private static Address pingAddress = new PingAddress();
-
-  private Credentials pingCred = new PermissiveCredentials();
+  private static int pingAddress = PingAddress.getCode();
 
   public PingClient(PastryNode pn) {
     super(pn);
   }
 
-  public Address getAddress() {
+  public int getAddress() {
     return pingAddress;
   }
 
-  public Credentials getCredentials() {
-    return pingCred;
-  }
-
-  public void sendPing(NodeId nid) {
+  public void sendPing(Id nid) {
     // routeMessage, sans the getAddress() in the RouteMessage constructor
-    routeMsg(nid, new PingMessage(pingAddress, getNodeId(), nid), pingCred,
+    routeMsg(nid, new PingMessage(pingAddress, getNodeId(), nid), 
         new SendOptions());
   }
 
-  public void sendTrace(NodeId nid) {
+  public void sendTrace(Id nid) {
     System.out.println("sending a trace from " + getNodeId() + " to " + nid);
     // sendEnrouteMessage
-    routeMsg(nid, new PingMessage(pingAddress, getNodeId(), nid), pingCred,
+    routeMsg(nid, new PingMessage(pingAddress, getNodeId(), nid), 
         new SendOptions());
   }
 
@@ -101,11 +86,11 @@ public class PingClient extends PastryAppl {
  */
 
 class PingMessage extends Message {
-  private NodeId source;
+  private Id source;
 
-  private NodeId target;
+  private Id target;
 
-  public PingMessage(Address pingAddress, NodeId src, NodeId tgt) {
+  public PingMessage(int pingAddress, Id src, Id tgt) {
     super(pingAddress);
     source = src;
     target = tgt;

@@ -13,25 +13,10 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class LeafSetProtocolAddress implements Address {
+public class LeafSetProtocolAddress {
   private static final int myCode = 0xf921def1;
 
-  /**
-   * Constructor.
-   */
-
-  public LeafSetProtocolAddress() {
-  }
-
-  public boolean equals(Object obj) {
-    return (obj instanceof LeafSetProtocolAddress);
-  }
-
-  public int hashCode() {
+  public static int getCode() {
     return myCode;
-  }
-
-  public String toString() {
-    return "[LeafSetProtocolAddress]";
   }
 }

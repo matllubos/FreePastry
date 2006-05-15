@@ -5,6 +5,8 @@ import java.net.*;
 import java.io.*;
 
 import rice.environment.Environment;
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.socket.*;
 import rice.pastry.*;
 
@@ -19,6 +21,8 @@ import rice.pastry.*;
 public class WrongEpochMessage extends DatagramMessage {
   
   static final long serialVersionUID = 2838948342952784682L;
+
+  public static final short TYPE = 14;
   
   protected EpochInetSocketAddress incorrect;
   protected EpochInetSocketAddress correct;
@@ -26,13 +30,19 @@ public class WrongEpochMessage extends DatagramMessage {
   /**
   * Constructor
    */
-  public WrongEpochMessage(SourceRoute outbound, SourceRoute inbound, EpochInetSocketAddress incorrect, EpochInetSocketAddress correct, long start) {
-    super(outbound, inbound, start);
+  public WrongEpochMessage(/*SourceRoute outbound, SourceRoute inbound, */EpochInetSocketAddress incorrect, EpochInetSocketAddress correct, long start) {
+    super(/*outbound, inbound,*/ start);
     
     this.incorrect = incorrect;
     this.correct = correct;
   }
   
+  public WrongEpochMessage(InputBuffer buf) throws IOException {
+    super(buf);
+    incorrect = EpochInetSocketAddress.build(buf);
+    correct = EpochInetSocketAddress.build(buf);
+  }
+
   public EpochInetSocketAddress getIncorrect() {
     return incorrect;
   }
@@ -42,6 +52,16 @@ public class WrongEpochMessage extends DatagramMessage {
   }
 
   public String toString() {
-    return "PingResponseMessage";
+    return "WrongEpochMessage";
+  }
+
+  public short getType() {
+    return TYPE;        
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf);
+    incorrect.serialize(buf);
+    correct.serialize(buf);
   }
 }

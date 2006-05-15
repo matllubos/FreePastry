@@ -15,7 +15,8 @@ import rice.p2p.past.*;
  * @version $Id$
  */
 public class SignedReference implements Serializable {
-  
+  public static final short TYPE = 7;
+
   // serialver for backwards compatibility
   private static final long serialVersionUID = -6793773589264272354L;
   

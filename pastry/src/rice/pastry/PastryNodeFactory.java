@@ -5,8 +5,6 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.CancellableTask;
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
@@ -27,12 +25,12 @@ public abstract class PastryNodeFactory {
 
   
   // max number of handles stored per routing table entry
-  protected final int rtMax;
+  protected final byte rtMax;
 
   // leafset size
-  protected final int lSetSize;
+  protected final byte lSetSize;
 
-  protected final int rtBase;
+  protected final byte rtBase;
   
 
   /**
@@ -47,9 +45,9 @@ public abstract class PastryNodeFactory {
   
   public PastryNodeFactory(Environment env) {
     this.environment = env;
-    rtMax = environment.getParameters().getInt("pastry_rtMax");
-    rtBase = environment.getParameters().getInt("pastry_rtBaseBitLength");
-    lSetSize = environment.getParameters().getInt("pastry_lSetSize");
+    rtMax = (byte)environment.getParameters().getInt("pastry_rtMax");
+    rtBase = (byte)environment.getParameters().getInt("pastry_rtBaseBitLength");
+    lSetSize = (byte)environment.getParameters().getInt("pastry_lSetSize");
     logger = env.getLogManager().getLogger(getClass(), null);
   }
   
@@ -67,7 +65,7 @@ public abstract class PastryNodeFactory {
    * @param bootstrap The node handle to bootstrap off of
    * @param nodeId The nodeId of the new node
    */
-  public abstract PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
+  public abstract PastryNode newNode(NodeHandle bootstrap, Id nodeId);
 
   /**
    * This method returns the remote leafset of the provided handle
@@ -185,7 +183,7 @@ public abstract class PastryNodeFactory {
       // -- impact correctness, but we're going to walk up from the bottom
       // -- of the routing table, even through some of the rows are probably
       // -- unfilled.  We'll optimize this in a later iteration.
-      int depth = (NodeId.nodeIdBitLength / rtBase);
+      int depth = (Id.IdBitLength / rtBase);
       int i = 0;
 
       
@@ -220,8 +218,8 @@ public abstract class PastryNodeFactory {
       // return the resulting closest node
       return nearNode;
     } catch (IOException e) {
-      if (logger.level <= Logger.WARNING) logger.log(
-        "ERROR: Exception " + e + " occured while finding best bootstrap.");
+      if (logger.level <= Logger.WARNING) logger.logException(
+        "ERROR occured while finding best bootstrap.", e);
       return seed;
     } finally {
       purgeProximityCache(local); 

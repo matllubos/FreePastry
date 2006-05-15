@@ -9,8 +9,10 @@ import rice.Continuation.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.past.rawserialization.PastContentDeserializer;
 import rice.p2p.scribe.*;
 
 import rice.post.*;
@@ -75,7 +77,26 @@ public class DeliveryService implements ScribeClient {
     this.post = post;
     this.logger = post.getEnvironment().getLogManager().getLogger(DeliveryService.class, post.getInstance());
     this.pending = pending;
+
+    PastContentDeserializer pcd = new PastContentDeserializer() {
+      
+      public PastContent deserializePastContent(InputBuffer buf, Endpoint endpoint,
+          short contentType) throws IOException {
+        switch(contentType) {
+          case Delivery.TYPE:
+            return new Delivery(buf, endpoint);
+          case Receipt.TYPE:
+            return new Receipt(buf, endpoint);
+          case Undeliverable.TYPE:
+            return new Undeliverable(buf, endpoint);
+        }
+        throw new IllegalArgumentException("Unknown type:"+contentType);
+      }    
+    };
+    pending.setContentDeserializer(pcd);
+    
     this.delivered = delivered;
+    delivered.setContentDeserializer(pcd);
     this.scribe = scribe;
     this.factory = factory;
     this.timeoutInterval = timeoutInterval;

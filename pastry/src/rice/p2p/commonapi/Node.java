@@ -31,7 +31,10 @@ public interface Node {
    * @param application The Application
    * @param instance An identifier for a given instance
    * @return The endpoint specific to this applicationk, which can be used for
-   *         message sending/receiving.
+   *         message sending/receiving.  Endpoint is already registered.
+   *         
+   * @deprecated use buildEndpoint(), then call Endpoint.register(), fixes 
+   * synchronization problems, related to implicit behavior        
    */
   public Endpoint registerApplication(Application application, String instance);
   
@@ -49,11 +52,11 @@ public interface Node {
    * other registerApplication
    * 
    * @param application The Application
-   * @param port The port to use
+   * @param code The globally unique code to use
    * @return The endpoint specific to this applicationk, which can be used for
    *         message sending/receiving.
    */
-  public Endpoint registerApplication(Application application, int port);
+//  public Endpoint registerApplication(Application application, int code);
   
   /**
    * Returns the Id of this node
@@ -82,5 +85,18 @@ public interface Node {
    * @return the environment for this node/app.
    */
   public Environment getEnvironment();
+  
+  /**
+   * Same as register application, but returns an unregistered Endpoint.  This allows
+   * the application to finish initialization that may require the endpoint
+   * before it receives messages from the network and notification of changes.
+   * 
+   * When then application is ready, it must call endpoint.register() to receive messages.
+   * 
+   * @param application
+   * @param instance
+   * @return
+   */
+  public Endpoint buildEndpoint(Application application, String instance);  
 }
 

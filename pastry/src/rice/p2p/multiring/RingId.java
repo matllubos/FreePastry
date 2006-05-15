@@ -6,6 +6,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) RingId.java
@@ -17,6 +18,7 @@ import rice.p2p.commonapi.*;
  * @author Alan Mislove
  */
 public class RingId implements Id {
+  public static short TYPE = 2;
   
   /**
    * Serialver for backward compatibility
@@ -267,6 +269,23 @@ public class RingId implements Id {
    */
   public int compareTo(Object o) {
     return id.compareTo(((RingId)o).id);
+  }
+
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(ringId.getType());
+    ringId.serialize(buf);
+    buf.writeShort(id.getType());
+    id.serialize(buf);
+  }
+
+  public RingId(InputBuffer buf, Endpoint endpoint) throws IOException {    
+    ringId = endpoint.readId(buf, buf.readShort()); 
+    id = endpoint.readId(buf, buf.readShort()); 
   }
 }
 

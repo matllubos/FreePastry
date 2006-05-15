@@ -15,6 +15,7 @@ import java.util.*;
 import rice.*;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.commonapi.*;
 import rice.persistence.*;
 
@@ -788,6 +789,7 @@ public class MemoryStorageTest extends Test {
   }
   
   public class VariableId implements Id {
+    public static final short TYPE = 4893;
     protected int num;    
     public static final String STRING = "0123456789ABCDEF";
     public VariableId(int num) { this.num = num; }
@@ -806,5 +808,11 @@ public class MemoryStorageTest extends Test {
         return STRING + num;
     }
     public int compareTo(Object o) { return 0; }
+    public void serialize(OutputBuffer buf) throws IOException {
+      buf.writeInt(num);
+    }
+    public short getType() {
+      return TYPE;
+    }
   }
 }

@@ -16,16 +16,16 @@ import java.util.*;
  */
 
 public class NodeIdUnit {
-  private NodeId nid;
+  private Id nid;
 
   private RandomSource rng;
 
-  public NodeId createNodeId() {
-    byte raw[] = new byte[NodeId.nodeIdBitLength >> 3];
+  public Id createNodeId() {
+    byte raw[] = new byte[Id.IdBitLength >> 3];
 
     rng.nextBytes(raw);
 
-    NodeId nodeId = NodeId.buildNodeId(raw);
+    Id nodeId = Id.build(raw);
 
     System.out.println("created node " + nodeId);
 
@@ -49,7 +49,7 @@ public class NodeIdUnit {
   public void equalityTest() {
     System.out.println("--------------------------");
     System.out.println("Creating oth");
-    NodeId oth = createNodeId();
+    Id oth = createNodeId();
 
     if (nid.equals(oth) == false)
       System.out.println("not equal - as expected.");
@@ -72,13 +72,13 @@ public class NodeIdUnit {
 
     System.out.println("creating a and b respectively");
 
-    NodeId a = createNodeId();
-    NodeId b = createNodeId();
+    Id a = createNodeId();
+    Id b = createNodeId();
 
     for (int i = 0; i < 100; i++) {
-      NodeId.Distance adist = nid.distance(a);
-      NodeId.Distance adist2 = a.distance(nid);
-      NodeId.Distance bdist = nid.distance(b);
+      Id.Distance adist = nid.distance(a);
+      Id.Distance adist2 = a.distance(nid);
+      Id.Distance bdist = nid.distance(b);
       System.out.println("adist =" + adist + "\n bdist=" + bdist);
 
       if (adist.equals(adist2) == true)
@@ -102,8 +102,8 @@ public class NodeIdUnit {
       else
         System.out.println("b is counter-clockwise from a");
 
-      NodeId.Distance abs = a.distance(b);
-      NodeId.Distance abl = a.longDistance(b);
+      Id.Distance abs = a.distance(b);
+      Id.Distance abl = a.longDistance(b);
       if (abs.compareTo(abl) != -1)
         System.out.println("ERROR: abs.compareTo(abl)=" + abs.compareTo(abl));
 
@@ -131,12 +131,12 @@ public class NodeIdUnit {
         (byte) 0xfb, (byte) 0x82, (byte) 0x9d, (byte) 0xd2, (byte) 0xd8, 0x42,
         (byte) 0x86, 0x40, 0x5d, (byte) 0xd7 };
 
-    a = NodeId.buildNodeId(t1/* raw80 */);
-    b = NodeId.buildNodeId(t2/* raw7f */);
-    NodeId n0 = NodeId.buildNodeId(raw0);
-    NodeId n7f = NodeId.buildNodeId(raw7f);
-    NodeId n80 = NodeId.buildNodeId(raw80);
-    NodeId c = n0;
+    a = Id.build(t1/* raw80 */);
+    b = Id.build(t2/* raw7f */);
+    Id n0 = Id.build(raw0);
+    Id n7f = Id.build(raw7f);
+    Id n80 = Id.build(raw80);
+    Id c = n0;
 
     System.out.println("a=" + a + "b=" + b + "c=" + c);
     System.out.println("a.clockwise(b)=" + a.clockwise(b));
@@ -175,7 +175,7 @@ public class NodeIdUnit {
     System.out.println("--------------------------");
 
     String bitRep = "";
-    for (int i = 0; i < NodeId.nodeIdBitLength; i++) {
+    for (int i = 0; i < Id.IdBitLength; i++) {
       if (nid.checkBit(i) == true)
         bitRep = bitRep + "1";
       else
@@ -185,7 +185,7 @@ public class NodeIdUnit {
     System.out.println(bitRep);
 
     String digRep = "";
-    for (int i = 0; i < NodeId.nodeIdBitLength; i++) {
+    for (int i = 0; i < Id.IdBitLength; i++) {
       digRep = digRep + nid.getDigit(i, 1);
     }
 
@@ -204,13 +204,13 @@ public class NodeIdUnit {
 
     System.out.println("creating a and b respectively");
 
-    NodeId a = createNodeId();
-    NodeId b = createNodeId();
+    Id a = createNodeId();
+    Id b = createNodeId();
 
-    NodeId.Distance adist = nid.distance(a);
-    NodeId.Distance bdist = nid.distance(b);
-    NodeId.Distance aldist = nid.longDistance(a);
-    NodeId.Distance bldist = nid.longDistance(b);
+    Id.Distance adist = nid.distance(a);
+    Id.Distance bdist = nid.distance(b);
+    Id.Distance aldist = nid.longDistance(a);
+    Id.Distance bldist = nid.longDistance(b);
 
     System.out.println("nid.dist(a)=" + adist);
     System.out.println("nid.longDist(a)=" + aldist);
@@ -262,7 +262,7 @@ public class NodeIdUnit {
     System.out.println("nid=" + nid);
 
     for (int b = 2; b < 7; b++)
-      for (int row = nid.nodeIdBitLength / b - 1; row >= 0; row--)
+      for (int row = nid.IdBitLength / b - 1; row >= 0; row--)
         for (int col = 0; col < (1 << b); col++) {
           Id domainFirst = nid.getDomainPrefix(row, col, 0, b);
           Id domainLast = nid.getDomainPrefix(row, col, -1, b);

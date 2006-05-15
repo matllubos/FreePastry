@@ -1,9 +1,9 @@
 
 package rice.pastry.leafset;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.routing.*;
-import rice.pastry.security.*;
 
 import java.util.*;
 import java.io.*;
@@ -21,7 +21,7 @@ import java.io.*;
 public class LeafSet extends Observable implements Serializable {
   static private final long serialVersionUID = 3960030608598552977L;
 
-  private NodeId baseId;
+  private Id baseId;
   private NodeHandle baseHandle;
   private SimilarSet cwSet;
   private SimilarSet ccwSet;
@@ -71,7 +71,7 @@ public class LeafSet extends Observable implements Serializable {
    */
   public boolean put(NodeHandle handle)
   {
-    NodeId nid = handle.getNodeId();
+    Id nid = handle.getNodeId();
     if (nid.equals(baseId)) return false;
     if (member(handle)) return false;
 
@@ -87,7 +87,7 @@ public class LeafSet extends Observable implements Serializable {
    */
   public boolean test(NodeHandle handle)
   {
-    NodeId nid = handle.getNodeId();
+    Id nid = handle.getNodeId();
     if (nid.equals(baseId)) return false;
     if (member(handle)) return false;
 
@@ -158,7 +158,7 @@ public class LeafSet extends Observable implements Serializable {
    * @param nid a node id.
    * @return true if that node id is in the set, false otherwise.
    */
-  public boolean member(NodeId nid)
+  public boolean member(Id nid)
   {
     return cwSet.member(nid) || ccwSet.member(nid);
   }
@@ -221,7 +221,7 @@ public class LeafSet extends Observable implements Serializable {
 
   /**
    * complement - given an index of a node in the leafset, produces
-   * the index of the same nodeId in the opposite half of the
+   * the index of the same Id in the opposite half of the
    * leafset
    *
    * @param index the index of the entry to complement
@@ -251,8 +251,8 @@ public class LeafSet extends Observable implements Serializable {
    * @return the index of the numerically closest node (0 if baseId is the closest).
    */
   public int mostSimilar(Id nid) {
-    NodeId.Distance cwMinDist;
-    NodeId.Distance ccwMinDist;
+    Id.Distance cwMinDist;
+    Id.Distance ccwMinDist;
     int cwMS;
     int ccwMS;
     int res;
@@ -359,8 +359,8 @@ public class LeafSet extends Observable implements Serializable {
       // determine next nearest node
       NodeHandle cwNode = get(cw);
       NodeHandle ccwNode = get(ccw);
-      NodeId.Distance cwDist = cwNode.getNodeId().distance(key);
-      NodeId.Distance ccwDist = ccwNode.getNodeId().distance(key);
+      Id.Distance cwDist = cwNode.getNodeId().distance(key);
+      Id.Distance ccwDist = ccwNode.getNodeId().distance(key);
 
       if (cwDist.compareTo(ccwDist) <= 0) {
         // cwNode is closer to key
@@ -532,7 +532,7 @@ public class LeafSet extends Observable implements Serializable {
    * @return true if the local leafset changed
    */
   public boolean merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable,
-                       PastrySecurityManager security, boolean testOnly, Set insertedHandles) {
+                       boolean testOnly, Set insertedHandles) {
 
     boolean changed, result = false;
     int cwSize = remotels.cwSize();
@@ -558,7 +558,7 @@ public class LeafSet extends Observable implements Serializable {
 
           // find the num. closest to localId in the remotels
           int closest = remotels.mostSimilar(baseId);
-          NodeId closestId = remotels.get(closest).getNodeId();
+          Id closestId = remotels.get(closest).getNodeId();
 
           if (closest == -remotels.ccwSize() || closest == remotels.cwSize()) {
             // doesn't hurt to merge it anyways
@@ -629,7 +629,6 @@ public class LeafSet extends Observable implements Serializable {
       if (i == 0) nh = from;
       else nh = remotels.get(i);
 
-      nh = security.verifyNodeHandle(nh);
       if (nh.isAlive() == false) continue;
       //if (member(nh.getNodeId())) continue;
 
@@ -655,7 +654,6 @@ public class LeafSet extends Observable implements Serializable {
       if (i == 0) nh = from;
       else nh = remotels.get(i);
 
-      nh = security.verifyNodeHandle(nh);
       if (nh.isAlive() == false) continue;
       //if (member(nh.getNodeId())) continue;
 
@@ -683,7 +681,6 @@ public class LeafSet extends Observable implements Serializable {
         if (i == 0) nh = from;
         else nh = remotels.get(i);
 
-        nh = security.verifyNodeHandle(nh);
         if (nh.isAlive() == false) continue;
 
         if (testOnly) {
@@ -787,6 +784,141 @@ public class LeafSet extends Observable implements Serializable {
   
   public LeafSet copy() {
     return new LeafSet(this);
+  }
+
+  /**
+   * So that small LeafSets (who have overlapping nodes) don't waste bandwidth, 
+   * leafset first defines the NodeHandles to be loaded into an array, then 
+   * specifies their locations. We do this because
+   * a NodeHandle takes up a lot more space than the index in the leafset, and 
+   * it may be in the leafset 1 or 2 times.  
+   * 
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + byte theSize  +numUniqueHandls+ byte cwSize   + byte ccwSize  +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + NodeHandle baseHandle                                         +
+   *                    ...                                             
+   *   +                                                               +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + NodeHandle 1st                                                +
+   *                    ...                                             
+   *   +                                                               +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *                    ...                                             
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + NodeHandle numUniqueHandls-th                                 +
+   *                    ...                                             
+   *   +                                                               +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + byte cw 1st   +  cw  2nd      + ...           + ccw 1st       +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + ccw 2nd       +  ...          + ...           + ccw Nth       +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   
+   */
+  public static LeafSet build(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+    byte theSize = buf.readByte();
+    byte numUniqueHandles = buf.readByte();
+    byte cwSize = buf.readByte();
+    byte ccwSize = buf.readByte();
+    NodeHandle baseHandle = nhf.readNodeHandle(buf);
+    NodeHandle[] nhTable = new NodeHandle[numUniqueHandles];
+    for (int i = 0; i < numUniqueHandles; i++) {
+      nhTable[i] = nhf.readNodeHandle(buf); 
+    }
+
+    NodeHandle[] cwTable = new NodeHandle[cwSize];
+    NodeHandle[] ccwTable = new NodeHandle[ccwSize];
+    
+    for (int i = 0; i < cwSize; i++) {
+      cwTable[i] = nhTable[buf.readByte()];
+    }
+    
+    for (int i = 0; i < ccwSize; i++) {
+      ccwTable[i] = nhTable[buf.readByte()];
+    }
+    
+    return new LeafSet(baseHandle,theSize, true, cwTable, ccwTable);
+  }
+  
+  public LeafSet(NodeHandle localNode, int size, boolean observe, NodeHandle[] cwTable, NodeHandle[] ccwTable) {
+    this.observe = observe;
+    
+    baseHandle = localNode;
+    baseId = localNode.getNodeId();
+    theSize = size;
+
+    cwSet = new SimilarSet(this, localNode, size/2, true, cwTable);
+    ccwSet = new SimilarSet(this, localNode, size/2, false, ccwTable);
+  }
+
+  /**
+   * So that small LeafSets (who have overlapping nodes) don't waste bandwidth, 
+   * leafset first defines the NodeHandles to be loaded into an array, then 
+   * specifies their locations. We do this because
+   * a NodeHandle takes up a lot more space than the index in the leafset, and 
+   * it may be in the leafset 1 or 2 times.  
+   * 
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + byte theSize  +numUniqueHandls+ byte cwSize   + byte ccwSize  +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + NodeHandle baseHandle                                         +
+   *                    ...                                             
+   *   +                                                               +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + NodeHandle 1st                                                +
+   *                    ...                                             
+   *   +                                                               +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *                    ...                                             
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + NodeHandle numUniqueHandls-th                                 +
+   *                    ...                                             
+   *   +                                                               +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + byte cw 1st   +  cw  2nd      + ...           + ccw 1st       +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + ccw 2nd       +  ...          + ...           + ccw Nth       +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   
+   *   TODO 2.23.2006 the synchronization of LeafSet is nonexistent
+   *   and it's difficult to add because the listeneer interface should not 
+   *   be called while holding a lock, but the lock should be acquired once while
+   *   making the change
+   *   
+   */  
+  public synchronized void serialize(OutputBuffer buf) throws IOException {
+    HashSet superset = new HashSet();
+    superset.addAll(cwSet.getCollection());
+    superset.addAll(ccwSet.getCollection());    
+    ArrayList list = new ArrayList(superset);
+        
+    buf.writeByte((byte)theSize);
+    buf.writeByte((byte)list.size());
+    buf.writeByte((byte)cwSize());
+    buf.writeByte((byte)ccwSize());
+
+    baseHandle.serialize(buf);
+    
+    Iterator it = list.iterator();
+    while(it.hasNext()) {
+      NodeHandle nh = (NodeHandle)it.next(); 
+      nh.serialize(buf);
+    }
+    
+    for (int i = 0; i < cwSet.size(); i++) {
+      buf.writeByte((byte)list.indexOf(cwSet.get(i))); 
+    }
+    
+    for (int i = 0; i < ccwSet.size(); i++) {
+      buf.writeByte((byte)list.indexOf(ccwSet.get(i))); 
+    }    
   }
 }
 

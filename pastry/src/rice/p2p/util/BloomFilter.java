@@ -7,6 +7,8 @@ import java.util.*;
 
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) BloomFilter.java
@@ -69,7 +71,7 @@ public class BloomFilter implements Serializable {
     for (int i=0; i<parameters.length; i++)
       this.parameters[i] = MathUtils.randomInt(rand);
   }
-  
+
   /**
    * Method which adds an element to this bloom filter. This is done by computing
    * h_1(x), h_2(x), ...  and then setting bits (h_1(x) % length), (h_2(x) % length)
@@ -146,5 +148,118 @@ public class BloomFilter implements Serializable {
     buffer.append("]");
     
     return buffer.toString();
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(length);
+    
+    buf.writeInt(parameters.length);
+    for(int i = 0; i < parameters.length; i++) {
+      buf.writeInt(parameters[i]);
+    }
+    
+    int numBits = set.length();
+    buf.writeInt(numBits);
+    byte curByte = 0x0;
+    for(int i = 0; i < numBits; i++) {
+      if (i > 0 && i%8 == 0) {
+        buf.writeByte(curByte);        
+        curByte = 0x0;
+      }
+      if (set.get(i))
+        curByte |= (0x1 << i%8);
+    }
+    buf.writeByte(curByte);
+  }
+  
+  public BloomFilter(InputBuffer buf) throws IOException {
+    length = buf.readInt();
+    
+    parameters = new int[buf.readInt()];
+    for(int i = 0; i < parameters.length; i++) {
+      parameters[i] = buf.readInt(); 
+    }
+
+    int numBits = buf.readInt();
+    set = new BitSet(numBits);
+    
+    byte curByte = buf.readByte();
+    for (int i = 0; i < numBits; i++) {
+      if (((curByte >>> i%8) & 0x1) == 0x1) {
+        set.set(i);
+      }
+      if (i < numBits-1 && i%8 == 7) {
+        curByte = buf.readByte(); 
+      }
+    }    
+  }
+  
+  /**
+   * Test serialize/deserialize
+   * @param args
+   */
+  public static void main(String[] args) throws IOException {
+    Random rng = new Random();
+    for (int i = 0; i < 135; i++) {
+      BloomFilter a = new BloomFilter(1, i);
+
+      for (int j = 0; j < i/2; j++) {
+        int flip = rng.nextInt(i);        
+        a.set.flip(flip);
+      }    
+      System.out.println("a:"+a.set);
+      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      OutputBuffer obuf = new OutputBuffer() {      
+        DataOutputStream dos = new DataOutputStream(baos);        
+        public void writeInt(int v) throws IOException {
+          dos.writeInt(v);
+        }
+        public void writeByte(byte v) throws IOException {
+          dos.writeByte(v);      
+        }      
+        public ByteArrayOutputStream getBaos() {return baos;}
+        public int bytesRemaining() {throw new RuntimeException("Not Implemented.");}      
+        public void writeUTF(String str) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public void writeShort(short v) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public void writeLong(long v) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public void writeFloat(float v) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public void writeDouble(double v) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public void writeChar(char v) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public void writeBoolean(boolean v) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public void write(byte[] b, int off, int len) throws IOException {throw new RuntimeException("Not Implemented.");}        
+      };
+      
+      a.serialize(obuf);
+      
+      final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());      
+      InputBuffer buf = new InputBuffer() {
+        DataInputStream dis = new DataInputStream(bais);
+        public int readInt() throws IOException {
+          return dis.readInt();
+        }
+        public byte readByte() throws IOException {
+          return dis.readByte();
+        }
+        public int bytesRemaining() {throw new RuntimeException("Not Implemented.");}
+        public String readUTF() throws IOException {throw new RuntimeException("Not Implemented.");}
+        public short readShort() throws IOException {throw new RuntimeException("Not Implemented.");}
+        public short peakShort() throws IOException {throw new RuntimeException("Not Implemented.");}
+        public long readLong() throws IOException {throw new RuntimeException("Not Implemented.");}
+        public float readFloat() throws IOException {throw new RuntimeException("Not Implemented.");}
+        public double readDouble() throws IOException {throw new RuntimeException("Not Implemented.");}
+        public char readChar() throws IOException {throw new RuntimeException("Not Implemented.");}      
+        public boolean readBoolean() throws IOException {throw new RuntimeException("Not Implemented.");}
+        public int read(byte[] b) throws IOException {throw new RuntimeException("Not Implemented.");}
+        public int read(byte[] b, int off, int len) throws IOException {throw new RuntimeException("Not Implemented.");}
+      };
+
+      BloomFilter b = new BloomFilter(buf);
+      
+      if (!b.set.equals(a.set)) {
+        System.out.println(i+"a:"+a.set); 
+        System.out.println(i+"b:"+b.set); 
+        System.out.println(); 
+      }
+    }
   }
 }

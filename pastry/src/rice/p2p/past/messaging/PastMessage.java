@@ -1,9 +1,12 @@
 
 package rice.p2p.past.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 
 /**
@@ -17,7 +20,7 @@ import rice.p2p.past.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public abstract class PastMessage implements Message {
+public abstract class PastMessage implements RawMessage {
   
   // serialver for backward compatibility
   private static final long serialVersionUID = -7195054010358285316L;
@@ -60,7 +63,7 @@ public abstract class PastMessage implements Message {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return MEDIUM_HIGH_PRIORITY;
   }
 
@@ -124,5 +127,24 @@ public abstract class PastMessage implements Message {
    */
   public void addHop(NodeHandle handle) {
   }
+  
+  public PastMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    id = buf.readInt();
+//    System.out.println("PM.deserialize()" + endpoint);
+    dest = endpoint.readId(buf, buf.readShort());
+//    System.out.println("PastMessage dest:"+dest+" id:"+id);
+    source = endpoint.readNodeHandle(buf);
+    isResponse = buf.readBoolean();
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(id);
+//    System.out.println("PM.serialize()" + dest);
+    buf.writeShort(dest.getType());
+    dest.serialize(buf);
+    source.serialize(buf);
+    buf.writeBoolean(isResponse);
+  }
+  
 }
 

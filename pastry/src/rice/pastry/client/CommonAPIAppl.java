@@ -3,11 +3,7 @@ package rice.pastry.client;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 import rice.pastry.routing.*;
-import rice.pastry.leafset.*;
-
-import java.util.*;
 
 /**
  * CommonAPIAppl is an abstract class that all new applications should extend.
@@ -63,7 +59,7 @@ public abstract class CommonAPIAppl extends PastryAppl {
     if (logger.level <= Logger.FINER) logger.log( 
         "[" + thePastryNode + "] route " + msg + " to " + key);
 
-    RouteMessage rm = new RouteMessage(key, msg, hint, getAddress());
+    RouteMessage rm = new RouteMessage(key, msg, hint);
     thePastryNode.receiveMessage(rm);
   }
 
@@ -194,14 +190,6 @@ public abstract class CommonAPIAppl extends PastryAppl {
    * its root. To permit event-driven implementations, upcall handlers must not
    * block and should not perform long-running computations.
    */
-
-  /**
-   * Returns the credentials of this application.
-   * 
-   * @return the credentials.
-   */
-
-  public abstract Credentials getCredentials();
 
   /**
    * Called by pastry when a message arrives for this application.

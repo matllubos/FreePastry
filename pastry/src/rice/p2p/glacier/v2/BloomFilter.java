@@ -1,11 +1,12 @@
 package rice.p2p.glacier.v2;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.Arrays;
 
 import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.p2p.commonapi.rawserialization.*;
 
 public class BloomFilter implements Serializable {
   
@@ -52,7 +53,7 @@ public class BloomFilter implements Serializable {
       hashParams[i] = offset + index;
     }
   }
-  
+
   private int[] getHashes(byte[] data) {
     long cache = 0;
     int ctr = 0;
@@ -127,6 +128,24 @@ System.outt.println(); */
       result = result + ((i==0) ? "" : ", ") + hashParams[i];
     result = result + " }]";
     return result;
+  }
+  
+  public BloomFilter(InputBuffer buf) throws IOException {
+    hashParams = new int[buf.readInt()];
+    for (int i = 0; i < hashParams.length; i++) {
+      hashParams[i] = buf.readInt();
+    }
+    bitfield = new byte[buf.readInt()];
+    buf.read(bitfield);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(hashParams.length); 
+    for (int i = 0; i < hashParams.length; i++) {
+      buf.writeInt(hashParams[i]);
+    }    
+    buf.writeInt(bitfield.length); 
+    buf.write(bitfield, 0, bitfield.length);
   }
 }    
     

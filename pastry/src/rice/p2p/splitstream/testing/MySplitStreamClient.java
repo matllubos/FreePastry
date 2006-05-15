@@ -14,10 +14,10 @@ import rice.selector.TimerTask;
  */
 public class MySplitStreamClient implements SplitStreamClient {
 
-  int SEND_PERIOD = 15000;//1000;
+  public static int SEND_PERIOD = 15000;//1000;
   
   // 160/8 id + 4 seq
-  int msgSize = 24;
+  public static int msgSize = 24; // min size is 24
   
   /**
    * The underlying common api node

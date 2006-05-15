@@ -1,9 +1,13 @@
 
 package rice.p2p.scribe.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.scribe.*;
+import rice.p2p.scribe.rawserialization.*;
 
 /**
  * @(#) SubscribeMessage.java The subscribe message.
@@ -12,6 +16,7 @@ import rice.p2p.scribe.*;
  * @author Alan Mislove
  */
 public class SubscribeMessage extends AnycastMessage {
+  public static final short TYPE = 2;
 
   /**
    * The original subscriber
@@ -36,7 +41,7 @@ public class SubscribeMessage extends AnycastMessage {
    * @param id The UID for this message
    * @param content The content
    */
-  public SubscribeMessage(NodeHandle source, Topic topic, int id, ScribeContent content) {
+  public SubscribeMessage(NodeHandle source, Topic topic, int id, RawScribeContent content) {
     this(source, topic, null, id, content);
   }
 
@@ -49,7 +54,7 @@ public class SubscribeMessage extends AnycastMessage {
    * @param content The content
    * @param previousParent The parent on this topic who died
    */
-  public SubscribeMessage(NodeHandle source, Topic topic, Id previousParent, int id, ScribeContent content) {
+  public SubscribeMessage(NodeHandle source, Topic topic, Id previousParent, int id, RawScribeContent content) {
     super(source, topic, content);
 
     this.id = id;
@@ -78,7 +83,7 @@ public class SubscribeMessage extends AnycastMessage {
   /**
    * Returns this subscribe lost message's id
    *
-   * @return The id of this subscribe lost message
+   * @return The id of this subscribe message
    */
   public int getId() {
     return id;
@@ -93,5 +98,48 @@ public class SubscribeMessage extends AnycastMessage {
     return "[SubscribeMessage " + topic + " subscriber " + subscriber + " ID " + id + "]";
   }
 
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE; 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version
+    super.serializeHelper(buf);
+    buf.writeInt(id);
+    if (previousParent == null) {
+      buf.writeBoolean(false);      
+    } else {
+      buf.writeBoolean(true);
+      buf.writeShort(previousParent.getType());
+      previousParent.serialize(buf);      
+    }
+    subscriber.serialize(buf);
+  }
+  
+  public static SubscribeMessage buildSM(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer scd) throws IOException {
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        return new SubscribeMessage(buf, endpoint, scd);
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }
+  }
+  
+  /**
+   * Private because it should only be called from build(), if you need to extend this,
+   * make sure to build a serializeHelper() like in AnycastMessage/SubscribeMessage, and properly handle the 
+   * version number.
+   */
+  private SubscribeMessage(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer contentDeserializer) throws IOException {
+    super(buf, endpoint, contentDeserializer, false);
+    id = buf.readInt();
+    if (buf.readBoolean())
+      previousParent = endpoint.readId(buf, buf.readShort());
+    subscriber = endpoint.readNodeHandle(buf);
+  }
+  
+  
 }
 

@@ -1,6 +1,9 @@
 package rice.p2p.glacier;
 
+import java.io.IOException;
+
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.glacier.VersionKey;
 import rice.p2p.util.MathUtils;
 
@@ -11,6 +14,8 @@ import rice.p2p.util.MathUtils;
  * @author ahae
  */
 public class FragmentKey implements Id, Comparable {
+  public static final short TYPE = 42;
+  
   /**
    * DESCRIBE THE FIELD
    */
@@ -206,5 +211,20 @@ public class FragmentKey implements Id, Comparable {
    */
   public int hashCode() {
     return (key.hashCode() + id);
+  }
+  
+  public FragmentKey(InputBuffer buf, Endpoint endpoint) throws IOException {
+    id = buf.readInt();
+    key = new VersionKey(buf, endpoint);
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(id);
+    key.serialize(buf);
+//    throw new RuntimeException("FragmentKey.serialize() is not supported!");
+  }
+
+  public short getType() {
+    return TYPE;
   }
 }

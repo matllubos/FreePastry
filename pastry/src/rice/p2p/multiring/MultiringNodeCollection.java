@@ -3,6 +3,7 @@ package rice.p2p.multiring;
 
 import java.util.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 
 /**
  * @(#) MultiringNodeCollection.java
@@ -80,7 +81,7 @@ public class MultiringNodeCollection {
    * @param message The message to be sent
    * @param hint A suggested hint
    */
-  protected void route(RingId id, Message message, String application) {
+  protected void route(RingId id, RawMessage message, String application) {
     MultiringNode best = (MultiringNode) nodes.elementAt(0);
     
     for (int i=1; i<nodes.size(); i++) {

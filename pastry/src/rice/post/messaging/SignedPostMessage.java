@@ -5,6 +5,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.*;
 
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.util.MathUtils;
 import rice.p2p.util.SecurityUtils;
 
@@ -14,6 +16,7 @@ import rice.p2p.util.SecurityUtils;
  * one which is sent across the wire.
  */
 public final class SignedPostMessage implements Serializable {
+  public static final short TYPE = 13;
 
   // the PostMessage
   /**
@@ -161,5 +164,44 @@ public final class SignedPostMessage implements Serializable {
       msg = new byte[ois.readInt()];
       ois.readFully(msg, 0, msg.length);
     }
-  }  
+  }
+
+  public SignedPostMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    version = buf.readInt();
+    int sigLength = buf.readInt();
+    signature = new byte[sigLength];
+    buf.read(signature);
+    message = PostMessage.build(buf, endpoint, buf.readShort());
+    
+    if (version != 0) {
+      msg = new byte[buf.readInt()];
+      buf.read(msg);
+    }    
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(version);
+    buf.writeInt(signature.length);
+    buf.write(signature,0,signature.length);
+    buf.writeShort(message.getType());
+    message.serialize(buf);
+    
+    if (msg == null) {
+      if (version == 0) {
+        // old-style; promote to newest-style
+        version = VERSION;
+        msg = SecurityUtils.serialize(message);
+      } else {
+        throw new IOException("SignedPostMessage is new style, but has no msg field!");
+      }
+    } else {
+      // has msg field, but was not base64 serialized
+      if (version == 0)
+        version = VERSION;
+    }
+    
+
+    buf.writeInt(msg.length);
+    buf.write(msg, 0, msg.length);
+  }
 }

@@ -2,8 +2,11 @@ package rice.p2p.glacier.v2;
 
 import rice.environment.Environment;
 import rice.environment.logging.*;
-import rice.environment.logging.LogManager;
+import rice.p2p.commonapi.Endpoint;
 import rice.p2p.glacier.*;
+import rice.p2p.past.PastContent;
+import rice.p2p.past.rawserialization.*;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.Continuation;
 import java.io.*;
 import java.util.Arrays;
@@ -38,25 +41,28 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     command.receiveResult(null);
   }
 
-  public Serializable decodeObject(Fragment[] fragments) {
-    return (Serializable) codec.decode(fragments);
+  public PastContent decodeObject(Fragment[] fragments, Endpoint endpoint, PastContentDeserializer pcd) {
+    return codec.decode(fragments, endpoint, pcd);
   }
   
-  public Manifest[] createManifests(VersionKey key, Serializable obj, Fragment[] fragments, long expiration) {
-    byte bytes[] = null;
-    try {
-      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-      ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
-
-      objectStream.writeObject(obj);
-      objectStream.flush();
-
-      bytes = byteStream.toByteArray();
+  public Manifest[] createManifests(VersionKey key, RawPastContent obj, Fragment[] fragments, long expiration) {
+    try {    
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      sob.writeShort(obj.getType());
+      obj.serialize(sob);
+      return createManifestsHelper(key, sob.getBytes(), sob.getWritten(), fragments, expiration);
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.log( 
           "Cannot serialize object: "+ioe);
       return null;
     }
+  }
+  
+  public Manifest[] createManifests(VersionKey key, PastContent obj, Fragment[] fragments, long expiration) {
+    return createManifests(key, obj instanceof RawPastContent ? (RawPastContent)obj : new JavaSerializedPastContent(obj), fragments, expiration);
+  }
+  
+  private Manifest[] createManifestsHelper(VersionKey key, byte[] bytes, int length, Fragment[] fragments, long expiration) {
 
     /* Get the SHA-1 hash object. */
 
@@ -80,7 +86,7 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
 
     byte[] objectHash = null;
     md.reset();
-    md.update(bytes);
+    md.update(bytes,0,length);
     objectHash = md.digest();
     
     /* Create the manifest */
@@ -94,28 +100,31 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     return manifests;
   }
   
-  public Fragment[] encodeObject(Serializable obj, boolean[] generateFragment) {
+  public Fragment[] encodeObject(RawPastContent obj, boolean[] generateFragment) {
     if (logger.level <= Logger.FINER) logger.log( 
         "Serialize object: " + obj);
 
-    byte bytes[] = null;
     try {
-      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-      ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
-
-      objectStream.writeObject(obj);
-      objectStream.flush();
-
-      bytes = byteStream.toByteArray();
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      sob.writeShort(obj.getType());
+      obj.serialize(sob);
+      return encodeObjectHelper(obj, sob.getBytes(), sob.getWritten(), generateFragment); 
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.log( 
           "Cannot serialize object: "+ioe);
       return null;
     }
+  }
+  
+  public Fragment[] encodeObject(PastContent obj, boolean[] generateFragment) {
+    return encodeObject(obj instanceof RawPastContent ? (RawPastContent)obj : new JavaSerializedPastContent(obj), generateFragment);
+  }
 
+    
+  private Fragment[] encodeObjectHelper(PastContent obj, byte[] bytes, int length, boolean[] generateFragment) {  
     if (logger.level <= Logger.FINER) logger.log( 
         "Create fragments: " + obj);
-    Fragment[] fragments = codec.encode(bytes, generateFragment);
+    Fragment[] fragments = codec.encode(bytes, length, generateFragment);
     if (logger.level <= Logger.FINER) logger.log( 
         "Completed: " + obj);
     

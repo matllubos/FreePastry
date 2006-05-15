@@ -1,16 +1,17 @@
 package rice.pastry;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
-import rice.pastry.routing.RouteMessage;
-import rice.pastry.routing.RoutingTable;
-import rice.pastry.security.*;
+import rice.pastry.routing.*;
 
 /**
  * A Pastry node is single entity in the pastry network.
@@ -20,13 +21,11 @@ import rice.pastry.security.*;
  * @author Andrew Ladd
  */
 
-public abstract class PastryNode extends Observable implements MessageReceiver, rice.p2p.commonapi.Node, Destructable {
+public abstract class PastryNode extends Observable implements rice.p2p.commonapi.Node, Destructable, NodeHandleFactory {
 
-  protected NodeId myNodeId;
+  protected Id myNodeId;
 
   private Environment myEnvironment;
-
-  private PastrySecurityManager mySecurityManager;
 
   private MessageDispatch myMessageDispatch;
 
@@ -44,12 +43,11 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
   
   public abstract NodeHandle coalesce(NodeHandle newHandle);
   
-  
   /**
    * Constructor, with NodeId. Need to set the node's ID before this node is
    * inserted as localHandle.localNode.
    */
-  protected PastryNode(NodeId id, Environment e) {
+  protected PastryNode(Id id, Environment e) {
     myEnvironment = e;
     myNodeId = id;
     ready = false;
@@ -75,10 +73,8 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    * @param rt
    *          Routing table.
    */
-  public void setElements(NodeHandle lh, PastrySecurityManager sm,
-      MessageDispatch md, LeafSet ls, RoutingTable rt) {
+  public void setElements(NodeHandle lh, MessageDispatch md, LeafSet ls, RoutingTable rt) {
     localhandle = lh;
-    mySecurityManager = sm;
     myMessageDispatch = md;
     leafSet = ls;
     routeSet = rt;
@@ -96,7 +92,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
     return localhandle;
   }
 
-  public NodeId getNodeId() {
+  public Id getNodeId() {
     return myNodeId;
   }
 
@@ -161,7 +157,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
     if (ready == r)
       return;
     //      if (r == false)
-    if (logger.level <= Logger.CONFIG) logger.log("PastryNode.setReady("+r+")");
+    if (logger.level <= Logger.INFO) logger.log("PastryNode.setReady("+r+")");
 
     ready = r;
 
@@ -182,10 +178,6 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
           ((PastryAppl) (it.next())).notifyReady();
         neverBeenReady = false;
       }
-
-      // deliver all buffered messages to all registered apps, because the node
-      // is now ready
-      myMessageDispatch.deliverAllBufferedMessages();
 
       // signal any apps that might be waiting for the node to get ready
       synchronized (this) {
@@ -212,7 +204,7 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    * 
    * @return true if the local node is currently the closest to the key.
    */
-  public boolean isClosest(NodeId key) {
+  public boolean isClosest(Id key) {
 
     if (leafSet.mostSimilar(key) == 0)
       return true;
@@ -288,10 +280,13 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    * with application messages.
    */
   public synchronized void receiveMessage(Message msg) {
-    if (mySecurityManager.verifyMessage(msg) == true)
-      myMessageDispatch.dispatchMessage(msg);
+    myMessageDispatch.dispatchMessage(msg);
   }
-
+  
+  public synchronized void receiveMessage(RawMessageDelivery delivery) {
+    myMessageDispatch.dispatchMessage(delivery); 
+  }
+  
   /**
    * Registers a message receiver with this Pastry node.
    * 
@@ -303,12 +298,9 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    *          the message receiver.
    */
 
-  public void registerReceiver(Credentials cred, Address address,
-      MessageReceiver receiver) {
-    if (mySecurityManager.verifyAddressBinding(cred, address) == true)
-      myMessageDispatch.registerReceiver(address, receiver);
-    else
-      throw new Error("security failure");
+  public void registerReceiver(int address,
+      PastryAppl receiver) {
+    myMessageDispatch.registerReceiver(address, receiver);
   }
 
   /**
@@ -393,7 +385,12 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    */
   public rice.p2p.commonapi.Endpoint registerApplication(
       rice.p2p.commonapi.Application application, String instance) {
-    return new rice.pastry.commonapi.PastryEndpoint(this, application, instance);
+    return new rice.pastry.commonapi.PastryEndpoint(this, application, instance, true);
+  }
+
+  public rice.p2p.commonapi.Endpoint buildEndpoint(
+      rice.p2p.commonapi.Application application, String instance) {
+    return new rice.pastry.commonapi.PastryEndpoint(this, application, instance, false);
   }
 
   /**
@@ -411,10 +408,10 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    * @return The endpoint specific to this applicationk, which can be used for
    *         message sending/receiving.
    */
-  public rice.p2p.commonapi.Endpoint registerApplication(
-      rice.p2p.commonapi.Application application, int port) {
-    return new rice.pastry.commonapi.PastryEndpoint(this, application, port);
-  }
+//  public rice.p2p.commonapi.Endpoint registerApplication(
+//      rice.p2p.commonapi.Application application, int port) {
+//    return new rice.pastry.commonapi.PastryEndpoint(this, application, port);
+//  }
 
   /**
    * Returns the Id of this node
@@ -465,10 +462,21 @@ public abstract class PastryNode extends Observable implements MessageReceiver, 
    * Make sure to call super.destroy() !!!
    */
   public void destroy() {
+    if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
     myMessageDispatch.destroy();
   }
 
 
   abstract public void send(NodeHandle handle, Message message);
+  
+  /**
+   * Called by PastryAppl to ask the transport layer to open a Socket to its counterpart on another node.
+   * 
+   * @param handle
+   * @param receiver
+   * @param appl
+   */
+  abstract public void connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout);
+
 }
 

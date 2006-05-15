@@ -1,7 +1,10 @@
 package rice.p2p.aggregation.messaging;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.glacier.*;
 
 public abstract class AggregationMessage implements Message {
@@ -39,7 +42,7 @@ public abstract class AggregationMessage implements Message {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return MEDIUM_LOW_PRIORITY;
   }
   
@@ -69,5 +72,18 @@ public abstract class AggregationMessage implements Message {
   public Id getDestination() {
     return dest;
   }
+  
+//  public AggregationMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+//    id = buf.readInt();
+//    dest = endpoint.readId(buf, buf.readShort());
+//    source = endpoint.readNodeHandle(buf);
+//  }
+//  
+//  public void serialize(OutputBuffer buf) throws IOException {
+//    buf.writeInt(id);
+//    buf.writeShort(dest.getType());
+//    dest.serialize(buf);
+//    source.serialize(buf);
+//  }  
 }
 

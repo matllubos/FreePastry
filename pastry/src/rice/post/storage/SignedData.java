@@ -6,6 +6,7 @@ import java.security.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 import rice.p2p.util.*;
@@ -17,7 +18,8 @@ import rice.p2p.util.*;
  * @version $Id$
  */
 public class SignedData extends StorageServiceData {
-  
+  public static final short TYPE = 6;
+
   // serialver for backwards compatibility
   private static final long serialVersionUID = 7535493841770155095L;
 
@@ -132,7 +134,8 @@ public class SignedData extends StorageServiceData {
    */
   private void writeObject(ObjectOutputStream oos) throws IOException {
     oos.defaultWriteObject();
-    
+
+//    new Exception("Signed Data writeObject()").printStackTrace();
     oos.writeInt(timestamp.length);
     oos.write(timestamp);
     oos.writeInt(signature.length);
@@ -152,4 +155,28 @@ public class SignedData extends StorageServiceData {
     signature = new byte[ois.readInt()];
     ois.readFully(signature, 0, signature.length);
   }
+
+  public short getType() {
+    return TYPE;
+  }
+  
+  public SignedData(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint);
+//    System.out.println(toString()+".deserialize()");
+    timestamp = new byte[buf.readInt()];
+    buf.read(timestamp);
+    signature = new byte[buf.readInt()];
+    buf.read(signature);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+//    System.out.println(toString()+".serialize()");
+    super.serialize(buf);
+    
+    buf.writeInt(timestamp.length);
+    buf.write(timestamp, 0, timestamp.length);
+    buf.writeInt(signature.length);
+    buf.write(signature, 0, signature.length);    
+  }
+  
 }

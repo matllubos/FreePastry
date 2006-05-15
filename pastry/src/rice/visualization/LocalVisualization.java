@@ -6,7 +6,6 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.pastry.NodeId;
 import rice.pastry.dist.DistNodeHandle;
 import rice.visualization.client.*;
 import rice.visualization.data.Data;

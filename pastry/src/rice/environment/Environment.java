@@ -70,8 +70,8 @@ public class Environment implements Destructable {
     // choose defaults for all non-specified parameters
     chooseDefaults();
     
-    addDestructable(this.selectorManager);
-    addDestructable(this.processor);
+//    addDestructable(this.selectorManager);
+//    addDestructable(this.processor);
     
     logger = this.logManager.getLogger(getClass(), null);
   }
@@ -129,8 +129,13 @@ public class Environment implements Destructable {
     if (selectorManager == null) {      
       selectorManager = generateDefaultSelectorManager(time, logManager); 
     }
-    if (processor == null) {      
-      processor = generateDefaultProcessor(); 
+    if (processor == null) {    
+      if (params.contains("environment_use_sim_processor") &&
+          params.getBoolean("environment_use_sim_processor")) {
+        processor = new SimProcessor(selectorManager);
+      } else {
+        processor = generateDefaultProcessor(); 
+      }
     }
   }
   
@@ -194,13 +199,25 @@ public class Environment implements Destructable {
     } catch (IOException ioe) {      
       if (logger.level <= Logger.WARNING) logger.logException("Error during shutdown",ioe); 
     }
+    if (getSelectorManager().isSelectorThread()) {
+      callDestroyOnDestructables();
+    } else {
+      getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          callDestroyOnDestructables();
+        }
+      });
+    }
+  }
+  
+  private void callDestroyOnDestructables() {
     Iterator i = destructables.iterator();
     while(i.hasNext()) {
       Destructable d = (Destructable)i.next();
       d.destroy();
     }
     selectorManager.destroy();
-    processor.destroy();
+    processor.destroy();    
   }
 
   public void addDestructable(Destructable destructable) {

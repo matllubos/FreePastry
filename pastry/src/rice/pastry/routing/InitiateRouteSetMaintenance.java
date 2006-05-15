@@ -2,7 +2,6 @@ package rice.pastry.routing;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.io.*;
 import java.util.*;
@@ -26,7 +25,7 @@ public class InitiateRouteSetMaintenance extends Message implements
    */
 
   public InitiateRouteSetMaintenance() {
-    super(new RouteProtocolAddress());
+    super(RouteProtocolAddress.getCode());
   }
 
 }

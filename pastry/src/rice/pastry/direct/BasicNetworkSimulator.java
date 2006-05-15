@@ -12,6 +12,7 @@ import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.simulated.DirectTimeSource;
+import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.BroadcastRouteRow;
@@ -123,7 +124,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     testRecord = tr;
   }
 
-  private void addTask(DirectTimerTask dtt) {
+  private void addTask(TimerTask dtt) {
     if (logger.level <= Logger.FINE) logger.log("addTask("+dtt+")");
 //    System.out.println("addTask("+dtt+")");
     synchronized(taskQueue) {
@@ -131,6 +132,15 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     }
 //    start();
 //    if (!manager.isSelectorThread()) Thread.yield();
+  }
+  
+  public CancellableTask enqueueDelivery(Delivery d) {
+    if (logger.level <= Logger.FINE)
+      logger.log("GNS: enqueueDelivery " + d);
+    DeliveryTimerTask dtt = null;
+    dtt = new DeliveryTimerTask(d, timeSource.currentTimeMillis() + MIN_DELAY);
+    addTask(dtt);
+    return dtt;
   }
   
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node) {
@@ -190,15 +200,15 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   private boolean simulate() {
     if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be on selector thread");
     
-    DirectTimerTask task;
+    TimerTask task;
     synchronized(taskQueue) {
       // take a task from the taskQueue
       if (taskQueue.isEmpty()) {
-        if (logger.level <= Logger.INFO) logger.log("taskQueue is empty");
+        if (logger.level <= Logger.FINE) logger.log("taskQueue is empty");
         return false;
       }
-      task = (DirectTimerTask) taskQueue.first();
-      if (logger.level <= Logger.INFO) logger.log("simulate():"+task);
+      task = (TimerTask) taskQueue.first();
+      if (logger.level <= Logger.FINE) logger.log("simulate():"+task);
       taskQueue.remove(task);
     }
       // increment the clock if needed
@@ -283,7 +293,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     Iterator it = nodes.iterator();
     DirectNodeHandle bestHandle = null;
     int bestProx = Integer.MAX_VALUE;
-    NodeId theId;
+    Id theId;
 
     while (it.hasNext()) {
       DirectPastryNode theNode = (DirectPastryNode) it.next();

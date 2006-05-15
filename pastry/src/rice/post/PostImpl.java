@@ -10,13 +10,19 @@ import rice.Continuation.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
+import rice.p2p.past.rawserialization.PastContentDeserializer;
 import rice.p2p.scribe.*;
+import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
 import rice.p2p.util.*;
+import rice.p2p.util.rawserialization.*;
 
+import rice.pastry.messaging.JavaSerializedDeserializer;
 import rice.post.delivery.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
+import rice.post.rawserialization.*;
 import rice.post.storage.*;
 import rice.post.security.*;
 import rice.post.security.ca.*;
@@ -169,6 +175,8 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   protected final String instance;
   
+  protected NotificationMessageDeserializer notificationMessageDeserializer;
+  
   /**
    * Builds a PostImpl to run on the given pastry node,
    * using the provided PAST and Scribe services.
@@ -204,7 +212,35 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.logger = environment.getLogManager().getLogger(PostImpl.class, instance);
 
     this.instance = instance;
-    this.endpoint = node.registerApplication(this, instance);
+    this.endpoint = node.buildEndpoint(this, instance);
+    this.endpoint.setDeserializer(new rice.p2p.util.JavaSerializedDeserializer(endpoint) {
+    
+      public Message deserialize(InputBuffer buf, short type, byte priority,
+          NodeHandle sender) throws IOException {
+        switch(type) {
+          case BackupMessage.TYPE:
+            return new BackupMessage();
+          case PostPastryMessage.TYPE:
+            return new PostPastryMessage(buf, endpoint);            
+          case SynchronizeMessage.TYPE:
+            return new SynchronizeMessage();
+        }
+        return super.deserialize(buf, type, priority, sender);
+      }    
+    });
+    
+//    final PostMessageDeserializer postMessageDeserializer = null;
+//    PastContentDeserializer deliveryDeserializer = new PastContentDeserializer() {      
+//      public PastContent deserializePastContent(InputBuffer buf, Endpoint endpoint,
+//          short contentType) throws IOException {
+//        switch(contentType) {
+//          case Delivery.TYPE:
+//            return new Delivery(buf,endpoint,postMessageDeserializer);
+//        }
+//        throw new IllegalArgumentException("Unknown type:"+contentType);
+//      }    
+//    };    
+    
     this.address = address;
     this.keyPair = keyPair;
     this.certificate = certificate;
@@ -214,6 +250,18 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.previousAddress = previousAddress;
     
     this.scribe = new ScribeImpl(node, instance);
+    this.scribe.setContentDeserializer(new ScribeContentDeserializer() {
+    
+      public ScribeContent deserializeScribeContent(InputBuffer buf,
+          Endpoint endpoint, short contentType) throws IOException {
+        switch(contentType) {
+          case PostScribeMessage.TYPE:
+            return new PostScribeMessage(buf, endpoint);
+        }
+        throw new IllegalArgumentException("Unknown type:"+buf);
+      }    
+    });
+    
     this.delivery = new DeliveryService(this, deliveryPast, deliveredPast, scribe, node.getIdFactory(), timeoutInterval);
     this.deliveryBuffer = new Vector();
 
@@ -231,13 +279,15 @@ public class PostImpl implements Post, Application, ScribeClient {
   //  logger.setLevel(Level.FINEST);
   //  logger.getHandlers()[0].setLevel(Level.FINEST);
     
+    endpoint.register();
+    
     endpoint.scheduleMessage(new SynchronizeMessage(), SYNCHRONIZE_WAIT + environment.getRandomSource().nextInt((int) synchronizeInterval), synchronizeInterval);
     endpoint.scheduleMessage(new RefreshMessage(), environment.getRandomSource().nextInt((int) refreshInterval), refreshInterval);
     endpoint.scheduleMessage(new BackupMessage(), environment.getRandomSource().nextInt((int) BACKUP_INTERVAL), BACKUP_INTERVAL);
     
     if (logger.level <= Logger.FINE) logger.log("Constructed new Post with user " + address + " and instance " + instance);
   }
-  
+    
   /**
     * @return The Endpoint
    */
@@ -279,7 +329,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     } else if (message instanceof BackupMessage) {
       processBackupMessage((BackupMessage) message);
     } else {
-      if (logger.level <= Logger.WARNING) logger.log("Found unknown message " + message + " - dropping on floor.");
+      if (logger.level <= Logger.WARNING) logger.logException("Found unknown message " + message + " - dropping on floor.", new Exception("Stack Trace"));
     }
   }
   
@@ -651,10 +701,17 @@ public class PostImpl implements Post, Application, ScribeClient {
     // decrypt and verify notification message
     try {
       byte[] key = SecurityUtils.decryptAsymmetric(message.getKey(), keyPair.getPrivate());
-      nm = (NotificationMessage) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(message.getData(), key));
+      byte[] plaintext = SecurityUtils.decryptSymmetric(message.getData(), key);
+      if (plaintext[0] == 0x1F && plaintext[1] == 0x8B) {
+        nm = (NotificationMessage) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(message.getData(), key));
+      } else {                
+        System.out.println("PostImpl.processEncryptedNotificatonMessage():Head of Plaintext:"+plaintext[0]+","+plaintext[1]+","+plaintext[2]+","+plaintext[3]+","+plaintext[4]+","+plaintext[5]+","+plaintext[6]+","+plaintext[7]);
+        InputBuffer buf = new SimpleInputBuffer(plaintext);     
+        nm = notificationMessageDeserializer.deserializeNotificationMessage(buf, endpoint, buf.readShort());
+      }
     } catch (Exception e) {
-      if (logger.level <= Logger.WARNING) logger.log("Exception occured which decrypting NotificationMessage " + e + " - dropping on floor.");
-      command.receiveException(new PostException("Exception occured which decrypting NotificationMessage " + e + " - dropping on floor."));
+      if (logger.level <= Logger.WARNING) logger.logException("Exception occured which decrypting NotificationMessage " + e + " - dropping on floor.", e);
+      command.receiveException(new PostException("Exception occured whil decrypting NotificationMessage " + e + " - dropping on floor."));
       return;
     }
 
@@ -1094,8 +1151,18 @@ public class PostImpl implements Post, Application, ScribeClient {
         try {
           byte[] key = SecurityUtils.generateKeySymmetric();
           byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
-          byte[] cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
-
+          byte[] cipherText;
+          if (message instanceof Raw) {
+            SimpleOutputBuffer sob = new SimpleOutputBuffer();
+            sob.writeShort(((Raw)message).getType());
+            message.serialize(sob);
+            byte[] plaintext = sob.getBytes();
+//            System.out.println("PostImpl.receiveResult2():Head of Plaintext:"+plaintext[0]+","+plaintext[1]+","+plaintext[2]+","+plaintext[3]+","+plaintext[4]+","+plaintext[5]+","+plaintext[6]+","+plaintext[7]);
+            cipherText = SecurityUtils.encryptSymmetric(sob.getBytes(), key, 0, sob.getWritten());
+          } else {
+            cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);            
+          }
+//          System.out.println("PostImpl.receiveResult2(): Constructing EncryptedNotificationMessage["+message+"]");
           EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, destination, keyCipherText, cipherText);
 
           delivery.deliver(signPostMessage(enm), new StandardContinuation(parent) {
@@ -1146,7 +1213,19 @@ public class PostImpl implements Post, Application, ScribeClient {
         try {
           byte[] key = SecurityUtils.generateKeySymmetric();
           byte[] keyCipherText = SecurityUtils.encryptAsymmetric(key, destinationLog.getPublicKey());
-          byte[] cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+          byte[] cipherText;// = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+          if (message instanceof Raw) {
+            SimpleOutputBuffer sob = new SimpleOutputBuffer();
+            sob.writeShort(((Raw)message).getType());
+            message.serialize(sob);
+            byte[] plaintext = sob.getBytes();
+//            System.out.println("PostImpl.receiveResult1():Head of Plaintext:"+plaintext[0]+","+plaintext[1]+","+plaintext[2]+","+plaintext[3]+","+plaintext[4]+","+plaintext[5]+","+plaintext[6]+","+plaintext[7]);
+
+            cipherText = SecurityUtils.encryptSymmetric(plaintext, key, 0, sob.getWritten());
+          } else {
+            cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);            
+          }
+//          System.out.println("PostImpl.receiveResult(): Constructing EncryptedNotificationMessage["+message+"]");
           EncryptedNotificationMessage enm = new EncryptedNotificationMessage(address, destination, keyCipherText, cipherText);
 
           if (logger.level <= Logger.FINER) logger.log("Sending notification message directly to : " + handle);
@@ -1192,11 +1271,26 @@ public class PostImpl implements Post, Application, ScribeClient {
     
     try {
       byte[] cipherText = null;
-
-      if (key != null) {
-        cipherText = SecurityUtils.encryptSymmetric(SecurityUtils.serialize(message), key);
+      byte[] plainText;
+      int plainTextLength = 0;
+      if (message instanceof Raw) {
+        SimpleOutputBuffer sob = new SimpleOutputBuffer();
+        sob.writeShort(((Raw)message).getType());
+        message.serialize(sob);
+        byte[] plaintext = sob.getBytes();
+//        System.out.println("PostImpl.sendGroup():Head of Plaintext:"+plaintext[0]+","+plaintext[1]+","+plaintext[2]+","+plaintext[3]+","+plaintext[4]+","+plaintext[5]+","+plaintext[6]+","+plaintext[7]);        
+        plainText = sob.getBytes();
+        plainTextLength = sob.getWritten();
       } else {
-        cipherText = SecurityUtils.serialize(message);
+        plainText = SecurityUtils.serialize(message);
+        plainTextLength = plainText.length;
+      }
+      
+      if (key != null) {        
+        cipherText = SecurityUtils.encryptSymmetric(plainText, key, 0, plainTextLength);
+      } else {
+        cipherText = new byte[plainTextLength];
+        System.arraycopy(plainText, 0, cipherText, 0, plainTextLength);
       }
 
       GroupNotificationMessage gnm = new GroupNotificationMessage(address, destination, cipherText);
@@ -1265,5 +1359,14 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   public String getInstance() {
     return instance;
+  }
+
+  public NotificationMessageDeserializer getNotificationMessageDeserializer() {
+    return notificationMessageDeserializer;
+  }
+
+  public void setNotificationMessageDeserializer(
+      NotificationMessageDeserializer notificationMessageDeserializer) {
+    this.notificationMessageDeserializer = notificationMessageDeserializer;
   }
 }

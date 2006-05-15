@@ -12,7 +12,7 @@ import java.util.*;
  * The size of this table is determined by two constants:
  * <P>
  * <UL>
- * <LI>{@link rice.pastry.NodeId#nodeIdBitLength nodeIdBitLength}which
+ * <LI>{@link rice.pastry.Id#nodeIdBitLength nodeIdBitLength}which
  * determines the number of bits in a node id (which we call <EM>n</EM>).
  * <LI>{@link RoutingTable#idBaseBitLength idBaseBitLength}which is the base
  * that table is stored in (which we call <EM>b</EM>).
@@ -40,9 +40,9 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * </SUP></EM>
    */
 
-  public int idBaseBitLength;// = 4;
+  public byte idBaseBitLength;// = 4;
 
-  private NodeId myNodeId;
+  private Id myNodeId;
 
   public NodeHandle myNodeHandle;
 
@@ -59,7 +59,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @param max the maximum number of entries at each table slot.
    */
 
-  public RoutingTable(NodeHandle me, int max, int base, Environment env) {
+  public RoutingTable(NodeHandle me, int max, byte base, Environment env) {
     logger = env.getLogManager().getLogger(RoutingTable.class,null);
     idBaseBitLength = base;
     myNodeId = me.getNodeId();
@@ -67,7 +67,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     maxEntries = max;
 
     int cols = 1 << idBaseBitLength;
-    int rows = NodeId.nodeIdBitLength / idBaseBitLength;
+    int rows = Id.IdBitLength / idBaseBitLength;
 
     routingTable = new RouteSet[rows][cols];
 
@@ -96,8 +96,8 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @return number of rows
    */
 
-  public int numRows() {
-    return routingTable.length;
+  public byte numRows() {
+    return (byte)routingTable.length;
   }
 
   /**
@@ -106,7 +106,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @return baseBitLength
    */
 
-  public int baseBitLength() {
+  public byte baseBitLength() {
     return idBaseBitLength;
   }
 
@@ -139,7 +139,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
       return null;
     int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
     int myDigit = myNodeId.getDigit(diffDigit, idBaseBitLength);
-    NodeId.Distance bestDistance = myNodeId.distance(key);
+    Id.Distance bestDistance = myNodeId.distance(key);
     NodeHandle alt = null;
     boolean finished = false;
 
@@ -153,7 +153,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
           NodeHandle n = rs.get(k);
 
           if (n.getLiveness() <= minLiveness /* isAlive() */) {
-            NodeId.Distance nDist = n.getNodeId().distance(key);
+            Id.Distance nDist = n.getNodeId().distance(key);
 
             if (bestDistance.compareTo(nDist) > 0) {
               bestDistance = nDist;
@@ -236,7 +236,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
   /**
    * Gets the set of handles that match at least one more digit of the key than
-   * the local nodeId.
+   * the local Id.
    * 
    * @param key the key
    * 
@@ -283,7 +283,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
   public void put(NodeHandle handle) {
   if (logger.level <= Logger.FINER) logger.log("RT: put("+handle+")"); 
-    NodeId nid = handle.getNodeId();
+    Id nid = handle.getNodeId();
     RouteSet ns = makeBestEntry(nid);
 
     if (ns != null)
@@ -297,7 +297,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @return the handle associated with that id, or null if none is known.
    */
 
-  public NodeHandle get(NodeId nid) {
+  public NodeHandle get(Id nid) {
     RouteSet ns = getBestEntry(nid);
 
     if (ns == null)
@@ -324,7 +324,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @return the handle that was removed, or null if it did not exist.
    */
 
-  //  public NodeHandle remove(NodeId nid)
+  //  public NodeHandle remove(Id nid)
   //  {
   //RouteSet ns = getBestEntry(nid);
   //  

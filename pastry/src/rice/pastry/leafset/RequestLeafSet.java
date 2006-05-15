@@ -1,8 +1,8 @@
 package rice.pastry.leafset;
 
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.io.*;
 import java.util.*;
@@ -15,9 +15,9 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class RequestLeafSet extends Message implements Serializable {
-  private NodeHandle handle;
-
+public class RequestLeafSet extends PRawMessage implements Serializable {
+  public static final short TYPE = 1;
+  
   /**
    * Constructor.
    * 
@@ -25,22 +25,7 @@ public class RequestLeafSet extends Message implements Serializable {
    */
 
   public RequestLeafSet(NodeHandle nh) {
-    super(new LeafSetProtocolAddress());
-    handle = nh;
-    setPriority(0);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials.
-   * @param nh the return handle.
-   */
-
-  public RequestLeafSet(Credentials cred, NodeHandle nh) {
-    super(new LeafSetProtocolAddress(), cred);
-    handle = nh;
-    setPriority(0);
+    this(null, nh);
   }
 
   /**
@@ -51,23 +36,9 @@ public class RequestLeafSet extends Message implements Serializable {
    */
 
   public RequestLeafSet(Date stamp, NodeHandle nh) {
-    super(new LeafSetProtocolAddress(), stamp);
-    handle = nh;
-    setPriority(0);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param cred the credentials.
-   * @param stamp the timestamp
-   * @param nh the return handle.
-   */
-
-  public RequestLeafSet(Credentials cred, Date stamp, NodeHandle nh) {
-    super(new LeafSetProtocolAddress(), cred, stamp);
-    handle = nh;
-    setPriority(0);
+    super(LeafSetProtocolAddress.getCode(), stamp);
+    setSender(nh);
+    setPriority(MAX_PRIORITY);
   }
 
   /**
@@ -77,14 +48,37 @@ public class RequestLeafSet extends Message implements Serializable {
    */
 
   public NodeHandle returnHandle() {
-    return handle;
+    return getSender();
   }
 
   public String toString() {
     String s = "";
 
-    s += "RequestLeafSet(by " + handle.getNodeId() + ")";
+    s += "RequestLeafSet(by " + getSender().getNodeId() + ")";
 
     return s;
   }
+  
+  /***************** Raw Serialization ***************************************/  
+  public short getType() {
+    return TYPE;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version    
+  }
+  
+  public RequestLeafSet(NodeHandle sender, InputBuffer buf) throws IOException {
+    super(LeafSetProtocolAddress.getCode());
+    
+    setSender(sender);
+    
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        break;
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }
+  }  
 }

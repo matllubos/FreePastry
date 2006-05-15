@@ -16,7 +16,6 @@ import rice.environment.Environment;
 import rice.p2p.commonapi.Message;
 import rice.p2p.scribe.ScribeContent;
 import rice.pastry.NodeHandle;
-import rice.pastry.NodeId;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.dist.DistPastryNode;
@@ -308,7 +307,7 @@ public class DistTestHarnessRunner {
         System.out.println("Current nodes on this host:");
 
         for (int i=0; i<pastryNodes.size(); i++) {
-          NodeId nh = ((PastryNode) pastryNodes.elementAt(i)).getNodeId();
+          rice.pastry.Id nh = ((PastryNode) pastryNodes.elementAt(i)).getNodeId();
           System.out.println("  " + i + ": " + nh);
         }
 

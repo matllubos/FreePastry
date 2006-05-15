@@ -1,8 +1,10 @@
 package rice.p2p.multiring;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) MutliringIdRange.java
@@ -154,6 +156,17 @@ public class MultiringIdRange implements IdRange {
    */
   public String toString() {
     return "{RingId " + ringId + " " + range.toString() + "}";
+  }
+
+  public MultiringIdRange(InputBuffer buf, Endpoint endpoint) throws IOException {
+    ringId = endpoint.readId(buf, buf.readShort());
+    range = endpoint.readIdRange(buf);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(ringId.getType());
+    ringId.serialize(buf);
+    range.serialize(buf);
   }
 }
 

@@ -4,6 +4,7 @@ import java.security.*;
 import java.io.*;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.glacier.Fragment;
 
 public class Manifest implements Serializable {
@@ -158,5 +159,38 @@ public class Manifest implements Serializable {
         fragmentHash[i][j] = fragmentHashField[i*fragmentHashSubLength + j];
     signature = new byte[signatureLength];
     ois.readFully(signature, 0, signatureLength);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(objectHash.length);
+    buf.writeInt(fragmentHash.length);
+    buf.writeInt(fragmentHash[0].length);
+    buf.writeInt(signature.length);
+    buf.write(objectHash, 0, objectHash.length);
+    int dim1 = fragmentHash.length;
+    int dim2 = fragmentHash[0].length;
+    byte[] fragmentHashField = new byte[dim1*dim2];
+    for (int i=0; i<dim1; i++)
+      for (int j=0; j<dim2; j++)
+        fragmentHashField[i*dim2 + j] = fragmentHash[i][j];
+    buf.write(fragmentHashField, 0, fragmentHashField.length);
+    buf.write(signature, 0, signature.length);    
+  }  
+  
+  public Manifest(InputBuffer buf) throws IOException {
+    int objectHashLength = buf.readInt();
+    int fragmentHashLength = buf.readInt();
+    int fragmentHashSubLength = buf.readInt();
+    int signatureLength = buf.readInt();
+    objectHash = new byte[objectHashLength];
+    buf.read(objectHash, 0, objectHashLength);
+    byte[] fragmentHashField = new byte[fragmentHashLength * fragmentHashSubLength];
+    buf.read(fragmentHashField, 0, fragmentHashLength * fragmentHashSubLength);
+    fragmentHash = new byte[fragmentHashLength][fragmentHashSubLength];
+    for (int i=0; i<fragmentHashLength; i++)
+      for (int j=0; j<fragmentHashSubLength; j++)
+        fragmentHash[i][j] = fragmentHashField[i*fragmentHashSubLength + j];
+    signature = new byte[signatureLength];
+    buf.read(signature, 0, signatureLength);    
   }
 }

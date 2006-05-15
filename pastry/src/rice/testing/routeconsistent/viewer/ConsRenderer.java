@@ -184,6 +184,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       selectedString+=",<font color=\""+ss.node.htmlColor()+"\">\u2588</font>"+ss.toString();  
       selected.add(ss.node);
     }
+        
     setText(s+selectedString);
     
     leafSets.clear();
@@ -474,8 +475,16 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     }
     
     public String toString() {
+      long now = absTime;
+      now/=1000; 
+      now%=86400; //1 day's seconds
+      now/=3600; // hour 0-23
+      now/=2; // 0-11;
+      now*=2; // 0-22 by 2
+      
+
 //      return "<html>["+x+","+y+"] T:<font color=\"FF0000\">"+absTime+"</font> S:"+spaceString+"</html>";
-      return "["+x+","+y+"] t:"+timeString+" T:"+absTime+" S:"+spaceString;
+      return now+"["+x+","+y+"] t:"+timeString+" T:"+absTime+" S:"+spaceString;
     }
   }
   
@@ -487,7 +496,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     this.reader = reader;
   }
   
-  int maxNumSquares = 100000;
+  int maxNumSquares = 300000;
   int numSquares = 0;
   int TIME_ADD = 1000;
   
@@ -496,7 +505,10 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
    */
   public synchronized void addSquare(Square s) {
     if (numSquares >= maxNumSquares) return;
-    //System.out.println(s);
+    
+//    if (s.nodeName.equals("0x5E008C"))
+//    if ((numSquares > 166891) && (numSquares < 166956))
+//      System.out.println(s);
     numSquares++;
     Node n = (Node)nodes.get(s.nodeName);  
     if (n == null) {
@@ -629,9 +641,9 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       }
       args = new String[3];
       // m:/planetlab/plcons/cons1/viz m:/planetlab/plcons/cons1/node_index.txt m:/planetlab/plcons/cons1/
-      args[0] = "m:/planetlab/plcons/cons"+number+"/viz";
-      args[1] = "m:/planetlab/plcons/cons"+number+"/node_index.txt";
-      args[2] = "m:/planetlab/plcons/cons1/";
+      args[0] = "n:/planetlab/cons"+number+"/viz";
+      args[1] = "n:/planetlab/cons"+number+"/node_index.txt";
+      args[2] = "n:/planetlab/cons"+number+"/";
     }
     
     JFrame frame = new JFrame("ConsRenderer");

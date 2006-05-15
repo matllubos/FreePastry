@@ -1,6 +1,7 @@
 
 package rice.p2p.scribe;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.prefs.*;
 
@@ -9,7 +10,9 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.scribe.messaging.*;
+import rice.p2p.scribe.rawserialization.*;
 
 /**
  * @(#) ScribeImpl.java Thie provided implementation of Scribe.
@@ -80,6 +83,8 @@ public class ScribeImpl implements Scribe, Application {
     this(node, new ScribePolicy.DefaultScribePolicy(node.getEnvironment()), instance);
   }
 
+  ScribeContentDeserializer contentDeserializer;
+  
   /**
    * Constructor for Scribe
    *
@@ -95,13 +100,47 @@ public class ScribeImpl implements Scribe, Application {
     MAINTENANCE_INTERVAL = p.getInt("p2p_scribe_maintenance_interval");
     MESSAGE_TIMEOUT = p.getInt("p2p_scribe_message_timeout");
     this.instance = instance;
-    this.endpoint = node.registerApplication(this, instance);
+    this.endpoint = node.buildEndpoint(this, instance);
+    this.contentDeserializer = new JavaScribeContentDeserializer();
+    this.endpoint.setDeserializer(new MessageDeserializer() {
+    
+      public Message deserialize(InputBuffer buf, short type, byte priority,
+          NodeHandle sender) throws IOException {
+        try {
+          switch(type) {
+            case AnycastMessage.TYPE:
+              return AnycastMessage.build(buf, endpoint, contentDeserializer);
+            case SubscribeMessage.TYPE:
+              return SubscribeMessage.buildSM(buf, endpoint, contentDeserializer);
+            case SubscribeAckMessage.TYPE:
+              return SubscribeAckMessage.build(buf, endpoint);
+            case SubscribeFailedMessage.TYPE:
+              return SubscribeFailedMessage.build(buf, endpoint);
+            case DropMessage.TYPE:
+              return DropMessage.build(buf, endpoint);
+            case PublishMessage.TYPE:
+              return PublishMessage.build(buf, endpoint, contentDeserializer);
+            case PublishRequestMessage.TYPE:
+              return PublishRequestMessage.build(buf, endpoint, contentDeserializer);
+            case UnsubscribeMessage.TYPE:
+              return UnsubscribeMessage.build(buf, endpoint);
+          }
+        } catch (IOException e) {
+          if (logger.level <= Logger.SEVERE) logger.log("Exception in deserializer in "+ScribeImpl.this.endpoint.toString()+":"+ScribeImpl.this.instance+" "+contentDeserializer+" "+e);
+          throw e;
+        }
+        throw new IllegalArgumentException("Unknown type:"+type);
+      }
+    
+    });
     this.topics = new Hashtable();
     this.outstanding = new Hashtable();
     this.lost = new Hashtable();
     this.policy = policy;
     this.handle = endpoint.getLocalNodeHandle();
     this.id = Integer.MIN_VALUE;
+    
+    endpoint.register();
     
     // schedule the period liveness checks of the parent
     endpoint.scheduleMessage(new MaintenanceMessage(), environment.getRandomSource().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
@@ -202,7 +241,7 @@ public class ScribeImpl implements Scribe, Application {
    *
    * @param Topic topic
    */
-  private void sendSubscribe(Topic topic, ScribeClient client, ScribeContent content) {
+  private void sendSubscribe(Topic topic, ScribeClient client, RawScribeContent content) {
     sendSubscribe(topic, client, content, null);
   }
 
@@ -211,7 +250,7 @@ public class ScribeImpl implements Scribe, Application {
    *
    * @param Topic topic
    */
-  private void sendSubscribe(Topic topic, ScribeClient client, ScribeContent content, Id previousParent) {
+  private void sendSubscribe(Topic topic, ScribeClient client, RawScribeContent content, Id previousParent) {
     id++;
 
     if (logger.level <= Logger.FINEST) logger.log(endpoint.getId() + ": Sending subscribe message for topic " + topic + " client:"+client);
@@ -298,6 +337,10 @@ public class ScribeImpl implements Scribe, Application {
    * @param client The client to give messages to
    */
   public void subscribe(Topic topic, ScribeClient client, ScribeContent content) {
+    subscribe(topic, client, content instanceof RawScribeContent ? (RawScribeContent)content : new JavaSerializedScribeContent(content));
+  }
+  
+  public void subscribe(Topic topic, ScribeClient client, RawScribeContent content) {
     if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Subscribing client " + client + " to topic " + topic);
 
     // if we don't know about this topic, subscribe
@@ -350,6 +393,10 @@ public class ScribeImpl implements Scribe, Application {
    * @param content The content to publish
    */
   public void publish(Topic topic, ScribeContent content) {
+    publish(topic, content instanceof RawScribeContent ? (RawScribeContent)content : new JavaSerializedScribeContent(content));
+  }
+  
+  public void publish(Topic topic, RawScribeContent content) {
     if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Publishing content " + content + " to topic " + topic);
 
     endpoint.route(topic.getId(), new PublishRequestMessage(handle, topic, content), null);
@@ -362,6 +409,14 @@ public class ScribeImpl implements Scribe, Application {
    * @param content The content to anycast
    */
   public void anycast(Topic topic, ScribeContent content) {
+    if (content instanceof RawScribeContent) {
+      anycast(topic, (RawScribeContent)content);
+    } else {
+      anycast(topic, new JavaSerializedScribeContent(content));
+    }
+  }
+  
+  public void anycast(Topic topic, RawScribeContent content) {
     if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Anycasting content " + content + " to topic " + topic);
 
     endpoint.route(topic.getId(), new AnycastMessage(handle, topic, content), null);
@@ -504,17 +559,23 @@ public class ScribeImpl implements Scribe, Application {
    * @return Whether or not to forward the message further
    */
   public boolean forward(final RouteMessage message) {
-    if (logger.level <= Logger.FINEST) logger.log(endpoint.getId() + ": Forward called with " + message.getMessage());
     
-    if (message.getMessage() instanceof AnycastMessage) {
-      AnycastMessage aMessage = (AnycastMessage) message.getMessage();
+    Message internalMessage;
+    try {
+      internalMessage = message.getMessage(endpoint.getDeserializer());
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe); 
+    }
+    if (logger.level <= Logger.FINEST) logger.log(endpoint.getId() + ": Forward called with " + internalMessage);
+    if (internalMessage instanceof AnycastMessage) {
+      AnycastMessage aMessage = (AnycastMessage) internalMessage;
 
       // get the topic manager associated with this topic
       TopicManager manager = (TopicManager) topics.get(aMessage.getTopic());
 
       // if it's a subscribe message, we must handle it differently
-      if (message.getMessage() instanceof SubscribeMessage) {
-        SubscribeMessage sMessage = (SubscribeMessage) message.getMessage();
+      if (internalMessage instanceof SubscribeMessage) {
+        SubscribeMessage sMessage = (SubscribeMessage) internalMessage;
 
         // if this is our own subscribe message, ignore it
         if (sMessage.getSource().getId().equals(endpoint.getId())) {
@@ -1154,5 +1215,9 @@ public class ScribeImpl implements Scribe, Application {
       TopicManager topicManager = (TopicManager)topicIter.next(); 
       topicManager.destroy();
     }
+  }
+
+  public void setContentDeserializer(ScribeContentDeserializer deserializer) {
+    contentDeserializer = deserializer;
   }
 }

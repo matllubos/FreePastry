@@ -5,6 +5,7 @@ import java.io.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 
 /**
@@ -23,7 +24,8 @@ import rice.p2p.past.*;
  * @version $Id$
  */
 public class ContentHashReference implements Serializable {
-  
+  public static final short TYPE = 2;
+
   // serialver, for backwards compatibility
   private static final long serialVersionUID = 5215474536871804216L;
   
@@ -113,6 +115,33 @@ public class ContentHashReference implements Serializable {
         this.locations = new Id[0];
         this.keys = new byte[0][0];
       }
+    }
+  }
+  
+  public ContentHashReference(InputBuffer buf, Endpoint endpoint) throws IOException {
+    locations = new Id[buf.readInt()]; 
+    for (int i = 0; i < locations.length; i++) {
+      locations[i] = endpoint.readId(buf, buf.readShort());
+    }
+    
+    keys = new byte[buf.readInt()][];
+    for (int i = 0; i < keys.length; i++) {
+      keys[i] = new byte[buf.readInt()];
+      buf.read(keys[i]);
+    }
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(locations.length);
+    for (int i = 0; i < locations.length; i++) {
+      buf.writeShort(locations[i].getType());
+      locations[i].serialize(buf);
+    }
+    
+    buf.writeInt(keys.length);
+    for (int i = 0; i < keys.length; i++) {
+      buf.writeInt(keys[i].length);
+      buf.write(keys[i], 0, keys[i].length);
     }
   }
 }

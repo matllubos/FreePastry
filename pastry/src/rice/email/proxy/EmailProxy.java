@@ -1,50 +1,29 @@
 package rice.email.proxy;
 
-import rice.p2p.commonapi.IdFactory;
+import java.io.*;
 
-import rice.pastry.client.*;
-import rice.pastry.commonapi.*;
-import rice.pastry.leafset.*;
-import rice.pastry.security.*;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.*;
-import rice.pastry.direct.*;
-import rice.pastry.standard.*;
+import javax.activation.CommandMap;
+import javax.activation.MailcapCommandMap;
 
-import rice.p2p.past.*;
-
-import rice.persistence.*;
-
-import rice.*;
-import rice.Continuation.*;
-
-import rice.post.*;
-import rice.post.proxy.*;
-import rice.post.security.*;
-import rice.post.security.ca.*;
- 
-import rice.email.*;
-import rice.email.proxy.smtp.*;
-import rice.email.proxy.web.*;
-import rice.email.proxy.pop3.*;
+import rice.Continuation;
+import rice.Continuation.ExternalContinuationRunnable;
+import rice.email.EmailService;
+import rice.email.messaging.EmailNotificationMessage;
 import rice.email.proxy.imap.*;
-import rice.email.proxy.user.*;
-import rice.email.proxy.mailbox.*;
-import rice.email.proxy.mailbox.postbox.*;
-import rice.environment.Environment;
+import rice.email.proxy.mailbox.postbox.PostMailboxManager;
+import rice.email.proxy.mailbox.postbox.PostMessage;
+import rice.email.proxy.pop3.*;
+import rice.email.proxy.smtp.*;
+import rice.email.proxy.user.UserManagerImpl;
+import rice.email.proxy.web.WebServer;
+import rice.email.proxy.web.WebServerImpl;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
-
-import rice.proxy.*;
-
-import java.util.*;
-import java.io.*;
-import java.net.*;
-import java.security.*;
-
-import javax.activation.*;
-import javax.mail.*;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.post.messaging.NotificationMessage;
+import rice.post.proxy.PostProxy;
+import rice.post.rawserialization.NotificationMessageDeserializer;
 
 /**
 * This class starts up everything on the Pastry side, and then
@@ -145,6 +124,18 @@ public class EmailProxy extends PostProxy {
   protected void startEmailService() throws Exception {
    Parameters parameters = environment.getParameters();
    stepStart("Starting Email service");
+   post.setNotificationMessageDeserializer(new NotificationMessageDeserializer() {
+  
+    public NotificationMessage deserializeNotificationMessage(InputBuffer buf,
+        Endpoint endpoint, short contentType) throws IOException {
+      switch(contentType) {
+        case EmailNotificationMessage.TYPE:
+          return new EmailNotificationMessage(buf, endpoint);
+      }
+      throw new IllegalArgumentException("Unknown type:"+contentType);
+    }
+  
+  });
    email = new EmailService(getLocalHost(), post, pair, parameters.getBoolean("post_allow_log_insert"));
    PostMessage.factory = FACTORY;
    stepDone(SUCCESS);

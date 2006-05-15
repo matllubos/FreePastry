@@ -223,7 +223,7 @@ public class SplitStreamTest extends Test {
       return new String("SPLIT_STREAM_TEST  MSG:");
     }
 
-    public int getPriority() {
+    public byte getPriority() {
       return Message.LOW_PRIORITY;
     }
   }
@@ -244,7 +244,7 @@ public class SplitStreamTest extends Test {
       return new String("PRINT_TREE MSG:");
     }
 
-    public int getPriority() {
+    public byte getPriority() {
       return Message.LOW_PRIORITY;
     }
   }

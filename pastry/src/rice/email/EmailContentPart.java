@@ -6,6 +6,8 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.post.storage.*;
 
@@ -96,4 +98,28 @@ public abstract class EmailContentPart implements Serializable {
    * @param set The set to add the PastContentHandles to.
    */
   public abstract void getContentHashReferences(Set set);
+  
+  public EmailContentPart(InputBuffer buf) throws IOException {
+    size = buf.readInt(); 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(size);
+  }
+
+  public abstract short getRawType();
+
+  public static EmailContentPart build(InputBuffer buf, Endpoint endpoint, short type) throws IOException {
+    switch(type) {
+      case EmailHeadersPart.TYPE:
+        return new EmailHeadersPart(buf, endpoint);
+      case EmailMessagePart.TYPE:
+        return new EmailMessagePart(buf, endpoint);
+      case EmailMultiPart.TYPE:
+        return new EmailMultiPart(buf, endpoint);
+      case EmailSinglePart.TYPE:
+        return new EmailSinglePart(buf, endpoint);        
+    }
+    throw new IllegalArgumentException("Unknown type:"+type);
+  }
 }

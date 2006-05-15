@@ -3,12 +3,14 @@ package rice.post.messaging;
 import java.io.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * This is a wrapper message for all Post messages which
  * are to be sent over the Pastry messaging system.
  */
-public class PostPastryMessage implements Message, SignedPostMessageWrapper {
+public class PostPastryMessage implements RawMessage, SignedPostMessageWrapper {
+  public static final short TYPE = 8;
 
   private SignedPostMessage message;
   
@@ -34,7 +36,7 @@ public class PostPastryMessage implements Message, SignedPostMessageWrapper {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return MEDIUM_HIGH_PRIORITY;
   }
 
@@ -49,6 +51,17 @@ public class PostPastryMessage implements Message, SignedPostMessageWrapper {
   
   public String toString() {
     return "[PPM " + message + "]"; 
+  }
+
+  public short getType() {
+    return TYPE;
+  }
+
+  public PostPastryMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    message = new SignedPostMessage(buf, endpoint);
+  }
+  public void serialize(OutputBuffer buf) throws IOException {
+    message.serialize(buf);
   }
   
 }

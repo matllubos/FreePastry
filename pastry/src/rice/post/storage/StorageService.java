@@ -15,8 +15,10 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.aggregation.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.past.rawserialization.*;
 import rice.p2p.glacier.VersioningPast;
 import rice.p2p.glacier.v2.GlacierContentHandle;
 import rice.p2p.util.*;
@@ -99,7 +101,39 @@ public class StorageService {
     logger = environment.getLogManager().getLogger(StorageService.class, null);    
     this.entity = address;
     this.immutablePast = immutablePast;
+    
     this.mutablePast = mutablePast;
+    
+    PastContentDeserializer pcd = new JavaPastContentDeserializer() {
+      public PastContent deserializePastContent(InputBuffer buf, Endpoint endpoint, short contentType) throws IOException {
+        switch(contentType) {
+          case ContentHashData.TYPE:
+            return new ContentHashData(buf, endpoint);
+          case SecureData.TYPE:
+            return new SecureData(buf, endpoint);
+          case SignedData.TYPE:
+            return new SignedData(buf, endpoint);
+        }
+        return super.deserializePastContent(buf, endpoint, contentType);
+      };
+    };
+    PastContentHandleDeserializer pchd = new JavaPastContentHandleDeserializer() {
+      
+      public PastContentHandle deserializePastContentHandle(InputBuffer buf, Endpoint endpoint,
+          short contentType) throws IOException {
+        switch(contentType) {
+          case StorageServiceDataHandle.TYPE:
+            return new StorageServiceDataHandle(buf, endpoint);
+        }
+        return super.deserializePastContentHandle(buf, endpoint, contentType);
+      }    
+    };
+
+    immutablePast.setContentHandleDeserializer(pchd);
+    immutablePast.setContentDeserializer(pcd);
+    mutablePast.setContentHandleDeserializer(pchd);
+    mutablePast.setContentDeserializer(pcd);
+    
     this.keyPair = keyPair;
     this.factory = factory;
     this.timeoutInterval = timeoutInterval;
@@ -596,6 +630,7 @@ public class StorageService {
    */
   protected static void storeSigned(final PostData data, final Id location, long time, long expiration, final KeyPair keyPair, Past past, Continuation command) {
     try {
+//      System.out.println("StorageService.storeSigned("+data+")");
       byte[] plainText = SecurityUtils.serialize(data);
       byte[] timestamp = MathUtils.longToByteArray(time);
       

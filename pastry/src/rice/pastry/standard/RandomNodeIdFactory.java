@@ -39,7 +39,7 @@ public class RandomNodeIdFactory implements NodeIdFactory {
    * @return the new nodeId
    */
 
-  public NodeId generateNodeId() {
+  public Id generateNodeId() {
 
     //byte raw[] = new byte[NodeId.nodeIdBitLength >> 3];
     //rng.nextBytes(raw);
@@ -63,7 +63,7 @@ public class RandomNodeIdFactory implements NodeIdFactory {
     md.update(raw);
     byte[] digest = md.digest();
 
-    NodeId nodeId = NodeId.buildNodeId(digest);
+    Id nodeId = Id.build(digest);
 
     return nodeId;
   }

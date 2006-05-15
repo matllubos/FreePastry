@@ -14,12 +14,12 @@ import java.net.*;
  *
  * @author Alan Mislove
  */
-public abstract class SocketMessage extends Message {
+public abstract class SocketMessage extends PRawMessage {
   
   /**
    * Constructor
    */
   public SocketMessage() {
-    super(null);
+    super(0);
   }
 }

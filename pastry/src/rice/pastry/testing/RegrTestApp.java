@@ -1,12 +1,8 @@
 package rice.pastry.testing;
 
 import rice.pastry.*;
-import rice.pastry.direct.*;
-import rice.pastry.standard.*;
-import rice.pastry.join.*;
 import rice.pastry.client.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 import rice.pastry.routing.*;
 
 import java.util.*;
@@ -24,25 +20,15 @@ import java.util.*;
 
 public class RegrTestApp extends CommonAPIAppl {
 
-  private static class RTAddress implements Address {
-    private int myCode = 0x9219d6ff;
+  private static class RTAddress {
+    private static int myCode = 0x9219d6ff;
 
-    public int hashCode() {
+    public static int getCode() {
       return myCode;
-    }
-
-    public boolean equals(Object obj) {
-      return (obj instanceof RTAddress);
-    }
-
-    public String toString() {
-      return "[RTAddress]";
     }
   }
 
-  private static Credentials cred = new PermissiveCredentials();
-
-  private static Address addr = new RTAddress();
+  private static int addr = RTAddress.getCode();
 
   private PastryRegrTest prg;
 
@@ -51,23 +37,19 @@ public class RegrTestApp extends CommonAPIAppl {
     this.prg = prg;
   }
 
-  public Address getAddress() {
+  public int getAddress() {
     return addr;
   }
 
-  public Credentials getCredentials() {
-    return cred;
-  }
-
-  public void sendMsg(NodeId nid) {
-    routeMsg(nid, new RTMessage(addr, getNodeHandle(), nid), cred,
+  public void sendMsg(Id nid) {
+    routeMsg(nid, new RTMessage(addr, getNodeHandle(), nid),
         new SendOptions());
   }
 
-  public void sendTrace(NodeId nid) {
+  public void sendTrace(Id nid) {
     //System.out.println("sending a trace from " + getNodeId() + " to " +
     // nid);
-    routeMsg(nid, new RTMessage(addr, getNodeHandle(), nid), cred,
+    routeMsg(nid, new RTMessage(addr, getNodeHandle(), nid),
         new SendOptions());
   }
 
@@ -81,8 +63,8 @@ public class RegrTestApp extends CommonAPIAppl {
 
     // check if numerically closest
     RTMessage rmsg = (RTMessage) msg;
-    //NodeId key = rmsg.target;
-    NodeId localId = getNodeId();
+    //Id key = rmsg.target;
+    Id localId = getNodeId();
 
     if (localId != key) {
       int inBetween;
@@ -109,7 +91,7 @@ public class RegrTestApp extends CommonAPIAppl {
     }
   }
 
-  //public boolean enrouteMessage(Message msg, Id key, NodeId nextHop,
+  //public boolean enrouteMessage(Message msg, Id key, Id nextHop,
   // SendOptions opt) {
   public void forward(RouteMessage rm) {
     /*
@@ -117,10 +99,10 @@ public class RegrTestApp extends CommonAPIAppl {
      */
     Message msg = rm.unwrap();
     Id key = rm.getTarget();
-    NodeId nextHop = rm.getNextHop().getNodeId();
+    Id nextHop = rm.getNextHop().getNodeId();
 
-    NodeId localId = getNodeId();
-    NodeId.Distance dist = localId.distance(key);
+    Id localId = getNodeId();
+    Id.Distance dist = localId.distance(key);
     int base = getRoutingTable().baseBitLength();
 
     if (prg.lastMsg == msg) {
@@ -146,7 +128,7 @@ public class RegrTestApp extends CommonAPIAppl {
 
   //public void leafSetChange(NodeHandle nh, boolean wasAdded) {
   public void update(NodeHandle nh, boolean wasAdded) {
-    final NodeId nid = nh.getNodeId();
+    final Id nid = nh.getNodeId();
 
     /*
      * System.out.println("at... " + getNodeId() + "'s leaf set");
@@ -158,7 +140,7 @@ public class RegrTestApp extends CommonAPIAppl {
       System.out.println("at... " + getNodeId()
           + "leafSetChange failure 1 with " + nid);
 
-    NodeId localId = thePastryNode.getNodeId();
+    Id localId = thePastryNode.getNodeId();
 
     if (localId == nid)
       System.out.println("at... " + getNodeId()
@@ -200,7 +182,7 @@ public class RegrTestApp extends CommonAPIAppl {
   }
 
   public void routeSetChange(NodeHandle nh, boolean wasAdded) {
-    NodeId nid = nh.getNodeId();
+    Id nid = nh.getNodeId();
 
     /*
      * System.out.println("at... " + getNodeId() + "'s route set");
@@ -240,10 +222,10 @@ public class RegrTestApp extends CommonAPIAppl {
 class RTMessage extends Message {
   public NodeHandle sourceNode;
 
-  //public NodeId source;
-  public NodeId target;
+  //public Id source;
+  public Id target;
 
-  public RTMessage(Address addr, NodeHandle src, NodeId tgt) {
+  public RTMessage(int addr, NodeHandle src, Id tgt) {
     super(addr);
     sourceNode = src;
     //source = src.getNodeId();

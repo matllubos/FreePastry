@@ -13,25 +13,10 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class JoinAddress implements Address {
+public class JoinAddress {
   private static final int myCode = 0xe80c17e8;
 
-  /**
-   * Constructor.
-   */
-
-  public JoinAddress() {
-  }
-
-  public boolean equals(Object obj) {
-    return (obj instanceof JoinAddress);
-  }
-
-  public int hashCode() {
+  public static int getCode() {
     return myCode;
-  }
-
-  public String toString() {
-    return "[JoinAddress]";
   }
 }

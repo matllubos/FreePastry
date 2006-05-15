@@ -9,6 +9,9 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
+import rice.p2p.util.MathUtils;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -66,17 +69,26 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // the length of the socket header
   public static int HEADER_SIZE = HEADER_DIRECT.length;
   
+  protected static byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
+  
+  // this is for historical purposes, and can definately be renamed
+  // this got added in FP 2.0 when we added a magic number and version number
+  public static int TOTAL_HEADER_SIZE = PASTRY_MAGIC_NUMBER.length+4+HEADER_SIZE;
+  
   // the pastry node which this manager serves
-  private SocketPastryNode pastryNode;
+  SocketPastryNode pastryNode;
 
   // the local address of the node
-  private EpochInetSocketAddress localAddress;
+  EpochInetSocketAddress localAddress;
 
   // the linked list of open sockets
   private LinkedList socketQueue;
 
   // maps a SelectionKey -> SocketConnector
   public Hashtable sockets;
+  
+  // maps a SelectionKey -> SocketConnector
+  public LinkedList appSockets;
   
   /**
    * 
@@ -86,7 +98,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * remove() called when added to socekts on socketOpened 
    * emptied() in SCM.destroy()
    */
-  private HashSet unIdentifiedSM = new HashSet();
+  HashSet unIdentifiedSM = new HashSet();
 
   // the linked list of open source routes
   private LinkedList sourceRouteQueue;
@@ -98,7 +110,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   private PingManager pingManager;
   
   // the source route manager, which keeps track of routes
-  private SocketSourceRouteManager manager;
+  SocketSourceRouteManager manager;
   
   // whether or not we've resigned
   private boolean resigned;
@@ -107,6 +119,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   
   protected RandomSource random;
 
+  MessageDeserializer defaultDeserializer;
   /**
    * Constructs a new SocketManager.
    *
@@ -117,10 +130,12 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    */
   public SocketCollectionManager(SocketPastryNode node, SocketSourceRouteManager manager, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) throws IOException {
     this.pastryNode = node;
+    defaultDeserializer = new JavaSerializedDeserializer(node);
     this.manager = manager;
     this.localAddress = proxyAddress;
     this.pingManager = new PingManager(node, manager, bindAddress, proxyAddress);
     this.socketQueue = new LinkedList();
+    this.appSockets = new LinkedList();
     this.sockets = new Hashtable();
     this.sourceRouteQueue = new LinkedList();
     this.resigned = false;
@@ -182,7 +197,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param message The message to send
    * @param address The address to send the message to
    */
-  public void bootstrap(SourceRoute path, Message message) {
+  public void bootstrap(SourceRoute path, Message message) throws IOException {
     if (! resigned) {
       synchronized (sockets) {
         openSocket(path, true);    
@@ -190,16 +205,26 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       }
     }
   }
-
+  
   /**
    * Method which sends a message across the wire.
    *
    * @param message The message to send
    * @param address The address to send the message to
    */
-  public void send(SourceRoute path, Message message, AddressManager am) {
+  public void send(SourceRoute path, SocketBuffer message, AddressManager am) {
     if (! sendInternal(path, message))
       new MessageRetry(path, message, am); 
+  }
+  
+  /**
+   * Method which sends a message across the wire.
+   *
+   * @param message The message to send
+   * @param address The address to send the message to
+   */
+  public void connect(SourceRoute path, int appId, AppSocketReceiver receiver, int timeout) {
+    openAppSocket(path, appId, receiver, timeout);
   }
   
   /**
@@ -219,6 +244,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
    * @param address DESCRIBE THE PARAMETER
    */
   protected void checkLiveness(SourceRoute path) {    
+    if (path.getLastHop().equals(localAddress)) return;
     if (! resigned) {
       if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
       DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);      
@@ -267,9 +293,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     * Method which sends a message across the wire.
     *
     * @param message The message to send
-    * @param address The address to send the message to
+    * @param path The path to send the message along
     */
-  protected boolean sendInternal(SourceRoute path, Message message) {
+  protected boolean sendInternal(SourceRoute path, SocketBuffer message) {
     if (! resigned) {
       synchronized (sockets) {
         if (! sockets.containsKey(path)) {
@@ -321,11 +347,28 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       synchronized (sockets) {
         if ((! sockets.containsKey(path)) && 
             ((sockets.size() < MAX_OPEN_SOCKETS) || (getSocketToClose() != null)))
-          socketOpened(path, new SocketManager(path, bootstrap));
+          socketOpened(path, new SocketManager(this, path, bootstrap));
       }
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.logException("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!",e);
       closeSocket(path);
+      manager.markDead(path);
+    }
+  }
+  
+  /**
+   * Method which opens a socket to a given remote node handle, and updates the
+   * bookkeeping to keep track of this socket
+   *
+   * @param address The address of the remote node
+   */
+  protected void openAppSocket(SourceRoute path, int appId, AppSocketReceiver connector, int timeout) {
+    try {
+      synchronized (sockets) { // all of these changes are synchronized on the same data structure        
+        appSocketOpened(new SocketAppSocket(this, path, appId, connector, timeout));
+      }
+    } catch (IOException e) {
+      if (logger.level <= Logger.WARNING) logger.logException("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + path + " AS DEAD!",e);
       manager.markDead(path);
     }
   }
@@ -379,13 +422,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
 
         if (logger.level <= Logger.FINE) logger.log("(SCM) Recorded opening of socket to path " + path);
 
-        if (sockets.size() > MAX_OPEN_SOCKETS) {
+        if ((sockets.size() + appSockets.size()) > MAX_OPEN_SOCKETS) {
           //SourceRoute toClose = (SourceRoute) socketQueue.removeLast();
-          SourceRoute toClose = getSocketToClose();
-          socketQueue.remove(toClose);
-          
-          if (logger.level <= Logger.FINE) logger.log("(SCM) Too many sockets open - closing currently unused socket to path " + toClose);
-          closeSocket(toClose);
+          closeOneSocket();
         }
       } else {
         if (logger.level <= Logger.FINE) logger.logException( "(SCM) Request to record path opening for already-open path " + path, new Exception("stack trace"));
@@ -408,6 +447,30 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     }
   }
 
+  protected void appSocketOpened(SocketAppSocket sas) {
+    synchronized (sockets) {
+      if (logger.level <= Logger.FINE) logger.log("(SCM) Recorded opening of app socket " + sas);
+      appSockets.addFirst(manager);
+      
+      if ((sockets.size() + appSockets.size()) > MAX_OPEN_SOCKETS) {
+        //SourceRoute toClose = (SourceRoute) socketQueue.removeLast();
+        closeOneSocket();
+      }
+    }
+  }
+
+  /**
+   * TODO: Add also checking the top of the AppSocketQueue
+   *
+   */
+  protected void closeOneSocket() {
+    SourceRoute toClose = getSocketToClose();
+    socketQueue.remove(toClose);
+    
+    if (logger.level <= Logger.FINE) logger.log("(SCM) Too many sockets open - closing currently unused socket to path " + toClose);
+    closeSocket(toClose); 
+  }
+  
   /**
    * Method which is designed to be called *ONCE THE SOCKET HAS BEEN CLOSED*.
    * This method simply updates the bookeeping, but does not actually close the
@@ -429,6 +492,25 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } else {
         if (logger.level <= Logger.FINE) logger.log("(SCM) SocketClosed called with socket not in the list: path:"+path+" manager:"+manager);        
+      }
+    }
+  }
+  
+  /**
+   * Method which is designed to be called *ONCE THE SOCKET HAS BEEN CLOSED*.
+   * This method simply updates the bookeeping, but does not actually close the
+   * socket.
+   *
+   * @param address The address of the remote node
+   * @param manager The manager for the remote address
+   */
+  protected void appSocketClosed(SocketAppSocket sas) {
+    synchronized (sockets) {
+      if (appSockets.contains(sas)) {
+        if (logger.level <= Logger.FINE) logger.log("(SCM) Recorded closing of app socket to " + sas);
+        appSockets.remove(sas);
+      } else {
+        if (logger.level <= Logger.FINE) logger.log("(SCM) appSocketClosed called with socket not in the list: path:"+sas);        
       }
     }
   }
@@ -592,7 +674,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     protected SourceRoute route;
     
     // The message
-    protected Message message;
+    protected SocketBuffer message;
     
     // This is to keep a hard link to the AM, so it isn't collected
     protected AddressManager am;
@@ -603,7 +685,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param message The message
      * @param route The route
      */
-    public MessageRetry(SourceRoute route, Message message, AddressManager am) {
+    public MessageRetry(SourceRoute route, SocketBuffer message, AddressManager am) {
       this.am = am;
       this.message = message;
       this.route = route;
@@ -715,384 +797,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
   }
     
-  /**
-   * Private class which is tasked with reading the greeting message off of a
-   * newly connected socket. This greeting message says who the socket is coming
-   * from, and allows the connected to hand the socket off the appropriate node
-   * handle.
-   *
-   * @version $Id$
-   * @author jeffh
-   */
-  private class SocketManager extends SelectionKeyHandler {
-
-    // the key to read from
-    protected SelectionKey key;
-    
-    // the channel we are associated with
-    protected SocketChannel channel;
-
-    // the reader reading data off of the stream
-    protected SocketChannelReader reader;
-
-    // the writer (in case it is necessary)
-    protected SocketChannelWriter writer;
-    
-    // the timer we use to check for stalled nodes
-    protected rice.selector.TimerTask timer;
-
-    // the node handle we're talking to
-    protected SourceRoute path;
-    
-    // whether or not this is a bootstrap socket - if so, we fake the address 
-    // and die once the the message has been sent
-    protected boolean bootstrap;
-
-    /**
-     * Constructor which accepts an incoming connection, represented by the
-     * selection key. This constructor builds a new SocketManager, and waits
-     * until the greeting message is read from the other end. Once the greeting
-     * is received, the manager makes sure that a socket for this handle is not
-     * already open, and then proceeds as normal.
-     *
-     * @param key The server accepting key for the channel
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    public SocketManager(SelectionKey key) throws IOException {
-      this.reader = new SocketChannelReader(pastryNode, null);
-      this.writer = new SocketChannelWriter(pastryNode, null);
-      this.bootstrap = false;
-      acceptConnection(key);
-    }
-    
-    /**
-     * Constructor which creates an outgoing connection to the given node
-     * handle using the provided address as a source route intermediate node. 
-     * This creates the connection by building the socket and sending
-     * accross the greeting message. Once the response greeting message is
-     * received, everything proceeds as normal.
-     *
-     * @param address The ultimate destination of this socket
-     * @param proxy The intermediate destination of this socket (if a source route)
-     * @exception IOException An error
-     */
-    public SocketManager(SourceRoute path, boolean bootstrap) throws IOException {
-      this.reader = new SocketChannelReader(pastryNode, path.reverse());
-      this.writer = new SocketChannelWriter(pastryNode, path);
-      this.bootstrap = bootstrap;
-      
-      if (logger.level <= Logger.FINE) logger.log("Opening connection with path " + path);
-      
-      // build the entire connection
-      createConnection(path);
-      
-      for (int i=1; i<path.getNumHops(); i++) {
-        send(HEADER_SOURCE_ROUTE);
-        send(SocketChannelRepeater.encodeHeader(path.getHop(i)));
-      }
-      
-      send(HEADER_DIRECT);
-      
-      if (! bootstrap)
-        send(path.reverse(localAddress));
-    }
-    
-    public String toString() {
-      return "SM "+channel; 
-    }
-    
-    /**
-     * Method which initiates a shutdown of this socket by calling 
-     * shutdownOutput().  This has the effect of removing the manager from
-     * the open list.
-     */
-    public void shutdown() {
-      try {
-        if (logger.level <= Logger.FINE) logger.log("Shutting down output on connection with path " + path);
-        
-        if (channel != null)
-          channel.socket().shutdownOutput();
-        else
-          if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
-
-        socketClosed(path, this);
-        pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
-      } catch (IOException e) {
-        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Received exception " + e + " while shutting down output.");
-        close();
-      }
-    }
-
-    /**
-     * Method which closes down this socket manager, by closing the socket,
-     * cancelling the key and setting the key to be interested in nothing
-     */
-    public void close() {
-      try {
-        if (logger.level <= Logger.FINE) {
-          if (path != null) {
-            logger.log("Closing connection with path " + path);
-          } else {
-            logger.log("Closing connection to " + (InetSocketAddress) channel.socket().getRemoteSocketAddress());
-          }
-        }
-        
-        // todo, need to monitor all openings, sourceroute, accepted, etc.
-        if (pastryNode != null)
-          pastryNode.broadcastChannelClosed((InetSocketAddress) channel.socket().getRemoteSocketAddress());
-        
-        clearTimer();
-        
-        if (key != null) {
-          if (logger.level <= Logger.WARNING) {
-            if (!pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
-              logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
-            }
-          }
-          key.cancel();
-          key.attach(null);
-          key = null;
-        }
-        
-        unIdentifiedSM.remove(this);
-        
-        if (channel != null) 
-          channel.close();
-
-        if (path != null) {
-          socketClosed(path, this);
-
-          Iterator i = writer.getQueue().iterator();
-          writer.reset();
-
-          /**
-           * Here, if we have not been declared dead, then we attempt to resend
-           * the messages. However, if we have been declared dead, we reroute
-           * the route messages via the pastry node, but delete any messages
-           * routed directly.
-           */
-          while (i.hasNext()) {
-            Object o = i.next();
-
-            if ((o instanceof Message) && (manager != null)) 
-              manager.reroute(path.getLastHop(), (Message) o);
-          } 
-
-          path = null;
-        }
-      } catch (IOException e) {
-        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
-      }
-    }
-
-    /**
-     * The entry point for outgoing messages - messages from here are ensocketQueued
-     * for transport to the remote node
-     *
-     * @param message DESCRIBE THE PARAMETER
-     */
-    public void send(final Object message) {
-      writer.enqueue(message);
-
-      if (key != null) 
-        pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
-    }
-
-    /**
-     * Method which should change the interestOps of the handler's key. This
-     * method should *ONLY* be called by the selection thread in the context of
-     * a select().
-     *
-     * @param key The key in question
-     */
-    public synchronized void modifyKey(SelectionKey key) {
-      if (channel.socket().isOutputShutdown()) {
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-        clearTimer();
-      } else if ((! writer.isEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        setTimer();
-      }
-    }
-
-    /**
-     * Specified by the SelectionKeyHandler interface - calling this tells this
-     * socket manager that the connection has completed and we can now
-     * read/write.
-     *
-     * @param key The key which is connectable.
-     */
-    public void connect(SelectionKey key) {
-      try {
-        // deregister interest in connecting to this socket
-        if (channel.finishConnect()) 
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
-
-        manager.markAlive(path);
-
-        if (logger.level <= Logger.FINE) logger.log("(SM) Found connectable channel - completed connection");
-      } catch (Exception e) {
-        if (logger.level <= Logger.FINE) logger.logException(
-            "(SM) Unable to connect to path " + path + " (" + e + ") marking as dead.",e);
-        manager.markDead(path);
-
-        close();
-      }
-    }
-
-    /**
-     * Reads from the socket attached to this connector.
-     *
-     * @param key The selection key for this manager
-     */
-    public void read(SelectionKey key) {
-      try {
-        Object o = reader.read(channel);
-
-        if (o != null) {
-          if (logger.level <= Logger.FINE) logger.log("(SM) Read message " + o + " from socket.");
-          if (o instanceof SourceRoute) {
-            if (this.path == null) {
-              this.path = (SourceRoute) o;
-              socketOpened(this.path, this);
-              manager.markAlive(this.path);
-              this.writer.setPath(this.path);
-              this.reader.setPath(this.path.reverse());
-
-              if (logger.level <= Logger.FINE) logger.log("Read open connection with path " + this.path);              
-            } else {
-              if (logger.level <= Logger.SEVERE) logger.log( "SERIOUS ERROR: Received duplicate path assignments: " + this.path + " and " + o);
-            }
-          } else {
-            receive((Message) o);
-          }
-        }
-      } catch (IOException e) {
-        if (logger.level <= Logger.FINE) logger.log("(SM) WARNING " + e + " reading - cancelling.");        
-        
-        // if it's not a bootstrap path, and we didn't close this socket's output,
-        // then check to see if the remote address is dead or just closing a socket
-        if ((path != null) && 
-            (! ((SocketChannel) key.channel()).socket().isOutputShutdown()))
-          checkLiveness(path);
-        
-        close();
-      }
-    }
-
-    /**
-     * Writes to the socket attached to this socket manager.
-     *
-     * @param key The selection key for this manager
-     */
-    public synchronized void write(SelectionKey key) {
-      try {        
-        clearTimer();
-        
-        if (writer.write(channel)) {
-          key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-          
-          if (bootstrap) 
-            close();
-        } else {
-          setTimer();
-        }
-      } catch (IOException e) {
-        if (logger.level <= Logger.WARNING) logger.log( "(SM) ERROR " + e + " writing - cancelling.");
-        close();
-      }
-    }
-
-    /**
-     * Accepts a new connection on the given key
-     *
-     * @param serverKey The server socket key
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    protected void acceptConnection(SelectionKey key) throws IOException {      
-      this.channel = (SocketChannel) key.channel();
-      this.key = pastryNode.getEnvironment().getSelectorManager().register(key.channel(), this, 0);
-      this.key.interestOps(SelectionKey.OP_READ);
-      
-      if (logger.level <= Logger.FINE) logger.log(
-          "(SM) Accepted connection from " + 
-          channel.socket().getRemoteSocketAddress());
-    }
-
-    /**
-     * Creates the outgoing socket to the remote handle
-     *
-     * @param address The accress to connect to
-     * @exception IOException DESCRIBE THE EXCEPTION
-     */
-    protected void createConnection(final SourceRoute path) throws IOException {
-      this.path = path;
-      this.channel = SocketChannel.open();
-      this.channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
-      this.channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
-      this.channel.configureBlocking(false);
-      this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
-      
-      if (logger.level <= Logger.FINE) logger.log("(SM) Initiating socket connection to path " + path);
-      
-      pastryNode.broadcastChannelOpened(path.getFirstHop().getAddress(), NetworkListener.REASON_NORMAL);
-
-      if (this.channel.connect(path.getFirstHop().getAddress())) 
-        this.key.interestOps(SelectionKey.OP_READ);
-      else 
-        this.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_CONNECT);
-    }
-
-    /**
-     * Method which is called once a message is received off of the wire If it's
-     * for us, it's handled here, otherwise, it's passed to the pastry node.
-     *
-     * @param message The receved message
-     */
-    protected void receive(Message message) {
-      if (message instanceof NodeIdRequestMessage) {
-        send(new NodeIdResponseMessage(pastryNode.getNodeId(), localAddress.getEpoch()));
-      } else if (message instanceof LeafSetRequestMessage) {
-        send(new LeafSetResponseMessage(pastryNode.getLeafSet()));
-      } else if (message instanceof RoutesRequestMessage) {
-        send(new RoutesResponseMessage((SourceRoute[]) manager.getBest().values().toArray(new SourceRoute[0])));
-      } else if (message instanceof RouteRowRequestMessage) {
-        RouteRowRequestMessage rrMessage = (RouteRowRequestMessage) message;
-        send(new RouteRowResponseMessage(pastryNode.getRoutingTable().getRow(rrMessage.getRow())));
-      } else {
-        long start = pastryNode.getEnvironment().getTimeSource().currentTimeMillis();
-        pastryNode.receiveMessage(message);
-        if (logger.level <= Logger.FINER) logger.log( "ST: " + (pastryNode.getEnvironment().getTimeSource().currentTimeMillis() - start) + " deliver of " + message);
-      }
-    }
-    
-    /**
-     * Internal method which sets the internal timer
-     */
-    protected void setTimer() {
-      if (this.timer == null) {
-        this.timer = new rice.selector.TimerTask() {
-          public void run() {
-            if (logger.level <= Logger.FINE) logger.log("WRITE_TIMER::Timer expired, checking liveness...");
-            manager.checkLiveness(path.getLastHop());
-          }
-        };
-        
-        pastryNode.getEnvironment().getSelectorManager().schedule(this.timer, WRITE_WAIT_TIME);
-      }
-    }
-    
-    /**
-     * Internal method which clears the internal timer
-     */
-    protected void clearTimer() {
-      if (this.timer != null)
-        this.timer.cancel();
-      
-      this.timer = null;
-    }
-  }
-  
   /**
    * Private class which is tasked with maintaining a source route which goes through this node.
    * This class maintains to sockets, and transfers the data between them.  It also is responsible
@@ -1416,7 +1120,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @exception IOException DESCRIBE THE EXCEPTION
      */
     public SocketAccepter(SelectionKey key) throws IOException {
-      this.buffer = ByteBuffer.allocateDirect(HEADER_SIZE);
+      this.buffer = ByteBuffer.allocateDirect(TOTAL_HEADER_SIZE);
       acceptConnection(key);
     }
     
@@ -1438,29 +1142,6 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     }
     
     /**
-     * Reads from the socket attached to this connector.
-     *
-     * @param key The selection key for this manager
-     */
-    public void read(SelectionKey key) {
-      try {
-        int read = ((SocketChannel) key.channel()).read(buffer);
-        
-        if (logger.level <= Logger.FINE) logger.log("(SA) Read " + read + " bytes from newly accepted connection.");
-        
-        // implies that the channel is closed
-        if (read == -1) 
-          throw new IOException("Error on read - the channel has been closed.");
-        
-        if (buffer.remaining() == 0) 
-          processBuffer();
-      } catch (IOException e) {
-        if (logger.level <= Logger.FINE) logger.log("(SA) ERROR " + e + " reading source route - cancelling.");
-        close();
-      }
-    }
-       
-    /**
      * Accepts a new connection on the given key
      *
      * @param serverKey The server socket key
@@ -1479,22 +1160,76 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     }
     
     /**
+     * Reads from the socket attached to this connector.
+     *
+     * @param key The selection key for this manager
+     */
+    public void read(SelectionKey key) {
+      try {
+        int read = ((SocketChannel) key.channel()).read(buffer);
+        
+        if (logger.level <= Logger.FINE) logger.log("(SA)1 Read " + read + " bytes from newly accepted connection.");
+        
+        // implies that the channel is closed
+        if (read == -1) 
+          throw new IOException("Error on read - the channel has been closed.");
+        
+        // this could be a problem if a socket is opened and nothing, or not enough is being written
+        if (buffer.remaining() == 0) 
+          processBuffer();
+      } catch (IOException e) {
+        if (logger.level <= Logger.FINE) logger.log("(SA) ERROR " + e + " reading source route - cancelling.");
+        close();
+      }
+    }
+       
+    /**
      * Private method which is designed to examine the newly read buffer and
      * handoff the connection to the approriate handler
      *
      * @exception IOException DESCRIBE THE EXCEPTION
      */
+    ByteBuffer appTypeBuffer = null;
+    byte[] array = null;
     private void processBuffer() throws IOException {
-      // flip the buffer
-      buffer.flip();
-      
-      // allocate space for the header
-      byte[] array = new byte[HEADER_SIZE];
-      buffer.get(array, 0, HEADER_SIZE);
-      
+      // NOTE: this is kind of a funky hack, the reason is that it is possible to 
+      // read the header without reading the appId bytes.  So, this code makes 
+      // read/processBuffer just keep being called until both arrive
+      // we don't want to touch buffer once we construct appTypeBuffer, and we
+      // return until it finishes reading
+      if (appTypeBuffer == null) {
+        // flip the buffer
+        buffer.flip();
+        array = new byte[HEADER_SIZE];
+        buffer.get(array, 0, HEADER_SIZE);
+        if (!Arrays.equals(array, PASTRY_MAGIC_NUMBER)) throw new IOException("Not a pastry socket:"+array[0]+","+array[1]+","+array[2]+","+array[3]);
+        
+        buffer.get(array, 0, HEADER_SIZE);
+        int version = MathUtils.byteArrayToInt(array);
+        if (!(version == 0)) throw new IOException("Unknown Version:"+version);
+        
+        // allocate space for the header
+        buffer.get(array, 0, HEADER_SIZE);
+        appTypeBuffer = ByteBuffer.allocateDirect(4);
+      }        
       // verify the buffer
       if (Arrays.equals(array, HEADER_DIRECT)) {
-        unIdentifiedSM.add(new SocketManager(key));
+        int read = ((SocketChannel) key.channel()).read(appTypeBuffer);        
+        if (logger.level <= Logger.FINE) logger.log("(SA)2 Read " + read + " bytes from newly accepted connection.");            
+        if (appTypeBuffer.hasRemaining()) return;
+
+        appTypeBuffer.flip();
+        byte[] appIDbytes = new byte[4];         
+        appTypeBuffer.get(appIDbytes, 0, 4);
+        int appId = MathUtils.byteArrayToInt(appIDbytes);
+//        if (logger.level <= Logger.FINE) logger.log("Found connection with AppId "+appId);
+        // TODO: make this level FINE when done
+        if (appId == 0) {
+          unIdentifiedSM.add(new SocketManager(SocketCollectionManager.this, key));
+        } else {
+          if (logger.level <= Logger.FINE) logger.log("Found connection with AppId "+appId);
+          appSockets.add(new SocketAppSocket(SocketCollectionManager.this, key, appId));
+        }
       } else if (Arrays.equals(array, HEADER_SOURCE_ROUTE)) {
         new SourceRouteManager(key);
       } else {

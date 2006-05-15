@@ -7,7 +7,6 @@ import rice.environment.logging.*;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 import rice.pastry.standard.*;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
@@ -65,7 +64,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    *
    * @return a new PastryNode
    */
-  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId) {
+  public PastryNode newNode(NodeHandle bootstrap, Id nodeId) {
     if (bootstrap == null)
       if (logger.level <= Logger.WARNING) logger.log(
           "No bootstrap node provided, starting a new ring...");
@@ -94,29 +93,26 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
     simulator.registerNode(pn);
 
-    DirectSecurityManager secureMan = new DirectSecurityManager(simulator);
     MessageDispatch msgDisp = new MessageDispatch(pn);
  
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, environment);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router =
-      new StandardRouter(pn, secureMan);
+      new StandardRouter(pn);
     StandardLeafSetProtocol lsProtocol =
-      new StandardLeafSetProtocol(pn, localhandle, secureMan, leafSet, routeTable);
+      new StandardLeafSetProtocol(pn, localhandle, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol =
-      new StandardRouteSetProtocol(localhandle, secureMan, routeTable, environment);
+      new StandardRouteSetProtocol(pn, routeTable, environment);
 
-    msgDisp.registerReceiver(router.getAddress(), router);
-    msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
-    msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
-
-    pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
-    pn.setDirectElements(/* simulator */);
-    secureMan.setLocalPastryNode(pn);
+    pn.setElements(localhandle, msgDisp, leafSet, routeTable);
+    router.register();
+    lsProtocol.register();
+    rsProtocol.register();
 
     StandardJoinProtocol jProtocol =
-      new StandardJoinProtocol(pn, localhandle, secureMan, routeTable, leafSet);    
+      new StandardJoinProtocol(pn, localhandle, routeTable, leafSet);    
+    jProtocol.register();
     
     // pn.doneNode(bootstrap);
     //pn.doneNode( simulator.getClosest(localhandle) );    

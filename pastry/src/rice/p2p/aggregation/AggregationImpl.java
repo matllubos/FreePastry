@@ -1,16 +1,7 @@
 package rice.p2p.aggregation;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.PrintStream;
 import java.io.Serializable;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -24,11 +15,12 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.aggregation.messaging.*;
+import rice.p2p.aggregation.raw.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.glacier.VersionKey;
 import rice.p2p.glacier.VersioningPast;
 import rice.p2p.glacier.v2.DebugContent;
-import rice.p2p.glacier.v2.GlacierImpl;
 import rice.p2p.past.Past;
 import rice.p2p.past.PastImpl;
 import rice.p2p.past.PastContent;
@@ -36,11 +28,14 @@ import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPast;
 import rice.p2p.past.gc.GCPastContent;
 import rice.p2p.past.gc.GCPastContentHandle;
+import rice.p2p.past.gc.rawserialization.RawGCPastContent;
+import rice.p2p.past.rawserialization.*;
 import rice.p2p.util.DebugCommandHandler;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.persistence.StorageManager;
 import rice.p2p.glacier.v2.GlacierContentHandle;
 
-public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {
+public class AggregationImpl implements GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {
   protected final Past aggregateStore;
   protected final StorageManager waitingList;
   protected final AggregationPolicy policy;
@@ -111,11 +106,16 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
   private Environment environment;
   protected Logger logger;
   
+  protected PastContentDeserializer contentDeserializer;
+  protected PastContentHandleDeserializer contentHandleDeserializer;
+  
+  protected AggregateFactory aggregateFactory;
+  
   public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance) throws IOException {
-    this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, getDefaultPolicy());
+    this(node, aggregateStore, objectStore, waitingList, configFileName, factory, instance, null, null);
   }
 
-  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy) throws IOException {
+  public AggregationImpl(Node node, Past aggregateStore, Past objectStore, StorageManager waitingList, String configFileName, IdFactory factory, String instance, AggregationPolicy policy, AggregateFactory aggregateFactory) throws IOException {
     this.environment = node.getEnvironment();
     logger = environment.getLogManager().getLogger(AggregationImpl.class, instance);
     
@@ -161,17 +161,71 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
     jitterRange = p.getDouble("p2p_aggregation_jitterRange");
 
+    this.aggregateFactory = aggregateFactory;
+    if (this.aggregateFactory == null) {
+      this.aggregateFactory = getDefaultAggregateFactory();
+    }
 
-    this.endpoint = node.registerApplication(this, instance);
+    this.endpoint = node.buildEndpoint(this, instance);
+    this.endpoint.setDeserializer(new MessageDeserializer() {    
+      public Message deserialize(InputBuffer buf, short type, byte priority,
+          NodeHandle sender) throws IOException {
+        switch(type) {
+//          case AggregationTimeoutMessage.TYPE:
+//            return new AggregationTimeoutMessage(buf, endpoint);
+        }
+        return null;
+      }    
+    });
+    
     this.waitingList = waitingList;
     this.instance = instance;
+    
+    this.contentDeserializer = new JavaPastContentDeserializer();
+    this.contentHandleDeserializer = new JavaPastContentHandleDeserializer();
+
     this.aggregateStore = aggregateStore;
+//    this.aggregateStore.setContentDeserializer(new JavaPastContentDeserializer() {    
+    this.aggregateStore.setContentDeserializer(new PastContentDeserializer() {    
+      public PastContent deserializePastContent(InputBuffer buf, Endpoint endpoint,
+          short contentType) throws IOException {
+        switch(contentType) {
+          case RawAggregate.TYPE:
+            return new RawAggregate(buf, endpoint, contentDeserializer);  
+          case NonAggregate.TYPE:
+            short subType = buf.readShort();
+            return contentDeserializer.deserializePastContent(buf, endpoint, subType);
+//            
+//          case 0:
+//            PastContent content = super.deserializePastContent(buf, endpoint, (short)0);
+//            throw new IllegalArgumentException("Unknown Type:"+contentType+" content:"+content.getClass().getName()+" "+content);            
+        }
+        throw new IllegalArgumentException("Unknown Type:"+contentType);
+      }    
+    });
+    
+    this.aggregateStore.setContentHandleDeserializer(new PastContentHandleDeserializer() {    
+      public PastContentHandle deserializePastContentHandle(InputBuffer buf, Endpoint endpoint,
+          short contentType) throws IOException {
+        switch(contentType) {
+          case AggregateHandle.TYPE:
+            return new AggregateHandle(buf, endpoint);          
+        }
+        throw new IllegalArgumentException("Unknown Type:"+contentType);
+      }    
+    });
+    
     this.objectStore = objectStore;
     this.node = node;
     this.timers = new Hashtable();
     this.aggregateList = new AggregateList(configFileName, getLocalNodeHandle().getId().toString(), factory, aggregateLogEnabled, instance, environment);
     this.stats = aggregateList.getStatistics(statsGranularity, statsRange, nominalReferenceCount);
-    this.policy = policy;
+    if (policy == null) {
+      this.policy = getDefaultPolicy();      
+    } else {
+      this.policy = policy;
+    }
+    
     this.factory = factory;
     this.flushWait = null;
     this.rebuildInProgress = false;
@@ -190,12 +244,17 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     addTimer(statsInterval, tiStatistics);
     if (monitorEnabled)
       addTimer(monitorRefreshInterval, tiMonitor);
+    endpoint.register();
   }
 
   private static AggregationPolicy getDefaultPolicy() {
     return new AggregationDefaultPolicy();
   }
 
+  private static AggregateFactory getDefaultAggregateFactory() {
+    return new RawAggregateFactory(); 
+  }
+  
   private long jitterTerm(long basis) {
     return (long)((1-jitterRange)*basis) + environment.getRandomSource().nextInt((int)(2*jitterRange*basis));
   }
@@ -360,7 +419,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       });
         
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return ret[0];
     }
@@ -378,7 +437,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       });
         
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return ret[0];
     }
@@ -399,7 +458,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       });
         
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return ret[0];
     }
@@ -418,7 +477,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "lookup("+id+")="+ret[0];
     }
@@ -445,7 +504,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "Handles("+max+","+id+"):\n"+ret[0];
     }
@@ -485,7 +544,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         });
 
         while (ret[0] == null)
-          Thread.currentThread().yield();
+          Thread.yield();
       
         result = result + ret[0];
       } else result = "Aggregate list is empty; nothing to refresh!";
@@ -512,7 +571,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "refresh("+id+", "+expiration+")="+ret[0];
     }
@@ -559,7 +618,6 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       Continuation c = new Continuation() {
         int currentLookup = 0;
         boolean lookupInAggrStore = false;
-        boolean done = false;
         
         public void receiveResult(Object o) {
           if (logger.level <= Logger.FINE) logger.log( "Monitor: Retr "+currentLookup+" a="+lookupInAggrStore+" got "+o);
@@ -617,7 +675,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       
       objectStore.lookupHandles((Id) monitorIDs.elementAt(0), 1, c);
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
 
       return result.toString();
     }
@@ -731,7 +789,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
       });
       
       while (ret[0] == null)
-        Thread.currentThread().yield();
+        Thread.yield();
       
       return "vlookup("+key+"v"+version+")="+ret[0];
     }
@@ -966,7 +1024,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
               waitingList.getObject(new VersionKey(desc[currentQuery].key, desc[currentQuery].version), this);
             } else {
               Id[] pointers = aggregateList.getSomePointers(nominalReferenceCount, maxPointersPerAggregate, null);
-              storeAggregate(new Aggregate(obj, pointers), aggrExpirationF, desc, pointers, new Continuation() {
+              storeAggregate(aggregateFactory.buildAggregate(obj, pointers), aggrExpirationF, desc, pointers, new Continuation() {
                 public void receiveResult(Object o) {
                   final Continuation.MultiContinuation c2 = new Continuation.MultiContinuation(thisContinuation, desc.length);
                   for (int i=0; i<desc.length; i++) {
@@ -1187,7 +1245,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
           aggr[currentLookup] = (Aggregate) o;
           currentLookup ++;
           if (currentLookup >= componentList.size()) {
-            GCPastContent[] components = new GCPastContent[objectsTotal];
+            RawGCPastContent[] components = new RawGCPastContent[objectsTotal];
             ObjectDescriptor[] desc = new ObjectDescriptor[objectsTotal];
             int componentIndex = 0;
 
@@ -1196,7 +1254,14 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             for (int i=0; i<adc.length; i++) {
               for (int j=0; j<adc[i].objects.length; j++) {
                 if (adc[i].objects[j].isAliveAt(now)) {
-                  components[componentIndex] = aggr[i].components[j];
+                  
+                  // just for debugging...
+                  GCPastContent temp = aggr[i].getComponent(j);
+//                  if (!(temp instanceof RawGCPastContent)) {
+//                    throw new RuntimeException(temp+" is not a RawGCPastContent"); 
+//                  }
+                  
+                  components[componentIndex] = (RawGCPastContent)temp;
                   desc[componentIndex] = adc[i].objects[j];
                   if (logger.level <= Logger.FINE) logger.log( "  #"+componentIndex+": "+adc[i].objects[j].key.toStringFull());
                   componentIndex ++;
@@ -1213,7 +1278,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
             Id[] pointers = aggregateList.getSomePointers(nominalReferenceCount, maxPointersPerAggregate, obsoleteAggregates);
             final long aggrExpirationF = chooseAggregateLifetime(desc, environment.getTimeSource().currentTimeMillis(), 0);
 
-            storeAggregate(new Aggregate(components, pointers), aggrExpirationF, desc, pointers, new Continuation() {
+            storeAggregate(aggregateFactory.buildAggregate(components, pointers), aggrExpirationF, desc, pointers, new Continuation() {
               public void receiveResult(Object o) {
                 if (logger.level <= Logger.INFO) logger.log( "Consolidated Aggregate stored OK, removing old descriptors...");
                 for (int i=0; i<adc.length; i++) {
@@ -1263,7 +1328,7 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     
     if (logger.level <= Logger.INFO) logger.log( "Found "+disconnected.length+" disconnected aggregates; inserting pointer array");
     storeAggregate(
-      new Aggregate(new GCPastContent[] {}, disconnected), 
+      aggregateFactory.buildAggregate(new GCPastContent[] {}, disconnected), 
       environment.getTimeSource().currentTimeMillis() + pointerArrayLifetime,
       new ObjectDescriptor[] {},
       disconnected,
@@ -1668,13 +1733,23 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
 
   private int getSize(PastContent obj) {
     try {
-      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-      ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
-
-      objectStream.writeObject(obj);
-      objectStream.flush();
-
-      return byteStream.toByteArray().length;
+//      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+//      ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
+//
+//      objectStream.writeObject(obj);
+//      objectStream.flush();
+      
+//      return byteStream.toByteArray().length;
+      RawPastContent rpc;
+      if (obj instanceof RawPastContent) {
+        rpc = (RawPastContent)obj;
+      } else {
+        rpc = new JavaSerializedPastContent(obj);
+      }
+      SimpleOutputBuffer buf = new SimpleOutputBuffer();
+      buf.writeShort(rpc.getType());
+      rpc.serialize(buf);
+      return buf.getWritten();
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.log("Cannot serialize object, size unknown: "+ioe);
     }
@@ -1737,19 +1812,19 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
                   if (logger.level <= Logger.INFO) logger.log( "Rebuild: Got aggregate " + fromKey.toStringFull());
 
                   Aggregate aggr = (Aggregate) o;
-                  ObjectDescriptor[] objects = new ObjectDescriptor[aggr.components.length];
+                  ObjectDescriptor[] objects = new ObjectDescriptor[aggr.numComponents()];
                   long aggregateExpiration = (thisHandle instanceof GCPastContentHandle) ? ((GCPastContentHandle)thisHandle).getExpiration() : GCPast.INFINITY_EXPIRATION;
           
-                  for (int i=0; i<aggr.components.length; i++) {
+                  for (int i=0; i<aggr.numComponents(); i++) {
                     objects[i] = new ObjectDescriptor(
-                      aggr.components[i].getId(), 
-                      aggr.components[i].getVersion(),
+                      aggr.getComponent(i).getId(), 
+                      aggr.getComponent(i).getVersion(),
                       aggregateExpiration,
                       aggregateExpiration,
-                      getSize(aggr.components[i])
+                      getSize(aggr.getComponent(i))
                     );
                     
-                    final GCPastContent objData = aggr.components[i];
+                    final GCPastContent objData = aggr.getComponent(i);
                     if (logger.level <= Logger.FINE) logger.log( "Checking whether "+objData.getId()+"v"+objData.getVersion()+" is in object store...");
                     objectStore.lookupHandles(objData.getId(), 1, new Continuation() {
                       public void receiveResult(Object o) {
@@ -1942,9 +2017,9 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
         objectStore.insert(obj, c);
         
       if (aggregateStore instanceof GCPast)
-        ((GCPast)aggregateStore).insert(obj, lifetime, c);
+        ((GCPast)aggregateStore).insert(new NonAggregate(obj), lifetime, c);
       else
-        aggregateStore.insert(obj, c);
+        aggregateStore.insert(new NonAggregate(obj), c);
     }
   }
   
@@ -2341,4 +2416,13 @@ public class AggregationImpl implements Past, GCPast, VersioningPast, Aggregatio
     return environment;
   }
 
+  public void setContentDeserializer(PastContentDeserializer deserializer) {    
+    contentDeserializer = deserializer;
+    objectStore.setContentDeserializer(contentDeserializer);
+  }
+
+  public void setContentHandleDeserializer(PastContentHandleDeserializer deserializer) {
+    contentHandleDeserializer = deserializer;
+    objectStore.setContentHandleDeserializer(deserializer);
+  }
 }

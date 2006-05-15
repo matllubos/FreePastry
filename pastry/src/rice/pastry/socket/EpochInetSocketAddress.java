@@ -1,8 +1,11 @@
 
 package rice.pastry.socket;
 
-import java.io.Serializable;
-import java.net.InetSocketAddress;
+import java.io.*;
+import java.net.*;
+
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * Class which represets a source route to a remote IP address.
@@ -94,6 +97,54 @@ public class EpochInetSocketAddress implements Serializable {
    */
   public long getEpoch() {
     return epoch;
+  }
+
+  /**
+   *   EpochInetSocketAddress: (IPV4):
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + InetAddress                                                   +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + port (int)                                                    +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + epoch (long)                                                  +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *  
+   * @param buf
+   * @return
+   * @throws IOException
+   */
+  public static EpochInetSocketAddress build(InputBuffer buf) throws IOException {
+    byte[] addrBytes = new byte[4];
+    buf.read(addrBytes);
+    InetAddress addr = InetAddress.getByAddress(addrBytes);
+    int port = buf.readInt();
+//    try {
+      InetSocketAddress saddr = new InetSocketAddress(addr, port);
+      long epoch = buf.readLong();
+      return new EpochInetSocketAddress(saddr, epoch);
+//    } catch (IllegalArgumentException iae) {
+//      throw iae; // just to set a breakpoint 
+//    }
+  }
+
+  /**
+   *   EpochInetSocketAddress: (IPV4):
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + InetAddress                                                   +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + port (int)                                                    +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   + epoch (long)                                                  +
+   *   +                                                               +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * 
+   * @param buf
+   */
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.write(address.getAddress().getAddress(),0,4);
+    buf.writeInt(address.getPort());
+    buf.writeLong(epoch);    
   }
 }
 

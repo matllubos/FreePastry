@@ -6,6 +6,7 @@ import java.io.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.*;
 
 /**
@@ -67,4 +68,18 @@ public abstract class PostEntityAddress implements Serializable {
       md.update(string.getBytes());
       return mFactory.buildRingId(ringId, md.digest());
   }
+  
+  public abstract short getType();
+  public abstract void serialize(OutputBuffer buf) throws IOException;
+  
+  public static PostEntityAddress build(InputBuffer buf, Endpoint endpoint, short type) throws IOException {
+    switch(type) {
+      case PostUserAddress.TYPE:
+        return new PostUserAddress(buf, endpoint);
+      case PostGroupAddress.TYPE:
+        return new PostGroupAddress(buf, endpoint);
+    }
+    throw new RuntimeException("Unknown type:"+type);
+  }
+  
 }

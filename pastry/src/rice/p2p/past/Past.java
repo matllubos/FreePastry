@@ -4,6 +4,7 @@ package rice.p2p.past;
 import rice.*;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.past.rawserialization.*;
 
 /**
  * @(#) Past.java
@@ -153,5 +154,9 @@ public interface Past {
    * @return
    */
   public String getInstance();
+  
+  public void setContentDeserializer(PastContentDeserializer deserializer);
+  public void setContentHandleDeserializer(PastContentHandleDeserializer deserializer);
+  
 }
 

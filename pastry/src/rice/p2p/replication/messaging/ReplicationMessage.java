@@ -1,7 +1,10 @@
 
 package rice.p2p.replication.messaging;
 
+import java.io.IOException;
+
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.replication.*;
 
 /**
@@ -13,7 +16,7 @@ import rice.p2p.replication.*;
  *
  * @author Alan Mislove
  */
-public abstract class ReplicationMessage implements Message {
+public abstract class ReplicationMessage implements RawMessage {
   
   // serialver for backward compatibility
   private static final long serialVersionUID = 2121558100279943464L;
@@ -30,7 +33,7 @@ public abstract class ReplicationMessage implements Message {
   protected ReplicationMessage(NodeHandle source) {
     this.source = source;
   }
-  
+
   /**
    * Method which should return the priority level of this message.  The messages
    * can range in priority from 0 (highest priority) to Integer.MAX_VALUE (lowest) -
@@ -42,7 +45,7 @@ public abstract class ReplicationMessage implements Message {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return MEDIUM_PRIORITY;
   }
   
@@ -55,5 +58,12 @@ public abstract class ReplicationMessage implements Message {
     return source;
   }
   
+  public ReplicationMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
+    source = endpoint.readNodeHandle(buf);
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    source.serialize(buf); 
+  }
 }
 

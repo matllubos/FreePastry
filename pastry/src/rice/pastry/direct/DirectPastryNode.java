@@ -5,9 +5,16 @@ import java.util.Hashtable;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.*;
+import rice.pastry.Id;
+import rice.pastry.NodeHandle;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.join.InitiateJoin;
 import rice.pastry.messaging.Message;
+import rice.pastry.routing.RouteMessage;
 import rice.selector.Timer;
 
 /**
@@ -31,14 +38,11 @@ public class DirectPastryNode extends PastryNode {
   
   protected Timer timer;
 
-  public DirectPastryNode(NodeId id, NetworkSimulator sim, Environment e, NodeRecord nr) {
+  public DirectPastryNode(Id id, NetworkSimulator sim, Environment e, NodeRecord nr) {
     super(id, e);
     timer = e.getSelectorManager().getTimer();
     simulator = sim;
     record = nr;
-  }
-
-  public void setDirectElements(/* simulator */) {
   }
 
   public void doneNode(NodeHandle bootstrap) {
@@ -164,12 +168,33 @@ public class DirectPastryNode extends PastryNode {
     currentNode = temp;
   }
 
+  public synchronized void route(RouteMessage rm) {
+    if (!getEnvironment().getSelectorManager().isSelectorThread()) {
+      simulator.deliverMessage(rm, this); 
+      return;
+    }
+    
+    DirectPastryNode temp = currentNode;
+    currentNode = this;
+    super.receiveMessage(rm);
+    currentNode = temp;
+  }
+  
   public Logger getLogger() {
     return logger;
   }
 
   public void send(NodeHandle handle, Message message) {
     handle.receiveMessage(message);
+  }
+  
+  public void connect(NodeHandle remoteNode, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
+    DirectNodeHandle dnh = (DirectNodeHandle)remoteNode;
+    simulator.enqueueDelivery(new DirectAppSocket(dnh, receiver, appl, simulator).getAcceptorDelivery());
+  }
+
+  public NodeHandle readNodeHandle(InputBuffer buf) {
+    throw new RuntimeException("Should not be called.");
   }
 }
 

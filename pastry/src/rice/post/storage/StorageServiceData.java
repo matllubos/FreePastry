@@ -5,8 +5,10 @@ import java.security.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.past.gc.rawserialization.RawGCPastContent;
 
 /**
  * This class is the abstraction of a class used by the storage package to
@@ -14,7 +16,7 @@ import rice.p2p.past.gc.*;
  *
  * @version $Id$
  */
-abstract class StorageServiceData implements GCPastContent {
+abstract class StorageServiceData implements RawGCPastContent {
   
   // serialver for backwards compatibility
   private static final long serialVersionUID = 2882784831315993461L;
@@ -128,5 +130,21 @@ abstract class StorageServiceData implements GCPastContent {
     
     data = new byte[ois.readInt()];
     ois.readFully(data, 0, data.length);
+  }
+  
+  
+  public StorageServiceData(InputBuffer buf, Endpoint endpoint) throws IOException {
+    location = endpoint.readId(buf, buf.readShort()); 
+    
+    data = new byte[buf.readInt()];
+    buf.read(data);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(location.getType());
+    location.serialize(buf);
+    
+    buf.writeInt(data.length);
+    buf.write(data,0,data.length);
   }
 }

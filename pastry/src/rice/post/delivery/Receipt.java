@@ -1,13 +1,14 @@
 
 package rice.post.delivery;
 
-import java.io.Serializable;
+import java.io.*;
 
 import rice.*;
 import rice.post.*;
 import rice.post.messaging.*;
 import rice.p2p.past.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 
 /**
@@ -19,7 +20,8 @@ import rice.p2p.commonapi.*;
  * @author Peter Druschel
  */
 public class Receipt extends Delivery {
-  
+  public static final short TYPE = 171;
+
   private static final long serialVersionUID = -2762703066657973942L;
 
   /**
@@ -45,6 +47,27 @@ public class Receipt extends Delivery {
   public byte[] getSignature() {
     return signature;
   }
+  
+  public Receipt(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint); 
+    
+    signature = new byte[buf.readInt()];
+    buf.read(signature);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf); 
+    
+    buf.writeInt(signature.length);
+    buf.write(signature, 0, signature.length);
+    
+  }
+  
+  public short getType() {
+    return TYPE;
+  }
+  
+  
 }
 
 

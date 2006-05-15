@@ -1,6 +1,7 @@
 package rice.pastry.direct;
 
 import rice.environment.Environment;
+import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 
@@ -105,4 +106,16 @@ public interface NetworkSimulator {
   public void removeNode(DirectPastryNode node);
 
   public void start();
+  
+  public void stop();
+  
+  /**
+   * Deliver message.
+   * 
+   * @param msg message to deliver.
+   * @param node the Pastry node to deliver it to.
+   * @param how long to delay to deliver the message
+   * @param period to deliver the message after the delay
+   */
+  public CancellableTask enqueueDelivery(Delivery del);  
 }

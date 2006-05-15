@@ -2,10 +2,16 @@
 package rice.p2p.multiring;
 
 import rice.*;
+
+import java.io.IOException;
 import java.util.*;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.multiring.messaging.RingMessage;
+import rice.p2p.util.JavaSerializedMessage;
 
 /**
  * @(#) MultiringEndpoint.java
@@ -34,6 +40,8 @@ public class MultiringEndpoint implements Endpoint {
    */
   protected Endpoint endpoint;
   
+//  protected MessageDeserializer myDeserializer;
+  
   /**
   * Constructor
    *
@@ -43,6 +51,19 @@ public class MultiringEndpoint implements Endpoint {
     this.node = node;
     this.endpoint = endpoint;
     this.application = application;
+//    myDeserializer = endpoint.getDeserializer();
+//    endpoint.setDeserializer(new MessageDeserializer() {
+//    
+//      public Message deserialize(InputBuffer buf, short type, byte priority,
+//          NodeHandle sender) throws IOException {
+//        switch (type) {
+//          case RingMessage.TYPE:
+//            return new RingMessage(buf,MultiringEndpoint.this.endpoint,myDeserializer,sender,priority);
+//        }
+//        throw new IllegalArgumentException("Invalid type:"+type);
+//      }
+//    
+//    });
   }
   
   /**
@@ -67,6 +88,14 @@ public class MultiringEndpoint implements Endpoint {
    * @param hint The first node to send this message to, optional
    */
   public void route(Id id, Message message, NodeHandle hint) {
+    if (message instanceof RawMessage) {
+      route(id, (RawMessage)message, hint); 
+    } else {
+      route(id, new JavaSerializedMessage(message), hint); 
+    }
+  }
+  
+  public void route(Id id, RawMessage message, NodeHandle hint) {
     RingId mId = (RingId) id;
     MultiringNodeHandle mHint = (MultiringNodeHandle) hint;
           
@@ -88,6 +117,7 @@ public class MultiringEndpoint implements Endpoint {
       }
     } 
   }
+  
   
   /**
    * This call produces a list of nodes that can be used as next hops on a route towards
@@ -279,6 +309,67 @@ public class MultiringEndpoint implements Endpoint {
     return node.getEnvironment();
   }
 
+  /**
+   * Passthrough to sub endpoint.
+   */
+  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout) {
+    MultiringNodeHandle mHandle = (MultiringNodeHandle) handle;
+    endpoint.connect(mHandle.getHandle(), receiver, timeout);
+  }
+
+  public void accept(AppSocketReceiver receiver) {
+    endpoint.accept(receiver);
+  }
+
+  public void setDeserializer(MessageDeserializer md) {
+    endpoint.setDeserializer(md);
+  }
+
+  public MessageDeserializer getDeserializer() {
+    return endpoint.getDeserializer();
+  }
+
+  public Id readId(InputBuffer buf, short type) throws IOException {
+    if (type == RingId.TYPE)
+      return new RingId(buf, endpoint);
+
+    return endpoint.readId(buf, type);
+  }
+
+  public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
+    return new MultiringNodeHandle(buf, endpoint);
+  }
+
+  public IdRange readIdRange(InputBuffer buf) throws IOException {
+    return new MultiringIdRange(buf,endpoint);
+//    return endpoint.readIdRange(buf);
+  }
+
+  public NodeHandle coalesce(NodeHandle handle) {
+    if (handle instanceof MultiringNodeHandle) {
+      MultiringNodeHandle mnh = (MultiringNodeHandle)handle;
+      mnh.handle = endpoint.coalesce(mnh.handle);
+      return mnh;
+    }
+    return endpoint.coalesce(handle);
+  }
+
+  public NodeHandleSet readNodeHandleSet(InputBuffer buf, short type) throws IOException {
+    switch(type) {
+      case MultiringNodeHandleSet.TYPE:
+        return new MultiringNodeHandleSet(buf, endpoint);
+    }
+    return endpoint.readNodeHandleSet(buf, type);
+  }
+  
+  public String toString() {
+    return "MRE["+endpoint+"]";
+  }
+  
+  public void register() {
+    endpoint.register(); 
+  }
+  
 }
 
 

@@ -6,7 +6,6 @@ package rice.pastry.testing;
 
 import rice.p2p.commonapi.Id;
 import rice.pastry.NodeHandle;
-import rice.pastry.messaging.Address;
 import rice.pastry.messaging.Message;
 
 /**
@@ -19,7 +18,7 @@ public class HelloMsg extends Message {
   public boolean messageDirect = false;
   private NodeHandle src;
   
-  public HelloMsg(Address addr, NodeHandle src, Id tgt, int mid) {
+  public HelloMsg(int addr, NodeHandle src, Id tgt, int mid) {
     super(addr);
     target = tgt;
     msgid = mid;

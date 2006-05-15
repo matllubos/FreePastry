@@ -5,6 +5,7 @@ import java.security.*;
 import java.util.*;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
 
@@ -15,7 +16,8 @@ import rice.p2p.past.gc.*;
  * @version $Id$
  */
 class SecureData extends StorageServiceData {
-  
+  public static final short TYPE = 4;
+
   // serialver, for backwards compatibility
   private static final long serialVersionUID = -1514593583283068707L;
 
@@ -69,5 +71,13 @@ class SecureData extends StorageServiceData {
    */
   public boolean isMutable() {
     return false;
+  }
+
+  public short getType() {
+    return TYPE;
+  }
+  
+  public SecureData(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf, endpoint); 
   }
 }

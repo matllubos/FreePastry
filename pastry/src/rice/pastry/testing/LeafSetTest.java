@@ -5,6 +5,7 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.RangeCannotBeDeterminedException;
 import rice.pastry.*;
 import rice.pastry.leafset.*;
@@ -300,13 +301,13 @@ public class LeafSetTest {
   }
 
   public static class TestNodeHandle extends NodeHandle implements Comparable {
-    private NodeId id;
+    private Id id;
 
-    public TestNodeHandle(NodeId id) {
+    public TestNodeHandle(Id id) {
       this.id = id;
     }
 
-    public NodeId getNodeId() {
+    public Id getNodeId() {
       return id;
     }
 
@@ -343,6 +344,10 @@ public class LeafSetTest {
 
     public String toString() {
       return id.toString();
+    }
+
+    public void serialize(OutputBuffer buf) throws IOException {
+      throw new RuntimeException("not implemented.");        
     }
   }
 }

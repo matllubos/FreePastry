@@ -9,8 +9,10 @@ import rice.Continuation.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
+import rice.p2p.past.rawserialization.SocketStrategy;
 import rice.p2p.past.gc.messaging.*;
 import rice.persistence.*;
 
@@ -40,6 +42,33 @@ public class GCPastImpl extends PastImpl implements GCPast {
   public int collected = 0;
   public int refreshed = 0;
   
+  protected class GCPastDeserializer extends PastDeserializer {
+
+    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+      try {
+        switch(type) {
+          case GCInsertMessage.TYPE:
+            return GCInsertMessage.buildGC(buf, endpoint, contentDeserializer);
+          case GCLookupHandlesMessage.TYPE:
+            return GCLookupHandlesMessage.buildGC(buf, endpoint);
+          case GCRefreshMessage.TYPE:
+            return GCRefreshMessage.build(buf, endpoint);
+        }
+      } catch (IOException e) {
+        if (logger.level <= Logger.SEVERE) logger.log("Exception in deserializer in "+GCPastImpl.this.endpoint.toString()+":"+instance+" "+e);
+        throw e;
+      }
+      
+      return super.deserialize(buf, type, priority, sender);
+    }
+  }
+    
+  public String toString() {
+    if (endpoint == null) return super.toString();
+    return "GCPastImpl["+endpoint.getInstance()+"]";
+  }
+  
+    
   /**
    * Constructor for GCPast
    *
@@ -72,6 +101,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
     this.realFactory = node.getIdFactory();
     
     endpoint.scheduleMessage(new GCCollectMessage(0, getLocalNodeHandle(), node.getId()), collectionInterval, collectionInterval);
+    endpoint.setDeserializer(new GCPastDeserializer());
   }
     
   /**
@@ -119,7 +149,8 @@ public class GCPastImpl extends PastImpl implements GCPast {
       public PastMessage buildMessage() {
         return new GCInsertMessage(getUID(), obj, expiration, getLocalNodeHandle(), obj.getId());
       }
-    }, command);
+    }, command,
+    socketStrategy.sendAlongSocket(SocketStrategy.TYPE_INSERT, obj));
   }
 
   /**
@@ -286,10 +317,14 @@ public class GCPastImpl extends PastImpl implements GCPast {
    * @return Whether or not to forward the message further
    */
   public boolean forward(final RouteMessage message) {
-    if (message.getMessage() instanceof GCLookupHandlesMessage) 
-      return true;
-    else
-      return super.forward(message);
+    try {
+      if (message.getMessage(endpoint.getDeserializer()) instanceof GCLookupHandlesMessage) 
+        return true;
+      else
+        return super.forward(message);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe); 
+    }
   }
   
   /**
@@ -311,7 +346,11 @@ public class GCPastImpl extends PastImpl implements GCPast {
         
         // make sure the policy allows the insert
         if (policy.allowInsert(imsg.getContent())) {
-          storage.getObject(imsg.getContent().getId(), new StandardContinuation(getResponseContinuation(msg)) {
+          Id theId = imsg.getContent().getId();
+          if (theId == null) {
+            if (logger.level <= Logger.SEVERE) logger.log("Error: null Id from "+imsg.getContent()+" from "+imsg+" in "+this);
+          }
+          storage.getObject(theId, new StandardContinuation(getResponseContinuation(msg)) {
             public void receiveResult(Object o) {
               try {
                 // allow the object to check the insert, and then insert the data
@@ -327,9 +366,9 @@ public class GCPastImpl extends PastImpl implements GCPast {
         }
       } else if (msg instanceof GCRefreshMessage) {
         final GCRefreshMessage rmsg = (GCRefreshMessage) msg;        
-        final Iterator i = rmsg.getKeys().getIterator();
+        final Iterator i = Arrays.asList(rmsg.getKeys()).iterator();
         final Vector result = new Vector();
-        other += rmsg.getKeys().numElements();
+        other += rmsg.getKeys().length;
         
         StandardContinuation process = new StandardContinuation(getResponseContinuation(msg)) {
           public void receiveResult(Object o) {

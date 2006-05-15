@@ -2,10 +2,14 @@
 package rice.p2p.past.gc;
 
 import rice.*;
+
+import java.io.IOException;
 import java.util.*;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) GCEndpoint.java
@@ -55,6 +59,10 @@ public class GCEndpoint implements Endpoint {
    * @param hint The first node to send this message to, optional
    */
   public void route(Id id, Message message, NodeHandle hint) {
+    endpoint.route(id, message, hint);
+  }
+  
+  public void route(Id id, RawMessage message, NodeHandle hint) {
     endpoint.route(id, message, hint);
   }
   
@@ -215,6 +223,55 @@ public class GCEndpoint implements Endpoint {
     return endpoint.getEnvironment();
   }
 
+  /**
+   * Passthrough to the sub endpoint.
+   */
+  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout) {
+    endpoint.connect(handle, receiver, timeout);
+  }
+
+  public void accept(AppSocketReceiver receiver) {
+    endpoint.accept(receiver);
+  }
+
+  public void setDeserializer(MessageDeserializer md) {
+    endpoint.setDeserializer(md);    
+  }
+
+  public MessageDeserializer getDeserializer() {
+    return endpoint.getDeserializer();    
+  }
+
+  public Id readId(InputBuffer buf, short type) throws IOException {    
+    if (type == GCId.TYPE)
+      return new GCId(buf, endpoint);
+
+    return endpoint.readId(buf, type);
+  }
+
+  public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
+    return endpoint.readNodeHandle(buf);
+  }
+
+  public IdRange readIdRange(InputBuffer buf) throws IOException {
+    return new GCIdRange(buf, endpoint); //.readIdRange(buf);
+  }
+
+  public NodeHandle coalesce(NodeHandle handle) {
+    return endpoint.coalesce(handle);
+  }
+
+  public NodeHandleSet readNodeHandleSet(InputBuffer buf, short type) throws IOException {
+    return endpoint.readNodeHandleSet(buf, type);
+  }
+  
+  public String toString() {
+    return "GCE["+endpoint+"]";
+  }
+  
+  public void register() {
+    endpoint.register(); 
+  }
 }
 
 

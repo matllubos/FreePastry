@@ -13,7 +13,7 @@ public class SourceRouteTest {
   
   public static class TestMessage extends Message {
     public TestMessage(Environment env) {
-      super(new StandardAddress(TestMessage.class, "monkey", env));
+      super(StandardAddress.getAddress(TestMessage.class, "monkey", env));
     }
   }
  
@@ -42,7 +42,7 @@ public class SourceRouteTest {
     byte[] payload;
     
     public TestMessage2() {
-      super(new StandardAddress(27));
+      super(27);
       payload = new byte[10000];
     }
   }

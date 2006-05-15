@@ -13,8 +13,10 @@ import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
-import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
+import rice.pastry.Id;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
@@ -22,6 +24,8 @@ import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
 import rice.pastry.standard.*;
 import rice.selector.*;
+import rice.pastry.NodeHandle;
+import rice.pastry.messaging.Message;
 
 /**
  * Pastry node factory for Socket-linked nodes.
@@ -212,8 +216,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     EpochInetSocketAddress rAddress = ((SocketNodeHandle) handle)
         .getEpochAddress();
 
-    lAddress = new EpochInetSocketAddress(new InetSocketAddress(lAddress
-        .getAddress().getAddress(), lAddress.getAddress().getPort() + 1));
+//    lAddress = new EpochInetSocketAddress(new InetSocketAddress(lAddress
+//        .getAddress().getAddress(), lAddress.getAddress().getPort() + 1));
 
     // if this is a request for an old version of us, then we return
     // infinity as an answer
@@ -229,11 +233,15 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket = new DatagramSocket(lAddress.getAddress().getPort());
       socket.setSoTimeout(5000);
 
-      byte[] data = PingManager.addHeader(route, new PingMessage(route, route
-          .reverse(lAddress), environment.getTimeSource().currentTimeMillis()),
-          lAddress, environment, logger);
+//      byte[] data = PingManager.addHeader(route, new PingMessage(route, route
+//          .reverse(lAddress), environment.getTimeSource().currentTimeMillis()),
+//          lAddress, environment, logger);
 
-      socket.send(new DatagramPacket(data, data.length, rAddress.getAddress()));
+      SocketBuffer sb = new SocketBuffer(lAddress, route, new PingMessage(/*route, route
+          .reverse(lAddress),*/ environment.getTimeSource().currentTimeMillis()));
+
+      if (logger.level <= Logger.FINE) logger.log("Sending Ping to "+rAddress+" from "+lAddress);
+      socket.send(new DatagramPacket(sb.getBuffer().array(), sb.getBuffer().limit(), rAddress.getAddress()));
 
       long start = environment.getTimeSource().currentTimeMillis();
       socket.receive(new DatagramPacket(new byte[10000], 10000));
@@ -264,6 +272,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     CancellableTask task = generateNodeHandle(address, c);
 
+    if (task == null)
+      return null;
+    
     synchronized (c) {
       try {
         c.wait(timeout);
@@ -317,8 +328,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       return new SocketNodeHandle(new EpochInetSocketAddress(address, rm
           .getEpoch()), rm.getNodeId());
     } catch (IOException e) {
-      if (logger.level <= Logger.WARNING)
-        logger.log("Error connecting to address " + address + ": " + e);
+      if (logger.level <= Logger.FINE) {
+        logger.logException("Error connecting to address " + address + ": ",e);
+      } else {
+        if (logger.level <= Logger.WARNING)
+          logger.log("Error connecting to address " + address + ": "+e);
+      }
       return null;
     }
   }
@@ -365,7 +380,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param nodeId DESCRIBE THE PARAMETER
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(final NodeHandle bootstrap, NodeId nodeId) {
+  public PastryNode newNode(final NodeHandle bootstrap, Id nodeId) {
     return newNode(bootstrap, nodeId, null);
   }
 
@@ -390,7 +405,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    *          behind NATs
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId,
+  public PastryNode newNode(NodeHandle bootstrap, Id nodeId,
       InetSocketAddress pAddress) {
     try {
       return newNode(bootstrap, nodeId, pAddress, true); // fix the method just below if you change this
@@ -413,7 +428,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
   
-  public PastryNode newNode(NodeHandle bootstrap, NodeId nodeId,
+  public PastryNode newNode(NodeHandle bootstrap, Id nodeId,
       InetSocketAddress pAddress, boolean throwException) throws IOException {
     if (!throwException) return newNode(bootstrap, nodeId, pAddress); // yes, this is sort of bizarre
     // the idea is that we can't throw an exception by default because it will break reverse compatibility
@@ -425,7 +440,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       if (logger.level <= Logger.WARNING)
         logger
             .log("No bootstrap node provided, starting a new ring binding to address "
-                + localAddress + "...");
+                + localAddress+":"+port+ "...");
 
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
@@ -484,30 +499,29 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       pn.setSocketSourceRouteManager(srManager);
       SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
       localhandle = (SocketNodeHandle) pn.coalesce(localhandle);
-      SocketPastrySecurityManager secureMan = new SocketPastrySecurityManager(
-          localhandle);
       MessageDispatch msgDisp = new MessageDispatch(pn);
       RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
           environment);
       LeafSet leafSet = new LeafSet(localhandle, lSetSize);
   
-      StandardRouter router = new StandardRouter(pn, secureMan);
-      msgDisp.registerReceiver(router.getAddress(), router);
+      StandardRouter router = new StandardRouter(pn);
   
       StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(
-          localhandle, secureMan, routeTable, environment);
-      msgDisp.registerReceiver(rsProtocol.getAddress(), rsProtocol);
+          pn, routeTable, environment);
   
-      pn.setElements(localhandle, secureMan, msgDisp, leafSet, routeTable);
+      pn.setElements(localhandle, msgDisp, leafSet, routeTable);
+      router.register();
+      rsProtocol.register();
       pn.setSocketElements(proxyAddress, leafSetMaintFreq, routeSetMaintFreq);
-      secureMan.setLocalPastryNode(pn);
   
       PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-          localhandle, secureMan, leafSet, routeTable);
+          localhandle, leafSet, routeTable);
+      lsProtocol.register();
       // msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
       ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-          localhandle, secureMan, routeTable, leafSet);
-  
+          localhandle, routeTable, leafSet);
+      jProtocol.register();
+      
       if (bootstrap != null) {
         bootstrap = (SocketNodeHandle) pn.coalesce(bootstrap);
       }
@@ -533,6 +547,34 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
+  MessageDeserializer deserializer = new SPNFDeserializer();
+  
+  // this one doesn't properly coalsece NodeHandles, but when this is used, there is no PastryNode yet!
+  NodeHandleFactory nhf = new NodeHandleFactory() {
+    public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
+      return SocketNodeHandle.build(buf);
+    }  
+  };
+  
+  
+  class SPNFDeserializer implements MessageDeserializer {
+    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, byte priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
+      switch (type) {
+        case NodeIdResponseMessage.TYPE:
+          return new NodeIdResponseMessage(buf);
+        case LeafSetResponseMessage.TYPE:
+          return new LeafSetResponseMessage(buf, nhf);
+        case RoutesResponseMessage.TYPE:
+          return new RoutesResponseMessage(buf);
+        case RouteRowResponseMessage.TYPE:
+          return new RouteRowResponseMessage(buf, nhf);
+        default:
+          if (logger.level <= Logger.SEVERE) logger.log( "SERIOUS ERROR: Received unknown message address: "+0+"type:"+type);
+          return null;
+      }
+    }        
+  }
+  
   /**
    * This method anonymously sends the given message to the remote address,
    * blocks until a response is received, and then closes the socket and returns
@@ -561,10 +603,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     channel.socket().connect(address, 20000);
     channel.socket().setSoTimeout(20000);
 
-    writer.enqueue(SocketCollectionManager.HEADER_DIRECT);
+    writer.enqueue(TOTAL_HEADER);
     writer.enqueue(message);
     writer.write(channel);
-    Object o = null;
+    SocketBuffer o = null;
 
     while (o == null) {
       o = reader.read(channel);
@@ -578,9 +620,18 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     if (logger.level <= Logger.FINER)
       logger.log("SPNF.getResponse(): Closed " + channel);
 
-    return (Message) o;
+    return o.deserialize(deserializer);
   }
-
+  
+  public static byte[] TOTAL_HEADER;
+  static {
+    TOTAL_HEADER = new byte[SocketCollectionManager.TOTAL_HEADER_SIZE+4]; // plus the appId
+    System.arraycopy(SocketCollectionManager.PASTRY_MAGIC_NUMBER,0,TOTAL_HEADER,0,SocketCollectionManager.PASTRY_MAGIC_NUMBER.length);
+    //System.arraycopy(new byte[4],0,TOTAL_HEADER,4,4); // version 0 // can just leave blank zero, cause java zeros everything automatically
+    System.arraycopy(SocketCollectionManager.HEADER_DIRECT,0,TOTAL_HEADER,8,SocketCollectionManager.HEADER_SIZE);
+    //System.arraycopy(new byte[4],0,TOTAL_HEADER,12,4); // appId 0 // can just leave blank zero, cause java zeros everything automatically    
+  }  
+  
   protected CancellableTask getResponse(final InetSocketAddress address,
       final Message message, final Continuation c) {
     // create reader and writer
@@ -592,8 +643,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     reader = new SocketChannelReader(environment, SourceRoute
         .build(new EpochInetSocketAddress(address,
             EpochInetSocketAddress.EPOCH_UNKNOWN)));
-    writer.enqueue(SocketCollectionManager.HEADER_DIRECT);
-    writer.enqueue(message);
+    writer.enqueue(TOTAL_HEADER);
+    try {
+      writer.enqueue(message);
+    } catch(IOException ioe) {
+      c.receiveException(ioe);
+      return null;
+    }
 
     // bind to the appropriate port
     try {
@@ -624,7 +680,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                 logger.log("SPNF.getResponse(" + address + "," + message
                     + ").read()");
               try {
-                Object o = null;
+                SocketBuffer o = null;
 
                 while (o == null) {
                   o = reader.read(channel);
@@ -632,7 +688,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                 channel.socket().close();
                 channel.close();
                 key.cancel();
-                c.receiveResult(o);
+                c.receiveResult(o.deserialize(deserializer));
               } catch (IOException ioe) {
                 handleException(ioe);
               }
@@ -754,13 +810,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket.setSoTimeout(timeout);
 
       for (int i = 0; i < existing.length; i++) {
-        byte[] buf = PingManager
-            .addHeader(SourceRoute
-                .build(new EpochInetSocketAddress(existing[i])),
-                new IPAddressRequestMessage(env.getTimeSource()
-                    .currentTimeMillis()), new EpochInetSocketAddress(local),
-                env, logger);
-        DatagramPacket send = new DatagramPacket(buf, buf.length, existing[i]);
+//        byte[] buf = PingManager
+//        .addHeader(SourceRoute
+//            .build(new EpochInetSocketAddress(existing[i])),
+//            new IPAddressRequestMessage(env.getTimeSource()
+//                .currentTimeMillis()), new EpochInetSocketAddress(local),
+//            env, logger);
+        SocketBuffer sb = new SocketBuffer(new EpochInetSocketAddress(local), 
+            SourceRoute.build(new EpochInetSocketAddress(existing[i])),
+            new IPAddressRequestMessage(env.getTimeSource()
+                .currentTimeMillis()));
+        DatagramPacket send = new DatagramPacket(sb.getBuffer().array(), sb.getBuffer().limit(), existing[i]);
         socket.send(send);
       }
 
@@ -770,8 +830,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       byte[] data = new byte[receive.getLength() - 38];
       System.arraycopy(receive.getData(), 38, data, 0, data.length);
 
-      return ((IPAddressResponseMessage) PingManager.deserialize(data, env,
-          null, logger)).getAddress();
+      return ((IPAddressResponseMessage)new SocketBuffer(data).deserialize(new PingManager.PMDeserializer(logger))).getAddress();
+      
+//      return ((IPAddressResponseMessage) PingManager.deserialize(data, env,
+//          null, logger)).getAddress();
     } finally {
       if (socket != null)
         socket.close();

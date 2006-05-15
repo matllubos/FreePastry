@@ -55,8 +55,8 @@ public class VisualizationEmailProxy extends EmailProxy {
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
       server.addPanelCreator(new SourceRoutePanelCreator());
-      server.addPanelCreator(new MultiPersistencePanelCreator(environment, new String[] {"Immutable", "Mutable", "Pending", "Delivered", "Glacier Immutable", "Glacier Mutable", "Aggregation Waiting"},
-                                                              new StorageManagerImpl[] {immutableStorage, mutableStorage, pendingStorage, deliveredStorage, glacierImmutableStorage, glacierMutableStorage, aggrWaitingStorage}));
+      server.addPanelCreator(new MultiPersistencePanelCreator(environment, new String[] {"Immutable", "Mutable", "Pending", "Delivered", "Glacier Immutable", "Aggregation Waiting"},
+                                                              new StorageManagerImpl[] {immutableStorage, mutableStorage, pendingStorage, deliveredStorage, glacierImmutableStorage, aggrWaitingStorage}));
       server.addPanelCreator(new MultiPASTPanelCreator(timer, new String[] {"Immutable", "Mutable", "Pending", "Delivered"},
                                                        new PastImpl[] {(PastImpl) realImmutablePast, (PastImpl) mutablePast, pendingPast, deliveredPast}));
       server.addPanelCreator(new GCPanelCreator(timer, realImmutablePast));

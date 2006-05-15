@@ -2,11 +2,13 @@ package rice.pastry.standard;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
+import rice.pastry.client.PastryAppl;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
-import rice.pastry.security.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -19,21 +21,31 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class StandardRouteSetProtocol implements MessageReceiver {
+public class StandardRouteSetProtocol extends PastryAppl {
   private final int maxTrials;
 
-  private NodeHandle localHandle;
-
-  private PastrySecurityManager security;
-
   private RoutingTable routeTable;
-
-  private Address address;
 
   private Environment environmet;
   
   protected Logger logger;
 
+  static class SRSPDeserializer extends PJavaSerializedDeserializer {
+    public SRSPDeserializer(PastryNode pn) {
+      super(pn); 
+    }
+    
+    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+      switch (type) {
+        case RequestRouteRow.TYPE:
+          return new RequestRouteRow(sender,buf);
+        case BroadcastRouteRow.TYPE:
+          return new BroadcastRouteRow(buf,pn);
+      }
+      return null;
+    }    
+  }
+  
   /**
    * Constructor.
    * 
@@ -41,27 +53,16 @@ public class StandardRouteSetProtocol implements MessageReceiver {
    * @param sm the security manager
    * @param rt the routing table
    */
-
-  public StandardRouteSetProtocol(NodeHandle lh, PastrySecurityManager sm,
-      RoutingTable rt, Environment env) {
-    
+  public StandardRouteSetProtocol(PastryNode ln, RoutingTable rt, Environment env) {
+    this(ln, rt, env, null);
+  }
+  
+  public StandardRouteSetProtocol(PastryNode ln, RoutingTable rt, Environment env, MessageDeserializer md) {
+    super(ln, null, RouteProtocolAddress.getCode(),  md == null ? new SRSPDeserializer(ln) : md);
     this.environmet = env;
     maxTrials = (1 << rt.baseBitLength()) / 2;
-    localHandle = lh;
-    security = sm;
     routeTable = rt;
-    address = new RouteProtocolAddress();
     logger = env.getLogManager().getLogger(getClass(), null);
-  }
-
-  /**
-   * Gets the address.
-   * 
-   * @return the address.
-   */
-
-  public Address getAddress() {
-    return address;
   }
 
   /**
@@ -70,14 +71,13 @@ public class StandardRouteSetProtocol implements MessageReceiver {
    * @param msg the message.
    */
 
-  public void receiveMessage(Message msg) {
+  public void messageForAppl(Message msg) {
     if (msg instanceof BroadcastRouteRow) {
       BroadcastRouteRow brr = (BroadcastRouteRow) msg;
 
       RouteSet[] row = brr.getRow();
 
       NodeHandle nh = brr.from();
-      nh = security.verifyNodeHandle(nh);
       if (nh.isAlive())
         routeTable.put(nh);
 
@@ -86,7 +86,6 @@ public class StandardRouteSetProtocol implements MessageReceiver {
 
         for (int j = 0; rs != null && j < rs.size(); j++) {
           nh = rs.get(j);
-          nh = security.verifyNodeHandle(nh);
           if (nh.isAlive() == false)
             continue;
           routeTable.put(nh);
@@ -100,10 +99,9 @@ public class StandardRouteSetProtocol implements MessageReceiver {
 
       int reqRow = rrr.getRow();
       NodeHandle nh = rrr.returnHandle();
-      nh = security.verifyNodeHandle(nh);
 
       RouteSet row[] = routeTable.getRow(reqRow);
-      BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
+      BroadcastRouteRow brr = new BroadcastRouteRow(thePastryNode.getLocalHandle(), row);
       nh.receiveMessage(brr);
     }
 
@@ -131,14 +129,14 @@ public class StandardRouteSetProtocol implements MessageReceiver {
   private void maintainRouteSet() {
 
     if (logger.level <= Logger.FINE) logger.log(
-      "maintainRouteSet " + localHandle.getNodeId());
+      "maintainRouteSet " + thePastryNode.getLocalHandle().getNodeId());
 
     // for each populated row in our routing table
-    for (int i = routeTable.numRows() - 1; i >= 0; i--) {
+    for (byte i = (byte)(routeTable.numRows() - 1); i >= 0; i--) {
       RouteSet row[] = routeTable.getRow(i);
-      BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
-      RequestRouteRow rrr = new RequestRouteRow(localHandle, i);
-      int myCol = localHandle.getNodeId().getDigit(i,
+      BroadcastRouteRow brr = new BroadcastRouteRow(thePastryNode.getLocalHandle(), row);
+      RequestRouteRow rrr = new RequestRouteRow(thePastryNode.getLocalHandle(), i);
+      int myCol = thePastryNode.getLocalHandle().getNodeId().getDigit(i,
           routeTable.baseBitLength());
       int j;
 
@@ -168,6 +166,10 @@ public class StandardRouteSetProtocol implements MessageReceiver {
 
     }
 
+  }
+
+  public boolean deliverWhenNotReady() {
+    return true;
   }
 
 }

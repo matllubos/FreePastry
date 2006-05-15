@@ -5,9 +5,10 @@ import java.io.Serializable;
 import rice.*;
 import rice.p2p.past.PastContentHandle;
 import rice.p2p.past.gc.GCPastContentHandle;
+import rice.p2p.past.gc.rawserialization.RawGCPastContentHandle;
 import rice.p2p.commonapi.*;
 
-public class GlacierContentHandle implements PastContentHandle, GCPastContentHandle {
+public class GlacierContentHandle implements GCPastContentHandle {
 
   protected Id id;
   protected NodeHandle nodeHandle;
@@ -40,6 +41,8 @@ public class GlacierContentHandle implements PastContentHandle, GCPastContentHan
   public Manifest getManifest() {
     return manifest;
   }
+  
+  
 }
 
 

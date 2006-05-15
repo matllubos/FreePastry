@@ -13,25 +13,10 @@ import java.io.*;
  * @author Andrew Ladd
  */
 
-public class RouteProtocolAddress implements Address {
+public class RouteProtocolAddress {
   private static final int myCode = 0x89ce110e;
 
-  /**
-   * Constructor.
-   */
-
-  public RouteProtocolAddress() {
-  }
-
-  public boolean equals(Object obj) {
-    return (obj instanceof RouteProtocolAddress);
-  }
-
-  public int hashCode() {
+  public static int getCode() {
     return myCode;
-  }
-
-  public String toString() {
-    return "[RouteProtocolAddress]";
   }
 }

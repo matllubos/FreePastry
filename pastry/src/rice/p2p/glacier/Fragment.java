@@ -2,6 +2,8 @@ package rice.p2p.glacier;
 
 import java.io.*;
 
+import rice.p2p.commonapi.rawserialization.*;
+
 public class Fragment implements Serializable {
   private static final long serialVersionUID = -809948154556539350L;
   
@@ -26,5 +28,18 @@ public class Fragment implements Serializable {
     payload = new byte[ois.readInt()];
     ois.readFully(payload, 0, payload.length);
   }
+  
+  public Fragment(InputBuffer buf) throws IOException {
+    payload = new byte[buf.readInt()];
+    buf.read(payload, 0, payload.length);
+    
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeInt(payload.length);
+    buf.write(payload, 0, payload.length);    
+  }
+
+  
 }
 

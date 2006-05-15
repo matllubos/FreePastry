@@ -1,11 +1,14 @@
 package rice.email;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
 import rice.email.log.*;
 import rice.email.messaging.*;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.post.*;
 import rice.post.log.*;
 import rice.post.messaging.*;
@@ -157,6 +160,26 @@ public class Email implements java.io.Serializable {
    */
   public void getContentHashReferences(Set set) {
     content.getContentHashReferences(set);
+  }
+  
+  public Email(InputBuffer buf, Endpoint endpoint) throws IOException {
+    content = new EmailMessagePart(buf, endpoint);
+    sender = new PostUserAddress(buf, endpoint);
+    recipients = new PostEntityAddress[buf.readShort()];
+    for (int i = 0; i < recipients.length; i++) {
+      short type = buf.readShort();
+      recipients[i] = PostEntityAddress.build(buf, endpoint, type); 
+    }
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    content.serialize(buf);
+    sender.serialize(buf);
+    buf.writeShort((short)recipients.length);
+    for(int i = 0; i < recipients.length; i++) {
+      buf.writeShort(recipients[i].getType());
+      recipients[i].serialize(buf); 
+    }
   }
 }
 

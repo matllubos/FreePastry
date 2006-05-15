@@ -7,6 +7,8 @@ import java.util.*;
 
 import rice.*;
 import rice.Continuation.*;
+import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.post.storage.*;
 
@@ -16,6 +18,7 @@ import rice.post.storage.*;
  * @author Alan Mislove
  */
 public class EmailHeadersPart extends EmailContentPart {
+  public static final short TYPE = 1;
   
   // serialver uid
   private static final long serialVersionUID = 1186745194337869017L;
@@ -158,5 +161,25 @@ public class EmailHeadersPart extends EmailContentPart {
     } else {
       return (unstoredHeaders.equals(part.unstoredHeaders) && content.equals(part.content));
     }
+  }
+  
+  
+  public EmailHeadersPart(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(buf);
+    headersReference = new EmailDataReference(buf, endpoint);
+    
+    content = EmailContentPart.build(buf, endpoint, buf.readShort());
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    super.serialize(buf);
+    headersReference.serialize(buf);
+    
+    buf.writeShort(content.getRawType());
+    content.serialize(buf);
+  }
+  
+  public short getRawType() {
+    return TYPE; 
   }
 }

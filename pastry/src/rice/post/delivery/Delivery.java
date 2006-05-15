@@ -9,7 +9,9 @@ import rice.post.messaging.*;
 import rice.post.security.*;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.past.gc.rawserialization.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.*;
 import rice.p2p.util.*;
 
@@ -21,7 +23,9 @@ import rice.p2p.util.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
-public class Delivery extends ContentHashPastContent implements GCPastContent {
+public class Delivery extends ContentHashPastContent implements RawGCPastContent {
+  
+  public static final short TYPE = 1;
   
   // serialver for backward compatibility
   private static final long serialVersionUID = 5154309973324809945L;
@@ -113,6 +117,25 @@ public class Delivery extends ContentHashPastContent implements GCPastContent {
    */
   public GCPastMetadata getMetadata(long expiration) {
     return new DeliveryMetadata(expiration, getMessage().getDestination());
+  }
+  
+  public Delivery(InputBuffer buf, Endpoint endpoint) throws IOException {
+    super(endpoint.readId(buf, buf.readShort()));
+    message = new SignedPostMessage(buf, endpoint);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(this.myId.getType());
+    this.myId.serialize(buf);
+    message.serialize(buf); 
+  }
+  
+  public short getType() {
+    return TYPE; 
+  }
+  
+  public String toString() {
+    return "Delivery["+message+"]"; 
   }
   
   protected static class DeliveryHandle implements GCPastContentHandle {

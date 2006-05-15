@@ -17,12 +17,12 @@ import java.util.*;
  */
 
 public class PingMessageNew extends Message {
-    private NodeId target;
+    private Id target;
 
     private int		nHops = 0;
     private double	fDistance = 0;
 
-    public PingMessageNew(Address pingAddress, NodeHandle src, NodeId tgt) {
+    public PingMessageNew(int pingAddress, NodeHandle src, Id tgt) {
 	super(pingAddress);
 	setSender(src);
 	target = tgt;
@@ -40,6 +40,6 @@ public class PingMessageNew extends Message {
     public int getHops(){ return nHops; }
     public double getDistance(){ return fDistance; }
 
-    public NodeId getSource(){ return getSender().getNodeId(); }
+    public Id getSource(){ return getSender().getNodeId(); }
 }
 

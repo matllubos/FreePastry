@@ -7,7 +7,9 @@ import java.util.*;
 import rice.environment.Environment;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.scribe.*;
+import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
 
 /**
  * This is the implementing class of the ISplitStream interface. It provides the functionality of
@@ -71,6 +73,19 @@ public class SplitStreamImpl implements SplitStream {
     maxFailedSubscriptions = p.getInt("p2p_splitStream_stripe_max_failed_subscription");
     stripeBaseBitLength = p.getInt("p2p_splitStream_stripeBaseBitLength");
     this.scribe = new ScribeImpl(node, instance);
+    scribe.setContentDeserializer(new ScribeContentDeserializer() {    
+      public ScribeContent deserializeScribeContent(InputBuffer buf,
+          Endpoint endpoint, short contentType) throws IOException {
+        switch(contentType) {
+          case SplitStreamContent.TYPE:
+            return new SplitStreamContent(buf);
+          case SplitStreamSubscribeContent.TYPE:
+            return new SplitStreamSubscribeContent(buf);
+        }
+        throw new IllegalArgumentException("Invalid type:"+contentType);
+      }    
+    });
+    
     this.node = node;
     this.channels = new Hashtable();
     scribe.setPolicy(factory.getSplitStreamScribePolicy(scribe, this));

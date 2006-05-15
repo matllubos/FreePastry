@@ -5,6 +5,7 @@ import rice.*;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.commonapi.testing.*;
 import rice.p2p.past.*;
 import rice.p2p.past.messaging.*;
@@ -505,6 +506,7 @@ public class PastRegrTest extends CommonAPITest {
    //               ((NUM_NODES < REPLICATION_FACTOR) &&
    //                 (((Boolean[]) result).length) == NUM_NODES));
 
+        System.out.println("PastRegrTest.testLookupHandles() insert result.length:"+((Boolean[]) result).length);
         for (int i=0; i<((Boolean[]) result).length; i++) {
           assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
           assertTrue("Insert of file should succeed at replica", ((Boolean[]) result)[i].booleanValue());
@@ -522,6 +524,10 @@ public class PastRegrTest extends CommonAPITest {
             assertTrue("Replicas should not be null", result != null);
             assertTrue("Replicas should be handle[]", result instanceof PastContentHandle[]);
             assertTrue("Only 1 replica should be returned", ((PastContentHandle[]) result).length == 1);
+            if (((PastContentHandle[]) result)[0] == null) {
+              System.out.println("PastRegrTest.problem");
+              
+            }
             assertEquals("Replica should be for right object", remoteId, ((PastContentHandle[]) result)[0].getId());
 
             stepDone();
@@ -728,34 +734,44 @@ public class PastRegrTest extends CommonAPITest {
   /**
    * Usage: DistPastTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (direct|socket)] [-help]
    */
-  public static void main(String args[]) throws IOException {
+  public static void main(String args[]) throws Exception {
 //    System.setOut(new PrintStream(new FileOutputStream("pastrtest.txt")));
 //    System.setErr(System.out);
-    LinkedList delme = new LinkedList();
-    delme.add(new File("FreePastry-Storage-Root"));
-    while(!delme.isEmpty()) {
-      File f = (File)delme.removeFirst();
-      if (f.isDirectory()) {
-        File[] subs = f.listFiles();
-        if (subs.length == 0) {
-          f.delete(); 
+//    while(true) {
+      LinkedList delme = new LinkedList();
+      delme.add(new File("FreePastry-Storage-Root"));
+      while(!delme.isEmpty()) {
+        File f = (File)delme.removeFirst();
+        if (f.isDirectory()) {
+          File[] subs = f.listFiles();
+          if (subs.length == 0) {
+            f.delete(); 
+          } else {
+            delme.addAll(Arrays.asList(subs));          
+            delme.addLast(f);          
+          }
         } else {
-          delme.addAll(Arrays.asList(subs));          
-          delme.addLast(f);          
+          f.delete(); 
         }
-      } else {
-        f.delete(); 
       }
-    }
-    
-    Environment env = parseArgs(args);
-    PastRegrTest pastTest = new PastRegrTest(env);
-    pastTest.start();
+      
+      Environment env = parseArgs(args);
+      env.getParameters().setDouble("p2p_past_successfulInsertThreshold",1.0);
+      PastRegrTest pastTest = new PastRegrTest(env);
+      pastTest.start();
+      
+//      synchronized(pastTest) {
+//        pastTest.wait();  
+//      }
+//    }
   }
 
   protected void cleanUp() {
     running = false;
-    environment.destroy();        
+    environment.destroy();  
+//    synchronized(this) {
+//      this.notifyAll();
+//    }
   }
   
   /**
@@ -936,6 +952,10 @@ public class PastRegrTest extends CommonAPITest {
       return message;
     }
 
+    public Message getMessage(MessageDeserializer md) {
+      return message;
+    }
+
     public void setDestinationId(Id id) {
       this.id = id;
     }
@@ -945,6 +965,10 @@ public class PastRegrTest extends CommonAPITest {
     }
 
     public void setMessage(Message message) {
+      this.message = message;
+    }
+    
+    public void setMessage(RawMessage message) {
       this.message = message;
     }
   }

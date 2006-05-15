@@ -3,16 +3,16 @@
  */
 package rice.pastry.standard;
 
+import java.io.IOException;
 import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
-import rice.pastry.messaging.Address;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RoutingTable;
-import rice.pastry.security.PastrySecurityManager;
 import rice.selector.LoopObserver;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
@@ -154,12 +154,30 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   public final int RETRY_INTERVAL;
   
+  static class CJPDeserializer extends SJPDeserializer {
+    public CJPDeserializer(PastryNode pn) {
+      super(pn);
+    }
+
+    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+      switch(type) {
+        case ConsistentJoinMsg.TYPE:
+          return new ConsistentJoinMsg(buf,pn,(NodeHandle)sender);
+      }      
+      return super.deserialize(buf, type, priority, sender);
+    }
+  }
+  
+  public ConsistentJoinProtocol(PastryNode ln, NodeHandle lh,
+      RoutingTable rt, LeafSet ls) {
+    this(ln, lh, rt, ls, null);
+  }
   /**
    * Constructor takes in the usual suspects.
    */
   public ConsistentJoinProtocol(PastryNode ln, NodeHandle lh,
-      PastrySecurityManager sm, RoutingTable rt, LeafSet ls) {
-    super(ln, lh, sm, rt, ls);    
+      RoutingTable rt, LeafSet ls, MessageDeserializer md) {
+    super(ln, lh, rt, ls, md != null ? md : new CJPDeserializer(ln));    
     gotResponse = new WeakHashMap();
     failed = new Hashtable();
     observing = new HashSet();
@@ -176,7 +194,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     
     cleanupTask = new TimerTask() {    
       public void run() {
-        if (logger.level<=Logger.INFO)logger.log("CJP: Cleanup task.");
+        if (logger.level<=Logger.FINE)logger.log("CJP: Cleanup task.");
         synchronized(failed) {
           long now = thePastryNode.getEnvironment().getTimeSource().currentTimeMillis();
           long expiration = now-failedNodeExpirationTime;
@@ -235,8 +253,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @author Jeff Hoye
    */
   class RequestFromEveryoneMsg extends Message {
-    public RequestFromEveryoneMsg(Address dest) {
-      super(dest);
+    public RequestFromEveryoneMsg(int address) {
+      super(address);
     }    
   }
   
@@ -477,7 +495,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         toSend.add(tf.handle); 
       }
     }
-    nh.receiveMessage(new ConsistentJoinMsg(getAddress(),leafSet,toSend,!reply));      
+    nh.receiveMessage(new ConsistentJoinMsg(leafSet,toSend,!reply));      
   }
   
   public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {

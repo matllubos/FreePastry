@@ -1,10 +1,12 @@
 
 package rice.p2p.past;
 
-import java.io.Serializable;
+import java.io.*;
 
 import rice.*;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.past.rawserialization.RawPastContentHandle;
 
 /**
  * @(#) ContentHashPastContentHandle.java
@@ -14,8 +16,10 @@ import rice.p2p.commonapi.*;
  * @version $Id$
  * @author Peter Druschel
  */
-public class ContentHashPastContentHandle implements PastContentHandle {
-
+public class ContentHashPastContentHandle implements RawPastContentHandle {
+  public static final short TYPE = -12;
+  
+  
   // the node on which the content object resides
   private NodeHandle storageNode;
 
@@ -53,6 +57,21 @@ public class ContentHashPastContentHandle implements PastContentHandle {
    */
   public NodeHandle getNodeHandle() {
     return storageNode;
+  }
+
+  public ContentHashPastContentHandle(InputBuffer buf, Endpoint endpoint) throws IOException {
+    myId = endpoint.readId(buf, buf.readShort());
+    storageNode = endpoint.readNodeHandle(buf);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(myId.getType());
+    myId.serialize(buf);
+    storageNode.serialize(buf);
+  }
+  
+  public short getType() {
+    return TYPE; 
   }
 }
 

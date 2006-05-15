@@ -6,6 +6,8 @@ import java.lang.Comparable;
 import java.lang.ref.*;
 import java.util.*;
 
+import antlr.InputBuffer;
+
 import rice.environment.random.RandomSource;
 
 /**
@@ -21,6 +23,8 @@ import rice.environment.random.RandomSource;
  */
 public class Id implements rice.p2p.commonapi.Id {
 
+  public static final short TYPE = 1;
+  
   /**
    * Support for coalesced Ids - ensures only one copy of each Id is in memory
    */
@@ -108,6 +112,33 @@ public class Id implements rice.p2p.commonapi.Id {
   public static Id build(int material[]) {
     return resolve(ID_MAP, new Id(material));
   }
+  
+  /**
+   * Id (Version 0)
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * +   160 Bit                                                     +
+   * +                                                               +
+   * +                                                               +
+   * +                                                               +
+   * +                                                               +
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * @param buf
+   * @throws IOException
+   */
+  public static Id build(rice.p2p.commonapi.rawserialization.InputBuffer buf) throws IOException {
+    int[] material = new int[nlen];
+    for (int i = 0; i < material.length; i++) {
+      material[i] = buf.readInt();
+    }
+    return build(material);     
+  }
+  
+  public void serialize(rice.p2p.commonapi.rawserialization.OutputBuffer buf) throws IOException {
+    for (int i = 0; i < Id.length; i++) {
+      buf.writeInt(Id[i]);
+    }
+  }
+
   
   /**
    * Constructor, which takes the output of a toStringFull() and converts it back
@@ -1157,6 +1188,10 @@ public class Id implements rice.p2p.commonapi.Id {
         difference[i] = (int) sum;
       }
     }
+  }
+
+  public short getType() {
+    return TYPE;
   }
 }
 

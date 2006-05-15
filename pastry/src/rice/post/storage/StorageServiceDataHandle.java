@@ -6,8 +6,11 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.multiring.MultiringNodeHandle;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.past.gc.rawserialization.RawGCPastContentHandle;
 
 /**
  * This class is the class which serves a reference to objects stored in past.
@@ -15,7 +18,9 @@ import rice.p2p.past.gc.*;
  *
  * @version $Id$
  */
-class StorageServiceDataHandle implements GCPastContentHandle {
+class StorageServiceDataHandle implements RawGCPastContentHandle {
+  public static final short TYPE = 8;
+  
   
   // serialver for backwards compatibility
   private static final long serialVersionUID = -4110663990885843864L;
@@ -95,6 +100,31 @@ class StorageServiceDataHandle implements GCPastContentHandle {
    */
   public long getExpiration() {
     return expiration;
+  }
+
+  public short getType() {
+    return TYPE;
+  }
+
+  public StorageServiceDataHandle(InputBuffer buf, Endpoint endpoint) throws IOException {
+    timestamp = buf.readLong();
+    version = buf.readLong();
+    expiration = buf.readLong();
+
+    id = endpoint.readId(buf, buf.readShort());
+    
+    handle = endpoint.readNodeHandle(buf);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeLong(timestamp);
+    buf.writeLong(version);
+    buf.writeLong(expiration);
+    
+    buf.writeShort(id.getType());
+    id.serialize(buf);  
+    
+    handle.serialize(buf);
   }
 
 }

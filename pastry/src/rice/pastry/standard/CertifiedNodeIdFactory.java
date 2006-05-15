@@ -52,7 +52,7 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
    *
    * @return the new nodeId
    */
-  public NodeId generateNodeId() {
+  public Id generateNodeId() {
     XMLObjectInputStream xois = null;
     try {
       File f = new File(NODE_ID_FILENAME);
@@ -66,7 +66,7 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
       
       if (f.exists()) {
         xois = new XMLObjectInputStream(new FileInputStream(f));
-        return (NodeId) xois.readObject();
+        return (Id) xois.readObject();
       } else {
         if (logger.level <= Logger.WARNING) logger.log(
           "Unable to find NodeID certificate - exiting.");
@@ -95,7 +95,7 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
    * @param file The location to write the certificate to
    * @param key The private key to use to sign the result
    */
-  public static void generateCertificate(NodeId id, OutputStream os, PrivateKey key) {
+  public static void generateCertificate(Id id, OutputStream os, PrivateKey key) {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       XMLObjectOutputStream xoos = new XMLObjectOutputStream(baos);
@@ -131,7 +131,9 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
     
     KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(st.sval.getBytes())));
           
-    generateCertificate(new RandomNodeIdFactory(new Environment()).generateNodeId(), new FileOutputStream(new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME)), caPair.getPrivate());
+    Environment env = new Environment();
+    generateCertificate(new RandomNodeIdFactory(env).generateNodeId(), new FileOutputStream(new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME)), caPair.getPrivate());
+    env.destroy();
   }
   
   public static String getArg(String[] args, String argType) {

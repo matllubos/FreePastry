@@ -2,6 +2,7 @@
 package rice.p2p.multiring;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 import java.io.*;
 import java.util.*;
@@ -101,7 +102,7 @@ public class MultiringNodeHandle extends NodeHandle implements Observer  {
    * @return A string
    */
   public String toString() {
-    return "{MNH " + handle.toString() + "}";
+    return "{MNH " + handle.toString() +"@"+ringId+"}";
   }
   
   /**
@@ -148,6 +149,18 @@ public class MultiringNodeHandle extends NodeHandle implements Observer  {
    */
   public boolean checkLiveness() {
     return handle.checkLiveness();
+  }
+
+  public MultiringNodeHandle(InputBuffer buf, Endpoint endpoint) throws IOException {
+    ringId = endpoint.readId(buf, buf.readShort());
+    handle = endpoint.readNodeHandle(buf);
+    handle.addObserver(this);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort(ringId.getType());
+    ringId.serialize(buf);
+    handle.serialize(buf);
   }
 }
 

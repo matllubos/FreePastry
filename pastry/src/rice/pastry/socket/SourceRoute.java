@@ -6,6 +6,8 @@ import java.lang.ref.*;
 import java.net.*;
 import java.util.*;
 
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
@@ -16,7 +18,7 @@ import rice.pastry.messaging.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class SourceRoute implements Serializable {
+public class SourceRoute extends PRawMessage implements Serializable {
   
   // serialver, for backward compatibility
   private static final long serialVersionUID = -4402277039316685149L;
@@ -27,6 +29,8 @@ public class SourceRoute implements Serializable {
   // the default distance, which is used before a ping
   protected EpochInetSocketAddress[] path;
 
+  public static final short TYPE = 1;
+  
   /**
    * Constructor
    *
@@ -34,6 +38,7 @@ public class SourceRoute implements Serializable {
    * @param address DESCRIBE THE PARAMETER
    */
   private SourceRoute(EpochInetSocketAddress[] path) {
+    super(0);
     this.path = path;
   }  
 
@@ -301,6 +306,35 @@ public class SourceRoute implements Serializable {
     
     return SourceRoute.build(result);
   }
+
+  /***************** Raw Serialization ***************************************/  
+  public short getType() {
+    return TYPE;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version    
+    buf.writeInt(path.length);
+    for (int i = 0; i < path.length; i++) {
+      path[i].serialize(buf);
+    }        
+  }
+  
+  public static SourceRoute build(InputBuffer buf) throws IOException {
+    byte version = buf.readByte();
+    switch(version) {
+      case 0:
+        int numInPath = buf.readInt();
+        EpochInetSocketAddress[] path = new EpochInetSocketAddress[numInPath];
+        for (int i = 0; i < numInPath; i++) {
+          path[i] = EpochInetSocketAddress.build(buf);
+        }    
+        return new SourceRoute(path);
+      default:
+        throw new IOException("Unknown Version: "+version);
+    }     
+  }
+  
 }
 
 

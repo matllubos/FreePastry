@@ -4,7 +4,6 @@ import rice.pastry.*;
 import rice.pastry.client.*;
 import rice.pastry.routing.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 import rice.pastry.direct.*;
 
 import java.util.*;
@@ -20,24 +19,18 @@ import java.util.*;
  */
 
 public class Ping extends PastryAppl {
-  private static Address pingAddress = new PingAddress();
-
-  private Credentials pingCred = new PermissiveCredentials();
+  private static int pingAddress = PingAddress.getCode();
 
   public Ping(PastryNode pn) {
     super(pn);
   }
 
-  public Address getAddress() {
+  public int getAddress() {
     return pingAddress;
   }
 
-  public Credentials getCredentials() {
-    return pingCred;
-  }
-
-  public void sendPing(NodeId nid) {
-    routeMsg(nid, new PingMessageNew(pingAddress, getNodeHandle(), nid), pingCred,
+  public void sendPing(Id nid) {
+    routeMsg(nid, new PingMessageNew(pingAddress, getNodeHandle(), nid), 
         new SendOptions());
   }
 

@@ -1,8 +1,12 @@
 
 package rice.p2p.commonapi;
 
+import java.io.IOException;
+
 import rice.*;
 import rice.environment.Environment;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * @(#) Endpoint.java
@@ -16,7 +20,7 @@ import rice.environment.Environment;
  * @author Alan Mislove
  * @author Peter Druschel
  */
-public interface Endpoint {
+public interface Endpoint extends NodeHandleReader {
 
   /**
    * Returns this node's id, which is its identifier in the namespace.
@@ -38,6 +42,14 @@ public interface Endpoint {
    * @param hint The first node to send this message to, optional
    */
   void route(Id id, Message message, NodeHandle hint);
+
+  /**
+   * Same as the other call, but uses the Raw serialization rather than java serialization.
+   * @param id
+   * @param message
+   * @param hint
+   */
+  void route(Id id, RawMessage message, NodeHandle hint);
 
   /**
    * This call produces a list of nodes that can be used as next hops on a route towards
@@ -180,6 +192,58 @@ public interface Endpoint {
    * @return the environment for this node/app.
    */
   public Environment getEnvironment();
+
+  /**
+   * Set's the acceptor for this application.  If no acceptor is set, then when a remote
+   * node's application opens a socket here, they will get an *Exception*
+   *
+   * @param receiver calls receiveSocket() when a new AppSocket is opened to this application
+   * from a remote node.
+   * Note that you must call accept() again after each socket is received to properly handle
+   * socket backlogging
+   */
+  public void accept(AppSocketReceiver receiver);
+
+  /**
+   * Opens a connection to this application on a remote node.
+   * If no acceptor is set, then receiver will get an *Exception*
+   *
+   * @param receiver calls receiveSocket() when a new AppSocket is opened to this application
+   * on a remote node.
+   */
+  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout);
+  
+  /**
+   * To use a more efficient serialization format than Java Serialization
+   * 
+   * @param md
+   */
+  public void setDeserializer(MessageDeserializer md);
+  
+  /**
+   * Returns the deserializer.  The default deserializer can deserialize rice.p2p.util.JavaSerializedMessage
+   * @return
+   */
+  public MessageDeserializer getDeserializer();
+  
+  /**
+   * To use a more efficient serialization format than Java Serialization
+   * 
+   * @param md
+   */
+  public Id readId(InputBuffer buf, short type) throws IOException;
+
+  /**
+   * To use Raw Serialization
+   * @param buf
+   * @return
+   * @throws IOException 
+   */
+  public IdRange readIdRange(InputBuffer buf) throws IOException;
+  
+  public NodeHandleSet readNodeHandleSet(InputBuffer buf, short type) throws IOException;
+  
+  public void register();
 }
 
 

@@ -61,12 +61,13 @@ public class MyScribeClient implements ScribeClient, Application {
    */
   public MyScribeClient(Node node) {
     // you should recognize this from lesson 3
-    this.endpoint = node.registerApplication(this, "myinstance");
+    this.endpoint = node.buildEndpoint(this, "myinstance");
     // construct Scribe
     myScribe = new ScribeImpl(node,"lesson6instance");
     // construct the topic
     myTopic = new Topic(new PastryIdFactory(node.getEnvironment()), "example topic");
     System.out.println("myTopic = "+myTopic);
+    endpoint.register();
   }
   
   /**
@@ -154,8 +155,8 @@ public class MyScribeClient implements ScribeClient, Application {
   }
 
   class PublishContent implements Message {
-    public int getPriority() {
-      return 0;
+    public byte getPriority() {
+      return MAX_PRIORITY;
     }
   }
 

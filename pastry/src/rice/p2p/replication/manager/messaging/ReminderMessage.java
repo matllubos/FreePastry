@@ -33,7 +33,7 @@ public class ReminderMessage implements Message {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return MEDIUM_PRIORITY;
   }
   

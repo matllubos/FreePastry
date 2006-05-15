@@ -21,7 +21,7 @@ public class InitiatePingNeighbor extends Message implements Serializable {
    */
 
   public InitiatePingNeighbor() {
-    super(new LeafSetProtocolAddress());
+    super(LeafSetProtocolAddress.getCode());
   }
 
 }

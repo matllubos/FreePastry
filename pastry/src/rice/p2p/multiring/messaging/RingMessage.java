@@ -1,9 +1,14 @@
 
 package rice.p2p.multiring.messaging;
 
+import java.io.IOException;
+import java.util.Hashtable;
+
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.*;
 import rice.p2p.scribe.*;
+import rice.p2p.util.JavaSerializedMessage;
 
 /**
  * @(#) RingMessage.java
@@ -14,12 +19,14 @@ import rice.p2p.scribe.*;
  *
  * @author Alan Mislove
  */
-public class RingMessage implements Message, ScribeContent {
+public class RingMessage implements ScribeContent {
   
   // serialver for backward compatibility
   private static final long serialVersionUID = -7097995807488121199L;
 
-  /**
+  public static final short TYPE = 1;
+
+  /** 
    * The target of this ring message
    */
   protected RingId id;
@@ -27,7 +34,7 @@ public class RingMessage implements Message, ScribeContent {
   /**
    * The internal message to be sent
    */
-  protected Message message;
+  protected RawMessage message;
   
   /**
    * The name of the application which sent this message
@@ -41,7 +48,11 @@ public class RingMessage implements Message, ScribeContent {
    * @param source The source address
    * @param dest The destination address
    */
-  public RingMessage(RingId id, Message message, String application) {
+//  public RingMessage(RingId id, Message message, String application) {
+//    this(id, message instanceof RawMessage ? (RawMessage) message : new JavaSerializedMessage(message), application);
+//  }
+//  
+  public RingMessage(RingId id, RawMessage message, String application) {
     this.id = id;
     this.message = message;
     this.application = application;
@@ -58,7 +69,7 @@ public class RingMessage implements Message, ScribeContent {
    *
    * @return This message's priority
    */
-  public int getPriority() {
+  public byte getPriority() {
     return message.getPriority();
   }
 
@@ -76,7 +87,7 @@ public class RingMessage implements Message, ScribeContent {
    *
    * @return The internal message of this message
    */
-  public Message getMessage() {
+  public RawMessage getMessage() {
     return message;
   }
 
@@ -88,5 +99,51 @@ public class RingMessage implements Message, ScribeContent {
   public String getApplication() {
     return application;
   }
+
+  public short getType() {
+    return TYPE;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    id.serialize(buf);
+    buf.writeUTF(application);
+    buf.writeShort(message.getType());
+    buf.writeByte(message.getPriority());
+//    message.getSender().seria
+    message.serialize(buf);
+  }
+  
+  /**
+   * TODO: This can probably be done more efficiently, IE, deserialize the message on getMessage().  Can do that later.
+   * @param buf
+   * @param endpoint
+   * @param md
+   * @param sender
+   * @param priority
+   * @throws IOException
+   */
+  public RingMessage(InputBuffer buf, Endpoint ringEndpoint, Hashtable endpoints) throws IOException {
+    id = new RingId(buf, ringEndpoint);
+    application = buf.readUTF();
+
+    // this code finds the proper deserializer
+    Endpoint endpoint = (Endpoint)endpoints.get(application);
+    if (endpoint == null) {
+      throw new IOException("Couldn't find application:"+application); 
+    }
+    MessageDeserializer md = endpoint.getDeserializer();
+    
+    short type = buf.readShort();
+    byte priority = buf.readByte();
+    // Jeff - 3/31/06 not sure if this is the correct decision, but I don't know how to get the sender
+//    NodeHandle sender = endpoint.readNodeHandle(buf);
+    Message m = md.deserialize(buf, type, priority, null);
+    if (type == 0) {
+      message = new JavaSerializedMessage(m);
+    } else {
+      message = (RawMessage)m; 
+    }
+  }
+  
 }
 

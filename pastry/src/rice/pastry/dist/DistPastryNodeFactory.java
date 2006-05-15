@@ -241,7 +241,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @param nodeId DESCRIBE THE PARAMETER
    * @return DESCRIBE THE RETURN VALUE
    */
-  public abstract PastryNode newNode(NodeHandle bootstrap, NodeId nodeId);
+  public abstract PastryNode newNode(NodeHandle bootstrap, Id nodeId);
   
   /**
    * Generates a new pastry node with the specified NodeId using the bootstrap
@@ -251,7 +251,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * @param nodeId DESCRIBE THE PARAMETER
    * @return DESCRIBE THE RETURN VALUE
    */
-  public abstract PastryNode newNode(NodeHandle bootstrap, NodeId nodeId, InetSocketAddress proxy);
+  public abstract PastryNode newNode(NodeHandle bootstrap, Id nodeId, InetSocketAddress proxy);
   
   /** 
    * Generates a new pastry node with the specified NodeId using the bootstrap

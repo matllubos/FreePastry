@@ -1,9 +1,10 @@
 package rice.pastry;
 
 import java.util.*;
-import java.io.Serializable;
+import java.io.*;
 
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * Represents an ordered set of NodeHandles. *
@@ -15,6 +16,8 @@ import rice.environment.random.RandomSource;
 
 public class NodeSet implements NodeSetI, Serializable {
 
+  public static final short TYPE = 1;
+  
   static final long serialVersionUID = 4410658508346287677L;
   
   private Vector set;
@@ -80,7 +83,7 @@ public class NodeSet implements NodeSetI, Serializable {
    *         found.
    */
 
-  public NodeHandle get(NodeId nid) {
+  public NodeHandle get(Id nid) {
     NodeHandle h;
 
     try {
@@ -132,7 +135,7 @@ public class NodeSet implements NodeSetI, Serializable {
    * @return the node handle removed or null if nothing.
    */
 
-  public NodeHandle remove(NodeId nid) {
+  public NodeHandle remove(Id nid) {
     try {
       return (NodeHandle) set.remove(getIndex(nid));
     } catch (Exception e) {
@@ -157,7 +160,7 @@ public class NodeSet implements NodeSetI, Serializable {
    * @return the index or -1 if no such element
    */
 
-  public int getIndex(NodeId nid) {
+  public int getIndex(Id nid) {
     return getIndexId(nid);
   }
 
@@ -314,7 +317,7 @@ public class NodeSet implements NodeSetI, Serializable {
    *         found.
    */
   public rice.p2p.commonapi.NodeHandle getHandle(rice.p2p.commonapi.Id id) {
-    return getHandle((NodeId) id);
+    return getHandle(id);
   }
 
   /**
@@ -346,7 +349,7 @@ public class NodeSet implements NodeSetI, Serializable {
    * @return the node handle removed or null if nothing.
    */
   public rice.p2p.commonapi.NodeHandle removeHandle(rice.p2p.commonapi.Id id) {
-    return remove((NodeId) id);
+    return remove((rice.pastry.Id) id);
   }
 
   /**
@@ -358,12 +361,32 @@ public class NodeSet implements NodeSetI, Serializable {
    */
   public int getIndexHandle(rice.p2p.commonapi.Id id)
       throws NoSuchElementException {
-    return getIndex((NodeId) id);
+    return getIndex((Id)id);
   }
   
   public Iterator iterator() {
     return set.iterator(); 
   }
 
+  public NodeSet(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+    short numNodes = buf.readShort();
+    set = new Vector(numNodes);
+    for (int i = 0; i < numNodes; i++) {
+      set.add(nhf.readNodeHandle(buf)); 
+    }
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeShort((short)set.size());
+    Iterator i = set.iterator();
+    while(i.hasNext()) {
+      NodeHandle nh = (NodeHandle)i.next();
+      nh.serialize(buf);
+    }
+  }  
+  
+  public short getType() {
+    return TYPE; 
+  }
 }
 

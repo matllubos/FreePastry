@@ -94,7 +94,7 @@ public class TestHarness implements Application, ScribeClient {
   public TestHarness(PastryNode pn) {
     factory = new PastryIdFactory(pn.getEnvironment());
     logger = pn.getEnvironment().getLogManager().getLogger(TestHarness.class,"monkey");
-    endpoint = pn.registerApplication(this, "monkey");
+    endpoint = pn.buildEndpoint(this, "monkey");
     _pastryNode = pn;
     _tests = new Hashtable();
     _files = new Hashtable();
@@ -109,6 +109,7 @@ public class TestHarness implements Application, ScribeClient {
     } catch (java.net.UnknownHostException uhe) {
       if (logger.level <= Logger.WARNING) logger.logException("", uhe);
     }
+    endpoint.register();
   }
   String hostname;
 

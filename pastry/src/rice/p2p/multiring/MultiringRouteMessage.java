@@ -2,6 +2,7 @@
 package rice.p2p.multiring;
 
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 import java.io.*;
 
@@ -74,6 +75,10 @@ public class MultiringRouteMessage implements RouteMessage {
     return message.getMessage();
   }
   
+  public Message getMessage(MessageDeserializer md) throws IOException {
+    return message.getMessage(md);
+  }
+  
   /**
     * Sets the destination Id for this message
    *
@@ -98,6 +103,17 @@ public class MultiringRouteMessage implements RouteMessage {
    * @param message The internal message
    */
   public void setMessage(Message message) {
+    if (message instanceof RawMessage) {
+      setMessage((RawMessage)message); 
+    } else {
+      this.message.setMessage(message); 
+    }
+  }
+  
+  /**
+   * Better performance.
+   */
+  public void setMessage(RawMessage message) {
     this.message.setMessage(message); 
   }
   

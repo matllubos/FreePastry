@@ -24,6 +24,7 @@ public interface NetworkListener {
   public static int REASON_ACC_NORMAL = 3;
   public static int REASON_ACC_SR = 4;
   public static int REASON_ACC_BOOTSTRAP = 5;
+  public static int REASON_APP_SOCKET_NORMAL = 6;
   
   public void channelOpened(InetSocketAddress addr, int reason);
   public void channelClosed(InetSocketAddress addr);

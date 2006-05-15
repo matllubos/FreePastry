@@ -1,13 +1,17 @@
 
 package rice.pastry.socket;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 
 import rice.environment.logging.Logger;
-import rice.pastry.NodeId;
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
+import rice.pastry.Id;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
+import rice.pastry.socket.SocketBuffer.SocketDataInputStream;
 import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
 
 /**
@@ -41,7 +45,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @param nodeId This node handle's node Id.
    * @param address DESCRIBE THE PARAMETER
    */
-  public SocketNodeHandle(EpochInetSocketAddress address, NodeId nodeId) {
+  public SocketNodeHandle(EpochInetSocketAddress address, Id nodeId) {
     super(nodeId, address.getAddress());
     
     this.eaddress = address;    
@@ -77,6 +81,15 @@ public class SocketNodeHandle extends DistNodeHandle {
         return spn.getSocketSourceRouteManager().getLiveness(getEpochAddress());
       }
     }
+  }
+  
+  /**
+   * You can call this method if the node shuts down nicely.  This will cause it to be removed
+   * from the leafset.  Improves the performance of consistency.
+   */
+  public void markDeadForever() {
+    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+    spn.getSocketSourceRouteManager().getAddressManager(getEpochAddress(), false).markDeadForever();
   }
   
   /**
@@ -119,6 +132,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     
 //    Runnable runnable = new Runnable() {    
 //      public void run() {
+    try {
         if (spn.getNodeId().equals(nodeId)) {
           //debug("Sending message " + msg + " locally");
           spn.receiveMessage(msg);
@@ -127,6 +141,10 @@ public class SocketNodeHandle extends DistNodeHandle {
               "Passing message " + msg + " to the socket controller for writing");
           spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
         }
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe); 
+    }
+        
 //      }    
 //    };
 //
@@ -147,7 +165,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    *
    * @param msg the bootstrap message.
    */
-  public void bootstrap(Message msg) {
+  public void bootstrap(Message msg) throws IOException {
     ((SocketPastryNode) getLocalNode()).getSocketSourceRouteManager().bootstrap(getEpochAddress(), msg);
   }
     
@@ -298,7 +316,7 @@ public class SocketNodeHandle extends DistNodeHandle {
       }
   }
 
-  public void setNodeId(NodeId nodeId) {
+  public void setNodeId(Id nodeId) {
     this.nodeId = nodeId;    
   }
   
@@ -306,6 +324,35 @@ public class SocketNodeHandle extends DistNodeHandle {
     localnode = spn; 
     this.logger = spn.getEnvironment().getLogManager().getLogger(getClass(),null);
   }
+  
+  /**
+   * Note, this SNH needs to be coalesced!!!
+   * @param buf
+   * @return
+   */
+  static SocketNodeHandle build(InputBuffer buf) throws IOException {
+//    NodeHandle (Version 0)
+//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//    + Epoch InetSocketAddress                                       +
+//    +                                                               +           
+//    +                                                               +           
+//    +                                                               +           
+//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//    +   Id                                                          +
+//    +                                                               +
+//    +                                                               +
+//    +                                                               +
+//    +                                                               +
+//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    EpochInetSocketAddress eaddr = EpochInetSocketAddress.build(buf);
+    Id nid = Id.build(buf);
+    return new SocketNodeHandle(eaddr, nid);
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    eaddress.serialize(buf);
+    nodeId.serialize(buf);
+  }  
 }
 
 

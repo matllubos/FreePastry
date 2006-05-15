@@ -1,6 +1,7 @@
 
 package rice.p2p.replication;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.logging.*;
 
@@ -10,6 +11,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.replication.ReplicationPolicy.*;
 import rice.p2p.replication.messaging.*;
 import rice.p2p.util.*;
@@ -108,7 +110,23 @@ public class ReplicationImpl implements Replication, Application {
     this.factory = node.getIdFactory();
     this.policy = policy;
     this.instance = instance;
-    this.endpoint = node.registerApplication(this, instance);
+    this.endpoint = node.buildEndpoint(this, instance);
+    
+    endpoint.setDeserializer(new MessageDeserializer() {
+    
+      public Message deserialize(InputBuffer buf, short type, byte priority,
+          NodeHandle sender) throws IOException {
+        switch(type) {
+          case RequestMessage.TYPE:
+            return RequestMessage.build(buf, endpoint);
+          case ResponseMessage.TYPE:
+            return ResponseMessage.build(buf, endpoint);
+        }
+        throw new IllegalArgumentException("Unknown type:"+type);
+      }
+    
+    });
+    
     
     if (this.policy == null)
       this.policy = new DefaultReplicationPolicy();
@@ -120,7 +138,8 @@ public class ReplicationImpl implements Replication, Application {
   //  log.getHandlers()[0].setLevel(Level.FINER);
     
     if (logger.level <= Logger.FINER) logger.log("Starting up ReplicationImpl with client " + client + " and factor " + replicationFactor);
-    
+
+    endpoint.register();
     // inject the first reminder message, which will cause the replication to begin
     // and the next maintenance message to be scheduled
     endpoint.scheduleMessage(new ReminderMessage(handle), environment.getRandomSource().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
@@ -256,8 +275,18 @@ public class ReplicationImpl implements Replication, Application {
         public void receiveResult(Object o) {
           Object[] array = (Object[]) o;
           IdSet[] result = new IdSet[array.length];
-          System.arraycopy(array, 0, result, 0, array.length);
-          
+          if ((array.length > 0) && (array[0] instanceof Throwable)) {
+            if (logger.level <= Logger.SEVERE) logger.logException("Errors in Multicontinuation:",(Throwable)array[0]);
+          } else {
+            try {
+              System.arraycopy(array, 0, result, 0, array.length);
+            } catch (ArrayStoreException ase) {
+              if (array.length > 0) {
+                if (logger.level <= Logger.SEVERE) logger.logException("Error copying "+array[0].getClass().getName()+":"+array.length,ase);            
+                throw ase;
+              }
+            }
+          }            
           if (logger.level <= Logger.FINE) logger.log( "COUNT: Telling node " + rm.getSource() + " to fetch");
           endpoint.route(null, new ResponseMessage(handle, rm.getRanges(), result), rm.getSource());
         }
@@ -279,7 +308,13 @@ public class ReplicationImpl implements Replication, Application {
       ResponseMessage rm = (ResponseMessage) message;
       
       for (int i=0; i<rm.getIdSets().length; i++) {
-        IdSet fetch = policy.difference(client.scan(rm.getRanges()[i]), rm.getIdSets()[i], factory);
+        IdSet temp = factory.buildIdSet();
+        Id[] tempA = rm.getIdSets()[i];
+        for (int j = 0; j < tempA.length; j++) {
+          temp.addId(tempA[j]); 
+        }
+        
+        IdSet fetch = policy.difference(client.scan(rm.getRanges()[i]), temp, factory);
         
         if (logger.level <= Logger.FINE) logger.log( "COUNT: Was told to fetch " + fetch.numElements() + " in instance " + instance);
 

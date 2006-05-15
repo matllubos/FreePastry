@@ -3,6 +3,8 @@ package rice.p2p.commonapi;
 
 import java.io.*;
 
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+
 /**
  * @(#) IdRange.java
  *
@@ -71,6 +73,8 @@ public interface IdRange extends Serializable {
    * @return Whether or not this range is empty
    */
   public boolean isEmpty();
+  
+  public void serialize(OutputBuffer buf) throws IOException;
 }
 
 

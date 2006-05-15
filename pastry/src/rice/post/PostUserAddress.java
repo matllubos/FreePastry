@@ -1,7 +1,10 @@
 package rice.post;
 
+import java.io.IOException;
+
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
 
 /**
  * This class represents the abstract notion of the address
@@ -11,6 +14,8 @@ import rice.p2p.commonapi.*;
  */
 public class PostUserAddress extends PostEntityAddress {
 
+  public static final short TYPE = 2;
+  
   // serialver for backward compatibility
   static final long serialVersionUID = -5468003419549068547L;
   
@@ -62,4 +67,24 @@ public class PostUserAddress extends PostEntityAddress {
   public int hashCode() {
     return name.hashCode();
   }
+  
+  public PostUserAddress(InputBuffer buf, Endpoint endpoint) throws IOException {
+    address = endpoint.readId(buf, buf.readShort()); 
+    name = buf.readUTF();
+  }
+  
+  /**
+   * Note that the TYPE is read in PostEntityAddress.build()
+   */
+  public void serialize(OutputBuffer buf) throws IOException {
+    
+    buf.writeShort(address.getType());
+    address.serialize(buf); 
+    
+    buf.writeUTF(name);
+  }
+
+  public short getType() {
+    return TYPE;
+  }  
 }

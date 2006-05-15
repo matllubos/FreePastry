@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.NetworkListener;
 import rice.pastry.socket.SocketCollectionManager.SourceRouteManager;
 
@@ -75,20 +76,20 @@ public class SocketChannelRepeater {
    * @param address The final address of the source route
    * @return The entire header
    */
-  public static byte[] encodeHeader(EpochInetSocketAddress address) {
-    try {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      DataOutputStream dos = new DataOutputStream(baos);
-      dos.write(address.getAddress().getAddress().getAddress());
-      dos.writeInt(address.getAddress().getPort());
-      dos.writeLong(address.getEpoch());
-      dos.flush();
-      
-      return baos.toByteArray();
-    } catch (IOException canthappen) {
-      throw new RuntimeException("PANIC: SHOULDN'T HAPPEN " + canthappen, canthappen);
-    }
-  }
+//  public static void encodeHeader(EpochInetSocketAddress address, OutputBuffer dos) {
+//    try {
+////      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+////      DataOutputStream dos = new DataOutputStream(baos);
+//      dos.write(address.getAddress().getAddress().getAddress(), 0, 4); 
+//      dos.writeInt(address.getAddress().getPort());
+//      dos.writeLong(address.getEpoch());
+////      dos.flush();
+//      
+////      return baos.toByteArray();
+//    } catch (IOException canthappen) {
+//      throw new RuntimeException("PANIC: SHOULDN'T HAPPEN " + canthappen, canthappen);
+//    }
+//  }
   
   /**
    * Method which can be used to decode the necessary header for the 

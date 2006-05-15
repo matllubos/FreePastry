@@ -2,7 +2,6 @@ package rice.pastry.join;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.security.*;
 
 import java.io.*;
 import java.util.*;
@@ -25,15 +24,14 @@ public class InitiateJoin extends Message implements Serializable {
    */
 
   public InitiateJoin(NodeHandle nh) {
-    super(new JoinAddress());
-	handle = new NodeHandle[1];
+    this((NodeHandle[])null);
+  	handle = new NodeHandle[1];
     handle[0] = nh;
   }
 
 
   public InitiateJoin(NodeHandle[] nh) {
-    super(new JoinAddress());
-
+    this(null, nh);
     handle = nh;
   }
 
@@ -47,39 +45,7 @@ public class InitiateJoin extends Message implements Serializable {
    */
 
   public InitiateJoin(Date stamp, NodeHandle[] nh) {
-    super(new JoinAddress(), stamp);
-
-    handle = nh;
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param jh a handle of the node trying to join the network.
-   * @param cred the credentials
-   * 
-   * @param nh the node handle that the join will begin from.
-   */
-
-  public InitiateJoin(Credentials cred, NodeHandle[] nh) {
-    super(new JoinAddress(), cred);
-
-    handle = nh;
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param jh a handle of the node trying to join the network.
-   * @param cred the credentials
-   * @param stamp the timestamp
-   * 
-   * @param nh the node handle that the join will begin from.
-   */
-
-  public InitiateJoin(Credentials cred, Date stamp, NodeHandle[] nh) {
-    super(new JoinAddress(), cred, stamp);
-
+    super(JoinAddress.getCode(), stamp);
     handle = nh;
   }
 
@@ -90,7 +56,6 @@ public class InitiateJoin extends Message implements Serializable {
    * 
    * @return the handle.
    */
-
   public NodeHandle getHandle() {
     for (int i = 0; i < handle.length; i++) {
       if (handle[i].isAlive()) return handle[i];

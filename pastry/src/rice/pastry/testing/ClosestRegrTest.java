@@ -2,18 +2,9 @@
 package rice.pastry.testing;
 
 import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.environment.params.simple.SimpleParameters;
-import rice.environment.time.simulated.DirectTimeSource;
 import rice.pastry.*;
 import rice.pastry.direct.*;
 import rice.pastry.standard.*;
-import rice.pastry.join.*;
-import rice.pastry.client.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.routing.*;
-import rice.pastry.leafset.*;
 
 import java.io.*;
 import java.util.*;

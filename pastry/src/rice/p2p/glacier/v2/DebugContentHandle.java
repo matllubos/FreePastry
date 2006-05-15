@@ -2,9 +2,10 @@ package rice.p2p.glacier.v2;
 
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.past.gc.rawserialization.RawGCPastContentHandle;
 import rice.p2p.commonapi.*;
 
-public class DebugContentHandle implements PastContentHandle, GCPastContentHandle {
+public class DebugContentHandle implements GCPastContentHandle {
   protected Id myId;
   protected rice.p2p.commonapi.NodeHandle myNodeHandle;
   protected long myExpiration;

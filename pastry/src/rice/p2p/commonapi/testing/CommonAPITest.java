@@ -162,6 +162,7 @@ public abstract class CommonAPITest {
     
       System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId());
     }
+    if (logger.level <= Logger.INFO) logger.log(((PastryNode)nodes[0]).getLeafSet().toString());
   }
   
   /**

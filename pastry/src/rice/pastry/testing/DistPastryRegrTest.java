@@ -4,19 +4,10 @@ import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.dist.*;
 import rice.pastry.standard.*;
-import rice.pastry.join.*;
-import rice.pastry.client.*;
-import rice.pastry.messaging.*;
-import rice.pastry.security.*;
-import rice.pastry.routing.*;
-import rice.pastry.leafset.*;
 
 import java.util.*;
 import java.io.IOException;
 import java.net.*;
-import java.rmi.Naming;
-import java.rmi.RMISecurityManager;
-import java.rmi.RemoteException;
 
 /**
  * a regression test suite for pastry with "distributed" nodes. All nodes are on
