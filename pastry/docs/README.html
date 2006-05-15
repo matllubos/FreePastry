@@ -5,7 +5,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 1.4.4,&nbsp; 28 April 2006.
+Release 2.0beta,&nbsp; 15 May 2006.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -115,6 +115,23 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.4.2+. The software was
 developed using Sun's SDK, version 1.4.2_03+
+<h3>Changes since release 1.4.4</h3>
+<ul>
+  <li>Elimination of Java Serialization.  Is reverse compatible with the <i>code</i> of previous version, but the protocol is not reverse compatible.  Your application needs to implement rice.p2p.commonapi.rawserialization.RawMessage to gain the benefits of non-java serialziation.</li>
+  <li>See <a href="ProtocolSpec.txt">docs/ProtocolSpec.txt</a> for the definition of the protocol.  Now FP can be ported to other languages...</li>
+  <li>Application level sockets.  Applications can now use their own socket which will be properly source-routed.  This allows applications to handle their own end-to-end communication for large messages and flow control.  See rice.tutorial.appsocket for an example of how to use this feature.</li>
+  <li>Application and Endpoint can be registered later to remove implicit registration that caused synchronization bugs during startup.  In other words, Node.registerApplication() was replaced with buildEndpoint() and you must call Endpoint.register() after you application has initialized its member variables.</li>
+  <li>Various other improvements.</li>
+</ul>
+
+<h3>Limitations of the beta.</h3>
+<ul>
+  <li>Needs profiling.</li>
+  <li>Protocol may still change slightly.</li>
+  <li>No documentation or tutorial for how to use Raw Serialization or Application level Sockets.</li>
+</ul>
+
+
 <h3>Changes since release 1.4.3_02</h3>
 <ul>
   <li>Numerous bug fixes.</li>
