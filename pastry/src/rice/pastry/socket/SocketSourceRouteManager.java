@@ -1120,6 +1120,7 @@ public class SocketSourceRouteManager {
        * @param proximity The proximity
        */
       protected void markProximity(int proximity) {
+        if (proximity < 0) throw new IllegalArgumentException("proximity must be >= 0, was:"+proximity);
         if (this.proximity > proximity) 
           this.proximity = proximity;
       }

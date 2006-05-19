@@ -166,10 +166,16 @@ public class SocketChannelRepeater {
       if (read == -1) 
         throw new IOException("Error on read - the channel has been closed.");
 
-      if (headerBuffer.remaining() == 0) 
+      if (headerBuffer.remaining() == 0) {
         processHeaderBuffer();
-      else 
+        ByteBuffer buffer = getBuffer(sc, true);
+        buffer.put(SocketCollectionManager.PASTRY_MAGIC_NUMBER);
+        buffer.put(new byte[4]); // version 0
+        buffer.flip();
+        return true;
+      } else {
         return false;
+      }
     }
     
     ByteBuffer buffer = getBuffer(sc, true);

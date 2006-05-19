@@ -314,6 +314,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * Handle the CJM as in the MSR-TR
    */
   public void receiveMessage(Message msg) {
+    if (logger.level <= Logger.FINER) logger.log("CJP: receiveMessage("+msg+")");
     if (msg instanceof ConsistentJoinMsg) {
       ConsistentJoinMsg cjm = (ConsistentJoinMsg)msg;
       // identify node j, the sender of the message

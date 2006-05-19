@@ -33,7 +33,7 @@ public class ConsistencyPLTest /*implements Observer*/ {
 
   public static String BOOTPREFIX = "ricepl-1";
   public static String BOOTNODE = "ricepl-1.cs.rice.edu";
-  public static String ALT_BOOTNODE = "ricepl-2.cs.rice.edu";
+  public static String ALT_BOOTNODE = "ricepl-3.cs.rice.edu";
   public static final int BASE_DELAY = 30000;
   public static final int RND_DELAY = 500000;
   
@@ -264,10 +264,10 @@ public class ConsistencyPLTest /*implements Observer*/ {
       boots[3] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.umass.edu"), startPort);
       boots[4] = new InetSocketAddress(InetAddress.getByName("planet1.scs.cs.nyu.edu"), startPort);
       boots[5] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.cornell.edu"), startPort);
-                                                        
       
       PartitionHandler ph = new PartitionHandler(node, (DistPastryNodeFactory)factory, boots);
-
+      ph.start(node.getEnvironment().getSelectorManager().getTimer());
+      
       Thread shutdownHook = new Thread() {
         public void run() { System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node); }
       };

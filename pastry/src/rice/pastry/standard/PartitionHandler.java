@@ -34,7 +34,9 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   Environment env;
   
   // XXX think about multiring
-  
+  /**
+   * You must call start after construction!!!
+   */
   public PartitionHandler(PastryNode pn, DistPastryNodeFactory factory, InetSocketAddress[] bootstraps) {
     pastryNode = pn;
     this.factory = factory;

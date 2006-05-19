@@ -139,7 +139,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     this.sockets = new Hashtable();
     this.sourceRouteQueue = new LinkedList();
     this.resigned = false;
-    this.logger = node.getEnvironment().getLogManager().getLogger(SocketChannelWriter.class, null);
+    this.logger = node.getEnvironment().getLogManager().getLogger(SocketCollectionManager.class, null);
     this.random = random;
     if (random == null) {
       this.random = node.getEnvironment().getRandomSource(); 
@@ -246,11 +246,15 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   protected void checkLiveness(SourceRoute path) {    
     if (path.getLastHop().equals(localAddress)) return;
     if (! resigned) {
-      if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path);
+      int prox = manager.proximity(path);
+      if (prox < 0) {
+        manager.proximity(path); 
+      }
+      if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path+" prox:"+prox);
       DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);      
 //      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
       
-      int delay = manager.proximity(path)*2;
+      int delay = prox*2;
       if (delay > PING_DELAY) delay = PING_DELAY;      
       ((SocketPastryNode) pastryNode).getTimer().schedule(checker, delay);
       pingManager.ping(path, checker);
@@ -795,6 +799,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       return super.cancel();
     }
     
+    public String toString() {
+      return "DeadChecker("+path+" #"+System.identityHashCode(this)+"):"+tries; 
+    }
+    
   }
     
   /**
@@ -851,9 +859,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param op The operation to add to the key's interest set
      */
     protected void addInterestOp(SelectableChannel channel, int op) throws IOException {
-      String k = (channel == channel1 ? "1" : "2");
-      if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   adding interest op " + op + " to key " + k);
-
+      String k = "unlogged";
+      if (logger.level <= Logger.FINER) {
+        k = (channel == channel1 ? "1" : "2");
+        logger.log( "(SRM) " + this + "   adding interest op " + op + " to key " + k);
+      }
       if (pastryNode.getEnvironment().getSelectorManager().getKey(channel) == null) {
         if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   key " + k + " is null - reregistering with ops " + op);
         pastryNode.getEnvironment().getSelectorManager().register(channel, this, op);
@@ -873,9 +883,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param op The operation to remove from the key's interest set
      */
     protected void removeInterestOp(SelectableChannel channel, int op) throws IOException {
-      String k = (channel == channel1 ? "1" : "2");
-      if (logger.level <= Logger.FINER) logger.log( "(SRM) " + this + "   removing interest op " + op + " from key " + k);
-
+      String k = "unlogged";
+      if (logger.level <= Logger.FINER) {
+        k = (channel == channel1 ? "1" : "2");
+        logger.log( "(SRM) " + this + "   removing interest op " + op + " from key " + k);
+      }
       SelectionKey key = pastryNode.getEnvironment().getSelectorManager().getKey(channel);
       
       if (key != null) {
@@ -965,8 +977,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param key The selection key for this manager
      */
     public void read(SelectionKey key) {
-      String k = (key.channel() == channel1 ? "1" : "2");
-      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " reading from key " + k + " " + key.interestOps());
+      String k = "unlogged";
+      if (logger.level <= Logger.FINE) {
+        k = (key.channel() == channel1 ? "1" : "2");
+        logger.log("(SRM) " + this + " reading from key " + k + " " + key.interestOps());
+      }
       
       try {        
         try {

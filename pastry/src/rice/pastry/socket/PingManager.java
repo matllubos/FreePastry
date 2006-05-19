@@ -162,7 +162,7 @@ public class PingManager extends SelectionKeyHandler {
     }
     
     if (logger.level <= Logger.FINE) logger.log(
-        "(PM) Actually sending ping via path " + path + " local " + localAddress);
+        "(PM) Actually sending ping via path " + path + " local " + localAddress+" for "+prl);
 
     lastPingTime.put(path, new Long(curTime));
     
@@ -338,7 +338,7 @@ public class PingManager extends SelectionKeyHandler {
   MessageDeserializer deserializer;
 
   public void enqueue(SourceRoute path, PRawMessage msg) {
-    if (logger.level <= Logger.FINER) logger.log("enqueue("+path+","+msg+")"); 
+    if (logger.level <= Logger.FINER-3) logger.log("enqueue("+path+","+msg+")"); 
     try {
       enqueue(path, new SocketBuffer(localAddress,path,msg));
     } catch (IOException e) {
@@ -374,7 +374,7 @@ public class PingManager extends SelectionKeyHandler {
 //            logger.log("COUNT: Sent message rice.pastry.socket.messaging.ShortPingResponseMessage of size " + msg.getBuffer().limit()  + " to " + path);           
 //            break;
 //          default:
-            if (logger.level <= Logger.FINER) logger.log(
+            if (logger.level <= Logger.FINER-3) logger.log(
               "COUNT: Sent message " + msg.getType() + " of size " + msg.getBuffer().limit()  + " to " + path);    
 //        }
 //      }        
@@ -416,13 +416,13 @@ public class PingManager extends SelectionKeyHandler {
       } else if (dm instanceof WrongEpochMessage) {
         WrongEpochMessage wem = (WrongEpochMessage) dm;
         
-        if (logger.level <= Logger.FINER) logger.log(
+        if (logger.level <= Logger.FINER-5) logger.log(
             "COUNT: Read message(3) " + dm.getClass() + " of size " + size + " from " + outboundPath.reverse());      
 
         manager.markAlive(outboundPath);
         manager.markDead(wem.getIncorrect());
       } else if (dm instanceof IPAddressRequestMessage) {
-        if (logger.level <= Logger.FINER) logger.log(
+        if (logger.level <= Logger.FINER-5) logger.log(
             "COUNT: Read message(4) " + dm.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
         
         enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, environment.getTimeSource().currentTimeMillis())); 
@@ -446,8 +446,8 @@ public class PingManager extends SelectionKeyHandler {
         buffer.flip();
 
         if (testSourceRouting) {
-//          if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
-          if ((address.getPort() % 2 == 0) && (localAddress.getAddress().getPort() % 2 == 0)) {
+          if (address.getPort() % 2 == localAddress.getAddress().getPort() % 2) {
+//          if ((address.getPort() % 2 == 0) && (localAddress.getAddress().getPort() % 2 == 0)) {
             buffer.clear();
             if (logger.level <= Logger.INFO) logger.log("Dropping packet");
             return;
@@ -485,7 +485,7 @@ public class PingManager extends SelectionKeyHandler {
         while (i.hasNext()) {
           write = (Envelope) i.next();
           
-          if (logger.level <= Logger.FINER) {
+          if (logger.level <= Logger.FINEST) {
             byte[] metadata = new byte[2];
             metadata[0] = write.data.getBuffer().get(HEADER_SIZE+4);
             metadata[1] = write.data.getBuffer().get(HEADER_SIZE+5);
@@ -664,7 +664,7 @@ public class PingManager extends SelectionKeyHandler {
       // now, check to make sure our hop is correct
       EpochInetSocketAddress eisa;
       
-      if (logger.level <= Logger.FINER) {
+      if (logger.level <= Logger.FINEST) {
         logger.log("readHeader("+address+") ("+metadata[0]+" "+metadata[1]+") local "+localAddress); 
         for (int i = 0; i < metadata[1]; i++) {
           logger.log("  "+SocketChannelRepeater.decodeHeader(route, i));           
@@ -729,7 +729,7 @@ public class PingManager extends SelectionKeyHandler {
           // increment the hop count
           packet[HEADER_SIZE+4]++;
           
-          if (logger.level <= Logger.FINE) logger.log("Forwarding ("+metadata[0]+" "+metadata[1]+") from "+address+" to "+next+" at "+localAddress);
+          if (logger.level <= Logger.FINER-4) logger.log("Forwarding ("+metadata[0]+" "+metadata[1]+") from "+address+" to "+next+" at "+localAddress);
 
           if (spn != null) {
             ((SocketPastryNode) spn).broadcastReceivedListeners(packet, address, packet.length, NetworkListener.TYPE_SR_UDP);
@@ -792,7 +792,7 @@ public class PingManager extends SelectionKeyHandler {
       this.destination = destination;
       this.data = data;
       
-      if (logger.level <= Logger.FINER) {
+      if (logger.level <= Logger.FINEST) {
         try {
           byte[] metadata = new byte[2];
           metadata[0] = data.getBuffer().get(HEADER_SIZE+4);
