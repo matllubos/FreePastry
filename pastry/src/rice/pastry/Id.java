@@ -6,8 +6,6 @@ import java.lang.Comparable;
 import java.lang.ref.*;
 import java.util.*;
 
-import antlr.InputBuffer;
-
 import rice.environment.random.RandomSource;
 
 /**
