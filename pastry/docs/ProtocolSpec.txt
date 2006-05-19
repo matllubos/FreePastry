@@ -190,6 +190,10 @@ Overview:
   int appID // 0 is normal pastry socket, needed for both direct or source routed sockets
   // non-zero then opens up the socket to the app
 
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +                   PASTRY_MAGIC_NUMBER                         + 
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +                   version number 0                            + 
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ =}
   +                   HEADER_SOURCE_ROUTE                         +   }
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   }
