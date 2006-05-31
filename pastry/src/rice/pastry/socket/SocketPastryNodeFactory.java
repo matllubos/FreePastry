@@ -428,7 +428,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
   
-  public PastryNode newNode(NodeHandle bootstrap, Id nodeId,
+  public synchronized PastryNode newNode(NodeHandle bootstrap, Id nodeId,
       InetSocketAddress pAddress, boolean throwException) throws IOException {
     if (!throwException) return newNode(bootstrap, nodeId, pAddress); // yes, this is sort of bizarre
     // the idea is that we can't throw an exception by default because it will break reverse compatibility
@@ -441,7 +441,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         logger
             .log("No bootstrap node provided, starting a new ring binding to address "
                 + localAddress+":"+port+ "...");
-
+    
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
     if (this.environment.getParameters().getBoolean(
@@ -470,31 +470,39 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
 
     try {      
-      final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
-  
-      SocketSourceRouteManager srManager = null;
-      EpochInetSocketAddress localAddress = null;
-      EpochInetSocketAddress proxyAddress = null;
       // NOTE: We _don't_ want to use the environment RandomSource because this
       // will cause
       // problems if we run the same node twice quickly with the same seed. Epochs
       // should really
       // be different every time.
       long epoch = random.nextLong();
-  
-      synchronized (this) {
-        localAddress = getEpochAddress(port, epoch);
-  
-        if (pAddress == null)
-          proxyAddress = localAddress;
-        else
-          proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
-  
-        srManager = new SocketSourceRouteManager(pn, localAddress, proxyAddress,
-            random);
-        if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
-          port++;
+      
+      EpochInetSocketAddress localAddress = null;
+      EpochInetSocketAddress proxyAddress = null;
+      
+      localAddress = getEpochAddress(port, epoch);
+
+      if (pAddress == null) {
+        proxyAddress = localAddress;
       }
+      else
+        proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
+
+      
+      
+      // getNearest uses the port inside the SNH, so this needs to be the local address
+      SocketNodeHandle temp = new SocketNodeHandle(getEpochAddress(port, epoch), nodeId);
+      NodeHandle nearest = getNearest(temp, bootstrap);
+      
+      final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
+  
+      SocketSourceRouteManager srManager = null;
+  
+      srManager = new SocketSourceRouteManager(pn, localAddress, proxyAddress,
+          random); // throws an exception if cant bind
+      if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
+        port++; // this statement must go after the construction of srManager because the 
+      // calling method can decide what to do with port incrementation if can't bind
       
       pn.setSocketSourceRouteManager(srManager);
       SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
@@ -531,7 +539,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       } catch (InterruptedException e) {
       }
   
-      pn.doneNode(getNearest(localhandle, bootstrap));
+      pn.doneNode(nearest);
       // pn.doneNode(bootstrap);
   
       return pn;

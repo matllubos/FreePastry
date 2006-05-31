@@ -212,7 +212,16 @@ public abstract class PastryNodeFactory {
       } while (! currentClosest.equals(nearNode));
       
       if (nearNode.getLocalNode() == null) {
-        nearNode = local.getLocalNode().coalesce(nearNode);
+        // this is messy, but here's the deal:
+        // when this is called by user code, local will have a localNode
+        // when SPNF calls it, the node may not, because I needed to move
+        // getNearest() to before the creation of the pastry node so that it
+        // uses the same port, this is necessary so that the firewall settings
+        // will work, otherwies, getNearest() used to have to bind to the next port
+        // because the pastry node was already bound to its port, now, we do 
+        // getNearest() first so we can keep the port the same
+        if (local.getLocalNode() != null)
+          nearNode = local.getLocalNode().coalesce(nearNode);
       }
       
       // return the resulting closest node

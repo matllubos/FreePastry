@@ -162,7 +162,7 @@ public class PingManager extends SelectionKeyHandler {
     }
     
     if (logger.level <= Logger.FINE) logger.log(
-        "(PM) Actually sending ping via path " + path + " local " + localAddress+" for "+prl);
+        "(PM) Sending Ping["+curTime+"] via path " + path + " local " + localAddress+" for "+prl);
 
     lastPingTime.put(path, new Long(curTime));
     
@@ -171,7 +171,7 @@ public class PingManager extends SelectionKeyHandler {
 //    if (USE_SHORT_PINGS)
 //      sendShortPing(path);
 //    else
-      enqueue(path, new PingMessage(/*path, path.reverse(localAddress), */environment.getTimeSource().currentTimeMillis()));
+      enqueue(path, new PingMessage(curTime));
   }
   
   /**
@@ -401,13 +401,18 @@ public class PingManager extends SelectionKeyHandler {
         ((SocketPastryNode) spn).broadcastReceivedListeners(dm, inboundPath.reverse().getLastHop().address, size, NetworkListener.TYPE_UDP);
             
       if (dm instanceof PingMessage) {
-        if (logger.level <= Logger.FINER) logger.log(
-            "COUNT: Read message(1) " + dm.getClass() + " of size " + size + " from " + inboundPath.reverse());      
+        if (logger.level <= Logger.FINE) {
+          logger.log(
+              "(PM) Sending PingResponse["+start+"] via path " + outboundPath + " local " + localAddress);
+        } else 
+          if (logger.level <= Logger.FINER) logger.log(
+            "COUNT: Read message(1) " + dm.getClass() + " of size " + size + " from " + outboundPath); //inboundPath.reverse());      
 
-        enqueue(inboundPath.reverse(), new PingResponseMessage(/*outboundPath, inboundPath, */start));        
+//        enqueue(inboundPath.reverse(), new PingResponseMessage(/*outboundPath, inboundPath, */start));        
+        enqueue(outboundPath, new PingResponseMessage(start));        
       } else if (dm instanceof PingResponseMessage) {
-        if (logger.level <= Logger.FINER) logger.log(
-            "COUNT: Read message(2) " + dm.getClass() + " of size " + size + " from " + outboundPath.reverse());      
+        if (logger.level <= Logger.FINE) logger.log(
+            "COUNT: Read PingResponse["+start+"] of size " + size + " from " + inboundPath);      
         int ping = (int) (environment.getTimeSource().currentTimeMillis() - start);
         
         manager.markAlive(outboundPath);

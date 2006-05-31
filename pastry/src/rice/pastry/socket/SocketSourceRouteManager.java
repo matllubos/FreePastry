@@ -16,6 +16,7 @@ import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.exception.NodeIsDeadException;
 import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.*;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
@@ -550,8 +551,9 @@ public class SocketSourceRouteManager {
    * @param address The foreign address
    * @return All possible source routes to the destination
    */
+  /*
   protected SourceRoute[] getAllRoutes(EpochInetSocketAddress destination) {
-    NodeSet nodes = spn.getLeafSet().neighborSet(NUM_SOURCE_ROUTE_ATTEMPTS);
+    NodeSet nodes = spn.getLeafSet().neighborSet(NUM_SOURCE_ROUTE_ATTEMPTS); // includes
     nodes.randomize(spn.getEnvironment().getRandomSource());
     Vector result = new Vector();
     result.add(SourceRoute.build(destination));
@@ -566,6 +568,56 @@ public class SocketSourceRouteManager {
     }
     
     return (SourceRoute[]) result.toArray(new SourceRoute[0]);
+  }
+*/  
+  protected SourceRoute[] getAllRoutes(EpochInetSocketAddress destination) {
+    
+    Vector result = new Vector(NUM_SOURCE_ROUTE_ATTEMPTS);
+    walkLeafSet(destination, NUM_SOURCE_ROUTE_ATTEMPTS, result);
+    
+    LinkedList ll = new LinkedList();
+    
+    // randomize
+    ll.add(result.remove(spn.getEnvironment().getRandomSource().nextInt(result.size())));
+    
+    ll.addFirst(SourceRoute.build(destination));
+    return (SourceRoute[]) ll.toArray(new SourceRoute[0]);
+  }
+  
+  /**
+   * Walks leafset from center out, making sure to not add the destination, 
+   * but get the number requested.
+   * @param destination
+   */
+  private Collection walkLeafSet(EpochInetSocketAddress destination, int numRequested, Collection result) {
+    LeafSet leafset = spn.getLeafSet();
+    for (int i = 1; i < leafset.maxSize()/2; i++) {
+      NodeHandle h;
+      
+      SocketNodeHandle snh = (SocketNodeHandle)leafset.get(-i);
+      if (addMember(snh, destination, result)) {
+        numRequested--;
+        if (numRequested == 0) return result;
+      }      
+      h = leafset.get(i);
+      if (addMember(snh, destination, result)) {
+        numRequested--;
+        if (numRequested == 0) return result;
+      }
+    }
+    return result;
+  }
+  
+  private boolean addMember(SocketNodeHandle handle, EpochInetSocketAddress destination, Collection result) {
+    if ((handle != null) && 
+        (! handle.isLocal()) && 
+        (! handle.getEpochAddress().equals(destination)) &&
+        (getBestRoute(handle.getEpochAddress()) != null) && 
+        (! getBestRoute(handle.getEpochAddress()).goesThrough(destination))) {
+      result.add(getBestRoute(handle.getEpochAddress()).append(destination)); 
+      return true;
+    }
+    return false;
   }
   
   /**
