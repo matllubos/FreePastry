@@ -538,6 +538,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
       }
+      
+      if (nearest != null)
+        nearest = pn.coalesce(nearest);
   
       pn.doneNode(nearest);
       // pn.doneNode(bootstrap);
