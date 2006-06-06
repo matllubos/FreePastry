@@ -117,7 +117,7 @@ The software requires a Java runtime, version 1.4.2+. The software was
 developed using Sun's SDK, version 1.4.2_03+
 <h3>Changes since release 1.4.4</h3>
 <ul>
-  <li>Elimination of Java Serialization.  Is reverse compatible with the <i>code</i> of previous version, but the protocol is not reverse compatible.  Your application needs to implement rice.p2p.commonapi.rawserialization.RawMessage to gain the benefits of non-java serialziation.</li>
+  <li>Elimination of Java Serialization.  Is reverse compatible with the <i>code</i> of previous version, but the protocol is not reverse compatible.  Your application needs to implement rice.p2p.commonapi.rawserialization.RawMessage to gain the benefits of non-java serialization.</li>
   <li>See <a href="ProtocolSpec.txt">docs/ProtocolSpec.txt</a> for the definition of the protocol.  Now FP can be ported to other languages...</li>
   <li>Application level sockets.  Applications can now use their own socket which will be properly source-routed.  This allows applications to handle their own end-to-end communication for large messages and flow control.  See rice.tutorial.appsocket for an example of how to use this feature.</li>
   <li>Application and Endpoint can be registered later to remove implicit registration that caused synchronization bugs during startup.  In other words, Node.registerApplication() was replaced with buildEndpoint() and you must call Endpoint.register() after you application has initialized its member variables.</li>
