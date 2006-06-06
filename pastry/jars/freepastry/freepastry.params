@@ -83,6 +83,23 @@ pastry_socket_scm_backoff_limit = 5
 pastry_socket_pingmanager_testSourceRouting = false
 pastry_socket_increment_port_after_construction = true
 
+# NAT/UPnP settings
+nat_network_prefixes = 127.0.0.1;10.;192.168.
+# possible values: always, never, prefix (prefix is if the localAddress matches any of the nat_network_prefixes
+# whether to search for a nat
+nat_search_policy = prefix
+# whether to verify connectivity
+nat_test_policy = always
+# policy for setting port forwarding the state of the firewall if there is already a conflicting rule: overwrite, fail (throw exception), change (use different port) 
+# you may want to set this to overwrite or fail on the bootstrap nodes, but most freepastry applications can run on any available port, so the default is change
+nat_state_policy = change
+# the name of the application in the firewall, set this if you want your application to have a more specific name
+nat_app_name = freepastry
+# how long to wait for responses from the firewall, in millis
+nat_discovery_timeout = 5000
+# how many searches to try to find a free firewall port
+nat_find_port_max_tries = 10
+
 # if we are not scheduled for time on cpu in this time, we setReady(false)
 # otherwise there could be message inconsistency, because
 # neighbors may believe us to be dead.  Note that it is critical
@@ -262,6 +279,8 @@ p2p_glacier_maxActiveRestores = 3
 # logging
 #default log level
 loglevel = WARNING
+
+logging_packageOnly = true
 
 logging_date_format = 
 logging_enable=true
