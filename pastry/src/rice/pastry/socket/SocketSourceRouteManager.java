@@ -578,7 +578,9 @@ public class SocketSourceRouteManager {
     LinkedList ll = new LinkedList();
     
     // randomize
-    ll.add(result.remove(spn.getEnvironment().getRandomSource().nextInt(result.size())));
+    while(result.size() > 0) { 
+      ll.add(result.remove(spn.getEnvironment().getRandomSource().nextInt(result.size())));
+    }
     
     ll.addFirst(SourceRoute.build(destination));
     return (SourceRoute[]) ll.toArray(new SourceRoute[0]);

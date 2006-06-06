@@ -414,6 +414,12 @@ public class PostProxy {
   protected void startCheckNAT() throws Exception {
     String address = getLocalHost().getHostAddress();
     
+    if (parameters.contains("pastry_proxy_connectivity_check_enable") &&
+        !parameters.getBoolean("pastry_proxy_connectivity_check_enable")) {
+      // if !enable then skip NAT check
+      return;
+    }
+    
     if (! CompatibilityCheck.testIPAddress(address)) {
       if (parameters.getBoolean("pastry_proxy_connectivity_show_message")) {
         int i = message("You computer appears to have the non-routable address " + address + ".\n" +
@@ -1643,6 +1649,12 @@ public class PostProxy {
       logManager.startRotateTask(selectorManager);
       Environment env = new Environment(selectorManager, proc, randomSource, timeSource, logManager, parameters);
       environment = env;
+      if (parameters.contains("pastry_proxy_connectivity_check_enable") &&
+          !parameters.getBoolean("pastry_proxy_connectivity_check_enable")) {
+        parameters.setString("nat_test_policy","never");
+      }
+     
+
       logger = environment.getLogManager().getLogger(getClass(), null);      
       
       if (localHost == null) {      

@@ -1,7 +1,9 @@
 package rice.pastry.socket;
 
 import java.io.IOException;
+import java.util.*;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
@@ -11,6 +13,8 @@ import rice.pastry.*;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.dist.DistPastryNode;
 import rice.pastry.messaging.*;
+import rice.pastry.socket.messaging.LeafSetResponseMessage;
+import rice.selector.TimerTask;
 
 /**
  * An Socket-based Pastry node, which has two threads - one thread for
@@ -133,8 +137,45 @@ public class SocketPastryNode extends DistPastryNode {
       } catch (IOException ioe) {
         throw new RuntimeException(ioe); 
       }
+    }    
+  }
+  
+  
+  // this code tests the firewall using the LeafSetResponseMessage with no leafset
+  HashSet fireWallContinuations = new HashSet();
+  
+  public void testFireWall(NodeHandle bootstrap, final Continuation c, int timeout) {
+    if (logger.level <= Logger.FINER) logger.log("testFireWall("+bootstrap+","+timeout+")");
+    synchronized(fireWallContinuations) {
+      fireWallContinuations.add(c);
     }
+    getEnvironment().getSelectorManager().getTimer().schedule(new TimerTask() {    
+      public void run() {
+        synchronized(fireWallContinuations) {
+          if (fireWallContinuations.remove(c)) {
+            c.receiveResult(new Boolean(false));
+          }          
+        }    
+      }    
+    }, timeout);
     
+    SocketNodeHandle snh = (SocketNodeHandle)bootstrap;
+    EpochInetSocketAddress[] rt = {address,snh.getEpochAddress(),address};
+    SourceRoute sr = SourceRoute.build(rt);
+    if (logger.level <= Logger.FINER) logger.log("testFireWall("+bootstrap+","+timeout+"):"+sr);
+    srManager.getManager().getPingManager().ping(sr,new PingResponseListener() {
+    
+      public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom) {
+        synchronized(fireWallContinuations) {
+          if (fireWallContinuations.remove(c)) {
+            c.receiveResult(new Boolean(true));
+          }          
+        }    
+      }    
+    });
+
+    
+//    srManager.getAddressManager(snh.getEpochAddress()).getRouteManager(sr).send(new LeafSetResponseMessage(null));
   }
 
   public void connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
@@ -154,4 +195,22 @@ public class SocketPastryNode extends DistPastryNode {
     return coalesce(SocketNodeHandle.build(buf));
   }
 
+//  public void testFireWallUDP(NodeHandle bootstrap) {
+//  }
+  
+//  public synchronized void receiveMessage(Message msg) {
+//    if (msg instanceof LeafSetResponseMessage) {
+//      synchronized(fireWallContinuations) {
+//        Iterator i = fireWallContinuations.iterator(); 
+//        while(i.hasNext()) {
+//          Continuation c = (Continuation)i.next(); 
+//          c.receiveResult(new Boolean(true));
+//        }
+//        fireWallContinuations.clear();
+//      }
+//    } else {
+//      super.receiveMessage(msg);
+//    } 
+//  }
 }
+

@@ -66,6 +66,7 @@ public final class SignedPostMessage implements Serializable {
         cachedMessage = (PostMessage) SecurityUtils.deserialize(msg);
       } catch (Exception e) {
         System.out.println("SignedPostMessage: Exception in getMessage "+e);
+        e.printStackTrace(System.out);
         return null;
       }
       return cachedMessage;
@@ -81,6 +82,7 @@ public final class SignedPostMessage implements Serializable {
         msg = SecurityUtils.serialize(message);
       } catch (IOException e) {
         System.out.println("SignedPostMessage: Exception in getMessageBytes "+e);
+        e.printStackTrace(System.out);
         return null;
       }
       return msg;

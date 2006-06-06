@@ -98,7 +98,7 @@ public class EmailService extends PostClient {
    *      retrieval.
    */
   public void getRootFolder(final Continuation command) {
-    if (folder != null) {
+    if (folder != null && inbox != null) {
       command.receiveResult(folder);
       return;
     }
