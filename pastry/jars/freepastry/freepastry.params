@@ -99,6 +99,8 @@ nat_app_name = freepastry
 nat_discovery_timeout = 5000
 # how many searches to try to find a free firewall port
 nat_find_port_max_tries = 10
+# uncomment this to use UPnP NAT port forwarding, you need to include in the classpath: commons-jxpath-1.1.jar:commons-logging.jar:sbbi-upnplib-xxx.jar
+# nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler
 
 # if we are not scheduled for time on cpu in this time, we setReady(false)
 # otherwise there could be message inconsistency, because
