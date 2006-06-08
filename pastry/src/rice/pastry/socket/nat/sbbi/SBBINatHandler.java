@@ -84,23 +84,21 @@ public class SBBINatHandler implements NATHandler {
    */
   int findPortTries = 0;
 
-  public int findAvailableFireWallPort(int internal, int external)
+  public int findAvailableFireWallPort(int internal, int external, int tries, String appName)
       throws IOException {
     try {
       findPortTries++;
-      if (findPortTries > environment.getParameters().getInt(
-          "nat_find_port_max_tries"))
+      if (findPortTries > tries)
         throw new IOException("Couldn't find available port on firewall");
       if (logger.level <= Logger.FINE)
         logger.log("findFireWallPort(" + internal + "," + external + ")");
-      String appName = environment.getParameters().getString("nat_app_name");
       ActionResponse response = null;
       response = fireWall.getSpecificPortMappingEntry(null, external, "TCP");
       if (checkSpecificPortMappingEntryResponse(response, internal, external,
           "TCP", appName)) {
         // continue
       } else {
-        return findAvailableFireWallPort(internal, external + 1);
+        return findAvailableFireWallPort(internal, external + 1, tries, appName);
       }
   
       response = fireWall.getSpecificPortMappingEntry(null, external, "UDP");
@@ -108,7 +106,7 @@ public class SBBINatHandler implements NATHandler {
           "UDP", appName)) {
         // continue
       } else {
-        return findAvailableFireWallPort(internal, external + 1);
+        return findAvailableFireWallPort(internal, external + 1, tries, appName);
       }
       return external;
     } catch (UPNPResponseException ure) {
@@ -286,19 +284,17 @@ public class SBBINatHandler implements NATHandler {
     return ret;
   }
 
-  public void openFireWallPort(int local, int external) throws IOException {
+  public void openFireWallPort(int local, int external, String appName) throws IOException {
     try {
       boolean mapped = true;
-      mapped = fireWall.addPortMapping(environment.getParameters().getString(
-          "nat_app_name"), null, local, external, localAddress.getHostAddress(),
+      mapped = fireWall.addPortMapping(appName, null, local, external, localAddress.getHostAddress(),
           0, "TCP");
       if (!mapped)
         throw new IOException(
             "Could not set firewall TCP port forwarding from external:"
                 + fireWallExternalAddress + ":" + external + " -> local:"
                 + localAddress + ":" + local);
-      mapped = fireWall.addPortMapping(environment.getParameters().getString(
-          "nat_app_name"), null, local, external, localAddress.getHostAddress(),
+      mapped = fireWall.addPortMapping(appName, null, local, external, localAddress.getHostAddress(),
           0, "UDP");
       if (!mapped)
         throw new IOException(

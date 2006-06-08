@@ -75,7 +75,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   protected int findFireWallPolicy;
   
   NATHandler natHandler;
-  
+  String firewallAppName;
+  int firewallSearchTries;
 
   /**
    * Constructor.
@@ -92,6 +93,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress,
       int startPort, Environment env, NATHandler handler) throws IOException {
     super(env);
+    firewallSearchTries = environment.getParameters().getInt("nat_find_port_max_tries");
+    firewallAppName = environment.getParameters().getString("nat_app_name");
     this.natHandler = handler;
     localAddress = bindAddress;
     if (localAddress == null) {
@@ -569,8 +572,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           } else {
             // configure the firewall if necessary, can be any port, start with
             // the freepastry port
-            int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port);
-            natHandler.openFireWallPort(port, availableFireWallPort);
+            int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port, firewallSearchTries, firewallAppName);
+            natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
             proxyAddress = new EpochInetSocketAddress(new InetSocketAddress(
                 natHandler.getFireWallExternalAddress(), availableFireWallPort), epoch);
           }
@@ -578,14 +581,14 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           // configure the firewall if necessary, but to the specified port
           if (natHandler.getFireWallExternalAddress() != null) {
             int availableFireWallPort = natHandler.findAvailableFireWallPort(port,
-                pAddress.getPort());
+                pAddress.getPort(), firewallSearchTries, firewallAppName);
             if (availableFireWallPort == pAddress.getPort()) {
-              natHandler.openFireWallPort(port, availableFireWallPort);
+              natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
             } else {
               // decide how to handle this
               switch (getFireWallPolicyVariable("nat_state_policy")) {
                 case OVERWRITE:
-                  natHandler.openFireWallPort(port, pAddress.getPort());
+                  natHandler.openFireWallPort(port, pAddress.getPort(), firewallAppName);
                   break;
                 case FAIL:
                   // todo: would be useful to pass the app that is bound to that
@@ -594,7 +597,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                       "Firewall is already bound to the requested port:"
                           + pAddress);
                 case USE_DIFFERENT_PORT:
-                  natHandler.openFireWallPort(port, availableFireWallPort);
+                  natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
                   pAddress = new InetSocketAddress(pAddress.getAddress(),
                       availableFireWallPort);
                   break;

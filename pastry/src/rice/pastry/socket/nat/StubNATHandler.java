@@ -22,11 +22,11 @@ public class StubNATHandler implements NATHandler {
     throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file.");
   }
 
-  public int findAvailableFireWallPort(int internal, int external) throws IOException {
+  public int findAvailableFireWallPort(int internal, int external, int tries, String appName) throws IOException {
     throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file.");
   }
 
-  public void openFireWallPort(int local, int external) throws IOException {
+  public void openFireWallPort(int local, int external, String appName) throws IOException {
     throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file.");
   }
 }
