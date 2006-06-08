@@ -125,8 +125,11 @@ public class MessageDispatch {
     PastryAppl mr = (PastryAppl) addressBook.get(new Integer(msg.getDestination()));
 
     if (mr == null) {
-      if (logger.level <= Logger.WARNING) logger.log(
+      if ((logger.level <= Logger.FINE) ||
+          (localNode.isReady() && (logger.level <= Logger.WARNING))) { 
+        logger.log(
           "Dropping message " + msg + " because the application address " + msg.getDestination() + " is unknown.");
+      }
       return false;
     } else {
       mr.receiveMessage(msg); 

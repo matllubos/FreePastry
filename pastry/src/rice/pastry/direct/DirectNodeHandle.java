@@ -125,6 +125,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
   public void receiveMessage(Message msg) {
     // shortcut if called on the local node
     if (simulator.getEnvironment().getSelectorManager().isSelectorThread() &&
+        // the message is from myself
         (remoteNode == DirectPastryNode.currentNode)) {
       remoteNode.receiveMessage(msg);
       return; 
@@ -134,7 +135,9 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
       if (logger.level <= Logger.WARNING) logger.log(
           "DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");              
     } else {
-      simulator.deliverMessage(msg, remoteNode);
+      simulator.deliverMessage(msg, remoteNode, 0);
+      // Note: June 8, 2006, if we want to add proximity here, need to update the tests to not be busted
+//      simulator.deliverMessage(msg, remoteNode, proximity());
     }
   }
 

@@ -1115,6 +1115,7 @@ public class ScribeImpl implements Scribe, Application {
           if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Child " + o + " for topic " + topic + " has died - removing.");
 
           ScribeImpl.this.removeChild(topic, (NodeHandle) o);
+          return;
         } 
         
         if (o.equals(parent)) {

@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.*;
 
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.*;
 import rice.p2p.commonapi.exception.*;
@@ -33,6 +34,8 @@ public class DirectAppSocket {
   DirectAppSocketEndpoint acceptorEndpoint;
   DirectAppSocketEndpoint connectorEndpoint;
   
+  Logger logger;
+  
   DirectAppSocket(DirectNodeHandle acceptor, AppSocketReceiver connector, PastryAppl connectorAppl, NetworkSimulator simulator) {
     this.acceptorNodeHandle = acceptor;
     DirectPastryNode acceptorNode = acceptor.getRemote();    
@@ -40,13 +43,13 @@ public class DirectAppSocket {
     this.connectorAppl = connectorAppl;
     this.simulator = simulator;
     acceptorAppl = acceptorNode.getMessageDispatch().getDestinationByAddress(connectorAppl.getAddress());
+    logger = simulator.getEnvironment().getLogManager().getLogger(DirectAppSocket.class,"");
     
     
     acceptorEndpoint = new DirectAppSocketEndpoint(acceptor);
-    connectorEndpoint = new DirectAppSocketEndpoint(connectorAppl.getNodeHandle());
+    connectorEndpoint = new DirectAppSocketEndpoint((DirectNodeHandle)connectorAppl.getNodeHandle());
     acceptorEndpoint.setCounterpart(connectorEndpoint);
     connectorEndpoint.setCounterpart(acceptorEndpoint);
-    
   }
   
   class DirectAppSocketEndpoint implements AppSocket {
@@ -54,8 +57,9 @@ public class DirectAppSocket {
     
     AppSocketReceiver reader;
     AppSocketReceiver writer;
-    NodeHandle localNodeHandle;
-
+    DirectNodeHandle localNodeHandle;
+    int seq = 0;
+    
     boolean inputClosed;
     boolean outputClosed;
     
@@ -72,7 +76,7 @@ public class DirectAppSocket {
     int firstOffset = 0;
  
     
-    public DirectAppSocketEndpoint(NodeHandle localNodeHandle) {
+    public DirectAppSocketEndpoint(DirectNodeHandle localNodeHandle) {
       this.localNodeHandle = localNodeHandle;
     }
     
@@ -80,7 +84,7 @@ public class DirectAppSocket {
       this.counterpart = counterpart;
     }
 
-    public NodeHandle getRemoteNodeHandle() {
+    public DirectNodeHandle getRemoteNodeHandle() {
       return counterpart.localNodeHandle;
     }
   
@@ -132,7 +136,10 @@ public class DirectAppSocket {
         public void deliver() {
           notifyCanWrite();            
         }            
-      });            
+        public int getSeq() {
+          return 0;            
+        }            
+      }, 0);            
       return lengthRead;
     }
   
@@ -161,11 +168,16 @@ public class DirectAppSocket {
         i++;
       }
       
+      if (logger.level <= Logger.FINER) logger.log(this+".write("+lengthToWrite+")");
       simulator.enqueueDelivery(new Delivery() {      
+        int mySeq = seq++;
         public void deliver() {
           counterpart.addToReadQueue(msg);      
         }
-      });      
+        public int getSeq() {
+          return mySeq; 
+        }
+      }, simulator.proximity(localNodeHandle, counterpart.localNodeHandle));      
       return lengthToWrite;
     }
   
@@ -175,6 +187,13 @@ public class DirectAppSocket {
      */
     protected void addToReadQueue(byte[] msg) {
       synchronized(this) {
+        if (logger.level <= Logger.FINE) {
+          if (msg == EOF) {
+            logger.log(this+": addToReadQueue(EOF)");
+          } else {
+            logger.log(this+": addToReadQueue("+msg.length+")");            
+          }
+        }
         byteDeliveries.addLast(msg);
       }
       notifyCanRead();
@@ -215,8 +234,12 @@ public class DirectAppSocket {
         simulator.enqueueDelivery(new Delivery() {              
           public void deliver() {
             notifyCanWrite(); // only actually notifies if proper at the time
-          }            
-        });            
+          }
+          // I don't think this needs a sequence number, but I may be wrong
+          public int getSeq() {
+            return 0;
+          }
+        }, 0); // I dont think this needs a delay, but I could be wrong            
       }
       
       if (wantToRead) {
@@ -226,17 +249,26 @@ public class DirectAppSocket {
           public void deliver() {
             notifyCanRead(); // only actually notifies if proper at the time           
           }            
-        });            
+          // I don't think this needs a sequence number, but I may be wrong
+          public int getSeq() {
+            return 0;
+          }
+        }, 0); // I dont think this needs a delay, but I could be wrong            
       }        
     }
   
     public void shutdownOutput() {
+      if (logger.level <= Logger.FINER) logger.log(this+".shutdownOutput()");
       outputClosed = true;
       simulator.enqueueDelivery(new Delivery() {      
+        int mySeq = seq++;
         public void deliver() {
           counterpart.addToReadQueue(EOF);      
         }
-      });      
+        public int getSeq() {
+          return mySeq;
+        }
+      }, simulator.proximity(localNodeHandle, counterpart.localNodeHandle)); // I dont think this needs a delay, but I could be wrong            
     }
   
     public void shutdownInput() {
@@ -247,25 +279,42 @@ public class DirectAppSocket {
       shutdownOutput();
       shutdownInput();
     }
+    
+    public String toString() {
+      return "DAS{"+localNodeHandle+":"+writer+"->"+counterpart.localNodeHandle+":"+reader+"}"; 
+    }
   }  
 
   
-  
+  /**
+   * This is how the Acceptor Responds, success is the ConnectorDelivery, failure is the ConnectorExceptionDelivery.
+   * 
+   * When connect() this is sent to the Acceptor, then it responds with a ConnectorDelivery
+   * 
+   * @author Jeff Hoye
+   */
   class AcceptorDelivery implements Delivery {
     public void deliver() {
       if (acceptorNodeHandle.isAlive()) {
         if (acceptorAppl == null) {
-          simulator.enqueueDelivery(new ConnectorExceptionDelivery(new AppNotRegisteredException())); 
+          simulator.enqueueDelivery(new ConnectorExceptionDelivery(new AppNotRegisteredException()),
+              simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
         } else {
           if (acceptorAppl.receiveSocket(acceptorEndpoint)) {
-            simulator.enqueueDelivery(new ConnectorDelivery());
+            simulator.enqueueDelivery(new ConnectorDelivery(),
+                simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
           } else {
-            simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NoReceiverAvailableException()));
+            simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NoReceiverAvailableException()),
+                simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
           }
         }
       } else {
-        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsDeadException())); 
+        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsDeadException()),
+            simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
       }
+    }
+    public int getSeq() {
+      return -1; 
     }
   }
   
@@ -277,7 +326,11 @@ public class DirectAppSocket {
         System.out.println("NOT IMPLEMENTED: Connector died during application socket initiation.");
 //        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsDeadException(acceptorNodeHandle))); 
       }
-    }    
+    }
+    // out of band, needs to get in front of any other message
+    public int getSeq() {
+      return -1; 
+    }
   }
   
   class ConnectorExceptionDelivery implements Delivery {
@@ -288,9 +341,17 @@ public class DirectAppSocket {
     public void deliver() {
       connectorReceiver.receiveException(null, e);      
     }
+    // out of band, needs to get in front of any other message
+    public int getSeq() {
+      return -1; 
+    }
   }
 
   public Delivery getAcceptorDelivery() {
     return new AcceptorDelivery();
+  }
+  
+  public String toString() {
+    return "DAS{"+connectorAppl+"->"+acceptorAppl+"}"; 
   }
 }

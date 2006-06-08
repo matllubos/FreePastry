@@ -69,7 +69,7 @@ public class MyApp implements Application {
           
           if (ret != MSG_LENGTH) {
             // if you sent any kind of long message, you would need to handle this case better
-            System.out.println("Error, we only received part of a message.");
+            System.out.println("Error, we only received part of a message."+ret+" from "+socket);
             return;
           }
             
@@ -124,7 +124,7 @@ public class MyApp implements Application {
       public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {   
         try {
           long ret = socket.write(outs,0,outs.length);        
-//          System.out.println("WROTE:"+ret); 
+//          System.out.println("WROTE:"+ret+" to "+socket); 
           // see if we are done
           if (!out.hasRemaining()) {
             socket.close();           

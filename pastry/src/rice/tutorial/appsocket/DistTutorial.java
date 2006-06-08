@@ -1,5 +1,6 @@
 package rice.tutorial.appsocket;
 
+import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
@@ -25,7 +26,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
  */
 public class DistTutorial {
 
-  public static final boolean USE_DIRECT = false;
+  public static final boolean USE_DIRECT = true;
 
   
   // this will keep track of our applications
@@ -141,8 +142,11 @@ public class DistTutorial {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
    */
   public static void main(String[] args) throws Exception {
+//    System.setOut(new PrintStream(new FileOutputStream("appsock.txt")));
+//    System.setErr(System.out);
+    
     boolean useDirect = USE_DIRECT;
-    if (args.length == 5) {
+    if (args.length > 4) {
       if (args[4].equalsIgnoreCase("-direct")) {
         useDirect = true;
       } else {

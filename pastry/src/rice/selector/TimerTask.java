@@ -12,7 +12,8 @@ import rice.p2p.commonapi.CancellableTask;
 public abstract class TimerTask implements Comparable, CancellableTask {
   protected long nextExecutionTime;
   protected boolean cancelled = false;
-
+  protected int seq;
+  
   /**
    * If period is positive, task will be rescheduled.
    */
@@ -62,7 +63,13 @@ public abstract class TimerTask implements Comparable, CancellableTask {
 //    return (int)(tt.nextExecutionTime-nextExecutionTime);
     int diff = (int)(nextExecutionTime-tt.nextExecutionTime);
     if (diff == 0) {
-      return System.identityHashCode(this) < System.identityHashCode(tt) ? 1 : -1;
+      // compare the sequence numbers
+      diff = seq-tt.seq;
+      
+      // if still same, try the hashcode
+      if (diff == 0) {      
+        return System.identityHashCode(this) < System.identityHashCode(tt) ? 1 : -1;
+      }
     }
     return diff;
   }

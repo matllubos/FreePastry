@@ -8,19 +8,20 @@ import rice.selector.TimerTask;
 public class DeliveryTimerTask extends TimerTask {
   Delivery md;
   
-  DeliveryTimerTask(Delivery md, long nextExecutionTime, int period, boolean fixed) {
+  DeliveryTimerTask(Delivery md, long nextExecutionTime, int period, boolean fixed, int seq) {
     this.md = md; 
     this.nextExecutionTime = nextExecutionTime;
     this.period = period;
     this.fixedRate = fixed;
+    this.seq = seq;
   }
   
-  DeliveryTimerTask(Delivery md, long nextExecutionTime, int period) {
-    this(md,nextExecutionTime,-1,false);
+  DeliveryTimerTask(Delivery md, long nextExecutionTime, int period, int seq) {
+    this(md,nextExecutionTime,-1,false, seq);
   }
   
-  DeliveryTimerTask(Delivery md, long nextExecutionTime) {
-    this(md,nextExecutionTime,-1,false);
+  DeliveryTimerTask(Delivery md, long nextExecutionTime, int seq) {
+    this(md,nextExecutionTime,-1,false, seq);
   }
   
   public void run() {
@@ -30,6 +31,4 @@ public class DeliveryTimerTask extends TimerTask {
   public String toString() {
     return "DeliveryTT for " + md;
   }
-  
-
 }

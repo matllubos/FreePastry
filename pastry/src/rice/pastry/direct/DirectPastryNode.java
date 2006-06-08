@@ -35,8 +35,9 @@ public class DirectPastryNode extends PastryNode {
   private NetworkSimulator simulator;
   protected boolean alive = true;
   NodeRecord record;
-  
   protected Timer timer;
+  // used to control message order for messages destined to arrive at the same time
+  int seq = 0;
 
   public DirectPastryNode(Id id, NetworkSimulator sim, Environment e, NodeRecord nr) {
     super(id, e);
@@ -190,7 +191,8 @@ public class DirectPastryNode extends PastryNode {
   
   public void connect(NodeHandle remoteNode, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
     DirectNodeHandle dnh = (DirectNodeHandle)remoteNode;
-    simulator.enqueueDelivery(new DirectAppSocket(dnh, receiver, appl, simulator).getAcceptorDelivery());
+    simulator.enqueueDelivery(new DirectAppSocket(dnh, receiver, appl, simulator).getAcceptorDelivery(),
+        simulator.proximity((DirectNodeHandle)localhandle, dnh));
   }
 
   public NodeHandle readNodeHandle(InputBuffer buf) {

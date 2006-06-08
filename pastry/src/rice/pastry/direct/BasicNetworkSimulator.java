@@ -134,22 +134,26 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 //    if (!manager.isSelectorThread()) Thread.yield();
   }
   
-  public CancellableTask enqueueDelivery(Delivery d) {
-    if (logger.level <= Logger.FINE)
-      logger.log("GNS: enqueueDelivery " + d);
+  public CancellableTask enqueueDelivery(Delivery d, int delay) {
+    long time = timeSource.currentTimeMillis()+delay;
+    if (logger.level <= Logger.FINE)      
+      logger.log("GNS: enqueueDelivery " + d+":"+time);
     DeliveryTimerTask dtt = null;
-    dtt = new DeliveryTimerTask(d, timeSource.currentTimeMillis() + MIN_DELAY);
+    dtt = new DeliveryTimerTask(d, time, d.getSeq());
     addTask(dtt);
     return dtt;
   }
   
+  /**
+   * node should always be a local node, because this will be delivered instantly
+   */
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node) {
     if (logger.level <= Logger.FINE)
       logger.log("GNS: deliver " + msg + " to " + node);
     DirectTimerTask dtt = null;
     if (msg.getSender() == null || msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
-      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + MIN_DELAY);
+      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis());
       addTask(dtt);
     }
     return dtt;
@@ -157,8 +161,10 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
       int delay) {
+    if (logger.level <= Logger.FINE)
+      logger.log("GNS: deliver("+delay+") " + msg + " to " + node);
     DirectTimerTask dtt = null;
-    if (msg.getSender().isAlive()) {
+    if (msg.getSender() == null || msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay);
       addTask(dtt);
@@ -169,7 +175,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
       int delay, int period) {
     DirectTimerTask dtt = null;
-    if (msg.getSender().isAlive()) {
+    if (msg.getSender() == null || msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period);
@@ -181,7 +187,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public ScheduledMessage deliverMessageFixedRate(Message msg,
       DirectPastryNode node, int delay, int period) {
     DirectTimerTask dtt = null;
-    if (msg.getSender().isAlive()) {
+    if (msg.getSender() == null || msg.getSender().isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period, true);

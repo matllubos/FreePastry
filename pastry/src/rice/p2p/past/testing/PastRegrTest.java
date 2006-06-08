@@ -506,7 +506,7 @@ public class PastRegrTest extends CommonAPITest {
    //               ((NUM_NODES < REPLICATION_FACTOR) &&
    //                 (((Boolean[]) result).length) == NUM_NODES));
 
-        System.out.println("PastRegrTest.testLookupHandles() insert result.length:"+((Boolean[]) result).length);
+//        System.out.println("PastRegrTest.testLookupHandles() insert result.length:"+((Boolean[]) result).length);
         for (int i=0; i<((Boolean[]) result).length; i++) {
           assertTrue("Insert of file should not return null at replica", ((Boolean[]) result)[i] != null);
           assertTrue("Insert of file should succeed at replica", ((Boolean[]) result)[i].booleanValue());

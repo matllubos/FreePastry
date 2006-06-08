@@ -13,6 +13,7 @@ import rice.pastry.messaging.Message;
     protected Message msg;
     protected DirectPastryNode node;    
     protected Logger logger;
+    protected int seq;
     
     /**
      * Constructor for MessageDelivery.
@@ -20,6 +21,7 @@ import rice.pastry.messaging.Message;
     public MessageDelivery(Message m, DirectPastryNode pn) {
       msg = m;
       node = pn;
+      this.seq = pn.seq++;
       
       // Note: this is done to reduce memory thrashing.  There are a ton of strings created
       // in getLogger(), and this is a really temporary object.
@@ -41,4 +43,8 @@ import rice.pastry.messaging.Message;
 //            "Cant deliver "+msg+" to " + node + "because it is not alive.");        
 //      }
     } 
+    
+    public int getSeq() {
+      return seq; 
+    }
   }

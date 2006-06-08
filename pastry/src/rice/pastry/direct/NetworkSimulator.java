@@ -117,5 +117,6 @@ public interface NetworkSimulator {
    * @param how long to delay to deliver the message
    * @param period to deliver the message after the delay
    */
-  public CancellableTask enqueueDelivery(Delivery del);  
+//  public CancellableTask enqueueDelivery(Delivery del);  
+  public CancellableTask enqueueDelivery(Delivery del, int delay);  
 }
