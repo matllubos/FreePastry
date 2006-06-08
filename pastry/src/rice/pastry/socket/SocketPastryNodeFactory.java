@@ -1,13 +1,11 @@
 package rice.pastry.socket;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.*;
 import java.nio.channels.*;
 import java.util.*;
 
-import net.sbbi.upnp.Discovery;
-import net.sbbi.upnp.impls.InternetGatewayDevice;
-import net.sbbi.upnp.messages.*;
 
 import rice.Continuation;
 import rice.Continuation.ExternalContinuation;
@@ -28,6 +26,8 @@ import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
+import rice.pastry.socket.nat.*;
+import rice.pastry.socket.nat.sbbi.SBBINatHandler;
 import rice.pastry.standard.*;
 import rice.selector.*;
 import rice.pastry.NodeHandle;
@@ -73,6 +73,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   protected int testFireWallPolicy;
 
   protected int findFireWallPolicy;
+  
+  NATHandler natHandler;
+  
 
   /**
    * Constructor.
@@ -87,8 +90,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param env The environment.
    */
   public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress,
-      int startPort, Environment env) throws IOException {
+      int startPort, Environment env, NATHandler handler) throws IOException {
     super(env);
+    this.natHandler = handler;
     localAddress = bindAddress;
     if (localAddress == null) {
       if (env.getParameters().contains("socket_bindAddress")) {
@@ -114,6 +118,27 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     nidFactory = nf;
     port = startPort;
     Parameters params = env.getParameters();
+    if (natHandler == null) {
+      if (params.contains("nat_handler_class")) {
+        try {
+          Class natHandlerClass = Class.forName(params.getString("nat_handler_class"));
+          Class[] args = {Environment.class, InetAddress.class};
+  //        Class[] args = new Class[2];
+  //        args[0] = environment.getClass();
+  //        args[1] = InetAddress.class;
+          Constructor constructor = natHandlerClass.getConstructor(args);
+          Object[] foo = {environment, this.localAddress};
+          natHandler = (NATHandler)constructor.newInstance(foo);
+        } catch (Exception e) {
+          if (logger.level <= Logger.WARNING) logger.logException("Error constructing NATHandler.",e);
+          throw new RuntimeException(e);
+        }
+      } else {
+        natHandler = new StubNATHandler(environment, this.localAddress);
+//      natHandler = new SBBINatHandler(environment, this.localAddress);
+      }
+    }
+    
     leafSetMaintFreq = params.getInt("pastry_leafSetMaintFreq");
     routeSetMaintFreq = params.getInt("pastry_routeSetMaintFreq");
 
@@ -135,7 +160,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
   public SocketPastryNodeFactory(NodeIdFactory nf, int startPort,
       Environment env) throws IOException {
-    this(nf, null, startPort, env);
+    this(nf, null, startPort, env, null);
   }
 
   /**
@@ -437,7 +462,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       return newNode(bootstrap, nodeId, pAddress, true); // fix the method just
                                                           // below if you change
                                                           // this
-    } catch (IOException e) {
+    } catch (BindException e) {
 
       if (logger.level <= Logger.WARNING)
         logger.log("Warning: " + e);
@@ -462,6 +487,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       } else {
         throw new RuntimeException(e);
       }
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);      
     }
   }
 
@@ -537,28 +564,28 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         findFireWallIfNecessary();
         if (pAddress == null) {
           // may need to find and set the firewall
-          if (fireWallExternalAddress == null) {
+          if (natHandler.getFireWallExternalAddress() == null) {
             proxyAddress = localAddress;
           } else {
             // configure the firewall if necessary, can be any port, start with
             // the freepastry port
-            int availableFireWallPort = findAvailableFireWallPort(port, port);
-            openFireWallPort(port, availableFireWallPort);
+            int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port);
+            natHandler.openFireWallPort(port, availableFireWallPort);
             proxyAddress = new EpochInetSocketAddress(new InetSocketAddress(
-                fireWallExternalAddress, availableFireWallPort), epoch);
+                natHandler.getFireWallExternalAddress(), availableFireWallPort), epoch);
           }
         } else {
           // configure the firewall if necessary, but to the specified port
-          if (fireWallExternalAddress != null) {
-            int availableFireWallPort = findAvailableFireWallPort(port,
+          if (natHandler.getFireWallExternalAddress() != null) {
+            int availableFireWallPort = natHandler.findAvailableFireWallPort(port,
                 pAddress.getPort());
             if (availableFireWallPort == pAddress.getPort()) {
-              openFireWallPort(port, availableFireWallPort);
+              natHandler.openFireWallPort(port, availableFireWallPort);
             } else {
               // decide how to handle this
               switch (getFireWallPolicyVariable("nat_state_policy")) {
                 case OVERWRITE:
-                  openFireWallPort(port, pAddress.getPort());
+                  natHandler.openFireWallPort(port, pAddress.getPort());
                   break;
                 case FAIL:
                   // todo: would be useful to pass the app that is bound to that
@@ -567,7 +594,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                       "Firewall is already bound to the requested port:"
                           + pAddress);
                 case USE_DIFFERENT_PORT:
-                  openFireWallPort(port, availableFireWallPort);
+                  natHandler.openFireWallPort(port, availableFireWallPort);
                   pAddress = new InetSocketAddress(pAddress.getAddress(),
                       availableFireWallPort);
                   break;
@@ -593,8 +620,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         environment.destroy();
       }
       throw ioe;
-    } catch (UPNPResponseException ure) {
-      throw new RuntimeException(ure);
+//    } catch (UPNPResponseException ure) {
+//      throw new RuntimeException(ure);
     }
 
     // calling method can decide what to do with port incrementation if can't
@@ -698,8 +725,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
-  protected void findFireWallIfNecessary() throws IOException,
-      UPNPResponseException {
+  protected void findFireWallIfNecessary() throws IOException {
     switch (getFireWallPolicyVariable("nat_search_policy")) {
       case NEVER:
         return;
@@ -708,7 +734,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           return;
       case ALWAYS:
       default:
-        findFireWall(localAddress);
+        natHandler.findFireWall(localAddress);
     }
   }
 
@@ -1018,275 +1044,5 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       if (socket != null)
         socket.close();
     }
-  }
-
-  boolean searchedForFireWall = false;
-
-  InternetGatewayDevice fireWall;
-
-  InetAddress fireWallExternalAddress;
-
-  public synchronized InetAddress findFireWall(InetAddress bindAddress)
-      throws IOException, UPNPResponseException {
-    NetworkInterface ni = NetworkInterface.getByInetAddress(bindAddress);
-    if (searchedForFireWall)
-      return fireWallExternalAddress;
-    searchedForFireWall = true;
-    int discoveryTimeout = environment.getParameters().getInt(
-        "nat_discovery_timeout");
-
-    InternetGatewayDevice[] IGDs = InternetGatewayDevice
-        .getDevices(discoveryTimeout);
-    // use this code with the next version of sbbi's upnp library, it will only
-    // search for the firewall on the given NetworkInterface
-    // InternetGatewayDevice[] IGDs =
-    // InternetGatewayDevice.getDevices(discoveryTimeout,
-    // Discovery.DEFAULT_TTL,
-    // Discovery.DEFAULT_MX,
-    // ni);
-    if (IGDs != null) {
-      // no idea how to handle this if there are 2 firewalls... handle the first
-      // one
-      // if they have that interesting of a network, then they know what they
-      // are doing
-      // and can configure port forwarding
-      fireWall = IGDs[0];
-      fireWallExternalAddress = InetAddress.getByName(fireWall
-          .getExternalIPAddress());
-    } else {
-      throw new IOException(
-          "Could not find firewall.  Please enable UPnP on firewall, or set 'find_firewall_policy = never'");
-    }
-    return fireWallExternalAddress;
-  }
-
-  /**
-   * Returns the external port to use based on querying the firewall for both
-   * TCP and UDP
-   * 
-   * @param internal // the internal port we expect it to be mapped to
-   * @param external // the first port to try, will search by incrementing
-   * @return
-   * @throws IOException
-   * @throws UPNPResponseException
-   */
-  int findPortTries = 0;
-
-  public int findAvailableFireWallPort(int internal, int external)
-      throws IOException, UPNPResponseException {
-    findPortTries++;
-    if (findPortTries > environment.getParameters().getInt(
-        "nat_find_port_max_tries"))
-      throw new IOException("Couldn't find available port on firewall");
-    if (logger.level <= Logger.FINE)
-      logger.log("findFireWallPort(" + internal + "," + external + ")");
-    String appName = environment.getParameters().getString("nat_app_name");
-    ActionResponse response = null;
-    response = fireWall.getSpecificPortMappingEntry(null, external, "TCP");
-    if (checkSpecificPortMappingEntryResponse(response, internal, external,
-        "TCP", appName)) {
-      // continue
-    } else {
-      return findAvailableFireWallPort(internal, external + 1);
-    }
-
-    response = fireWall.getSpecificPortMappingEntry(null, external, "UDP");
-    if (checkSpecificPortMappingEntryResponse(response, internal, external,
-        "UDP", appName)) {
-      // continue
-    } else {
-      return findAvailableFireWallPort(internal, external + 1);
-    }
-    return external;
-  }
-
-  public static final int MAX_PORT = 65535;
-
-  /**
-   * We return true if the response matches our app exactly, or if the entries
-   * are invalid (because some firewalls do this instad of returning an error
-   * that there is no entry.)
-   * 
-   * @param response
-   * @param internal
-   * @param external
-   * @param type TCP or UDP
-   * @return
-   */
-  private boolean checkSpecificPortMappingEntryResponse(
-      ActionResponse response, int internal, int external, String type,
-      String app) {
-    if (response == null)
-      return true;
-
-    if (logger.level <= Logger.FINEST) {
-      Set s = response.getOutActionArgumentNames();
-      Iterator i = s.iterator();
-      while (i.hasNext()) {
-        String key = (String) i.next();
-        String val = response.getOutActionArgumentValue(key);
-        System.out.println("  " + key + " -> " + val);
-      }
-    }
-
-    boolean ret = true;
-    // NewInternalPort->9001
-    String internalPortStr = response
-        .getOutActionArgumentValue("NewInternalPort");
-    if (internalPortStr != null) {
-      try {
-        int internalPort = Integer.parseInt(internalPortStr);
-        if (internalPort > MAX_PORT) {
-          if (logger.level < Logger.WARNING)
-            logger
-                .log("Warning, NAT "
-                    + fireWall.getIGDRootDevice().getModelName()
-                    + " returned an invalid value for entry NewInternalPort.  Expected an integer less than "
-                    + MAX_PORT + ", got: " + internalPort + ".  Query "
-                    + external + ":" + type + "... overwriting entry.");
-          return true; // a bogus entry from the firewall,
-        }
-        if (internalPort != internal) {
-          if (logger.level <= Logger.FINER)
-            logger.log("internalPort(" + internalPort + ") != internal("
-                + internal + ")");
-          ret = false; // but don't return yet, maybe it will become more clear
-                        // with another clue
-        }
-      } catch (NumberFormatException nfe) {
-        // firewall bug, assume we can overwrite
-        if (logger.level < Logger.WARNING)
-          logger
-              .log("Warning, NAT "
-                  + fireWall.getIGDRootDevice().getModelName()
-                  + " returned an invalid value for entry NewInternalPort.  Expected an integer, got: "
-                  + internalPortStr + ".  Query " + external + ":" + type
-                  + "... overwriting entry.");
-        return true;
-      }
-    }
-
-    // NewPortMappingDescription->freepastry
-    String appName = response
-        .getOutActionArgumentValue("NewPortMappingDescription");
-    if (appName != null) {
-      // this is in case the app name is just a bunch of spaces
-      String tempName = appName.replaceAll(" ", "");
-      if ((tempName.equals("")) || appName.equalsIgnoreCase(app)) {
-        // do nothing yet
-      } else {
-        if (logger.level <= Logger.FINER)
-          logger.log("appName(" + appName + ") != app(" + app + ")");
-        ret = false;
-      }
-    }
-
-    // NewInternalClient->192.168.1.64
-    String newInternalClientString = response
-        .getOutActionArgumentValue("NewInternalClient");
-    if (newInternalClientString == null) {
-      if (logger.level < Logger.WARNING)
-        logger
-            .log("Warning, NAT "
-                + fireWall.getIGDRootDevice().getModelName()
-                + " returned no value for entry NewInternalClient.  Expected an IP address, got: "
-                + newInternalClientString + ".  Query " + external + ":" + type
-                + "... overwriting entry.");
-      return true;
-    }
-    try {
-      InetAddress client = InetAddress.getByName(newInternalClientString);
-      if (!client.equals(localAddress)) {
-        if (logger.level <= Logger.FINER)
-          logger.log("client(" + client + ") != localAddress(" + localAddress
-              + ")");
-        ret = false;
-      }
-    } catch (Exception e) {
-      if (logger.level < Logger.WARNING)
-        logger
-            .log("Warning, NAT "
-                + fireWall.getIGDRootDevice().getModelName()
-                + " returned an invalid value for entry NewInternalClient.  Expected an IP address, got: "
-                + newInternalClientString + ".  Query " + external + ":" + type
-                + "... overwriting entry.");
-      return true;
-    }
-
-    // NewEnabled->1
-    String enabledString = response.getOutActionArgumentValue("NewEnabled");
-    if (enabledString != null) {
-      try {
-        int enabled = Integer.parseInt(enabledString);
-        if (enabled == 0) {
-          if (logger.level < Logger.FINE)
-            logger
-                .log("Warning, NAT "
-                    + fireWall.getIGDRootDevice().getModelName()
-                    + " had an existing rule that was disabled, implicitly overwriting.  "
-                    + "Query " + external + ":" + type + "."
-                    + "\n  NewInternalPort -> " + internalPortStr
-                    + "\n  NewPortMappingDescription -> " + appName
-                    + "\n  NewInternalClient -> " + newInternalClientString
-                    + "\n  NewEnabled -> " + enabledString);
-          return true; // the current rule is not used, go ahead and overwrite
-        } else if (enabled == 1) {
-          // nothing, depend on previous settings of ret to determine what to do
-        } else {
-          if (logger.level < Logger.WARNING)
-            logger
-                .log("Warning, NAT "
-                    + fireWall.getIGDRootDevice().getModelName()
-                    + " returned an invalid value for entry NewEnabled.  Expected 0 or 1, got: "
-                    + enabled + ".  Query " + external + ":" + type
-                    + "... overwriting entry.");
-          return true; // a bogus entry from the firewall,
-        }
-      } catch (NumberFormatException nfe) {
-        // firewall bug, assume we can overwrite
-        if (logger.level < Logger.WARNING)
-          logger
-              .log("Warning, NAT "
-                  + fireWall.getIGDRootDevice().getModelName()
-                  + " returned an invalid value for entry NewEnabled.  Expected 0 or 1, got: "
-                  + enabledString + ".  Query " + external + ":" + type
-                  + "... overwriting entry.");
-        return true;
-      }
-    } else {
-      // router didn't specify enable string, no info, do nothing
-    }
-
-    if (ret == false) {
-      if (logger.level < Logger.INFO)
-        logger.log("Warning, NAT " + fireWall.getIGDRootDevice().getModelName()
-            + " had an existing rule, trying different port.  " + "Query "
-            + external + ":" + type + "." + "\n  NewInternalPort -> "
-            + internalPortStr + "\n  NewPortMappingDescription -> " + appName
-            + "\n  NewInternalClient -> " + newInternalClientString
-            + "\n  NewEnabled -> " + enabledString);
-    }
-    return ret;
-  }
-
-  public void openFireWallPort(int local, int external) throws IOException,
-      UPNPResponseException {
-    boolean mapped = true;
-    mapped = fireWall.addPortMapping(environment.getParameters().getString(
-        "nat_app_name"), null, local, external, localAddress.getHostAddress(),
-        0, "TCP");
-    if (!mapped)
-      throw new IOException(
-          "Could not set firewall TCP port forwarding from external:"
-              + fireWallExternalAddress + ":" + external + " -> local:"
-              + localAddress + ":" + local);
-    mapped = fireWall.addPortMapping(environment.getParameters().getString(
-        "nat_app_name"), null, local, external, localAddress.getHostAddress(),
-        0, "UDP");
-    if (!mapped)
-      throw new IOException(
-          "Could not set firewall UDP port forwarding from external:"
-              + fireWallExternalAddress + ":" + external + " -> local:"
-              + localAddress + ":" + local);
   }
 }
