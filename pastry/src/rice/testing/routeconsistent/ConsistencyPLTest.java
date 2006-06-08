@@ -185,11 +185,64 @@ public class ConsistencyPLTest /*implements Observer*/ {
       System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
       System.out.println("Ping Num Source Route attempts:"+env.getParameters().getInt("pastry_socket_srm_num_source_route_attempts"));
       
+      class MyNetworkListener implements NetworkListener {      
+        public static final int TRACKS = 2;
+        
+        int[] msgRec = new int[TRACKS];
+        int[] bytesRec = new int[TRACKS];
+        int[] msgSnt = new int[TRACKS];
+        int[] bytesSnt = new int[TRACKS];
+        int channelsOpened;
+        int channelsClosed;
+        
+        
+        /**
+         * returns full status of network activity since last call, then clears everything
+         * @return
+         */
+        public synchronized String clobber() {
+          String ret = 
+            "st:"+msgSnt[TYPE_TCP]+":"+bytesSnt[TYPE_TCP]+
+            " su:"+msgSnt[TYPE_UDP]+":"+bytesSnt[TYPE_UDP]+
+            " rt:"+msgRec[TYPE_TCP]+":"+bytesRec[TYPE_TCP]+
+            " ru:"+msgRec[TYPE_UDP]+":"+bytesRec[TYPE_UDP]+
+            " socks:"+channelsOpened+":"+channelsClosed;
+          
+          for (int i = 0; i < TRACKS; i++) {
+            msgRec[i] = 0;
+            bytesRec[i] = 0;
+            msgSnt[i] = 0;
+            bytesSnt[i] = 0;
+          }
+          channelsOpened = 0;
+          channelsClosed = 0;          
+          return ret;
+        }        
+        public synchronized void dataReceived(Object message, InetSocketAddress address, int size,
+            int type) {
+          msgRec[type&0x1]++;
+          bytesRec[type&0x1]+=size;      
+        }      
+        public synchronized void dataSent(Object message, InetSocketAddress address, int size,
+            int type) {
+          msgSnt[type&0x1]++;
+          bytesSnt[type&0x1]+=size;      
+        }      
+        public synchronized void channelClosed(InetSocketAddress addr) {
+          channelsClosed++;
+        }      
+        public synchronized void channelOpened(InetSocketAddress addr, int reason) {
+          channelsOpened++;
+        }      
+      }
+      
+      final MyNetworkListener networkActivity = new MyNetworkListener(); 
+       
       final BooleanHolder imaliveRunning = new BooleanHolder();
       new Thread(new Runnable() {
         public void run() {
           while(imaliveRunning.running) {
-            System.out.println("ImALIVE:"+env.getTimeSource().currentTimeMillis());
+            System.out.println("ImALIVE:"+env.getTimeSource().currentTimeMillis()+" "+networkActivity.clobber());
             try {
               Thread.sleep(15000);
             } catch (Exception e) {}

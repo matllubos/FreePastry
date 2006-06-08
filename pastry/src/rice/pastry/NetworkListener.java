@@ -12,10 +12,10 @@ import java.net.*;
  */
 public interface NetworkListener {
   
-  public static int TYPE_UDP    = 0x001;
-  public static int TYPE_TCP    = 0x010;
-  public static int TYPE_SR_UDP = 0x101;
-  public static int TYPE_SR_TCP = 0x110;
+  public static int TYPE_TCP    = 0x00;
+  public static int TYPE_UDP    = 0x01;
+  public static int TYPE_SR_TCP = 0x10;
+  public static int TYPE_SR_UDP = 0x11;
   
   public static int REASON_NORMAL = 0;
   public static int REASON_SR = 1;
