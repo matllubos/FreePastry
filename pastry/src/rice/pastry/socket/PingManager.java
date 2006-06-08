@@ -734,7 +734,7 @@ public class PingManager extends SelectionKeyHandler {
           // increment the hop count
           packet[HEADER_SIZE+4]++;
           
-          if (logger.level <= Logger.FINER-4) logger.log("Forwarding ("+metadata[0]+" "+metadata[1]+") from "+address+" to "+next+" at "+localAddress);
+          if (logger.level <= Logger.FINE) logger.log("Forwarding ("+metadata[0]+" "+metadata[1]+") from "+address+" to "+next+" at "+localAddress);
 
           if (spn != null) {
             ((SocketPastryNode) spn).broadcastReceivedListeners(packet, address, packet.length, NetworkListener.TYPE_SR_UDP);

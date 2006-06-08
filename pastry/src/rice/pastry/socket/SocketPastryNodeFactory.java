@@ -93,13 +93,18 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress,
       int startPort, Environment env, NATHandler handler) throws IOException {
     super(env);
-    firewallSearchTries = environment.getParameters().getInt("nat_find_port_max_tries");
-    firewallAppName = environment.getParameters().getString("nat_app_name");
+    environment = env;
+    nidFactory = nf;
+    port = startPort;
+    Parameters params = env.getParameters();
+    
+    firewallSearchTries = params.getInt("nat_find_port_max_tries");
+    firewallAppName = params.getString("nat_app_name");
     this.natHandler = handler;
     localAddress = bindAddress;
     if (localAddress == null) {
-      if (env.getParameters().contains("socket_bindAddress")) {
-        localAddress = env.getParameters().getInetAddress("socket_bindAddress");
+      if (params.contains("socket_bindAddress")) {
+        localAddress = params.getInetAddress("socket_bindAddress");
       }
     }
     if (localAddress == null) {
@@ -117,10 +122,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       }
     }
 
-    environment = env;
-    nidFactory = nf;
-    port = startPort;
-    Parameters params = env.getParameters();
     if (natHandler == null) {
       if (params.contains("nat_handler_class")) {
         try {
