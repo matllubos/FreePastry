@@ -40,6 +40,9 @@ public class RouteMessage extends PRawMessage implements Serializable,
   private NodeHandleFactory nhf;
   PastryNode pn;
   
+  boolean hasSender;
+  byte internalPriority;
+  
   private RMDeserializer endpointDeserializer = new RMDeserializer();
   
   /**
@@ -190,7 +193,9 @@ public class RouteMessage extends PRawMessage implements Serializable,
    */
 
   public byte getPriority() {
-    return internalMsg.getPriority();
+    if (internalMsg != null)
+      return internalMsg.getPriority();
+    return internalPriority;
   }
 
   /**
@@ -309,15 +314,16 @@ public class RouteMessage extends PRawMessage implements Serializable,
         int auxAddress = buf.readInt();
         Id target = Id.build(buf);
         NodeHandle prev = nhf.readNodeHandle(buf);
-    
         return new RouteMessage(target, auxAddress, prev, buf, nhf, pn);
       default:
         throw new IOException("Unknown Version: "+version);
     }
   }
   
-  public RouteMessage(Id target, int auxAddress, NodeHandle prev, InputBuffer buf, NodeHandleFactory nhf, PastryNode pn) {
+  public RouteMessage(Id target, int auxAddress, NodeHandle prev, InputBuffer buf, NodeHandleFactory nhf, PastryNode pn) throws IOException {
     this(target, null, null, null);
+    hasSender = buf.readBoolean();
+    internalPriority = buf.readByte();
     prevNode = prev;
     serializedMsg = buf;
     this.nhf = nhf;
@@ -326,7 +332,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeByte((byte)0);
+    buf.writeByte((byte)0); // version
     buf.writeInt(auxAddress);
     target.serialize(buf);
     prevNode.serialize(buf);
@@ -401,8 +407,6 @@ public class RouteMessage extends PRawMessage implements Serializable,
 //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     
     NodeHandle internalSender = null;
-    boolean hasSender = serializedMsg.readBoolean();
-    byte internalPriority = serializedMsg.readByte();
     short internalType = serializedMsg.readShort();
     if (hasSender) {
       internalSender = nhf.readNodeHandle(serializedMsg);
