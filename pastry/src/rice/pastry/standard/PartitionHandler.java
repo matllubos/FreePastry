@@ -75,7 +75,8 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     if (logger.level <= Logger.FINER) logger.log("gone size 2 is "+gone.size()+" of "+maxGoneSize);
 
     while (gone.size() > maxGoneSize) {
-      gone.entrySet().iterator().remove();
+      Object key = gone.keySet().iterator().next();
+      gone.remove(key);
     }
     if (logger.level <= Logger.FINER) logger.log("gone size 3 is "+gone.size()+" of "+maxGoneSize);
   }
