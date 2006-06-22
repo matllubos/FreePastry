@@ -86,12 +86,16 @@ public abstract class ScribeMessage implements RawMessage {
    * numbers correct.
    */
   protected ScribeMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
-    source = endpoint.readNodeHandle(buf);
+    if (buf.readBoolean())
+      source = endpoint.readNodeHandle(buf);
     topic = new Topic(buf, endpoint);
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    source.serialize(buf);
+    boolean hasSource = (source != null);
+    buf.writeBoolean(hasSource);
+    if (hasSource)
+      source.serialize(buf);
     topic.serialize(buf);
   }
   
