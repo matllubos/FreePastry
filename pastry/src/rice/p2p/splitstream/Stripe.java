@@ -199,6 +199,7 @@ public class Stripe implements ScribeClient {
    * @param child The child that was added
    */
   public void childAdded(Topic topic, NodeHandle child) {
+    if (logger.level <= Logger.FINE) logger.log("childAdded("+topic+","+child+")");
   }
 
   /**
@@ -208,6 +209,7 @@ public class Stripe implements ScribeClient {
    * @param child The child that was removed
    */
   public void childRemoved(Topic topic, NodeHandle child) {
+    if (logger.level <= Logger.FINE) logger.log("childRemoved("+topic+","+child+")");
   }
 
 
