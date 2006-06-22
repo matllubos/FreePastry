@@ -146,12 +146,13 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
   /**
    * Deprecated to cause warnings.
    * 
-   * @deprecated use serialize(OutputBuffer buf, boolean javaSerialize)
+   * use serialize(OutputBuffer buf, boolean javaSerialize)
    */
-  public void serialize(OutputBuffer buf) throws IOException {
-    throw new RuntimeException("Illegal call.  Must call serialize(OutputBuffer, boolean");
-  }
+//  public void serialize(OutputBuffer buf) throws IOException {
+//    throw new RuntimeException("Illegal call.  Must call serialize(OutputBuffer, boolean");
+//  }
   
+  public abstract void serialize(OutputBuffer buf) throws IOException;
   
   protected byte serType;
   

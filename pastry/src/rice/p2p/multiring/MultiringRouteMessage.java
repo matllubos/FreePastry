@@ -67,9 +67,10 @@ public class MultiringRouteMessage implements RouteMessage {
   }
   
   /**
-    * Returns the enclosed message inside of this message
+   * Returns the enclosed message inside of this message
    *
    * @return The enclosed message
+   * @deprecated Use getMessages(MessageDeserializer)
    */
   public Message getMessage() {
     return message.getMessage();
