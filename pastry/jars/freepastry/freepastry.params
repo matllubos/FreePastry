@@ -124,7 +124,8 @@ recent detected failures (see ConsistentJoinProtocol ctor)
 pastry_protocol_consistentJoin_maxFailedToSend = 20
 
 # how often we send/expect to be sent updates
-pastry_protocol_periodicLeafSet_ping_neighbor_period = 20000
+pastry_protocol_periodicLeafSet_ping_neighbor_period = 15000
+pastry_protocol_periodicLeafSet_lease_period = 30000
 
 # what the grace period is to receive a periodic update, before checking 
 # liveness
