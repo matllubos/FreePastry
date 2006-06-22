@@ -456,7 +456,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * 
    * @param bootstrap Node handle to bootstrap from.
    * @param nodeId DESCRIBE THE PARAMETER
-   * @param address The address to claim that this node is at - used for proxies
+   * @param pAddress The address to claim that this node is at - used for proxies
    *          behind NATs
    * @return A node with a random ID and next port number.
    */
@@ -654,7 +654,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     lsProtocol.register();
     // msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
     ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-        localhandle, routeTable, leafSet);
+        localhandle, routeTable, leafSet, lsProtocol);
     jProtocol.register();
 
     if (bootstrap != null) {
@@ -669,7 +669,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         case ALWAYS:
         default:
           ExternalContinuation ec = new ExternalContinuation();
-          pn.testFireWall(bootstrap, ec, 5000);
+          pn.testFireWall(bootstrap, ec, 5000, 3);
           ec.sleep();
           Boolean resultB = (Boolean) ec.getResult();
           boolean result = resultB.booleanValue();

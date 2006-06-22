@@ -15,6 +15,7 @@ import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.exception.NodeIsDeadException;
 import rice.p2p.commonapi.rawserialization.MessageDeserializer;
+import rice.p2p.util.TimerWeakHashMap;
 import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
@@ -58,6 +59,7 @@ public class SocketSourceRouteManager {
    */
   HashSet hardLinks = new HashSet();
 
+  TimerWeakHashMap nodeHandles; 
   
   /**
    * Constructor
@@ -74,9 +76,12 @@ public class SocketSourceRouteManager {
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
     NUM_SOURCE_ROUTE_ATTEMPTS = p.getInt("pastry_socket_srm_num_source_route_attempts");
     
+    nodeHandles = new TimerWeakHashMap(node.getEnvironment().getSelectorManager().getTimer(),30000);
+    
     this.logger = node.getEnvironment().getLogManager().getLogger(SocketSourceRouteManager.class, null);
     this.manager = new SocketCollectionManager(node, this, bindAddress, proxyAddress, random);
     this.localAddress = bindAddress;
+    
   }
   
   public HashMap getBest() {
@@ -155,8 +160,6 @@ public class SocketSourceRouteManager {
    * And I mean the same object!!! not .equals(). The whole memory management
    * will get confused if this is not the case.
    */
-  WeakHashMap nodeHandles = new WeakHashMap();
-
   public NodeHandle coalesce(NodeHandle newHandle) {
     SocketNodeHandle snh = (SocketNodeHandle) newHandle;
     synchronized (nodeHandles) {
@@ -248,23 +251,14 @@ public class SocketSourceRouteManager {
           + " already exists.");
 
     manager = new AddressManager(snh, search);
+    
     // TODO make this time configurable
-    this.spn.getEnvironment().getSelectorManager().getTimer().schedule(
-        new HardLinkTimerTask(manager), 30000);
+    // yes, this is bizarre, becasue manager is not actually a key in nodeHandles, but it will work
+    // I can't exactly remember why we have this...
+    nodeHandles.refresh(manager);
     snh.addressManager = manager;
     return manager;
   }
-  
-  static class HardLinkTimerTask extends TimerTask {
-    AddressManager manager;
-    public HardLinkTimerTask(AddressManager manager) {
-      this.manager = manager;
-    }
-    public void run() {
-      // do nothing, just expire
-    }
-  }
-  
   
   /**
    * Method which sends a bootstrap message across the wire.
@@ -582,7 +576,17 @@ public class SocketSourceRouteManager {
       ll.add(result.remove(spn.getEnvironment().getRandomSource().nextInt(result.size())));
     }
     
+    // Note: need the direct route to try to recover after temporary outage
     ll.addFirst(SourceRoute.build(destination));
+    if (logger.level <= Logger.FINER) {
+      String s = "";
+      Iterator i = ll.iterator();
+      while(i.hasNext()) {
+        s+=" "+i.next(); 
+      }
+      logger.log("getAllRoutes("+destination+"):"+ll.size()+","+spn.getLeafSet().getUniqueCount()+"/"+NUM_SOURCE_ROUTE_ATTEMPTS+s);
+    } else if (logger.level <= Logger.FINE) 
+      logger.log("getAllRoutes("+destination+"):"+ll.size()+","+spn.getLeafSet().getUniqueCount()+"/"+NUM_SOURCE_ROUTE_ATTEMPTS);
     return (SourceRoute[]) ll.toArray(new SourceRoute[0]);
   }
   
@@ -593,15 +597,13 @@ public class SocketSourceRouteManager {
    */
   private Collection walkLeafSet(EpochInetSocketAddress destination, int numRequested, Collection result) {
     LeafSet leafset = spn.getLeafSet();
-    for (int i = 1; i < leafset.maxSize()/2; i++) {
-      NodeHandle h;
-      
+    for (int i = 1; i < leafset.maxSize()/2; i++) {      
       SocketNodeHandle snh = (SocketNodeHandle)leafset.get(-i);
       if (addMember(snh, destination, result)) {
         numRequested--;
         if (numRequested == 0) return result;
       }      
-      h = leafset.get(i);
+      snh = (SocketNodeHandle)leafset.get(i);
       if (addMember(snh, destination, result)) {
         numRequested--;
         if (numRequested == 0) return result;

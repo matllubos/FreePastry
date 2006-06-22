@@ -12,7 +12,7 @@ import rice.environment.params.Parameters;
 import rice.environment.time.TimeSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
-import rice.p2p.util.MathUtils;
+import rice.p2p.util.*;
 import rice.pastry.*;
 import rice.pastry.messaging.PRawMessage;
 import rice.pastry.socket.messaging.*;
@@ -25,7 +25,7 @@ import rice.selector.*;
  */
 public class PingManager extends SelectionKeyHandler {
   
-  public static final int PING_THROTTLE = 1500;
+  public static final int PING_THROTTLE = 500;
 
 //  private static final short SHORT_PING_TYPE = 159;
 //  private static final short SHORT_PING_RESPONSE_TYPE = 160;
@@ -54,10 +54,10 @@ public class PingManager extends SelectionKeyHandler {
   public final int DATAGRAM_SEND_BUFFER_SIZE;
   
   // SourceRoute -> ArrayList of PingResponseListener
-  protected WeakHashMap pingListeners = new WeakHashMap();
+  protected WeakHashMap pingListeners;
 
   // SourceRoute -> Long 
-  protected WeakHashMap lastPingTime = new WeakHashMap();
+  protected WeakHashMap lastPingTime;
   
   // The list of pending meesages
   protected ArrayList pendingMsgs;
@@ -101,6 +101,8 @@ public class PingManager extends SelectionKeyHandler {
     this.timeSource = environment.getTimeSource();
     
     Parameters p = environment.getParameters();
+    pingListeners = new TimerWeakHashMap(environment.getSelectorManager().getTimer(), 60000);
+    lastPingTime = new TimerWeakHashMap(environment.getSelectorManager().getTimer(), 5000); 
     this.manager = manager;
     this.pendingMsgs = new ArrayList();
     this.localAddress = proxyAddress;
@@ -260,11 +262,13 @@ public class PingManager extends SelectionKeyHandler {
     if (prl == null) 
       return;
     
-    ArrayList list = (ArrayList) pingListeners.get(path);
-    
-    if (list != null) {
-      // remove all
-      while(list.remove(prl));
+    synchronized(pingListeners) {
+      ArrayList list = (ArrayList) pingListeners.get(path);
+      
+      if (list != null) {
+        // remove all
+        while(list.remove(prl));
+      }
     }
   }
   
@@ -280,14 +284,16 @@ public class PingManager extends SelectionKeyHandler {
     if (prl == null) 
       return;
     
-    ArrayList list = (ArrayList) pingListeners.get(path);
-    
-    if (list == null) {
-      list = new ArrayList();
-      pingListeners.put(path, list);
+    synchronized(pingListeners) {
+      ArrayList list = (ArrayList) pingListeners.get(path);
+      
+      if (list == null) {
+        list = new ArrayList();
+        pingListeners.put(path, list);
+      }
+      
+      list.add(prl);
     }
-    
-    list.add(prl);
   }
   
   /**
@@ -298,7 +304,10 @@ public class PingManager extends SelectionKeyHandler {
    * @param lastTimePinged
    */
   protected void notifyPingResponseListeners(SourceRoute path, int proximity, long lastTimePinged) {
-    ArrayList list = (ArrayList) pingListeners.remove(path);
+    ArrayList list;
+    synchronized(pingListeners) {
+      list = (ArrayList) pingListeners.remove(path);
+    }
     
     if (list != null) {
       Iterator i = list.iterator();
@@ -387,23 +396,23 @@ public class PingManager extends SelectionKeyHandler {
    * @param message DESCRIBE THE PARAMETER
    * @param address DESCRIBE THE PARAMETER
    */
-  public void receiveMessage(SourceRoute sr, DatagramMessage dm, int size, InetSocketAddress from) throws IOException {
+  public void receiveMessage(SourceRoute sr, DatagramMessage dm, int size, SourceRoute fromPath) throws IOException {
 //    if (message instanceof DatagramMessage) {
 //      DatagramMessage dm = (DatagramMessage) message;      
       long start = dm.getStartTime();
       SourceRoute inboundPath = sr.removeLastHop(); //dm.getInboundPath();
       SourceRoute outboundPath = inboundPath.reverse(); //dm.getOutboundPath();
       
-      if (inboundPath == null)
-        inboundPath = SourceRoute.build(new EpochInetSocketAddress(from));
+//      if (inboundPath == null)
+//        inboundPath = SourceRoute.build(new EpochInetSocketAddress(from));
 
       if (spn != null)
-        ((SocketPastryNode) spn).broadcastReceivedListeners(dm, inboundPath.reverse().getLastHop().address, size, NetworkListener.TYPE_UDP);
+        ((SocketPastryNode) spn).broadcastReceivedListeners(dm, outboundPath.getLastHop().address, size, NetworkListener.TYPE_UDP);
             
       if (dm instanceof PingMessage) {
         if (logger.level <= Logger.FINE) {
           logger.log(
-              "(PM) Sending PingResponse["+start+"] via path " + outboundPath + " local " + localAddress);
+              "(PM) Sending PingResponse["+start+"] via path " + outboundPath + " local " + localAddress +" sr:"+sr+" ib:"+inboundPath);
         } else 
           if (logger.level <= Logger.FINER) logger.log(
             "COUNT: Read message(1) " + dm.getClass() + " of size " + size + " from " + outboundPath); //inboundPath.reverse());      
@@ -428,9 +437,9 @@ public class PingManager extends SelectionKeyHandler {
         manager.markDead(wem.getIncorrect());
       } else if (dm instanceof IPAddressRequestMessage) {
         if (logger.level <= Logger.FINER-5) logger.log(
-            "COUNT: Read message(4) " + dm.getClass() + " of size " + size + " from " + SourceRoute.build(new EpochInetSocketAddress(from)));      
+            "COUNT: Read message(4) " + dm.getClass() + " of size " + size + " from " + fromPath);      
         
-        enqueue(SourceRoute.build(new EpochInetSocketAddress(from)), new IPAddressResponseMessage(from, environment.getTimeSource().currentTimeMillis())); 
+        enqueue(fromPath, new IPAddressResponseMessage(fromPath.path[0].address, environment.getTimeSource().currentTimeMillis())); 
       } else {
         if (logger.level <= Logger.WARNING) logger.log(
             "ERROR: Received unknown DatagramMessage " + dm);
@@ -682,6 +691,9 @@ public class PingManager extends SelectionKeyHandler {
         throw ioe; 
       }
       
+      SourceRoute fromPath = SourceRoute.build(new EpochInetSocketAddress(address));
+
+      
       // if so, process the packet
       if ((eisa.equals(localAddress)) || (eisa.getAddress().equals(localAddress.getAddress()) &&
                                           (eisa.getEpoch() == EpochInetSocketAddress.EPOCH_UNKNOWN))) {
@@ -722,7 +734,7 @@ public class PingManager extends SelectionKeyHandler {
 //          } else {
             // a normal message
             SocketBuffer delivery = new SocketBuffer(array,spn);
-            receiveMessage(inbound, (DatagramMessage)delivery.deserialize(deserializer), array.length, address);
+            receiveMessage(inbound, (DatagramMessage)delivery.deserialize(deserializer), array.length, fromPath);
 //          }
         } else {
           // sourceroute hop
@@ -763,8 +775,14 @@ public class PingManager extends SelectionKeyHandler {
 //          if (spn != null) {
 //            ((SocketPastryNode) spn).broadcastReceivedListeners(packet, address, packet.length, NetworkListener.TYPE_SR_UDP);
 //          }
+          
+          WrongEpochMessage wem = new WrongEpochMessage(/*outbound, back.reverse(), */eisa, localAddress, environment.getTimeSource().currentTimeMillis());
 
-          enqueue(back.reverse(), new WrongEpochMessage(/*outbound, back.reverse(), */eisa, localAddress, environment.getTimeSource().currentTimeMillis()));
+          if (spn != null) {
+            ((SocketPastryNode) spn).broadcastReceivedListeners(null, address, buffer.remaining(), NetworkListener.TYPE_UDP);
+          }
+          
+          enqueue(back.reverse(), wem);
         } else {
           if (logger.level <= Logger.WARNING) logger.log(
               "WARNING: Received packet destined for EISA (" + metadata[0] + " " + metadata[1] + ") " + eisa + " but the local address is " + localAddress + " - dropping silently.");

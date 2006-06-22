@@ -134,11 +134,11 @@ public class SocketChannelWriter {
       if (queue.size() > MAXIMUM_QUEUE_LENGTH) {
         Object remove = queue.removeLast();
         if (logger.level <= Logger.WARNING) logger.log(
-             "(W): Maximum TCP queue length reached to " + path + " - message " + remove + " will be dropped.");
+             "(W): Maximum TCP queue length of "+MAXIMUM_QUEUE_LENGTH+" reached to " + path + " - message " + remove + " will be dropped.");
         return false;
       } else if (queue.size() > 20) {
         if (logger.level <= Logger.WARNING) logger.log(
-            "ERROR: Queue to " + path + " has "+queue.size()+" elements (more than "+MAXIMUM_QUEUE_LENGTH+") - probably a bad sign - enqueue of " + o);
+            "ERROR: Queue to " + path + " has "+queue.size()+" elements - probably a bad sign - enqueue of " + o);
       }        
     }
 
