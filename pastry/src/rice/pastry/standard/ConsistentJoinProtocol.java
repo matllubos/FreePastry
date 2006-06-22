@@ -9,6 +9,7 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.util.TimerWeakHashMap;
 import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
@@ -29,13 +30,18 @@ import rice.selector.TimerTask;
  * 
  * @author Jeff Hoye
  */
-public class ConsistentJoinProtocol extends StandardJoinProtocol implements Observer, NodeSetListener, LoopObserver {
+public class ConsistentJoinProtocol extends StandardJoinProtocol implements Observer, NodeSetListener, LoopObserver /*, ReadyStrategy */{
 
   /**
    * This variable is set to prevent the process from going to sleep or not
    * being scheduled for too long.
    */
   protected final int MAX_TIME_TO_BE_SCHEDULED;
+  
+  /**
+   * The number of nodes needed to hear from to go live, can be up to the LeafSet.maxSize()
+   */
+  protected final int MAX_NUM_TO_HEAR_FROM = 8;
 
   /**
    * Suppresses sendTheMessage() if we are not ready to do this part of the join process,
@@ -169,18 +175,28 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   }
   
   public ConsistentJoinProtocol(PastryNode ln, NodeHandle lh,
-      RoutingTable rt, LeafSet ls) {
-    this(ln, lh, rt, ls, null);
+      RoutingTable rt, LeafSet ls, ReadyStrategy nextReadyStrategy) {
+    this(ln, lh, rt, ls, nextReadyStrategy, null);
   }
+  
   /**
    * Constructor takes in the usual suspects.
+   * 
+   * @param ln
+   * @param lh
+   * @param rt
+   * @param ls
+   * @param nextReadyStrategy if non-null, will call nextRenderStrategy.start() when complete
+   * @param md
    */
   public ConsistentJoinProtocol(PastryNode ln, NodeHandle lh,
-      RoutingTable rt, LeafSet ls, MessageDeserializer md) {
+      RoutingTable rt, LeafSet ls, ReadyStrategy nextReadyStrategy, 
+      MessageDeserializer md) {
     super(ln, lh, rt, ls, md != null ? md : new CJPDeserializer(ln));    
-    gotResponse = new WeakHashMap();
+    gotResponse = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
     failed = new Hashtable();
     observing = new HashSet();
+    this.nextReadyStrategy = nextReadyStrategy;
     ls.addNodeSetListener(this);
     ln.addObserver(this);
     Parameters p = ln.getEnvironment().getParameters();
@@ -214,7 +230,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     };
     ln.getEnvironment().getSelectorManager().schedule(cleanupTask, cleanupInterval, cleanupInterval);
   }
-  
+
   /**
    * This is where we start out, when the StandardJoinProtocol would call
    * setReady();
@@ -289,7 +305,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * which will begin the join process again.
    *
    */
-  public void otherNodesMaySuspectFaulty() {
+  public void otherNodesMaySuspectFaulty(int timeNotScheduled) {
+    if (logger.level <= Logger.WARNING) logger.log("WARNING: CJP.otherNodesMaySuspectFaulty("+timeNotScheduled+")");
     thePastryNode.setReady(false);
   }
   
@@ -299,7 +316,12 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   public Collection whoDoWeNeedAResponseFrom() {
     HashSet ret = new HashSet();
-    for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
+    int leftIndex = leafSet.ccwSize();
+    if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
+    int rightIndex = leafSet.ccwSize();
+    if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
+    for (int i=-leftIndex; i<=rightIndex; i++) {
+//    for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
       if (i != 0) {
         NodeHandle nh = leafSet.get(i);          
         if (gotResponse.get(nh) == null) {
@@ -323,12 +345,13 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       // failed_i := failed_i - {j}
       failed.remove(j);
       
-      if (thePastryNode.isReady()) {
-        if (cjm.request) {
-          sendTheMessage(j, true); 
-        }
-        return;
-      }
+      // Removed 6/14/06, I think we should incorporate the new info into the leafset
+//      if (thePastryNode.isReady()) {
+//        if (cjm.request) {
+//          sendTheMessage(j, true); 
+//        }
+//        return;
+//      }
       
       // L_i.add(j);
       addToLeafSet(j);
@@ -394,7 +417,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         
         // mark that he knows about us
         gotResponse.put(j, new Object());
-        doneProbing();
+        if (tryingToGoReady)
+          doneProbing();
 //      }      
     } else if (msg instanceof RequestFromEveryoneMsg) {
       requestFromEveryoneWeHaventHeardFrom();
@@ -403,6 +427,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     }
   }
 
+  ReadyStrategy nextReadyStrategy;
+  
   /** 
    * Similar to the MSR-TR
    *
@@ -414,13 +440,18 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       HashSet seen = new HashSet();
       String toHearFromStr = "";
       int numToHearFrom = 0;
-      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
+      int leftIndex = leafSet.ccwSize();
+      if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
+      int rightIndex = leafSet.ccwSize();
+      if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
+      for (int i=-leftIndex; i<=rightIndex; i++) {
+//      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
         if (i != 0) {
           NodeHandle nh = leafSet.get(i);          
           if (!seen.contains(nh) && (gotResponse.get(nh) == null)) {
             numToHearFrom++;
             toHearFrom.add(nh);
-            toHearFromStr+=nh+":"+nh.getLiveness()+",";
+            if (logger.level <= Logger.FINE) toHearFromStr+=nh+":"+nh.getLiveness()+",";
           }
           seen.add(nh);
         }
@@ -429,7 +460,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       if (numToHearFrom == 0) {
         if (!thePastryNode.isReady()) {
           // active_i = true;
-          thePastryNode.setReady(); 
+          if (nextReadyStrategy == null) {
+            thePastryNode.setReady(); 
+          } else {
+            nextReadyStrategy.start(); 
+          }
           retryTask.cancel();
           tryingToGoReady = false;
         }
@@ -519,11 +554,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     if (logger.level <= Logger.FINEST) logger.log("CJP: update("+arg0+","+arg+")"+arg.getClass().getName());
     
     // we went offline for whatever reason.  Now we need to try to come back online.
-    if (arg0 == thePastryNode) {
-      if (((Boolean)arg).booleanValue() == false) {
-        setReady();
-      }
-    }
+//    if (arg0 == thePastryNode) {
+//      if (((Boolean)arg).booleanValue() == false) {
+//        setReady();
+//      }
+//    }
     
     if (arg0 instanceof NodeHandle) {
 //      if (thePastryNode.isReady()) {
@@ -574,9 +609,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @param loopTime the time it took to do a single selection loop.
    */
   public void loopTime(int loopTime) {
-    if (loopTime > delayInterest()) {
-      otherNodesMaySuspectFaulty(); 
-    }
+    // may want to do a full rejoin if this one trips... but make it longer
+    // partition handler may handle this anyway
+    otherNodesMaySuspectFaulty(loopTime); 
   }
   
   public void destroy() {
