@@ -15,7 +15,7 @@ import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.splitstream.ChannelId;
 import rice.p2p.splitstream.testing.MySplitStreamClient;
 import rice.pastry.*;
-import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
 import rice.pastry.standard.*;
@@ -23,7 +23,7 @@ import rice.pastry.standard.*;
 /**
  * @author Jeff Hoye
  */
-public class ConsistencyPLTest /*implements Observer*/ {
+public class ConsistencyPLTest implements Observer {
   public static final int startPort = 21854;
   public static final int WAIT_TO_SUBSCRIBE_DELAY = 60000;
   
@@ -52,6 +52,7 @@ public class ConsistencyPLTest /*implements Observer*/ {
   public ConsistencyPLTest(PastryNode localNode, LeafSet leafSet) {
     this.localNode = localNode;
     this.leafSet = leafSet;
+    localNode.addObserver(this);
 //    leafSet.addObserver(this);
   }
   
@@ -69,6 +70,17 @@ public class ConsistencyPLTest /*implements Observer*/ {
 //    }
 //  }
 
+  public void update(Observable observable, Object value) {
+    Boolean b = (Boolean)value;    
+    boolean rdy = b.booleanValue();
+    
+    System.out.println("CPLT.update("+rdy+")");
+    int num = 2;    
+    if (!rdy) num = 5;
+    System.out.println("LEAFSET"+num+":"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+":"+localNode.getLeafSet());
+//    System.out.println("CPLT.setReady("+rdy+"):"+localNode.getEnvironment().getTimeSource().currentTimeMillis()); 
+  }
+  
   private static Id generateId() {
     byte[] data = new byte[20];
     new Random(100).nextBytes(data);
@@ -237,12 +249,13 @@ public class ConsistencyPLTest /*implements Observer*/ {
       }
       
       final MyNetworkListener networkActivity = new MyNetworkListener(); 
-       
+             
       final BooleanHolder imaliveRunning = new BooleanHolder();
       new Thread(new Runnable() {
         public void run() {
           while(imaliveRunning.running) {
-            System.out.println("ImALIVE:"+env.getTimeSource().currentTimeMillis()+" "+networkActivity.clobber());
+            String foo = networkActivity.clobber();
+            System.out.println("ImALIVE:"+env.getTimeSource().currentTimeMillis()+" "+foo);
             try {
               Thread.sleep(15000);
             } catch (Exception e) {}
@@ -308,7 +321,7 @@ public class ConsistencyPLTest /*implements Observer*/ {
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
       final PastryNode node = factory.newNode(bootHandle);
-            
+      ((DistPastryNode) node).addNetworkListener(networkActivity);
       
       InetSocketAddress[] boots = new InetSocketAddress[6];
       boots[0] = new InetSocketAddress(InetAddress.getByName("ricepl-1.cs.rice.edu"), startPort);
@@ -357,7 +370,9 @@ public class ConsistencyPLTest /*implements Observer*/ {
   
       ls.addNodeSetListener(new NodeSetListener() {
         public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
-          System.out.println("LEAFSET1:"+env.getTimeSource().currentTimeMillis()+":"+ls);
+          int num = 1;
+          if (!node.isReady()) num = 4;
+          System.out.println("LEAFSET"+num+":"+env.getTimeSource().currentTimeMillis()+":"+ls);
           bootAddresses.add(((SocketNodeHandle)handle).getAddress());
         }
       });
@@ -391,7 +406,9 @@ public class ConsistencyPLTest /*implements Observer*/ {
       int maxLeafsetSize = ls.getUniqueCount();
       boolean running = true;
       while(running) {
-        System.out.println("LEAFSET2:"+env.getTimeSource().currentTimeMillis()+":"+ls);
+        int num = 2;
+        if (!node.isReady()) num = 5;
+        System.out.println("LEAFSET"+num+":"+env.getTimeSource().currentTimeMillis()+":"+ls);
         Thread.sleep(1*60*1000);
         if (artificialChurn) {
           if (!isBootNode) {            

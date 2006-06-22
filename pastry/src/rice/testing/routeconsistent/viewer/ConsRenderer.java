@@ -630,6 +630,9 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }  
   
   public static void main(String[] args) throws Exception {
+
+    String dir = "n:/planetlab/cons";
+//    String dir = "c:/cons/cons";
     
     if (args.length <= 1) {
       String number = "1";
@@ -641,9 +644,9 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       }
       args = new String[3];
       // m:/planetlab/plcons/cons1/viz m:/planetlab/plcons/cons1/node_index.txt m:/planetlab/plcons/cons1/
-      args[0] = "n:/planetlab/cons"+number+"/viz";
-      args[1] = "n:/planetlab/cons"+number+"/node_index.txt";
-      args[2] = "n:/planetlab/cons"+number+"/";
+      args[0] = dir+number+"/viz";
+      args[1] = dir+number+"/node_index.txt";
+      args[2] = dir+number+"/";
     }
     
     JFrame frame = new JFrame("ConsRenderer");
