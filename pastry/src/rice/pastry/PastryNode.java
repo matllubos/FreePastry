@@ -35,13 +35,13 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
 
   protected NodeHandle localhandle;
 
-  private boolean ready;
-
   protected Vector apps;
 
   protected Logger logger;
   
   public abstract NodeHandle coalesce(NodeHandle newHandle);
+    
+  ReadyStrategy readyStrategy;
   
   /**
    * Constructor, with NodeId. Need to set the node's ID before this node is
@@ -50,9 +50,32 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   protected PastryNode(Id id, Environment e) {
     myEnvironment = e;
     myNodeId = id;
-    ready = false;
+    
+    readyStrategy = new ReadyStrategy() {
+      private boolean ready = false; 
+      
+      public void setReady(boolean r) {
+        if (r != ready) {
+          ready = r;
+          notifyReadyObservers();
+        }
+      }
+      
+      public boolean isReady() {
+        return ready;  
+      }
+      
+      public void start() {
+        // don't need to do any initialization 
+      }
+    };
+    
     apps = new Vector();
     logger = e.getLogManager().getLogger(getClass(), null);
+  }
+  
+  public void setReadyStrategy(ReadyStrategy rs) {
+    readyStrategy = rs; 
   }
   
   /**
@@ -97,7 +120,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   }
 
   public boolean isReady() {
-    return ready;
+    return readyStrategy.isReady();
   }
 
   /**
@@ -143,23 +166,23 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     setReady(true);
   }
 
+  public void setReady(boolean ready) {
+    readyStrategy.setReady(ready); 
+  }
+  
   /**
    * This variable makes it so notifyReady() is only called on the apps once.
    * Deprecating
    */
   private boolean neverBeenReady = true;
 
-  public void setReady(boolean r) {
-
+  public void notifyReadyObservers() {
+  
     // It is possible to have the setReady() invoked more than once if the
-    // message
-    // denoting the termination of join protocol is duplicated.
-    if (ready == r)
-      return;
+    // message denoting the termination of join protocol is duplicated.
+    boolean ready = readyStrategy.isReady();
     //      if (r == false)
-    if (logger.level <= Logger.INFO) logger.log("PastryNode.setReady("+r+")");
-
-    ready = r;
+    if (logger.level <= Logger.INFO) logger.log("PastryNode.notifyReadyObservers("+ready+")");
 
     if (ready) {
       nodeIsReady(); // deprecate this
