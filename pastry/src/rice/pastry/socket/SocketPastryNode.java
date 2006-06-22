@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.*;
 
 import rice.Continuation;
+import rice.Continuation.ExternalContinuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
@@ -141,9 +142,36 @@ public class SocketPastryNode extends DistPastryNode {
   }
   
   
-  // this code tests the firewall using the LeafSetResponseMessage with no leafset
-  HashSet fireWallContinuations = new HashSet();
+  /**
+   * Try multiple times... it turned out that trying only once was failing often.
+   * 
+   * @param bootstrap
+   * @param c
+   * @param timeout
+   * @param tries
+   */
+  public void testFireWall(NodeHandle bootstrap, final Continuation c, int timeout, int tries) {
+    for (int i = 0; i < tries; i++) {
+      ExternalContinuation ec = new ExternalContinuation();
+      testFireWall(bootstrap, ec, 5000);
+      ec.sleep();
+      Boolean resultB = (Boolean) ec.getResult();
+      boolean result = resultB.booleanValue();
+      if (result) {
+        c.receiveResult(new Boolean(true)); 
+        return;
+      } 
+      try {
+        Thread.sleep(getEnvironment().getRandomSource().nextInt(timeout));
+      } catch (InterruptedException ie) {
+        throw new RuntimeException(ie); 
+      }
+    }
+    c.receiveResult(new Boolean(false));
+  }
   
+  // this code tests the firewall using a ping
+  HashSet fireWallContinuations = new HashSet();
   public void testFireWall(NodeHandle bootstrap, final Continuation c, int timeout) {
     if (logger.level <= Logger.FINER) logger.log("testFireWall("+bootstrap+","+timeout+")");
     synchronized(fireWallContinuations) {
@@ -160,7 +188,7 @@ public class SocketPastryNode extends DistPastryNode {
     }, timeout);
     
     SocketNodeHandle snh = (SocketNodeHandle)bootstrap;
-    EpochInetSocketAddress[] rt = {address,snh.getEpochAddress(),address};
+    EpochInetSocketAddress[] rt = {snh.getEpochAddress(),address};
     SourceRoute sr = SourceRoute.build(rt);
     if (logger.level <= Logger.FINER) logger.log("testFireWall("+bootstrap+","+timeout+"):"+sr);
     srManager.getManager().getPingManager().ping(sr,new PingResponseListener() {
