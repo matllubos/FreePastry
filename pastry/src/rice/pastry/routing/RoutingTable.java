@@ -314,7 +314,12 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    */
 
   public RouteSet[] getRow(int i) {
-    return routingTable[i];
+    try {
+      return routingTable[i];
+    } catch (ArrayIndexOutOfBoundsException aioobe) {
+      if (logger.level <= Logger.WARNING) logger.log("Warning, call to RoutingTable.getRow("+i+") max should be "+(routingTable.length-1)); 
+      return null;
+    }
   }
 
   /**
