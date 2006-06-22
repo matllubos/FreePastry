@@ -164,7 +164,7 @@ public abstract class PastryAppl implements Observer
 //        rm.routeMessage(this.localNode.getLocalHandle());
 //        return;
 //      }
-        undeliveredMessages.add(msg);
+//        undeliveredMessages.add(msg);
         return;
       }
     }    
