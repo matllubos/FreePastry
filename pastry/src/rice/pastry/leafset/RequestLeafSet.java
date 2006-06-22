@@ -18,14 +18,16 @@ import java.util.*;
 public class RequestLeafSet extends PRawMessage implements Serializable {
   public static final short TYPE = 1;
   
+  long timeStamp;
+  
   /**
    * Constructor.
    * 
    * @param nh the return handle.
    */
 
-  public RequestLeafSet(NodeHandle nh) {
-    this(null, nh);
+  public RequestLeafSet(NodeHandle nh, long timeStamp) {
+    this(null, nh, timeStamp);
   }
 
   /**
@@ -35,9 +37,10 @@ public class RequestLeafSet extends PRawMessage implements Serializable {
    * @param nh the return handle
    */
 
-  public RequestLeafSet(Date stamp, NodeHandle nh) {
+  public RequestLeafSet(Date stamp, NodeHandle nh, long timeStamp) {
     super(LeafSetProtocolAddress.getCode(), stamp);
     setSender(nh);
+    this.timeStamp = timeStamp;
     setPriority(MAX_PRIORITY);
   }
 
@@ -66,6 +69,7 @@ public class RequestLeafSet extends PRawMessage implements Serializable {
 
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeByte((byte)0); // version    
+    buf.writeLong(timeStamp);
   }
   
   public RequestLeafSet(NodeHandle sender, InputBuffer buf) throws IOException {
@@ -76,9 +80,14 @@ public class RequestLeafSet extends PRawMessage implements Serializable {
     byte version = buf.readByte();
     switch(version) {
       case 0:
+        timeStamp = buf.readLong();
         break;
       default:
         throw new IOException("Unknown Version: "+version);
     }
+  }
+
+  public long getTimeStamp() {
+    return timeStamp;
   }  
 }

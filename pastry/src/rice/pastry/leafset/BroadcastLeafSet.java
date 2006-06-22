@@ -32,12 +32,14 @@ public class BroadcastLeafSet extends PRawMessage {
 
   private int theType;
 
+  private long requestTimeStamp;
+  
   /**
    * Constructor.
    */
 
-  public BroadcastLeafSet(NodeHandle from, LeafSet leafSet, int type) {
-    this(null, from, leafSet, type);
+  public BroadcastLeafSet(NodeHandle from, LeafSet leafSet, int type, long requestTimeStamp) {
+    this(null, from, leafSet, type, requestTimeStamp);
   }
 
   /**
@@ -46,12 +48,13 @@ public class BroadcastLeafSet extends PRawMessage {
    * @param stamp the timestamp
    */
 
-  public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet, int type) {
+  public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet, int type, long requestTimeStamp) {
     super(LeafSetProtocolAddress.getCode(), stamp);
 
     fromNode = from;
     theLeafSet = leafSet;
     theType = type;
+    this.requestTimeStamp = requestTimeStamp;
     setPriority(MAX_PRIORITY);
   }
 
@@ -100,6 +103,7 @@ public class BroadcastLeafSet extends PRawMessage {
     fromNode.serialize(buf);
     theLeafSet.serialize(buf);
     buf.writeByte((byte) theType);
+    buf.writeLong(requestTimeStamp);
   }
   
   public BroadcastLeafSet(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
@@ -111,9 +115,14 @@ public class BroadcastLeafSet extends PRawMessage {
         fromNode = nhf.readNodeHandle(buf);
         theLeafSet = LeafSet.build(buf, nhf);
         theType = buf.readByte();
+        requestTimeStamp = buf.readLong();
         break;
       default:
         throw new IOException("Unknown Version: "+version);
     }
+  }
+
+  public long getTimeStamp() {
+    return requestTimeStamp;
   }  
 }
