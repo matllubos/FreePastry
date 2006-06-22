@@ -235,7 +235,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       Iterator i = loopObservers.iterator();
       while (i.hasNext()) {
         LoopObserver lo = (LoopObserver) i.next();
-        if (lo.delayInterest() >= diff) {
+        if (lo.delayInterest() <= diff) {
           lo.loopTime((int) diff);
         }
       }
