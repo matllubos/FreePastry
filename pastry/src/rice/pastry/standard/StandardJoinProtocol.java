@@ -111,7 +111,7 @@ public class StandardJoinProtocol extends PastryAppl {
 
           // now update the local leaf set
           BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(),
-              BroadcastLeafSet.JoinInitial);
+              BroadcastLeafSet.JoinInitial, 0);
           localHandle.receiveMessage(bls);
 
           // we have now successfully joined the ring, set the local node ready

@@ -96,7 +96,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
 
       if (returnHandle.isAlive()) {
         BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
-            BroadcastLeafSet.Update);
+            BroadcastLeafSet.Update, rls.getTimeStamp());
 
         returnHandle.receiveMessage(bls);
       }
@@ -144,7 +144,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
       insertedHandles = null;
 
     BroadcastLeafSet bl = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
-        BroadcastLeafSet.Correction);
+        BroadcastLeafSet.Correction, 0);
     boolean changed = remotels.merge(leafSet, thePastryNode.getLocalHandle(), null,
         true, insertedHandles);
 
@@ -197,7 +197,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
    */
 
   protected void broadcast(int type) {
-    BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet, type);
+    BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet, type, 0);
 
     int cwSize = leafSet.cwSize();
     int ccwSize = leafSet.ccwSize();
@@ -228,7 +228,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
 
   protected void broadcast(LeafSet ls, NodeHandle from) {
     BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
-        BroadcastLeafSet.JoinAdvertise);
+        BroadcastLeafSet.JoinAdvertise, 0);
 
     int cwSize = ls.cwSize();
     int ccwSize = ls.ccwSize();
@@ -299,7 +299,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
 
   private void requestLeafSet() {
 
-    RequestLeafSet rls = new RequestLeafSet(thePastryNode.getLocalHandle());
+    RequestLeafSet rls = new RequestLeafSet(thePastryNode.getLocalHandle(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());
     int cwSize = leafSet.cwSize();
     int ccwSize = leafSet.ccwSize();
     boolean allDead = true;
