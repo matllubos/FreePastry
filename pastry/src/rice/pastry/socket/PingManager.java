@@ -657,7 +657,7 @@ public class PingManager extends SelectionKeyHandler {
   protected void readHeader(InetSocketAddress address) throws IOException {
     byte[] header = new byte[HEADER_SIZE];
     buffer.get(header, 0, HEADER_SIZE);
-    if (!Arrays.equals(header, SocketCollectionManager.PASTRY_MAGIC_NUMBER)) throw new IOException("Not a pastry message:"+header[0]+","+header[1]+","+header[2]+","+header[3]);
+    if (!Arrays.equals(header, SocketCollectionManager.PASTRY_MAGIC_NUMBER)) throw new IOException("Not a pastry message from "+address+":"+header[0]+","+header[1]+","+header[2]+","+header[3]);
     
     buffer.get(header, 0, HEADER_SIZE);
     int version = MathUtils.byteArrayToInt(header);

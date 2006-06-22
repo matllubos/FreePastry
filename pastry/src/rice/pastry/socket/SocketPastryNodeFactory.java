@@ -109,8 +109,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
     if (localAddress == null) {
       localAddress = InetAddress.getLocalHost();
+      ServerSocket test = null;
       try {
-        ServerSocket test = new ServerSocket();
+        test = new ServerSocket();
         test.bind(new InetSocketAddress(localAddress, port));
       } catch (SocketException e) {
         Socket temp = new Socket("yahoo.com", 80);
@@ -119,6 +120,11 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
         if (logger.level <= Logger.WARNING)
           logger.log("Error binding to default IP, using " + localAddress);
+      } finally {
+        try {
+          if (test != null)
+            test.close();
+        } catch (Exception e) {}
       }
     }
 
@@ -302,6 +308,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket.receive(new DatagramPacket(new byte[10000], 10000));
       return (int) (environment.getTimeSource().currentTimeMillis() - start);
     } catch (IOException e) {
+      if (logger.level <= Logger.WARNING) logger.logException("Error in getProximity() ",e);
       return Integer.MAX_VALUE - 1;
     } finally {
       if (socket != null)
@@ -689,6 +696,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 //    } catch (InterruptedException e) {
 //    }
 
+//    NodeHandle nearest = getNearest(temp, bootstrap);
     if (nearest != null)
       nearest = pn.coalesce(nearest);
 
