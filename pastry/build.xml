@@ -361,6 +361,8 @@
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
         <include name="xpp*.jar"/> 
+        <include name="sbbi*.jar"/>
+        <include name="commons*.jar"/>
       </tarfileset> 
       <tarfileset dir="${docs.dir}" includes="README*" prefix="pastry-${freepastry-version}/docs" />
       <tarfileset dir="." includes="build.xml" prefix="pastry-${freepastry-version}"/>
@@ -406,6 +408,8 @@
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
         <include name="xpp*.jar"/> 
+        <include name="sbbi*.jar"/>
+        <include name="commons*.jar"/>
       </zipfileset> 
       <zipfileset dir="${docs.dir}" includes="README*" prefix="pastry-${freepastry-version}/docs" />
       <zipfileset dir="." includes="build.xml" prefix="pastry-${freepastry-version}"/>
@@ -505,6 +509,9 @@
         <include name="jfreechart-0.9.16.jar"/>
         <include name="xmlpull_1_1_3_4a.jar"/>
         <include name="xpp3-1.1.3.4d_b2.jar"/>
+        <include name="sbbi-upnplib-1.0.3.jar"/>
+        <include name="commons-jxpath-1.1.jar"/>
+        <include name="commons-logging.jar"/>
         <include name="epost.png"/>
       </tarfileset>
     </tar>
@@ -519,6 +526,9 @@
         <include name="jfreechart-0.9.16.jar"/>
         <include name="xmlpull_1_1_3_4a.jar"/>
         <include name="xpp3-1.1.3.4d_b2.jar"/>
+        <include name="sbbi-upnplib-1.0.3.jar"/>
+        <include name="commons-jxpath-1.1.jar"/>
+        <include name="commons-logging.jar"/>
         <include name="epost.png"/>
       </zipfileset>
     </zip>
