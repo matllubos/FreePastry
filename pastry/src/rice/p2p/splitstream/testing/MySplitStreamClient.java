@@ -130,7 +130,7 @@ public class MySplitStreamClient implements SplitStreamClient {
         
     Id stripeId = (rice.pastry.Id) (s.getStripeId().getId());
     String stripeStr = stripeId.toString().substring(3, 4);
-    System.out.println("deliver("+stripeStr+","+publisher+","+seq+"):"+n.getEnvironment().getTimeSource().currentTimeMillis());
+    System.out.println("deliver("+stripeStr+","+publisher+","+seq+"):"+n.getEnvironment().getTimeSource().currentTimeMillis()+" from "+s.getParent());
   }
 
   /**
