@@ -8,6 +8,7 @@ import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.util.TimerWeakHashMap;
 import rice.pastry.*;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.BroadcastLeafSet;
@@ -17,6 +18,7 @@ import rice.pastry.leafset.LeafSetProtocolAddress;
 import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.RoutingTable;
+import rice.selector.TimerTask;
 
 /**
  * An implementation of a periodic-style leafset protocol
@@ -25,7 +27,7 @@ import rice.pastry.routing.RoutingTable;
  * 
  * @author Alan Mislove
  */
-public class PeriodicLeafSetProtocol extends PastryAppl {
+public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy, NodeSetListener {
 
   protected NodeHandle localHandle;
 
@@ -40,13 +42,18 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
    * NodeHandle
    */
   protected WeakHashMap lastTimeReceivedBLS;
+  protected WeakHashMap lastTimeSentBLS;
 
   /**
    * Related to rapidly determining direct neighbor liveness.
    */
   public final int PING_NEIGHBOR_PERIOD;
 
+  public final int LEASE_PERIOD;
+  
   public final int CHECK_LIVENESS_PERIOD;
+
+  public final int BLS_THROTTLE = 5000;
 
   ScheduledMessage pingNeighborMessage;
 
@@ -98,13 +105,14 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
     this.localHandle = local;
     this.leafSet = ls;
     this.routeTable = rt;
-    this.lastTimeReceivedBLS = new WeakHashMap();
+    this.lastTimeReceivedBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
+    this.lastTimeSentBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
     Parameters p = ln.getEnvironment().getParameters();
-    PING_NEIGHBOR_PERIOD = p
-        .getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period");
+    PING_NEIGHBOR_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period");
+    LEASE_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_lease_period");
     CHECK_LIVENESS_PERIOD = PING_NEIGHBOR_PERIOD
-        + p
-            .getInt("pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod");
+        + p.getInt("pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod");
+    this.lastTimeRenewedLease = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), LEASE_PERIOD*2);
 
     // Removed after meeting on 5/5/2005 Don't know if this is always the
     // appropriate policy.
@@ -113,6 +121,16 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
         new InitiatePingNeighbor(), PING_NEIGHBOR_PERIOD, PING_NEIGHBOR_PERIOD);
   }
 
+  private void updateRecBLS(NodeHandle from, long time) {
+    Long oldTime = (Long) lastTimeReceivedBLS.get(from);
+    if ((oldTime == null) || (oldTime.longValue() < time)) {
+      lastTimeReceivedBLS.put(from, new Long(time));      
+      if (logger.level <= Logger.FINE) logger.log("PLSP.updateRecBLS("+from+","+time+")");
+      if (hasSetStrategy)
+        isReady();
+    } 
+  }
+  
   /**
    * Receives messages.
    * 
@@ -122,9 +140,6 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
     if (msg instanceof BroadcastLeafSet) {
       // receive a leafset from another node
       BroadcastLeafSet bls = (BroadcastLeafSet) msg;
-
-      lastTimeReceivedBLS.put(bls.from(), new Long(localNode.getEnvironment()
-          .getTimeSource().currentTimeMillis()));
 
       // if we have now successfully joined the ring, set the local node ready
       if (bls.type() == BroadcastLeafSet.JoinInitial) {
@@ -155,21 +170,31 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
         leafSet.merge(bls.leafSet(), bls.from(), routeTable, false,
             null);
       }
+      // do this only if you are his proper neighbor and he is yours !!!
+      if ((bls.leafSet().get(1) == localHandle) ||
+          (bls.leafSet().get(-1) == localHandle)) {
+        updateRecBLS(bls.from(), bls.getTimeStamp());
+      }
+      
     } else if (msg instanceof RequestLeafSet) {
       // request for leaf set from a remote node
       RequestLeafSet rls = (RequestLeafSet) msg;
 
       rls.returnHandle().receiveMessage(
-          new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update));
+          new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, rls.getTimeStamp()));
+      if (rls.getTimeStamp() > 0) {
+        // remember that we gave out a lease, and go unReady() if the node goes faulty
+        lastTimeRenewedLease.put(rls.returnHandle(),new Long(localNode.getEnvironment().getTimeSource().currentTimeMillis()));
+      }
     } else if (msg instanceof InitiateLeafSetMaintenance) {
       // perform leafset maintenance
       NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
 
       if (set.size() > 1) {
         NodeHandle handle = set.get(random.nextInt(set.size() - 1) + 1);
-        handle.receiveMessage(new RequestLeafSet(localHandle));
+        handle.receiveMessage(new RequestLeafSet(localHandle, localNode.getEnvironment().getTimeSource().currentTimeMillis()));
         handle.receiveMessage(new BroadcastLeafSet(localHandle, leafSet,
-            BroadcastLeafSet.Update));
+            BroadcastLeafSet.Update, 0));
 
         NodeHandle check = set.get(random
             .nextInt(set.size() - 1) + 1);
@@ -182,37 +207,39 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
 
       // send BLS to left neighbor
       if (left != null) {
-        left.receiveMessage(new BroadcastLeafSet(localHandle, leafSet,
-            BroadcastLeafSet.Update));
-        left.receiveMessage(new RequestLeafSet(localHandle));
+        sendBLS(left);
+      }
+      if (right != null) {
+        sendBLS(right);
       }
       // see if received BLS within past 30 seconds from right neighbor
-      if (right != null) {
-        Long time = (Long) lastTimeReceivedBLS.get(right);
-        if (time == null
-            || (time.longValue() < (localNode.getEnvironment().getTimeSource()
-                .currentTimeMillis() - CHECK_LIVENESS_PERIOD))) {
-          // else checkLiveness() on right neighbor
-          if (logger.level <= Logger.FINE)
-            logger
-                .log("PeriodicLeafSetProtocol: Checking liveness on right neighbor:"
-                    + right);
-          right.checkLiveness();
-        }
-      }
-      if (left != null) {
-        Long time = (Long) lastTimeReceivedBLS.get(left);
-        if (time == null
-            || (time.longValue() < (localNode.getEnvironment().getTimeSource()
-                .currentTimeMillis() - CHECK_LIVENESS_PERIOD))) {
-          // else checkLiveness() on left neighbor
-          if (logger.level <= Logger.FINE)
-            logger
-                .log("PeriodicLeafSetProtocol: Checking liveness on left neighbor:"
-                    + left);
-          left.checkLiveness();
-        }
-      }
+      // now handled in sendBLS()
+//      if (right != null) {
+//        Long time = (Long) lastTimeReceivedBLS.get(right);
+//        if (time == null
+//            || (time.longValue() < (localNode.getEnvironment().getTimeSource()
+//                .currentTimeMillis() - CHECK_LIVENESS_PERIOD))) {
+//          // else checkLiveness() on right neighbor
+//          if (logger.level <= Logger.FINE)
+//            logger
+//                .log("PeriodicLeafSetProtocol: Checking liveness on right neighbor:"
+//                    + right);
+//          right.checkLiveness();
+//        }
+//      }
+//      if (left != null) {
+//        Long time = (Long) lastTimeReceivedBLS.get(left);
+//        if (time == null
+//            || (time.longValue() < (localNode.getEnvironment().getTimeSource()
+//                .currentTimeMillis() - CHECK_LIVENESS_PERIOD))) {
+//          // else checkLiveness() on left neighbor
+//          if (logger.level <= Logger.FINE)
+//            logger
+//                .log("PeriodicLeafSetProtocol: Checking liveness on left neighbor:"
+//                    + left);
+//          left.checkLiveness();
+//        }
+//      }
     }
   }
 
@@ -223,13 +250,158 @@ public class PeriodicLeafSetProtocol extends PastryAppl {
    */
   protected void broadcastAll() {
     BroadcastLeafSet bls = new BroadcastLeafSet(localHandle, leafSet,
-        BroadcastLeafSet.JoinAdvertise);
+        BroadcastLeafSet.JoinAdvertise, 0);
     NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
 
     for (int i = 1; i < set.size(); i++)
       set.get(i).receiveMessage(bls);
   }
 
+  // Ready Strategy
+  boolean hasSetStrategy = false;
+
+  public void start() {
+    if (!hasSetStrategy) {
+      if (logger.level <= Logger.INFO) logger.log("PLSP.start(): Setting self as ReadyStrategy");
+      ready = true;
+      localNode.setReadyStrategy(this);
+      hasSetStrategy = true;
+      localNode.addLeafSetListener(this);
+    }    
+  }
+  
+  /**
+   * Called when the leafset changes
+   */
+  NodeHandle lastLeft;
+  NodeHandle lastRight;
+  public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
+    NodeHandle newLeft = leafSet.get(-1);
+    if ((!added) && (
+      handle == lastLeft ||
+      handle == lastRight
+      )) {
+      // check to see if we have an existing lease
+      long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+      long leaseOffset = curTime-LEASE_PERIOD;
+
+      Long time = (Long)lastTimeRenewedLease.get(handle);
+      if (time != null
+          && (time.longValue() >= leaseOffset)) {
+        // we gave out a lease too recently
+        TimerTask deadLease = 
+        new TimerTask() {        
+          public void run() {
+            deadLeases.remove(this);
+            isReady();            
+          }        
+        };
+        deadLeases.add(deadLease);
+        localNode.getEnvironment().getSelectorManager().getTimer().schedule(deadLease,
+            time.longValue()-leaseOffset);
+        isReady();
+      }      
+    }
+    if (lastLeft != newLeft) {
+      lastLeft = newLeft;
+      sendBLS(lastLeft);
+    }
+    NodeHandle newRight = leafSet.get(1);
+    if (lastRight != newRight) {
+      lastRight = newRight;
+      sendBLS(lastRight);
+    }
+  }
+  
+  boolean ready = false;
+  public void setReady(boolean r) {
+    if (ready != r) {
+      ready = r; 
+      thePastryNode.notifyReadyObservers();
+    }
+  }
+  
+  /**
+   * 
+   *
+   */
+  public boolean isReady() {
+    // check to see if we've heard from the left/right neighbors recently enough
+    boolean shouldBeReady = shouldBeReady(); // temp
+//    if (!shouldBeReady) {      
+//      // I suspect this is unnecessary because this timer should be well underway of sorting this out
+//      receiveMessage(new InitiatePingNeighbor());
+//    }
+    
+    if (shouldBeReady != ready) {
+      thePastryNode.setReady(shouldBeReady); // will call back in to setReady() and notify the observers
+    }
+    return shouldBeReady;
+  }
+  
+  HashSet deadLeases = new HashSet();
+  
+  public boolean shouldBeReady() {
+    long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+    long leaseOffset = curTime-LEASE_PERIOD;
+    
+    NodeHandle left = leafSet.get(-1);
+    NodeHandle right = leafSet.get(1);
+    
+    // see if received BLS within past 30 seconds from right neighbor
+    if (right != null) {
+      Long time = (Long) lastTimeReceivedBLS.get(right);
+      if (time == null
+          || (time.longValue() < leaseOffset)) {
+            sendBLS(right);
+        // we don't have a lease
+        return false;
+      }      
+    }
+    if (left != null) {
+      Long time = (Long) lastTimeReceivedBLS.get(left);
+      if (time == null
+          || (time.longValue() < leaseOffset)) {
+            sendBLS(left);
+        // we don't have a lease
+        return false;
+      }      
+    }     
+    if (deadLeases.size() > 0) return false;
+    return true;
+  }
+  
+  /**
+   * 
+   * @param sendTo
+   * @return true if we sent it, false if we didn't because of throttled
+   */
+  private boolean sendBLS(NodeHandle sendTo) {
+    Long time = (Long) lastTimeSentBLS.get(sendTo);
+    if (time == null
+        || (time.longValue() < (localNode.getEnvironment().getTimeSource()
+            .currentTimeMillis() - BLS_THROTTLE))) {
+      long currentTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+      if (logger.level <= Logger.FINE) // only log if not throttled
+        logger.log("PeriodicLeafSetProtocol: Checking liveness on neighbor:"
+              + sendTo+" "+time);
+      lastTimeSentBLS.put(sendTo, new Long(currentTime));
+
+      sendTo.receiveMessage(new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
+      sendTo.receiveMessage(new RequestLeafSet(localHandle, currentTime));
+      sendTo.checkLiveness();
+      return true;
+    } 
+    return false;
+  }
+  
+  /**
+   * NodeHandle -> time
+   * 
+   * If this node is found faulty (and you took over the leafset), must go non-ready until lease expires
+   */
+  WeakHashMap lastTimeRenewedLease;
+  
   /**
    * Used to kill self if leafset shrunk by too much. NOTE: PLSP is not
    * registered as an observer.
