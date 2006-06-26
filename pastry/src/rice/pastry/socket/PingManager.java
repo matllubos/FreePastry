@@ -185,6 +185,7 @@ public class PingManager extends SelectionKeyHandler {
       if (key.channel() != null)
         key.channel().close();
       key.cancel();
+      key.attach(null);
     }
   }
   

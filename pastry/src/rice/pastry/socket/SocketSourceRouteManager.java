@@ -114,15 +114,19 @@ public class SocketSourceRouteManager {
    * debugging and testing.
    */
   public void destroy() throws IOException {
-    spn.getEnvironment().getSelectorManager().invoke(new Runnable() {    
-      public void run() {
-        try {
-          manager.destroy();
-        } catch (IOException ioe) {
-          if (logger.level <= Logger.WARNING) logger.logException("Exception while destrying SocketSourceRouteManager",ioe);
+    if (spn.getEnvironment().getSelectorManager().isSelectorThread()) {
+      manager.destroy();
+    } else {
+      spn.getEnvironment().getSelectorManager().invoke(new Runnable() {    
+        public void run() {
+          try {
+            destroy();
+          } catch (IOException ioe) {
+            if (logger.level <= Logger.WARNING) logger.logException("Exception while destrying SocketSourceRouteManager",ioe);
+          }
         }
-      }
-    });
+      });
+    }
   }
   
   /**

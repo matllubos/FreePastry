@@ -560,12 +560,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     // getNearest uses the port inside the SNH, so this needs to be the local
     // address
-    SocketNodeHandle temp = new SocketNodeHandle(getEpochAddress(port, epoch),
-        nodeId);
-    NodeHandle nearest = getNearest(temp, bootstrap);
+    NodeHandle nearest; // = getNearest(temp, bootstrap);
 
     final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
 
+    environment.addDestructable(pn);
+    
     SocketSourceRouteManager srManager = null;
 
     try {
@@ -614,6 +614,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           }
           proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
         }
+        SocketNodeHandle temp = new SocketNodeHandle(proxyAddress,
+            nodeId);
+        nearest = getNearest(temp, bootstrap);
 
         srManager = new SocketSourceRouteManager(pn, localAddress,
             proxyAddress, random); // throws an exception if cant bind
