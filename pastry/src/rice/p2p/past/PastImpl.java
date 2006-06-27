@@ -64,6 +64,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   // the replica manager used by Past
   protected ReplicationManager replicaManager;
   
+  protected LockManager lockManager;
+  
   // the policy used for application-specific behavior
   protected PastPolicy policy;
 
@@ -201,6 +203,8 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
     //   log.getHandlers()[0].setLevel(Level.FINE);
     
     this.replicaManager = buildReplicationManager(node, instance);
+    
+    this.lockManager = new LockManagerImpl(environment);
     
     this.endpoint.accept(new AppSocketReceiver() {
       
@@ -976,16 +980,27 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
         // make sure the policy allows the insert
         if (policy.allowInsert(imsg.getContent())) {
           inserts++;
+          final Id msgid = imsg.getContent().getId();
           
-          storage.getObject(imsg.getContent().getId(), new StandardContinuation(getResponseContinuation(msg)) {
-            public void receiveResult(Object o) {
-              try {
-                // allow the object to check the insert, and then insert the data
-                PastContent content = imsg.getContent().checkInsert(imsg.getContent().getId(), (PastContent) o);
-                storage.store(imsg.getContent().getId(), null, content, parent);
-              } catch (PastException e) {
-                parent.receiveException(e);
-              }
+          lockManager.lock(msgid, new StandardContinuation(getResponseContinuation(msg)) {
+
+            public void receiveResult(Object result) {
+              storage.getObject(msgid, new StandardContinuation(parent) {
+                public void receiveResult(Object o) {
+                  try {
+                    // allow the object to check the insert, and then insert the data
+                    PastContent content = imsg.getContent().checkInsert(msgid, (PastContent) o);
+                    storage.store(msgid, null, content, new StandardContinuation(parent) {
+                      public void receiveResult(Object result) {
+                        getResponseContinuation(msg).receiveResult(result);
+                        lockManager.unlock(msgid);
+                      }
+                    });
+                  } catch (PastException e) {
+                    parent.receiveException(e);
+                  }
+                }
+              });
             }
           });
         } else {
