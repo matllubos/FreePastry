@@ -308,7 +308,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       socket.receive(new DatagramPacket(new byte[10000], 10000));
       return (int) (environment.getTimeSource().currentTimeMillis() - start);
     } catch (IOException e) {
-      if (logger.level <= Logger.WARNING) logger.logException("Error in getProximity() ",e);
+      if (logger.level <= Logger.FINE) logger.logException("Error in getProximity("+local+","+handle+") ",e);
       return Integer.MAX_VALUE - 1;
     } finally {
       if (socket != null)

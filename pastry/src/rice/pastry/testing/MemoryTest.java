@@ -56,10 +56,12 @@ public class MemoryTest {
     Environment env = new Environment();    
     env.getParameters().setBoolean("pastry_factory_selectorPerNode", false);
     env.getParameters().setBoolean("pastry_factory_processorPerNode", false);
-    env.getParameters().setInt("pastry_socket_scm_ping_delay", 1000);
-    env.getParameters().setInt("pastry_socket_scm_ping_jitter", 500);
-    env.getParameters().setInt("pastry_socket_scm_num_ping_tries", 2);
-    
+    env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", 0);
+    env.getParameters().setInt("pastry_socket_scm_ping_delay", 500);
+    env.getParameters().setInt("pastry_socket_scm_num_ping_tries", 5);
+    env.getParameters().setInt("pastry_protocol_periodicLeafSet_ping_neighbor_period", 8000);
+    env.getParameters().setInt("pastry_protocol_periodicLeafSet_lease_period", 10000);
+
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     //InetAddress localAddress = InetAddress.getByName("139.19.64.79");
@@ -122,6 +124,8 @@ public class MemoryTest {
   }
   
   public static void main(String[] args) throws Exception {
+    System.setOut(new PrintStream(new FileOutputStream("mem.txt")));
+    System.setErr(System.out);
     testOneEnvironment();
     testMultiEnvironment();
   }

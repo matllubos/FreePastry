@@ -487,6 +487,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   public void destroy() {
     if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
     myMessageDispatch.destroy();
+    getEnvironment().removeDestructable(this);
   }
 
 
