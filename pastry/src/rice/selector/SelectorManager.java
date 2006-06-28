@@ -219,6 +219,14 @@ public class SelectorManager extends Thread implements Timer, Destructable {
           "ERROR (SelectorManager.run): " , t);
       System.exit(-1);
     }
+    invocations.clear();
+    loopObservers.clear();
+    cancelledKeys.clear();
+    timerQueue.clear();
+    invocations = null;
+    loopObservers = null;
+    cancelledKeys = null;
+    timerQueue = null;
     if (logger.level <= Logger.INFO) logger.log("Selector "+instance+" shutting down.");
   }
 

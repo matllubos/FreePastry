@@ -74,10 +74,11 @@ public class ConsistencyPLTest implements Observer {
     Boolean b = (Boolean)value;    
     boolean rdy = b.booleanValue();
     
-    System.out.println("CPLT.update("+rdy+")");
+    long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+    System.out.println("CPLT.update("+rdy+"):"+curTime);
     int num = 2;    
     if (!rdy) num = 5;
-    System.out.println("LEAFSET"+num+":"+localNode.getEnvironment().getTimeSource().currentTimeMillis()+":"+localNode.getLeafSet());
+    System.out.println("LEAFSET"+num+":"+curTime+":"+localNode.getLeafSet());
 //    System.out.println("CPLT.setReady("+rdy+"):"+localNode.getEnvironment().getTimeSource().currentTimeMillis()); 
   }
   
@@ -90,6 +91,60 @@ public class ConsistencyPLTest implements Observer {
   static class BooleanHolder {
     public boolean running = true; 
   }
+  
+  static Environment environment;
+  static MyNetworkListener networkActivity;
+
+  static class MyNetworkListener implements NetworkListener {      
+    public static final int TRACKS = 2;
+    
+    int[] msgRec = new int[TRACKS];
+    int[] bytesRec = new int[TRACKS];
+    int[] msgSnt = new int[TRACKS];
+    int[] bytesSnt = new int[TRACKS];
+    int channelsOpened;
+    int channelsClosed;
+    
+    
+    /**
+     * returns full status of network activity since last call, then clears everything
+     * @return
+     */
+    public synchronized String clobber() {
+      String ret = 
+        "st:"+msgSnt[TYPE_TCP]+":"+bytesSnt[TYPE_TCP]+
+        " su:"+msgSnt[TYPE_UDP]+":"+bytesSnt[TYPE_UDP]+
+        " rt:"+msgRec[TYPE_TCP]+":"+bytesRec[TYPE_TCP]+
+        " ru:"+msgRec[TYPE_UDP]+":"+bytesRec[TYPE_UDP]+
+        " socks:"+channelsOpened+":"+channelsClosed;
+      
+      for (int i = 0; i < TRACKS; i++) {
+        msgRec[i] = 0;
+        bytesRec[i] = 0;
+        msgSnt[i] = 0;
+        bytesSnt[i] = 0;
+      }
+      channelsOpened = 0;
+      channelsClosed = 0;          
+      return ret;
+    }        
+    public synchronized void dataReceived(Object message, InetSocketAddress address, int size,
+        int type) {
+      msgRec[type&0x1]++;
+      bytesRec[type&0x1]+=size;      
+    }      
+    public synchronized void dataSent(Object message, InetSocketAddress address, int size,
+        int type) {
+      msgSnt[type&0x1]++;
+      bytesSnt[type&0x1]+=size;      
+    }      
+    public synchronized void channelClosed(InetSocketAddress addr) {
+      channelsClosed++;
+    }      
+    public synchronized void channelOpened(InetSocketAddress addr, int reason) {
+      channelsOpened++;
+    }      
+  }  
   
   public static void main(String[] args) throws Exception {
     
@@ -175,8 +230,10 @@ public class ConsistencyPLTest implements Observer {
     }
     
     while(true) { // to allow churn
-      final Environment env = new Environment();
-
+      Environment env = new Environment();
+      
+      environment = env;
+      
       if (args.length > 0) {
         int theVal = Integer.parseInt(args[0]);
         if (theVal >= 0) {
@@ -197,65 +254,14 @@ public class ConsistencyPLTest implements Observer {
       System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
       System.out.println("Ping Num Source Route attempts:"+env.getParameters().getInt("pastry_socket_srm_num_source_route_attempts"));
       
-      class MyNetworkListener implements NetworkListener {      
-        public static final int TRACKS = 2;
-        
-        int[] msgRec = new int[TRACKS];
-        int[] bytesRec = new int[TRACKS];
-        int[] msgSnt = new int[TRACKS];
-        int[] bytesSnt = new int[TRACKS];
-        int channelsOpened;
-        int channelsClosed;
-        
-        
-        /**
-         * returns full status of network activity since last call, then clears everything
-         * @return
-         */
-        public synchronized String clobber() {
-          String ret = 
-            "st:"+msgSnt[TYPE_TCP]+":"+bytesSnt[TYPE_TCP]+
-            " su:"+msgSnt[TYPE_UDP]+":"+bytesSnt[TYPE_UDP]+
-            " rt:"+msgRec[TYPE_TCP]+":"+bytesRec[TYPE_TCP]+
-            " ru:"+msgRec[TYPE_UDP]+":"+bytesRec[TYPE_UDP]+
-            " socks:"+channelsOpened+":"+channelsClosed;
-          
-          for (int i = 0; i < TRACKS; i++) {
-            msgRec[i] = 0;
-            bytesRec[i] = 0;
-            msgSnt[i] = 0;
-            bytesSnt[i] = 0;
-          }
-          channelsOpened = 0;
-          channelsClosed = 0;          
-          return ret;
-        }        
-        public synchronized void dataReceived(Object message, InetSocketAddress address, int size,
-            int type) {
-          msgRec[type&0x1]++;
-          bytesRec[type&0x1]+=size;      
-        }      
-        public synchronized void dataSent(Object message, InetSocketAddress address, int size,
-            int type) {
-          msgSnt[type&0x1]++;
-          bytesSnt[type&0x1]+=size;      
-        }      
-        public synchronized void channelClosed(InetSocketAddress addr) {
-          channelsClosed++;
-        }      
-        public synchronized void channelOpened(InetSocketAddress addr, int reason) {
-          channelsOpened++;
-        }      
-      }
-      
-      final MyNetworkListener networkActivity = new MyNetworkListener(); 
-             
+      networkActivity = new MyNetworkListener();
+
       final BooleanHolder imaliveRunning = new BooleanHolder();
       new Thread(new Runnable() {
         public void run() {
           while(imaliveRunning.running) {
             String foo = networkActivity.clobber();
-            System.out.println("ImALIVE:"+env.getTimeSource().currentTimeMillis()+" "+foo);
+            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" "+foo);
             try {
               Thread.sleep(15000);
             } catch (Exception e) {}
@@ -334,8 +340,9 @@ public class ConsistencyPLTest implements Observer {
       PartitionHandler ph = new PartitionHandler(node, (DistPastryNodeFactory)factory, boots);
       ph.start(node.getEnvironment().getSelectorManager().getTimer());
       
+      final String nodeString = node.toString();
       Thread shutdownHook = new Thread() {
-        public void run() { System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node); }
+        public void run() { System.out.println("SHUTDOWN "+environment.getTimeSource().currentTimeMillis()+" "+nodeString); }
       };
       
       Runtime.getRuntime().addShutdownHook(shutdownHook);
@@ -349,7 +356,7 @@ public class ConsistencyPLTest implements Observer {
       NodeSetListener preObserver = 
         new NodeSetListener() {
           public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
-            System.out.println("LEAFSET4:"+env.getTimeSource().currentTimeMillis()+":"+ls);
+            System.out.println("LEAFSET4:"+environment.getTimeSource().currentTimeMillis()+":"+ls);
             bootAddresses.add(((SocketNodeHandle)handle).getAddress());
           }
         };
@@ -372,7 +379,7 @@ public class ConsistencyPLTest implements Observer {
         public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
           int num = 1;
           if (!node.isReady()) num = 4;
-          System.out.println("LEAFSET"+num+":"+env.getTimeSource().currentTimeMillis()+":"+ls);
+          System.out.println("LEAFSET"+num+":"+environment.getTimeSource().currentTimeMillis()+":"+ls);
           bootAddresses.add(((SocketNodeHandle)handle).getAddress());
         }
       });
@@ -420,8 +427,8 @@ public class ConsistencyPLTest implements Observer {
               System.out.println("Killing self to cause churn. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
               System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node);
               //              System.exit(25);
-              node.destroy();
-              env.destroy();
+//              node.destroy(); // done in env.destroy()
+              env.destroy();              
               running = false;
               int waittime = env.getRandomSource().nextInt(300000);
               System.out.println("Waiting for "+waittime+" millis before restarting.");

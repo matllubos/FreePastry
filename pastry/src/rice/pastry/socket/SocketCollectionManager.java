@@ -625,6 +625,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
     key.channel().close();
     key.cancel();    
+    key.attach(null);
   }
   
   public int getNumSourceRoutes() {
