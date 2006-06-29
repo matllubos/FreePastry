@@ -69,14 +69,18 @@ public class ClosestRegrTest {
       synchronized(node) {
         while(!node.isReady()) {
           try {
-            node.wait(500);          
+            node.wait(500);   
           } catch (InterruptedException ie) {
             return; 
           }
         }
       }
+      
+
       if (i > 0)
         test(i, (DirectNodeHandle)node.getLocalHandle());
+      
+//      try { Thread.sleep(100); } catch (InterruptedException ie) {}
 
 //      while (simulator.simulate()) {}
 
@@ -109,19 +113,26 @@ public class ClosestRegrTest {
 //    System.out.println();
     DirectNodeHandle closest = (DirectNodeHandle)factory.getNearest(handle, bootstrap);
     DirectNodeHandle realClosest = simulator.getClosest(handle);
-        
+//    int cProx = simulator.proximity(closest, handle);
+//    System.out.println("cProx:"+cProx);
     if (! closest.getNodeId().equals(realClosest.getNodeId())) {
-      incorrect++;
       int cProx = simulator.proximity(closest, handle);
       int rProx = simulator.proximity(realClosest, handle);
-      sum += (cProx / rProx);
-      
-      System.out.println("ERROR: CLOSEST TO " + handle + " WAS " + closest.getNodeId()+":"+ cProx + " REAL CLOSEST: " + realClosest.getNodeId()+":"+rProx);
-      System.out.println("SO FAR: " + incorrect + "/" + i + " PERCENTAGE: " + (sum/incorrect));
+      if (cProx == 0) {
+        System.out.println("ERROR: factory.getNearest("+handle+") returned "+closest); 
+      }
+//      if (true) {
+      if (rProx < cProx) {
+        incorrect++;
+        sum += (cProx / rProx);
+        
+        System.out.println("ERROR: CLOSEST TO " + handle + " WAS " + closest.getNodeId()+":"+ cProx + " REAL CLOSEST: " + realClosest.getNodeId()+":"+rProx);
+        System.out.println("SO FAR: " + incorrect + "/" + i + " PERCENTAGE: " + (sum/incorrect));
 
 //      NodeHandle closest2 = factory.getNearest(handle, bootstrap);
 //      System.out.println(closest2);
 //      NodeHandle realClosest2 = simulator.getClosest(nodeId);
+      }
     }
   }
 

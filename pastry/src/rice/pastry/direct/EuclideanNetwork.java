@@ -19,11 +19,14 @@ import rice.pastry.messaging.*;
  */
 public class EuclideanNetwork extends BasicNetworkSimulator {
 
+  final int side;
   /**
    * Constructor.
    */
   public EuclideanNetwork(Environment env) {
     super(env);
+    side = (int)(maxDiameter/Math.sqrt(2.0));
+//    System.out.println("side:"+side);    
   }
 
   public NodeRecord generateNodeRecord() {
@@ -50,8 +53,8 @@ public class EuclideanNetwork extends BasicNetworkSimulator {
      * @param nh 
      */
     public EuclideanNodeRecord() {
-      x = random.nextInt() % 10000;
-      y = random.nextInt() % 10000;
+      x = random.nextInt() % side;
+      y = random.nextInt() % side;
 
       alive = true;
     }
@@ -61,8 +64,11 @@ public class EuclideanNetwork extends BasicNetworkSimulator {
       EuclideanNodeRecord nr = (EuclideanNodeRecord)that;
       int dx = x - nr.x;
       int dy = y - nr.y;
-
-      return ((int) Math.sqrt(dx * dx + dy * dy));
+      
+      int ret = (int)Math.sqrt(dx * dx + dy * dy);
+      if ((ret < 2) && !this.equals(that)) return 2;
+      
+      return ret;
     }
   }
 }

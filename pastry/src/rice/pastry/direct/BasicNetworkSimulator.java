@@ -40,10 +40,15 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   
   protected SelectorManager manager;
     
+  protected final int maxDiameter;
+  protected final int minDelay;
+  
   public BasicNetworkSimulator(Environment env) {
     this.environment = env;
     manager = environment.getSelectorManager();
     Parameters params = env.getParameters();
+    maxDiameter = params.getInt("pastry_direct_max_diameter");
+    minDelay = params.getInt("pastry_direct_min_delay");
     if (params.contains("pastry_direct_use_own_random")
         && params.getBoolean("pastry_direct_use_own_random")) {
 

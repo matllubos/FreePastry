@@ -40,17 +40,24 @@ public class SphereNetwork extends BasicNetworkSimulator {
      * DESCRIBE THE FIELD
      */
     public double theta, phi;
-
+    double radius;
+    
     /**
      * Constructor for NodeRecord.
      *
      * @param nh DESCRIBE THE PARAMETER
      */
     public SphereNodeRecord() {
-      theta = Math.asin(2.0 * random.nextDouble() - 1.0);
-      phi = 2.0 * Math.PI * random.nextDouble();
+      this(Math.asin(2.0 * random.nextDouble() - 1.0),
+           2.0 * Math.PI * random.nextDouble());
     }
 
+    public SphereNodeRecord(double theta, double phi) {
+      this.theta = theta;
+      this.phi = phi;
+      radius = maxDiameter/Math.PI;
+    }
+    
     /**
      * DESCRIBE THE METHOD
      *
@@ -59,9 +66,26 @@ public class SphereNetwork extends BasicNetworkSimulator {
      */
     public int proximity(NodeRecord that) {
       SphereNodeRecord nr = (SphereNodeRecord)that;
-      return (int) (10000 * Math.acos(Math.cos(phi - nr.phi) * Math.cos(theta) * Math.cos(nr.theta) +
+      int ret = (int) (radius * Math.acos(Math.cos(phi - nr.phi) * Math.cos(theta) * Math.cos(nr.theta) +
         Math.sin(theta) * Math.sin(nr.theta)));
+      
+      if ((ret < 2) && !this.equals(that)) return 2;
+      
+      return ret;
     }
+  }
+  
+  public void test() {
+    System.out.println(new SphereNodeRecord(0,0).proximity(new SphereNodeRecord(0, Math.PI))); 
+    System.out.println(new SphereNodeRecord(-1,0).proximity(new SphereNodeRecord(1, Math.PI))); 
+    for (int i = 0; i < 100; i++) {
+      System.out.println(new SphereNodeRecord().proximity(new SphereNodeRecord())); 
+    }
+  }
+  
+  public static void main(String[] argz) {
+    System.out.println("hello world"); 
+    new SphereNetwork(Environment.directEnvironment()).test();    
   }
 }
 

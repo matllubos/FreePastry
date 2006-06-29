@@ -300,7 +300,7 @@ public abstract class PastryNodeFactory {
 
       int prox = proximity(local, tempNode);
       
-      if ((prox < nearestdist) && tempNode.isAlive()) {
+      if ((prox > 0) && (prox < nearestdist) && tempNode.isAlive()) {
         nearestdist = prox;
         closestNode = tempNode;
       }
