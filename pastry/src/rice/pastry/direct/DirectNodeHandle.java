@@ -97,7 +97,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
   }
   
   public final void assertLocalNode() {
-    if (DirectPastryNode.currentNode == null) {
+    if (DirectPastryNode.getCurrentNode() == null) {
 //      ctor.printStackTrace();
       throw new RuntimeException("PANIC: localnode is null in " + this+"@"+System.identityHashCode(this));
     }
@@ -110,9 +110,9 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    */
   public int proximity() {
     assertLocalNode();
-    if (!simulator.getEnvironment().getSelectorManager().isSelectorThread()) 
-      throw new RuntimeException("Must be called on selector thread.");
-    int result = simulator.proximity((DirectNodeHandle)DirectPastryNode.currentNode.getLocalHandle(), this);
+//    if (!simulator.getEnvironment().getSelectorManager().isSelectorThread()) 
+//      throw new RuntimeException("Must be called on selector thread.");
+    int result = simulator.proximity((DirectNodeHandle)DirectPastryNode.getCurrentNode().getLocalHandle(), this);
 
     return result;
   }
@@ -126,7 +126,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
     // shortcut if called on the local node
     if (simulator.getEnvironment().getSelectorManager().isSelectorThread() &&
         // the message is from myself
-        (remoteNode == DirectPastryNode.currentNode)) {
+        (remoteNode == DirectPastryNode.getCurrentNode())) {
       remoteNode.receiveMessage(msg);
       return; 
     }

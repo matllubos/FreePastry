@@ -30,8 +30,33 @@ public class DirectPastryNode extends PastryNode {
    * Used for proximity calculation of DirectNodeHandle. This will probably go
    * away when we switch to a byte-level protocol.
    */
-  static public DirectPastryNode currentNode = null;
+  static private Hashtable currentNode = new Hashtable();
+  
+  /**
+   * Returns the previous one.
+   * 
+   * @param dnh
+   * @return
+   */
+  public static synchronized DirectPastryNode setCurrentNode(DirectPastryNode dpn) {
+    Thread current = Thread.currentThread();
+    DirectPastryNode ret = (DirectPastryNode)currentNode.get(current);
+    if (dpn == null) {
+      currentNode.remove(current);
+    } else {
+      currentNode.put(current, dpn);
+    } 
+    return ret;
+  }
+  
+  public static synchronized DirectPastryNode getCurrentNode() {
+    Thread current = Thread.currentThread();
+    DirectPastryNode ret = (DirectPastryNode)currentNode.get(current);
+    return ret;    
+  }
 
+  
+  
   private NetworkSimulator simulator;
   protected boolean alive = true;
   NodeRecord record;
@@ -160,13 +185,12 @@ public class DirectPastryNode extends PastryNode {
       return;
     }
     
-    DirectPastryNode temp = currentNode;
 //    if ((currentNode != null) && (currentNode != this))
 //      throw new RuntimeException("receiveMessage called recursively!");
 //    System.out.println("currentNode != null");
-    currentNode = this;
+    DirectPastryNode temp = setCurrentNode(this);
     super.receiveMessage(msg);
-    currentNode = temp;
+    setCurrentNode(temp);
   }
 
   public synchronized void route(RouteMessage rm) {
@@ -175,10 +199,9 @@ public class DirectPastryNode extends PastryNode {
       return;
     }
     
-    DirectPastryNode temp = currentNode;
-    currentNode = this;
+    DirectPastryNode temp = setCurrentNode(this);
     super.receiveMessage(rm);
-    currentNode = temp;
+    setCurrentNode(temp);
   }
   
   public Logger getLogger() {

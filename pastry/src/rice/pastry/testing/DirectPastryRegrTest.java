@@ -89,6 +89,14 @@ public class DirectPastryRegrTest extends PastryRegrTest {
 //    enet.setAlive(pn.getNodeId(), false);
   }
 
+  protected void checkRoutingTable(final RegrTestApp rta) {
+    DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)rta.getPastryNode());
+    try {
+      super.checkRoutingTable(rta);
+    } finally {
+      DirectPastryNode.setCurrentNode(temp);
+    }
+  }  
   /**
    * main. just create the object and call PastryNode's main.
    */

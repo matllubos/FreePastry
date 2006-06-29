@@ -54,6 +54,10 @@ public class RegrTestApp extends CommonAPIAppl {
   }
 
   //public void messageForAppl(Message msg) {
+  /**
+   * Makes sure the message was delivered to the correct node by crossrefrencing the 
+   * sorted nodes list in the simulator.
+   */
   public void deliver(Id key, Message msg) {
 
     /*
@@ -87,6 +91,11 @@ public class RegrTestApp extends CommonAPIAppl {
         System.out.print(msg);
         System.out.println(" received at " + getNodeId());
         System.out.println(getLeafSet());
+//      } else {
+//        System.out.println("mfa success, inBetween=" + inBetween); 
+//        System.out.print(msg);
+//        System.out.println(" received at " + getNodeId());
+//        System.out.println(getLeafSet());
       }
     }
   }

@@ -209,27 +209,7 @@ public abstract class PastryRegrTest {
       pastryNodesSortedReady.put(pn.getNodeId(), pn);
 
       checkLeafSet(rta[i]);
-      if (!environment.getSelectorManager().isSelectorThread() && (this instanceof DirectPastryRegrTest)) {
-        final RegrTestApp theRta = rta[i];
-        final DirectPastryNode dpn = (DirectPastryNode)theRta.getPastryNode();
-        
-        // check if closest entry has valid proximity
-        ExternalRunnable er = new ExternalRunnable() {          
-          protected Object execute() throws Exception {
-            DirectPastryNode.currentNode = dpn;
-            checkRoutingTable(theRta);
-            DirectPastryNode.currentNode = null;
-            return null;
-          }          
-        };
-        try {
-          er.invoke(environment);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      } else {
-        checkRoutingTable(rta[i]);
-      }
+      checkRoutingTable(rta[i]);
     }
 
 //    System.out.println("messages: " + msgCount);
@@ -412,11 +392,13 @@ public abstract class PastryRegrTest {
           try {
             range = rta.range(ls.get(k), maxRank, nearest, true);
           } catch (IllegalArgumentException iae) {
-          } catch (RangeCannotBeDeterminedException rcbde) {}
+          } catch (RangeCannotBeDeterminedException rcbde) {
+          } catch (NullPointerException npe) {}
         else
           // check the individual rank ranges
           try {
             range = rta.range(ls.get(k), j / 2, nearest, false);
+          } catch (NullPointerException npe) {
           } catch (RangeCannotBeDeterminedException rcbde) {}
 
         //System.out.println("j=" + j + " maxRank=" + maxRank + " " + range);
@@ -493,9 +475,8 @@ public abstract class PastryRegrTest {
    * verify the correctness of the routing table
    */
 
-  private void checkRoutingTable(final RegrTestApp rta) {
+  protected void checkRoutingTable(final RegrTestApp rta) {
     RoutingTable rt = rta.getRoutingTable();
-
     // check routing table
 
     for (int i = rt.numRows() - 1; i >= 0; i--) {
@@ -534,35 +515,12 @@ public abstract class PastryRegrTest {
           }
         } else {
           // check entries
-          NodeHandle nh;
-          if (!environment.getSelectorManager().isSelectorThread() && (this instanceof DirectPastryRegrTest)) {
-            // check if closest entry has valid proximity
-            ExternalRunnable er = new ExternalRunnable() {          
-              protected Object execute() throws Exception {
-                DirectPastryNode temp = DirectPastryNode.currentNode;
-                DirectPastryNode.currentNode = (DirectPastryNode)rta.getPastryNode();
-                Object ret = rs.closestNode();
-                DirectPastryNode.currentNode = temp;
-                return ret;
-              }          
-            };
-            try {
-              nh = (NodeHandle)er.invoke(environment);
-            } catch (Exception e) {
-              e.printStackTrace();
-              System.exit(0);
-              return;
-            }
-          } else {
-            nh = (NodeHandle)rs.closestNode();            
-          }
-          
-          
+          NodeHandle nh = (NodeHandle)rs.closestNode();          
           
           int bestProximity = Integer.MAX_VALUE;
           if (nh != null) {
             bestProximity = nh.proximity();
-            if (nh.proximity() == Integer.MAX_VALUE) {
+            if (bestProximity == Integer.MAX_VALUE) {
               System.out.println("checkRoutingTable failure 0, row=" + i
                   + " column=" + j);
             }
@@ -597,7 +555,6 @@ public abstract class PastryRegrTest {
     }
 
     //System.out.println(rt);
-
   }
 
   /**
@@ -642,6 +599,7 @@ public abstract class PastryRegrTest {
       pastryNodes.remove(n);
       rtApps.remove(n);
       pastryNodesSorted.remove(pn.getNodeId());
+      pastryNodesSortedReady.remove(pn.getNodeId());
       killNode(pn);
       System.out.println("Killed " + pn.getNodeId());
     }
