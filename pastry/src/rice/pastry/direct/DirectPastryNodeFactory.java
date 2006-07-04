@@ -37,6 +37,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    */
   public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim, Environment env) {    
     super(env);
+    env.getParameters().setInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled",120000);
     nidFactory = nf;
     simulator = sim;
   }
@@ -100,18 +101,18 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
 
     StandardRouter router =
       new StandardRouter(pn);
-    StandardLeafSetProtocol lsProtocol =
-      new StandardLeafSetProtocol(pn, localhandle, leafSet, routeTable);
     StandardRouteSetProtocol rsProtocol =
       new StandardRouteSetProtocol(pn, routeTable, environment);
 
     pn.setElements(localhandle, msgDisp, leafSet, routeTable);
     router.register();
-    lsProtocol.register();
     rsProtocol.register();
 
-    StandardJoinProtocol jProtocol =
-      new StandardJoinProtocol(pn, localhandle, routeTable, leafSet);    
+    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
+        localhandle, leafSet, routeTable);
+    lsProtocol.register();
+    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
+        localhandle, routeTable, leafSet, lsProtocol);
     jProtocol.register();
     
     // pn.doneNode(bootstrap);

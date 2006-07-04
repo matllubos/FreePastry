@@ -70,7 +70,7 @@ public class HelloWorld {
    * Create a Pastry node and add it to pastryNodes. Also create a client
    * application for this node.
    */
-  public void makePastryNode() {
+  public void makePastryNode(int num) {
     PastryNode pn = factory.newNode(getBootstrap());
     pastryNodes.addElement(pn);
 
@@ -85,7 +85,7 @@ public class HelloWorld {
       }
     }
     
-    System.out.println("created " + pn);
+    System.out.println("created "+num+" "+pn);
   }
 
   /**
@@ -178,7 +178,7 @@ public class HelloWorld {
     HelloWorld driver = new HelloWorld(env);
 
     for (int i = 0; i < numnodes; i++) {
-      driver.makePastryNode();
+      driver.makePastryNode(i);
       if (simultaneous_joins == false)
         while (driver.simulate())
           ;

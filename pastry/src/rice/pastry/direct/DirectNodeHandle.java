@@ -124,7 +124,8 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    */
   public void receiveMessage(Message msg) {
     // shortcut if called on the local node
-    if (simulator.getEnvironment().getSelectorManager().isSelectorThread() &&
+    if (
+        //simulator.getEnvironment().getSelectorManager().isSelectorThread() &&
         // the message is from myself
         (remoteNode == DirectPastryNode.getCurrentNode())) {
       remoteNode.receiveMessage(msg);
@@ -152,9 +153,9 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
     if (obj == null) {
       return false;
     }
-    NodeHandle nh = (NodeHandle) obj;
+    DirectNodeHandle nh = (DirectNodeHandle) obj;
 
-    if (this.getNodeId().equals(nh.getNodeId())) {
+    if (this.remoteNode.getNodeId().equals(nh.remoteNode.getNodeId())) {
       return true;
     } else {
       return false;

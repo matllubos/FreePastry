@@ -156,7 +156,13 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     if (logger.level <= Logger.FINE)
       logger.log("GNS: deliver " + msg + " to " + node);
     DirectTimerTask dtt = null;
-    if (msg.getSender() == null || msg.getSender().isAlive()) {
+    
+    DirectNodeHandle sender = null;
+    sender = (DirectNodeHandle)msg.getSender();
+    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
+    if (senderNode != null)
+      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
+    if (sender == null || sender.isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis());
       addTask(dtt);
@@ -169,7 +175,13 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     if (logger.level <= Logger.FINE)
       logger.log("GNS: deliver("+delay+") " + msg + " to " + node);
     DirectTimerTask dtt = null;
-    if (msg.getSender() == null || msg.getSender().isAlive()) {
+    
+    DirectNodeHandle sender = null;
+    sender = (DirectNodeHandle)msg.getSender();
+    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
+    if (senderNode != null)
+      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
+    if (sender == null || sender.isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay);
       addTask(dtt);
@@ -180,7 +192,13 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
       int delay, int period) {
     DirectTimerTask dtt = null;
-    if (msg.getSender() == null || msg.getSender().isAlive()) {
+    
+    DirectNodeHandle sender = null;
+    sender = (DirectNodeHandle)msg.getSender();
+    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
+    if (senderNode != null)
+      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
+    if (sender == null || sender.isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period);
@@ -192,7 +210,13 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public ScheduledMessage deliverMessageFixedRate(Message msg,
       DirectPastryNode node, int delay, int period) {
     DirectTimerTask dtt = null;
-    if (msg.getSender() == null || msg.getSender().isAlive()) {
+
+    DirectNodeHandle sender = null;
+    sender = (DirectNodeHandle)msg.getSender();
+    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
+    if (senderNode != null)
+      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
+    if (sender == null || sender.isAlive()) {
       MessageDelivery md = new MessageDelivery(msg, node);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period, true);

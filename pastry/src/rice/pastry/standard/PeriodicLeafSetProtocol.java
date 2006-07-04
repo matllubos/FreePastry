@@ -180,7 +180,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       // request for leaf set from a remote node
       RequestLeafSet rls = (RequestLeafSet) msg;
 
-      rls.returnHandle().receiveMessage(
+      thePastryNode.send(rls.returnHandle(),
           new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, rls.getTimeStamp()));
       if (rls.getTimeStamp() > 0) {
         // remember that we gave out a lease, and go unReady() if the node goes faulty
@@ -192,9 +192,10 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
 
       if (set.size() > 1) {
         NodeHandle handle = set.get(random.nextInt(set.size() - 1) + 1);
-        handle.receiveMessage(new RequestLeafSet(localHandle, localNode.getEnvironment().getTimeSource().currentTimeMillis()));
-        handle.receiveMessage(new BroadcastLeafSet(localHandle, leafSet,
-            BroadcastLeafSet.Update, 0));
+        thePastryNode.send(handle,
+            new RequestLeafSet(localHandle, localNode.getEnvironment().getTimeSource().currentTimeMillis()));
+        thePastryNode.send(handle,
+            new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
 
         NodeHandle check = set.get(random
             .nextInt(set.size() - 1) + 1);
@@ -254,7 +255,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
 
     for (int i = 1; i < set.size(); i++)
-      set.get(i).receiveMessage(bls);
+      thePastryNode.send(set.get(i), bls);
   }
 
   // Ready Strategy
@@ -387,8 +388,10 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
               + sendTo+" "+time);
       lastTimeSentBLS.put(sendTo, new Long(currentTime));
 
-      sendTo.receiveMessage(new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
-      sendTo.receiveMessage(new RequestLeafSet(localHandle, currentTime));
+      thePastryNode.send(sendTo, new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
+      thePastryNode.send(sendTo, new RequestLeafSet(localHandle, currentTime));
+//      sendTo.receiveMessage(new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
+//      sendTo.receiveMessage(new RequestLeafSet(localHandle, currentTime));
       sendTo.checkLiveness();
       return true;
     } 

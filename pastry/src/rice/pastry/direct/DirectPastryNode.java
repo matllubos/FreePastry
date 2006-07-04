@@ -145,7 +145,10 @@ public class DirectPastryNode extends PastryNode {
    * @return the scheduled event object; can be used to cancel the message
    */
   public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
-    return simulator.deliverMessage(msg, this, (int)delay, (int)period);
+    DirectPastryNode temp = setCurrentNode(this);
+    ScheduledMessage ret = simulator.deliverMessage(msg, this, (int)delay, (int)period);
+    setCurrentNode(temp);
+    return ret;
   }
 
   /**
@@ -209,7 +212,9 @@ public class DirectPastryNode extends PastryNode {
   }
 
   public void send(NodeHandle handle, Message message) {
+    DirectPastryNode temp = setCurrentNode(this);
     handle.receiveMessage(message);
+    setCurrentNode(temp);
   }
   
   public void connect(NodeHandle remoteNode, AppSocketReceiver receiver, PastryAppl appl, int timeout) {

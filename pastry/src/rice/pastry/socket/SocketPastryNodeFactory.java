@@ -662,7 +662,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
         localhandle, leafSet, routeTable);
     lsProtocol.register();
-    // msgDisp.registerReceiver(lsProtocol.getAddress(), lsProtocol);
     ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
         localhandle, routeTable, leafSet, lsProtocol);
     jProtocol.register();

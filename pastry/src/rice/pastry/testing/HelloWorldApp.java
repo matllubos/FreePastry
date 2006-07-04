@@ -1,5 +1,6 @@
 package rice.pastry.testing;
 
+import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.pastry.*;
 import rice.pastry.client.*;
@@ -43,7 +44,9 @@ public class HelloWorldApp extends PastryAppl {
    */
   public void sendRndMsg(RandomSource rng) {
     Id rndid = Id.makeRandomId(rng);
-    System.out.println("Sending message from " + getNodeId() + " to random dest " + rndid);
+    if (logger.level <= Logger.FINE) {
+      System.out.println("Sending message from " + getNodeId() + " to random dest " + rndid);
+    }
     Message msg = new HelloMsg(addr, thePastryNode.getLocalHandle(), rndid,
         ++msgid);
     routeMsg(rndid, msg, new SendOptions());
@@ -66,7 +69,9 @@ public class HelloWorldApp extends PastryAppl {
    * @param msg Message being routed around
    */
   public void messageForAppl(Message msg) {
-    System.out.println("Received " + msg + " at " + getNodeId());
+    if (logger.level <= Logger.FINE) {
+      System.out.println("Received " + msg + " at " + getNodeId());
+    }
   }
 
   /**
@@ -80,7 +85,9 @@ public class HelloWorldApp extends PastryAppl {
    */
   public boolean enrouteMessage(Message msg, Id key, NodeHandle nextHop,
       SendOptions opt) {
-    System.out.println("Enroute " + msg + " at " + getNodeId());
+    if (logger.level <= Logger.FINER) {
+      System.out.println("Enroute " + msg + " at " + getNodeId());
+    }
     return true;
   }
 
@@ -91,14 +98,16 @@ public class HelloWorldApp extends PastryAppl {
    * @param wasAdded added (true) or removed (false)
    */
   public void leafSetChange(NodeHandle nh, boolean wasAdded) {
-    String s = "In " + getNodeId() + "'s leaf set, " + "node " + nh.getNodeId()
-        + " was ";
-    if (wasAdded)
-      s += "added";
-    else
-      s += "removed";
+    if (logger.level <= Logger.FINEST) {
+      String s = "In " + getNodeId() + "'s leaf set, " + "node " + nh.getNodeId()
+          + " was ";
+      if (wasAdded)
+        s += "added";
+      else
+        s += "removed";
 
-    System.out.println(s);
+      System.out.println(s);
+    }
   }
 
   /**
@@ -108,14 +117,16 @@ public class HelloWorldApp extends PastryAppl {
    * @param wasAdded added (true) or removed (false)
    */
   public void routeSetChange(NodeHandle nh, boolean wasAdded) {
-    String s = "In " + getNodeId() + "'s route set, " + "node "
-        + nh.getNodeId() + " was ";
-    if (wasAdded)
-      s += "added";
-    else
-      s += "removed";
-
-    System.out.println(s);
+    if (logger.level <= Logger.FINEST) {
+      String s = "In " + getNodeId() + "'s route set, " + "node "
+          + nh.getNodeId() + " was ";
+      if (wasAdded)
+        s += "added";
+      else
+        s += "removed";
+  
+      System.out.println(s);
+    }
   }
 
   /**
@@ -123,7 +134,7 @@ public class HelloWorldApp extends PastryAppl {
    * set, and has become ready to receive application messages.
    */
   public void notifyReady() {
-    if (true /* Log.ifp(6) */)
+    if (logger.level <= Logger.INFO)
       System.out.println("Node " + getNodeId()
           + " ready, waking up any clients");
     //sendRndMsg(new Randon());
