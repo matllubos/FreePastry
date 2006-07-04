@@ -63,7 +63,7 @@ public class JavaSerializedErasureCodec extends ErasureCodec {
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING)
-        logger.logException("encodeObject: ", ioe);
+        logger.logException("encodeObject: "+obj, ioe);
       return null;
     }
 

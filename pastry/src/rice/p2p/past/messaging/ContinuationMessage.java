@@ -9,6 +9,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
 import rice.p2p.util.JavaDeserializer;
+import rice.p2p.util.rawserialization.JavaSerializationException;
 
 /**
  * @(#) ContinuationMessage.java
@@ -185,17 +186,21 @@ public abstract class ContinuationMessage extends PastMessage implements Continu
       } else {      
 //      if (true) throw new IOException("Test");
 //        System.out.println("ContinuationMessage<"+getClass().getName()+">.serialize():"+serType+" "+response+" "+exception);
-        buf.writeByte(serType);        
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        
-        // write out object and find its length
-        oos.writeObject(content);
-        oos.close();
-        
-        byte[] temp = baos.toByteArray();
-        buf.writeInt(temp.length);
-        buf.write(temp, 0, temp.length);
+        try {
+          buf.writeByte(serType);        
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          ObjectOutputStream oos = new ObjectOutputStream(baos);
+          
+          // write out object and find its length
+          oos.writeObject(content);
+          oos.close();
+          
+          byte[] temp = baos.toByteArray();
+          buf.writeInt(temp.length);
+          buf.write(temp, 0, temp.length);
+        } catch (IOException ioe) {
+          throw new JavaSerializationException(content, ioe);
+        }
       }
     } else {
       buf.writeByte(S_SUB); 

@@ -9,6 +9,7 @@ import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.past.*;
 import rice.p2p.past.gc.*;
+import rice.p2p.util.rawserialization.JavaSerializationException;
 
 public class JavaSerializedGCPastContent implements RawGCPastContent {
   public static final short TYPE = 0;
@@ -20,19 +21,22 @@ public class JavaSerializedGCPastContent implements RawGCPastContent {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-    // write out object and find its length
-    oos.writeObject(content);
-    oos.close();
-    
-    byte[] temp = baos.toByteArray();
-    buf.writeInt(temp.length);
-    buf.write(temp, 0, temp.length);
-//    System.out.println("JavaSerializedGCPastContent.serialize() "+content+" length:"+temp.length);
-//    new Exception("Stack Trace").printStackTrace();
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+  
+      // write out object and find its length
+      oos.writeObject(content);
+      oos.close();
+      
+      byte[] temp = baos.toByteArray();
+      buf.writeInt(temp.length);
+      buf.write(temp, 0, temp.length);
+  //    System.out.println("JavaSerializedGCPastContent.serialize() "+content+" length:"+temp.length);
+  //    new Exception("Stack Trace").printStackTrace();
+    } catch (IOException ioe) {
+      throw new JavaSerializationException(content, ioe);
+    }
   }
 
   public short getType() {

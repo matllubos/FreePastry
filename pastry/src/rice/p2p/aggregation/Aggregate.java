@@ -70,6 +70,7 @@ public class Aggregate implements GCPastContent {
 
       bytes = byteStream.toByteArray();
     } catch (IOException ioe) {
+      // too bad we don't have a good way to throw a serialziation exception
       return null;
     }
     

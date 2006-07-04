@@ -20,6 +20,7 @@ import rice.environment.logging.Logger;
 import rice.environment.processing.WorkRequest;
 import rice.p2p.commonapi.*;
 import rice.p2p.util.*;
+import rice.p2p.util.rawserialization.JavaSerializationException;
 
 /**
  * This class is an implementation of Storage which provides
@@ -1625,6 +1626,8 @@ public class PersistentStorage implements Storage {
       ObjectOutputStream objout = new ObjectOutputStream(new BufferedOutputStream(fout));
       objout.writeObject(map);
       objout.close();
+    } catch (IOException ioe) {
+      throw new JavaSerializationException(map, ioe);
     } finally {
       if (fout != null)
         fout.close();

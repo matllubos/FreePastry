@@ -8,6 +8,7 @@ import java.io.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.messaging.*;
 import rice.p2p.commonapi.Message;
+import rice.p2p.util.rawserialization.JavaSerializationException;
 
 /**
  * Wrapper that converts rice.pastry.messaging.Message to rice.pastry.messageing.PRawMessage
@@ -31,18 +32,22 @@ public class JavaSerializedMessage implements RawMessage {
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-    // write out object and find its length
-    oos.writeObject(msg);
-    oos.close();
-    
-    byte[] temp = baos.toByteArray();
-    buf.write(temp, 0, temp.length);
-//    System.out.println("JavaSerializedMessage.serailize() "+msg+" length:"+temp.length);
-//    new Exception("Stack Trace").printStackTrace();
-//    constructionStack.printStackTrace();
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+  
+      // write out object and find its length
+      oos.writeObject(msg);
+      oos.close();
+      
+      byte[] temp = baos.toByteArray();
+      buf.write(temp, 0, temp.length);
+  //    System.out.println("JavaSerializedMessage.serailize() "+msg+" length:"+temp.length);
+  //    new Exception("Stack Trace").printStackTrace();
+  //    constructionStack.printStackTrace();
+    } catch (IOException ioe) {
+      throw new JavaSerializationException(msg, ioe);
+    }
   }
   
   public Message getMessage() {

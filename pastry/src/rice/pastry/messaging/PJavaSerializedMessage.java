@@ -6,6 +6,7 @@ package rice.pastry.messaging;
 import java.io.*;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.util.rawserialization.JavaSerializationException;
 import rice.pastry.messaging.*;
 
 /**
@@ -31,18 +32,22 @@ public class PJavaSerializedMessage extends PRawMessage {
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-    // write out object and find its length
-    oos.writeObject(msg);
-    oos.close();
-    
-    byte[] temp = baos.toByteArray();
-    buf.write(temp, 0, temp.length);
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+  
+      // write out object and find its length
+      oos.writeObject(msg);
+      oos.close();
+      
+      byte[] temp = baos.toByteArray();
+      buf.write(temp, 0, temp.length);
 //    System.out.println("PJavaSerializedMessage.serialize() "+msg+" length:"+temp.length);
 //    new Exception("Stack Trace").printStackTrace();
 //    constructionStack.printStackTrace();
+    } catch (IOException ioe) {
+      throw new JavaSerializationException("Error serializing "+msg, ioe);
+    }
   }
   
   public Message getMessage() {
