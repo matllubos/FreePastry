@@ -455,6 +455,7 @@ RequestLeafSet:
 
   format: 
     byte version (0)
+    long timestamp
       
 BroadcastLeafSet:
   address: 0xf921def1 (Leafset Protocol)
@@ -467,6 +468,7 @@ BroadcastLeafSet:
     NodeHandle fromNode
     LeafSet leafSet
     int theType
+    long timestamp // based on the request's timestamp, 0 if self-initiated
 
 1.7.4: Routing Table Maintenance **********************************************
 RequestRouteRow:
@@ -661,7 +663,8 @@ Chapter 2 CommonApi Apps ******************************************************
     use: request publication of a ScribeContent    
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       short contentType
       ScribeContent payload
@@ -671,7 +674,8 @@ Chapter 2 CommonApi Apps ******************************************************
     use: multicast of a ScribeContent    
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       short contentType
       ScribeContent payload
@@ -681,7 +685,8 @@ Chapter 2 CommonApi Apps ******************************************************
     use: anycast a ScribeContent, has a list of nodes to visit, and a "passport" of visited nodes
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       
       // array of NodeHandles to visit
@@ -706,7 +711,8 @@ Chapter 2 CommonApi Apps ******************************************************
       AnycastMessage and can likely use a common code path
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       
       // array of NodeHandles to visit
@@ -732,7 +738,8 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Acknowledge a SubscribeMessaege. (sent by the node that accepts the anycasted subscribe)    
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       int id // matches the id of the request
       
@@ -746,7 +753,8 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Sent when the subscribe attempt fails, (based on the ScribePolicy, there are no available candidates to join from)
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       int id // matches the id of the request
       
@@ -755,7 +763,8 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Unsubscribe from a topic.    
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       
   DropMessage:    
@@ -763,7 +772,8 @@ Chapter 2 CommonApi Apps ******************************************************
     use: Tells a child that it's parent can no longer support it.    
     format:
       byte version (0)
-      NodeHandle source
+      boolean hasSource
+        NodeHandle source
       Topic topic
       
 2.2 Past **********************************************************************

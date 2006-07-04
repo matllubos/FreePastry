@@ -47,6 +47,9 @@ direct_simulator_start_time = -1
 #pastry_periodic_leafset_protocol_use_own_random = true
 pastry_direct_gtitm_matrix_file=GNPINPUT
 pastry_direct_gtitm_max_overlay_size=1000
+#millis of the maximum network delay for the generated network topologies
+pastry_direct_max_diameter=200
+pastry_direct_min_delay=2
 
 # rice.pastry.socket parameters
 # tells the factory you intend to use multiple nodes
@@ -58,7 +61,7 @@ pastry_factory_processorPerNode = false
 pastry_factory_bootsInParallel = 1
 
 pastry_socket_reader_selector_deserialization_max_size = 1000000
-pastry_socket_writer_max_queue_length = 128
+pastry_socket_writer_max_queue_length = 30
 pastry_socket_repeater_buffer_size = 65536
 pastry_socket_pingmanager_smallPings=true
 pastry_socket_pingmanager_datagram_receive_buffer_size = 131072
@@ -66,7 +69,7 @@ pastry_socket_pingmanager_datagram_send_buffer_size = 65536
 pastry_socket_srm_check_dead_throttle = 300000
 pastry_socket_srm_ping_throttle = 300000
 pastry_socket_scm_max_open_sockets = 300
-pastry_socket_scm_max_open_source_routes = 20
+pastry_socket_scm_max_open_source_routes = 30
 # the maximum number of source routes to attempt, setting this to 0 will 
 # effectively eliminate source route attempts
 # setting higher than the leafset does no good, it will be bounded by the leafset
@@ -108,7 +111,7 @@ nat_find_port_max_tries = 10
 # to consider the amount of time it takes the transport layer to find a 
 # node faulty before setting this parameter, this parameter should be
 # less than the minimum time required to find a node faulty
-pastry_protocol_consistentJoin_max_time_to_be_scheduled = 20000
+pastry_protocol_consistentJoin_max_time_to_be_scheduled = 15000
 
 # in case messages are dropped or something, how often it will retry to 
 # send the consistent join message, to get verification from the entire
@@ -124,7 +127,7 @@ recent detected failures (see ConsistentJoinProtocol ctor)
 pastry_protocol_consistentJoin_maxFailedToSend = 20
 
 # how often we send/expect to be sent updates
-pastry_protocol_periodicLeafSet_ping_neighbor_period = 15000
+pastry_protocol_periodicLeafSet_ping_neighbor_period = 20000
 pastry_protocol_periodicLeafSet_lease_period = 30000
 
 # what the grace period is to receive a periodic update, before checking 
