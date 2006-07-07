@@ -68,7 +68,7 @@ public class NetworkLogUploadThread extends Thread {
   
   public void run() {
     try {
-      int interval = params.getInt("log_network_upload_interval");
+      int interval = params.getInt("log_network_upload_initial_delay");
       int init_interval = environment.getRandomSource().nextInt(interval / 2) + interval / 2;
 
       Thread.sleep(init_interval);

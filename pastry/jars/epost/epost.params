@@ -146,7 +146,8 @@ restart_return_value_max=1000000
 restart_return_value_min=-1000000
 security_manager_install=true
 shutdown_hooks_enable=true
-log_network_upload_interval = 1800000
+log_network_upload_interval = 21600000
+log_network_upload_initial_delay = 1800000
 log_network_buffer_size = 128000
 log_rotate_filename=epost.log
 # 1 gigabytes

@@ -80,6 +80,8 @@ public class RotatingLogManager extends AbstractLogManager {
             dateFormat));
       }
 
+      System.out.println("rotate: about to rotate log");
+      
       String filename = params.getString("log_rotate_filename");
       File oldfile = new File(filename);
       if (oldfile.exists()) {
@@ -92,20 +94,21 @@ public class RotatingLogManager extends AbstractLogManager {
             pe.printStackTrace();
           }
         }
-        oldfile.renameTo(new File(rot_filename));
+        System.out.println("rotate: renaming "+filename+" to "+rot_filename);
+        // have to close before we rename for Windows 
+        if (oldps != null)
+          oldps.close();
+        boolean result = oldfile.renameTo(new File(rot_filename));
       }
       try {
         ps = new PrintStream(new FileOutputStream(oldfile, true), true);
-        if (oldps != null)
-          oldps.close();
       } catch (FileNotFoundException e) {
-        if (ps != oldps) {
-          ps = oldps;
-        }
+        // this won't happen
         System.err.println("could not rotate log " + filename + " because of "
             + e);
         // XXX should also log it
       }
+      System.out.println("rotate: starting new log");
     }
   }
 
@@ -120,6 +123,16 @@ public class RotatingLogManager extends AbstractLogManager {
       synchronized (RotatingLogManager.this) {
         if (new File(params.getString("log_rotate_filename")).length() >= params.getLong("log_rotate_max_size"))
           rotate();
+      }
+    }
+  }
+  
+  public PrintStream getPrintStream() {
+    synchronized (this) {
+      if (enabled) {
+          return ps;
+      } else {
+        return nullPrintStream;
       }
     }
   }
