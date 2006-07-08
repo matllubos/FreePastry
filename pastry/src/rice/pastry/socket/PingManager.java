@@ -421,13 +421,18 @@ public class PingManager extends SelectionKeyHandler {
 //        enqueue(inboundPath.reverse(), new PingResponseMessage(/*outboundPath, inboundPath, */start));        
         enqueue(outboundPath, new PingResponseMessage(start));        
       } else if (dm instanceof PingResponseMessage) {
-        if (logger.level <= Logger.FINE) logger.log(
-            "COUNT: Read PingResponse["+start+"] of size " + size + " from " + inboundPath);      
         int ping = (int) (environment.getTimeSource().currentTimeMillis() - start);
-        
-        manager.markAlive(outboundPath);
-        manager.markProximity(outboundPath, ping);
-        notifyPingResponseListeners(outboundPath, ping, start);
+
+        if (logger.level <= Logger.FINE) logger.log(
+            "COUNT: Read PingResponse["+start+"]:RTT="+ping+" of size " + size + " from " + inboundPath);      
+        if (ping > 0) {
+          manager.markAlive(outboundPath);
+          manager.markProximity(outboundPath, ping);
+          notifyPingResponseListeners(outboundPath, ping, start);
+        } else {
+          if (logger.level <= Logger.WARNING) logger.log(
+              "COUNT: Read PingResponse["+start+"]:RTT="+ping+"!!! of size " + size + " from " + inboundPath);                
+        }
       } else if (dm instanceof WrongEpochMessage) {
         WrongEpochMessage wem = (WrongEpochMessage) dm;
         
