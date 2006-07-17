@@ -95,7 +95,11 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
         return result;
       // try re-resolving the address before giving up
       try {
-        result = getNodeHandle(new InetSocketAddress(addresses[i].getAddress().getHostName(), addresses[i].getPort()), timeoutMillis);
+        InetSocketAddress newAddress = new InetSocketAddress(addresses[i].getAddress().getHostName(), addresses[i].getPort());
+        if (!newAddress.getAddress().equals(addresses[i].getAddress())) {
+          // re-resolving actually gave us a  new address
+          result = getNodeHandle(newAddress, timeoutMillis);
+        }
       } catch (UnresolvedAddressException uae) {
         if (logger.level <= Logger.INFO) logger.log("getNodeHandle: Could not resolve hostname "+addresses[i]);
       }
