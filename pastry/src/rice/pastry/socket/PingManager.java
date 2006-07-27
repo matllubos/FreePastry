@@ -53,6 +53,8 @@ public class PingManager extends SelectionKeyHandler {
   // largest message size than can be sent via UDP
   public final int DATAGRAM_SEND_BUFFER_SIZE;
   
+  public final int MIN_RTT = 2;
+  
   // SourceRoute -> ArrayList of PingResponseListener
   protected WeakHashMap pingListeners;
 
@@ -425,6 +427,14 @@ public class PingManager extends SelectionKeyHandler {
 
         if (logger.level <= Logger.FINE) logger.log(
             "COUNT: Read PingResponse["+start+"]:RTT="+ping+" of size " + size + " from " + inboundPath);      
+        if ((ping >= 0) && (ping < MIN_RTT)) {
+          if (inboundPath.getFirstHop() == localAddress) {
+            if (logger.level <= Logger.FINER) logger.log("pinged self"+inboundPath.getFirstHop());            
+          } else {
+            if (logger.level <= Logger.FINER) logger.log("RTT from "+inboundPath+" was "+ping+" setting to "+MIN_RTT);            
+            ping = MIN_RTT; // cant have a zero latency connection 
+          }
+        }
         if (ping > 0) {
           manager.markAlive(outboundPath);
           manager.markProximity(outboundPath, ping);
