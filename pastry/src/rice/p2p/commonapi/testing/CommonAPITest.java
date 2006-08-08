@@ -132,7 +132,7 @@ public abstract class CommonAPITest {
       if (SIMULATOR.equalsIgnoreCase(SIMULATOR_SPHERE)) {
         simulator = new SphereNetwork(env);
       } else if (SIMULATOR.equalsIgnoreCase(SIMULATOR_GT_ITM)){
-        simulator = new GenericNetwork(env, null);        
+        simulator = new GenericNetwork(env);        
       } else {
         simulator = new EuclideanNetwork(env);
       }
@@ -498,6 +498,8 @@ public abstract class CommonAPITest {
       logManager = Environment.generateDefaultLogManager(timeSource, params);
       ((DirectTimeSource)timeSource).setLogManager(logManager);
       selector = Environment.generateDefaultSelectorManager(timeSource,logManager);
+      ((DirectTimeSource)timeSource).setSelectorManager(selector);
+      
       proc = new SimProcessor(selector);
     } else {
       timeSource = new SimpleTimeSource(); 
