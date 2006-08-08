@@ -121,7 +121,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
                                                                                pm,
                                                                                (rice.pastry.NodeHandle) hint);
-                                                                              
+    rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
     if (noKey) {
       rm.getOptions().setMultipleHopsAllowed(false);                                                                               
     }
