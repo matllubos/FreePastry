@@ -133,7 +133,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
     }
     
     if (! remoteNode.isAlive()) {
-      if (logger.level <= Logger.WARNING) logger.log(
+      if (logger.level <= Logger.FINE) logger.log(
           "DirectNodeHandle: attempt to send message " + msg + " to a dead node " + getNodeId() + "!");              
     } else {
 //      simulator.deliverMessage(msg, remoteNode, 0);
