@@ -27,7 +27,7 @@ public class ConsistencyPLTest implements Observer {
   public static final int startPort = 21854;
   public static final int WAIT_TO_SUBSCRIBE_DELAY = 60000;
   
-  public static final boolean useScribe = false;
+  public static boolean useScribe = false;
   public static boolean useSplitStream = false;
   public static String INSTANCE = "ConsPLSplitStreamTest";
 
@@ -38,7 +38,7 @@ public class ConsistencyPLTest implements Observer {
   public static final int RND_DELAY = 500000;
   
   
-  public static boolean artificialChurn = true;
+  public static boolean artificialChurn = false;
   
   //the object is just to implement the destruction policy.
   PastryNode localNode;
@@ -152,6 +152,7 @@ public class ConsistencyPLTest implements Observer {
     System.setErr(ps);
     System.setOut(ps);
 
+    long bootTime = System.currentTimeMillis();
     System.out.println("start of log");
     
     boolean isBootNode = false;
@@ -159,12 +160,28 @@ public class ConsistencyPLTest implements Observer {
     if (localAddress.getHostName().startsWith(BOOTPREFIX)) {
       isBootNode = true;      
     }
+    int killRingTime = 3*60; // minutes
+    if (args.length > 0) {
+      killRingTime = Integer.valueOf(args[0]).intValue(); 
+    }    
+    
+    int artificialChurnTime = 0; // minutes
     if (args.length > 1) {
-      artificialChurn = Boolean.valueOf(args[1]).booleanValue(); 
+      artificialChurnTime = Integer.valueOf(args[1]).intValue(); 
     }    
     
     if (args.length > 2) {
-      useSplitStream = Boolean.valueOf(args[2]).booleanValue(); 
+      String app = args[2];
+      if (app.equalsIgnoreCase("split")) {
+        useSplitStream = true;
+        System.out.println("using splitstream");
+      }
+      if (app.equalsIgnoreCase("scribe")) {
+        useScribe = true;
+        System.out.println("using scribe");
+      }
+      
+//      useSplitStream = Boolean.valueOf(args[2]).booleanValue(); 
     }    
     
     if (args.length > 3) {
@@ -228,31 +245,31 @@ public class ConsistencyPLTest implements Observer {
       }
       Thread.sleep(BASE_DELAY+new Random(time).nextInt(RND_DELAY));
     }
-    
-    while(true) { // to allow churn
+    boolean restartNode = true;
+    while(restartNode) { // to allow churn
       Environment env = new Environment();
       
       environment = env;
       
-      if (args.length > 0) {
-        int theVal = Integer.parseInt(args[0]);
-        if (theVal >= 0) {
-          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", theVal);           
-        } else {    // it's negative, try varying it based on time      
-          long now = env.getTimeSource().currentTimeMillis();
-          now/=1000; 
-          now%=86400; //1 day's seconds
-          now/=3600; // hour 0-23
-          now/=2; // 0-11;
-          now*=2; // 0-22 by 2
-        
-          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", (int)now); 
-        }
-      }
+//      if (args.length > 0) {
+//        int theVal = Integer.parseInt(args[0]);
+//        if (theVal >= 0) {
+//          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", theVal);           
+//        } else {    // it's negative, try varying it based on time      
+//          long now = env.getTimeSource().currentTimeMillis();
+//          now/=1000; 
+//          now%=86400; //1 day's seconds
+//          now/=3600; // hour 0-23
+//          now/=2; // 0-11;
+//          now*=2; // 0-22 by 2
+//        
+//          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", (int)now); 
+//        }
+//      }
       
       System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
-      System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
-      System.out.println("Ping Num Source Route attempts:"+env.getParameters().getInt("pastry_socket_srm_num_source_route_attempts"));
+//      System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
+//      System.out.println("Ping Num Source Route attempts:"+env.getParameters().getInt("pastry_socket_srm_num_source_route_attempts"));
       
       networkActivity = new MyNetworkListener();
 
@@ -417,6 +434,12 @@ public class ConsistencyPLTest implements Observer {
         if (!node.isReady()) num = 5;
         System.out.println("LEAFSET"+num+":"+env.getTimeSource().currentTimeMillis()+":"+ls);
         Thread.sleep(1*60*1000);
+        long testTime = env.getTimeSource().currentTimeMillis()-bootTime;
+        if (testTime > artificialChurnTime*1000*60) artificialChurn = true;
+        if ((killRingTime > 0) && testTime > killRingTime*1000*60) {
+          restartNode = false;
+          artificialChurn = true;
+        }
         if (artificialChurn) {
           if (!isBootNode) {            
             
@@ -430,9 +453,9 @@ public class ConsistencyPLTest implements Observer {
 //              node.destroy(); // done in env.destroy()
               env.destroy();              
               running = false;
-              int waittime = env.getRandomSource().nextInt(300000);
+              int waittime = env.getRandomSource().nextInt(30000)+30000;
               System.out.println("Waiting for "+waittime+" millis before restarting.");
-              Thread.sleep(waittime); // wait up to 5 minutes
+              Thread.sleep(waittime); // wait up to 1 minute
             }
           }
         }
