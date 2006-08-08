@@ -82,6 +82,19 @@ public class DirectPastryNode extends PastryNode {
   public void destroy() {
     super.destroy();
     alive = false;
+    setReadyStrategy(new ReadyStrategy() {
+    
+      public void start() {
+        throw new RuntimeException("Can't start!");
+      }
+    
+      public boolean isReady() {
+        return false;
+      }
+    
+      public void setReady(boolean r) {
+      }    
+    });
     setReady(false); 
     simulator.removeNode(this);
   }
