@@ -177,11 +177,12 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return A String representation of the node handle.
    */
   public String toString() {
-    if (getLocalNode() == null) {
-      return "[SNH: " + nodeId + "/" + getEpochAddress() + "]";
-    } else {
-      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "/" + getEpochAddress() + "]";
-    }
+    return "[SNH: " + nodeId + "/" + getEpochAddress() + "]";
+//    if (getLocalNode() == null) {
+//      return "[SNH: " + nodeId + "/" + getEpochAddress() + "]";
+//    } else {
+//      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "/" + getEpochAddress() + "]";
+//    }
   }
 
   /**
