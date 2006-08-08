@@ -30,16 +30,16 @@ public class GenericNetwork extends BasicNetworkSimulator
 
 //  private Vector transit = new Vector();
 
-  public static int MAXOVERLAYSIZE = 1000;
+  public static int MAXOVERLAYSIZE = 2000;
 
   // This keeps track of the indices that have already been assigned
   public Vector assignedIndices = new Vector();
 
-  public String inFile_Matrix = "GNPINPUT";
+  public File inFile_Matrix;// = "GNPINPUT";
 
-  public String inFile_Coord = "COORD";
+//  public File inFile_Coord;// = "COORD";
 
-  public String outFile_RawGNPError = "RawGNPError";
+//  public File outFile_RawGNPError;// = "RawGNPError";
 
   public NodeRecord generateNodeRecord() {
     return new GNNodeRecord(); 
@@ -82,13 +82,21 @@ public class GenericNetwork extends BasicNetworkSimulator
   // The static variable MAXOVERLAYSIZE should be set to the n, where its input
   // is a N*N matrix
   public GenericNetwork(Environment env, String inFile) {
+    this(env, new File(inFile));  
+  }
+  
+  public GenericNetwork(Environment env) {
+    this(env, (File)null);
+  }
+  
+  public GenericNetwork(Environment env, File inFile) {
     super(env);
     
     MAXOVERLAYSIZE = env.getParameters().getInt("pastry_direct_gtitm_max_overlay_size");
     
     inFile_Matrix = inFile;
     if (inFile_Matrix == null) {
-      inFile_Matrix = env.getParameters().getString("pastry_direct_gtitm_matrix_file");
+      inFile_Matrix = new File(env.getParameters().getString("pastry_direct_gtitm_matrix_file"));
     }
       
 //    System.out.println("TOPOLOGY : Generic toplogy");
@@ -143,81 +151,81 @@ public class GenericNetwork extends BasicNetworkSimulator
     }
   }
 
-  public void readOverlayPos() {
-    BufferedReader fin = null;
-    try {
-      fin = new BufferedReader(new FileReader(inFile_Coord));
-      String line;
-      line = fin.readLine();
-      while (line != null) {
-        String[] words;
-        words = line.split("[ \t]+");
-        // System.out.println("words.length= " + words.length);
-        // for(int i=0; i< words.length; i++) {
-        // System.out.println("word[" + i + "]= " + words[i]);
-        // }
-        if (words[0].equals("Done")) {
-          // This means that we are done
-          break;
-        }
-        if (words[0].equals("##index=")) {
-          int index;
-          double pos[] = new double[Coordinate.GNPDIMENSIONS];
-          index = Integer.parseInt(words[1]);
-          for (int i = 0; i < Coordinate.GNPDIMENSIONS; i++) {
-            pos[i] = Double.parseDouble(words[2 + i]);
-          }
-          Coordinate state = new Coordinate(index, pos);
-          nodePos.put(new Integer(index), state);
-          // System.out.println("inputfile coord[" + index + "]= " + state);
-        }
-        line = fin.readLine();
-      }
-      fin.close();
-
-    } catch (IOException e) {
-      System.out.println("ERROR: In opening input/output files");
-    }
-
-  }
+//  public void readOverlayPos() {
+//    BufferedReader fin = null;
+//    try {
+//      fin = new BufferedReader(new FileReader(inFile_Coord));
+//      String line;
+//      line = fin.readLine();
+//      while (line != null) {
+//        String[] words;
+//        words = line.split("[ \t]+");
+//        // System.out.println("words.length= " + words.length);
+//        // for(int i=0; i< words.length; i++) {
+//        // System.out.println("word[" + i + "]= " + words[i]);
+//        // }
+//        if (words[0].equals("Done")) {
+//          // This means that we are done
+//          break;
+//        }
+//        if (words[0].equals("##index=")) {
+//          int index;
+//          double pos[] = new double[Coordinate.GNPDIMENSIONS];
+//          index = Integer.parseInt(words[1]);
+//          for (int i = 0; i < Coordinate.GNPDIMENSIONS; i++) {
+//            pos[i] = Double.parseDouble(words[2 + i]);
+//          }
+//          Coordinate state = new Coordinate(index, pos);
+//          nodePos.put(new Integer(index), state);
+//          // System.out.println("inputfile coord[" + index + "]= " + state);
+//        }
+//        line = fin.readLine();
+//      }
+//      fin.close();
+//
+//    } catch (IOException e) {
+//      System.out.println("ERROR: In opening input/output files");
+//    }
+//
+//  }
 
   // This evaluates the GNP error (predicted - actual)/min(predicted,actual)
   // function
-  public void computeRawGNPError() {
-    BufferedWriter fout = null;
-    try {
-      String s = "";
-      fout = new BufferedWriter(new FileWriter(outFile_RawGNPError));
-
-      for (int i = 0; i < MAXOVERLAYSIZE; i++) {
-        for (int j = 0; j < MAXOVERLAYSIZE; j++) {
-          double actual = (double) distance[i][j];
-          Coordinate state_i = (Coordinate) nodePos.get(new Integer(i));
-          Coordinate state_j = (Coordinate) nodePos.get(new Integer(j));
-          double predicted = state_i.distance(state_j);
-          double min;
-          if (actual != -1) {
-            if (actual < predicted)
-              min = actual;
-            else
-              min = predicted;
-            if (min > 0) {
-              double gnpError = 0;
-              gnpError = (Math.abs(predicted - actual)) / min;
-              s = "" + gnpError;
-              fout.write(s, 0, s.length());
-              fout.newLine();
-              fout.flush();
-            }
-          }
-
-        }
-      }
-
-    } catch (IOException e) {
-      System.out.println("ERROR: In opening input/output files");
-    }
-  }  
+//  public void computeRawGNPError() {
+//    BufferedWriter fout = null;
+//    try {
+//      String s = "";
+//      fout = new BufferedWriter(new FileWriter(outFile_RawGNPError));
+//
+//      for (int i = 0; i < MAXOVERLAYSIZE; i++) {
+//        for (int j = 0; j < MAXOVERLAYSIZE; j++) {
+//          double actual = (double) distance[i][j];
+//          Coordinate state_i = (Coordinate) nodePos.get(new Integer(i));
+//          Coordinate state_j = (Coordinate) nodePos.get(new Integer(j));
+//          double predicted = state_i.distance(state_j);
+//          double min;
+//          if (actual != -1) {
+//            if (actual < predicted)
+//              min = actual;
+//            else
+//              min = predicted;
+//            if (min > 0) {
+//              double gnpError = 0;
+//              gnpError = (Math.abs(predicted - actual)) / min;
+//              s = "" + gnpError;
+//              fout.write(s, 0, s.length());
+//              fout.newLine();
+//              fout.flush();
+//            }
+//          }
+//
+//        }
+//      }
+//
+//    } catch (IOException e) {
+//      System.out.println("ERROR: In opening input/output files");
+//    }
+//  }  
   
   public static class Coordinate implements Serializable {
 
