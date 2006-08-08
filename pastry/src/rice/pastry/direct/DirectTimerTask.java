@@ -19,7 +19,7 @@ public class DirectTimerTask extends ScheduledMessage {
   }
   
   DirectTimerTask(MessageDelivery md, long nextExecutionTime, int period) {
-    this(md,nextExecutionTime,-1,false);
+    this(md,nextExecutionTime,period,false);
   }
   
   DirectTimerTask(MessageDelivery md, long nextExecutionTime) {
