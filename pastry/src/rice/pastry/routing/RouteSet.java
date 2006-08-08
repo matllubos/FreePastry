@@ -29,20 +29,31 @@ public class RouteSet implements NodeSetI, Serializable,
 
   private int closest;
 
+  transient int row;
+  transient int col;
+  
   /**
    * Constructor.
    * 
    * @param maxSize the maximum number of nodes that fit in this set.
    */
 
-  public RouteSet(int maxSize) {
+  public RouteSet(int maxSize, int row, int col) {
     nodes = new NodeHandle[maxSize];
     theSize = 0;
     closest = -1;
+    this.row = row;
+    this.col = col;
   }
 
   public String toString() {
-    String s = "RS: ";
+    
+    String s = "RS";
+    if (col >= 0) {
+      s+="("+row+","+Id.tran[col]+"):";
+    } else {
+      s+=":"; 
+    }
     for (int i = 0; i < nodes.length; i++) {
       s+=nodes[i]+","; 
     }
@@ -192,7 +203,7 @@ public class RouteSet implements NodeSetI, Serializable,
   
   private void notifyTable(NodeHandle handle, boolean added) {
     if (observer != null)
-      observer.nodeSetUpdate(null, handle, added);
+      observer.nodeSetUpdate(this, handle, added);
   }
   
   public void setRoutingTable(RoutingTable rt) {
@@ -236,6 +247,10 @@ public class RouteSet implements NodeSetI, Serializable,
    */
   public int size() {
     return theSize;
+  }
+  
+  public int capacity() {
+    return nodes.length; 
   }
 
   /**
@@ -489,7 +504,9 @@ public class RouteSet implements NodeSetI, Serializable,
     nodes = new NodeHandle[maxSize];
     for (int i = 0; i < theSize; i++) {
       nodes[i] = nhf.readNodeHandle(buf);
-    }           
+    }    
+    row = -1;
+    col = -1;
   }
   
 }

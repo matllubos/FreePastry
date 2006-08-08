@@ -76,6 +76,14 @@ public class BroadcastRouteRow extends PRawMessage implements Serializable {
     return s;
   }
   
+  public String toStringFull() {
+    String s = "BRR{"+fromNode+"}:";
+    for (int i = 0; i < row.length; i++) {
+      s+=row[i]+"|";
+    }
+    return s;
+  }
+  
   /***************** Raw Serialization ***************************************/
   public short getType() {
     return TYPE;

@@ -74,7 +74,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     for (int i = 0; i < rows; i++) {
       int myCol = myNodeId.getDigit(i, idBaseBitLength);
       // insert this node at the appropriate column
-      routingTable[i][myCol] = new RouteSet(maxEntries);
+      routingTable[i][myCol] = new RouteSet(maxEntries,i,myCol);
       routingTable[i][myCol].put(myNodeHandle);
       routingTable[i][myCol].setRoutingTable(this);
     }
@@ -268,7 +268,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
     if (routingTable[diffDigit][digit] == null) {
       // allocate a RouteSet
-      routingTable[diffDigit][digit] = new RouteSet(maxEntries);
+      routingTable[diffDigit][digit] = new RouteSet(maxEntries,diffDigit,digit);
       routingTable[diffDigit][digit].setRoutingTable(this);
     }
 
@@ -281,13 +281,55 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @param handle the handle to put.
    */
 
-  public void put(NodeHandle handle) {
-  if (logger.level <= Logger.FINER) logger.log("RT: put("+handle+")"); 
+  public boolean put(NodeHandle handle) {
+    if (logger.level <= Logger.FINER) logger.log("RT: put("+handle+")");        
     Id nid = handle.getNodeId();
     RouteSet ns = makeBestEntry(nid);
-
-    if (ns != null)
-      ns.put(handle);    
+    
+    if (ns != null) {
+      return ns.put(handle);          
+    }
+    
+    return false;
+  }
+  
+  public static final int TEST_FAIL_NO_PREFIX_MATCH = -1;  
+  public static final int TEST_FAIL_EXISTING_ARE_BETTER = 0;    
+  public static final int TEST_SUCCESS_BETTER_PROXIMITY = 1;
+  public static final int TEST_SUCCESS_ENTRY_WAS_DEAD = 2;
+  public static final int TEST_SUCCESS_AVAILABLE_SPACE = 3;
+  public static final int TEST_SUCCESS_NO_ENTRIES = 4;
+  
+  public int test(NodeHandle handle) {
+    // get the location in the RT
+    Id key = handle.getNodeId();
+    int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
+    // it matches us
+    if (diffDigit < 0) return TEST_FAIL_NO_PREFIX_MATCH;
+    int digit = key.getDigit(diffDigit, idBaseBitLength);
+    
+    // there is no RouteSet for that entry
+    if (routingTable[diffDigit][digit] == null) {
+      return TEST_SUCCESS_NO_ENTRIES; 
+    }
+    
+    RouteSet rs = routingTable[diffDigit][digit];
+    
+    // the RouteSet for that entry is empty
+    if (rs.size() == 0) return TEST_SUCCESS_NO_ENTRIES;    
+    
+    // the RouteSet for that entry has room
+    if (rs.size() < rs.capacity()) return TEST_SUCCESS_AVAILABLE_SPACE;
+    
+    int prox = handle.proximity();
+    if (prox == Integer.MAX_VALUE) return TEST_FAIL_EXISTING_ARE_BETTER;
+    
+    for (int i = 0; i < rs.size(); i++) {
+      NodeHandle nh = rs.get(i);
+      if (!nh.isAlive()) return TEST_SUCCESS_ENTRY_WAS_DEAD;
+      if (nh.proximity() > prox) return TEST_SUCCESS_BETTER_PROXIMITY;      
+    }   
+    return TEST_FAIL_EXISTING_ARE_BETTER;
   }
 
   /**
@@ -361,6 +403,15 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 //  }
 
   public void nodeSetUpdate(Object o, NodeHandle handle, boolean added) {
+    if (logger.level <= Logger.FINE) {
+      RouteSet rs = (RouteSet)o;
+      if (added) {
+        logger.log("RT: added("+handle+")@("+rs.row+","+Id.tran[rs.col]+")");
+      } else {
+        logger.log("RT: removed("+handle+")@("+rs.row+","+Id.tran[rs.col]+")");        
+      }
+    }
+    
     // pass the event to the Observers of this RoutingTable
     synchronized (listeners) {
       for (int i = 0; i < listeners.size(); i++) {
