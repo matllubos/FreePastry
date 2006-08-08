@@ -139,7 +139,7 @@ public class DirectTutorial {
       // remind user how to use
       System.out.println("Usage:"); 
       System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.direct.DirectTutorial numNodes");
-      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
+      System.out.println("example java rice.tutorial.direct.DirectTutorial 100");
       throw e; 
     }
   }

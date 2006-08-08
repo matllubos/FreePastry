@@ -41,7 +41,7 @@ public class DirectTutorial {
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
-    // construct the PastryNodeFactory, this is how we use rice.pastry.direct, with a Euclidean Network
+    // construct the PastryNodeFactory, this is how we use rice.pastry.direct, from a file
     PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, new GenericNetwork(env, new File(fileName)), env);
 
     // create the handle to boot off of
@@ -124,7 +124,7 @@ public class DirectTutorial {
   /**
    * Usage: 
    * java [-cp FreePastry-<version>.jar] rice.tutorial.gtitm.DirectTutorial numNodes <filename>
-   * example java rice.tutorial.gtitm.DirectTutorial 100 C_king_1740
+   * example java rice.tutorial.gtitm.DirectTutorial 100 GNPINPUT
    */
   public static void main(String[] args) throws Exception {
     // Loads pastry settings, and sets up the Environment for simulation
@@ -143,8 +143,8 @@ public class DirectTutorial {
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 
-      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.direct.DirectTutorial numNodes");
-      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.gtitm.DirectTutorial numNodes <filename>");
+      System.out.println("example java rice.tutorial.gtitm.DirectTutorial 100 GNPINPUT");
       throw e; 
     }
   }
