@@ -54,6 +54,10 @@ public class SimpleRandomSource implements RandomSource {
       init(time, manager, instance);
   }
   
+  public void setLogManager(LogManager manager) {
+    logger = manager.getLogger(SimpleRandomSource.class, instance);     
+  }
+  
   private void init(long seed, LogManager manager, String instance) {
     if (manager != null)
       logger = manager.getLogger(SimpleRandomSource.class, instance);

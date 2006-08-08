@@ -6,12 +6,14 @@ package rice.environment.time.simulated;
 import rice.environment.logging.*;
 import rice.environment.params.Parameters;
 import rice.environment.time.TimeSource;
+import rice.selector.*;
 
 public class DirectTimeSource implements TimeSource {
 
   private long time = 0;
   private Logger logger = null;
   private String instance;
+  private SelectorManager selectorManager;
   
   public DirectTimeSource(long time) {
     this(time, null);
@@ -34,20 +36,48 @@ public class DirectTimeSource implements TimeSource {
     logger = manager.getLogger(DirectTimeSource.class, instance);
   }
   
+  public void setSelectorManager(SelectorManager sm) {
+    selectorManager = sm;
+  }
+  
   public long currentTimeMillis() {
     return time;
   }
   
-  public void setTime(long newTime) {
+  public synchronized void setTime(long newTime) {
     if (newTime < time) {
       throw new RuntimeException("Attempted to set time from "+time+" to "+newTime+".");
     }
-    if (logger.level <= Logger.FINE) logger.log("DirectTimeSource.setTime("+time+"=>"+newTime+")");
+    if (logger.level <= Logger.FINER) logger.log("DirectTimeSource.setTime("+time+"=>"+newTime+")");
     time = newTime;
   }
 
   public void incrementTime(int millis) {
     setTime(time+millis); 
+  }
+
+  private class BlockingTimerTask extends TimerTask {
+    boolean done = false;
+    
+    public void run() {
+      synchronized(DirectTimeSource.this) {
+        done = true;
+        DirectTimeSource.this.notifyAll();
+        Thread.yield();
+      }
+    }
+    
+  }
+  
+  public synchronized void sleep(long delay) throws InterruptedException {
+    BlockingTimerTask btt = new BlockingTimerTask();
+    if (logger.level <= Logger.FINE) logger.log("DirectTimeSource.sleep("+delay+")");
+    
+    selectorManager.getTimer().schedule(btt,delay);
+    
+    while(!btt.done) {
+      wait(); 
+    }
   }
   
 }

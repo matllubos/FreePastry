@@ -86,14 +86,26 @@ public class Environment implements Destructable {
     this(null,null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName));
   }
   
+  public static Environment directEnvironment(int randomSeed) {
+    SimpleRandomSource srs = new SimpleRandomSource(randomSeed, null);
+    Environment env = directEnvironment(srs);
+    srs.setLogManager(env.getLogManager());
+    return env;
+  }
+  
   public static Environment directEnvironment() {
+    return directEnvironment(null);
+  }
+  
+  public static Environment directEnvironment(RandomSource rs) {
     Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
     DirectTimeSource dts = new DirectTimeSource(params);
     LogManager lm = generateDefaultLogManager(dts,params);
     dts.setLogManager(lm);
     SelectorManager selector = generateDefaultSelectorManager(dts,lm);
+    dts.setSelectorManager(selector);
     Processor proc = new SimProcessor(selector);
-    Environment ret = new Environment(selector,proc,null,dts,lm,
+    Environment ret = new Environment(selector,proc,rs,dts,lm,
         params);
     return ret;
   }

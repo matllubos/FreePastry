@@ -18,5 +18,9 @@ public class SimpleTimeSource implements TimeSource {
    */
   public long currentTimeMillis() {
     return System.currentTimeMillis();
-  }  
+  }
+
+  public void sleep(long delay) throws InterruptedException {
+    Thread.sleep(delay);
+  }    
 }
