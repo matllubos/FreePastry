@@ -1,5 +1,6 @@
 package rice.pastry.standard;
 
+import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
@@ -98,7 +99,17 @@ public class StandardRouter extends PastryAppl {
       // get the closest alive node
       if (rs == null
           || ((handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE)) == null)) {
-
+        // cull out dead nodes (this is mostly for the simulator -- I hope --, the listener interface should make this work normally)
+        if (rs != null) {
+          for (int index = 0; index < rs.size(); index++) {
+            NodeHandle nh = rs.get(index);
+            if (!nh.isAlive()) {
+              rs.remove(nh);
+              index--;
+            }
+          }
+        }
+        
         // no live routing table entry matching the next digit
         // get best alternate RT entry
         handle = thePastryNode.getRoutingTable().bestAlternateRoute(NodeHandle.LIVENESS_ALIVE,
@@ -173,8 +184,12 @@ public class StandardRouter extends PastryAppl {
       BroadcastRouteRow brr = new BroadcastRouteRow(thePastryNode.getLocalHandle(), row);
 
       NodeHandle prevNode = msg.getPrevNode();
-      if (prevNode.isAlive())
+      if (prevNode.isAlive()) {
+        if (logger.level <= Logger.FINE) {
+          logger.log("Found hole in "+prevNode+"'s routing table. Sending "+brr.toStringFull());  
+        }
         prevNode.receiveMessage(brr);
+      }
     }
 
   }

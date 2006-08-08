@@ -74,6 +74,7 @@ public class StandardRouteSetProtocol extends PastryAppl {
   public void messageForAppl(Message msg) {
     if (msg instanceof BroadcastRouteRow) {
       BroadcastRouteRow brr = (BroadcastRouteRow) msg;
+      if (logger.level <= Logger.FINER+5) logger.log("Received "+brr.toStringFull());
 
       RouteSet[] row = brr.getRow();
 
@@ -102,6 +103,7 @@ public class StandardRouteSetProtocol extends PastryAppl {
 
       RouteSet row[] = routeTable.getRow(reqRow);
       BroadcastRouteRow brr = new BroadcastRouteRow(thePastryNode.getLocalHandle(), row);
+      if (logger.level <= Logger.FINER+5) logger.log("Responding to "+rrr+" with "+brr.toStringFull());
       nh.receiveMessage(brr);
     }
 
@@ -128,7 +130,7 @@ public class StandardRouteSetProtocol extends PastryAppl {
 
   private void maintainRouteSet() {
 
-    if (logger.level <= Logger.FINE) logger.log(
+    if (logger.level <= Logger.INFO) logger.log(
       "maintainRouteSet " + thePastryNode.getLocalHandle().getNodeId());
 
     // for each populated row in our routing table
@@ -153,9 +155,15 @@ public class StandardRouteSetProtocol extends PastryAppl {
         NodeHandle nh;
 
         if (rs != null && (nh = rs.closestNode()) != null) {
-          nh.receiveMessage(brr);
-          nh.receiveMessage(rrr);
-          break;
+          if (nh.isAlive()) {
+            if (logger.level <= Logger.FINE) logger.log("swapping with "+(i+1)+"/"+routeTable.numRows()+" "+(j+1)+"/"+maxTrials+":"+nh);
+            nh.receiveMessage(brr);
+            nh.receiveMessage(rrr);
+            break;
+          } else {
+            if (logger.level <= Logger.FINE) logger.log("found dead node in table:"+nh);            
+            routeTable.remove(nh); 
+          }
         }
       }
 
