@@ -24,7 +24,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   Vector nodes = new Vector();
 
   // these messages should be delivered when the timer expires
-  protected TreeSet taskQueue = new TreeSet();
+//  protected TreeSet taskQueue = new TreeSet();
 
   Environment environment;
 
@@ -132,9 +132,10 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   private void addTask(TimerTask dtt) {
     if (logger.level <= Logger.FINE) logger.log("addTask("+dtt+")");
 //    System.out.println("addTask("+dtt+")");
-    synchronized(taskQueue) {
-      taskQueue.add(dtt);
-    }
+//    synchronized(taskQueue) {
+//      taskQueue.add(dtt);
+//    }
+    manager.getTimer().schedule(dtt);
 //    start();
 //    if (!manager.isSelectorThread()) Thread.yield();
   }
@@ -234,28 +235,35 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    */  
   private boolean simulate() {
     if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be on selector thread");
-    
-    TimerTask task;
-    synchronized(taskQueue) {
-      // take a task from the taskQueue
-      if (taskQueue.isEmpty()) {
-        if (logger.level <= Logger.FINE) logger.log("taskQueue is empty");
-        return false;
-      }
-      task = (TimerTask) taskQueue.first();
-      if (logger.level <= Logger.FINE) logger.log("simulate():"+task);
-      taskQueue.remove(task);
+    long scheduledExecutionTime = manager.getNextTaskExecutionTime();
+    if (scheduledExecutionTime > timeSource.currentTimeMillis()) {
+      if (logger.level <= Logger.FINER) logger.log("the time is now "+scheduledExecutionTime);        
+      timeSource.setTime(scheduledExecutionTime);
     }
-      // increment the clock if needed
-      if (task.scheduledExecutionTime() > timeSource.currentTimeMillis()) {
-        if (logger.level <= Logger.FINER) logger.log("the time is now "+task.scheduledExecutionTime());        
-        timeSource.setTime(task.scheduledExecutionTime());
-      }
-  
-  
-      if (task.execute(timeSource)) {
-        addTask(task);
-      }    
+    
+//    TimerTask task;
+//    synchronized(taskQueue) {
+//      // take a task from the taskQueue
+//      if (taskQueue.isEmpty()) {
+//        if (logger.level <= Logger.FINE) logger.log("taskQueue is empty");
+//        return false;
+//      }
+//      task = (TimerTask) taskQueue.first();
+//      if (logger.level <= Logger.FINE) logger.log("simulate():"+task);
+//      taskQueue.remove(task);
+//    }
+//      // increment the clock if needed
+//      if (task.scheduledExecutionTime() > timeSource.currentTimeMillis()) {
+//        if (logger.level <= Logger.FINER) logger.log("the time is now "+task.scheduledExecutionTime());        
+//        timeSource.setTime(task.scheduledExecutionTime());
+//      }
+//  
+//  
+//      if (task.execute(timeSource)) {
+//        addTask(task);
+//      }    
+      
+      
       return true;
   }
   

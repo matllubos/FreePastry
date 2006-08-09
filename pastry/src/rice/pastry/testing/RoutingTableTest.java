@@ -1,5 +1,6 @@
 package rice.pastry.testing;
 
+import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -16,6 +17,7 @@ import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.*;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 import rice.tutorial.direct.MyApp;
 
 /**
@@ -30,15 +32,19 @@ public class RoutingTableTest {
   
   Vector apps = new Vector();
   
-  Environment env;
+  final Environment env;
   
   PastryNodeFactory factory;
   
   NodeIdFactory nidFactory;
   
-  public static final boolean useMaintenance = true;
-  public static final boolean useMessaging = false;
-  public static final boolean earlyAbort = false;
+  public static boolean useMaintenance = false;
+  public static boolean useMessaging = false;
+  
+  public static int rtMaintInterval = 15*60; // seconds
+  public static int msgSendRate = 10000; // millis per node
+  
+  public static final boolean logHeavy = true;
   
   public static int T_total = 0;
   public static int T_ctr = 0;
@@ -54,7 +60,7 @@ public class RoutingTableTest {
    * @param numNodes the number of nodes to create in this JVM
    * @param env the environment for these nodes
    */
-  public RoutingTableTest(int numNodes, Environment env) throws Exception {
+  public RoutingTableTest(int numNodes, int numKill, final Environment env) throws Exception {
     this.env = env;
     
     // Generate the NodeIds Randomly
@@ -62,71 +68,88 @@ public class RoutingTableTest {
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.direct, with a Euclidean Network
     factory = new DirectPastryNodeFactory(nidFactory, new EuclideanNetwork(env), env);
+
     
     // loop to construct the nodes/apps
-    for (int curNode = 0; curNode < numNodes; curNode++) {
+    createNodes(numNodes, numKill);    
+  }
 
-      createNode();
-      
+  class CreatorTimerTask extends TimerTask {
+    int numNodes;
+    int numToKill;
+    public CreatorTimerTask(int numNodes, int numToKill) {
+      this.numNodes = numNodes;
+      this.numToKill = numToKill;
     }
-      
-    // wait 10 seconds
-    env.getTimeSource().sleep(10000);
-    System.out.println("PreDeath "+env.getTimeSource().currentTimeMillis()+":"+testRoutingTables());
-    env.getTimeSource().sleep(10000);    
-//    env.getParameters().setInt("rice.pastry.routing.RoutingTable_loglevel", Logger.FINE);
     
-//    while(true) {
-    killNodes(10);
-//    }      
-    env.getTimeSource().sleep(10000);    
-    int numFailed = 0;
-    env.getParameters().setInt("rice.pastry.routing.RoutingTable_loglevel", Logger.FINE);
-    do {
-      numFailed = testRoutingTables();
-      System.out.println("Time "+env.getTimeSource().currentTimeMillis()+":"+numFailed);
-      /************************************/
-      
-      if (earlyAbort) {
-        T_total+=numFailed;
-        T_ctr++;
-        T_ave = T_total/T_ctr;
-        
-        System.out.println("Total: "+T_ctr+":"+numFailed+" = "+T_ave);
-        env.destroy();
-        if (true) return;
-      }      
-      /************************************/
-      
-      if (useMessaging)
-        sendSomeMessages();
-      if (!useMessaging)
-        env.getTimeSource().sleep(16*60000);          
-    } while(numFailed > 0);
+    int ctr = 0;
+    public void run() {
+      try {
+        createNode();
+      } catch (InterruptedException ie) {
+        ie.printStackTrace(); 
+      }
+      synchronized(this) {
+        ctr++;
+        if (ctr >= numNodes) {
+          cancel();
+          env.getSelectorManager().getTimer().schedule(new TimerTask() {          
+            public void run() {
+              killNodes(numToKill);
+              if (logHeavy)
+                env.getParameters().setInt("rice.pastry.routing.RoutingTable_loglevel", Logger.FINE);
+              
+              if (useMessaging) {
+                env.getSelectorManager().getTimer().schedule(new TimerTask() {
+                  public void run() {
+                    sendSomeMessages();
+                    if (testRoutingTables() == 0) {
+                      System.out.println("Shutting down");
+                      env.destroy();
+                    }
+                  }
+                },msgSendRate,msgSendRate);
+              } else {
+                env.getSelectorManager().getTimer().schedule(new TimerTask() {
+                  public void run() {
+                    if (testRoutingTables() == 0) {
+                      System.out.println("Shutting down");
+                      env.destroy();
+                    }
+                  }    
+                },rtMaintInterval*1000,rtMaintInterval*1000);
+              }
 
-    System.out.println("Shutting down");
-    env.destroy();      
+            }          
+          },100000);
+          notifyAll(); 
+        }
+      }
+    }    
+  };
+  
+  public void createNodes(int numNodes, int numToKill) throws InterruptedException {    
+    CreatorTimerTask ctt = new CreatorTimerTask(numNodes, numToKill);    
+    env.getSelectorManager().getTimer().schedule(ctt,1000,1000); 
+    synchronized(ctt) {
+      while(ctt.ctr < numNodes) {
+        ctt.wait(); 
+      }
+    }
   }
   
-  public void sendSomeMessages() throws InterruptedException {
-    // route 10 messages
-    for (int i = 0; i < 1; i++) {
-        
-      // for each app
-      Iterator appIterator = apps.iterator();
-      while(appIterator.hasNext()) {
-        MyApp app = (MyApp)appIterator.next();
-        
-        // pick a key at random
-        Id randId = nidFactory.generateNodeId();
-        
-        // send to that key
-        app.routeMyMsg(randId);
-        
-        // wait a bit
-        env.getTimeSource().sleep(100);
-      }
-    }     
+  public void sendSomeMessages() {        
+    // for each app
+    Iterator appIterator = apps.iterator();
+    while(appIterator.hasNext()) {
+      MyApp app = (MyApp)appIterator.next();
+      
+      // pick a key at random
+      Id randId = nidFactory.generateNodeId();
+      
+      // send to that key
+      app.routeMyMsg(randId);
+    }
   }
   
 
@@ -140,13 +163,15 @@ public class RoutingTableTest {
     PastryNode node = factory.newNode(bootHandle);
     
     // the node may require sending several messages to fully boot into the ring
-    while(!node.isReady()) {
-      // delay so we don't busy-wait
-      env.getTimeSource().sleep(100);
-    }
-    
+//    synchronized(node) {
+//      while(!node.isReady()) {
+//        // delay so we don't busy-wait
+//        node.wait();
+////        env.getTimeSource().sleep(100);
+//      }
+//    }    
     if (useMaintenance)
-      node.scheduleMsg(new InitiateRouteSetMaintenance(),15*60*1000,15*60*1000);
+      node.scheduleMsg(new InitiateRouteSetMaintenance(),rtMaintInterval*1000,rtMaintInterval*1000);
     
     nodes.add(node);
 
@@ -171,32 +196,32 @@ public class RoutingTableTest {
     }
   }
 
-  class MyHelperRunnable implements Runnable {
-    int numFailed = -1;
-    public void run() {
-      synchronized(this) {
-        numFailed = testRoutingTablesHelper();
-        notifyAll();
-      }
-    }
-    
-  }
+//  class MyHelperRunnable implements Runnable {
+//    int numFailed = -1;
+//    public void run() {
+//      synchronized(this) {
+//        numFailed = testRoutingTablesHelper();
+//        notifyAll();
+//      }
+//    }
+//    
+//  }
   
   // do this on the selector thread so the routing tables don't change while processing
-  private int testRoutingTables() throws InterruptedException {
-    MyHelperRunnable mhr = new MyHelperRunnable();
-    
-    env.getSelectorManager().invoke(mhr);
-    
-    synchronized(mhr) {
-      while(mhr.numFailed == -1) {
-        mhr.wait(); 
-      }
-    }
-    return mhr.numFailed;
-  }
+//  private int testRoutingTables() throws InterruptedException {
+//    MyHelperRunnable mhr = new MyHelperRunnable();
+//    
+//    env.getSelectorManager().invoke(mhr);
+//    
+//    synchronized(mhr) {
+//      while(mhr.numFailed == -1) {
+//        mhr.wait(); 
+//      }
+//    }
+//    return mhr.numFailed;
+//  }
   
-  private int testRoutingTablesHelper() {
+  private int testRoutingTables() {
 //    Collections.sort(nodes,new Comparator() {
 //    
 //      public int compare(Object one, Object two) {
@@ -212,6 +237,7 @@ public class RoutingTableTest {
     Iterator nodeIterator = nodes.iterator();
     int curNodeIndex = 0;
     int ctr = 0;
+    int[] ctrs = new int[5];
     while(nodeIterator.hasNext()) {
       PastryNode node = (PastryNode)nodeIterator.next();
       DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);
@@ -222,13 +248,16 @@ public class RoutingTableTest {
         NodeHandle thatHandle = that.getLocalHandle();
         int response = rt.test(thatHandle);
         if (response > 1) {
+          ctrs[response]++;
           ctr++;
-          System.out.println(response+": ("+curNodeIndex+")"+node+" could have held "+thatHandle);    
+          if (logHeavy)
+            System.out.println(response+": ("+curNodeIndex+")"+node+" could have held "+thatHandle);    
         }
       }
       DirectPastryNode.setCurrentNode(temp);
       curNodeIndex++;
     }    
+    System.out.println("Time "+env.getTimeSource().currentTimeMillis()+" = "+ctr+"   2:"+ctrs[2]+" 3:"+ctrs[3]+" 4:"+ctrs[4]);
     return ctr;
   }
 
@@ -240,26 +269,49 @@ public class RoutingTableTest {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
    */
   public static void main(String[] args) throws Exception {
+    System.out.println("use: numNodes numKill randSeed maintInterval(sec) sendInterval(millis)");
+    // the number of nodes to use
+    int numNodes = 100;
+    if (args.length > 0) numNodes = Integer.parseInt(args[0]);    
+
+    int numKill = 10;
+    if (args.length > 1) numKill = Integer.parseInt(args[1]);
+
+    int randSeed = 5;
+    if (args.length > 2) randSeed = Integer.parseInt(args[2]);
+    
+    int maintInterval = -1;
+    if (args.length > 3) maintInterval = Integer.parseInt(args[3]);
+    
+    int sendInterval = -1;
+    if (args.length > 4) sendInterval = Integer.parseInt(args[4]);
+    
+    if (maintInterval > 0) {
+      useMaintenance = true;
+      rtMaintInterval = maintInterval;
+    }
+    
+    if (sendInterval > 0) {
+      useMessaging = true;
+      msgSendRate = sendInterval;
+    }
+    
+    if (logHeavy) {
+      System.setOut(new PrintStream(new FileOutputStream("rtt.txt")));
+      System.setErr(System.out);
+    }
+    
     // Loads pastry settings, and sets up the Environment for simulation
     int tries = 1;
-    if (earlyAbort) tries = 100;
     for (int i = 0; i < tries; i++) {
-      Environment env = Environment.directEnvironment();
-      
-      try {
-        // the number of nodes to use
-        int numNodes = 100;
-        if (args.length > 0) numNodes = Integer.parseInt(args[0]);    
-        
-        // launch our node!
-        RoutingTableTest dt = new RoutingTableTest(numNodes, env);
-      } catch (Exception e) {
-        // remind user how to use
-        System.out.println("Usage:"); 
-        System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.direct.DirectTutorial numNodes");
-        System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
-        throw e; 
+      Environment env = Environment.directEnvironment(tries+randSeed);
+      if (logHeavy) {
+        env.getParameters().setInt("rice.pastry.standard.StandardRouteSetProtocol_loglevel",405); 
+        env.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel", Logger.FINE); 
       }
+      
+      // launch our node!
+      RoutingTableTest dt = new RoutingTableTest(numNodes, numKill, env);
     }
   }
 }

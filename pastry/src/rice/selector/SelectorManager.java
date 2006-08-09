@@ -447,11 +447,14 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   }
 
   /**
-   * Method which schedules a task to run after a specified number of millis
+   * Method which schedules a task to run after a specified number of millis.  The task must have a proper nextExecutionTime set
    * 
    * @param task The task to run
-   * @param delay The delay before running, in milliseconds
    */
+  public void schedule(TimerTask task) {
+    addTask(task);
+  }
+  
   public void schedule(TimerTask task, long delay) {
     task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
     addTask(task);
@@ -506,6 +509,14 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       selector.wakeup();
   }
 
+  public long getNextTaskExecutionTime() {
+    if (timerQueue.size() > 0) {
+      TimerTask next = (TimerTask) timerQueue.first();
+      return next.nextExecutionTime;
+    }
+    return 0;    
+  }
+  
   /**
    * Internal method which finds all due tasks and executes them.
    */

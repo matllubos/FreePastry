@@ -152,18 +152,27 @@ public class StandardRouteSetProtocol extends PastryAppl {
         RouteSet rs = row[col];
 
         // swap row with closest node only
-        NodeHandle nh;
 
-        if (rs != null && (nh = rs.closestNode()) != null) {
-          if (nh.isAlive()) {
-            if (logger.level <= Logger.FINE) logger.log("swapping with "+(i+1)+"/"+routeTable.numRows()+" "+(j+1)+"/"+maxTrials+":"+nh);
-            nh.receiveMessage(brr);
-            nh.receiveMessage(rrr);
-            break;
-          } else {
+        if (rs != null && rs.size() > 0) {
+          NodeHandle nh;
+          
+          nh = rs.closestNode(10); // any liveness status will work
+          
+          // this logic is to make this work correctly in the simulator
+          // if we find him not alive, then we would have routed to him and the liveness would have failed
+          // thus the correct behavior is to break, not continue.  In other words, we waste this cycle
+          // finding the node faulty and removing it rather than doing an actual swap
+          // - Jeff Hoye,  Aug 9, 2006
+          if (!nh.isAlive()) {
             if (logger.level <= Logger.FINE) logger.log("found dead node in table:"+nh);            
-            routeTable.remove(nh); 
+            rs.remove(nh);
+            break;
           }
+
+          if (logger.level <= Logger.FINE) logger.log("swapping with "+(i+1)+"/"+routeTable.numRows()+" "+(j+1)+"/"+maxTrials+":"+nh);
+          nh.receiveMessage(brr);
+          nh.receiveMessage(rrr);
+          break;
         }
       }
 

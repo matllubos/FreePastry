@@ -11,4 +11,5 @@ public interface Timer {
   void scheduleAtFixedRate(TimerTask task, long delay, long period);
   void schedule(TimerTask task, long delay);
   void schedule(TimerTask task, long delay, long period);
+  void schedule(TimerTask dtt);
 }
