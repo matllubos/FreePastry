@@ -88,11 +88,20 @@ pastry_socket_increment_port_after_construction = true
 
 # NAT/UPnP settings
 nat_network_prefixes = 127.0.0.1;10.;192.168.
+# Enable and set this if you have already set up port forwarding and know the external address
+#external_address = 123.45.67.89:1234
+#enable this if you set up port forwarding (on the same port), but you don't 
+#know the external address and you don't have UPnP enabled
+#this is useful for a firwall w/o UPnP support, and your IP address isn't static
+probe_for_external_address = false
+# values how to probe
+pastry_proxy_connectivity_timeout = 15000 
+pastry_proxy_connectivity_tries = 3
 # possible values: always, never, prefix (prefix is if the localAddress matches any of the nat_network_prefixes
-# whether to search for a nat
+# whether to search for a nat using UPnP
 nat_search_policy = prefix
 # whether to verify connectivity
-nat_test_policy = always
+firewall_test_policy = always
 # policy for setting port forwarding the state of the firewall if there is already a conflicting rule: overwrite, fail (throw exception), change (use different port) 
 # you may want to set this to overwrite or fail on the bootstrap nodes, but most freepastry applications can run on any available port, so the default is change
 nat_state_policy = change
@@ -103,7 +112,7 @@ nat_discovery_timeout = 5000
 # how many searches to try to find a free firewall port
 nat_find_port_max_tries = 10
 # uncomment this to use UPnP NAT port forwarding, you need to include in the classpath: commons-jxpath-1.1.jar:commons-logging.jar:sbbi-upnplib-xxx.jar
-# nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler
+nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler
 
 # if we are not scheduled for time on cpu in this time, we setReady(false)
 # otherwise there could be message inconsistency, because

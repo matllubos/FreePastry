@@ -139,6 +139,14 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           Constructor constructor = natHandlerClass.getConstructor(args);
           Object[] foo = {environment, this.localAddress};
           natHandler = (NATHandler)constructor.newInstance(foo);
+        } catch (ClassNotFoundException e) {
+          if (logger.level <= Logger.INFO) logger.log("Didn't find UPnP libs, skipping UPnP");
+          natHandler = new StubNATHandler(environment, this.localAddress);
+//          natHandler = new SocketNatHandler(environment, new InetSocketAddress(localAddress,port), pAddress);
+        } catch (NoClassDefFoundError e) {
+          if (logger.level <= Logger.INFO) logger.log("Didn't find UPnP libs, skipping UPnP");
+          natHandler = new StubNATHandler(environment, this.localAddress);
+//          natHandler = new SocketNatHandler(environment, new InetSocketAddress(localAddress,port), pAddress);
         } catch (Exception e) {
           if (logger.level <= Logger.WARNING) logger.logException("Error constructing NATHandler.",e);
           throw new RuntimeException(e);
@@ -571,48 +579,69 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     try {
       synchronized (this) {
         localAddress = getEpochAddress(port, epoch);
-
-        findFireWallIfNecessary();
+                
+        boolean probeForExternalAddress = environment.getParameters().getBoolean("probe_for_external_address");
         if (pAddress == null) {
-          // may need to find and set the firewall
-          if (natHandler.getFireWallExternalAddress() == null) {
-            proxyAddress = localAddress;
+          if (environment.getParameters().contains("external_address")) {
+            pAddress = environment.getParameters().getInetSocketAddress("external_address");
           } else {
-            // configure the firewall if necessary, can be any port, start with
-            // the freepastry port
-            int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port, firewallSearchTries, firewallAppName);
-            natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-            proxyAddress = new EpochInetSocketAddress(new InetSocketAddress(
-                natHandler.getFireWallExternalAddress(), availableFireWallPort), epoch);
-          }
-        } else {
-          // configure the firewall if necessary, but to the specified port
-          if (natHandler.getFireWallExternalAddress() != null) {
-            int availableFireWallPort = natHandler.findAvailableFireWallPort(port,
-                pAddress.getPort(), firewallSearchTries, firewallAppName);
-            if (availableFireWallPort == pAddress.getPort()) {
-              natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-            } else {
-              // decide how to handle this
-              switch (getFireWallPolicyVariable("nat_state_policy")) {
-                case OVERWRITE:
-                  natHandler.openFireWallPort(port, pAddress.getPort(), firewallAppName);
-                  break;
-                case FAIL:
-                  // todo: would be useful to pass the app that is bound to that
-                  // port
-                  throw new BindException(
-                      "Firewall is already bound to the requested port:"
-                          + pAddress);
-                case USE_DIFFERENT_PORT:
-                  natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-                  pAddress = new InetSocketAddress(pAddress.getAddress(),
-                      availableFireWallPort);
-                  break;
+            if (probeForExternalAddress) {
+              int timeout = environment.getParameters().getInt("pastry_proxy_connectivity_timeout");
+              int tries = environment.getParameters().getInt("pastry_proxy_connectivity_tries");
+              if (bootstrap == null) {
+                throw new IOException("Cannot probe for external address without a bootstrap node to use as a probe target");
               }
+              
+              InetSocketAddress[] verifyAddresses = new InetSocketAddress[1];
+              verifyAddresses[0] = ((SocketNodeHandle)bootstrap).eaddress.address;
+              pAddress = verifyConnection(timeout, tries, localAddress.address, verifyAddresses, environment, logger);
             }
           }
-          proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
+        }
+        
+        if (!probeForExternalAddress) {
+          findFireWallIfNecessary();
+          if (pAddress == null) {
+            // may need to find and set the firewall
+            if (natHandler.getFireWallExternalAddress() == null) {
+              proxyAddress = localAddress;
+            } else {
+              // configure the firewall if necessary, can be any port, start with
+              // the freepastry port
+              int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port, firewallSearchTries, firewallAppName);
+              natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
+              proxyAddress = new EpochInetSocketAddress(new InetSocketAddress(
+                  natHandler.getFireWallExternalAddress(), availableFireWallPort), epoch);
+            }
+          } else {
+            // configure the firewall if necessary, but to the specified port
+            if (natHandler.getFireWallExternalAddress() != null) {
+              int availableFireWallPort = natHandler.findAvailableFireWallPort(port,
+                  pAddress.getPort(), firewallSearchTries, firewallAppName);
+              if (availableFireWallPort == pAddress.getPort()) {
+                natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
+              } else {
+                // decide how to handle this
+                switch (getFireWallPolicyVariable("nat_state_policy")) {
+                  case OVERWRITE:
+                    natHandler.openFireWallPort(port, pAddress.getPort(), firewallAppName);
+                    break;
+                  case FAIL:
+                    // todo: would be useful to pass the app that is bound to that
+                    // port
+                    throw new BindException(
+                        "Firewall is already bound to the requested port:"
+                            + pAddress);
+                  case USE_DIFFERENT_PORT:
+                    natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
+                    pAddress = new InetSocketAddress(pAddress.getAddress(),
+                        availableFireWallPort);
+                    break;
+                }
+              }
+            }
+            proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
+          }
         }
         SocketNodeHandle temp = new SocketNodeHandle(proxyAddress,
             nodeId);
@@ -669,7 +698,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     if (bootstrap != null) {
       bootstrap = (SocketNodeHandle) pn.coalesce(bootstrap);
 
-      switch (getFireWallPolicyVariable("nat_test_policy")) {
+      switch (getFireWallPolicyVariable("firewall_test_policy")) {
         case NEVER:
           break;
         case PREFIX_MATCH:
@@ -1018,6 +1047,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public static InetSocketAddress verifyConnection(int timeout,
       InetSocketAddress local, InetSocketAddress[] existing, Environment env,
       Logger logger) throws IOException {
+    
+    return verifyConnection(timeout, 1, local, existing, env, logger);
+  }
+  
+  public static InetSocketAddress verifyConnection(int timeout, int tries,
+      InetSocketAddress local, InetSocketAddress[] existing, Environment env,
+      Logger logger) throws IOException {
     if (logger.level <= Logger.INFO)
       logger.log("Verifying connection of local node " + local + " using "
           + existing[0] + " and " + existing.length + " more");
@@ -1025,33 +1061,48 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     try {
       socket = new DatagramSocket(local);
-      socket.setSoTimeout(timeout);
+//      socket.setSoTimeout(timeout);
 
-      for (int i = 0; i < existing.length; i++) {
-        // byte[] buf = PingManager
-        // .addHeader(SourceRoute
-        // .build(new EpochInetSocketAddress(existing[i])),
-        // new IPAddressRequestMessage(env.getTimeSource()
-        // .currentTimeMillis()), new EpochInetSocketAddress(local),
-        // env, logger);
-        SocketBuffer sb = new SocketBuffer(
-            new EpochInetSocketAddress(local),
-            SourceRoute.build(new EpochInetSocketAddress(existing[i])),
-            new IPAddressRequestMessage(env.getTimeSource().currentTimeMillis()));
-        DatagramPacket send = new DatagramPacket(sb.getBuffer().array(), sb
-            .getBuffer().limit(), existing[i]);
-        socket.send(send);
-      }
+      IOException toThrow = null;
+      // retry loop
+      // TODO: need socket to be non-blocking to do this correctly, but do this later, in the meantime, the looping will be outside
+      int subTimeout = timeout/(int)(Math.pow(2,tries)-1); // a function of timeout and tries
+      if (subTimeout < 1) subTimeout = 1;  
+      for (int curTry = 0; curTry < tries; curTry++) {
+        
+        socket.setSoTimeout(subTimeout);
+      // probe each node
+        for (int i = 0; i < existing.length; i++) {
+          // byte[] buf = PingManager
+          // .addHeader(SourceRoute
+          // .build(new EpochInetSocketAddress(existing[i])),
+          // new IPAddressRequestMessage(env.getTimeSource()
+          // .currentTimeMillis()), new EpochInetSocketAddress(local),
+          // env, logger);
+          SocketBuffer sb = new SocketBuffer(
+              new EpochInetSocketAddress(local),
+              SourceRoute.build(new EpochInetSocketAddress(existing[i])),
+              new IPAddressRequestMessage(env.getTimeSource().currentTimeMillis()));
+          DatagramPacket send = new DatagramPacket(sb.getBuffer().array(), sb
+              .getBuffer().limit(), existing[i]);
+          socket.send(send);
+        }
+  
+        DatagramPacket receive = new DatagramPacket(new byte[10000], 10000);
+        try {
+          socket.receive(receive);
+        } catch (SocketTimeoutException e) {
+          toThrow = e;
+        }
+        subTimeout*=2;
 
-      DatagramPacket receive = new DatagramPacket(new byte[10000], 10000);
-      socket.receive(receive);
-
-      byte[] data = new byte[receive.getLength() - 38];
-      System.arraycopy(receive.getData(), 38, data, 0, data.length);
-
-      return ((IPAddressResponseMessage) new SocketBuffer(data)
-          .deserialize(new PingManager.PMDeserializer(logger))).getAddress();
-
+        byte[] data = new byte[receive.getLength() - 38];
+        System.arraycopy(receive.getData(), 38, data, 0, data.length);
+  
+        return ((IPAddressResponseMessage) new SocketBuffer(data)
+            .deserialize(new PingManager.PMDeserializer(logger))).getAddress();
+      } // retry loop
+      throw toThrow;
       // return ((IPAddressResponseMessage) PingManager.deserialize(data, env,
       // null, logger)).getAddress();
     } finally {
