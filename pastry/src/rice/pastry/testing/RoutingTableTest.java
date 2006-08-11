@@ -221,17 +221,27 @@ public class RoutingTableTest {
 //    return mhr.numFailed;
 //  }
   
+  private void testLeafSets() {
+    ArrayList nds = new ArrayList(nodes);
+    Collections.sort(nds,new Comparator() {
+    
+      public int compare(Object one, Object two) {
+        PastryNode n1 = (PastryNode)one;
+        PastryNode n2 = (PastryNode)two;
+        return n1.getId().compareTo(n2.getId());
+      }
+    
+    });
+    
+    Iterator i = nds.iterator();
+    while(i.hasNext()) {
+      PastryNode n = (PastryNode)i.next(); 
+      System.out.println(n.getLeafSet());
+    }
+  }
+  
   private int testRoutingTables() {
-//    Collections.sort(nodes,new Comparator() {
-//    
-//      public int compare(Object one, Object two) {
-//        PastryNode n1 = (PastryNode)one;
-//        PastryNode n2 = (PastryNode)two;
-//        return n1.getId().compareTo(n2.getId());
-//      }
-//    
-//    });
-
+    testLeafSets();
     
     // for each node
     Iterator nodeIterator = nodes.iterator();
@@ -306,6 +316,7 @@ public class RoutingTableTest {
     for (int i = 0; i < tries; i++) {
       Environment env = Environment.directEnvironment(tries+randSeed);
       if (logHeavy) {
+        env.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE); 
         env.getParameters().setInt("rice.pastry.standard.StandardRouteSetProtocol_loglevel",405); 
         env.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel", Logger.FINE); 
       }
