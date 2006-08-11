@@ -112,9 +112,10 @@ public class DirectPastryNode extends PastryNode {
    * @param bootstrap
    *          Node handle to bootstrap with.
    */
+  ScheduledMessage joinTask;
   public final void initiateJoin(NodeHandle[] bootstrap) {
     if (bootstrap != null && bootstrap[0] != null) {
-      simulator.deliverMessage(new InitiateJoin(bootstrap), this);
+      joinTask = scheduleMsg(new InitiateJoin(bootstrap), 0, 5000);
 //      this.receiveMessage(new InitiateJoin(bootstrap));
     } else {
       setReady(); // no bootstrap node, so ready immediately
@@ -125,6 +126,10 @@ public class DirectPastryNode extends PastryNode {
    * Called from PastryNode after the join succeeds.
    */
   public final void nodeIsReady() {
+    if (joinTask != null) {
+      joinTask.cancel();
+      joinTask = null;
+    }
   }
 
   /**
