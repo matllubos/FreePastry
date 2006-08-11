@@ -70,6 +70,7 @@ public class RouteSet implements NodeSetI, Serializable,
    * @return true if the put succeeded, false otherwise.
    */
   public boolean put(NodeHandle handle) {
+    if (!handle.isAlive()) return false;
     int worstIndex = -1;
     int worstProximity = Integer.MIN_VALUE;
 
@@ -80,6 +81,21 @@ public class RouteSet implements NodeSetI, Serializable,
       if (nodes[i].equals(handle))
         return false;
 
+      if (!nodes[i].isAlive()) {
+        // node is dead, replace immeadiately
+        notifyTable(nodes[i], false);
+
+        // in case we observe this handle, stop doing so
+        nodes[i].deleteObserver(this);
+
+        // insert new handle
+        nodes[i] = handle;
+
+        notifyTable(handle, true);
+        handle.addObserver(this);
+        return true;
+      }
+      
       // find entry with worst proximity
       int p = nodes[i].proximity();
       if (p >= worstProximity) {

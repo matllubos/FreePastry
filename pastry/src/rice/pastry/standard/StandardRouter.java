@@ -2,6 +2,7 @@ package rice.pastry.standard;
 
 import rice.environment.logging.Logger;
 import rice.pastry.*;
+import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.client.PastryAppl;
@@ -61,6 +62,7 @@ public class StandardRouter extends PastryAppl {
    */
 
   private void receiveRouteMessage(RouteMessage msg) {
+    if (logger.level <= Logger.FINER) logger.log("receiveRouteMessage("+msg+")");  
     Id target = msg.getTarget();
 
     if (target == null)
@@ -77,9 +79,9 @@ public class StandardRouter extends PastryAppl {
     else if ((lsPos > 0 && (lsPos < cwSize || !thePastryNode.getLeafSet().get(lsPos).getNodeId()
         .clockwise(target)))
         || (lsPos < 0 && (-lsPos < ccwSize || thePastryNode.getLeafSet().get(lsPos).getNodeId()
-            .clockwise(target))))
-    // the target is within range of the leafset, deliver it directly
-    {
+            .clockwise(target)))) {
+      if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):1");  
+    // the target is within range of the leafset, deliver it directly    
       NodeHandle handle = thePastryNode.getLeafSet().get(lsPos);
 
       if (handle.isAlive() == false) {
@@ -90,8 +92,10 @@ public class StandardRouter extends PastryAppl {
       } else {
         msg.nextHop = handle;
         msg.getOptions().setRerouteIfSuspected(false);
+        thePastryNode.getRoutingTable().put(handle);        
       }
     } else {
+      if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):2");  
       // use the routing table
       RouteSet rs = thePastryNode.getRoutingTable().getBestEntry(target);
       NodeHandle handle = null;
@@ -127,6 +131,7 @@ public class StandardRouter extends PastryAppl {
             msg.getOptions().setRerouteIfSuspected(false);
           }
         } else {
+          if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):3");  
           Id.Distance altDist = handle.getNodeId().distance(target);
           Id.Distance lsDist = thePastryNode.getLeafSet().get(lsPos).getNodeId().distance(
               target);
@@ -144,14 +149,16 @@ public class StandardRouter extends PastryAppl {
             }
           }
         }
-      } else {
+      } //else {
         // we found an appropriate RT entry, check for RT holes at previous node
-        checkForRouteTableHole(msg, handle);
-      }
+//      checkForRouteTableHole(msg, handle);
+//      }
 
       msg.nextHop = handle;
     }
-
+    
+    // this wasn't being called often enough in its previous location, moved here Aug 11, 2006
+    checkForRouteTableHole(msg, msg.nextHop);
     msg.setPrevNode(thePastryNode.getLocalHandle());
     thePastryNode.getLocalHandle().receiveMessage(msg);
   }
@@ -165,15 +172,38 @@ public class StandardRouter extends PastryAppl {
    */
 
   private void checkForRouteTableHole(RouteMessage msg, NodeHandle handle) {
+    if (logger.level <= Logger.FINEST) logger.log("checkForRouteTableHole("+msg+","+handle+")");  
 
-    if (msg.getPrevNode() == null)
+    NodeHandle prevNode = msg.getPrevNode();
+    if (prevNode == null) {
+      if (logger.level <= Logger.FINER) logger.log("No prevNode defined in "+msg);  
       return;
+    }
 
-    Id prevId = msg.getPrevNode().getNodeId();
+    if (prevNode.equals(getNodeHandle())) {
+      if (logger.level <= Logger.FINER) logger.log("prevNode is me in "+msg);  
+      return;
+    }
+
+    // we don't want to send the repair if they just routed in the leafset
+    LeafSet ls = thePastryNode.getLeafSet();
+    if (ls.overlaps()) return; // small network, don't bother
+    if (ls.member(prevNode)) {
+      // ok, it's in my leafset, so I'm in his, but make sure that it's not on the edge
+      int index = ls.getIndex(prevNode);
+      if ((index == ls.cwSize()) || (index == -ls.ccwSize())) {
+        // it is the edge... continue with repair 
+      } else {
+        return;
+      }
+    }
+    
+    Id prevId = prevNode.getNodeId();
     Id key = msg.getTarget();
 
     int diffDigit;
 
+    // if we both have the same prefix (in other words the previous node didn't make a prefix of progress)
     if ((diffDigit = prevId.indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength())) == 
       thePastryNode.getNodeId().indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength())) {
 
@@ -183,7 +213,6 @@ public class StandardRouter extends PastryAppl {
       RouteSet[] row = thePastryNode.getRoutingTable().getRow(diffDigit);
       BroadcastRouteRow brr = new BroadcastRouteRow(thePastryNode.getLocalHandle(), row);
 
-      NodeHandle prevNode = msg.getPrevNode();
       if (prevNode.isAlive()) {
         if (logger.level <= Logger.FINE) {
           logger.log("Found hole in "+prevNode+"'s routing table. Sending "+brr.toStringFull());  
