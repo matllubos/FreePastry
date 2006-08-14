@@ -7,7 +7,8 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.RouteMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
@@ -18,7 +19,7 @@ import rice.pastry.routing.*;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
-import rice.tutorial.direct.MyApp;
+import rice.tutorial.direct.MyMsg;
 
 /**
  * This tutorial shows how to setup a FreePastry node using the Socket Protocol.
@@ -44,7 +45,7 @@ public class RoutingTableTest {
   public static int rtMaintInterval = 15*60; // seconds
   public static int msgSendRate = 10000; // millis per node
   
-  public static final boolean logHeavy = true;
+  public static final boolean logHeavy = false;
   
   public static int T_total = 0;
   public static int T_ctr = 0;
@@ -222,6 +223,7 @@ public class RoutingTableTest {
 //  }
   
   private void testLeafSets() {
+    if (!logHeavy) return;
     ArrayList nds = new ArrayList(nodes);
     Collections.sort(nds,new Comparator() {
     
@@ -271,7 +273,87 @@ public class RoutingTableTest {
     return ctr;
   }
 
-  
+  public class MyApp implements Application {
+    /**
+     * The Endpoint represents the underlieing node.  By making calls on the 
+     * Endpoint, it assures that the message will be delivered to a MyApp on whichever
+     * node the message is intended for.
+     */
+    protected Endpoint endpoint;
+    
+    /**
+     * The node we were constructed on.
+     */
+    protected Node node;
+
+    public MyApp(Node node) {
+      // We are only going to use one instance of this application on each PastryNode
+      this.endpoint = node.buildEndpoint(this, "myinstance");
+      
+      this.node = node;
+          
+      // now we can receive messages
+      this.endpoint.register();
+    }
+
+    /**
+     * Getter for the node.
+     */
+    public Node getNode() {
+      return node;
+    }
+    
+    /**
+     * Called to route a message to the id
+     */
+    public void routeMyMsg(Id id) {
+      if (logHeavy)
+        System.out.println(this+" sending to "+id);    
+      Message msg = new MyMsg(endpoint.getId(), id);
+      endpoint.route(id, msg, null);
+    }
+    
+    /**
+     * Called to directly send a message to the nh
+     */
+    public void routeMyMsgDirect(NodeHandle nh) {
+      if (logHeavy)
+        System.out.println(this+" sending direct to "+nh);    
+      Message msg = new MyMsg(endpoint.getId(), nh.getId());
+      endpoint.route(null, msg, nh);
+    }
+      
+    /**
+     * Called when we receive a message.
+     */
+    public void deliver(Id id, Message message) {
+      if (logHeavy)
+        System.out.println(this+" received "+message);
+    }
+
+    /**
+     * Called when you hear about a new neighbor.
+     * Don't worry about this method for now.
+     */
+    public void update(rice.p2p.commonapi.NodeHandle handle, boolean joined) {
+    }
+    
+    /**
+     * Called a message travels along your path.
+     * Don't worry about this method for now.
+     */
+    public boolean forward(RouteMessage message) {
+      if (logHeavy)
+        System.out.println(this+"forwarding "+message.getMessage());
+      return true;
+    }
+    
+    public String toString() {
+      return "MyApp "+endpoint.getId();
+    }
+
+  }
+
   
   /**
    * Usage: 
@@ -315,6 +397,8 @@ public class RoutingTableTest {
     int tries = 1;
     for (int i = 0; i < tries; i++) {
       Environment env = Environment.directEnvironment(tries+randSeed);
+//      Environment env = new Environment();
+      
       if (logHeavy) {
         env.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE); 
         env.getParameters().setInt("rice.pastry.standard.StandardRouteSetProtocol_loglevel",405); 
