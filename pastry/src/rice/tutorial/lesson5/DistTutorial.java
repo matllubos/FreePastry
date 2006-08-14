@@ -70,6 +70,9 @@ public class DistTutorial {
     // Loads pastry settings
     Environment env = new Environment();
     
+    // disable the UPnP setting (in case you are testing this on a NATted LAN)
+    env.getParameters().setString("nat_search_policy","never");
+    
     try {
       // the port to use locally
       int bindport = Integer.parseInt(args[0]);

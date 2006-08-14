@@ -161,6 +161,9 @@ public class DistTutorial {
       env = Environment.directEnvironment();
     } else {
       env = new Environment(); 
+      
+      // disable the UPnP setting (in case you are testing this on a NATted LAN)
+      env.getParameters().setString("nat_search_policy","never");      
     }
     
     try {
