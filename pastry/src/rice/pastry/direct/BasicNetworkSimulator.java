@@ -11,6 +11,7 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.TimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
@@ -28,8 +29,11 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 
   Environment environment;
 
-  DirectTimeSource timeSource;
+  TimeSource timeSource;
 
+  // true if we are responsible for incrementing the time
+  private boolean isDirectTimeSource = false;
+  
   private TestRecord testRecord;
 
   protected Logger logger;
@@ -65,18 +69,22 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
       this.random = env.getRandomSource();
     }
     this.logger = env.getLogManager().getLogger(getClass(), null);
-    try {
-      timeSource = (DirectTimeSource) env.getTimeSource();
-    } catch (ClassCastException cce) {
-      throw new IllegalArgumentException(
-          "env.getTimeSource() must return a DirectTimeSource instead of a "
-              + env.getTimeSource().getClass().getName());
-    }
+//    try {
+    timeSource = env.getTimeSource();
+//    } catch (ClassCastException cce) {
+//      throw new IllegalArgumentException(
+//          "env.getTimeSource() must return a DirectTimeSource instead of a "
+//              + env.getTimeSource().getClass().getName());
+//    }
+    if (timeSource instanceof DirectTimeSource)
+      isDirectTimeSource = true;
+    
     testRecord = null;    
     start();
   }
 
   boolean running = false; // Invariant: only modified on the selector
+
   public void start() {
     // this makes things single threaded
     manager.invoke(new Runnable() {      
@@ -234,11 +242,12 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    * then return true. If both are empty, return false;
    */  
   private boolean simulate() {
+    if (!isDirectTimeSource) return true;
     if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be on selector thread");
     long scheduledExecutionTime = manager.getNextTaskExecutionTime();
     if (scheduledExecutionTime > timeSource.currentTimeMillis()) {
       if (logger.level <= Logger.FINER) logger.log("the time is now "+scheduledExecutionTime);        
-      timeSource.setTime(scheduledExecutionTime);
+      ((DirectTimeSource)timeSource).setTime(scheduledExecutionTime);
     }
     
 //    TimerTask task;
