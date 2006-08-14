@@ -19,14 +19,14 @@ public class StubNATHandler implements NATHandler {
   }
 
   public InetAddress findFireWall(InetAddress bindAddress) throws IOException {
-    throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file.");
+    throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file, or disable firewall checking by setting \"nat_search_policy\" = \"never\".");
   }
 
   public int findAvailableFireWallPort(int internal, int external, int tries, String appName) throws IOException {
-    throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file.");
+    throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file, or disable firewall checking by setting \"nat_search_policy\" = \"never\".");
   }
 
   public void openFireWallPort(int local, int external, String appName) throws IOException {
-    throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file.");
+    throw new IOException("Stub implementation.  You should use a real implementation such as rice.pastry.socket.nat.sbbi.SBBINatHandler.  You can do this by setting \"nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler\" in the params file, or disable firewall checking by setting \"nat_search_policy\" = \"never\".");
   }
 }
