@@ -34,6 +34,8 @@ public class SimpleParameters implements Parameters {
 
   private static String ARRAY_SPACER = ",";
 
+  private static final String defaultParamsFile = "freepastry"+FILENAME_EXTENSION;
+  
   /**
    * 
    * @param orderedDefaults
@@ -46,6 +48,14 @@ public class SimpleParameters implements Parameters {
   public SimpleParameters(String[] orderedDefaults, String mutableConfigFileName) {
     if (mutableConfigFileName != null) {
       this.configFileName = mutableConfigFileName + FILENAME_EXTENSION;
+    } else {
+      try {
+        if (new File(defaultParamsFile).exists()) {
+          this.configFileName = defaultParamsFile; 
+        }
+      } catch (Exception e) {
+        e.printStackTrace(); 
+      }
     }
     this.properties = new MyProperties();
     this.defaults = new MyProperties();
