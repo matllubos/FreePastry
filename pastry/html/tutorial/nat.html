@@ -1,0 +1,152 @@
+<html>
+<title>FreePastry NAT Configuration</title>
+
+<h1><center>FreePastry NAT/Firewall Configuration</center></h1>
+
+<p>This page is designed to help you configure FreePastry for your particular NAT/firewall setup.  It covers FreePastry 2.0.</p>
+
+<p>If FreePastry detects an invalid configuration, it will prompt the user for how to proceed.  However if you are a developer, you should read over this document to understand how FreePastry will behave in various scenarios so you can pre-configure FreePastry to do the appropriate behaviour for your application.</p>
+
+<p>The document has 3 sections.  The first shows you how to configure FreePastry's parameters.  The second section consists of quick links to help you configure FreePastry based on your particular setup.  Some require you to run with additional libraries in your classpath, some require to adjust your parameters.  The third is a detailed explanation of how FreePastry's firewall configuration works.</p>  
+<hr/>
+<h2>Definitions:</h2>
+<ul>
+  <li><a href="http://en.wikipedia.org/wiki/Network_address_translation">What is a NAT?</a></li>
+  <li><a href="http://freepastry.org/">What is a FreePastry?</a></li>
+</ul>
+<hr/>
+
+<h2><a href="#params">How to adjust FreePastry's parameters.</a></h2>
+
+<h2>Quick links for your particular setup.</h2>
+<ul>
+  <li><a href="#open">I'm not firewalled.</a></li>
+  <li><a href="#lan"/>I'm running the entrie network on my LAN (or a single computer), which happens to be behind a NAT.</a></li>
+  <li><a href="#upnp">UPnP: Let FreePastry configure my NAT for me.</a></li>
+  <li><a href="#forward">I want to manually configure my port forwarding settings in my NAT.</a></li>
+  <li><a href="#stunt">STUNT: Use NAT hole punching.</a>(coming soon! -- maybe)</li>
+</ul>
+
+<h2><a href="#detail">Detailed information.</a></h2>
+<hr/>
+
+<a name="params"/>
+<h2>Adjusting FreePastry's parameters</h2>
+<h3>About FreePastry's Parameters</h3>
+<p>Because FreePatry is a research project used for a variety of purposes, there are a lot of "knobs" that can be adjusted.  We have attempted to tune these knobs for the most common configurations, but over the years we have had requests to adjust various aspects of FreePastry for the developer/researcher's unique purposes.  Thus we decided it would be useful to have a central place for all of these kinds of configurations rather than adjusting constants in the code.  To make this as useful as possible, FreePastry's paramter system has the following capabilities:</p>
+<ul>
+  <li>Ability to adjust the parameters programatically.</li>
+  <li>Ability to store the configuration without overwriting the defaults.</li>
+  <li>Ability to load a hierarchy of configurations.  This allows applications to override and extend FreePastry's defaults without touching the default freepastry.params file.  This is a forward compatability issue.  FreePastry can add more parameters without interfering with properly built user applications' build process.</li>
+</ul>
+
+<h4>How FreePastry "reads" the parameters.</h4>
+<p>Every PastryNode has access to the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/Environment.html">Environment</a>.  To read a parameter, FreePastry calls <code>environment.getParameters().getXXX("parameter_name")</code>.  A parameter can be of various types including ints, strings, and InetAddresses.  See the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/params/Parameters.html">JavaDoc for Parameters</a> for more information.</p>
+<h4>How FreePastry initializes the parameters.</h4>
+<p>Most applications use the default constructor for the Environment.  This will load a "default" parameter file from the jar called freepastry.params.  If java can find a file in the working directory called "user.params" it will load this as the mutable parameter store.  Any values in this file will overwrite the default configurations stored in the jar.</p>
+<p><b>Note:</b>If you want to use a different mutable parameters filename than "user.params", you can use the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/Environment.html#Environment(java.lang.String)">single argument constructor</a> of Environment.  If you wish to have additional defaults in your application, you can call the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/Environment.html#Environment(java.lang.String[],%20java.lang.String)">2 argument constructor</a> of the Environment.
+<h4>Format of the config file.</h4>
+Internally, FreePastry's Parameters system uses java's <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/util/Properties.html">java.util.Properties</a> class.  Thus the format is defined <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/util/Properties.html#load(java.io.InputStream)">here</a>.
+
+
+There are 3 ways to adjust FreePastry's parameters:
+<ul>
+  <li><a href="#paramsfile">By adding a "user.params" config file.</a></li>
+  <li><a href="#paramsjar">By changing the freepastry.params included in the Jar.</a></li>
+  <li><a href="#paramsprog">Programatically.</a></li>
+</ul>
+
+<a name="paramsfile">
+<h3>Adding a config file.</h3>
+<p>If your application uses the default Environment constructor, it will search for a user.params file in the working directory.  If it finds one, it will use it.</p>
+<p>Thus if you want to add/modify the parameter "external_address" and set it to "123.45.67.89:1234" do the following.</p>  
+
+<p>1) Create a text file named user.params in your working directory.</p>
+<p>2) Add the following line to freepastry.params</p>
+<pre>
+external_address = 123.45.67.89:1234
+</pre>  
+
+<a name="paramsjar">
+<h3>Changing the default freepastry.params file included in the Jar.</h3>
+<p>Before building (with ant), edit the file located in the source distribution in <code>jars/freepastry.params</code>.  The documentation for the parameters is in the file.</p>
+
+<a name="paramsprog">
+<h3>Changing the params programatically.</h3>
+<p>Right after you create the Environment, call <code>getParameters().setXXX("param_name");</code></p>
+<p>Thus if you want to add/modify the parameter "external_address" and set it to "123.45.67.89:1234" do the following.</p>  
+
+<pre>
+    Environment env = new Environment();
+    env.getParameters().setInetSocketAddress("external_address",new InetSocketAddress(InetAddress.getByName("123.45.67.89"),1234));
+</pre>
+
+<hr/>
+
+<h2>Specific configurations.</h2>
+<a name="open"/><h3>I'm not firewalled.</h3>
+<p>FreePastry should work fine for you by default.  Sometimes it may fail the firewall test which verifies bidirectional connectivity to the bootstrap.  If this happens, it means that your connectivity to the Bootstrap node is too poor for FreePastry to get any communication through, and thus freepastry incorrectly assumes you are firewalled.  If you want to disable this test set:</p>
+<pre>
+firewall_test_policy = never
+</pre>
+
+<p>It is also possible that while you do have an internet routable address, there is still a firewall blocking one or more of your ports.  Verify that you don't have blocked ports.</p>
+
+<a name="lan"/><h3>I'm running the entrie network on my LAN (or a single computer), which happens to be behind a NAT.</h3>
+<p>Disable UPnP altogether by setting this:</p>
+
+<pre>
+nat_search_policy = never
+</pre>
+
+<p>Note that you need to re-enable this if you wish to join/create a network that goes over the internet.</p>
+
+<a name="upnp"/><h3>UPnP: Let FreePastry configure my NAT for me.</h3>
+Many firewalls can configure port forwarding programatically.  See <a href="http://en.wikipedia.org/wiki/Internet_Gateway_Device">UPnP Internet Gateway Device</a> for more information.
+FreePastry uses <a href="http://www.sbbi.net/site/index.html">SBBI</a>'s <a href="http://www.sbbi.net/site/upnp/">UPnPLib</a> to configure the NAT.
+
+<p>Enable UPnP on your router if you haven't already done so.  If you have trouble with this check your router's documentation online at your manufacturer's site.</p>
+<p>Include these libraries in your classpath when you run the FreePastry based application.  They can be found in the source distribution.</p>
+
+<pre>
+commons-jxpath-1.1.jar:commons-logging.jar:sbbi-upnplib-xxx.jar
+</pre>
+
+So, to run the lesson3 tutorial:
+
+<pre>
+java -cp .:FreePastry-2.0b2.jar:commons-jxpath-1.1.jar:commons-logging.jar:sbbi-upnplib-1.0.3.jar rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001
+</pre>
+
+<a name="forward"/><h3>I want to manually configure my port forwarding settings in my NAT.</h3>
+Configure forwarding of both UDP and TCP on the same port that you are using.  Check out <a href="www.portforward.com">www.portforward.com</a> for help.
+
+<h4>If you have a <i>dynamic address</i> (your ISP may re-assign your IP address):</h4>
+
+<pre>
+probe_for_external_address = true
+</pre>
+
+<p><b>Note:</b>The external port and local port must be the <i>same</i> for this to work.  In other words you can't forward port 9300 -> 9001, you must use the same port.</p>
+
+<h4>If you have a <i>static address</i> (your ISP doesn't change your IP address everytime you reboot your router):</h4>
+Set this parameter to the address you set up forwarding.  Note that it is ok to have <i>different</i> external port from local port.
+
+<pre>
+external_address = 123.45.67.89:1234
+</pre>  
+
+<a name="stunt"/><h3>STUNT: Use NAT hole punching.</h3>
+  We're investigating using <a href="http://nutss.gforge.cis.cornell.edu/stunt.php">STUNT</a> to do NAT hole punching.  However we are still in the investigation phase of this project. 
+
+
+<hr/>
+
+<a name="detail"/>
+<h2>Detailed explanation of FreePastry NAT settings.</h2>
+
+<h4>Hairpinning</h4>
+
+
+
+</html>
