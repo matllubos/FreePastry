@@ -41,6 +41,7 @@ public class RoutingTableTest {
   
   public static boolean useMaintenance = false;
   public static boolean useMessaging = false;
+  public static boolean useScribe = false;
   
   public static int rtMaintInterval = 15*60; // seconds
   public static int msgSendRate = 10000; // millis per node
@@ -104,10 +105,12 @@ public class RoutingTableTest {
                 env.getSelectorManager().getTimer().schedule(new TimerTask() {
                   public void run() {
                     sendSomeMessages();
-                    if (testRoutingTables() == 0) {
-                      System.out.println("Shutting down");
-                      env.destroy();
-                    }
+                    testRoutingTables();
+                    testRoutingTables2();
+//                    if (testRoutingTables() == 0) {
+//                      System.out.println("Shutting down");
+//                      env.destroy();
+//                    }
                   }
                 },msgSendRate,msgSendRate);
               } else {
@@ -242,7 +245,157 @@ public class RoutingTableTest {
     }
   }
   
-  private int testRoutingTables() {
+  private double testRoutingTables() {
+//    testLeafSets();
+    
+    // for each node
+    Iterator nodeIterator = nodes.iterator();
+    int curNodeIndex = 0;
+    int ctr = 0;
+    double acc = 0;
+    
+    while(nodeIterator.hasNext()) {
+      PastryNode node = (PastryNode)nodeIterator.next();
+      DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);
+      RoutingTable rt = node.getRoutingTable();
+      Iterator i2 = nodes.iterator();
+      while(i2.hasNext()) {
+        PastryNode that = (PastryNode)i2.next();
+        if (that != node) {
+          NodeHandle thatHandle = that.getLocalHandle();        
+          int latency = calcLatency(node,thatHandle);
+          int proximity = thatHandle.proximity();
+          if (latency < proximity-3) {
+            calcLatency(node, thatHandle); 
+          }
+          double streatch = (1.0*latency)/(1.0*proximity);
+//          System.out.println(streatch);
+          acc+=streatch;
+          ctr++;
+        }
+      }
+      DirectPastryNode.setCurrentNode(temp);
+      curNodeIndex++;
+    }    
+    System.out.println("Time "+env.getTimeSource().currentTimeMillis()+" = "+(acc/ctr));
+    return acc/ctr;
+  }
+
+  // recursively calculate the latency
+  private int calcLatency(PastryNode node, NodeHandle thatHandle) {
+    DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);    
+    try {
+      RoutingTable rt = node.getRoutingTable();
+      LeafSet ls = node.getLeafSet();
+      thePenalty = 0;
+      NodeHandle next = getNextHop(rt, ls, thatHandle);
+      int penalty = thePenalty;
+//      if (penalty > 0) System.out.println("penalty "+thePenalty);
+      if (next == thatHandle) return thatHandle.proximity();  // base case
+      DirectNodeHandle dnh = (DirectNodeHandle)next;    
+      PastryNode nextNode = dnh.getRemote();
+      return penalty+next.proximity()+calcLatency(nextNode, thatHandle); // recursive case
+    } finally {
+      DirectPastryNode.setCurrentNode(temp); 
+    }
+  }
+  
+  int thePenalty = 0;  // the penalty for trying non-alive nodes
+  private NodeHandle getNextHop(RoutingTable rt, LeafSet ls, NodeHandle thatHandle) {
+    rice.pastry.Id target = (rice.pastry.Id)thatHandle.getId();
+
+    int cwSize = ls.cwSize();
+    int ccwSize = ls.ccwSize();
+
+    int lsPos = ls.mostSimilar(target);
+
+    if (lsPos == 0) // message is for the local node so deliver it
+      throw new RuntimeException("can't happen");
+
+    else if ((lsPos > 0 && (lsPos < cwSize || !ls.get(lsPos).getNodeId()
+        .clockwise(target)))
+        || (lsPos < 0 && (-lsPos < ccwSize || ls.get(lsPos).getNodeId()
+            .clockwise(target)))) {
+
+    // the target is within range of the leafset, deliver it directly    
+      NodeHandle handle = ls.get(lsPos);
+
+      if (handle.isAlive() == false) {
+        // node is dead - get rid of it and try again
+        thePenalty += handle.proximity()*4; // rtt*2
+        LeafSet ls2 = ls.copy();
+        ls2.remove(handle);
+        return getNextHop(rt, ls2, thatHandle);
+      } else {
+        return handle;
+      }
+    } else {
+      // use the routing table
+      RouteSet rs = rt.getBestEntry(target);
+      NodeHandle handle = null;
+
+      // apply penalty if node was not alive
+      NodeHandle notAlive = null;
+      if (rs != null
+          && ((notAlive = rs.closestNode(10)) != null)) {
+        if ((notAlive != null) && !notAlive.isAlive()) thePenalty+=notAlive.proximity()*4;
+      }
+      
+      if (rs == null
+          || ((handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE)) == null)) {
+
+        // penalize for choosing dead route
+        NodeHandle notAlive2 = null;
+        notAlive2 = rt.bestAlternateRoute(10,
+            target);
+        if (notAlive2 == notAlive) {
+          // don't doublePenalize 
+        } else {
+          if ((notAlive2 != null) && !notAlive2.isAlive()) thePenalty+=notAlive2.proximity()*4;
+        }
+        
+        // no live routing table entry matching the next digit
+        // get best alternate RT entry
+        handle = rt.bestAlternateRoute(NodeHandle.LIVENESS_ALIVE,
+            target);
+
+        if (handle == null) {
+          // no alternate in RT, take leaf set extent
+          handle = ls.get(lsPos);
+
+          if (handle.isAlive() == false) {
+            thePenalty += handle.proximity()*4;
+            LeafSet ls2 = ls.copy();
+            ls2.remove(handle);
+            return getNextHop(rt, ls2, thatHandle);
+          }
+        } else {
+          Id.Distance altDist = handle.getNodeId().distance(target);
+          Id.Distance lsDist = ls.get(lsPos).getNodeId().distance(
+              target);
+
+          if (lsDist.compareTo(altDist) < 0) {
+            // closest leaf set member is closer
+            handle = ls.get(lsPos);
+
+            if (handle.isAlive() == false) {
+              thePenalty += handle.proximity()*4;
+              LeafSet ls2 = ls.copy();
+              ls2.remove(handle);
+              return getNextHop(rt, ls2, thatHandle);
+            }
+          }
+        }
+      } //else {
+        // we found an appropriate RT entry, check for RT holes at previous node
+//      checkForRouteTableHole(msg, handle);
+//      }
+
+      return handle;    
+    }
+  }
+  
+  private int testRoutingTables2() {
     testLeafSets();
     
     // for each node
@@ -392,21 +545,79 @@ public class RoutingTableTest {
       System.setOut(new PrintStream(new FileOutputStream("rtt.txt")));
       System.setErr(System.out);
     }
-    
-    // Loads pastry settings, and sets up the Environment for simulation
-    int tries = 1;
-    for (int i = 0; i < tries; i++) {
-      Environment env = Environment.directEnvironment(tries+randSeed);
-//      Environment env = new Environment();
-      
-      if (logHeavy) {
-        env.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE); 
-        env.getParameters().setInt("rice.pastry.standard.StandardRouteSetProtocol_loglevel",405); 
-        env.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel", Logger.FINE); 
-      }
-      
-      // launch our node!
-      RoutingTableTest dt = new RoutingTableTest(numNodes, numKill, env);
-    }
+
+//    int[] churnMatrix = {0,15,60,600}; // minutes
+//    
+//    for (int churnIndex = 0; churnIndex < churnMatrix.length; churnIndex++) {
+//      int churnTime = churnMatrix[churnIndex]*1000;
+//      for (int test = 0; test < 10; test++) {      
+//        switch(test) {
+//          case 0: // nothing            
+//            useMaintenance = false;
+//            useMessaging = false;
+//            useScribe = false;
+//            break;
+//          case 1: // maintenance normal
+//            useMaintenance = true;
+//            rtMaintInterval = 900;
+//            useMessaging = false;
+//            useScribe = false;
+//          case 2: // maintenance high
+//            useMaintenance = true;
+//            rtMaintInterval = 60;
+//            useMessaging = false;
+//            useScribe = false;
+//          case 3: // messaging light
+//            useMaintenance = false;
+//            useMessaging = true;
+//            msgSendRate = 10000;
+//            useScribe = false;            
+//          case 4: // messaging heavy
+//            useMaintenance = false;
+//            useMessaging = true;
+//            msgSendRate = 1000;
+//            useScribe = false;                        
+//          case 5: // both light
+//            useMaintenance = true;
+//            rtMaintInterval = 900;
+//            useMessaging = true;
+//            msgSendRate = 10000;
+//            useScribe = false;            
+//          case 6: // scribe light
+//            useMaintenance = false;
+//            useMessaging = false;
+//            msgSendRate = 10000;
+//            useScribe = true;            
+//          case 7: // scribe heavy
+//            useMaintenance = false;
+//            useMessaging = false;
+//            msgSendRate = 1000;
+//            useScribe = true;                        
+//          case 8: // scribe+maint
+//            useMaintenance = true;
+//            rtMaintInterval = 900;
+//            useMessaging = false;
+//            msgSendRate = 10000;
+//            useScribe = true;            
+//        }
+//        
+//        for (numNodes = 10; numNodes < Math.pow(10,5)+1; numNodes*=10) {
+          for (int tries = 0; tries < 1; tries++) {
+            // Loads pastry settings, and sets up the Environment for simulation
+            Environment env = Environment.directEnvironment(tries+randSeed);
+      //      Environment env = new Environment();
+            
+            if (logHeavy) {
+              env.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE); 
+              env.getParameters().setInt("rice.pastry.standard.StandardRouteSetProtocol_loglevel",405); 
+              env.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel", Logger.FINE); 
+            }
+            
+            // launch our node!
+            RoutingTableTest dt = new RoutingTableTest(numNodes, numKill, env);
+          } // tries
+//        } // numNodes
+//      } // test
+//    } // churn
   }
 }
