@@ -34,7 +34,7 @@ public class SimpleParameters implements Parameters {
 
   private static String ARRAY_SPACER = ",";
 
-  private static final String defaultParamsFile = "freepastry"+FILENAME_EXTENSION;
+  private static final String defaultParamsFile = "user"+FILENAME_EXTENSION;
   
   /**
    * 
