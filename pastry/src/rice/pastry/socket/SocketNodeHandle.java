@@ -2,7 +2,7 @@
 package rice.pastry.socket;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.*;
 import java.util.*;
 
 import rice.environment.logging.Logger;
@@ -46,7 +46,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @param address DESCRIBE THE PARAMETER
    */
   public SocketNodeHandle(EpochInetSocketAddress address, Id nodeId) {
-    super(nodeId, address.getAddress());
+    super(nodeId);
     
     this.eaddress = address;    
   }
@@ -71,14 +71,12 @@ public class SocketNodeHandle extends DistNodeHandle {
       if (isLocal()) 
         return LIVENESS_ALIVE;
       else {
-        // make sure this isn't an old existance of ourself:
-        EpochInetSocketAddress localEaddr = ((SocketNodeHandle)getLocalNode().getLocalHandle()).getEpochAddress();
-        InetSocketAddress localAddress = localEaddr.getAddress();
-        InetSocketAddress myAddress = getEpochAddress().getAddress();
-        if (localAddress.equals(myAddress) && (!getEpochAddress().equals(localEaddr)))
+        // make sure this isn't an old existance of ourself:       
+        EpochInetSocketAddress localEaddr = ((SocketNodeHandle)getLocalNode().getLocalHandle()).eaddress;
+        if (localEaddr.addressEquals(eaddress) && (eaddress.epoch != localEaddr.epoch))
           return LIVENESS_DEAD_FOREVER;
         
-        return spn.getSocketSourceRouteManager().getLiveness(getEpochAddress());
+        return spn.getSocketSourceRouteManager().getLiveness(eaddress);
       }
     }
   }
@@ -89,7 +87,21 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public void markDeadForever() {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    spn.getSocketSourceRouteManager().getAddressManager(getEpochAddress(), false).markDeadForever();
+    spn.getSocketSourceRouteManager().getAddressManager(eaddress, false).markDeadForever();
+  }
+  
+  /**
+   * Returns the InetSocketAddress that should be used to contact the node
+   * 
+   * @param addressList The sorted list of address alieses.  From Internet to LAN
+   * @return
+   */
+  public InetSocketAddress getAddress(InetAddress[] addressList) {
+    return eaddress.getAddress(addressList);
+  }
+  
+  public InetSocketAddress getAddress() {
+    return eaddress.address[0];
   }
   
   /**
@@ -104,7 +116,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     SocketPastryNode spn = (SocketPastryNode) getLocalNode();
     
     if (spn != null)
-      spn.getSocketSourceRouteManager().checkLiveness(getEpochAddress());
+      spn.getSocketSourceRouteManager().checkLiveness(eaddress);
     
     return isAlive();
   }
@@ -139,7 +151,7 @@ public class SocketNodeHandle extends DistNodeHandle {
         } else {
           if (logger.level <= Logger.FINER) logger.log(
               "Passing message " + msg + " to the socket controller for writing");
-          spn.getSocketSourceRouteManager().send(getEpochAddress(), msg);
+          spn.getSocketSourceRouteManager().send(eaddress, msg);
         }
     } catch (IOException ioe) {
       throw new RuntimeException(ioe); 
@@ -166,7 +178,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @param msg the bootstrap message.
    */
   public void bootstrap(Message msg) throws IOException {
-    ((SocketPastryNode) getLocalNode()).getSocketSourceRouteManager().bootstrap(getEpochAddress(), msg);
+    ((SocketPastryNode) getLocalNode()).getSocketSourceRouteManager().bootstrap(eaddress, msg);
   }
     
   /**
@@ -177,11 +189,11 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return A String representation of the node handle.
    */
   public String toString() {
-    return "[SNH: " + nodeId + "/" + getEpochAddress() + "]";
+    return "[SNH: " + nodeId + "/" + eaddress + "]";
 //    if (getLocalNode() == null) {
-//      return "[SNH: " + nodeId + "/" + getEpochAddress() + "]";
+//      return "[SNH: " + nodeId + "/" + eaddress + "]";
 //    } else {
-//      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "/" + getEpochAddress() + "]";
+//      return "[SNH: " + getLocalNode().getNodeId() + " -> " + nodeId + "/" + eaddress + "]";
 //    }
   }
 
@@ -227,7 +239,7 @@ public class SocketNodeHandle extends DistNodeHandle {
     else if (spn.getNodeId().equals(nodeId)) 
       return 0;
     else 
-      return spn.getSocketSourceRouteManager().proximity(getEpochAddress());
+      return spn.getSocketSourceRouteManager().proximity(eaddress);
   }
 
   /**
@@ -243,7 +255,7 @@ public class SocketNodeHandle extends DistNodeHandle {
 //    Runnable runnable = new Runnable() {    
 //      public void run() {
         if ((spn != null) && spn.srManager != null) 
-          spn.srManager.ping(getEpochAddress());
+          spn.srManager.ping(eaddress);
 //      }
 //    };
 //    

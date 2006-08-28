@@ -11,16 +11,20 @@ public class SimpleInputBuffer extends DataInputStream implements InputBuffer {
   ByteArrayInputStream bais;
   
   public SimpleInputBuffer(byte[] bytes) {
+    this(bytes,0); 
+  }
+  public SimpleInputBuffer(byte[] bytes, int skip) {
     super(new ByteArrayInputStream(bytes));
     bais = (ByteArrayInputStream)this.in;
+    bais.skip(skip);
   }
   
-  public short peakShort() throws IOException {
-    bais.mark(2);
-    short temp = readShort();
-    bais.reset();
-    return temp;
-  }
+//  public short peakShort() throws IOException {
+//    bais.mark(2);
+//    short temp = readShort();
+//    bais.reset();
+//    return temp;
+//  }
   
   public int bytesRemaining() {
     try {

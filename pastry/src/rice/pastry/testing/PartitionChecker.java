@@ -137,7 +137,7 @@ public class PartitionChecker {
                   LeafSet ls = factory.getLeafSet(handle);
 //                  System.out.println("Response:"+handle+" "+ring.getName()+" "+ls);
                   
-                  ps.println(handle.getEpochAddress().getAddress().getAddress().getHostAddress()+":"+handle.getEpochAddress().getAddress().getPort());
+                  ps.println(handle.getAddress().getAddress().getHostAddress()+":"+handle.getAddress().getPort());
           //        SourceRoute[] routes = factory.getRoutes(handle);
                   
           //        for (int i=0; i<routes.length; i++) 

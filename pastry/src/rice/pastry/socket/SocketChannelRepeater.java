@@ -6,7 +6,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.pastry.NetworkListener;
 import rice.pastry.socket.SocketCollectionManager.SourceRouteManager;
 
@@ -27,7 +28,7 @@ public class SocketChannelRepeater {
   // the default size of the transfer array
   protected int REPEATER_BUFFER_SIZE;
   // 4 for the ip, 4 for the port (int), 8 for the epoch (long)
-  protected static int HEADER_BUFFER_SIZE = 16;
+  protected static int HEADER_BUFFER_SIZE = 2;
   
   // whether or not this repeater has been connected to the other side
   private boolean connected;
@@ -102,6 +103,33 @@ public class SocketChannelRepeater {
     return decodeHeader(array, 0);
   }
   
+  public static EpochInetSocketAddress[] decodeFullHeader(byte[] array, int num) throws IOException {
+//  byte[] ip = new byte[4];
+//  byte[] skip = new byte[HEADER_BUFFER_SIZE];
+  
+//  // read the object size
+//  DataInputStream dis = new DataInputStream(new ByteArrayInputStream(array));
+//  
+    
+    EpochInetSocketAddress[] ret = new EpochInetSocketAddress[num];
+    
+  InputBuffer ib = new SimpleInputBuffer(array);
+  // skip the stuff
+  for (int i=0; i<num; i++)
+    ret[i] = EpochInetSocketAddress.build(ib);
+  
+  // now read our stuff
+  return ret;
+//  dis.readFully(ip);
+//  int port = dis.readInt();
+//  long epoch = dis.readLong();
+//  
+//  if ((port <= 0) || (port >= 65536)) 
+//    throw new IOException("Found inet address with improper port - " + port);
+//  
+//  return new EpochInetSocketAddress(new InetSocketAddress(InetAddress.getByAddress(ip), port), epoch);
+  }
+  
   /**
    * Method which can be used to decode the necessary header for the 
    * intermediate hop
@@ -110,25 +138,28 @@ public class SocketChannelRepeater {
    * @return The address
    */
   public static EpochInetSocketAddress decodeHeader(byte[] array, int offset) throws IOException {
-    byte[] ip = new byte[4];
-    byte[] skip = new byte[HEADER_BUFFER_SIZE];
+//    byte[] ip = new byte[4];
+//    byte[] skip = new byte[HEADER_BUFFER_SIZE];
     
-    // read the object size
-    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(array));
+//    // read the object size
+//    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(array));
+//    
     
+    InputBuffer ib = new SimpleInputBuffer(array);
     // skip the stuff
     for (int i=0; i<offset; i++)
-      dis.readFully(skip);
+      EpochInetSocketAddress.build(ib);
     
     // now read our stuff
-    dis.readFully(ip);
-    int port = dis.readInt();
-    long epoch = dis.readLong();
-    
-    if ((port <= 0) || (port >= 65536)) 
-      throw new IOException("Found inet address with improper port - " + port);
-    
-    return new EpochInetSocketAddress(new InetSocketAddress(InetAddress.getByAddress(ip), port), epoch);
+    return EpochInetSocketAddress.build(ib);
+//    dis.readFully(ip);
+//    int port = dis.readInt();
+//    long epoch = dis.readLong();
+//    
+//    if ((port <= 0) || (port >= 65536)) 
+//      throw new IOException("Found inet address with improper port - " + port);
+//    
+//    return new EpochInetSocketAddress(new InetSocketAddress(InetAddress.getByAddress(ip), port), epoch);
   }
   
   /**
@@ -167,12 +198,19 @@ public class SocketChannelRepeater {
         throw new IOException("Error on read - the channel has been closed.");
 
       if (headerBuffer.remaining() == 0) {
-        processHeaderBuffer();
-        ByteBuffer buffer = getBuffer(sc, true);
-        buffer.put(SocketCollectionManager.PASTRY_MAGIC_NUMBER);
-        buffer.put(new byte[4]); // version 0
-        buffer.flip();
-        return true;
+        if (headerBuffer.capacity() == HEADER_BUFFER_SIZE) {
+          headerBuffer.flip();
+          short lengthOfNextAddress = headerBuffer.asShortBuffer().get();
+          headerBuffer = ByteBuffer.allocateDirect(lengthOfNextAddress);          
+          return read(sc);
+        } else {
+          processHeaderBuffer(sc);
+          ByteBuffer buffer = getBuffer(sc, true);
+          buffer.put(SocketCollectionManager.PASTRY_MAGIC_NUMBER);
+          buffer.put(new byte[4]); // version 0
+          buffer.flip();
+          return true;
+        }
       } else {
         return false;
       }
@@ -236,19 +274,21 @@ public class SocketChannelRepeater {
    *
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  private void processHeaderBuffer() throws IOException {
+  private void processHeaderBuffer(SocketChannel sc) throws IOException {
     // flip the buffer
     headerBuffer.flip();
     
     // allocate space for the header
-    byte[] headerArray = new byte[HEADER_BUFFER_SIZE];
+    byte[] headerArray = new byte[headerBuffer.capacity()];
     headerBuffer.get(headerArray);
 
-    EpochInetSocketAddress address = decodeHeader(headerArray);
-    manager.createConnection(address);
     
-    if (logger.level <= Logger.FINER) logger.log(
-        "Read address " + address);    
+    EpochInetSocketAddress address = decodeHeader(headerArray);
+    
+    if (logger.level <= Logger.FINE) logger.log(
+        "Connecting SocketChannelRepeater to "+address+" from "+sc.socket().getRemoteSocketAddress());
+    
+    manager.createConnection(address);
     
     this.connected = true;
   }

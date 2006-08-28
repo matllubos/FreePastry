@@ -123,7 +123,7 @@ public class SocketChannelReader {
             "(R) Deserialized bytes into object " + obj);
         
         if (spn != null)
-          spn.broadcastReceivedListeners(obj, (path == null ? (InetSocketAddress) sc.socket().getRemoteSocketAddress() : path.getLastHop().address), size, NetworkListener.TYPE_TCP);
+          spn.broadcastReceivedListeners(obj, (path == null ? (InetSocketAddress) sc.socket().getRemoteSocketAddress() : path.getLastHop().getAddress(((SocketNodeHandle)spn.getLocalHandle()).eaddress)), size, NetworkListener.TYPE_TCP);
 
         record(obj, size, path);
         

@@ -167,7 +167,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       temp = channel;
       channel.configureBlocking(false);
       channel.socket().setReuseAddress(true);
-      channel.socket().bind(bindAddress.getAddress());
+      channel.socket().bind(bindAddress.getInnermostAddress());
       
       this.key = pastryNode.getEnvironment().getSelectorManager().register(channel, this, 0);
       this.key.interestOps(SelectionKey.OP_ACCEPT);
@@ -432,8 +432,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         }
       } else {
         if (logger.level <= Logger.FINE) logger.logException( "(SCM) Request to record path opening for already-open path " + path, new Exception("stack trace"));
-        String local = "" + localAddress.getAddress().getAddress().getHostAddress() +":"+ localAddress.getAddress().getPort();
-        String remote = "" + path.getLastHop().getAddress().getAddress().getHostAddress() +":"+ path.getLastHop().getAddress().getPort();
+        String local = "" + localAddress.getAddress(localAddress).getAddress().getHostAddress() +":"+ localAddress.getAddress(localAddress).getPort();
+        String remote = "" + path.getLastHop().getAddress(localAddress).getAddress().getHostAddress() +":"+ path.getLastHop().getAddress(localAddress).getPort();
 
         if (logger.level <= Logger.FINE) logger.log("(SCM) RESOLVE: Comparing paths " + local + " and " + remote);
 
@@ -1061,7 +1061,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @exception IOException DESCRIBE THE EXCEPTION
      */
     protected void createConnection(final EpochInetSocketAddress address) throws IOException {  
-      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " creating connection for key 2 as " + address.getAddress());
+      if (logger.level <= Logger.FINE) logger.log("(SRM) " + this + " creating connection for key 2 as " + address.getAddress(localAddress));
 
       channel2 = SocketChannel.open();
       channel2.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
@@ -1070,9 +1070,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
       
       if (logger.level <= Logger.FINE) logger.log("(SRM) " + "Initiating source route connection to " + address);
       
-      pastryNode.broadcastChannelOpened(address.address, NetworkListener.REASON_SR);
+      pastryNode.broadcastChannelOpened(address.getAddress(localAddress), NetworkListener.REASON_SR);
       
-      boolean done = channel2.connect(address.getAddress());
+      boolean done = channel2.connect(address.getAddress(localAddress));
 
       if (done)
         pastryNode.getEnvironment().getSelectorManager().register(channel2, this, SelectionKey.OP_READ);
@@ -1250,7 +1250,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         new SourceRouteManager(key);
       } else {
         if (logger.level <= Logger.WARNING) logger.log( "ERROR: Improperly formatted header received accepted connection - ignoring.");
-        if (logger.level <= Logger.WARNING) logger.log( "READ " + array[0] + " " + array[1] + " " + array[2] + " " + array[3]);
+        if (logger.level <= Logger.WARNING) logger.log( "READ " + array[0] + " " + array[1] + " " + array[2] + " " + array[3]+" expected "+HEADER_SOURCE_ROUTE[0] + " " + HEADER_SOURCE_ROUTE[1] + " " + HEADER_SOURCE_ROUTE[2] + " " + HEADER_SOURCE_ROUTE[3]);
         throw new IOException("Improperly formatted header received - unknown header.");
       }
     }    

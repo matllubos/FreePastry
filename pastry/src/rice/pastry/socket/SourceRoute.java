@@ -114,7 +114,9 @@ public class SourceRoute extends PRawMessage implements Serializable {
     if (o == null)
       return false;
     
-    return Arrays.equals(path, ((SourceRoute) o).path);
+    boolean ret = Arrays.equals(path, ((SourceRoute) o).path);
+
+    return ret; 
   }
   
   /**
@@ -129,14 +131,17 @@ public class SourceRoute extends PRawMessage implements Serializable {
     
     for (int i=0; i<path.length; i++) {
       EpochInetSocketAddress thePath = path[i];
-      InetSocketAddress theAddr = thePath.getAddress();
-      InetAddress theAddr2 = theAddr.getAddress();
-      if (theAddr2 == null) {
-        result.append(theAddr.toString());
-      } else {
-        String ha = theAddr2.getHostAddress();
-        result.append(ha + ":" + theAddr.getPort());
-      }
+      for (int ctr = 0; ctr < thePath.address.length; ctr++) {
+        InetSocketAddress theAddr = thePath.address[ctr];
+        InetAddress theAddr2 = theAddr.getAddress();
+        if (theAddr2 == null) {
+          result.append(theAddr.toString());
+        } else {
+          String ha = theAddr2.getHostAddress();
+          result.append(ha + ":" + theAddr.getPort());
+        }
+        if (ctr < thePath.address.length - 1) result.append(";");
+      } // ctr
       if (i < path.length - 1) result.append(" -> ");
     }
     
@@ -260,14 +265,14 @@ public class SourceRoute extends PRawMessage implements Serializable {
    *
    * @return An array represetning the route
    */
-  public InetSocketAddress[] toArray() {
-    InetSocketAddress[] result = new InetSocketAddress[path.length];
-    
-    for (int i=0; i<result.length; i++)
-      result[i] = path[i].getAddress();
-    
-    return result;
-  }
+//  public InetSocketAddress[] toArray() {
+//    InetSocketAddress[] result = new InetSocketAddress[path.length];
+//    
+//    for (int i=0; i<result.length; i++)
+//      result[i] = path[i].getAddress();
+//    
+//    return result;
+//  }
   
   /**
    * Method which creates a new source route by removing the last hop of this one

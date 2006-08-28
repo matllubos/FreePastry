@@ -373,9 +373,9 @@ class SocketManager extends SelectionKeyHandler {
     
     if (manager.logger.level <= Logger.FINE) manager.logger.log("(SM) Initiating socket connection to path " + path);
     
-    manager.pastryNode.broadcastChannelOpened(path.getFirstHop().getAddress(), NetworkListener.REASON_NORMAL);
+    manager.pastryNode.broadcastChannelOpened(path.getFirstHop().getAddress(manager.localAddress), NetworkListener.REASON_NORMAL);
 
-    if (this.channel.connect(path.getFirstHop().getAddress())) 
+    if (this.channel.connect(path.getFirstHop().getAddress(manager.localAddress))) 
       this.key.interestOps(SelectionKey.OP_READ);
     else 
       this.key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_CONNECT);

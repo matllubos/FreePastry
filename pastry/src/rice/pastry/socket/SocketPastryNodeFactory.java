@@ -70,6 +70,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
   private InetAddress localAddress;
 
+  // the ordered list of InetAddresses, from External to internal
+  InetAddress[] addressList;
+  
   protected int testFireWallPolicy;
 
   protected int findFireWallPolicy;
@@ -192,7 +195,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
     RoutesResponseMessage lm = (RoutesResponseMessage) getResponse(wHandle
-        .getAddress(), new RoutesRequestMessage());
+        .getAddress(addressList), new RoutesRequestMessage());
 
     return lm.getRoutes();
   }
@@ -209,7 +212,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
     LeafSetResponseMessage lm = (LeafSetResponseMessage) getResponse(wHandle
-        .getAddress(), new LeafSetRequestMessage());
+        .getAddress(addressList), new LeafSetRequestMessage());
 
     return lm.getLeafSet();
   }
@@ -217,7 +220,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public CancellableTask getLeafSet(NodeHandle handle, final Continuation c) {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
-    return getResponse(wHandle.getAddress(), new LeafSetRequestMessage(),
+    return getResponse(wHandle.getAddress(addressList), new LeafSetRequestMessage(),
         new Continuation() {
           public void receiveResult(Object result) {
             LeafSetResponseMessage lm = (LeafSetResponseMessage) result;
@@ -243,7 +246,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
     RouteRowResponseMessage rm = (RouteRowResponseMessage) getResponse(wHandle
-        .getAddress(), new RouteRowRequestMessage(row));
+        .getAddress(addressList), new RouteRowRequestMessage(row));
 
     return rm.getRouteRow();
   }
@@ -252,7 +255,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       final Continuation c) {
     SocketNodeHandle wHandle = (SocketNodeHandle) handle;
 
-    return getResponse(wHandle.getAddress(), new RouteRowRequestMessage(row),
+    return getResponse(wHandle.getAddress(addressList), new RouteRowRequestMessage(row),
         new Continuation() {
           public void receiveResult(Object result) {
             RouteRowResponseMessage rm = (RouteRowResponseMessage) result;
@@ -285,7 +288,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     // if this is a request for an old version of us, then we return
     // infinity as an answer
-    if (lAddress.getAddress().equals(rAddress.getAddress())) {
+    if (lAddress.getAddress(addressList).equals(rAddress.getAddress(addressList))) {
       return Integer.MAX_VALUE;
     }
 
@@ -294,7 +297,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         .build(new EpochInetSocketAddress[] { rAddress });
 
     try {
-      socket = new DatagramSocket(lAddress.getAddress().getPort());
+      socket = new DatagramSocket(lAddress.getAddress(addressList).getPort());
       socket.setSoTimeout(5000);
 
       // byte[] data = PingManager.addHeader(route, new PingMessage(route, route
@@ -310,7 +313,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       if (logger.level <= Logger.FINE)
         logger.log("Sending Ping to " + rAddress + " from " + lAddress);
       socket.send(new DatagramPacket(sb.getBuffer().array(), sb.getBuffer()
-          .limit(), rAddress.getAddress()));
+          .limit(), rAddress.getAddress(addressList)));
 
       long start = environment.getTimeSource().currentTimeMillis();
       socket.receive(new DatagramPacket(new byte[10000], 10000));
@@ -593,8 +596,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
               }
               
               InetSocketAddress[] verifyAddresses = new InetSocketAddress[1];
-              verifyAddresses[0] = ((SocketNodeHandle)bootstrap).eaddress.address;
-              pAddress = verifyConnection(timeout, tries, localAddress.address, verifyAddresses, environment, logger);
+              verifyAddresses[0] = ((SocketNodeHandle)bootstrap).eaddress.address[0]; // if the bootstrap is going to be used to detect the external address, we have to use its internet address
+              pAddress = verifyConnection(timeout, tries, localAddress.getInnermostAddress(), verifyAddresses, environment, logger);
             }
           }
         }
@@ -610,8 +613,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
               // the freepastry port
               int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port, firewallSearchTries, firewallAppName);
               natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-              proxyAddress = new EpochInetSocketAddress(new InetSocketAddress(
-                  natHandler.getFireWallExternalAddress(), availableFireWallPort), epoch);
+              proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{new InetSocketAddress(
+                  natHandler.getFireWallExternalAddress(), availableFireWallPort), localAddress.getInnermostAddress()}, epoch);
             }
           } else {
             // configure the firewall if necessary, but to the specified port
@@ -640,9 +643,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                 }
               }
             }
-            proxyAddress = new EpochInetSocketAddress(pAddress, epoch);
+            proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);
           }
-        }
+        }        
+        
+        updateAddressList(proxyAddress);
+        
         SocketNodeHandle temp = new SocketNodeHandle(proxyAddress,
             nodeId);
         nearest = getNearest(temp, bootstrap);
@@ -715,8 +721,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
             // continue
           } else { // should change to IOException in FP 2.0
             throw new RuntimeException("Firewall test failed for local:"
-                + localAddress.getAddress() + " external:"
-                + proxyAddress.getAddress());
+                + proxyAddress.getInnermostAddress() + " external:"
+                + proxyAddress.address[0]);
           }
       } // switch
     }
@@ -735,6 +741,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     // pn.doneNode(bootstrap);
 
     return pn;
+  }
+
+  private void updateAddressList(EpochInetSocketAddress proxyAddress) {
+    addressList = new InetAddress[proxyAddress.address.length];
+    for (int i = 0; i < addressList.length; i++) {
+      addressList[i] = proxyAddress.address[i].getAddress(); 
+    }
   }
 
   MessageDeserializer deserializer = new SPNFDeserializer();

@@ -198,9 +198,10 @@ public class SocketChannelWriter {
             if (buffer != null) {
               if (spn != null) {
                 spn.broadcastSentListeners(queue.getFirst(), 
-                    (path == null ? 
-                        (InetSocketAddress) sc.socket().getRemoteSocketAddress() : 
-                        path.getLastHop().address), buffer.limit(), NetworkListener.TYPE_TCP);
+                  (path == null ? 
+                      (InetSocketAddress) sc.socket().getRemoteSocketAddress() : 
+                      path.getLastHop().getAddress( ((SocketNodeHandle)spn.getLocalHandle()).eaddress )), 
+                  buffer.limit(), NetworkListener.TYPE_TCP);
               }
               record("Sent", queue.getFirst(), buffer.limit(), path);
             } else {

@@ -23,8 +23,8 @@ public class EpochInetSocketAddress implements Serializable {
   // a static epoch which indicates an unknown (and unmattering) epoch number
   public static final long EPOCH_UNKNOWN = -1;
     
-  // the address
-  protected InetSocketAddress address;
+  // the address list, most external first
+  protected InetSocketAddress address[];
   
   // the epoch number of the remote node
   protected long epoch;
@@ -45,17 +45,25 @@ public class EpochInetSocketAddress implements Serializable {
    * @param epoch The remote epoch
    */
   public EpochInetSocketAddress(InetSocketAddress address, long epoch) {
-    this.address = address;
-    this.epoch = epoch;
+    this(new InetSocketAddress[]{address}, epoch);
   }  
 
+  public EpochInetSocketAddress(InetSocketAddress[] addressList, long epoch) {
+    this.address = addressList;
+    this.epoch = epoch;    
+  }
+  
   /**
    * Returns the hashCode of this source route
    *
    * @return The hashCode
    */
   public int hashCode() {
-    return (int) (address.hashCode() ^ epoch);
+    int result = (int)epoch;
+    for (int i = 0; i < address.length; i++) {
+      result ^=  address[i].hashCode();
+    }
+    return result;
   }
   
   /**
@@ -68,7 +76,15 @@ public class EpochInetSocketAddress implements Serializable {
     if (o == null) return false;
     EpochInetSocketAddress that = (EpochInetSocketAddress)o;
     if (this.epoch != that.epoch) return false;
-    return (this.address.equals(that.address));
+    return addressEquals(that);
+  }
+  
+  public boolean addressEquals(EpochInetSocketAddress that) {
+    if (this.address.length != that.address.length) return false;
+    for (int ctr = 0; ctr < this.address.length; ctr++) {
+      if (!this.address[ctr].equals(that.address[ctr])) return false;
+    }
+    return true;
   }
   
   /**
@@ -78,7 +94,12 @@ public class EpochInetSocketAddress implements Serializable {
    * @return THe string
    */
   public String toString() {
-    return address.toString() + " [" + epoch + "]";
+    String s = "";
+    for (int ctr = 0; ctr < address.length; ctr++) {
+      s+=address[ctr];
+      if (ctr < address.length-1) s+=":";  
+    }
+    return s + " [" + epoch + "]";
   }
   
   /**
@@ -86,8 +107,45 @@ public class EpochInetSocketAddress implements Serializable {
    *
    * @return The address
    */
-  public InetSocketAddress getAddress() {
-    return address;
+  public InetSocketAddress getAddress(EpochInetSocketAddress local) {   
+    // start from the outside address, and return the first one not equal to the local address (sans port)
+    
+    try {
+      for (int ctr = 0; ctr < address.length; ctr++) {
+        if (!address[ctr].getAddress().equals(address[ctr].getAddress())) {
+          return address[ctr];
+        }
+      }
+    } catch (ArrayIndexOutOfBoundsException aioobe) {
+      throw new RuntimeException("ArrayIndexOutOfBoundsException in "+this+".getAddress("+local+")",aioobe);
+    }
+    return address[address.length-1]; // the last address if we are on the same computer
+  }
+  
+  
+  public InetSocketAddress getAddress(InetAddress[] local) {   
+    // start from the outside address, and return the first one not equal to the local address (sans port)
+    try {
+      for (int ctr = 0; ctr < address.length; ctr++) {
+        if (!address[ctr].getAddress().equals(local[ctr])) {
+          return address[ctr];
+        }
+      }
+    } catch (ArrayIndexOutOfBoundsException aioobe) {
+      String s = "";
+      for (int ctr = 0; ctr < local.length; ctr++) {
+        s+=local[ctr];
+        if (ctr < local.length-1) s+=":";  
+      }
+      throw new RuntimeException("ArrayIndexOutOfBoundsException in "+this+".getAddress("+local+")",aioobe);
+    }
+    return address[address.length-1]; // the last address if we are on the same computer
+  }
+  
+  
+  
+  public InetSocketAddress getInnermostAddress() {
+    return address[address.length-1];     
   }
   
   /**
@@ -115,17 +173,18 @@ public class EpochInetSocketAddress implements Serializable {
    * @throws IOException
    */
   public static EpochInetSocketAddress build(InputBuffer buf) throws IOException {
-    byte[] addrBytes = new byte[4];
-    buf.read(addrBytes);
-    InetAddress addr = InetAddress.getByAddress(addrBytes);
-    int port = buf.readInt();
-//    try {
-      InetSocketAddress saddr = new InetSocketAddress(addr, port);
-      long epoch = buf.readLong();
-      return new EpochInetSocketAddress(saddr, epoch);
-//    } catch (IllegalArgumentException iae) {
-//      throw iae; // just to set a breakpoint 
-//    }
+    byte numAddresses = buf.readByte();
+    InetSocketAddress[] saddr = new InetSocketAddress[numAddresses];
+    for (int ctr = 0; ctr < numAddresses; ctr++) {
+      byte[] addrBytes = new byte[4];
+      buf.read(addrBytes);
+      InetAddress addr = InetAddress.getByAddress(addrBytes);
+      short port = buf.readShort();
+      saddr[ctr] = new InetSocketAddress(addr, port);
+    }
+//    System.out.println("EISA.build():numAddresses:"+numAddresses);
+    long epoch = buf.readLong();
+    return new EpochInetSocketAddress(saddr, epoch);
   }
 
   /**
@@ -142,10 +201,19 @@ public class EpochInetSocketAddress implements Serializable {
    * @param buf
    */
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.write(address.getAddress().getAddress(),0,4);
-    buf.writeInt(address.getPort());
+//    System.out.println("EISA.serialize():numAddresses:"+address.length);
+    buf.writeByte((byte)address.length);
+    for (int ctr = 0; ctr < address.length; ctr++) {
+      buf.write(address[ctr].getAddress().getAddress(),0,4);
+      buf.writeShort((short)address[ctr].getPort());
+    }
     buf.writeLong(epoch);    
   }
+
+  public short getSerializedLength() {
+    return (short)(8+1+(address.length*6)); // epoch+numAddresses+(numAddresses*(address.length+port.length)
+  }
+
 }
 
 

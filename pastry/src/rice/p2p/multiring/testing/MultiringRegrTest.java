@@ -17,6 +17,7 @@ import rice.pastry.*;
 import rice.pastry.commonapi.PastryIdFactory;
 import rice.pastry.direct.*;
 import rice.pastry.dist.*;
+import rice.pastry.socket.*;
 import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
@@ -290,8 +291,9 @@ public class MultiringRegrTest {
     if (PROTOCOL == PROTOCOL_DIRECT) {
       return ((DirectPastryNode) bootstrap).getLocalHandle();
     } else {
-      InetSocketAddress address = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
-      return ((DistPastryNodeFactory) factory).getNodeHandle(((DistNodeHandle) ((DistPastryNode) bootstrap).getLocalHandle()).getAddress());
+//      InetSocketAddress address = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
+//      return ((DistPastryNodeFactory) factory).getNodeHandle(((DistNodeHandle) ((DistPastryNode) bootstrap).getLocalHandle()).getAddress());
+      return ((SocketPastryNodeFactory) factory).getNodeHandle(((SocketNodeHandle) ((SocketPastryNode) bootstrap).getLocalHandle()).getEpochAddress().getInnermostAddress());
     }
   }
 

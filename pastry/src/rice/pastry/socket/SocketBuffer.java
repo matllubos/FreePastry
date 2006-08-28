@@ -109,6 +109,14 @@ public class SocketBuffer implements RawMessageDelivery {
     o.writeByte((byte) 1);
     int numHops = path.getNumHops() + 1;
     o.writeByte((byte) (numHops));
+    
+//    System.out.println("SB<ctor> numHops:"+numHops);
+    
+    short length = address.getSerializedLength();    
+    for (int i=0; i<path.getNumHops(); i++) 
+      length+=path.getHop(i).getSerializedLength();
+    
+    o.writeShort(length);
     address.serialize(o);
     
     for (int i=0; i<path.getNumHops(); i++) 
@@ -127,8 +135,8 @@ public class SocketBuffer implements RawMessageDelivery {
     o.writeInt(0); // version
     for (int i=1; i<path.getNumHops(); i++) {
       o.write(SocketCollectionManager.HEADER_SOURCE_ROUTE,0,SocketCollectionManager.HEADER_SOURCE_ROUTE.length);
+      o.writeShort(path.getHop(i).getSerializedLength());
       path.getHop(i).serialize(o);
-
     }     
     o.write(SocketCollectionManager.HEADER_DIRECT,0,SocketCollectionManager.HEADER_DIRECT.length);
     o.write(MathUtils.intToByteArray(appId), 0, 4);    
