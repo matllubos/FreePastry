@@ -129,6 +129,12 @@ public class SocketBuffer implements RawMessageDelivery {
     serialize(msg, false);
   }
   
+  /**
+   * Used to initialize the sourceroute path.  Counterpart reading of the header is found in SocketChannelRepeater.read()
+   * @param path
+   * @param appId
+   * @throws IOException
+   */
   public SocketBuffer(SourceRoute path, int appId) throws IOException {
     initialize(DEFAULT_BUFFER_SIZE);
     o.write(SocketCollectionManager.PASTRY_MAGIC_NUMBER);

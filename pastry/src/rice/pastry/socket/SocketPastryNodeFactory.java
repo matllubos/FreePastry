@@ -661,7 +661,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
                   // because the
       }
     } catch (IOException ioe) {
-      // this will useually be a bind exception
+      // this will usually be a bind exception
 
       // clean up Environment
       if (this.environment.getParameters().getBoolean(
