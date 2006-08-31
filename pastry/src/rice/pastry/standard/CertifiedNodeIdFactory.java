@@ -116,6 +116,7 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
    * -ca [file] -out [dir]
    */
   public static void main(String[] args) throws Exception {
+    String pw = getArg(args, "-pw");
     String caDirectory = getArg(args, "-ca");
     String out = getArg(args, "-out");
     
@@ -129,10 +130,10 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
     StreamTokenizer st = new StreamTokenizer(new BufferedReader(new InputStreamReader(new FileInputStream(pwFile))));
     st.nextToken();
     
-    KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(st.sval.getBytes())));
+    KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(pw.getBytes())));
           
     Environment env = new Environment();
-    generateCertificate(new RandomNodeIdFactory(env).generateNodeId(), new FileOutputStream(new File("/tmp/epost/" + out + "/" + NODE_ID_FILENAME)), caPair.getPrivate());
+    generateCertificate(new RandomNodeIdFactory(env).generateNodeId(), new FileOutputStream(new File(NODE_ID_FILENAME)), caPair.getPrivate());
     env.destroy();
   }
   
