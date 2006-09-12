@@ -8,6 +8,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.*;
 import rice.p2p.scribe.*;
+import rice.p2p.scribe.rawserialization.RawScribeContent;
 import rice.p2p.util.JavaSerializedMessage;
 
 /**
@@ -19,7 +20,7 @@ import rice.p2p.util.JavaSerializedMessage;
  *
  * @author Alan Mislove
  */
-public class RingMessage implements ScribeContent {
+public class RingMessage implements RawScribeContent {
   
   // serialver for backward compatibility
   private static final long serialVersionUID = -7097995807488121199L;
