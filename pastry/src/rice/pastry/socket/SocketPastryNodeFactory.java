@@ -17,6 +17,7 @@ import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
@@ -96,6 +97,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress,
       int startPort, Environment env, NATHandler handler) throws IOException {
     super(env);
+    if (env.getTimeSource() instanceof DirectTimeSource) {
+      throw new IllegalArgumentException("SocketPastryNodeFactory is not compatible with the DirectTimeSource in the environment.  Please use the SimpleTimeSource or an equivalent.");
+    }
+    
     environment = env;
     nidFactory = nf;
     port = startPort;
