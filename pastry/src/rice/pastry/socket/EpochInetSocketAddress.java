@@ -112,7 +112,7 @@ public class EpochInetSocketAddress implements Serializable {
     
     try {
       for (int ctr = 0; ctr < address.length; ctr++) {
-        if (!address[ctr].getAddress().equals(address[ctr].getAddress())) {
+        if (!address[ctr].getAddress().equals(local.address[ctr].getAddress())) {
           return address[ctr];
         }
       }

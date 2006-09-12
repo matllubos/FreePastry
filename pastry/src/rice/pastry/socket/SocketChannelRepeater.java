@@ -28,7 +28,7 @@ public class SocketChannelRepeater {
   // the default size of the transfer array
   protected int REPEATER_BUFFER_SIZE;
   // 4 for the ip, 4 for the port (int), 8 for the epoch (long)
-  protected static int HEADER_BUFFER_SIZE = 2;
+  private static int HEADER_BUFFER_SIZE = 2;
   
   // whether or not this repeater has been connected to the other side
   private boolean connected;

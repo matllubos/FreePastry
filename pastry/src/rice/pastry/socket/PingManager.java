@@ -517,15 +517,7 @@ public class PingManager extends SelectionKeyHandler {
           write = (Envelope) i.next();
           
           if (logger.level <= Logger.FINEST) {
-            byte[] metadata = new byte[2];
-            metadata[0] = write.data.getBuffer().get(HEADER_SIZE+4);
-            metadata[1] = write.data.getBuffer().get(HEADER_SIZE+5);
-            byte[] route = new byte[SocketChannelRepeater.HEADER_BUFFER_SIZE * metadata[1]];
-            System.arraycopy(write.data.getBuffer().array(), HEADER_SIZE+8, route, 0, route.length);
-            logger.log("write("+write.destination+") ("+metadata[0]+" "+metadata[1]+") local "+localAddress); 
-            for (int ii = 0; ii < metadata[1]; ii++) {
-              logger.log("  "+SocketChannelRepeater.decodeHeader(route, ii));           
-            }
+            write.log("PM.write to "+write.destination.getAddress(localAddress));
           }
           if (write.data.getBuffer().get(HEADER_SIZE) != 0) {
             throw new IOException("Attempting to send Invalid version");
@@ -825,6 +817,24 @@ public class PingManager extends SelectionKeyHandler {
     protected EpochInetSocketAddress destination;
     protected SocketBuffer data;
 
+    public void log(String callingFrom) {      
+      try {
+        byte[] metadata = new byte[2];
+        metadata[0] = data.getBuffer().get(HEADER_SIZE+4);
+        metadata[1] = data.getBuffer().get(HEADER_SIZE+5);
+        short routeLength = data.getBuffer().getShort(HEADER_SIZE+6);
+        byte[] route = new byte[routeLength];
+        System.arraycopy(data.getBuffer().array(), HEADER_SIZE+8, route, 0, route.length);
+        logger.log("log(<"+callingFrom+">"+destination+") ("+metadata[0]+" "+metadata[1]+") local "+localAddress); 
+        EpochInetSocketAddress[] fullHeader = SocketChannelRepeater.decodeFullHeader(route, metadata[1]);
+        for (int ii = 0; ii < metadata[1]; ii++) {
+          logger.log("  "+fullHeader[ii]);           
+        }      
+      } catch (IOException ioe) {
+        logger.logException("",ioe); 
+      }
+    }
+    
     /**
      * Constructor for Envelope.
      *
@@ -836,28 +846,30 @@ public class PingManager extends SelectionKeyHandler {
       this.data = data;
       
       if (logger.level <= Logger.FINEST) {
-        try {
-          byte[] metadata = new byte[2];
-          metadata[0] = data.getBuffer().get(HEADER_SIZE+4);
-          metadata[1] = data.getBuffer().get(HEADER_SIZE+5);
-//          short headerLength = data.get
-          byte[] route = new byte[SocketChannelRepeater.HEADER_BUFFER_SIZE * metadata[1]];
-          System.arraycopy(data.getBuffer().array(), HEADER_SIZE+8, route, 0, route.length);
-          logger.log("enqueue("+destination+") ("+metadata[0]+" "+metadata[1]+") local "+localAddress); 
-          for (int ii = 0; ii < metadata[1]; ii++) {
-            logger.log("  "+SocketChannelRepeater.decodeHeader(route, ii));           
-          }
-
-//        if (metadata[1] == 3 && metadata[0] == 1) {
-//          EpochInetSocketAddress dest = SocketChannelRepeater.decodeHeader(route, metadata[1]-1);
-//          if (dest.equals(destination)) {
-//            System.out.println("Warning");
-//          }                
-//        }
-        } catch (IOException ioe) {
-          logger.logException("",ioe); 
-        }
+        log("Env.ctor");
       }
+//      if (logger.level <= Logger.FINEST) {
+//          byte[] metadata = new byte[2];
+//          metadata[0] = data.getBuffer().get(HEADER_SIZE+4);
+//          metadata[1] = data.getBuffer().get(HEADER_SIZE+5);
+////          short headerLength = data.get
+//          byte[] route = new byte[SocketChannelRepeater.HEADER_BUFFER_SIZE * metadata[1]];
+//          System.arraycopy(data.getBuffer().array(), HEADER_SIZE+8, route, 0, route.length);
+//          logger.log("enqueue("+destination+") ("+metadata[0]+" "+metadata[1]+") local "+localAddress); 
+//          for (int ii = 0; ii < metadata[1]; ii++) {
+//            logger.log("  "+SocketChannelRepeater.decodeHeader(route, ii));           
+//          }
+//
+////        if (metadata[1] == 3 && metadata[0] == 1) {
+////          EpochInetSocketAddress dest = SocketChannelRepeater.decodeHeader(route, metadata[1]-1);
+////          if (dest.equals(destination)) {
+////            System.out.println("Warning");
+////          }                
+////        }
+//        } catch (IOException ioe) {
+//          logger.logException("",ioe); 
+//        }
+//      }
       if (data.getBuffer().get(HEADER_SIZE) != 0) {
         throw new RuntimeException("Attempting to send Invalid version");
       }      
