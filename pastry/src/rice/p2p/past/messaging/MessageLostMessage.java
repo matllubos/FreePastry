@@ -9,7 +9,7 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
-import rice.p2p.util.JavaSerializedMessage;
+import rice.p2p.util.rawserialization.JavaSerializedMessage;
 
 /**
  * @(#) MessageLostMessage.java

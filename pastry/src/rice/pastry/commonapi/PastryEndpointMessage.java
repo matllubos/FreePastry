@@ -5,7 +5,7 @@ import java.io.IOException;
 
 import rice.p2p.commonapi.Message;
 import rice.p2p.commonapi.rawserialization.*;
-import rice.p2p.util.JavaSerializedMessage;
+import rice.p2p.util.rawserialization.JavaSerializedMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.messaging.*;
 

@@ -8,8 +8,7 @@ import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.past.*;
-import rice.p2p.util.JavaDeserializer;
-import rice.p2p.util.rawserialization.JavaSerializationException;
+import rice.p2p.util.rawserialization.*;
 
 /**
  * @(#) ContinuationMessage.java

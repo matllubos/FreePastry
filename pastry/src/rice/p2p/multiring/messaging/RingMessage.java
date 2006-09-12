@@ -9,7 +9,7 @@ import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.*;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.rawserialization.RawScribeContent;
-import rice.p2p.util.JavaSerializedMessage;
+import rice.p2p.util.rawserialization.JavaSerializedMessage;
 
 /**
  * @(#) RingMessage.java

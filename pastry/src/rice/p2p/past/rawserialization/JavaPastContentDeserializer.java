@@ -8,7 +8,7 @@ import java.io.*;
 import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.past.PastContent;
-import rice.p2p.util.JavaDeserializer;
+import rice.p2p.util.rawserialization.JavaDeserializer;
 
 /**
  * uses p2p.util.JavaDeserializer to deserialize ScribeContent using Java Serialization

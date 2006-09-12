@@ -4,7 +4,7 @@
  * To change the template for this generated file go to
  * Window>Preferences>Java>Code Generation>Code and Comments
  */
-package rice.p2p.util;
+package rice.p2p.util.rawserialization;
 
 import java.io.IOException;
 import java.io.InputStream;

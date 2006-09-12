@@ -1,14 +1,13 @@
 /*
  * Created on Feb 21, 2006
  */
-package rice.p2p.util;
+package rice.p2p.util.rawserialization;
 
 import java.io.*;
 
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.messaging.*;
 import rice.p2p.commonapi.Message;
-import rice.p2p.util.rawserialization.JavaSerializationException;
 
 /**
  * Wrapper that converts rice.pastry.messaging.Message to rice.pastry.messageing.PRawMessage

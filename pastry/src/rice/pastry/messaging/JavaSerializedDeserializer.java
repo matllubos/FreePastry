@@ -20,14 +20,20 @@ import rice.pastry.PastryNode;
 public class JavaSerializedDeserializer implements MessageDeserializer {
 
   protected PastryNode pn;
+  private boolean deserializeOnlyTypeZero = true;
   
   public JavaSerializedDeserializer(PastryNode pn) {
     this.pn = pn;
+  }  
+  
+  public void setAlwaysUseJavaSerialization(boolean val) {
+    deserializeOnlyTypeZero = !val; 
   }
   
   public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
-    if (type != 0) throw new IllegalArgumentException("type must be zero, was "+type); 
-    
+    if (deserializeOnlyTypeZero && (type != 0)) throw new IllegalArgumentException("Type must be zero, was "+type+".  See http://freepastry.org/FreePastry/extendingRawMessages.html for more information."); 
+    // the plan here is to provide a mechanism to easily java serialize RawMessages in case the user is having problems
+    // provide a static method to java serialize the object then setAlwaysUsejavaSerialization(true)
 
     Object o = null;
     try {
@@ -40,6 +46,11 @@ public class JavaSerializedDeserializer implements MessageDeserializer {
       Message ret = (Message)o;
 
       return ret;
+    } catch (StreamCorruptedException sce) {
+      if (!deserializeOnlyTypeZero)
+        throw new RuntimeException("Not a java serialized message!  See http://freepastry.org/FreePastry/extendingRawMessages.html for more information.", sce);
+      else 
+        throw sce;
 //    } catch (ClassCastException e) {
 //      if (logger.level <= Logger.SEVERE) logger.log(
 //          "PANIC: Serialized message was not a pastry message!");
