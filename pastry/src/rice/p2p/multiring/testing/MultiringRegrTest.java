@@ -358,7 +358,7 @@ public class MultiringRegrTest {
       Id source = organizationalNodes[si][sj].getId();
       Id dest = organizationalNodes[di][dj].getId();
     
-      System.out.println("SENDING FROM " + source + " TO " + dest);
+      System.out.println(i+" SENDING FROM " + source + " TO " + dest);
       sourceApp.send(dest);
     
       try {

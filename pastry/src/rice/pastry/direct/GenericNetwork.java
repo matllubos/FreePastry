@@ -114,7 +114,7 @@ public class GenericNetwork extends BasicNetworkSimulator
       fr = new FileReader(inFile_Matrix);
     } catch (Exception e) {
       System.out
-          .println("ERROR: The required inter-host distance matrix for Generic Network not found");
+          .println("ERROR: The required inter-host distance matrix for Generic Network not found:"+inFile_Matrix.getAbsolutePath());
       System.exit(1);
     }
     BufferedReader in = new BufferedReader(fr);
