@@ -223,7 +223,15 @@ public class SocketPastryNode extends DistPastryNode {
     return coalesce(SocketNodeHandle.build(buf));
   }
 
-//  public void testFireWallUDP(NodeHandle bootstrap) {
+  
+  public int proximity(NodeHandle nh) {
+    if (nh.getNodeId().equals(getNodeId()))
+      return 0;
+    else
+      return getSocketSourceRouteManager().proximity(((SocketNodeHandle) nh).eaddress);
+  }
+
+// public void testFireWallUDP(NodeHandle bootstrap) {
 //  }
   
 //  public synchronized void receiveMessage(Message msg) {

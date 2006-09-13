@@ -96,7 +96,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
 
     MessageDispatch msgDisp = new MessageDispatch(pn);
  
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, environment);
+    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, pn);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router =

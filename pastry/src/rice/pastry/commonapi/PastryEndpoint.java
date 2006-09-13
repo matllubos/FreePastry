@@ -495,7 +495,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       case NodeSet.TYPE:
         return new NodeSet(buf, thePastryNode);
       case RouteSet.TYPE:
-        return new RouteSet(buf, thePastryNode);
+        return new RouteSet(buf, thePastryNode, thePastryNode);
     }
     throw new IllegalArgumentException("Unknown type: "+type);
   }

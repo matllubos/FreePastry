@@ -58,7 +58,7 @@ public class RouteRowResponseMessage extends SocketMessage {
     }    
   }
   
-  public RouteRowResponseMessage(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+  public RouteRowResponseMessage(InputBuffer buf, NodeHandleFactory nhf, PastryNode localNode) throws IOException {
     byte version = buf.readByte();
     switch(version) {
       case 0:
@@ -66,7 +66,7 @@ public class RouteRowResponseMessage extends SocketMessage {
         set = new RouteSet[numRouteSets];
         for (int i = 0; i<numRouteSets; i++) {      
           if (buf.readBoolean()) {
-            set[i] = new RouteSet(buf, nhf); 
+            set[i] = new RouteSet(buf, nhf, localNode); 
           }
         }
         break;

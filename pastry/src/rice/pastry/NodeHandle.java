@@ -74,6 +74,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle
    * Smaller values imply greater proximity. The exact nature and interpretation of the proximity metric
    * implementation-specific.
    *
+   * @deprecated use PastryNode.proximity() or Endpoint.proximity()
    * @return the proximity metric value
    */
   public abstract int proximity();
@@ -139,6 +140,10 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle
    */
   public abstract int hashCode();
   
+  /**
+   * @deprecated use PastryNode.send() or Endpoint.send()
+   * @param msg
+   */
   public abstract void receiveMessage(Message msg);
 
   public abstract void serialize(OutputBuffer buf) throws IOException;

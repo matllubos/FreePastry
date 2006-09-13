@@ -686,7 +686,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     localhandle = (SocketNodeHandle) pn.coalesce(localhandle);
     MessageDispatch msgDisp = new MessageDispatch(pn);
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
-        environment);
+        pn);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize);
 
     StandardRouter router = new StandardRouter(pn);
@@ -776,7 +776,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         case RoutesResponseMessage.TYPE:
           return new RoutesResponseMessage(buf);
         case RouteRowResponseMessage.TYPE:
-          return new RouteRowResponseMessage(buf, nhf);
+          return new RouteRowResponseMessage(buf, nhf, null);
         default:
           if (logger.level <= Logger.SEVERE)
             logger.log("SERIOUS ERROR: Received unknown message address: " + 0

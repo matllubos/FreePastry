@@ -9,6 +9,7 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.Id;
+import rice.pastry.PastryNode;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
 import rice.pastry.socket.SocketBuffer.SocketDataInputStream;
@@ -137,35 +138,10 @@ public class SocketNodeHandle extends DistNodeHandle {
    *
    * @param msg Message to be delivered, may or may not be routeMessage.
    */
-  public void receiveMessage(final Message msg) {
+  public void receiveMessage(Message msg) {
     assertLocalNode();
 
-    final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    
-//    Runnable runnable = new Runnable() {    
-//      public void run() {
-    try {
-        if (spn.getNodeId().equals(nodeId)) {
-          //debug("Sending message " + msg + " locally");
-          spn.receiveMessage(msg);
-        } else {
-          if (logger.level <= Logger.FINER) logger.log(
-              "Passing message " + msg + " to the socket controller for writing");
-          spn.getSocketSourceRouteManager().send(eaddress, msg);
-        }
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe); 
-    }
-        
-//      }    
-//    };
-//
-//    SelectorManager sm = spn.getEnvironment().getSelectorManager();
-//    if (sm.isSelectorThread()) {
-//      runnable.run();      
-//    } else {
-//      sm.invoke(runnable);
-//    }
+    getLocalNode().send(this, msg);
   }
   
   /**
@@ -232,14 +208,10 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return the proximity metric value
    */
   public int proximity() {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-
-    if (spn == null) 
+    PastryNode spn = getLocalNode();
+    if (spn == null)
       return DEFAULT_PROXIMITY;
-    else if (spn.getNodeId().equals(nodeId)) 
-      return 0;
-    else 
-      return spn.getSocketSourceRouteManager().proximity(eaddress);
+    return spn.proximity(this);
   }
 
   /**

@@ -264,7 +264,7 @@ public class RoutingTableTest {
         if (that != node) {
           NodeHandle thatHandle = that.getLocalHandle();        
           int latency = calcLatency(node,thatHandle);
-          int proximity = thatHandle.proximity();
+          int proximity = node.proximity(thatHandle);
           if (latency < proximity-3) {
             calcLatency(node, thatHandle); 
           }
@@ -288,20 +288,20 @@ public class RoutingTableTest {
       RoutingTable rt = node.getRoutingTable();
       LeafSet ls = node.getLeafSet();
       thePenalty = 0;
-      NodeHandle next = getNextHop(rt, ls, thatHandle);
+      NodeHandle next = getNextHop(rt, ls, thatHandle, node);
       int penalty = thePenalty;
 //      if (penalty > 0) System.out.println("penalty "+thePenalty);
-      if (next == thatHandle) return thatHandle.proximity();  // base case
+      if (next == thatHandle) return node.proximity(thatHandle);  // base case
       DirectNodeHandle dnh = (DirectNodeHandle)next;    
       PastryNode nextNode = dnh.getRemote();
-      return penalty+next.proximity()+calcLatency(nextNode, thatHandle); // recursive case
+      return penalty+nextNode.proximity(next)+calcLatency(nextNode, thatHandle); // recursive case
     } finally {
       DirectPastryNode.setCurrentNode(temp); 
     }
   }
   
   int thePenalty = 0;  // the penalty for trying non-alive nodes
-  private NodeHandle getNextHop(RoutingTable rt, LeafSet ls, NodeHandle thatHandle) {
+  private NodeHandle getNextHop(RoutingTable rt, LeafSet ls, NodeHandle thatHandle, PastryNode localNode) {
     rice.pastry.Id target = (rice.pastry.Id)thatHandle.getId();
 
     int cwSize = ls.cwSize();
@@ -322,10 +322,10 @@ public class RoutingTableTest {
 
       if (handle.isAlive() == false) {
         // node is dead - get rid of it and try again
-        thePenalty += handle.proximity()*4; // rtt*2
+        thePenalty += localNode.proximity(handle)*4; // rtt*2
         LeafSet ls2 = ls.copy();
         ls2.remove(handle);
-        return getNextHop(rt, ls2, thatHandle);
+        return getNextHop(rt, ls2, thatHandle, localNode);
       } else {
         return handle;
       }
@@ -338,7 +338,7 @@ public class RoutingTableTest {
       NodeHandle notAlive = null;
       if (rs != null
           && ((notAlive = rs.closestNode(10)) != null)) {
-        if ((notAlive != null) && !notAlive.isAlive()) thePenalty+=notAlive.proximity()*4;
+        if ((notAlive != null) && !notAlive.isAlive()) thePenalty+=localNode.proximity(notAlive)*4;
       }
       
       if (rs == null
@@ -351,7 +351,7 @@ public class RoutingTableTest {
         if (notAlive2 == notAlive) {
           // don't doublePenalize 
         } else {
-          if ((notAlive2 != null) && !notAlive2.isAlive()) thePenalty+=notAlive2.proximity()*4;
+          if ((notAlive2 != null) && !notAlive2.isAlive()) thePenalty+=localNode.proximity(notAlive2)*4;
         }
         
         // no live routing table entry matching the next digit
@@ -364,10 +364,10 @@ public class RoutingTableTest {
           handle = ls.get(lsPos);
 
           if (handle.isAlive() == false) {
-            thePenalty += handle.proximity()*4;
+            thePenalty += localNode.proximity(handle)*4;
             LeafSet ls2 = ls.copy();
             ls2.remove(handle);
-            return getNextHop(rt, ls2, thatHandle);
+            return getNextHop(rt, ls2, thatHandle, localNode);
           }
         } else {
           Id.Distance altDist = handle.getNodeId().distance(target);
@@ -379,10 +379,10 @@ public class RoutingTableTest {
             handle = ls.get(lsPos);
 
             if (handle.isAlive() == false) {
-              thePenalty += handle.proximity()*4;
+              thePenalty += localNode.proximity(handle)*4;
               LeafSet ls2 = ls.copy();
               ls2.remove(handle);
-              return getNextHop(rt, ls2, thatHandle);
+              return getNextHop(rt, ls2, thatHandle, localNode);
             }
           }
         }
@@ -495,6 +495,7 @@ public class RoutingTableTest {
      * Called a message travels along your path.
      * Don't worry about this method for now.
      */
+    @SuppressWarnings("deprecation")
     public boolean forward(RouteMessage message) {
       if (logHeavy)
         System.out.println(this+"forwarding "+message.getMessage());

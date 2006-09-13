@@ -81,6 +81,7 @@ public class MultiringNodeHandle extends NodeHandle implements Observer  {
    *
    * @return The current proximity value of this node
    */
+  @SuppressWarnings("deprecation")
   public int proximity() {
     return handle.proximity();
   }

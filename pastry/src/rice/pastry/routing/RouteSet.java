@@ -31,6 +31,7 @@ public class RouteSet implements NodeSetI, Serializable,
 
   transient int row;
   transient int col;
+  transient PastryNode localNode;
   
   /**
    * Constructor.
@@ -38,7 +39,8 @@ public class RouteSet implements NodeSetI, Serializable,
    * @param maxSize the maximum number of nodes that fit in this set.
    */
 
-  public RouteSet(int maxSize, int row, int col) {
+  public RouteSet(int maxSize, int row, int col, PastryNode local) {
+    this.localNode = local;
     nodes = new NodeHandle[maxSize];
     theSize = 0;
     closest = -1;
@@ -97,7 +99,7 @@ public class RouteSet implements NodeSetI, Serializable,
       }
       
       // find entry with worst proximity
-      int p = nodes[i].proximity();
+      int p = localNode.proximity(nodes[i]);
       if (p >= worstProximity) {
         worstProximity = p;
         worstIndex = i;
@@ -116,7 +118,7 @@ public class RouteSet implements NodeSetI, Serializable,
 
       return true;
     } else {
-      if (handle.proximity() == Integer.MAX_VALUE) {
+      if (localNode.proximity(handle) == Integer.MAX_VALUE) {
         // wait until the proximity value is available
 
         handle.ping(); // XXX - eventually, should only ping handles pinged from
@@ -124,7 +126,7 @@ public class RouteSet implements NodeSetI, Serializable,
         handle.addObserver(this);
 
         return false;
-      } else if (handle.proximity() < worstProximity) {
+      } else if (localNode.proximity(handle) < worstProximity) {
         // remove handle with worst proximity
 //        setChanged();
         notifyTable(nodes[worstIndex], false);
@@ -275,7 +277,7 @@ public class RouteSet implements NodeSetI, Serializable,
    */
   public void pingAllNew() {
     for (int i = 0; i < theSize; i++) {
-      if (nodes[i].proximity() == Integer.MAX_VALUE)
+      if (localNode.proximity(nodes[i]) == Integer.MAX_VALUE)
         nodes[i].ping();
     }
   }
@@ -302,7 +304,7 @@ public class RouteSet implements NodeSetI, Serializable,
       if (nodes[i].getLiveness() > minLiveness)
         continue;
 
-      int p = nodes[i].proximity();
+      int p = localNode.proximity(nodes[i]);
       if (p <= bestProximity) {
         bestProximity = p;
         bestNode = nodes[i];
@@ -409,7 +411,7 @@ public class RouteSet implements NodeSetI, Serializable,
 
     int closest = -1;
     for (int i = 0; i < j; i++)
-      if ((closest == -1) || (tmp[i].proximity() < tmp[closest].proximity()))
+      if ((closest == -1) || (localNode.proximity(tmp[i]) < localNode.proximity(tmp[closest])))
         closest = i;
 
     out.writeInt(closest);
@@ -513,7 +515,7 @@ public class RouteSet implements NodeSetI, Serializable,
     }       
   }
   
-  public RouteSet(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+  public RouteSet(InputBuffer buf, NodeHandleFactory nhf, PastryNode local) throws IOException {
     byte maxSize = buf.readByte();
     theSize = buf.readByte();
     closest = buf.readByte();

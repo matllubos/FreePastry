@@ -491,6 +491,13 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   }
 
 
+  /**
+   * Deliver message to the NodeHandle.
+   * 
+   * @param nh
+   * @param m
+   * @return
+   */
   abstract public void send(NodeHandle handle, Message message);
   
   /**
@@ -502,5 +509,13 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    */
   abstract public void connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout);
 
+  /**
+   * The proximity of the node handle.
+   * 
+   * @param nh
+   * @return
+   */
+  abstract public int proximity(NodeHandle nh);
+  
 }
 

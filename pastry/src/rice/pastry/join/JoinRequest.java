@@ -211,7 +211,7 @@ public class JoinRequest extends PRawMessage {
     
   }
 
-  public JoinRequest(InputBuffer buf, NodeHandleFactory nhf, NodeHandle sender) throws IOException {
+  public JoinRequest(InputBuffer buf, NodeHandleFactory nhf, NodeHandle sender, PastryNode localNode) throws IOException {
     super(JoinAddress.getCode());
     
     byte version = buf.readByte();
@@ -234,7 +234,7 @@ public class JoinRequest extends PRawMessage {
             thisRow = new RouteSet[numCols];
             for (int j=0; j<numCols; j++) {
               if (buf.readBoolean()) {
-                thisRow[j] = new RouteSet(buf, nhf);
+                thisRow[j] = new RouteSet(buf, nhf, localNode);
               } else {
                 thisRow[j] = null;
               }

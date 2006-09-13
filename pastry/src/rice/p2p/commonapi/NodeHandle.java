@@ -47,6 +47,7 @@ public abstract class NodeHandle extends Observable implements Serializable  {
   /**
    * Returns the current proximity value of this node
    *
+   * @deprecated use Endpoint.proximity()
    * @return The current proximity value of this node
    */
   public abstract int proximity();

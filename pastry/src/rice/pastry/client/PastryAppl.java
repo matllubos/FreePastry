@@ -241,7 +241,7 @@ public abstract class PastryAppl implements Observer
     // But routeMsgDirect messages *do* need credentials. So do we
     // go back to using options to differentiate from routeMsg?
 
-    dest.receiveMessage(msg);
+    thePastryNode.send(dest,msg);
     return dest.isAlive();
   }
 

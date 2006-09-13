@@ -200,15 +200,16 @@ public class DirectPastryNode extends PastryNode {
   }
 
   public synchronized void receiveMessage(Message msg) {
-//    System.out.println("setting currentNode from "+currentNode+" to "+this+" on "+Thread.currentThread());   
+    // System.out.println("setting currentNode from "+currentNode+" to "+this+"
+    // on "+Thread.currentThread());
     if (!getEnvironment().getSelectorManager().isSelectorThread()) {
-      simulator.deliverMessage(msg, this); 
+      simulator.deliverMessage(msg, this);
       return;
     }
-    
-//    if ((currentNode != null) && (currentNode != this))
-//      throw new RuntimeException("receiveMessage called recursively!");
-//    System.out.println("currentNode != null");
+
+    // if ((currentNode != null) && (currentNode != this))
+    // throw new RuntimeException("receiveMessage called recursively!");
+    // System.out.println("currentNode != null");
     DirectPastryNode temp = setCurrentNode(this);
     super.receiveMessage(msg);
     setCurrentNode(temp);
@@ -228,13 +229,38 @@ public class DirectPastryNode extends PastryNode {
   public Logger getLogger() {
     return logger;
   }
-
-  public void send(NodeHandle handle, Message message) {
-    DirectPastryNode temp = setCurrentNode(this);
-    handle.receiveMessage(message);
-    setCurrentNode(temp);
-  }
   
+  public int proximity(NodeHandle that) {
+    int result = simulator.proximity((DirectNodeHandle) getLocalHandle(),
+        (DirectNodeHandle) that);
+
+    return result;
+  }
+
+  @Override
+  public void send(NodeHandle nh, Message m) {
+    // shortcut if called on the local node
+    if (
+    // simulator.getEnvironment().getSelectorManager().isSelectorThread() &&
+    // the message is from myself
+    (nh == getLocalHandle())) {
+      receiveMessage(m);
+      return;
+    }
+
+    if (!nh.isAlive()) {
+      if (logger.level <= Logger.FINE)
+        logger.log("DirectNodeHandle: attempt to send message " + m
+            + " to a dead node " + getNodeId() + "!");
+    } else {
+      // simulator.deliverMessage(msg, remoteNode, 0);
+      // Note: June 8, 2006, if we want to add proximity here, need to update
+      // the tests to not be busted
+      simulator.deliverMessage(m, ((DirectNodeHandle) nh).getRemote(),
+          proximity(nh));
+    }
+  }
+
   public void connect(NodeHandle remoteNode, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
     DirectNodeHandle dnh = (DirectNodeHandle)remoteNode;
     simulator.enqueueDelivery(new DirectAppSocket(dnh, receiver, appl, simulator).getAcceptorDelivery(),
@@ -244,5 +270,6 @@ public class DirectPastryNode extends PastryNode {
   public NodeHandle readNodeHandle(InputBuffer buf) {
     throw new RuntimeException("Should not be called.");
   }
+
 }
 

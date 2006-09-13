@@ -40,7 +40,7 @@ public class StandardRouteSetProtocol extends PastryAppl {
         case RequestRouteRow.TYPE:
           return new RequestRouteRow(sender,buf);
         case BroadcastRouteRow.TYPE:
-          return new BroadcastRouteRow(buf,pn);
+          return new BroadcastRouteRow(buf,pn,pn);
       }
       return null;
     }    

@@ -531,7 +531,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         toSend.add(tf.handle); 
       }
     }
-    nh.receiveMessage(new ConsistentJoinMsg(leafSet,toSend,!reply));      
+    thePastryNode.send(nh,new ConsistentJoinMsg(leafSet,toSend,!reply));      
   }
   
   public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {

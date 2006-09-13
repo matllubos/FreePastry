@@ -1861,7 +1861,7 @@ public class PostProxy {
                                                new Object[] {"Cancel", "Kill ePOST Proxy", "Hide Status Window"}, "Hide Status Window");
           
           if (i == 2)
-            hide();
+            setVisible(false);
             
           if (i == 1) 
             System.exit(-1);

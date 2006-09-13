@@ -46,6 +46,8 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
   public NodeHandle myNodeHandle;
 
+  protected PastryNode pn;
+  
   private RouteSet routingTable[][];
 
   private int maxEntries;
@@ -59,8 +61,9 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @param max the maximum number of entries at each table slot.
    */
 
-  public RoutingTable(NodeHandle me, int max, byte base, Environment env) {
-    logger = env.getLogManager().getLogger(RoutingTable.class,null);
+  public RoutingTable(NodeHandle me, int max, byte base, PastryNode pn) {
+    logger = pn.getEnvironment().getLogManager().getLogger(RoutingTable.class,null);
+    this.pn = pn;
     idBaseBitLength = base;
     myNodeId = me.getNodeId();
     myNodeHandle = me;
@@ -74,7 +77,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     for (int i = 0; i < rows; i++) {
       int myCol = myNodeId.getDigit(i, idBaseBitLength);
       // insert this node at the appropriate column
-      routingTable[i][myCol] = new RouteSet(maxEntries,i,myCol);
+      routingTable[i][myCol] = new RouteSet(maxEntries,i,myCol, pn);
       routingTable[i][myCol].put(myNodeHandle);
       routingTable[i][myCol].setRoutingTable(this);
     }
@@ -268,7 +271,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
     if (routingTable[diffDigit][digit] == null) {
       // allocate a RouteSet
-      routingTable[diffDigit][digit] = new RouteSet(maxEntries,diffDigit,digit);
+      routingTable[diffDigit][digit] = new RouteSet(maxEntries,diffDigit,digit, pn);
       routingTable[diffDigit][digit].setRoutingTable(this);
     }
 
@@ -321,13 +324,13 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     // the RouteSet for that entry has room
     if (rs.size() < rs.capacity()) return TEST_SUCCESS_AVAILABLE_SPACE;
     
-    int prox = handle.proximity();
+    int prox = pn.proximity(handle);
     if (prox == Integer.MAX_VALUE) return TEST_FAIL_EXISTING_ARE_BETTER;
     
     for (int i = 0; i < rs.size(); i++) {
       NodeHandle nh = rs.get(i);
       if (!nh.isAlive()) return TEST_SUCCESS_ENTRY_WAS_DEAD;
-      if (nh.proximity() > prox) return TEST_SUCCESS_BETTER_PROXIMITY;      
+      if (pn.proximity(nh) > prox) return TEST_SUCCESS_BETTER_PROXIMITY;      
     }   
     return TEST_FAIL_EXISTING_ARE_BETTER;
   }

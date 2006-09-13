@@ -85,6 +85,7 @@ public class MyApp implements Application {
    * Called a message travels along your path.
    * Don't worry about this method for now.
    */
+  @SuppressWarnings("deprecation")
   public boolean forward(RouteMessage message) {
     MyMsg msg = (MyMsg)message.getMessage();
     msg.addHop(endpoint.getLocalNodeHandle());    

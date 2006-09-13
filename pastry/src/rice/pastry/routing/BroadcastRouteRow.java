@@ -103,7 +103,7 @@ public class BroadcastRouteRow extends PRawMessage implements Serializable {
     }
   }
 
-  public BroadcastRouteRow(InputBuffer buf, NodeHandleFactory nhf) throws IOException {
+  public BroadcastRouteRow(InputBuffer buf, NodeHandleFactory nhf, PastryNode localNode) throws IOException {
     super(RouteProtocolAddress.getCode(), null);    
     
     byte version = buf.readByte();
@@ -113,7 +113,7 @@ public class BroadcastRouteRow extends PRawMessage implements Serializable {
         row = new RouteSet[buf.readByte()];
         for (int i=0; i<row.length; i++)
           if (buf.readBoolean()) {
-            row[i] = new RouteSet(buf, nhf);
+            row[i] = new RouteSet(buf, nhf, localNode);
           }
         break;
       default:
