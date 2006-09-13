@@ -29,8 +29,10 @@ public class VisualizationEmailProxy extends EmailProxy {
   protected InetSocketAddress serverAddress;
   protected InetSocketAddress globalServerAddress;
   
+  
   public void start2() throws Exception { 
     super.start2();
+    MessageNamingService mns = new MessageNamingService();
     Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("visualization_enable")) {
       DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
@@ -49,9 +51,9 @@ public class VisualizationEmailProxy extends EmailProxy {
       server.addPanelCreator(new OverviewPanelCreator(environment));
       NetworkActivityPanelCreator network = new NetworkActivityPanelCreator(environment);
       server.addPanelCreator(network);
-      MessageDistributionPanelCreator message = new MessageDistributionPanelCreator();
+      MessageDistributionPanelCreator message = new MessageDistributionPanelCreator(mns);
       server.addPanelCreator(message);
-      RecentMessagesPanelCreator recent = new RecentMessagesPanelCreator();
+      RecentMessagesPanelCreator recent = new RecentMessagesPanelCreator(mns);
       server.addPanelCreator(recent);
       server.addPanelCreator(new PastryPanelCreator());
       server.addPanelCreator(new SourceRoutePanelCreator());
@@ -127,9 +129,9 @@ public class VisualizationEmailProxy extends EmailProxy {
         globalServer.addPanelCreator(new OverviewPanelCreator(environment));
         NetworkActivityPanelCreator gnetwork = new NetworkActivityPanelCreator(environment);
         globalServer.addPanelCreator(gnetwork);
-        MessageDistributionPanelCreator gmessage = new MessageDistributionPanelCreator();
+        MessageDistributionPanelCreator gmessage = new MessageDistributionPanelCreator(mns);
         globalServer.addPanelCreator(gmessage);
-        RecentMessagesPanelCreator grecent = new RecentMessagesPanelCreator();
+        RecentMessagesPanelCreator grecent = new RecentMessagesPanelCreator(mns);
         globalServer.addPanelCreator(grecent);
         globalServer.addPanelCreator(new PastryPanelCreator());
         globalServer.addPanelCreator(new SourceRoutePanelCreator());

@@ -23,6 +23,12 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
   protected Vector receivedMessageAddresses = new Vector();
   protected Vector receivedMessageSizes = new Vector(); 
   
+  MessageNamingService mns;
+
+  public RecentMessagesPanelCreator(MessageNamingService mns) {
+    this.mns = mns; 
+  }
+  
   public DataPanel createPanel(Object[] objects) {
     DataPanel networkActivityPanel = new DataPanel("Recent");
     
@@ -81,30 +87,24 @@ public class RecentMessagesPanelCreator implements PanelCreator, NetworkListener
     return "Unknown";
   }
   
-  protected synchronized void addMessage(Object obj, InetSocketAddress address, int size, Vector location, Vector locationAddresses, Vector locationSizes) {
-    if (obj instanceof rice.pastry.routing.RouteMessage) {
-      addMessage(((rice.pastry.routing.RouteMessage) obj).unwrap(), address, size, location, locationAddresses, locationSizes);
-    } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-      addMessage(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), address, size, location, locationAddresses, locationSizes);
-    } else {
-      location.add(obj.getClass().getName());
-      locationAddresses.add(address);
-      locationSizes.add(new Integer(size));
-      
-      if (location.size() > NUM_MESSAGES) {
-        location.removeElementAt(0); 
-        locationAddresses.removeElementAt(0);
-        locationSizes.removeElementAt(0); 
-      }
-    } 
+  protected synchronized void addMessage(String msgName, InetSocketAddress address, int size, Vector location, Vector locationAddresses, Vector locationSizes) {
+    location.add(msgName);
+    locationAddresses.add(address);
+    locationSizes.add(new Integer(size));
+    
+    if (location.size() > NUM_MESSAGES) {
+      location.removeElementAt(0); 
+      locationAddresses.removeElementAt(0);
+      locationSizes.removeElementAt(0); 
+    }
   }
   
-  public synchronized void dataSent(Object message, InetSocketAddress address, int size, int type) {
-      addMessage(message, address, size, sentMessages, sentMessageAddresses, sentMessageSizes);
+  public synchronized void dataSent(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
+      addMessage(mns.getMessageName(msgAddress, msgType), address, size, sentMessages, sentMessageAddresses, sentMessageSizes);
   }
   
-  public synchronized void dataReceived(Object message, InetSocketAddress address, int size, int type) {
-    addMessage(message, address, size, receivedMessages, receivedMessageAddresses, receivedMessageSizes);
+  public synchronized void dataReceived(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
+    addMessage(mns.getMessageName(msgAddress, msgType), address, size, receivedMessages, receivedMessageAddresses, receivedMessageSizes);
   }
 
   public void channelOpened(InetSocketAddress addr, int reason) {

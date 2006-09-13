@@ -21,6 +21,12 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
   
   protected Vector messageSizes = new Vector(); 
   
+  protected MessageNamingService mns;
+  
+  public MessageDistributionPanelCreator(MessageNamingService mns) {
+    this.mns = mns; 
+  }
+  
   public DataPanel createPanel(Object[] objects) {
     DataPanel networkActivityPanel = new DataPanel("Messages");
     
@@ -127,21 +133,15 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
     return networkActivityPanel;
   }
   
-  protected synchronized void addMessage(Object obj, int size) {
-    if (obj instanceof rice.pastry.routing.RouteMessage) {
-      addMessage(((rice.pastry.routing.RouteMessage) obj).unwrap(), size);
-    } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-      addMessage(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size);
-    } else {
-      messages.add(obj.getClass().getName());
-      
-      messageSizes.add(new Integer(size));
-      
-      if (messages.size() > NUM_MESSAGES) {
-        messages.removeElementAt(0); 
-        messageSizes.removeElementAt(0); 
-      }
-    } 
+  protected synchronized void addMessage(int msgAddress, short msgType, int size) {
+    messages.add(mns.getMessageName(msgAddress, msgType));
+    
+    messageSizes.add(new Integer(size));
+    
+    if (messages.size() > NUM_MESSAGES) {
+      messages.removeElementAt(0); 
+      messageSizes.removeElementAt(0); 
+    }     
   }
   
   protected synchronized String[] getMessages() {
@@ -188,12 +188,12 @@ public class MessageDistributionPanelCreator implements PanelCreator, NetworkLis
     return result;
   }
   
-  public synchronized void dataSent(Object message, InetSocketAddress address, int size, int type) {
-      addMessage(message, size);
+  public synchronized void dataSent(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
+      addMessage(msgAddress, msgType, size);
   }
   
-  public synchronized void dataReceived(Object message, InetSocketAddress address, int size, int type) {
-      addMessage(message, size);
+  public synchronized void dataReceived(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
+      addMessage(msgAddress, msgType, size);
   }
 
   public void channelOpened(InetSocketAddress addr, int reason) {

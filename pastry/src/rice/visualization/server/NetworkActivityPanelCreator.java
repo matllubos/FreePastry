@@ -168,12 +168,12 @@ public class NetworkActivityPanelCreator implements PanelCreator, NetworkListene
     return result;
   }
   
-  public synchronized void dataSent(Object message, InetSocketAddress address, int size, int type) {
+  public synchronized void dataSent(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
     sentTotal += size;
     addMessage(address, size);
   }
   
-  public synchronized void dataReceived(Object message, InetSocketAddress address, int size, int type) {
+  public synchronized void dataReceived(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
     receivedTotal += size;
     addMessage(address, size);
   }

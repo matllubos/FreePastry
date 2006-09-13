@@ -128,12 +128,12 @@ public class ConsistencyPLTest implements Observer {
       channelsClosed = 0;          
       return ret;
     }        
-    public synchronized void dataReceived(Object message, InetSocketAddress address, int size,
+    public synchronized void dataReceived(int msgAddress, short msgType, InetSocketAddress address, int size,
         int type) {
       msgRec[type&0x1]++;
       bytesRec[type&0x1]+=size;      
     }      
-    public synchronized void dataSent(Object message, InetSocketAddress address, int size,
+    public synchronized void dataSent(int msgAddress, short msgType, InetSocketAddress address, int size,
         int type) {
       msgSnt[type&0x1]++;
       bytesSnt[type&0x1]+=size;      

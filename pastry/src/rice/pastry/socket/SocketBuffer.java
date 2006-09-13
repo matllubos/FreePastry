@@ -303,15 +303,25 @@ public class SocketBuffer implements RawMessageDelivery {
   public Message deserialize(MessageDeserializer md) throws IOException {
     if (md == null) md = defaultDeserializer;
 
-    if (isRouteMessage()) return RouteMessage.build(str, nhf, spn);
-    
-//    try {
-      Message m = (Message)md.deserialize(str, type, priority, sender);
-//    } catch (IOException ioe) {
-//      if (logger.level <= Logger.SEVERE) logger.log("Error deserializing address:"+address+" type:"+type); 
-//    }
-//    System.out.println("SB.deserialize("+m+")");
-    return m;
+    try {
+      str.mark(100000000);
+      if (isRouteMessage()) {
+        RouteMessage rm = RouteMessage.build(str, nhf, spn);
+        rmSubAddress = rm.getAuxAddress();
+        rmSubType = rm.getInternalType();
+        return rm;
+      }
+  //    try {
+      
+        Message m = (Message)md.deserialize(str, type, priority, sender);
+  //    } catch (IOException ioe) {
+  //      if (logger.level <= Logger.SEVERE) logger.log("Error deserializing address:"+address+" type:"+type); 
+  //    }
+  //    System.out.println("SB.deserialize("+m+")");
+      return m;
+    } finally {
+      str.reset(); 
+    }
   }
 
   
@@ -368,12 +378,12 @@ public class SocketBuffer implements RawMessageDelivery {
       bais = arg0;
     }
 
-    public short peakShort() throws IOException {
-      bais.mark(2);
-      short temp = readShort();
-      bais.reset();
-      return temp;
-    }
+//    public short peakShort() throws IOException {
+//      bais.mark(2);
+//      short temp = readShort();
+//      bais.reset();
+//      return temp;
+//    }
     
     /**
      * I'm not sure this will always work. May need to contain the BAIS, and
@@ -389,6 +399,16 @@ public class SocketBuffer implements RawMessageDelivery {
       return -1;
     }
 
+  }
+
+  public short getInnermostType() {
+    if (isRouteMessage()) return rmSubType;
+    return type;
+  }
+
+  public int getInnermostAddress() {
+    if (isRouteMessage()) return rmSubAddress;
+    return address;
   }
 
   public short getType() {

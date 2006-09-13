@@ -315,11 +315,11 @@ public class VisualizationServer implements Runnable {
 
     protected long lastReceived = environment.getTimeSource().currentTimeMillis();
     
-    public void dataSent(Object message, InetSocketAddress address, int size, int type) {
+    public void dataSent(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
       lastSent = environment.getTimeSource().currentTimeMillis();
     }
     
-    public void dataReceived(Object message, InetSocketAddress address, int size, int type) {
+    public void dataReceived(int msgAddress, short msgType, InetSocketAddress address, int size, int type) {
       lastReceived = environment.getTimeSource().currentTimeMillis();
     }
     

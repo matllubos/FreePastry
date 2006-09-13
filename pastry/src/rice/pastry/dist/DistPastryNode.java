@@ -84,18 +84,18 @@ public abstract class DistPastryNode extends PastryNode {
       listeners[i].channelOpened(addr, reason);
   }
   
-  public void broadcastSentListeners(Object message, InetSocketAddress dest, int size, int type) {
+  public void broadcastSentListeners(int address, short msgType, InetSocketAddress dest, int size, int wireType) {
     NetworkListener[] listeners = getNetworkListeners();
     
     for (int i=0; i<listeners.length; i++)
-      listeners[i].dataSent(message, dest, size, type);
+      listeners[i].dataSent(address, msgType, dest, size, wireType);
   }
   
-  public void broadcastReceivedListeners(Object message, InetSocketAddress from, int size, int type) {
+  public void broadcastReceivedListeners(int address, short msgType, InetSocketAddress from, int size, int wireType) {
     NetworkListener[] listeners = getNetworkListeners();
     
     for (int i=0; i<listeners.length; i++)
-      listeners[i].dataReceived(message, from, size, type);
+      listeners[i].dataReceived(address, msgType, from, size, wireType);
   }
 
   /**

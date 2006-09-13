@@ -28,8 +28,8 @@ public interface NetworkListener {
   
   public void channelOpened(InetSocketAddress addr, int reason);
   public void channelClosed(InetSocketAddress addr);
-  public void dataSent(Object message, InetSocketAddress address, int size, int type);
-  public void dataReceived(Object message, InetSocketAddress address, int size, int type);
+  public void dataSent(int msgAddress, short msgType, InetSocketAddress socketAddress, int size, int wireType);
+  public void dataReceived(int msgAddress, short msgType, InetSocketAddress socketAddress, int size, int wireType);
    
 }
 

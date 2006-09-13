@@ -375,8 +375,8 @@ public class PingManager extends SelectionKeyHandler {
       }
       
       if (spn != null)
-        ((SocketPastryNode) spn).broadcastSentListeners(msg, path.getLastHop().getAddress(localAddress), msg.getBuffer().limit(), NetworkListener.TYPE_UDP);
-
+        ((SocketPastryNode) spn).broadcastSentListeners(msg.getInnermostAddress(), msg.getInnermostType(), path.getLastHop().getAddress(localAddress), msg.getBuffer().limit(), NetworkListener.TYPE_UDP);
+      
 //      if (logger.level <= Logger.FINER) {
 //        switch (msg.getType()) {
 //  //      if (! (msg instanceof byte[])) {
@@ -388,7 +388,7 @@ public class PingManager extends SelectionKeyHandler {
 //            break;
 //          default:
             if (logger.level <= Logger.FINER-3) logger.log(
-              "COUNT: Sent message " + msg.getType() + " of size " + msg.getBuffer().limit()  + " to " + path);    
+              "COUNT: Sent message " + msg.getInnermostAddress()+":"+msg.getInnermostType() + " of size " + msg.getBuffer().limit()  + " to " + path);    
 //        }
 //      }        
       environment.getSelectorManager().modifyKey(key);
@@ -411,7 +411,7 @@ public class PingManager extends SelectionKeyHandler {
 //        inboundPath = SourceRoute.build(new EpochInetSocketAddress(from));
 
       if (spn != null)
-        ((SocketPastryNode) spn).broadcastReceivedListeners(dm, outboundPath.getLastHop().getAddress(localAddress), size, NetworkListener.TYPE_UDP);
+        ((SocketPastryNode) spn).broadcastReceivedListeners(dm.getDestination(), dm.getType(), outboundPath.getLastHop().getAddress(localAddress), size, NetworkListener.TYPE_UDP);
             
       if (dm instanceof PingMessage) {
         if (logger.level <= Logger.FINE) {
@@ -761,8 +761,8 @@ public class PingManager extends SelectionKeyHandler {
           if (logger.level <= Logger.FINE) logger.log("Forwarding ("+metadata[0]+" "+metadata[1]+") from "+address+" to "+next+" at "+localAddress);
 
           if (spn != null) {
-            ((SocketPastryNode) spn).broadcastReceivedListeners(packet, address, packet.length, NetworkListener.TYPE_SR_UDP);
-            ((SocketPastryNode) spn).broadcastSentListeners(packet, next.getAddress(localAddress), packet.length, NetworkListener.TYPE_SR_UDP);          
+            ((SocketPastryNode) spn).broadcastReceivedListeners(0,(short)0, address, packet.length, NetworkListener.TYPE_SR_UDP);
+            ((SocketPastryNode) spn).broadcastSentListeners(0,(short)0, next.getAddress(localAddress), packet.length, NetworkListener.TYPE_SR_UDP);          
           }
           
           synchronized (pendingMsgs) {
@@ -791,7 +791,7 @@ public class PingManager extends SelectionKeyHandler {
           WrongEpochMessage wem = new WrongEpochMessage(/*outbound, back.reverse(), */eisa, localAddress, environment.getTimeSource().currentTimeMillis());
 
           if (spn != null) {
-            ((SocketPastryNode) spn).broadcastReceivedListeners(null, address, buffer.remaining(), NetworkListener.TYPE_UDP);
+            ((SocketPastryNode) spn).broadcastReceivedListeners(0,(short)0, address, buffer.remaining(), NetworkListener.TYPE_UDP);
           }
           
           enqueue(back.reverse(), wem);

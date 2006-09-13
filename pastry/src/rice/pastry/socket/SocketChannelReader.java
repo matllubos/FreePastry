@@ -11,6 +11,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.Message;
+import rice.pastry.routing.RouteMessage;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the
@@ -123,9 +124,9 @@ public class SocketChannelReader {
             "(R) Deserialized bytes into object " + obj);
         
         if (spn != null)
-          spn.broadcastReceivedListeners(obj, (path == null ? (InetSocketAddress) sc.socket().getRemoteSocketAddress() : path.getLastHop().getAddress(((SocketNodeHandle)spn.getLocalHandle()).eaddress)), size, NetworkListener.TYPE_TCP);
+          spn.broadcastReceivedListeners(obj.getInnermostAddress(),obj.getInnermostType(), (path == null ? (InetSocketAddress) sc.socket().getRemoteSocketAddress() : path.getLastHop().getAddress(((SocketNodeHandle)spn.getLocalHandle()).eaddress)), size, NetworkListener.TYPE_TCP);
 
-        record(obj, size, path);
+        if (logger.level <= Logger.FINER) logger.log("COUNT: Read message(5) " + obj + " of size " + size + " from " + path);
         
         return obj;        
       }
@@ -134,27 +135,6 @@ public class SocketChannelReader {
     return null;
   }
   
-  protected void record(Object obj, int size, SourceRoute path) {
-        boolean recorded = false;
-        try {
-            if (obj instanceof rice.pastry.routing.RouteMessage) {
-                record(((rice.pastry.routing.RouteMessage) obj).unwrap(), size, path);
-                recorded = true;
-            } else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-                record(((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
-                recorded = true;
-//          } else if (obj instanceof rice.post.messaging.PostPastryMessage) {
-//              record(((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
-//              recorded = true;
-            }
-        } catch (java.lang.NoClassDefFoundError exc) { }
-
-    if (!recorded) {
-      if (logger.level <= Logger.FINER) logger.log(
-          "COUNT: Read message(5) " + obj + " of size " + size + " from " + path);
-    }
-  }
-
   /**
    * Resets this input stream so that it is ready to read another object off of
    * the queue.

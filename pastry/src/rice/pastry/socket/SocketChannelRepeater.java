@@ -222,7 +222,7 @@ public class SocketChannelRepeater {
     
     if (logger.level <= Logger.FINER) logger.log(
         "Read " + read + " bytes of data..." + buffer.remaining());
-    spn.broadcastReceivedListeners(junk, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), read, NetworkListener.TYPE_SR_TCP);
+    spn.broadcastReceivedListeners(0,(short)0, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), read, NetworkListener.TYPE_SR_TCP);
     
     // implies that the channel is closed
     if (read == -1) 
@@ -237,7 +237,7 @@ public class SocketChannelRepeater {
     }
   }
   
-  static final byte[] junk = new byte[0];
+//  static final byte[] junk = new byte[0];
   
   /**
    * Method which is designed to be called when this repeater should write 
@@ -255,7 +255,7 @@ public class SocketChannelRepeater {
     
     if (logger.level <= Logger.FINER) logger.log(
         "Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
-    spn.broadcastSentListeners(junk, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), i, NetworkListener.TYPE_SR_TCP);
+    spn.broadcastSentListeners(0,(short)0, (InetSocketAddress) sc.socket().getRemoteSocketAddress(), i, NetworkListener.TYPE_SR_TCP);
     
     // if we've written everything in the buffer, clear it, and return true
     if (buffer.remaining() == 0) {

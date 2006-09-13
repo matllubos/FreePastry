@@ -193,11 +193,12 @@ public class SocketChannelWriter {
           if (! queue.isEmpty()) {
             if (logger.level <= Logger.FINER) logger.log(
                 "(W) About to serialize object " + queue.getFirst());
-            buffer = ((SocketBuffer)queue.getFirst()).getBuffer();
+            SocketBuffer sbuf = (SocketBuffer)queue.getFirst();
+            buffer = sbuf.getBuffer();
             
             if (buffer != null) {
               if (spn != null) {
-                spn.broadcastSentListeners(queue.getFirst(), 
+                spn.broadcastSentListeners(sbuf.getInnermostAddress(),sbuf.getInnermostType(), 
                   (path == null ? 
                       (InetSocketAddress) sc.socket().getRemoteSocketAddress() : 
                       path.getLastHop().getAddress( ((SocketNodeHandle)spn.getLocalHandle()).eaddress )), 
