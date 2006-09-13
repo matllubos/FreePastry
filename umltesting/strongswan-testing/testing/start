@@ -1,0 +1,7 @@
+cp ~jeffh/planetlab/pastry.jar .
+
+./installpastry
+
+# call start-testing
+./start-testing
+   

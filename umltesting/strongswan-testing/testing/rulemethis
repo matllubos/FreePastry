@@ -1,0 +1,59 @@
+#!/bin/bash
+# Copyright 1999-2004 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+#ENABLELOGGING=yes
+
+# it flushes the table
+iptables --flush
+iptables --flush -t nat
+iptables --flush -t mangle
+
+# enable IP forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
+	
+# it sets the default policy is DROP
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
+
+# it adds logging prefixes
+if [ "$ENABLELOGGING" = "yes" ]
+then
+iptables -A INPUT -j LOG --log-prefix "INPUT_1 "
+iptables -A OUTPUT -j LOG --log-prefix "OUTPUT_1 "
+iptables -A FORWARD -j LOG --log-prefix "FORWARD_1 "
+iptables -A PREROUTING -t nat -j LOG --log-prefix "PREROUTING_1 "
+iptables -A POSTROUTING -t nat -j LOG --log-prefix "POSTROUTING_1 "
+iptables -A OUTPUT -t nat -j LOG --log-prefix "OUTPUT_nat_1 "
+iptables -A INPUT -t mangle -j LOG --log-prefix "INPUT_mangle_1 "
+iptables -A OUTPUT -t mangle -j LOG --log-prefix "OUTPUT_mangle_1 "
+iptables -A FORWARD -t mangle -j LOG --log-prefix "FORWARD_mangle_1 "
+iptables -A PREROUTING -t mangle -j LOG --log-prefix "PREROUTING_mangle_1 "
+iptables -A POSTROUTING -t mangle -j LOG --log-prefix "POSTROUTING_mangle_1 "
+fi
+
+# it masquerades as a single computer
+iptables -A POSTROUTING -t nat -o eth0 -j SNAT --to-source 192.168.0.1
+iptables -A FORWARD -i eth1 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth0 -m state --state ESTABLISHED -j ACCEPT
+#iptables -t nat --append POSTROUTING --out-interface eth0 -j MASQUERADE
+if [ "$ENABLELOGGING" = "yes" ]
+then
+iptables -A POSTROUTING -t nat -j LOG --log-prefix "POSTROUTING_2 "
+fi
+
+# it enables port forwarding for alice
+iptables -t nat -A PREROUTING -p tcp -i eth0 -d 192.168.0.1 --dport 8888 -j DNAT --to 10.1.0.10:80
+iptables -t nat -A PREROUTING -p udp -i eth0 -d 192.168.0.1 --dport 8888 -j DNAT --to 10.1.0.10:80
+if [ "$ENABLELOGGING" = "yes" ]
+then
+iptables -A PREROUTING -t nat -j LOG --log-prefix "PREROUTING_3 "
+fi
+
+iptables -A FORWARD -p tcp -i eth0 -d 10.1.0.10 --dport 80 -j ACCEPT
+iptables -A FORWARD -p udp -i eth0 -d 10.1.0.10 --dport 80 -j ACCEPT
+if [ "$ENABLELOGGING" = "yes" ]
+then
+iptables -A FORWARD -j LOG --log-prefix "FORWARD_2 "
+fi

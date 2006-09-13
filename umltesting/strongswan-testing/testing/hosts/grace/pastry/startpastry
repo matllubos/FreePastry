@@ -1,0 +1,4 @@
+#!/bin/bash
+cd /root/
+java -cp pastry.jar rice.tutorial.lesson3.DistTutorial 8000 grace 8000 > /root/out.txt 2>&1
+

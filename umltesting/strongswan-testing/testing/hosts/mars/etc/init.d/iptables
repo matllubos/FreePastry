@@ -1,0 +1,129 @@
+#!/sbin/runscript
+# Copyright 1999-2004 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+opts="start stop reload"
+
+depend() {
+	before net
+	need logger
+}
+
+start() {
+	ebegin "Starting firewall"
+
+	COMP_SELF=PH_IP_MARS
+	COMP_A=PH_IP_ALICE
+	COMP_B=PH_IP_BOB
+	COMP_A_PORT=9001
+	COMP_B_PORT=9002
+	COMP_INTERNAL_PORT=8000
+
+	#ENABLELOGGING=yes
+
+	# it flushes the table
+	iptables --flush
+	iptables --flush -t nat
+	iptables --flush -t mangle
+
+	# enable IP forwarding
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+
+	# it sets the default policy is DROP
+	iptables -P INPUT DROP
+	iptables -P OUTPUT DROP
+	iptables -P FORWARD DROP
+
+	# it adds logging prefixes
+	if [ "$ENABLELOGGING" = "yes" ]
+	then
+		iptables -A INPUT -j LOG --log-prefix "INPUT_1 "
+		iptables -A OUTPUT -j LOG --log-prefix "OUTPUT_1 "
+		iptables -A FORWARD -j LOG --log-prefix "FORWARD_1 "
+		iptables -A PREROUTING -t nat -j LOG --log-prefix "PREROUTING_1 "
+		iptables -A POSTROUTING -t nat -j LOG --log-prefix "POSTROUTING_1 "
+		iptables -A OUTPUT -t nat -j LOG --log-prefix "OUTPUT_nat_1 "
+		iptables -A INPUT -t mangle -j LOG --log-prefix "INPUT_mangle_1 "
+		iptables -A OUTPUT -t mangle -j LOG --log-prefix "OUTPUT_mangle_1 "
+		iptables -A FORWARD -t mangle -j LOG --log-prefix "FORWARD_mangle_1 "
+		iptables -A PREROUTING -t mangle -j LOG --log-prefix "PREROUTING_mangle_1 "
+		iptables -A POSTROUTING -t mangle -j LOG --log-prefix "POSTROUTING_mangle_1 "
+	fi
+
+	# it masquerades as a single computer
+	iptables -A POSTROUTING -t nat -o eth0 -j SNAT --to-source $COMP_SELF
+	iptables -A FORWARD -i eth1 -m state --state NEW,ESTABLISHED -j ACCEPT
+	iptables -A FORWARD -i eth0 -m state --state ESTABLISHED -j ACCEPT
+	#iptables -t nat --append POSTROUTING --out-interface eth0 -j MASQUERADE
+	if [ "$ENABLELOGGING" = "yes" ]
+	then
+		iptables -A POSTROUTING -t nat -j LOG --log-prefix "POSTROUTING_2 "
+	fi
+
+	# it enables port forwarding for alice
+	iptables -t nat -A PREROUTING -p tcp -i eth0 -d $COMP_SELF --dport $COMP_A_PORT -j DNAT --to $COMP_A:$COMP_INTERNAL_PORT
+	iptables -t nat -A PREROUTING -p udp -i eth0 -d $COMP_SELF --dport $COMP_A_PORT -j DNAT --to $COMP_A:$COMP_INTERNAL_PORT
+	if [ "$ENABLELOGGING" = "yes" ]
+	then
+		iptables -A PREROUTING -t nat -j LOG --log-prefix "PREROUTING_3 "
+	fi
+
+	iptables -A FORWARD -p tcp -i eth0 -d $COMP_A --dport $COMP_INTERNAL_PORT -j ACCEPT
+	iptables -A FORWARD -p udp -i eth0 -d $COMP_A --dport $COMP_INTERNAL_PORT -j ACCEPT
+	if [ "$ENABLELOGGING" = "yes" ]
+	then
+		iptables -A FORWARD -j LOG --log-prefix "FORWARD_2 "
+	fi
+
+        # it enables port forwarding for bob
+	iptables -t nat -A PREROUTING -p tcp -i eth0 -d $COMP_SELF --dport $COMP_B_PORT -j DNAT --to $COMP_B:$COMP_INTERNAL_PORT
+        iptables -t nat -A PREROUTING -p udp -i eth0 -d $COMP_SELF --dport $COMP_B_PORT -j DNAT --to $COMP_B:$COMP_INTERNAL_PORT
+        if [ "$ENABLELOGGING" = "yes" ]
+        then
+                iptables -A PREROUTING -t nat -j LOG --log-prefix "PREROUTING_3 "
+        fi
+        iptables -A FORWARD -p tcp -i eth0 -d $COMP_B --dport $COMP_INTERNAL_PORT -j ACCEPT
+        iptables -A FORWARD -p udp -i eth0 -d $COMP_B --dport $COMP_INTERNAL_PORT -j ACCEPT
+        if [ "$ENABLELOGGING" = "yes" ]
+        then
+                iptables -A FORWARD -j LOG --log-prefix "FORWARD_2 "
+        fi
+
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping firewall"
+		for a in `cat /proc/net/ip_tables_names`; do
+			/sbin/iptables -F -t $a
+			/sbin/iptables -X -t $a
+	
+			if [ $a == nat ]; then
+				/sbin/iptables -t nat -P PREROUTING ACCEPT
+				/sbin/iptables -t nat -P POSTROUTING ACCEPT
+				/sbin/iptables -t nat -P OUTPUT ACCEPT
+			elif [ $a == mangle ]; then
+				/sbin/iptables -t mangle -P PREROUTING ACCEPT
+				/sbin/iptables -t mangle -P INPUT ACCEPT
+				/sbin/iptables -t mangle -P FORWARD ACCEPT
+				/sbin/iptables -t mangle -P OUTPUT ACCEPT
+				/sbin/iptables -t mangle -P POSTROUTING ACCEPT
+			elif [ $a == filter ]; then
+				/sbin/iptables -t filter -P INPUT ACCEPT
+				/sbin/iptables -t filter -P FORWARD ACCEPT
+				/sbin/iptables -t filter -P OUTPUT ACCEPT
+			fi
+		done
+	eend $?
+}
+
+reload() {
+	ebegin "Flushing firewall"
+		for a in `cat /proc/net/ip_tables_names`; do
+			/sbin/iptables -F -t $a
+			/sbin/iptables -X -t $a
+		done;
+        eend $?
+	start
+}
+

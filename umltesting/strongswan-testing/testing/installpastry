@@ -1,0 +1,71 @@
+# load vars
+DIR=`dirname $0`
+
+source $DIR/scripts/function.sh
+
+[ -f $DIR/testing.conf ] || die "!! Configuration file 'testing.conf' not found"
+[ -d $DIR/hosts ] || die "Directory hosts cannot be found."
+
+source $DIR/testing.conf
+
+if [ "$#" -eq 0 ]
+then
+  HOSTS=$STRONGSWANHOSTS
+    else
+  HOSTS=$*
+fi
+
+	
+# install pastry.jar on hosts
+cd $BUILDDIR/root-fs
+
+[ -f gentoo-fs ] || die "!! Root file system 'gentoo-fs' not found."
+
+if [ ! -d $BUILDDIR ]
+then
+    cecho-n " * Directory '$BUILDDIR' does not exist..dieing.."
+    cecho "done"
+fi
+
+LOGFILE=${BUILDDIR}/testing.log
+
+if [ ! -f $LOGFILE ]
+then
+   cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
+   touch $LOGFILE
+   cecho "done"
+fi
+
+LOOPDIR=loop
+if [ ! -d $LOOPDIR ]
+then
+    mkdir $LOOPDIR
+fi
+
+cecho-n " * Copying pastry to .."
+
+if [ "$#" -eq 0 ]
+then
+    HOSTS=$STRONGSWANHOSTS
+else
+    HOSTS=$*
+fi
+
+for host in $HOSTS
+do
+    cecho-n "$host.."
+    mount -o loop gentoo-fs-$host $LOOPDIR
+    if [ -f $LOOPDIR/etc/init.d/runpastry ]
+    then
+      cp $UMLTESTDIR/testing/runpastry $LOOPDIR/etc/init.d/runpastry 
+    fi
+    cp $UMLTESTDIR/testing/pastry.jar $LOOPDIR/root/    
+    if [ -d $UMLTESTDIR/testing/hosts/$host/pastry/ ]
+    then
+      cp $UMLTESTDIR/testing/hosts/$host/pastry/* $LOOPDIR/root/
+    fi
+    umount $LOOPDIR
+done
+
+cecho "done"
+   
