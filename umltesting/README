@@ -1,0 +1,40 @@
+This is a testing framework to verify compatability with NATs.  It is based on strongswan's testing environment (http://www.strongswan.org/), but is altered to remove strongswan, and add java/FreePastry/netcat.  The system uses "user mode linux" (UML) to run virtual computers on a single linux box (host).  
+
+Look at desktop_diagram.ppt for the testing scenerio included.
+
+High Level Notes:
+  The NATs mars, venus, jupiter are simply UML instances configured with 2 NICs and proper ip-tables rules.
+  Note that alice/eve, and bob/fred have identical IP addresses.  
+  Pastry binds locally to port 8000
+  The nats forward port 9001,9002 to it's 2 internal nodes.
+  grace is the bootstrap node
+  Testing must be run as root on a linux box
+  Better performance can be achieved by installing the SKAS linux patch to the host system.
+  The UML instances run under a gentoo distribution.
+  
+Use:
+1) Check out strongswan-testing to /root/strongswan-testing
+2) cd /root/strongswan-testing/testing
+3) edit start to copy pastry.jar from it's location (currently ~jeffh/planetlab/)
+4) ./make-testing
+5) screen -r <alice, bob, mars... etc> to log in
+  username: root
+  password: tuxmux
+6) ctrl-a d to switch back to the host computer
+7) ./stop to kill the umls and copy out.txt from each computer
+8) ./start to copy pastry and run again
+
+Detailed Notes:
+testing/hosts/xxx has files copied to the individual nodes when make
+testing/hosts/pastry/ is copied to the root directory
+use netcat to verify connectivity you expect
+ssh to the host coputer via uml0,1,... as needed
+eve/fred have trouble sshing to the host via uml3 because the routing on the host will return packets to alice/bob.
+we use init.d to run pastry on the end nodes, and iptables on the NATs
+/etc/init.d/runpastry calls /root/startpastry on the end nodes.
+on every (non-NAT) node except grace, this delays 20 seconds before starting tutorial.lesson3.
+
+
+Most everything is based on bash scripts.  Good Luck!
+
+-Jeff Hoye
