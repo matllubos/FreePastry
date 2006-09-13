@@ -1,8 +1,8 @@
 #!/bin/bash
 
-export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/etc:/usr/ccs/bin:/usr/ucb:/usr/site/ssh/bin:/usr/local/bin:/usr/X11R6/bin:/home/jeffh/ant/apache-ant-1.6.0/bin
+export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/etc:/usr/ccs/bin:/usr/ucb:/usr/site/ssh/bin:/usr/local/bin:/usr/X11R6/bin:/DS/usr/jeffh/ant/apache-ant-1.6.0/bin
 
-AUTOBUILD_DIR=/home/jeffh/pastry/autobuild
+AUTOBUILD_DIR=/DS/usr/jeffh/pastry/autobuild
 TODAY=`date +%Y%m%d`
 LOGDIR="$AUTOBUILD_DIR/logs/$TODAY"
 
@@ -10,9 +10,10 @@ cd $AUTOBUILD_DIR
 
 # offer an option to avoid the CVS step, for testing
 if [ "$1" != "--nosync" ]; then
-	echo "Checking out Pastry sources from CVS."
+	echo "Checking out Pastry sources from SVN."
 	rm -rf pastry
-	cvs -Q -d /net/madras/FreePastry/cvsroot/ co pastry
+	svn co --username builder --password easy2guess https://svn.mpi-sws.mpg.de/svn/freepastry/trunk/pastry pastry	
+#	cvs -Q -d /net/madras/FreePastry/cvsroot/ co pastry
 fi
 
 # Read the version number out of 'VERSION' in CVS
@@ -45,7 +46,7 @@ declare -x ANT_OPTS=-Xmx1024m
 
 cd pastry
 #ant beautifyandlicense
-ant freepastry-release \
+ant/bin/ant freepastry-release \
 	-Ddontbeautify=1 \
 	-Ddontjavadoc=1 \
 	-Dfreepastry-version="$VERSION" \
