@@ -154,28 +154,6 @@ public class SocketChannelWriter {
     buffer = null;
   }
   
-  protected void record(String action, Object obj, int size, SourceRoute path) {
-		boolean recorded = false;
-		
-		try {
-			if (obj instanceof rice.pastry.routing.RouteMessage) {
-				record(action, ((rice.pastry.routing.RouteMessage) obj).unwrap(), size, path);
-				recorded = true;
-			} else if (obj instanceof rice.pastry.commonapi.PastryEndpointMessage) {
-				record(action, ((rice.pastry.commonapi.PastryEndpointMessage) obj).getMessage(), size, path);
-				recorded = true;
-//			} else if (obj instanceof rice.post.messaging.PostPastryMessage) {
-//				record(action, ((rice.post.messaging.PostPastryMessage) obj).getMessage().getMessage(), size, path);
-//				recorded = true;
-			} 
-		} catch (java.lang.NoClassDefFoundError exc) { }
-
-    if (!recorded) {
-      if (logger.level <= Logger.FINER) logger.log(
-          "COUNT: " + action + " message " + obj.getClass() + " of size " + size + " to " + path);
-    }
-  }
-
   /**
    * Method which is designed to be called when this writer should write out its
    * data. Returns whether or not the message was completely written. If false
@@ -204,7 +182,7 @@ public class SocketChannelWriter {
                       path.getLastHop().getAddress( ((SocketNodeHandle)spn.getLocalHandle()).eaddress )), 
                   buffer.limit(), NetworkListener.TYPE_TCP);
               }
-              record("Sent", queue.getFirst(), buffer.limit(), path);
+              if (logger.level <= Logger.FINER) logger.log("COUNT: Sent message " + sbuf + " of size " + buffer.limit()+ " to " + path);
             } else {
               queue.removeFirst();
               
@@ -218,8 +196,8 @@ public class SocketChannelWriter {
         int j = buffer.limit();
         int i = sc.write(buffer);
                 
-        record("Wrote " + i + " of " + j + " bytes of", queue.getFirst(), buffer.limit(), path);
-        
+        if (logger.level <= Logger.FINER) logger.log("Wrote " + i + " of " + j + " bytes of message " + queue.getFirst() + " of size " + buffer.limit()+ " to " + path);
+
         if (logger.level <= Logger.FINEST) logger.log(
             "(W) Wrote " + i + " of " + j + " bytes to " + sc.socket().getRemoteSocketAddress());
         

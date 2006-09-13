@@ -303,8 +303,8 @@ public class SocketBuffer implements RawMessageDelivery {
   public Message deserialize(MessageDeserializer md) throws IOException {
     if (md == null) md = defaultDeserializer;
 
-    try {
-      str.mark(100000000);
+//    try {
+//      str.mark(100000000);
       if (isRouteMessage()) {
         RouteMessage rm = RouteMessage.build(str, nhf, spn);
         rmSubAddress = rm.getAuxAddress();
@@ -319,9 +319,9 @@ public class SocketBuffer implements RawMessageDelivery {
   //    }
   //    System.out.println("SB.deserialize("+m+")");
       return m;
-    } finally {
-      str.reset(); 
-    }
+//    } finally {
+//      str.reset(); 
+//    }
   }
 
   

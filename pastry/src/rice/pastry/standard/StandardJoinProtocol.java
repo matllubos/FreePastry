@@ -89,7 +89,7 @@ public class StandardJoinProtocol extends PastryAppl {
         // leafSet.put(nh);
         if (thePastryNode.isReady()) {
           jr.acceptJoin(localHandle, leafSet);
-          nh.receiveMessage(jr);
+          thePastryNode.send(nh,jr);
         } else {
           if (logger.level <= Logger.INFO) logger.log(
               "NOTE: Dropping incoming JoinRequest " + jr
@@ -112,7 +112,7 @@ public class StandardJoinProtocol extends PastryAppl {
           // now update the local leaf set
           BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(),
               BroadcastLeafSet.JoinInitial, 0);
-          localHandle.receiveMessage(bls);
+          thePastryNode.receiveMessage(bls);
 
           // we have now successfully joined the ring, set the local node ready
           setReady();
@@ -200,7 +200,7 @@ public class StandardJoinProtocol extends PastryAppl {
       if (row != null) {
         BroadcastRouteRow brr = new BroadcastRouteRow(localHandle, row);
 
-        localHandle.receiveMessage(brr);
+        thePastryNode.receiveMessage(brr);
       }
     }
 
@@ -220,7 +220,7 @@ public class StandardJoinProtocol extends PastryAppl {
 
         NodeHandle nh = rs.closestNode();
         if (nh != null)
-          nh.receiveMessage(brr);
+          thePastryNode.send(nh,brr);
 
         /*
          * int m = rs.size(); for (int k=0; k<m; k++) { NodeHandle nh =

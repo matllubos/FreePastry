@@ -97,7 +97,7 @@ public class ConfigurationFrame extends JFrame {
     getContentPane().add(button);
     
     pack();
-    show();
+    setVisible(true);
   }
   
   protected void save() {
@@ -959,7 +959,7 @@ public class ConfigurationFrame extends JFrame {
         });
         
         pack();
-        show();
+        setVisible(true);
       }
     }
     
@@ -1212,7 +1212,7 @@ public class ConfigurationFrame extends JFrame {
       });
       
       pack();
-      show();
+      setVisible(true);
     }
   }
   

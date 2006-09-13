@@ -43,7 +43,7 @@ public class CompatibilityCheck {
     frame.getContentPane().add(kill);
     
     frame.pack();
-    frame.show();
+    frame.setVisible(true);
   }
   
   public void test() {

@@ -160,7 +160,7 @@ public class StandardRouter extends PastryAppl {
     // this wasn't being called often enough in its previous location, moved here Aug 11, 2006
     checkForRouteTableHole(msg, msg.nextHop);
     msg.setPrevNode(thePastryNode.getLocalHandle());
-    thePastryNode.getLocalHandle().receiveMessage(msg);
+    thePastryNode.receiveMessage(msg);
   }
 
   /**
@@ -217,7 +217,7 @@ public class StandardRouter extends PastryAppl {
         if (logger.level <= Logger.FINE) {
           logger.log("Found hole in "+prevNode+"'s routing table. Sending "+brr.toStringFull());  
         }
-        prevNode.receiveMessage(brr);
+        thePastryNode.send(prevNode,brr);
       }
     }
 

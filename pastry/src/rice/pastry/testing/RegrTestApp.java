@@ -5,6 +5,7 @@ import rice.pastry.client.*;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -106,7 +107,12 @@ public class RegrTestApp extends CommonAPIAppl {
     /*
      * System.out.print(msg); System.out.println(" at " + getNodeId());
      */
-    Message msg = rm.unwrap();
+    Message msg;
+    try {
+      msg = rm.unwrap(deserializer);
+    } catch (IOException ioe) {
+      throw new RuntimeException("Error deserializing message "+rm,ioe); 
+    }
     Id key = rm.getTarget();
     Id nextHop = rm.getNextHop().getNodeId();
 

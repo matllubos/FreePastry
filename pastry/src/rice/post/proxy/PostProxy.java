@@ -1849,7 +1849,7 @@ public class PostProxy {
       
       setTitle("ePOST");
       pack();
-      show();
+      setVisible(true);
       
       setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
       
@@ -2190,7 +2190,7 @@ public class PostProxy {
       });
       
       pack();
-      show();
+      setVisible(true);
     }
     
     protected void done() {
@@ -2299,7 +2299,7 @@ public class PostProxy {
       });
       
       pack();
-      show();
+      setVisible(true);
     }
     
     protected void done() {

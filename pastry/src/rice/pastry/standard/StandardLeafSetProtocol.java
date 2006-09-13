@@ -98,7 +98,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
         BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
             BroadcastLeafSet.Update, rls.getTimeStamp());
 
-        returnHandle.receiveMessage(bls);
+        thePastryNode.send(returnHandle,bls);
       }
     } else if (msg instanceof InitiateLeafSetMaintenance) {
       // request for leafset maintenance
@@ -150,7 +150,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
 
     if (changed) {
       // nodes where missing, send update to "from"
-      from.receiveMessage(bl);
+      thePastryNode.send(from,bl);
 
       if (notifyMissing) {
         // send leafset to nodes that where missing from remotels
@@ -162,7 +162,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
         while (it.hasNext()) {
           // send leafset to missing node
           NodeHandle nh = (NodeHandle) it.next();
-          nh.receiveMessage(bl);
+          thePastryNode.send(nh,bl);
         }
       }
     }
@@ -212,7 +212,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
         continue;
 
       if (!sent.isMember(nh.getNodeId())) {
-        nh.receiveMessage(bls);
+        thePastryNode.send(nh,bls);
         sent.addMember(nh.getNodeId());
       }
     }
@@ -244,7 +244,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
       if (nh == null || nh.isAlive() == false)
         continue;
 
-      nh.receiveMessage(bls);
+      thePastryNode.send(nh,bls);
 
     }
   }
@@ -308,7 +308,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
     for (int i = -ccwSize; i < 0; i++) {
       NodeHandle handle = leafSet.get(i);
       if (handle != null && handle.isAlive()) {
-        handle.receiveMessage(rls);
+        thePastryNode.send(handle,rls);
         allDead = false;
         break;
       }
@@ -324,7 +324,7 @@ public class StandardLeafSetProtocol extends PastryAppl {
     for (int i = cwSize; i > 0; i--) {
       NodeHandle handle = leafSet.get(i);
       if (handle != null && handle.isAlive()) {
-        handle.receiveMessage(rls);
+        thePastryNode.send(handle,rls);
         allDead = false;
         break;
       }
