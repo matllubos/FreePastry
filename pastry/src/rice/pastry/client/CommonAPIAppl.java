@@ -1,5 +1,7 @@
 package rice.pastry.client;
 
+import java.io.IOException;
+
 import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
@@ -272,7 +274,11 @@ public abstract class CommonAPIAppl extends PastryAppl {
 
         // if the message is for the local node, deliver it here
         if (getNodeId().equals(nextHop.getNodeId())) {
-          deliver(rm.getTarget(), rm.unwrap());
+          try {
+            deliver(rm.getTarget(), rm.unwrap(deserializer));
+          } catch (IOException ioe) {
+            throw new RuntimeException("Error deserializing message "+rm,ioe); 
+          }
         } else {
           // route the message
           rm.routeMessage(getNodeHandle());

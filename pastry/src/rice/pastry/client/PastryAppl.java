@@ -174,8 +174,12 @@ public abstract class PastryAppl implements Observer
     if (msg instanceof RouteMessage) {
       RouteMessage rm = (RouteMessage) msg;
 
-      if (enrouteMessage(rm.unwrap(), rm.getTarget(), rm.nextHop, rm.getOptions()))
-        rm.routeMessage(thePastryNode.getLocalHandle());
+      try {
+        if (enrouteMessage(rm.unwrap(deserializer), rm.getTarget(), rm.nextHop, rm.getOptions()))
+          rm.routeMessage(thePastryNode.getLocalHandle());
+      } catch (IOException ioe) {
+        throw new RuntimeException("Error deserializing message "+rm,ioe); 
+      }
     }
     else messageForAppl(msg);
   }
