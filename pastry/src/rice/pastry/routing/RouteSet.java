@@ -516,6 +516,7 @@ public class RouteSet implements NodeSetI, Serializable,
   }
   
   public RouteSet(InputBuffer buf, NodeHandleFactory nhf, PastryNode local) throws IOException {
+    this.localNode = local;
     byte maxSize = buf.readByte();
     theSize = buf.readByte();
     closest = buf.readByte();
