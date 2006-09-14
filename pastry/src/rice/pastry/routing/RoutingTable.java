@@ -284,7 +284,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @param handle the handle to put.
    */
 
-  public boolean put(NodeHandle handle) {
+  public synchronized boolean put(NodeHandle handle) {
     if (logger.level <= Logger.FINER) logger.log("RT: put("+handle+")");        
     Id nid = handle.getNodeId();
     RouteSet ns = makeBestEntry(nid);
@@ -303,7 +303,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
   public static final int TEST_SUCCESS_AVAILABLE_SPACE = 3;
   public static final int TEST_SUCCESS_NO_ENTRIES = 4;
   
-  public int test(NodeHandle handle) {
+  public synchronized int test(NodeHandle handle) {
     // get the location in the RT
     Id key = handle.getNodeId();
     int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
@@ -382,7 +382,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
   //
   //return ns.remove(nid);
   //  }
-  public NodeHandle remove(NodeHandle nh) {
+  public synchronized NodeHandle remove(NodeHandle nh) {
     if (logger.level <= Logger.FINER) logger.log("RT: remove("+nh+")"); 
     RouteSet ns = getBestEntry(nh.getNodeId());
 
@@ -512,5 +512,32 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     synchronized (listeners) {
       listeners.remove(listener);
     }
+  }
+
+  /**
+   * 
+   * Does not return self
+   * 
+   * @return list of NodeHandle
+   */
+  public synchronized List asList() {
+    List rtHandles = new ArrayList(numEntries());
+
+    for (int r = 0; r < numRows(); r++) {
+      RouteSet[] row = getRow(r);
+      for (int c = 0; c < numColumns(); c++) {
+        RouteSet entry = row[c];
+        if (entry != null) {
+          for (int i = 0; i < entry.size(); i++) {
+            NodeHandle nh = entry.get(i);
+            if (!nh.equals(pn.getLocalHandle())) {
+              rtHandles.add(nh);
+            }
+          }
+        }
+      }
+    }
+
+    return rtHandles;
   }
 }

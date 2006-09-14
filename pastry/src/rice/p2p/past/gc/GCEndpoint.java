@@ -167,6 +167,10 @@ public class GCEndpoint implements Endpoint {
     return endpoint.getLocalNodeHandle();
   }
   
+  public List networkNeighbors(int num) {
+    return endpoint.networkNeighbors(num);
+  }
+  
   /**
    * Schedules a message to be delivered to this application after the provided number of
    * milliseconds.

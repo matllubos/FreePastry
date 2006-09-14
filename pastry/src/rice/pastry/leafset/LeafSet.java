@@ -920,5 +920,21 @@ public class LeafSet extends Observable implements Serializable {
       buf.writeByte((byte)list.indexOf(ccwSet.get(i))); 
     }    
   }
+  
+  /**
+   * 
+   * If overlaps() a NodeHandle may show up twice.  Does not return self.
+   * 
+   * @return list of NodeHandle
+   */
+  public synchronized List asList() {
+    List l = new ArrayList();
+    for (int i=-ccwSize(); i<=cwSize(); i++) {
+      if (i != 0) {
+        l.add(get(i));
+      }
+    }      
+    return l;
+  }
 }
 

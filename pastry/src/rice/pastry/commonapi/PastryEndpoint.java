@@ -3,6 +3,7 @@ package rice.pastry.commonapi;
 
 import java.io.IOException;
 import java.security.InvalidParameterException;
+import java.util.*;
 
 import rice.*;
 import rice.environment.Environment;
@@ -498,6 +499,36 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
         return new RouteSet(buf, thePastryNode, thePastryNode);
     }
     throw new IllegalArgumentException("Unknown type: "+type);
+  }
+
+  public List networkNeighbors(int num) {
+    HashSet<NodeHandle> handles = new HashSet<NodeHandle>();    
+    List<NodeHandle> l = (List<NodeHandle>)thePastryNode.getRoutingTable().asList();    
+    Iterator<NodeHandle> i = l.iterator();
+    while(i.hasNext()) {
+      handles.add(i.next());
+    }
+    l = thePastryNode.getLeafSet().asList();
+    i = l.iterator();
+    while(i.hasNext()) {
+      handles.add(i.next());
+    }
+    
+    NodeHandle[] array = handles.toArray(new NodeHandle[0]);
+    
+    Arrays.sort(array,new Comparator<NodeHandle>() {    
+      public int compare(NodeHandle a, NodeHandle b) {
+        return thePastryNode.proximity((rice.pastry.NodeHandle)a)-thePastryNode.proximity((rice.pastry.NodeHandle)b);
+      }          
+    });
+    
+    
+    if (array.length <= num) return Arrays.asList(array);
+    
+    NodeHandle[] ret = new NodeHandle[num];
+    System.arraycopy(array,0,ret,0,num);
+    
+    return Arrays.asList(ret);
   }
   
 }

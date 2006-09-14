@@ -270,6 +270,10 @@ public class MultiringEndpoint implements Endpoint {
     return endpoint.scheduleMessageAtFixedRate(message, delay, period);
   }
   
+  public List networkNeighbors(int num) {
+    return endpoint.networkNeighbors(num);
+  }
+  
   /**
    * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
    * as encryption, erasure encoding, or bloom filter creation should never be done in the context
@@ -369,7 +373,7 @@ public class MultiringEndpoint implements Endpoint {
   public void register() {
     endpoint.register(); 
   }
-  
+
 }
 
 

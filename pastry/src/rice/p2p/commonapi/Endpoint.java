@@ -2,6 +2,7 @@
 package rice.p2p.commonapi;
 
 import java.io.IOException;
+import java.util.List;
 
 import rice.*;
 import rice.environment.Environment;
@@ -233,6 +234,15 @@ public interface Endpoint extends NodeHandleReader {
    */
   public Id readId(InputBuffer buf, short type) throws IOException;
 
+  /**
+   * Returns an ordered list of the nearest known neighbors.  
+   * Note that proximity is usually an estimate, and can quickly become stale.
+   * 
+   * @param num
+   * @return List of NodeHandle
+   */
+  List networkNeighbors(int num);
+  
   /**
    * To use Raw Serialization
    * @param buf

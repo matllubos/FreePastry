@@ -66,7 +66,7 @@ public interface NodeHandleSet extends Serializable {
    * @return the size.
    */
   public int size();
-
+  
   /**
    * Gets the index of the element with the given node id.
    *
