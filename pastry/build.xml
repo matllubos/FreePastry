@@ -71,8 +71,8 @@
            classpathref="project.classpath"
            includes="**/*.java"
            deprecation="yes"
-           target="1.4"
-    	       source="1.4"
+           target="1.5"
+    	       source="1.5"
            debuglevel="lines,vars,source"
            debug="true">           
     </javac>
