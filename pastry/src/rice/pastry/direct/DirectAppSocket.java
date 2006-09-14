@@ -177,7 +177,7 @@ public class DirectAppSocket {
         public int getSeq() {
           return mySeq; 
         }
-      }, simulator.proximity(localNodeHandle, counterpart.localNodeHandle));      
+      }, simulator.networkDelay(localNodeHandle, counterpart.localNodeHandle));      
       return lengthToWrite;
     }
   
@@ -268,7 +268,7 @@ public class DirectAppSocket {
         public int getSeq() {
           return mySeq;
         }
-      }, simulator.proximity(localNodeHandle, counterpart.localNodeHandle)); // I dont think this needs a delay, but I could be wrong            
+      }, simulator.networkDelay(localNodeHandle, counterpart.localNodeHandle)); // I dont think this needs a delay, but I could be wrong            
     }
   
     public void shutdownInput() {
@@ -298,19 +298,19 @@ public class DirectAppSocket {
       if (acceptorNodeHandle.isAlive()) {
         if (acceptorAppl == null) {
           simulator.enqueueDelivery(new ConnectorExceptionDelivery(new AppNotRegisteredException()),
-              simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
+              simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
         } else {
           if (acceptorAppl.receiveSocket(acceptorEndpoint)) {
             simulator.enqueueDelivery(new ConnectorDelivery(),
-                simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
+                simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
           } else {
             simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NoReceiverAvailableException()),
-                simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
+                simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
           }
         }
       } else {
         simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsDeadException()),
-            simulator.proximity(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
+            simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle())); 
       }
     }
     public int getSeq() {

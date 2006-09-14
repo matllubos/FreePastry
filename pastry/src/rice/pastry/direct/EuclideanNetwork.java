@@ -59,8 +59,11 @@ public class EuclideanNetwork extends BasicNetworkSimulator {
       alive = true;
     }
 
-
     public int proximity(NodeRecord that) {
+      return networkDelay(that)*2;
+    }
+    
+    public int networkDelay(NodeRecord that) {
       EuclideanNodeRecord nr = (EuclideanNodeRecord)that;
       int dx = x - nr.x;
       int dy = y - nr.y;

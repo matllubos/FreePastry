@@ -323,6 +323,17 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    * @param b the second NodeId
    * @return the proximity between the two input NodeIds
    */
+  public int networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
+    NodeRecord nra = a.getRemote().record;
+    NodeRecord nrb = b.getRemote().record;
+
+    if (nra == null || nrb == null) {
+      throw new Error("asking about node proximity for unknown node(s)");
+    }
+
+    return nra.networkDelay(nrb);
+  }
+
   public int proximity(DirectNodeHandle a, DirectNodeHandle b) {
     NodeRecord nra = a.getRemote().record;
     NodeRecord nrb = b.getRemote().record;
@@ -334,6 +345,8 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     return nra.proximity(nrb);
   }
 
+  
+  
   /**
    * find the closest NodeId to an input NodeId out of all NodeIds in the
    * network

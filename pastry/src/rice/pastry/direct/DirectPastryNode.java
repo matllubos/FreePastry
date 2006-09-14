@@ -264,7 +264,7 @@ public class DirectPastryNode extends PastryNode {
   public void connect(NodeHandle remoteNode, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
     DirectNodeHandle dnh = (DirectNodeHandle)remoteNode;
     simulator.enqueueDelivery(new DirectAppSocket(dnh, receiver, appl, simulator).getAcceptorDelivery(),
-        simulator.proximity((DirectNodeHandle)localhandle, dnh));
+        simulator.networkDelay((DirectNodeHandle)localhandle, dnh));
   }
 
   public NodeHandle readNodeHandle(InputBuffer buf) {

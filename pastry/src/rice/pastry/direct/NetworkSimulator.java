@@ -35,16 +35,25 @@ public interface NetworkSimulator {
   public boolean isAlive(DirectNodeHandle nh);
 
   /**
-   * Determines proximity between two nodes.
+   * Determines rtt between two nodes.
    * 
    * @param a a node id.
    * @param b another node id.
    * 
    * @return proximity of b to a.
    */
-
   public int proximity(DirectNodeHandle a, DirectNodeHandle b);
-
+  
+  /**
+   * Determines delivery time from a to b.
+   * 
+   * @param a a node id.
+   * @param b another node id.
+   * 
+   * @return proximity of b to a.
+   */
+  public int networkDelay(DirectNodeHandle a, DirectNodeHandle b);
+  
   /**
    * Deliver message.
    * 
