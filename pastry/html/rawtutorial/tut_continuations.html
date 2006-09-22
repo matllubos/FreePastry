@@ -1,0 +1,199 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<h2>Contents</h2>
+<ul>
+	<h3>Getting Started</h3>
+	<ul>
+	<li><a href="index.html#requirements">What You'll Need</a></li>
+	</ul>
+	<h3>Lessons</h3>
+	<ul>
+	<li><a href="tut_continuations.html#lesson0a">Lesson 0.a</a>: Continuations.</li>
+	<li><a href="tut_environment.html#lesson0b">Lesson 0.b</a>: Environment.</li>
+	<li><a href="tut_beginning.html#lesson1">Lesson 1</a>: Minimal code to create/join a pastry
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson2">Lesson 2</a>: Execute the code to launch your new
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson3">Lesson 3</a>: Write a simple application using the
+	commonAPI. (this will show you how to send and receive messages)</li>
+	<li><a href="tut_multiple_nodes.html#lesson4">Lesson 4</a>: Running multiple nodes in the same 
+	JVM.</li>
+	<li><a href="tut_timertask.html#lesson5">Lesson 5</a>: Scheduling tasks on the FreePastry 
+	timer.</li>
+	<li><a href="tut_scribe.html#lesson6">Lesson 6</a>: Introducing Scribe.</li>
+	<li><a href="tut_past.hml#lesson7">Lesson 7</a>: Past &mdash FreePastry's DHT.</li>
+	</ul>
+	<h3>Coming soon:</h3>
+	<ul>
+	<li>Lesson 8: Splitstream.</li>
+	<li>Lesson 9: Advanced Scribe: Policies.</li>
+	<li>Lesson 10: Advanced Environment.</li>
+	</ul>
+</ul>
+
+<a name="lesson0a"></a><h1>Lesson 0.a</h1>
+<h2>Continuations.</h2>
+FreePastry and its applications use Continuations in various places, so it is important that you understand what they do and how to use them.<br/><br/>
+
+A continuation is similar to a callback, or in java, a Listener, but it is typically used only once.  A google search for continuations will show you a variety of uses in computer science, but the primary use for them in FreePastry is to handle network latency, or other types of IO that may block or take a significant amount of time.<br/><br/>
+
+To understand why we use continuations, let's look at an alternative style of calls.  RMI/RPC style calls are generally blocking calls.  Blocking calls work similar to a regular function call.  The lookup command in Past (FreePastry's DHT) <i>could</i> look like:
+<pre>
+  public Result lookup(Id id) {
+    // blocking network call
+  }
+</pre>
+But if the network call takes a while to execute due to latency, then your program will block until it completes.  In the meantime you could be doing other lookups, but because of this style of call, you are forced to wait, or use a lot of threads.  Continuations allow you to "continue" processing
+when the result arrives, and in the meantime issue other requests.<br/><br/>
+
+Let's look at the <code>rice.Continuation</code> interface.
+<pre>
+/**
+ * Asynchronously receives the result to a given method call, using
+ * the command pattern.
+ * 
+ * Implementations of this class contain the remainder of a computation
+ * which included an asynchronous method call.  When the result to the
+ * call becomes available, the receiveResult method on this command
+ * is called.
+ *
+ * @version $Id: index.html 2716 2005-08-10 17:42:38 +0200 (Wed, 10 Aug 2005) jeffh $
+ *
+ * @author Alan Mislove
+ * @author Andreas Haeberlen
+ */
+public interface Continuation {
+
+  /**
+   * Called when a previously requested result is now availble.
+   *
+   * @param result The result of the command.
+   */
+  public void receiveResult(Object result);
+
+  /**
+   * Called when an execption occured as a result of the
+   * previous command.
+   *
+   * @param result The exception which was caused.
+   */
+  public void receiveException(Exception result);
+}
+</pre>
+
+In Past (the DHT that runs on top of FreePastry) the code to do a lookup looks like this:
+
+<pre>
+  public void lookup(Id id, Continuation command) {
+    // non-blocking network call
+  }
+</pre>
+
+Note the differences between this call and the alternative approach mentioned before: 
+<ol>
+  <li>The method takes a Continuation.</li>
+  <li>There is no return value.</li>
+</ol>
+
+When the result arrives, Past will call <code>command.receiveResult()</code> with the response.  Inside the continuation, you can complete the task that required the lookup.  If instead, an error occurs, Past will call <code>command.receiveException()</code>.  Note that because <code>receiveResult()</code> is called with an Object, you must cast the result to what you are expecting from the lookup.<br/><br/>
+
+Here is an example implementation of a continuation <a href="./src/lesson0a/MyContinuation.java">MyContinuation.java</a>:<br/><br/>
+
+First, create the continuation :
+<pre>
+class MyContinuation implements Continuation {
+  /**
+   * Called when the result arrives.
+   */
+  public void receiveResult(Object result) {
+    PastContent pc = (PastContent)result;
+    System.out.println("Received a "+pc);
+  }
+
+  /**
+   * Called if there is an error.
+   */
+  public void receiveException(Exception result) {
+    System.out.println("There was an error: "+result);      
+  }
+}
+</pre>
+
+Note that the continuation has 2 methods it must implement: <code>receiveResult()</code> and <code>receiveException()</code>.  This continuation will print "Received a <i>blah</i>" when the result comes in.  Note that we need to cast the result to what we should be expecting.  In the case of Past, we know that the result will be a PastContent.  If there is an error, we will print "There was an error: <i>Description of the error</i>"<br/><br/>
+
+Here is the code to use our continuation.  Note that this code will not run, because Past and Id have not been initialized.  (You will learn how to do that in <a href="#lesson7">Lesson 7</a>).<br/><br/>  
+
+Download the code here: <a href="./src/lesson0a/TestContinuation.java">TestContinuation.java</a>
+
+<pre>
+public class TestContinuation {
+  public static void main(String[] args) {
+    Past past = null; // generated elsewhere
+    Id id = null; // generated elsewhere
+    
+    // create the continuation
+    Continuation command = new MyContinuation();    
+    
+    // make the call with the continuation
+    past.lookup(id, command);    
+  }
+}
+</pre>
+
+This code calls lookup with the continuation.  When the result arrives, <code>command.receiveResult()</code> will be called.<br/><br/>
+
+<h3>Anonymous inner classes</h3>
+Java hackers love anonymous inner classes, so here is the same code as an anonymous inner class, rather than a seperate class.  This is handy because it flows a bit more like a typical blocking program.  <i>First do a <code>past.lookup()</code> then <code>System.out.println()</code>.</i><br/><br/>
+Download the code here: <a href="./src/lesson0a/TestContinuationAnon.java">TestContinuationAnon.java</a>
+
+<pre>
+public class TestContinuationAnon {
+
+  public static void main(String[] args) {
+    Past past = null; // generated elsewhere
+    Id id = null; // generated elsewhere
+    
+    // same code as TestContinuation and MyContinuation combined
+    past.lookup(id, new Continuation() {
+      // will be called if success in the lookup
+      public void receiveResult(Object result) {
+        PastContent pc = (PastContent)result;
+        System.out.println("Received a "+pc);        
+      }
+
+      // will be called if failure in the lookup
+      public void receiveException(Exception result) {
+        System.out.println("There was an error: "+result);      
+      }
+    });    
+  }
+}
+</pre>
+Click here for more information on <a href="http://java.sun.com/docs/books/tutorial/java/javaOO/innerclasses.html">Java Anonymous Inner Classes</a>.
+<hr/>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@
+</div>
+
+</div>
+</body>
+</html>

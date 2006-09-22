@@ -1,0 +1,114 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<h2>Contents</h2>
+<ul>
+	<h3>Getting Started</h3>
+	<ul>
+	<li><a href="index.html#requirements">What You'll Need</a></li>
+	</ul>
+	<h3>Lessons</h3>
+	<ul>
+	<li><a href="tut_continuations.html#lesson0a">Lesson 0.a</a>: Continuations.</li>
+	<li><a href="tut_environment.html#lesson0b">Lesson 0.b</a>: Environment.</li>
+	<li><a href="tut_beginning.html#lesson1">Lesson 1</a>: Minimal code to create/join a pastry
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson2">Lesson 2</a>: Execute the code to launch your new
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson3">Lesson 3</a>: Write a simple application using the
+	commonAPI. (this will show you how to send and receive messages)</li>
+	<li><a href="tut_multiple_nodes.html#lesson4">Lesson 4</a>: Running multiple nodes in the same 
+	JVM.</li>
+	<li><a href="tut_timertask.html#lesson5">Lesson 5</a>: Scheduling tasks on the FreePastry 
+	timer.</li>
+	<li><a href="tut_scribe.html#lesson6">Lesson 6</a>: Introducing Scribe.</li>
+	<li><a href="tut_past.hml#lesson7">Lesson 7</a>: Past &mdash FreePastry's DHT.</li>
+	</ul>
+	<h3>Coming soon:</h3>
+	<ul>
+	<li>Lesson 8: Splitstream.</li>
+	<li>Lesson 9: Advanced Scribe: Policies.</li>
+	<li>Lesson 10: Advanced Environment.</li>
+	</ul>
+</ul>
+
+
+<hr/>
+
+<a name="requirements"></a><h2>What You'll Need</h2>
+Before you begin, you should meet the following requirements.  
+<ol>
+  <li>An intermediate level of knowledge in the Java programming language.  <a href="http://java.sun.com/docs/books/tutorial/">The Java Tutorial</a> is a good place to start. 
+  <li>A copy of a current JDK, 1.4.2_06 or later.  <a href="http://java.sun.com/j2se/index.jsp">Sun's J2SE</a>. 
+  <li>A basic understanding of Pastry overlay structure.  Read the short overview <a href="http://freepastry.rice.edu/PAST/overview.pdf">[pdf]</a><a href="http://freepastry.rice.edu/PAST/overview.ps">[ps]</a> of <a href="http://freepastry.rice.edu/">FreePastry</a>.
+  <li>Have a working copy of FreePastry-1.4_01 or later.  You can simply download the <a href="http://freepastry.rice.edu/FreePastry/FreePastry-1.4.2.jar">current jar</a>, or download and build the <a href="http://freepastry.rice.edu/FreePastry/">source</a>.
+</ol>
+<hr/>
+
+<a name="lesson0b"></a><h1>Lesson 0.b</h1>
+<h2>Environment</h2>
+The environment allows us to more easily virtualize pastry inside the same Virtual machine.  This is the main
+new feature of FreePastry 1.4.2.  The environment serves FreePastry in 6 key ways:
+<ul>
+  <li><b>Logging</b> &mdash We have standardized on a logging system throughout FreePastry.  This is a simpler
+  logging framework than the one that ships with java. However it is compatible.  (In other words, you can implement
+  our LogManager and Logger with the Java one.)  This logging replaces the previous "-verbose" etc. logging.</li>
+  <li><b>Parameters</b> &mdash Formerly hard-coded (<code>public static final</code>) parameters are now able to be specified at startup, or even changed during runtime
+  rather than requiring a recompile.  It allows parameters to be changed from code, and to be persistent.
+  In other words, you could have a gui that lets you change the parameters, then store them to disk (By calling Parameters.store()), so next time the 
+  code is run, it retains the parameters.</li>
+  <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
+  thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
+  synchronization than several threads.  Note that the SelectorManager is a Daemon thread that will cause the JVM to not exit when the main method ends.  See below to find out how to destroy the SelectorManager.</li> 
+  <li><b>Processor</b> &mdash It is important that tasks done on the SelectorThread don't take long, as this is the network IO thread, and can cause other nodes to suspect you are faulty.  However, sometimes you need to do a CPU intensive task (like calculate a manifest for a bloom filter) that will cause problems if done on the SelectorThread.  For these tasks, you can use the "<i>Processor</i>.  This is simply a different thread that will be context switched automatically by the system.  Typically, you will access this by using the Node.process() or Endpoint.process() function call.  These calls result in a call to the <i>Processor</i>.  Future implementations could use more Threads for computers with several processors, or hyper-threading.</li> 
+  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
+  you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
+  where some nodes have incorrect system clocks due to misconfigured NTP servers.</li>
+  <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
+</ul>
+
+Pastry applications access the Environment from the PastryNode or the commonapi Node (PastryNode implements Node).  Generally you 
+can use the same Environment for everything inside your JVM.  The two Objects that you will likely construct with an Environment are the 
+PastryNodeFactory and the IdFactory.  
+
+<h3>How should I get an environment?</h3>
+<ul>
+  <li>In your main method simply call <code>new Environment()</code>.</li>
+  <li>In your application, call <code>node.getEnvironment(), or endpoint.getEnvironment()</code>.</li>
+</ul> 
+
+The default constructor for an environment looks in the classpath for a params file called <b>freepastry.params</b>.  If you compiled
+the jar with the included ant task, or used the jar from the web, this should work automagically.  If you are compiling FreePastry
+from an IDE (such as eclipse) or from the command line (javac) then you will need to make sure to put the freepastry.params file
+located in <b>jars/freepastry</b> in your classpath, or use a different contstructor for the Environment.<br/>
+
+<h3>My JVM won't exit, or How should I get rid of an environment?</h3>
+The SelectorManager and Processor both have daemon threads that are used to handle communication and processing for the PastryNode.  For the JVM to be able to exit, you will need to properly destroy the environment, by calling environment.destroy().  This will call store on the parameters, and destroy the selector/processor threads.  Of course, you can also call System.exit(), but that is generally considered bad form.<br/><br/>
+
+This should be sufficient information for you to continue with the tutorial.  You can learn more in Lesson 10 Advanced Environment.
+<hr/>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>

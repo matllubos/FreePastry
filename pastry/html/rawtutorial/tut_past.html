@@ -1,0 +1,318 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<h2>Contents</h2>
+<ul>
+	<h3>Getting Started</h3>
+	<ul>
+	<li><a href="index.html#requirements">What You'll Need</a></li>
+	</ul>
+	<h3>Lessons</h3>
+	<ul>
+	<li><a href="tut_continuations.html#lesson0a">Lesson 0.a</a>: Continuations.</li>
+	<li><a href="tut_environment.html#lesson0b">Lesson 0.b</a>: Environment.</li>
+	<li><a href="tut_beginning.html#lesson1">Lesson 1</a>: Minimal code to create/join a pastry
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson2">Lesson 2</a>: Execute the code to launch your new
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson3">Lesson 3</a>: Write a simple application using the
+	commonAPI. (this will show you how to send and receive messages)</li>
+	<li><a href="tut_multiple_nodes.html#lesson4">Lesson 4</a>: Running multiple nodes in the same 
+	JVM.</li>
+	<li><a href="tut_timertask.html#lesson5">Lesson 5</a>: Scheduling tasks on the FreePastry 
+	timer.</li>
+	<li><a href="tut_scribe.html#lesson6">Lesson 6</a>: Introducing Scribe.</li>
+	<li><a href="tut_past.hml#lesson7">Lesson 7</a>: Past &mdash FreePastry's DHT.</li>
+	</ul>
+	<h3>Coming soon:</h3>
+	<ul>
+	<li>Lesson 8: Splitstream.</li>
+	<li>Lesson 9: Advanced Scribe: Policies.</li>
+	<li>Lesson 10: Advanced Environment.</li>
+	</ul>
+</ul>
+
+
+<hr/>
+
+<a name="lesson7"></a><h1>Lesson 7</h1>
+<h2>Past &mdash FreePastry's DHT.</h2>
+<h3>Download the tutorial files: 
+<a href="./src/lesson7/MyPastContent.java">MyPastContent.java</a>,
+<a href="./src/lesson7/PastTutorial.java">PastTutorial.java</a> into a directory called rice/tutorial/lesson7/.</h3>
+
+<p/>Past is FreePastry's Distributed Hash Table (DHT).  This tutorial will show you how to get scribe up and running.  You will learn how to do the following:
+<ul>
+ <li><a href="#l7Content">Create a PastContent.</a></li>
+ <li><a href="#l7Past">Create a Past instance.</a></li>
+ <li><a href="#l7Put">Put an object in Past.</a></li>
+ <li><a href="#l7Get">Get an object from Past.</a></li>
+ <li><a href="#l7GetFailed">A failed Get.</a></li>
+</ul>
+
+
+<h2>Terms:</h2>
+<ul>
+  <li><b>Past</b>&mdash;A large-scale, peer-to-peer archival storage facility.  Past is FreePastry's DHT.  It has insert() and lookup() operations.</i></li>
+  <li><b>Content</b>&mdash;A possible value of the DHT.</li>
+  <li><b>IdFactory</b>&mdash;A hash function.  <i>An IdFactory implements a hash function to build Ids that are compatable with pastry.</i></li>
+  <li><b>PastryIdFactory</b>&mdash;A commonly used IdFactory in Pastry.  <i>The PastryIdFactory uses SHA1 as it's underlying hash function.</i></li>
+  <li><b>Storage</b>&mdash;provides a local storage service <i>for example, a persistence storage service or an in-memory storage service</i></li>
+  <li><b>MemoryStorage</b>&mdash;an implementation of Storage which provides in-memory storage. <i>This class is specifically <b>not</b> designed to provide persistent storage.</i></li>
+  <li><b>PersistentStorage</b>&mdash;an implementation of Storage which provides persistent storage to disk.</li>
+  <li><b>Cache</b>&mdash;finite temporary storage for rapid access.</i></li>
+  <li><b>LRUCache</b>&mdash;implemetation of a least-recently-used (LRU) cache.</i></li>
+  <li><b>StorageManager</b>&mdash;a storage attached to a cache.  <i>Objects inserted and retrieved from the storage are auto-matically cached, to speed up future accesses.</i></li>
+</ul>
+
+
+
+<a name="l7Content"></a><h3>Create a PastContent.</h3>
+Unlike Scribe, you do not need to write a client to utilize Past.  However, you do need to create a content object to put/get.  This is called a PastContent.  The easiest way to create a PastContent is to extend rice.p2p.past.ContentHashPastContent.  Here is the code for MyPastContent.  
+<pre>
+public class MyPastContent extends ContentHashPastContent {  
+  /**
+   * Store the content.
+   * 
+   * Note that this class is Serializable, so any non-transient field will 
+   * automatically be stored to to disk.
+   */
+  String content;
+    
+  /**
+   * Takes an environment for the timestamp
+   * An IdFactory to generate the hash
+   * The content to be stored.
+   * 
+   * @param idf to generate a hash of the content
+   * @param content to be stored
+   */
+  public MyPastContent(Id id, String content) {
+    super(id);
+    this.content = content;
+  }
+  
+  /**
+   * A descriptive toString()
+   */
+  public String toString() {
+    return "MyPastContent ["+content+"]";
+  }
+}
+</pre>
+Note that the super constructor needs an Id.  Other than that the class must be <a href="http://java.sun.com/developer/technicalArticles/Programming/serialization/">serializable</a>.
+
+
+<a name="l7Past"></a><h3>Create a Past instance.</h3>
+Now on to the PastTutorial.  The first part of PastTutorial looks identical to ScribeTutorial.  The interesting part is creating the Past application.  
+<pre>
+      // used for generating PastContent object Ids.
+      // this implements the "hash function" for our DHT
+      PastryIdFactory idf = new rice.pastry.commonapi.PastryIdFactory(env);
+      
+      // create a different storage root for each node
+      String storageDirectory = "./storage"+node.getId().hashCode();
+
+      // create the persistent part
+      Storage stor = new PersistentStorage(idf, storageDirectory, 4 * 1024 * 1024, node
+          .getEnvironment());
+      Past app = new PastImpl(node, new StorageManagerImpl(idf, stor, new LRUCache(
+          new MemoryStorage(idf), 512 * 1024, node.getEnvironment())), 3, "");
+</pre>
+Recall the PastryIdFactory is basically a hash funciton that produces Ids.  
+
+The rest of the code sets up a typical PastImpl.  It uses PersistentStorage for the primary store, and an LRUCache backed by a MemoryStorage as the cache.<br/><br/>
+
+Here is an overview of what is going on.<br/><br/>
+
+PastImpl needs the following:
+<ul>
+  <li>The Node</li>
+  <li>StorageManager</li>
+  <li>The number of Replicas to maintain &mdash; this is a parameter that you can tune to adjust overhead vs. chance of data-loss</li>
+  <li>An instance name</li>
+</ul>  
+StorageManagerImpl (the StorageManager) needs the following:
+<ul>
+  <li>An IdFactory</li>
+  <li>A storage &mdash; we'll use the PersistentStorage</li>
+  <li>A cache &mdash; we'll use the LRUCache</li>  
+</ul>
+The PersistentStorage needs the following:
+<ul>
+  <li>An IdFactory</li>
+  <li>The directory to put the storage root. &mdash; Note that we need a different storage root for each node, otherwise they will use the same one.  This is only necessary
+  because we are running multiple nodes in the same JVM.</li>
+  <li>The max size (in bytes) &mdash; 1 Meg</li>
+  <li>The environment</li>
+</ul>  
+The LRUCache needs the following:
+<ul>
+  <li>A storage &mdash; we'll use a MemoryStorage</li>
+  <li>The max size (in bytes) &mdash; 0.5 Meg</li>
+  <li>The environment</li>
+</ul>  
+
+<a name="l7Put"></a><h3>Put an object in Past.</h3>
+Now lets store some data.  The loop around this code is so we can later look up the data that was stored.
+
+<pre>
+      // these variables are final so that the continuation can access them
+      final String s = "test" + env.getRandomSource().nextInt();
+      
+      // build the past content
+      final PastContent myContent = new MyPastContent(localFactory.buildId(s), s);
+    
+      storedKey[ctr] = myContent.getId();
+      
+      // pick a random past appl on a random node
+      Past p = (Past)apps.get(env.getRandomSource().nextInt(numNodes));
+      System.out.println("Inserting " + myContent + " at node "+p.getLocalNodeHandle());
+      
+      // insert the data
+      p.insert(myContent, new Continuation() {
+        // the result is an Array of Booleans for each insert
+        public void receiveResult(Object result) {          
+          Boolean[] results = ((Boolean[]) result);
+          int numSuccessfulStores = 0;
+          for (int ctr = 0; ctr < results.length; ctr++) {
+            if (results[ctr].booleanValue()) 
+              numSuccessfulStores++;
+          }
+          System.out.println(myContent + " successfully stored at " + 
+              numSuccessfulStores + " locations.");
+        }
+  
+        public void receiveException(Exception result) {
+          System.out.println("Error storing "+myContent);
+          result.printStackTrace();
+        }
+      });
+</pre>
+Note that we call <code>Past.insert()</code> with our newly created MyPastContent object, and a Continuation.  <code>Past.insert()</code> calls <code>receiveResult()</code> on the continuation with a Boolean[] that represents the success/failure of the individual stores for this object in the ring.  Our continuation prints how many times this node was stored.  Because our replication factor is 3, it should be stored 4 times (primary+3 replicas).  If an error occurs it will call <code>receiveException()</code>. 
+
+<a name="l7Get"></a><h3>Get an object from Past.</h3>
+We choose a random application and call Past.lookup()
+<pre>
+      final Id lookupKey = storedKey[ctr];
+      
+      // pick a random past appl on a random node
+      Past p = (Past)apps.get(env.getRandomSource().nextInt(numNodes));
+
+      System.out.println("Looking up " + lookupKey + " at node "+p.getLocalNodeHandle());
+      p.lookup(lookupKey, new Continuation() {
+        public void receiveResult(Object result) {
+          System.out.println("Successfully looked up " + result + " for key "+lookupKey+".");
+        }
+  
+        public void receiveException(Exception result) {
+          System.out.println("Error looking up "+lookupKey);
+          result.printStackTrace();
+        }
+      });
+</pre>
+
+<a name="l7GetFailed"></a><h3>A failed Get.</h3>
+Now let's see what happen if the Past doesn't have the requested content.  Here's a hint, it calls <code>receiveResult()</code> with a null result.
+<pre>
+    final Id bogusKey = localFactory.buildId("bogus");
+
+...
+
+    System.out.println("Looking up bogus key " + bogusKey + " at node "+p.getLocalNodeHandle());
+    p.lookup(bogusKey, new Continuation() {
+      public void receiveResult(Object result) {
+        System.out.println("Successfully looked up " + result + " for key "+bogusKey+".  Notice that the result is null.");
+      }
+
+      public void receiveException(Exception result) {
+        System.out.println("Error looking up "+bogusKey);
+        result.printStackTrace();
+      }
+    });
+</pre>
+
+When you run the code, your output will resemble:
+
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson7.PastTutorial 9001 10.9.8.7 9001 5</span>
+<span class="output">:1122487192406:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122487192421:No bootstrap node provided, starting a new ring...
+Finished creating new node SocketNodeHandle (&lt;0x22D2E1..&gt;/FOO/10.9.8.7:9001 [6702844014892124116])
+Finished creating new node SocketNodeHandle (&lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790])
+Finished creating new node SocketNodeHandle (&lt;0x16C2C6..&gt;/FOO/10.9.8.7:9003 [419583566816935501])
+Finished creating new node SocketNodeHandle (&lt;0xED50E1..&gt;/FOO/10.9.8.7:9004 [-7110190430495110085])
+Finished creating new node SocketNodeHandle (&lt;0x4AE14A..&gt;/FOO/10.9.8.7:9005 [-7392240638718374041])
+Storing 5 keys
+Inserting MyPastContent [test1382830848] at node [SNH: &lt;0x22D2E1..&gt; -&gt; &lt;0x22D2E1..&gt;/FOO/10.9.8.7:9001 [6702844014892124116]]
+Inserting MyPastContent [test-618483902] at node [SNH: &lt;0xED50E1..&gt; -&gt; &lt;0xED50E1..&gt;/FOO/10.9.8.7:9004 [-7110190430495110085]]
+Inserting MyPastContent [test482928483] at node [SNH: &lt;0x22D2E1..&gt; -&gt; &lt;0x22D2E1..&gt;/FOO/10.9.8.7:9001 [6702844014892124116]]
+Inserting MyPastContent [test-919775810] at node [SNH: &lt;0x4AE14A..&gt; -&gt; &lt;0x4AE14A..&gt;/FOO/10.9.8.7:9005 [-7392240638718374041]]
+Inserting MyPastContent [test1099145466] at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+MyPastContent [test1382830848] successfully stored at 4 locations.
+MyPastContent [test-618483902] successfully stored at 4 locations.
+MyPastContent [test482928483] successfully stored at 4 locations.
+MyPastContent [test-919775810] successfully stored at 4 locations.
+MyPastContent [test1099145466] successfully stored at 4 locations.
+Looking up the 5 keys
+Looking up &lt;0x9515FC..&gt; at node [SNH: &lt;0x16C2C6..&gt; -&gt; &lt;0x16C2C6..&gt;/FOO/10.9.8.7:9003 [419583566816935501]]
+Looking up &lt;0xB987B7..&gt; at node [SNH: &lt;0x16C2C6..&gt; -&gt; &lt;0x16C2C6..&gt;/FOO/10.9.8.7:9003 [419583566816935501]]
+Looking up &lt;0x999A32..&gt; at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+Looking up &lt;0xC9B06E..&gt; at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+Looking up &lt;0xC2EF27..&gt; at node [SNH: &lt;0x3EDF4C..&gt; -&gt; &lt;0x3EDF4C..&gt;/FOO/10.9.8.7:9002 [-4218714042288854790]]
+Successfully looked up MyPastContent [test1099145466] for key &lt;0xC2EF27..&gt;.
+Successfully looked up MyPastContent [test-618483902] for key &lt;0xB987B7..&gt;.
+Successfully looked up MyPastContent [test482928483] for key &lt;0x999A32..&gt;.
+Successfully looked up MyPastContent [test-919775810] for key &lt;0xC9B06E..&gt;.
+Successfully looked up MyPastContent [test1382830848] for key &lt;0x9515FC..&gt;.
+Looking up a bogus key
+Looking up bogus key &lt;0x216ACE..&gt; at node [SNH: &lt;0xED50E1..&gt; -&gt; &lt;0xED50E1..&gt;/FOO/10.9.8.7:9004 [-7110190430495110085]]
+Successfully looked up null for key &lt;0x216ACE..&gt;.  Notice that the result is null.
+</span></pre>
+
+
+
+Also 5 directories were created, each containing a FreePastry-Storage-Root subfolder:
+<pre>
+<span class="input">ls storage*</span>
+<span class="output">storage-1404778543:
+FreePastry-Storage-Root
+
+storage-1501429183:
+FreePastry-Storage-Root
+
+storage-1862004272:
+FreePastry-Storage-Root
+
+storage2042841361:
+FreePastry-Storage-Root
+
+storage848913672:
+FreePastry-Storage-Root
+</span></pre>
+
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>

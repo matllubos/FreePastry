@@ -1,0 +1,760 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<h2>Contents</h2>
+<ul>
+	<h3>Getting Started</h3>
+	<ul>
+	<li><a href="index.html#requirements">What You'll Need</a></li>
+	</ul>
+	<h3>Lessons</h3>
+	<ul>
+	<li><a href="tut_continuations.html#lesson0a">Lesson 0.a</a>: Continuations.</li>
+	<li><a href="tut_environment.html#lesson0b">Lesson 0.b</a>: Environment.</li>
+	<li><a href="tut_beginning.html#lesson1">Lesson 1</a>: Minimal code to create/join a pastry
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson2">Lesson 2</a>: Execute the code to launch your new
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson3">Lesson 3</a>: Write a simple application using the
+	commonAPI. (this will show you how to send and receive messages)</li>
+	<li><a href="tut_multiple_nodes.html#lesson4">Lesson 4</a>: Running multiple nodes in the same 
+	JVM.</li>
+	<li><a href="tut_timertask.html#lesson5">Lesson 5</a>: Scheduling tasks on the FreePastry 
+	timer.</li>
+	<li><a href="tut_scribe.html#lesson6">Lesson 6</a>: Introducing Scribe.</li>
+	<li><a href="tut_past.hml#lesson7">Lesson 7</a>: Past &mdash FreePastry's DHT.</li>
+	</ul>
+	<h3>Coming soon:</h3>
+	<ul>
+	<li>Lesson 8: Splitstream.</li>
+	<li>Lesson 9: Advanced Scribe: Policies.</li>
+	<li>Lesson 10: Advanced Environment.</li>
+	</ul>
+</ul>
+
+
+<hr/>
+
+<a name="requirements"></a><h2>What You'll Need</h2>
+Before you begin, you should meet the following requirements.  
+<ol>
+  <li>An intermediate level of knowledge in the Java programming language.  <a href="http://java.sun.com/docs/books/tutorial/">The Java Tutorial</a> is a good place to start. 
+  <li>A copy of a current JDK, 1.4.2_06 or later.  <a href="http://java.sun.com/j2se/index.jsp">Sun's J2SE</a>. 
+  <li>A basic understanding of Pastry overlay structure.  Read the short overview <a href="http://freepastry.rice.edu/PAST/overview.pdf">[pdf]</a><a href="http://freepastry.rice.edu/PAST/overview.ps">[ps]</a> of <a href="http://freepastry.rice.edu/">FreePastry</a>.
+  <li>Have a working copy of FreePastry-1.4_01 or later.  You can simply download the <a href="http://freepastry.rice.edu/FreePastry/FreePastry-1.4.2.jar">current jar</a>, or download and build the <a href="http://freepastry.rice.edu/FreePastry/">source</a>.
+</ol>
+<hr/>
+
+<a name="lesson0a"></a><h1>Lesson 0.a</h1>
+<h2>Continuations.</h2>
+FreePastry and its applications use Continuations in various places, so it is important that you understand what they do and how to use them.<br/><br/>
+
+A continuation is similar to a callback, or in java, a Listener, but it is typically used only once.  A google search for continuations will show you a variety of uses in computer science, but the primary use for them in FreePastry is to handle network latency, or other types of IO that may block or take a significant amount of time.<br/><br/>
+
+To understand why we use continuations, let's look at an alternative style of calls.  RMI/RPC style calls are generally blocking calls.  Blocking calls work similar to a regular function call.  The lookup command in Past (FreePastry's DHT) <i>could</i> look like:
+<pre>
+  public Result lookup(Id id) {
+    // blocking network call
+  }
+</pre>
+But if the network call takes a while to execute due to latency, then your program will block until it completes.  In the meantime you could be doing other lookups, but because of this style of call, you are forced to wait, or use a lot of threads.  Continuations allow you to "continue" processing
+when the result arrives, and in the meantime issue other requests.<br/><br/>
+
+Let's look at the <code>rice.Continuation</code> interface.
+<pre>
+/**
+ * Asynchronously receives the result to a given method call, using
+ * the command pattern.
+ * 
+ * Implementations of this class contain the remainder of a computation
+ * which included an asynchronous method call.  When the result to the
+ * call becomes available, the receiveResult method on this command
+ * is called.
+ *
+ * @version $Id: index.html 2716 2005-08-10 17:42:38 +0200 (Wed, 10 Aug 2005) jeffh $
+ *
+ * @author Alan Mislove
+ * @author Andreas Haeberlen
+ */
+public interface Continuation {
+
+  /**
+   * Called when a previously requested result is now availble.
+   *
+   * @param result The result of the command.
+   */
+  public void receiveResult(Object result);
+
+  /**
+   * Called when an execption occured as a result of the
+   * previous command.
+   *
+   * @param result The exception which was caused.
+   */
+  public void receiveException(Exception result);
+}
+</pre>
+
+In Past (the DHT that runs on top of FreePastry) the code to do a lookup looks like this:
+
+<pre>
+  public void lookup(Id id, Continuation command) {
+    // non-blocking network call
+  }
+</pre>
+
+Note the differences between this call and the alternative approach mentioned before: 
+<ol>
+  <li>The method takes a Continuation.</li>
+  <li>There is no return value.</li>
+</ol>
+
+When the result arrives, Past will call <code>command.receiveResult()</code> with the response.  Inside the continuation, you can complete the task that required the lookup.  If instead, an error occurs, Past will call <code>command.receiveException()</code>.  Note that because <code>receiveResult()</code> is called with an Object, you must cast the result to what you are expecting from the lookup.<br/><br/>
+
+Here is an example implementation of a continuation <a href="./src/lesson0a/MyContinuation.java">MyContinuation.java</a>:<br/><br/>
+
+First, create the continuation :
+<pre>
+class MyContinuation implements Continuation {
+  /**
+   * Called when the result arrives.
+   */
+  public void receiveResult(Object result) {
+    PastContent pc = (PastContent)result;
+    System.out.println("Received a "+pc);
+  }
+
+  /**
+   * Called if there is an error.
+   */
+  public void receiveException(Exception result) {
+    System.out.println("There was an error: "+result);      
+  }
+}
+</pre>
+
+Note that the continuation has 2 methods it must implement: <code>receiveResult()</code> and <code>receiveException()</code>.  This continuation will print "Received a <i>blah</i>" when the result comes in.  Note that we need to cast the result to what we should be expecting.  In the case of Past, we know that the result will be a PastContent.  If there is an error, we will print "There was an error: <i>Description of the error</i>"<br/><br/>
+
+Here is the code to use our continuation.  Note that this code will not run, because Past and Id have not been initialized.  (You will learn how to do that in <a href="tut_past.html#lesson7">Lesson 7</a>).<br/><br/>  
+
+Download the code here: <a href="./src/lesson0a/TestContinuation.java">TestContinuation.java</a>
+
+<pre>
+public class TestContinuation {
+  public static void main(String[] args) {
+    Past past = null; // generated elsewhere
+    Id id = null; // generated elsewhere
+    
+    // create the continuation
+    Continuation command = new MyContinuation();    
+    
+    // make the call with the continuation
+    past.lookup(id, command);    
+  }
+}
+</pre>
+
+This code calls lookup with the continuation.  When the result arrives, <code>command.receiveResult()</code> will be called.<br/><br/>
+
+<h3>Anonymous inner classes</h3>
+Java hackers love anonymous inner classes, so here is the same code as an anonymous inner class, rather than a seperate class.  This is handy because it flows a bit more like a typical blocking program.  <i>First do a <code>past.lookup()</code> then <code>System.out.println()</code>.</i><br/><br/>
+Download the code here: <a href="./src/lesson0a/TestContinuationAnon.java">TestContinuationAnon.java</a>
+
+<pre>
+public class TestContinuationAnon {
+
+  public static void main(String[] args) {
+    Past past = null; // generated elsewhere
+    Id id = null; // generated elsewhere
+    
+    // same code as TestContinuation and MyContinuation combined
+    past.lookup(id, new Continuation() {
+      // will be called if success in the lookup
+      public void receiveResult(Object result) {
+        PastContent pc = (PastContent)result;
+        System.out.println("Received a "+pc);        
+      }
+
+      // will be called if failure in the lookup
+      public void receiveException(Exception result) {
+        System.out.println("There was an error: "+result);      
+      }
+    });    
+  }
+}
+</pre>
+Click here for more information on <a href="http://java.sun.com/docs/books/tutorial/java/javaOO/innerclasses.html">Java Anonymous Inner Classes</a>.
+<hr/>
+
+<a name="lesson0b"></a><h1>Lesson 0.b</h1>
+<h2>Environment</h2>
+The environment allows us to more easily virtualize pastry inside the same Virtual machine.  This is the main
+new feature of FreePastry 1.4.2.  The environment serves FreePastry in 6 key ways:
+<ul>
+  <li><b>Logging</b> &mdash We have standardized on a logging system throughout FreePastry.  This is a simpler
+  logging framework than the one that ships with java. However it is compatible.  (In other words, you can implement
+  our LogManager and Logger with the Java one.)  This logging replaces the previous "-verbose" etc. logging.</li>
+  <li><b>Parameters</b> &mdash Formerly hard-coded (<code>public static final</code>) parameters are now able to be specified at startup, or even changed during runtime
+  rather than requiring a recompile.  It allows parameters to be changed from code, and to be persistent.
+  In other words, you could have a gui that lets you change the parameters, then store them to disk (By calling Parameters.store()), so next time the 
+  code is run, it retains the parameters.</li>
+  <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
+  thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
+  synchronization than several threads.  Note that the SelectorManager is a Daemon thread that will cause the JVM to not exit when the main method ends.  See below to find out how to destroy the SelectorManager.</li> 
+  <li><b>Processor</b> &mdash It is important that tasks done on the SelectorThread don't take long, as this is the network IO thread, and can cause other nodes to suspect you are faulty.  However, sometimes you need to do a CPU intensive task (like calculate a manifest for a bloom filter) that will cause problems if done on the SelectorThread.  For these tasks, you can use the "<i>Processor</i>.  This is simply a different thread that will be context switched automatically by the system.  Typically, you will access this by using the Node.process() or Endpoint.process() function call.  These calls result in a call to the <i>Processor</i>.  Future implementations could use more Threads for computers with several processors, or hyper-threading.</li> 
+  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
+  you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
+  where some nodes have incorrect system clocks due to misconfigured NTP servers.</li>
+  <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
+</ul>
+
+Pastry applications access the Environment from the PastryNode or the commonapi Node (PastryNode implements Node).  Generally you 
+can use the same Environment for everything inside your JVM.  The two Objects that you will likely construct with an Environment are the 
+PastryNodeFactory and the IdFactory.  
+
+<h3>How should I get an environment?</h3>
+<ul>
+  <li>In your main method simply call <code>new Environment()</code>.</li>
+  <li>In your application, call <code>node.getEnvironment(), or endpoint.getEnvironment()</code>.</li>
+</ul> 
+
+The default constructor for an environment looks in the classpath for a params file called <b>freepastry.params</b>.  If you compiled
+the jar with the included ant task, or used the jar from the web, this should work automagically.  If you are compiling FreePastry
+from an IDE (such as eclipse) or from the command line (javac) then you will need to make sure to put the freepastry.params file
+located in <b>jars/freepastry</b> in your classpath, or use a different contstructor for the Environment.<br/>
+
+<h3>My JVM won't exit, or How should I get rid of an environment?</h3>
+The SelectorManager and Processor both have daemon threads that are used to handle communication and processing for the PastryNode.  For the JVM to be able to exit, you will need to properly destroy the environment, by calling environment.destroy().  This will call store on the parameters, and destroy the selector/processor threads.  Of course, you can also call System.exit(), but that is generally considered bad form.<br/><br/>
+
+This should be sufficient information for you to continue with the tutorial.  You can learn more in Lesson 10 Advanced Environment.
+<hr/>
+
+
+<a name="lesson1"></a><h1>Lesson 1</h1>
+<h2>Minimal code to create/join a pastry ring.</h2>
+
+<h3>Download the tutorial file <a href="./src/lesson1/DistTutorial.java">DistTutorial.java</a>.</h3>
+
+In this lesson we are going to use Socket transport layer to communicate.  The Socket transport layer is a package within the pastry source tree that is used to communicate between nodes using Internet Protocol (IP).  It is located in rice.pastry.socket.  Socket uses TCP for all messages except liveness which it uses UDP to accomplish.  Before we dive into the code lets start with a short vocabulary lesson:<br>
+
+<h2>Terms:</h2>
+<ul>
+  <li><b>NodeId</b> &mdash; The randomly assigned unique identifier of a Node in the FreePastry.  <i>Typically a NodeId is 160bit represented by 20 Hex digits.  We usually only display the first 6 digits as this is enough to uniquely identify nodes for a pretty large ring.</i></li>
+  <li><b>NodeIdFactory</b> &mdash; This generates your local NodeId.  <i>Why do we need a NodeIdFactory?  In a real deployment of Pastry, it is critical that one cannot choose their NodeId.  To accomplish this you may want to use a Certificate Authority to centrally assign NodeIds.  However, for your initial purposes one doesn't need to be able to secure the choice of NodeId.  The factory pattern gives us the flexibility we need to change this behavior in the future.  Thus we begin with RandomNodeIdFactory which generates a Random node id.</i></li>
+  <li><b>PastryNode</b> &mdash; This is a Node in the network.  <i>Your application will send messages through the node and the node will deliver messages to your application.</i></li>
+  <li><b>NodeHandle</b> &mdash; This is a "reference" to a PastryNode.  It is how you refer to a specific node in the network.  <i>A NodeHandle consists of a NodeId and whatever information the transport layer needs to find the node in the underlieing protocol.  In this case an IP address and port.  In this lesson, you will use a NodeHandle to bootstrap your node into the ring.  You can get the NodeHandle to your local node by calling PastryNode.getLocalHandle().  In the distributed environment, you will need to get a NodeHandle to your bootstrap node(s) by asking the transport layer.  In this case you are interested in acquiring a node handle from an IP address and port.  The the Socket transport uses this information to opens a socket to this address:port and requests a copy of the NodeHandle from the remote node.  If it doesn't find a node at this location it returns null.</i></li>
+  <li><b>Bootstrap Node</b> &mdash; The node you use to join the ring.  <i>When a node starts up, it can either join an existing ring, or start a new one.  If you don't have a ring yet, then your choice is narrowed down to starting your own.  But once your first node has started a ring, you probably want all new nodes join that one.  To join a ring, you need to bootstrap off of any one node in the existing ring.  This is the bootstrap node.  In the example below, we use the first node that we construct as the bootstrap node.  In a real deployment, you may want to cache several nodes so that if you are unable to boot off of the first one, you can try others.</i></li>
+  <li><b>PastryNodeFactory</b> &mdash; Constructs and initializes the Pastry Node.  <i>This sets up the PastryNode including the transport layer, the Leafset Maintenance protocol and, the RoutingTable Maintenance protocol.  These protocols are necessary for a FreePastry deployment to properly maintain the overlay structure.  In this example we will use the SocketPastryNodeFactory which as its name implies sets up the pastry node to use the Socket transport layer to communicate with other nodes.</i></li>  
+  <li><b>Daemon thread</b> &mdash; Prevents the JVM from exiting after the main method is complete.  See <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/Thread.html">java.lang.Thread</a> for more information.</i></li>  
+</ul>
+
+<p/>Now that you have the proper vocabulary, here is the constructor for the DistTutorial.  You can see most of the elements described in the vocabulary.
+
+<pre>
+  /**
+   * This constructor sets up a PastryNode.  It will bootstrap to an 
+   * existing ring if it can find one at the specified location, otherwise
+   * it will start a new ring.
+   * 
+   * @param bindport the local port to bind to 
+   * @param bootaddress the IP:port of the node to boot from
+   * @param env the environment for these nodes
+   */
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
+    
+    // Generate the NodeIds Randomly
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
+    
+    // construct the PastryNodeFactory, this is how we use rice.pastry.socket
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+
+    // This will return null if we there is no node at that location
+    NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
+      
+    // construct a node, passing the null boothandle on the first loop will 
+    // cause the node to start its own ring
+    PastryNode node = factory.newNode(bootHandle);
+      
+    // the node may require sending several messages to fully boot into the ring
+    while(!node.isReady()) {
+      // delay so we don't busy-wait
+      Thread.sleep(100);
+    }
+    
+    System.out.println("Finished creating new node "+node);    
+  }
+</pre>
+
+<h3>Let's examine each line:</h3>
+
+<ol>
+  <li>The arguments that we start with are: 
+  <ol type="a">
+    <li><code>int bindport</code> &mdash; the local port to bind to.</li>
+    <li><code>InetSocketAddress bootaddress</code> &mdash; The address of our bootstrap node.</li>
+    <li><code>Environment env</code> &mdash; The environment.  See <a href="tut_environment.html#lesson0b">lesson 0.b</a>.</li>
+  </ol><br/>
+<pre>
+public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {</pre></li>
+
+  <li>We begin by constructing our NodeIdFactory, which we are going to need to give to our PastryNodeFactory.<br/><br/>
+<pre>
+NodeIdFactory nidFactory = new RandomNodeIdFactory(env);</pre></li>
+
+  <li>Give the nidFactory to our SocketPastryNodeFactory.  Additionally, we need to tell the SocketPastryNodeFactory what port to bind our pastry node to.<br/><br/>
+<pre>
+PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);</pre></li>
+
+  <li>Turn the bootaddress into a NodeHandle.  Note that this call blocks, and can take several seconds to complete.  It is opening a socket to the specified address.  If there is an error, or no PastryNode found at the bootaddress, then <code>getNodeHandle()</code> returns null.<br/><br/>
+<pre>
+NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);</pre></li>
+
+  <li>Finally, create the PastryNode.  If bootHandle is null then the factory will start a new ring.<br/><br/>
+<pre>
+PastryNode node = factory.newNode(bootHandle);</pre></li>
+
+  <li>Even though we don't have an application to run yet, it is important that you are aware of the call to <code>PastryNode.isReady()</code>.  This method returns false until the node is fully booted into the ring (which entails establishing his neighbor set i.e. the routing table and the leafset).  This simple loop is a typical way to wait for the node to fully boot into the ring.<br/>
+<pre>
+while(!node.isReady()) {
+  Thread.sleep(100);
+}
+</pre></li>
+</ol>
+
+<p/>Before we can run our program lets take a quick look at the <code>main()</code> method.  We need to get 1) the local port to bind to, 2) the IP address of the bootstrap node, and 3) the port of the bootstrap node.
+
+<pre>
+  /**
+   * Usage: 
+   * java [-cp FreePastry-<version>.jar] rice.tutorial.lesson1.DistTutorial localbindport bootIP bootPort
+   * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
+   */
+  public static void main(String[] args) throws Exception {
+    // Loads pastry settings
+    Environment env = new Environment();
+
+    try {
+      // the port to use locally
+      int bindport = Integer.parseInt(args[0]);
+      
+      // build the bootaddress from the command line args
+      InetAddress bootaddr = InetAddress.getByName(args[1]);
+      int bootport = Integer.parseInt(args[2]);
+      InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+  
+      // launch our node!
+      DistTutorial dt = new DistTutorial(bindport, bootaddress);
+    } catch (Exception e) {
+      // remind user how to use
+      System.out.println("Usage:"); 
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson1.DistTutorial localbindport bootIP bootPort");
+      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001");
+      throw e; 
+    } 
+  }
+</pre>    
+
+<h3>Let's examine each line:</h3>
+
+<ol>
+  <li>This line constructs the Environment.  It has the side effect of starting a daemon thread.
+<pre>
+    Environment env = new Environment();
+</pre></li>
+  <li>This line parses the first command line argument into an int.
+<pre>
+    int bindport = Integer.parseInt(args[0]);
+</pre></li>
+
+  <li>These lines parse the IP and port and turn them into an InetSocketAddress.
+<pre>
+    InetAddress bootaddr = InetAddress.getByName(args[1]);
+    int bootport = Integer.parseInt(args[2]);
+    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+</pre></li>
+  <li>Finally we execute our constructor.
+<pre>
+    DistTutorial dt = new DistTutorial(bindport, bootaddress);
+</pre></li>
+  <li>We wrap the method with an indication of how to use the program in case the user inputs the wrong args.
+<pre>
+    try {
+
+      ...
+      
+    } catch (Exception e) {
+      // remind user how to use
+      System.out.println("Usage:"); 
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson1.DistTutorial localbindport bootIP bootPort");
+      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001");
+      throw e; 
+    } 
+</pre></li>
+</ol>
+
+<h3>Congratulations!  You have built code to launch/join a FreePastry ring!<br>
+Lesson 2 will aid you in running your code.</h3>
+
+<hr/>
+
+<a name="lesson2"></a><h1>Lesson 2</h1>
+<h2>Execute the code to launch your new ring.</h2>
+
+<p/>This is a short lesson that shows you how to run <a href="./src/lesson1/DistTutorial.java">DistTutorial.java</a> which you created in Lesson 1.
+
+<h3>Download the tutorial file <a href="./src/lesson1/DistTutorial.java">DistTutorial.java</a>.</h3>
+
+<p/>After you compile the code, you can either run multiple nodes on 1 computer (but in separate processes) or if you have multiple computers, you can launch them on different machines as long as the computers can communicate with each other via IP.  In other words, it won't work if the computers are behind different firewalls.
+
+<ul>
+  <li><b>Step 1:</b> Compile
+    <ol type="i">
+      <li>Setup your directory as follows:
+<pre>
+FreePastry-1.4.2.jar
+rice/tutorial/lesson1/DistTutorial.java
+</pre>
+      </li>
+      <li>Compile the Java sources:
+	  <pre><span class="input">javac -classpath FreePastry-1.4.2.jar rice/tutorial/lesson1/*.java</span></pre></li>
+    </ol>
+  <li><b>Step 2:</b> Launch the bootstrap node.
+Even though this is the first node, and therefore we know the bootstrap will
+not work, you need to place in a bogus ip/port.  A smarter <code>main()</code> method in DistTutorial.java could fix this problem.
+<pre><span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9001 <i>yourhost.domain</i> 9001</span></pre>
+<p>
+(In the above command, <i>yourhost.domain</i> can be the DNS name of your
+host or its IP address.)  Your output will look something like this:</p>
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122932166578:No bootstrap node provided, starting a new ring...
+Finished creating new node SocketNodeHandle (&lt;0xB7E151..&gt;/FOO/10.9.8.7:9001 [-4233509936758121968])</span></pre>
+Note that the first 2 lines starting with the current system time are generated by the new logging system.  
+</li>
+  <li><b>Step 3:</b> Launch another node.
+  <p>
+  You can do this on another computer but make sure you fill in the name of
+  the computer from step 2 in <i>bootstraphost.domain</i>.</p>
+<pre><span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9002 <i>bootstraphost.domain</i> 9001</span></pre>
+<p/> Your output will look something like this:    
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson1.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="output">Finished creating new node SocketNodeHandle (<0xE00352..>/FOO/10.9.8.7:9002 [4492232311666603357])</span></pre></li>
+</ul>
+
+
+<h3>Congratulations!  You have just launched your first FreePastry ring!<br>
+Lesson 3 will show you how to send and receive messages by creating a commonAPI application.</h3>
+
+<hr/>
+
+<a name="lesson3"></a><h1>Lesson 3</h1>
+<h2>Write a simple application using the commonAPI.</h2>
+<h3>Download the tutorial files: 
+<a href="./src/lesson3/DistTutorial.java">DistTutorial.java</a> (changed from Lesson 1!!!),
+<a href="./src/lesson3/MyApp.java">MyApp.java</a>,
+<a href="./src/lesson3/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/lesson3/.</h3>
+
+<p/>This tutorial will show you how to create and run your first FreePastry application.  You will be able to send/receive messages with this application.
+
+<h2>Terms:</h2>
+<ul>
+  <li><b>CommonAPI</b>&mdash;Universal interface to structured overlays.  <i>The rice.p2p.commonapi package provides an interface similar to the one provided in 'Towards a Common API for Structured Peer-to-Peer Overlays', by F. Dabek, B. Zhao, P. Druschel, J. Kubiatowicz, and I. Stoica, published in the second International Workshop on Peer-to-Peer Systems, Berkeley, CA, February 2003.  The API is designed to allow applications to be written in a protocol-independent manner, allowing the easy migration of applications from Pastry to Chord to CAN to Tapestry, etc....  Applications need only interact with the interfaces in the rice.p2p.commonapi package, and need not worry about anything in the rice.pastry packages.</i></li>
+  
+  <li><b>Application</b>&mdash;A program that runs on a Node.   <i>This is an interface which all applications on top of a Node must export.  This interface allows the underlying node to deliver message, inform the application of passing messages, and changes in the neighbor nodes.
+      <p/>You can have multiple Applications on a single node, and you can even have multiple </i>instances<i> of an Application on the same node.  Why would you want multiple instances on the same node?  Many applications in FreePastry are intermediate applications that provide a service for higher level applications.  It is convenient to have a separate instances of say... Scribe for each higher application that would like to multicast.  This way you know that any messages that scribe delivers are in regards to your higher level traffic, and you don't need to distinguish that traffic between multiple high level applications.</i></li>
+  <li><b>Endpoint.java</b>&mdash;This interface represents an endpoint which applications can use to send messages from.  <i>An endpoint is obtained by the registerApplication() method in Node.  The endpoint represents the applications' view of the world.</i></li>
+  
+  <li><b>Id.java</b>&mdash;This interface is the abstraction of an Id in a structured overlay.  <i>The only assumption that is made is that the Id space is circular.  An Id could represent a live node in the network, an object in the network, or simply a random Id.  NodeId implements this interface.</i></li>
+
+  <li><b>Message.java</b>&mdash;This interface represents the abstraction of a message in the common API.  <i>Thus, messages sent to other nodes should extend or implement this class.  FreePastry sends messages around the network by first converting them to a byte stream using java serialization.</i></li>
+</ul>
+
+<h3>MyMsg</h3>
+<p/>Let's start by taking a look at your message class.  In FreePastry a Message is an Object that is Serializable.  The transport layer serializes this object into bytes then sends it through the network.  When the message is received, it is deserialized back into an Object and delivered to your application.
+<pre>
+public class MyMsg implements Message {
+</pre>
+<p>This class implements <code>rice.p2p.commonapi.Message</code>.  Message
+extends Serializable and has a single method: <code>getPriority()</code>.
+Let's take a look at that method now.  </p>
+
+<p>For now always return Message.LOW_PRIORITY for your messages.  It is important to not set application message priority too high, or you may interfere with Pastry's overlay maintenance traffic that keeps the ring functioning properly.
+</p>
+<pre>
+  public int getPriority() {
+    return Message.LOW_PRIORITY;
+  }
+</pre>
+
+The "payload" of your message is created by making member variables in your message.  Here is the payload for <code>MyMsg</code>.  An Id is the commonAPI version of a NodeId, it is also used as the "key" when routing.
+
+<pre>
+  /**
+   * Where the Message came from.
+   */
+  Id from;
+  /**
+   * Where the Message is going.
+   */
+  Id to;
+</pre>
+
+We will create a <code>toString()</code> so that we can print out the message.
+
+<pre>
+  public String toString() {
+    return "MyMsg from "+from+" to "+to;
+  }
+</pre>
+
+Finally we have the constructor that loads the payload.
+
+<pre>
+  public MyMsg(Id from, Id to) {
+    this.from = from;
+    this.to = to;
+  }
+</pre>
+
+<h3>MyApp</h3>
+
+<p/>Now let's take a look at MyApp.  MyApp is designed to log output whenever we send or receive a message.
+
+<p/>The Endpoint is what we will call on to send messages.
+<pre>
+  protected Endpoint endpoint;
+</pre>
+
+<p/>The constructor generates an Endpoint from the node.  The instance is designed to allow you to run the same app multiple times on the same node.  The apps will not receive each other's messages.  You will only be able to send messages to apps that generated endpoints with the same instance string.  For most of your apps, you will only run one instance, so just make sure the instance is the same on all nodes.
+<pre>
+  public MyApp(Node node) {
+    // We are only going to use one instance of this application on each PastryNode
+    this.endpoint = node.registerApplication(this, "myinstance");
+  }
+</pre>
+
+
+<h4>Sending a message:</h4>
+
+<p/>In a Distributed Hash Table, or DHT, you typically want to route to the nearest node to the hash of an object that you are interested in.  The commonAPI provides you with <code>Endpoint.route()</code> to accomplish this.  This function sends a <code>MyMsg</code> to an id.  
+<pre>
+  /**
+   * Called to route a message to the id
+   */
+  public void routeMyMsg(Id id) {
+    System.out.println(this+" sending to "+id);    
+    Message msg = new MyMsg(endpoint.getId(), id);
+    endpoint.route(id, msg, null);
+  }
+</pre>
+
+Note that <code>Endpoint.route()</code> takes 3 arguments.  They are:
+<ol>
+  <li><b>Id</b>&mdash;the destination of the message <em>(optional)</em></li>
+  <li><b>Message</b>&mdash;the message to send</li>
+  <li><b>NodeHandle</b>&mdash;a "hint": the node to route to first <em>(optional)</em></li>
+</ol>
+
+Sometimes you need to send messages to a particular Node in the network, not
+just to the nearest key.  For example, if you need to send messages that are
+large, they are going to take up a lot of bandwidth; it is more efficient to
+<i>not</i> route the messages through the overlay, but rather send directly to
+the node.  You can use the <code>Endpoint.route()</code> method to accomplish
+this by passing a <code>null</code> argument as the Id and the target node's NodeHandle as the "hint" argument.
+<pre>
+  /**
+   * Called to directly send a message to the nh
+   */
+  public void routeMyMsgDirect(NodeHandle nh) {
+    System.out.println(this+" sending direct to "+nh);
+    Message msg = new MyMsg(endpoint.getId(), nh.getId());
+    endpoint.route(null, msg, nh);
+  }</pre>
+
+<h4>Receiving a message:</h4>
+<p/>Simply implement the <code>deliver()</code> method as is specified by the Application interface.
+<pre>
+  /**
+   * Called when we receive a message.
+   */
+  public void deliver(Id id, Message message) {
+    System.out.println(this+" received "+message);
+  }
+</pre>
+
+<p/>For now you don't need to worry about the additional methods in the Application interface.
+
+  
+<h3>Congratulations, you have an application.  Let's integrate it into DistTutorial.java</h3>
+
+Here is the new code we will add to the bottom of the DistTutorial constructor:
+<pre>
+    // construct a new MyApp
+    MyApp app = new MyApp(node);
+    
+    // wait 10 seconds
+    Thread.sleep(10000);
+    
+    // as long as we're not the first node
+    if (bootHandle != null) {
+      
+      // route 10 messages
+      for (int i = 0; i &lt; 10; i++) {
+        // pick a key at random
+        Id randId = nidFactory.generateNodeId();
+        
+        // send to that key
+        app.routeMyMsg(randId);
+        
+        // wait a sec
+        Thread.sleep(1000);
+      }
+
+      // wait 10 seconds
+      Thread.sleep(10000);
+      
+      // send directly to my leafset
+      LeafSet leafSet = node.getLeafSet();
+      
+      // this is a typical loop to cover your leafset.  Note that if the leafset
+      // overlaps, then duplicate nodes will be sent to twice
+      for (int i=-leafSet.ccwSize(); i&lt;=leafSet.cwSize(); i++) {
+        if (i != 0) { // don't send to self
+          // select the item
+          NodeHandle nh = leafSet.get(i);
+          
+          // send the message directly to the node
+          app.routeMyMsgDirect(nh);   
+          
+          // wait a sec
+          Thread.sleep(1000);
+        }
+      }
+    }
+</pre>
+
+ <p>First we create the MyApp.</p>
+  <pre>
+    // construct a new MyApp
+    MyApp app = new MyApp(node);  
+  </pre>
+
+ <p>After waiting 10 seconds, let's send some messages, but only if I am not
+ the first node.  After all, if I'm the only node in the ring, it is hardly
+ interesting to send messages to myself.</p>
+  <pre>
+    if (bootHandle != null) {</pre>
+Loop 10 times.  
+  <pre>
+      for (int i = 0; i &lt; 10; i++) {</pre>
+  
+Reuse the RandomNodeIdFactory to generate random keys to route to.  
+  <pre>
+        Id randId = nidFactory.generateNodeId();</pre>
+  
+Route.
+  <pre>
+        app.routeMyMsg(randId);</pre>
+  
+Wait a second and repeat.
+  <pre>
+        Thread.sleep(1000);
+      }</pre>  
+ <p>After waiting another 10 seconds, let's send some messages directly to
+ nodes.  This section is also going to show you how to access the leafset from
+ the PastryNode.  Note that this is a FreePastry specific call, not a
+ commonAPI call.</p>
+ <p>Get the leafset from the PastryNode:</p>
+  <pre>
+      LeafSet leafSet = node.getLeafSet();</pre>
+Iterate over all of the nodes in the leafset.  
+  <pre>
+      for (int i=-leafSet.ccwSize(); i&lt;=leafSet.cwSize(); i++) {</pre>
+  
+  
+Don't send to myself.  The local node is node zero in the leafset.
+  <pre>
+        if (i != 0) { // don't send to self</pre>
+  
+Extract the nodehandle at that index.
+  <pre>
+          NodeHandle nh = leafSet.get(i);</pre>
+  
+Wait a second and repeat.
+  <pre>
+        Thread.sleep(1000);
+      }</pre>  
+  
+Send the message.
+  <pre>
+          app.routeMyMsgDirect(nh);   
+      }</pre>  
+
+  
+Now if you execute this code twice you should get something like:
+
+<p><em>(for Node1)</em></p>
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson3.DistTutorial 9001 10.9.8.7 9001</span>
+<span class="output">:1122933198281:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122933198296:No bootstrap node provided, starting a new ring...
+Finished creating new node SocketNodeHandle (&lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996])
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xA67C20..&gt;
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xBF799E..&gt;
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC4BEE7..&gt;
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x86ACA9..&gt;
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x9906E6..&gt;
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x8F5015..&gt;
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545..&gt;
+MyApp &lt;0xC20545..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xC20545..&gt;</span></pre>
+
+<p><em>(for Node2)</em></p>
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson3.DistTutorial 9002 10.9.8.7 9001</span>
+<span class="output">Finished creating new node SocketNodeHandle (&lt;0xDD90C6..&gt;/FOO/10.9.8.7:9002 [5138450490561334965])
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0x2E5C63..&gt;
+MyApp &lt;0xDD90C6..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x2E5C63..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0x03045C..&gt;
+MyApp &lt;0xDD90C6..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x03045C..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0xA67C20..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0xF9C506..&gt;
+MyApp &lt;0xDD90C6..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0xF9C506..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0xBF799E..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0xC4BEE7..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0x86ACA9..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0x41F900..&gt;
+MyApp &lt;0xDD90C6..&gt; received MyMsg from &lt;0xDD90C6..&gt; to &lt;0x41F900..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0x9906E6..&gt;
+MyApp &lt;0xDD90C6..&gt; sending to &lt;0x8F5015..&gt;
+MyApp &lt;0xDD90C6..&gt; sending direct to [SNH: &lt;0xDD90C6..&gt; -&gt; &lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996]]
+MyApp &lt;0xDD90C6..&gt; sending direct to [SNH: &lt;0xDD90C6..&gt; -&gt; &lt;0xC20545..&gt;/FOO/10.9.8.7:9001 [-4445364026872145996]]</span></pre>
+
+<h3>Congratulations!  You have just sent and received your first messages in
+FreePastry!</h3>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>

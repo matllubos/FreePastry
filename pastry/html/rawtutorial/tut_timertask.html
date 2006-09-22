@@ -1,0 +1,162 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<h2>Contents</h2>
+<ul>
+	<h3>Getting Started</h3>
+	<ul>
+	<li><a href="index.html#requirements">What You'll Need</a></li>
+	</ul>
+	<h3>Lessons</h3>
+	<ul>
+	<li><a href="tut_continuations.html#lesson0a">Lesson 0.a</a>: Continuations.</li>
+	<li><a href="tut_environment.html#lesson0b">Lesson 0.b</a>: Environment.</li>
+	<li><a href="tut_beginning.html#lesson1">Lesson 1</a>: Minimal code to create/join a pastry
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson2">Lesson 2</a>: Execute the code to launch your new
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson3">Lesson 3</a>: Write a simple application using the
+	commonAPI. (this will show you how to send and receive messages)</li>
+	<li><a href="tut_multiple_nodes.html#lesson4">Lesson 4</a>: Running multiple nodes in the same 
+	JVM.</li>
+	<li><a href="tut_timertask.html#lesson5">Lesson 5</a>: Scheduling tasks on the FreePastry 
+	timer.</li>
+	<li><a href="tut_scribe.html#lesson6">Lesson 6</a>: Introducing Scribe.</li>
+	<li><a href="tut_past.hml#lesson7">Lesson 7</a>: Past &mdash FreePastry's DHT.</li>
+	</ul>
+	<h3>Coming soon:</h3>
+	<ul>
+	<li>Lesson 8: Splitstream.</li>
+	<li>Lesson 9: Advanced Scribe: Policies.</li>
+	<li>Lesson 10: Advanced Environment.</li>
+	</ul>
+</ul>
+
+
+<hr/>
+
+<a name="lesson5"></a><h1>Lesson 5</h1>
+<h2>Scheduling tasks on the FreePastry timer.</h2>
+<h3>Download the tutorial files: 
+<a href="./src/lesson5/DistTutorial.java">DistTutorial.java</a>,
+<a href="./src/lesson5/MyApp.java">MyApp.java</a> into a directory called rice/tutorial/lesson5/.</h3>
+
+<p/>This tutorial will show you how to schedule a task on the FreePastry thread.  To be compatible
+with the commonAPI, the approach is to schedule a message to be sent to yourself at a regular interval.<br/>  
+
+<p/>Let's start with the changes to MyApp.  
+
+<p/>First a simple message.
+<pre>
+  class MessageToSelf implements Message {
+    public int getPriority() {
+      return 0;
+    }    
+  }
+</pre>
+
+<p/>Note that due to laziness, I have constructed this Message as an inner class
+of MyApp.  This is fine for what we are going to use it for, but beware that 
+it you will get a NotSerializableException if you attempt to send this 
+message over the wire.  While the Message may be serializable it has an implicit
+reference to MyApp, the containing class.  When the message is serialized,
+FreePastry will also attempt to serialize MyApp which will fail and throw the 
+exception.
+
+<p/>Here is the change to the constructor of MyApp, where we schedule the 
+MessageToSelf.  The first parameter is the <code>Message</code> that will be sent to
+MyApp.  The second is the delay (in millis) until it is first sent.  The third parameter 
+is the period at which the message should be repeated.  
+
+<pre>
+    // Send MessageToSelf every 5 seconds, starting in 3 seconds
+    messageToSelfTask = endpoint.scheduleMessage(new MessageToSelf(), 3000, 5000);
+</pre>  
+
+<p/>As you can see, we have asked FreePastry to deliver the MessageToSelf in 3 seconds, and
+then continue to deliver it again every 5 seconds.  Note that there is also a version
+of scheduleMessage() that doesn't take the 3rd parameter, and therefore doesn't repeat.
+
+<p/>We stored the task as a member variable so that we can 
+cancel it later.
+<pre>
+  CancellableTask messageToSelfTask;
+</pre>  
+
+
+<p/>Whenever we receive the MessageToSelf we are just going to print out the current time.
+However, in your application you could call a method to do routine maintenance, send 
+messages to other nodes etc.
+<pre>
+  public void deliver(Id id, Message message) {
+    System.out.println(this+" received "+message);
+    if (message instanceof MessageToSelf) {
+      // This will get called every 5 seconds, on Pastry's thread.
+      // Thus now we can assume we are on Pastry's thread.
+      // TODO: whatever... send messages to other nodes? print out status?
+      System.out.println("I got the MessageToSelf at time:"+System.currentTimeMillis());
+    }
+  }
+</pre>
+
+<p/>Finally, we make a public method to cancel the task.
+<pre>
+  public void cancelTask() {
+    messageToSelfTask.cancel(); 
+  }
+</pre>
+
+<p/>The DistTutorial.java is based on lesson3, but we removed the code to print the leafset.  For this 
+example it is unnecessary to launch multiple pastry nodes, so we will only launch one.  We added a bit of 
+code after constructing the MyApp to cancel the task after 15 seconds.
+
+<pre>
+    // construct a new MyApp
+    MyApp app = new MyApp(node);
+    
+    // wait 15 seconds
+    Thread.sleep(15000);
+    
+    // cancel the task
+    app.cancelTask();
+</pre>
+
+<p/>Ok, time to run it!  Your output should resemble the following:
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson5.DistTutorial 9001 localhost 9001</span>
+<span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122932166578:No bootstrap node provided, starting a new ring...
+Finished creating new node SocketNodeHandle (&lt;0x3C1EEA..&gt;/FOO/10.9.8.7:9001 [9038308767327354496])
+MyApp &lt;0x3C1EEA..&gt; received rice.tutorial.lesson5.MyApp$MessageToSelf@d70d7a
+I got the MessageToSelf at time:1115228553359
+MyApp &lt;0x3C1EEA..&gt; received rice.tutorial.lesson5.MyApp$MessageToSelf@d70d7a
+I got the MessageToSelf at time:1115228558359
+MyApp &lt;0x3C1EEA..&gt; received rice.tutorial.lesson5.MyApp$MessageToSelf@d70d7a
+I got the MessageToSelf at time:1115228563359
+</span></pre>
+<h3>Congratulations!  Now you can schedule and cancel tasks without launching your own thread.</h3>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>

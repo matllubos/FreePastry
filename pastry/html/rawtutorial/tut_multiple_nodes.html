@@ -1,0 +1,181 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<h2>Contents</h2>
+<ul>
+	<h3>Getting Started</h3>
+	<ul>
+	<li><a href="index.html#requirements">What You'll Need</a></li>
+	</ul>
+	<h3>Lessons</h3>
+	<ul>
+	<li><a href="tut_continuations.html#lesson0a">Lesson 0.a</a>: Continuations.</li>
+	<li><a href="tut_environment.html#lesson0b">Lesson 0.b</a>: Environment.</li>
+	<li><a href="tut_beginning.html#lesson1">Lesson 1</a>: Minimal code to create/join a pastry
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson2">Lesson 2</a>: Execute the code to launch your new
+	ring.</li>
+	<li><a href="tut_beginning.html#lesson3">Lesson 3</a>: Write a simple application using the
+	commonAPI. (this will show you how to send and receive messages)</li>
+	<li><a href="tut_multiple_nodes.html#lesson4">Lesson 4</a>: Running multiple nodes in the same 
+	JVM.</li>
+	<li><a href="tut_timertask.html#lesson5">Lesson 5</a>: Scheduling tasks on the FreePastry 
+	timer.</li>
+	<li><a href="tut_scribe.html#lesson6">Lesson 6</a>: Introducing Scribe.</li>
+	<li><a href="tut_past.hml#lesson7">Lesson 7</a>: Past &mdash FreePastry's DHT.</li>
+	</ul>
+	<h3>Coming soon:</h3>
+	<ul>
+	<li>Lesson 8: Splitstream.</li>
+	<li>Lesson 9: Advanced Scribe: Policies.</li>
+	<li>Lesson 10: Advanced Environment.</li>
+	</ul>
+</ul>
+
+
+<hr/>
+
+<a name="lesson4"></a><h1>Lesson 4</h1>
+<h2>Running multiple nodes in the same JVM.</h2>
+<h3>Download the tutorial files: 
+<a href="./src/lesson4/DistTutorial.java">DistTutorial.java</a> (changed from Lesson 3!!!),
+<a href="./src/lesson4/MyApp.java">MyApp.java</a>,
+<a href="./src/lesson4/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/lesson4/.</h3>
+
+<p/>This tutorial will show you how to create and run multiple FreePastry nodes within the same JVM.  We will continue to use the Socket transport layer.  This tutorial is very simple, all we will be doing is modifying lesson 3 to have multiple nodes.<br>  
+
+Let's start with the changes to MyApp.  We are going to make it keep a reference to the Node with a member variable named <code>node</code>.  It will become apparent later in this tutorial. 
+<pre>
+  protected Node node;
+</pre>  
+
+In the constructor:
+<pre>
+    this.node = node;
+</pre>  
+
+And here is the getter:
+<pre>
+  public Node getNode() {
+    return node;
+  }
+</pre>  
+
+Now we will look at the changes to DistTutorial.  We have a member variable <code>apps</code> that will keep track of the list of apps.
+<pre>
+  Vector apps = new Vector();
+</pre>  
+
+We modify the constructor to take in how many nodes we wish to create:
+<pre>
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
+</pre>
+
+After constructing the <code>PastryNodeFactory</code> we create a loop to construct the nodes, and add them to our <code>apps</code> Vector.
+<pre>
+    for (int curNode = 0; curNode < numNodes; curNode++) {
+	    
+	    ...
+	    
+	    apps.add(app); 
+    }
+</pre>
+
+When routing messages, we have created a subloop to do so for each app in the system:
+<pre>
+      // for each app
+      Iterator appIterator = apps.iterator();
+      while(appIterator.hasNext()) {
+        MyApp app = (MyApp)appIterator.next();
+        
+        ...
+        
+      }
+</pre>
+
+Note that we eliminated this code, because it is no longer important to not route if we are the bootstrap.
+<pre>
+    // as long as we're not the first node
+    if (bootHandle != null) {
+</pre>
+
+
+In the send direct loop we use our getter <code>MyApp.getNode()</code>.  This prevents us from having to remember a parallel data structure for the Nodes.  
+<pre>
+    // for each app
+    Iterator appIterator = apps.iterator();
+    while(appIterator.hasNext()) {
+      MyApp app = (MyApp)appIterator.next();
+      PastryNode node = (PastryNode)app.getNode();
+</pre>
+
+Other than that, we changed the delay in several locations so the program doesn't take as long to execute.  Compile and run this program as before, but make sure to specify some the number of nodes to run as the 4th argument.
+<pre>
+<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson4.DistTutorial 9001 10.9.8.7 9001 10</span>
+<span class="output">:1122933905343:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
+:1122933905359:No bootstrap node provided, starting a new ring...
+Finished creating new node SocketNodeHandle (&lt;0x93426F..&gt;/FOO/10.9.8.7:9001 [6666451457797044406])
+Finished creating new node SocketNodeHandle (&lt;0xAE1B63..&gt;/FOO/10.9.8.7:9002 [8904287830673843378])
+Finished creating new node SocketNodeHandle (&lt;0x3E99E3..&gt;/FOO/10.9.8.7:9003 [-1171813548315184530])
+Finished creating new node SocketNodeHandle (&lt;0xC8715F..&gt;/FOO/10.9.8.7:9004 [6496343980737954414])
+Finished creating new node SocketNodeHandle (&lt;0x688826..&gt;/FOO/10.9.8.7:9005 [-6779179910423314388])
+Finished creating new node SocketNodeHandle (&lt;0x640179..&gt;/FOO/10.9.8.7:9006 [3471226224877450778])
+Finished creating new node SocketNodeHandle (&lt;0x7A6F99..&gt;/FOO/10.9.8.7:9007 [7101267768505206817])
+Finished creating new node SocketNodeHandle (&lt;0xD5DAAE..&gt;/FOO/10.9.8.7:9008 [7899110252170216207])
+Finished creating new node SocketNodeHandle (&lt;0x19C832..&gt;/FOO/10.9.8.7:9009 [-4206970387543598705])
+Finished creating new node SocketNodeHandle (&lt;0x490C38..&gt;/FOO/10.9.8.7:9010 [-6742572645641651296])
+MyApp &lt;0x93426F..&gt; sending to &lt;0x0E510A..&gt;
+MyApp &lt;0x19C832..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0x0E510A..&gt;
+MyApp &lt;0xAE1B63..&gt; sending to &lt;0xE704A5..&gt;
+MyApp &lt;0xD5DAAE..&gt; received MyMsg from &lt;0xAE1B63..&gt; to &lt;0xE704A5..&gt;
+MyApp &lt;0x3E99E3..&gt; sending to &lt;0x533803..&gt;
+MyApp &lt;0x490C38..&gt; received MyMsg from &lt;0x3E99E3..&gt; to &lt;0x533803..&gt;
+MyApp &lt;0xC8715F..&gt; sending to &lt;0x779E75..&gt;
+MyApp &lt;0x7A6F99..&gt; received MyMsg from &lt;0xC8715F..&gt; to &lt;0x779E75..&gt;
+MyApp &lt;0x688826..&gt; sending to &lt;0x3FFFB9..&gt;
+MyApp &lt;0x3E99E3..&gt; received MyMsg from &lt;0x688826..&gt; to &lt;0x3FFFB9..&gt;
+
+...
+
+MyApp &lt;0x93426F..&gt; sending direct to [SNH: &lt;0x93426F..&gt; -&gt; &lt;0xAE1B63..&gt;/FOO/10.9.8.7:9002 [8904287830673843378]]
+MyApp &lt;0xAE1B63..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0xAE1B63..&gt;
+MyApp &lt;0x93426F..&gt; sending direct to [SNH: &lt;0x93426F..&gt; -&gt; &lt;0xC8715F..&gt;/FOO/10.9.8.7:9004 [6496343980737954414]]
+MyApp &lt;0xC8715F..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0xC8715F..&gt;
+MyApp &lt;0x93426F..&gt; sending direct to [SNH: &lt;0x93426F..&gt; -&gt; &lt;0xD5DAAE..&gt;/FOO/10.9.8.7:9008 [7899110252170216207]]
+MyApp &lt;0xD5DAAE..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0xD5DAAE..&gt;
+MyApp &lt;0x93426F..&gt; sending direct to [SNH: &lt;0x93426F..&gt; -&gt; &lt;0x19C832..&gt;/FOO/10.9.8.7:9009 [-4206970387543598705]]
+MyApp &lt;0x19C832..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0x19C832..&gt;
+MyApp &lt;0x93426F..&gt; sending direct to [SNH: &lt;0x93426F..&gt; -&gt; &lt;0x3E99E3..&gt;/FOO/10.9.8.7:9003 [-1171813548315184530]]
+MyApp &lt;0x3E99E3..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0x3E99E3..&gt;
+MyApp &lt;0x93426F..&gt; sending direct to [SNH: &lt;0x93426F..&gt; -&gt; &lt;0x490C38..&gt;/FOO/10.9.8.7:9010 [-6742572645641651296]]
+MyApp &lt;0x490C38..&gt; received MyMsg from &lt;0x93426F..&gt; to &lt;0x490C38..&gt;
+
+...
+
+</span></pre>
+<h3>Congratulations!  You have just created an entire ring inside a single JVM.  This should make it much easier to test your application.</h3>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>
