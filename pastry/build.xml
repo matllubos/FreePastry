@@ -309,7 +309,7 @@
     </jar>
   </target>
 
-  <target name="freepastry-release" depends="freepastry-jar,javadoc">
+  <target name="freepastry-release" depends="freepastry-jar,javadoc,freepastry-tutorial">
     <move file="pastry.jar" tofile="FreePastry-${freepastry-version}.jar"/>
  <!--
     <tar destfile="FreePastry-${freepastry-version}-all.tgz" compression="gzip">
@@ -437,6 +437,16 @@
         <include name="FreePastry-${freepastry-version}-docs.zip"/>
       </fileset>
     </checksum>
+  </target>
+
+  <!-- perform variable substitutions to the tutorial -->
+  <target name="freepastry-tutorial">
+    <copy todir="tutorial">
+    	  <fileset dir="html/rawtutorial" excludes="tutorial.variables"/>
+      <filterset>
+	    <filtersfile file="html/tutorial/tutorial.variables"/>
+      </filterset>
+    </copy>
   </target>
   
   <!-- ********************** epost section ********************* -->
