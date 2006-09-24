@@ -444,7 +444,7 @@
     <copy todir="tutorial">
     	  <fileset dir="html/rawtutorial" excludes="tutorial.variables"/>
       <filterset>
-	    <filtersfile file="html/tutorial/tutorial.variables"/>
+	    <filtersfile file="html/rawtutorial/tutorial.variables"/>
       </filterset>
     </copy>
   </target>
