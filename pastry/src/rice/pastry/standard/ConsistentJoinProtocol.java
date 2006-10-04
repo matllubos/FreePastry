@@ -465,7 +465,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           } else {
             nextReadyStrategy.start(); 
           }
-          retryTask.cancel();
+          if (retryTask != null) {
+            retryTask.cancel();            
+          }
           tryingToGoReady = false;
         }
         // failed_i = {}
@@ -489,11 +491,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       
       synchronized(leafSet) {
         int index = -leafSet.ccwSize();
-        if (index != -leafSet.maxSize()/2) {
+        if ((index != 0) && index != -leafSet.maxSize()/2) {
           left = leafSet.get(index);
         }
         index = leafSet.cwSize();
-        if (index != leafSet.maxSize()/2) {
+        if ((index != 0) && index != leafSet.maxSize()/2) {
           right = leafSet.get(index);
         }
       }

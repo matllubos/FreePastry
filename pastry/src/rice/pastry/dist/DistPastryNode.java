@@ -103,7 +103,7 @@ public abstract class DistPastryNode extends PastryNode {
    *
    * @param bootstrap Node handle to bootstrap with.
    */
-  public final void initiateJoin(NodeHandle bootstrap) {
+  public final void initiateJoin(NodeHandle[] bootstrap) {
     if (logger.level <= Logger.CONFIG) logger.log(
         "DistPN.initiateJoin()");
 //    if (bootstrap != null && bootstrap[0] != null)
@@ -135,7 +135,7 @@ public abstract class DistPastryNode extends PastryNode {
    *
    * @param bootstrap DESCRIBE THE PARAMETER
    */
-  public void doneNode(NodeHandle bootstrap) {
+  public void doneNode(NodeHandle[] bootstrap) {
 
     if (routeSetMaintFreq > 0) {
       // schedule the routeset maintenance event

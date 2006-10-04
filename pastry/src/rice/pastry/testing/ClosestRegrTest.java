@@ -111,7 +111,7 @@ public class ClosestRegrTest {
     PastryNode bootNode = (PastryNode) pastryNodes.elementAt(environment.getRandomSource().nextInt(i));
     NodeHandle bootstrap = bootNode.getLocalHandle();
 //    System.out.println();
-    DirectNodeHandle closest = (DirectNodeHandle)factory.getNearest(handle, bootstrap);
+    DirectNodeHandle closest = (DirectNodeHandle)factory.getNearest(handle, bootstrap)[0];
     DirectNodeHandle realClosest = simulator.getClosest(handle);
 //    int cProx = simulator.proximity(closest, handle);
 //    System.out.println("cProx:"+cProx);

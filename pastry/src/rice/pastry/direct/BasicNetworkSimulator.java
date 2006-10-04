@@ -323,7 +323,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    * @param b the second NodeId
    * @return the proximity between the two input NodeIds
    */
-  public int networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
+  public double networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
     NodeRecord nra = a.getRemote().record;
     NodeRecord nrb = b.getRemote().record;
 

@@ -160,10 +160,17 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
     return "[DNH " + getNodeId() + "]";
   }
 
+  /**
+   * Only notify if dead.  Note that this is limitied in that it's not possible 
+   * to simulate a byzantine failure of a node.  But that's out of the scope of 
+   * the simulator.  If we leave in the first arg, the node notifies DECLARED_LIVE 
+   * way too often.
+   */
   public void update(Observable arg0, Object arg1) {
     if (remoteNode.alive) {
-      notifyObservers(NodeHandle.DECLARED_LIVE);      
+//      notifyObservers(NodeHandle.DECLARED_LIVE);      
     } else {
+//      System.out.println(this+"Notifying dead");
       notifyObservers(NodeHandle.DECLARED_DEAD);      
     }
   }

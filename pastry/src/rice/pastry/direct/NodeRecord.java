@@ -5,7 +5,7 @@ package rice.pastry.direct;
 
 public interface NodeRecord {
 
-  int networkDelay(NodeRecord nrb);
+  double networkDelay(NodeRecord nrb);
   
   int proximity(NodeRecord nrb);
   

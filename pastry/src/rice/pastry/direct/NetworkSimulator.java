@@ -52,7 +52,7 @@ public interface NetworkSimulator {
    * 
    * @return proximity of b to a.
    */
-  public int networkDelay(DirectNodeHandle a, DirectNodeHandle b);
+  public double networkDelay(DirectNodeHandle a, DirectNodeHandle b);
   
   /**
    * Deliver message.

@@ -37,7 +37,7 @@ public abstract class PastryNodeFactory {
    * Hashtable which keeps track of temporary ping values, which are
    * only used during the getNearest() method
    */
-  protected Hashtable pingCache = new Hashtable();
+  protected Hashtable<NodeHandle, Hashtable<NodeHandle,Integer>> pingCache = new Hashtable<NodeHandle, Hashtable<NodeHandle,Integer>>();
 
   protected Environment environment;
   
@@ -133,25 +133,46 @@ public abstract class PastryNodeFactory {
    * @return The proximity of the handle
    */
   protected int proximity(NodeHandle local, NodeHandle handle) {
-    Hashtable localTable = (Hashtable) pingCache.get(local.getNodeId());
+    Hashtable<NodeHandle,Integer> localTable = pingCache.get(local);
     
     if (localTable == null) {
       localTable = new Hashtable();
-      pingCache.put(local.getNodeId(), localTable);
+      pingCache.put(local, localTable);
     }
     
-    if (localTable.get(handle.getNodeId()) == null) {
+    if (localTable.get(handle) == null) {
       int value = getProximity(local, handle);
-      localTable.put(handle.getNodeId(), new Integer(value));
+      localTable.put(handle, value);
 
       return value;
     } else {
-      return ((Integer) localTable.get(handle.getNodeId())).intValue();
+      return ((Integer) localTable.get(handle)).intValue();
     }
   }
   
   private void purgeProximityCache(NodeHandle local) {
-    pingCache.remove(local.getNodeId()); 
+    pingCache.remove(local); 
+  }
+  
+  public NodeHandle[] sortedProximityCache(NodeHandle local) {
+    final Hashtable<NodeHandle,Integer> localTable = pingCache.get(local);
+    if (localTable == null) return null;
+    
+    ArrayList<NodeHandle> handles = new ArrayList<NodeHandle>(localTable.keySet());
+    Collections.sort(handles,new Comparator<NodeHandle>() {
+    
+      public int compare(NodeHandle a, NodeHandle b) {
+        return localTable.get(a).intValue()-localTable.get(b).intValue();
+      }    
+    });
+    
+//    Iterator<NodeHandle> i = handles.iterator();
+//    while(i.hasNext()) {
+//      NodeHandle nh = i.next();
+//      System.out.println(nh+":"+localTable.get(nh));
+//    }
+    
+    return (NodeHandle[])handles.toArray(new NodeHandle[0]);
   }
   
   /**
@@ -165,7 +186,7 @@ public abstract class PastryNodeFactory {
    * @param seed Any member of the pastry ring
    * @return A node suitable to boot off of (which is close the this node)
    */
-  public NodeHandle getNearest(NodeHandle local, NodeHandle seed) {
+  public NodeHandle[] getNearest(NodeHandle local, NodeHandle seed) {
     try {
       // if the seed is null, we can't do anything
       if (seed == null)
@@ -225,11 +246,12 @@ public abstract class PastryNodeFactory {
       }
       
       // return the resulting closest node
-      return nearNode;
+//      return nearNode;
+      return sortedProximityCache(local);
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.logException(
         "ERROR occured while finding best bootstrap.", e);
-      return seed;
+      return new NodeHandle[]{seed};
     } finally {
       purgeProximityCache(local); 
     }

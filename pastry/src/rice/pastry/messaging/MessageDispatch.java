@@ -3,6 +3,7 @@ package rice.pastry.messaging;
 
 import java.util.*;
 
+import rice.Destructable;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.client.PastryAppl;
@@ -25,7 +26,7 @@ import rice.pastry.client.PastryAppl;
  * @author Andrew Ladd
  */
 
-public class MessageDispatch {
+public class MessageDispatch implements Destructable {
 
   private int bufferSize;
 

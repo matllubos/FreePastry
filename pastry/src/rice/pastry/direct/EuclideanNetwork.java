@@ -60,18 +60,24 @@ public class EuclideanNetwork extends BasicNetworkSimulator {
     }
 
     public int proximity(NodeRecord that) {
-      return networkDelay(that)*2;
+      return (int)Math.round((networkDelay(that)*2.0));
     }
     
-    public int networkDelay(NodeRecord that) {
+    public double networkDelay(NodeRecord that) {
       EuclideanNodeRecord nr = (EuclideanNodeRecord)that;
       int dx = x - nr.x;
       int dy = y - nr.y;
       
-      int ret = (int)Math.sqrt(dx * dx + dy * dy);
-      if ((ret < 2) && !this.equals(that)) return 2;
+      double ret = Math.sqrt(dx * dx + dy * dy);
+//      int ret = (int)Math.round(sqrt);
+      if ((ret < 2.0) && !this.equals(that)) return 2.0;
       
       return ret;
     }
-  }
+    
+    public String toString() {
+      return "ENR("+x+","+y+")"; 
+    }
+    
+  }  
 }

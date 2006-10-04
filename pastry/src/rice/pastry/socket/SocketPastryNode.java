@@ -75,7 +75,7 @@ public class SocketPastryNode extends DistPastryNode {
    * 
    * @param bootstrap The node which this node should boot off of.
    */
-  public void doneNode(NodeHandle bootstrap) {
+  public void doneNode(NodeHandle[] bootstrap) {
     super.doneNode(bootstrap);
     initiateJoin(bootstrap);
   }

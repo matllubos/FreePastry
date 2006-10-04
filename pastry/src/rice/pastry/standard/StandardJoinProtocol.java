@@ -155,7 +155,8 @@ public class StandardJoinProtocol extends PastryAppl {
 
       if (nh == null) {
         if (logger.level <= Logger.SEVERE) logger.log(
-            "ERROR: Cannot join ring.  All bootstraps are faulty.");        
+            "ERROR: Cannot join ring.  All bootstraps are faulty."+ij); 
+        thePastryNode.joinFailed(new JoinFailedException("Cannot join ring.  All bootstraps are faulty."+ij));
       } else {
         if (nh.isAlive() == true) {
           JoinRequest jr = new JoinRequest(localHandle, thePastryNode

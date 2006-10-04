@@ -186,17 +186,19 @@ public abstract class PastryAppl implements Observer
 
   public void update(Observable arg0, Object arg1) {
     if (arg0 == thePastryNode) {
-      Boolean b = (Boolean)arg1;
-      if (b.booleanValue()) {
-        Collection copy;
-        synchronized(undeliveredMessages) {
-          copy = new ArrayList(undeliveredMessages); 
-          undeliveredMessages.clear();
-        }
-        Iterator i = copy.iterator();
-        while(i.hasNext()) {
-          Message m = (Message)i.next(); 
-          receiveMessage(m);
+      if (arg1 instanceof Boolean) {
+        Boolean b = (Boolean)arg1;
+        if (b.booleanValue()) {
+          Collection copy;
+          synchronized(undeliveredMessages) {
+            copy = new ArrayList(undeliveredMessages); 
+            undeliveredMessages.clear();
+          }
+          Iterator i = copy.iterator();
+          while(i.hasNext()) {
+            Message m = (Message)i.next(); 
+            receiveMessage(m);
+          }
         }
       }
     }

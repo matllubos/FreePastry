@@ -576,7 +576,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
     // getNearest uses the port inside the SNH, so this needs to be the local
     // address
-    NodeHandle nearest; // = getNearest(temp, bootstrap);
+    NodeHandle[] nearest; // = getNearest(temp, bootstrap);
 
     final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
 
@@ -739,9 +739,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 //    }
 
 //    NodeHandle nearest = getNearest(temp, bootstrap);
-    if (nearest != null)
-      nearest = pn.coalesce(nearest);
-
+    if (nearest.length > 0) {
+      for(int i = 0; i < nearest.length; i++) {
+        nearest[i] = pn.coalesce(nearest[i]);
+      }
+    }
+    
     pn.doneNode(nearest);
     // pn.doneNode(bootstrap);
 

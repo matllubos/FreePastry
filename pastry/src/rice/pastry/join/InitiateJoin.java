@@ -23,16 +23,15 @@ public class InitiateJoin extends Message implements Serializable {
    * @param nh the node handle that the join will begin from.
    */
 
-  public InitiateJoin(NodeHandle nh) {
-    this((NodeHandle[])null);
-  	handle = new NodeHandle[1];
-    handle[0] = nh;
-  }
+//  public InitiateJoin(NodeHandle nh) {
+//    this((NodeHandle[])null);
+//  	handle = new NodeHandle[1];
+//    handle[0] = nh;
+//  }
 
 
   public InitiateJoin(NodeHandle[] nh) {
     this(null, nh);
-    handle = nh;
   }
 
   /**
@@ -47,6 +46,7 @@ public class InitiateJoin extends Message implements Serializable {
   public InitiateJoin(Date stamp, NodeHandle[] nh) {
     super(JoinAddress.getCode(), stamp);
     handle = nh;
+//    System.out.println("IJ<ctor>"+this);
   }
 
   /**
@@ -61,6 +61,16 @@ public class InitiateJoin extends Message implements Serializable {
       if (handle[i].isAlive()) return handle[i];
     }
     return null;
+  }
+  
+  public String toString() {
+    String s = "IJ{"; 
+    for (int i = 0; i < handle.length; i++) {
+      s+=handle[i]+":"+handle[i].isAlive();
+      if (i != handle.length-1) s+=",";
+    }
+    s+="}";
+    return s;
   }
 }
 

@@ -71,7 +71,7 @@ public class DirectPastryNode extends PastryNode {
     record = nr;
   }
 
-  public void doneNode(NodeHandle bootstrap) {
+  public void doneNode(NodeHandle[] bootstrap) {
     initiateJoin(bootstrap);
   }
 
@@ -82,6 +82,7 @@ public class DirectPastryNode extends PastryNode {
   public void destroy() {
     super.destroy();
     alive = false;
+    if (joinTask != null) joinTask.cancel();
     setReadyStrategy(new ReadyStrategy() {
     
       public void start() {
@@ -96,15 +97,16 @@ public class DirectPastryNode extends PastryNode {
       }    
     });
     setReady(false); 
+    notifyReadyObservers();
     simulator.removeNode(this);
   }
   
   
-  public final void initiateJoin(NodeHandle bootstrap) {
-    NodeHandle[] boots = new NodeHandle[1];
-    boots[0] = bootstrap;
-    initiateJoin(boots);
-  }
+//  public final void initiateJoin(NodeHandle bootstrap) {
+//    NodeHandle[] boots = new NodeHandle[1];
+//    boots[0] = bootstrap;
+//    initiateJoin(boots);
+//  }
   
   /**
    * Sends an InitiateJoin message to itself.
@@ -264,7 +266,7 @@ public class DirectPastryNode extends PastryNode {
   public void connect(NodeHandle remoteNode, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
     DirectNodeHandle dnh = (DirectNodeHandle)remoteNode;
     simulator.enqueueDelivery(new DirectAppSocket(dnh, receiver, appl, simulator).getAcceptorDelivery(),
-        simulator.networkDelay((DirectNodeHandle)localhandle, dnh));
+        (int)Math.round(simulator.networkDelay((DirectNodeHandle)localhandle, dnh)));
   }
 
   public NodeHandle readNodeHandle(InputBuffer buf) {

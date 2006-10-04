@@ -64,10 +64,10 @@ public class GenericNetwork extends BasicNetworkSimulator
     }
 
     public int proximity(NodeRecord that) {
-      return networkDelay(that)+that.networkDelay(this);
+      return (int)Math.round(networkDelay(that)+that.networkDelay(this));
     }
     
-    public int networkDelay(NodeRecord that) {
+    public double networkDelay(NodeRecord that) {
       GNNodeRecord nr = (GNNodeRecord)that;
       int res = distance[index][nr.index];
       if (res < 0)

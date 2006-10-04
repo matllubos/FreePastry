@@ -43,6 +43,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     
   ReadyStrategy readyStrategy;
   
+  protected boolean joinFailed = false;
+  
   /**
    * Constructor, with NodeId. Need to set the node's ID before this node is
    * inserted as localHandle.localNode.
@@ -132,6 +134,16 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
 
   public void setMessageDispatch(MessageDispatch md) {
     myMessageDispatch = md;
+    addDestructable(myMessageDispatch);
+  }
+
+  public Destructable addDestructable(Destructable d) {
+    destructables.add(d);    
+    return d;
+  }
+
+  public boolean removeDestructable(Destructable d) {
+    return destructables.remove(d);    
   }
 
   /**
@@ -160,7 +172,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param bootstrap
    *          Node handle to bootstrap with.
    */
-  public abstract void initiateJoin(NodeHandle bootstrap);
+  public abstract void initiateJoin(NodeHandle[] bootstrap);
 
   public void setReady() {
     setReady(true);
@@ -479,6 +491,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     }
   }
 
+  HashSet<Destructable> destructables = new HashSet<Destructable>();
+  
   /**
    * Method which kills a PastryNode.  Note, this doesn't implicitly kill the environment.
    * 
@@ -486,7 +500,10 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    */
   public void destroy() {
     if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
-    myMessageDispatch.destroy();
+    Iterator<Destructable> i = destructables.iterator();
+    while(i.hasNext()) {
+      i.next().destroy(); 
+    }
     getEnvironment().removeDestructable(this);
   }
 
@@ -516,6 +533,23 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @return
    */
   abstract public int proximity(NodeHandle nh);
+
+  public void joinFailed(JoinFailedException cje) {
+    if (logger.level <= Logger.WARNING) logger.log("joinFailed("+cje+")");
+    joinFailed = true;
+    setChanged();
+    this.notifyObservers(cje); 
+  }
+
+  /**
+   * Returns true if there was a fatal error Joining
+   * @return
+   */
+  public boolean joinFailed() {
+    return joinFailed; 
+  }
+  
+  
   
 }
 

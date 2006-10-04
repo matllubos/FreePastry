@@ -277,7 +277,6 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   NodeHandle lastLeft;
   NodeHandle lastRight;
   public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
-    NodeHandle newLeft = leafSet.get(-1);
     if ((!added) && (
       handle == lastLeft ||
       handle == lastRight
@@ -303,12 +302,13 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
         isReady();
       }      
     }
-    if (lastLeft != newLeft) {
+    NodeHandle newLeft = leafSet.get(-1);
+    if (newLeft != null && (lastLeft != newLeft)) {
       lastLeft = newLeft;
       sendBLS(lastLeft);
     }
     NodeHandle newRight = leafSet.get(1);
-    if (lastRight != newRight) {
+    if (newRight != null && (lastRight != newRight)) {
       lastRight = newRight;
       sendBLS(lastRight);
     }
