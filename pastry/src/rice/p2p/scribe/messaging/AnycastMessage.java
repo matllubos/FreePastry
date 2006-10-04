@@ -184,13 +184,6 @@ public class AnycastMessage extends ScribeMessage {
     buf.writeByte((byte)0); // version
     serializeHelper(buf);
     
-    if (content == null) {
-      buf.writeBoolean(false);
-    } else {
-      buf.writeBoolean(true);
-      buf.writeShort(content.getType());
-      content.serialize(buf);
-    }    
   }
   
   /**
@@ -211,13 +204,21 @@ public class AnycastMessage extends ScribeMessage {
     while(i.hasNext()) {
       ((NodeHandle)i.next()).serialize(buf); 
     }
+    
+    if (content == null) {
+      buf.writeBoolean(false);
+    } else {
+      buf.writeBoolean(true);
+      buf.writeShort(content.getType());
+      content.serialize(buf);
+    }    
   }
   
   public static AnycastMessage build(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer scd) throws IOException {
     byte version = buf.readByte();
     switch(version) {
       case 0:
-        return new AnycastMessage(buf, endpoint, scd, true);
+        return new AnycastMessage(buf, endpoint, scd);
       default:
         throw new IOException("Unknown Version: "+version);
     }
@@ -227,10 +228,8 @@ public class AnycastMessage extends ScribeMessage {
    * Protected because it should only be called from an extending class, to get version
    * numbers correct.
    * 
-   * @param readContent should probably be false if this class is extended, true if not.  The parameter is wether or not
-   * this message could have a ScribeContent, the SubscribeMesage never has a content, so it should be false
    */
-  protected AnycastMessage(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer cd, boolean readContent) throws IOException {
+  protected AnycastMessage(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer cd) throws IOException {
     super(buf, endpoint);
     
     toVisit = new LinkedList();
@@ -245,17 +244,15 @@ public class AnycastMessage extends ScribeMessage {
       visited.add(endpoint.readNodeHandle(buf)); 
     }
     
-    if (readContent) {
-      // this can be done lazilly to be more efficient, must cache remaining bits, endpoint, cd, and implement own InputBuffer
-      if (buf.readBoolean()) {
-        short contentType = buf.readShort();
-        if (contentType == 0) {
-          content = new JavaSerializedScribeContent(cd.deserializeScribeContent(buf, endpoint, contentType));
-        } else {
-          content = (RawScribeContent)cd.deserializeScribeContent(buf, endpoint, contentType); 
-        }
-      }  
-    }
+    // this can be done lazilly to be more efficient, must cache remaining bits, endpoint, cd, and implement own InputBuffer
+    if (buf.readBoolean()) {
+      short contentType = buf.readShort();
+      if (contentType == 0) {
+        content = new JavaSerializedScribeContent(cd.deserializeScribeContent(buf, endpoint, contentType));
+      } else {
+        content = (RawScribeContent)cd.deserializeScribeContent(buf, endpoint, contentType); 
+      }
+    }  
   }
 
 }

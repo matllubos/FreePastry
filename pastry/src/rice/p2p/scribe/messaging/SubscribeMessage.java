@@ -133,7 +133,7 @@ public class SubscribeMessage extends AnycastMessage {
    * version number.
    */
   private SubscribeMessage(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer contentDeserializer) throws IOException {
-    super(buf, endpoint, contentDeserializer, false);
+    super(buf, endpoint, contentDeserializer);
     id = buf.readInt();
     if (buf.readBoolean())
       previousParent = endpoint.readId(buf, buf.readShort());
