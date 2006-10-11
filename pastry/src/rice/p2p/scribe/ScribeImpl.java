@@ -1200,17 +1200,22 @@ public class ScribeImpl implements Scribe, Application {
     }
 
     public void destroy() {
-      if (parent!=null) 
+      if (logger.level <= Logger.FINE) logger.log("Destroying "+this);
+      if (parent!=null) {
+        if (logger.level <= Logger.FINER) logger.log(parent+".deleteObserver()p");
         parent.deleteObserver(this);
+      }
       Iterator i = children.iterator();
       while(i.hasNext()) {
         NodeHandle child = (NodeHandle)i.next();
+        if (logger.level <= Logger.FINER) logger.log(child+".deleteObserver()c");
         child.deleteObserver(this);
       }
     }
   }
 
   public void destroy() {
+    if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
     Iterator topicIter = topics.values().iterator();
     while(topicIter.hasNext()) {
       TopicManager topicManager = (TopicManager)topicIter.next(); 
