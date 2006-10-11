@@ -130,16 +130,19 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    * @return true if they are equal, false otherwise.
    */
   public boolean equals(Object obj) {
-    if (obj == null) {
-      return false;
-    }
-    DirectNodeHandle nh = (DirectNodeHandle) obj;
-
-    if (this.remoteNode.getNodeId().equals(nh.remoteNode.getNodeId())) {
-      return true;
-    } else {
-      return false;
-    }
+    // we know that there is only one of these per node in the simulator
+    return obj == this;
+    
+//    if (obj == null) {
+//      return false;
+//    }
+//    DirectNodeHandle nh = (DirectNodeHandle) obj;
+//
+//    if (this.remoteNode.getNodeId().equals(nh.remoteNode.getNodeId())) {
+//      return true;
+//    } else {
+//      return false;
+//    }
   }
 
   /**
