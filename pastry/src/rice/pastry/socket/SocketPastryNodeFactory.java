@@ -739,11 +739,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 //    }
 
 //    NodeHandle nearest = getNearest(temp, bootstrap);
-    if (nearest.length > 0) {
-      for(int i = 0; i < nearest.length; i++) {
-        nearest[i] = pn.coalesce(nearest[i]);
+    if (nearest != null)
+      if (nearest.length > 0) {
+        for(int i = 0; i < nearest.length; i++) {
+          nearest[i] = pn.coalesce(nearest[i]);
+        }
       }
-    }
     
     pn.doneNode(nearest);
     // pn.doneNode(bootstrap);
