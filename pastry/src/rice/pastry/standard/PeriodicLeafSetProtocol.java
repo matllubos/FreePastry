@@ -444,6 +444,12 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     if (logger.level <= Logger.INFO)
       logger.log("PLSP: destroy() called");
     pingNeighborMessage.cancel();
+    lastLeft = null;
+    lastRight = null;
+    lastTimeReceivedBLS.clear();
+    lastTimeRenewedLease.clear();
+    lastTimeSentBLS.clear();
+    deadLeases.clear();
   }
 
 }

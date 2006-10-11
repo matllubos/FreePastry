@@ -80,6 +80,10 @@ public class DirectPastryNode extends PastryNode {
   }
   
   public void destroy() {
+    record.markDead();
+    routeSet.destroy();
+    leafSet.destroy();
+    
     super.destroy();
     alive = false;
     if (joinTask != null) joinTask.cancel();
@@ -233,10 +237,11 @@ public class DirectPastryNode extends PastryNode {
   }
   
   public int proximity(NodeHandle that) {
-    int result = simulator.proximity((DirectNodeHandle) getLocalHandle(),
+    if (!that.isAlive()) return Integer.MAX_VALUE;
+    float result = simulator.proximity((DirectNodeHandle) getLocalHandle(),
         (DirectNodeHandle) that);
 
-    return result;
+    return (int)result;
   }
 
   @Override

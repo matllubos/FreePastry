@@ -64,18 +64,21 @@ public class SphereNetwork extends BasicNetworkSimulator {
      * @param nr DESCRIBE THE PARAMETER
      * @return DESCRIBE THE RETURN VALUE
      */
-    public int proximity(NodeRecord that) {
-      return (int)Math.round(networkDelay(that)*2.0);
+    public float proximity(NodeRecord that) {
+      return (float)Math.round(networkDelay(that)*2.0);
     }
     
-    public double networkDelay(NodeRecord that) {
+    public float networkDelay(NodeRecord that) {
       SphereNodeRecord nr = (SphereNodeRecord)that;
       double ret = (radius * Math.acos(Math.cos(phi - nr.phi) * Math.cos(theta) * Math.cos(nr.theta) +
         Math.sin(theta) * Math.sin(nr.theta)));
       
-      if ((ret < 2.0) && !this.equals(that)) return 2.0;
+      if ((ret < 2.0) && !this.equals(that)) return (float)2.0;
       
-      return ret;
+      return (float)ret;
+    }
+
+    public void markDead() {
     }
   }
   

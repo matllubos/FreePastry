@@ -29,13 +29,15 @@ import rice.tutorial.direct.MyMsg;
  * @author Jeff Hoye
  */
 public class RoutingTableTest {
-  boolean printLiveness = true;
-  boolean printLeafSets = true;
+  boolean printLiveness = false;
+  boolean printLeafSets = false;
   
   // this will keep track of our nodes
   Vector nodes = new Vector();
   
-  Vector apps = new Vector();
+  HashMap apps = new HashMap();
+  
+  int timeToFindFaulty = 30000; // millis
   
   final Environment env;
   int numNodes;
@@ -99,40 +101,35 @@ public class RoutingTableTest {
     // Generate the NodeIds Randomly
     nidFactory = new RandomNodeIdFactory(env);
     
+//    env.getParameters().setInt("pastry_direct_gtitm_max_overlay_size",numNodes);
+//    if (numNodes > 2000) {
+    env.getParameters().setString("pastry_direct_gtitm_matrix_file","sample_10k");
+//    env.getParameters().setString("pastry_direct_gtitm_matrix_file","sample_2k");
+//    }  
     // construct the PastryNodeFactory, this is how we use rice.pastry.direct, with a Euclidean Network
-    factory = new DirectPastryNodeFactory(nidFactory, new EuclideanNetwork(env), env);
+    factory = new DirectPastryNodeFactory(nidFactory, new GenericNetwork(env), env);
 
     // loop to construct the nodes/apps
-    createNodes(numNodes, meanSessionTime, useScribe, msgSendRate, rtMaintTime);    
-    
+    createNodes();    
+  }
+
+  public void startLoggerTask() {
     env.getSelectorManager().getTimer().schedule(new TimerTask() {
+      int ctr = 0;
       public void run() {
-        testRoutingTables();
+        testRoutingTables(ctr++);
       }    
     },reportRate,reportRate);
-
+    
     env.getSelectorManager().getTimer().schedule(new TimerTask() {
       public void run() {
         env.destroy();
       }    
     },testTime);  
-
-    // loop to construct the nodes/apps
-//    createNodes(numNodes, meanSessionTime, useScribe, msgSendRate, rtMaintTime);    
   }
-
+  
   class CreatorTimerTask extends TimerTask {
-    int numNodes;
-    int meanSessionTime;
-    boolean useScribe;
-    int msgSendRate;
-    int rtMaintInterval;
-    public CreatorTimerTask(int numNodes, int meanSessionTime, boolean useScribe, int msgSendRate, int rtMaintTime) {
-      this.numNodes = numNodes;
-      this.meanSessionTime = meanSessionTime;
-      this.useScribe = useScribe;
-      this.msgSendRate = msgSendRate;
-      this.rtMaintInterval = rtMaintTime;
+    public CreatorTimerTask() {
     }
     
     int ctr = 0;
@@ -144,7 +141,13 @@ public class RoutingTableTest {
       }
       synchronized(this) {
         ctr++;
+        
+        if (ctr %100 == 0) {
+          System.out.println("Created "+ctr+" nodes."); 
+        }
+        
         if (ctr >= numNodes) {
+          startLoggerTask();          
           cancel();
 //          env.getSelectorManager().getTimer().schedule(new TimerTask() {          
 //            public void run() {
@@ -165,8 +168,8 @@ public class RoutingTableTest {
     }    
   }
   
-  public void createNodes(int numNodes, int meanSessionTime, boolean useScribe, int msgSendRate, int rtMaint) throws InterruptedException {    
-    CreatorTimerTask ctt = new CreatorTimerTask(numNodes, meanSessionTime, useScribe, msgSendRate, rtMaint);    
+  public void createNodes() throws InterruptedException {    
+    CreatorTimerTask ctt = new CreatorTimerTask();    
     env.getSelectorManager().getTimer().schedule(ctt,1000,1000); 
 //    synchronized(ctt) {
 //      while(ctt.ctr < numNodes) {
@@ -177,7 +180,7 @@ public class RoutingTableTest {
   
   public void sendSomeMessages() {        
     // for each app
-    Iterator appIterator = apps.iterator();
+    Iterator appIterator = apps.values().iterator();
     while(appIterator.hasNext()) {
       MyApp app = (MyApp)appIterator.next();
       
@@ -191,7 +194,7 @@ public class RoutingTableTest {
   
   public void sendSomeScribeMessages() {        
     // for each app
-    Iterator appIterator = apps.iterator();
+    Iterator appIterator = apps.values().iterator();
     while(appIterator.hasNext()) {
       Scribe app = (Scribe)appIterator.next();
       app.publish(topic, new TestScribeContent(topic, 0));
@@ -268,8 +271,9 @@ public class RoutingTableTest {
     // this will add "magic" to the node such that if it is destroyed, then it will automatically create its replacement
     node.addDestructable(new Destructable() {          
       public void destroy() {
-        System.out.println("Destructable called.");
+//        System.out.println("Destructable called.");
         nodes.remove(node);
+        apps.remove(node);
         try {
           createNode(); // create a new node every time we
                                 // destroy one
@@ -294,18 +298,18 @@ public class RoutingTableTest {
       if (node.isReady()) {
         finishNode(node);
       } else {
-        System.out.println("Adding observer to "+node);
+//        System.out.println("Adding observer to "+node);
       node.addObserver(new Observer() {
 
       public void update(Observable o, Object arg) {
-        System.out.println("observer.update("+arg+")");
+//        System.out.println("observer.update("+arg+")");
         if (arg instanceof Boolean) {
           if (!((Boolean) arg).booleanValue()) return;
           
           node.deleteObserver(this);
           finishNode(node);
         } else if (arg instanceof JoinFailedException) {
-          System.out.println("Got JoinFailedException:"+arg);
+//          System.out.println("Got JoinFailedException:"+arg);
           node.destroy(); 
         }
       }// update
@@ -323,13 +327,16 @@ public class RoutingTableTest {
 
     if ((meanSessionTime > 0)) {
       env.getSelectorManager().getTimer().schedule(new TimerTask() {
-        @Override
-        public void run() {
+        {
           node.addDestructable(new Destructable() {          
             public void destroy() {
               cancel();
             }          
           });
+        }
+        
+        @Override
+        public void run() {
           if (env.getRandomSource().nextInt(meanSessionTime * 2) == 0) {
             if (printLiveness)
               System.out.println("Destroying " + node);
@@ -353,11 +360,11 @@ public class RoutingTableTest {
         Scribe app = new ScribeImpl(node,"test");
         ScribeClient client = new TestScribeClient(app, topic);
         app.subscribe(topic, client);
-        apps.add(app);
+        apps.put(node,app);
       } else {
         // construct a new MyApp
         MyApp app = new MyApp(node);    
-        apps.add(app);
+        apps.put(node,app);
       }    
       
       env.getSelectorManager().getTimer().schedule(new TimerTask() {      
@@ -374,18 +381,7 @@ public class RoutingTableTest {
     
     if (rtMaintTime > 0)
       node.scheduleMsg(new InitiateRouteSetMaintenance(),rtMaintTime*1000,rtMaintTime*1000);
-    
-    
-    if (useScribe) {
-      Scribe app = new ScribeImpl(node,"test");
-      ScribeClient client = new TestScribeClient(app, topic);
-      app.subscribe(topic, client);
-      apps.add(app);
-    } else {
-      // construct a new MyApp
-      MyApp app = new MyApp(node);    
-      apps.add(app);
-    }    
+        
     if (printLiveness)
       System.out.println("Finished creating new node("+nodes.size()+") "+node+" at "+env.getTimeSource().currentTimeMillis());
  
@@ -411,12 +407,12 @@ public class RoutingTableTest {
     }
   }
   
-  private void testRoutingTables() {    
+  private void testRoutingTables(int round) {    
     if (printLeafSets)
       testLeafSets();
     double streatch = testRoutingTables1();
     int holes = testRoutingTables2();
-    System.out.println((env.getTimeSource().currentTimeMillis()/(60*1000))+","+streatch+","+holes);
+    System.out.println(round+","+streatch+","+holes+" numNodes:"+nodes.size());
   }
   
   /**
@@ -445,11 +441,11 @@ public class RoutingTableTest {
             throw new RuntimeException("proximity zero:"+node+".proximity("+thatHandle+")"); 
           }
           if (latency < proximity) { // due to rounding error
-            latency = proximity;
+            latency = proximity;            
 //            calcLatency(node, thatHandle); 
-          }
+          }          
           double streatch = (1.0*latency)/(1.0*proximity);
-//          if (streatch < 1.0) System.out.println(streatch);
+//          if (streatch > 3.0) System.out.println("streatch: "+streatch);
           acc+=streatch;
           ctr++;
         }
@@ -496,7 +492,7 @@ public class RoutingTableTest {
 
       if (handle.isAlive() == false) {
         // node is dead - get rid of it and try again
-        thePenalty += localNode.proximity(handle)*4; // rtt*2
+        thePenalty += timeToFindFaulty; // rtt*2
         LeafSet ls2 = ls.copy();
         ls2.remove(handle);
         return getNextHop(rt, ls2, thatHandle, localNode);
@@ -538,7 +534,7 @@ public class RoutingTableTest {
           handle = ls.get(lsPos);
 
           if (handle.isAlive() == false) {
-            thePenalty += localNode.proximity(handle)*4;
+            thePenalty += timeToFindFaulty;
             LeafSet ls2 = ls.copy();
             ls2.remove(handle);
             return getNextHop(rt, ls2, thatHandle, localNode);
@@ -553,7 +549,7 @@ public class RoutingTableTest {
             handle = ls.get(lsPos);
 
             if (handle.isAlive() == false) {
-              thePenalty += localNode.proximity(handle)*4;
+              thePenalty += timeToFindFaulty;
               LeafSet ls2 = ls.copy();
               ls2.remove(handle);
               return getNextHop(rt, ls2, thatHandle, localNode);
@@ -773,109 +769,38 @@ public class RoutingTableTest {
   
   /**
    * Usage: 
-   * java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes
-   * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
    */
   public static void main(String[] args) throws Exception {
-//    System.out.println("use: numNodes numKill randSeed maintInterval(sec) sendInterval(millis)");
-    // the number of nodes to use
-//    int numNodes = 100;
-//    if (args.length > 0) numNodes = Integer.parseInt(args[0]);    
-//
-//    int numKill = 10;
-//    if (args.length > 1) numKill = Integer.parseInt(args[1]);
-//
-//    int randSeed = 5;
-//    if (args.length > 2) randSeed = Integer.parseInt(args[2]);
-//    
-//    int maintInterval = -1;
-//    if (args.length > 3) maintInterval = Integer.parseInt(args[3]);
-//    
-//    int sendInterval = -1;
-//    if (args.length > 4) sendInterval = Integer.parseInt(args[4]);
-//    
-//    if (maintInterval > 0) {
-//      useMaintenance = true;
-//      rtMaintInterval = maintInterval;
-//    }
-//    
-//    if (sendInterval > 0) {
-//      useMessaging = true;
-//      msgSendRate = sendInterval;
-//    }
-//    
-//    if (logHeavy) {
-//      System.setOut(new PrintStream(new FileOutputStream("rtt.txt")));
-//      System.setErr(System.out);
-//    }
-
-//    int[] churnMatrix = {0,15,60,600}; // minutes
-//    
-//    for (int churnIndex = 0; churnIndex < churnMatrix.length; churnIndex++) {
-//      int churnTime = churnMatrix[churnIndex]*1000;
-//      for (int test = 0; test < 10; test++) {      
-//        switch(test) {
-//          case 0: // nothing            
-//            useMaintenance = false;
-//            useMessaging = false;
-//            useScribe = false;
-//            break;
-//          case 1: // maintenance normal
-//            useMaintenance = true;
-//            rtMaintInterval = 900;
-//            useMessaging = false;
-//            useScribe = false;
-//          case 2: // maintenance high
-//            useMaintenance = true;
-//            rtMaintInterval = 60;
-//            useMessaging = false;
-//            useScribe = false;
-//          case 3: // messaging light
-//            useMaintenance = false;
-//            useMessaging = true;
-//            msgSendRate = 10000;
-//            useScribe = false;            
-//          case 4: // messaging heavy
-//            useMaintenance = false;
-//            useMessaging = true;
-//            msgSendRate = 1000;
-//            useScribe = false;                        
-//          case 5: // both light
-//            useMaintenance = true;
-//            rtMaintInterval = 900;
-//            useMessaging = true;
-//            msgSendRate = 10000;
-//            useScribe = false;            
-//          case 6: // scribe light
-//            useMaintenance = false;
-//            useMessaging = false;
-//            msgSendRate = 10000;
-//            useScribe = true;            
-//          case 7: // scribe heavy
-//            useMaintenance = false;
-//            useMessaging = false;
-//            msgSendRate = 1000;
-//            useScribe = true;                        
-//          case 8: // scribe+maint
-//            useMaintenance = true;
-//            rtMaintInterval = 900;
-//            useMessaging = false;
-//            msgSendRate = 10000;
-//            useScribe = true;            
-//        }
-//            
+//    System.setOut(new PrintStream("out.txt"));
+//    System.setErr(System.out);
+    
+  
+    int numNodes = 100;
+    int meanSessionTime = 1;
+    int useScribeIndex = 1;
+    int rtMaintIndex = 0;
+    int msgSendRateIndex = 0;
+    int numNodesIndex = -1;
+    
+      numNodes = Integer.parseInt(args[0]);  
+    
+      meanSessionTime = Integer.parseInt(args[1]);  
     
     int[] rtMaintVals = {0,60,15,1};
     int[] msgSendVals = {0,10000,1000,100};
-        for (int numNodes = 100; numNodes < 100001; numNodes*=10) 
-        for (int useScribeIndex = 0; useScribeIndex < 2; useScribeIndex++) 
-        for (int rtMaintIndex = 0; rtMaintIndex < 4; rtMaintIndex++)
-        for (int msgSendRateIndex = 0; msgSendRateIndex < 4; msgSendRateIndex++)
-//        for (int meanSessionTime = 1; meanSessionTime < 10001; meanSessionTime*=10)          
+    int[] numNodesVals = {100,200,500,1000,2000,5000,10000};
+//    for (numNodesIndex = 0; numNodesIndex < numNodesVals.length; numNodesIndex++) 
+//      for (numNodes = 100; numNodes <= 10000; numNodes*=10) 
+//        for (meanSessionTime = 1; meanSessionTime < 10001; meanSessionTime*=10)          
+        for (useScribeIndex = 0; useScribeIndex < 2; useScribeIndex++) 
+        for (msgSendRateIndex = ((useScribeIndex == 0) ? 0 : 1); msgSendRateIndex < 4; msgSendRateIndex++)
+        for (rtMaintIndex = 0; rtMaintIndex < 4; rtMaintIndex++)
           for (int tries = 0; tries < 10; tries++) {
-            int meanSessionTime = 1;
+            if (numNodesIndex >= 0) numNodes = numNodesVals[numNodesIndex];
+            
             boolean useScribe = true;
             if (useScribeIndex == 0) useScribe = false;
+            
             final Object lock = new Object();
             // Loads pastry settings, and sets up the Environment for simulation
             Environment env = Environment.directEnvironment();
@@ -900,8 +825,5 @@ public class RoutingTableTest {
               lock.wait(); // will be notified when the environment is destroyed
             }
           } // tries
-//        } // numNodes
-//      } // test
-//    } // churn
   }
 }

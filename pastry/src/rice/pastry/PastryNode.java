@@ -29,9 +29,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
 
   private MessageDispatch myMessageDispatch;
 
-  private LeafSet leafSet;
+  protected LeafSet leafSet;
 
-  private RoutingTable routeSet;
+  protected RoutingTable routeSet;
 
   protected NodeHandle localhandle;
 
@@ -100,7 +100,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    */
   public void setElements(NodeHandle lh, MessageDispatch md, LeafSet ls, RoutingTable rt) {
     localhandle = lh;
-    myMessageDispatch = md;
+    setMessageDispatch(md);
     leafSet = ls;
     routeSet = rt;
   }
@@ -502,7 +502,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
     Iterator<Destructable> i = destructables.iterator();
     while(i.hasNext()) {
-      i.next().destroy(); 
+      Destructable d = i.next();
+      if (logger.level <= Logger.INFO - 5) logger.log("Destroying "+d);
+      d.destroy(); 
     }
     getEnvironment().removeDestructable(this);
   }

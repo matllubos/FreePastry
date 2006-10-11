@@ -936,5 +936,10 @@ public class LeafSet extends Observable implements Serializable {
     }      
     return l;
   }
+
+  public void destroy() {
+    cwSet.destroy();
+    ccwSet.destroy();
+  }
 }
 

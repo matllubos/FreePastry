@@ -19,11 +19,8 @@ import java.io.*;
 // coordinates from input files
 public class GenericNetwork extends BasicNetworkSimulator 
 {
-  // This contains the total number of nodes assigned so far
-  private int countIndex = 0;
-  
   // This stores the matrix
-  private int distance[][];
+  private float distance[][];
 
   // This stores the coordinates
   public Hashtable nodePos = new Hashtable();
@@ -33,7 +30,7 @@ public class GenericNetwork extends BasicNetworkSimulator
   public static int MAXOVERLAYSIZE = 2000;
 
   // This keeps track of the indices that have already been assigned
-  public Vector assignedIndices = new Vector();
+  public HashSet assignedIndices = new HashSet();
 
   public File inFile_Matrix;// = "GNPINPUT";
 
@@ -46,13 +43,10 @@ public class GenericNetwork extends BasicNetworkSimulator
   }
   
   private class GNNodeRecord implements NodeRecord {
-    public boolean alive;
-
     public int index; // index in the symmetric inter-host latency matrix
 
     public GNNodeRecord() {
-      if (countIndex >= MAXOVERLAYSIZE) throw new RuntimeException("No more nodes int he network.");
-      alive = true;
+      if (assignedIndices.size() >= MAXOVERLAYSIZE) throw new RuntimeException("No more nodes int he network.");
       // index = countIndex++;
       index = random.nextInt(MAXOVERLAYSIZE);
       while (assignedIndices.contains(new Integer(index))) {
@@ -60,18 +54,17 @@ public class GenericNetwork extends BasicNetworkSimulator
       }
       // System.out.println("index= " + index);
       assignedIndices.add(new Integer(index));
-      countIndex++;
     }
 
-    public int proximity(NodeRecord that) {
-      return (int)Math.round(networkDelay(that)+that.networkDelay(this));
+    public float proximity(NodeRecord that) {
+      return Math.round(networkDelay(that)+that.networkDelay(this));
     }
     
-    public double networkDelay(NodeRecord that) {
+    public float networkDelay(NodeRecord that) {
       GNNodeRecord nr = (GNNodeRecord)that;
-      int res = distance[index][nr.index];
+      float res = distance[index][nr.index];
       if (res < 0)
-        return Integer.MAX_VALUE;
+        return Float.MAX_VALUE;
       else
         return res;
     }
@@ -80,6 +73,12 @@ public class GenericNetwork extends BasicNetworkSimulator
     // cooresponds to
     public int getIndex() {
       return index;
+    }
+
+    public void markDead() {
+//      System.out.println("a"+assignedIndices.size());
+      assignedIndices.remove(new Integer(index));
+//      System.out.println("b"+assignedIndices.size());
     }
   }
 
@@ -130,8 +129,9 @@ public class GenericNetwork extends BasicNetworkSimulator
         String[] words;
         words = line.split("[ \t]+");
         if (distance == null) {
-          MAXOVERLAYSIZE = words.length;
-          distance = new int[MAXOVERLAYSIZE][MAXOVERLAYSIZE]; 
+          if (words.length < MAXOVERLAYSIZE)
+            MAXOVERLAYSIZE = words.length;
+          distance = new float[MAXOVERLAYSIZE][MAXOVERLAYSIZE]; 
         }
         int nodeCount = 0;
 //        for (int i = 0; i < words.length; i++) {
@@ -142,12 +142,13 @@ public class GenericNetwork extends BasicNetworkSimulator
 //                  .println("ERROR: the matrix has more entries than MAXOVERLAYSIZE which is a static variable set in main()");
 //              System.exit(1);
 //            }
-            distance[lineCount][nodeCount] = (int) Float.parseFloat(words[i]);
+            distance[lineCount][nodeCount] = Float.parseFloat(words[i]);
             nodeCount++;
-
+            if (nodeCount == MAXOVERLAYSIZE) break;
           }
         }
         lineCount++;
+        if (lineCount == MAXOVERLAYSIZE) break;
       }
       System.out.println("Size of Generic Network matrix= " + lineCount);
     } catch (IOException e) {
@@ -231,39 +232,39 @@ public class GenericNetwork extends BasicNetworkSimulator
 //    }
 //  }  
   
-  public static class Coordinate implements Serializable {
-
-    public static int GNPDIMENSIONS = 8;
-    public int index;
-    public double[] pos = new double[GNPDIMENSIONS];
-    
-    public Coordinate(int _index, double[] arr) {
-    for(int i=0; i<GNPDIMENSIONS; i++) {
-        pos[i] = arr[i];
-    }
-    }
-
-    
-    public double distance(Coordinate o) {
-    double dpos[] = new double[GNPDIMENSIONS];
-    double sumDist = 0;
-    for(int i=0; i<GNPDIMENSIONS; i++) {
-        dpos[i] = Math.abs(o.pos[i] - pos[i]);
-        sumDist = sumDist + (dpos[i]*dpos[i]);
-    }
-    double dist = Math.sqrt(sumDist);
-    return dist;
-    
-    }
-
-    public String toString() {
-    String s = "(";
-    for(int i=0; i < GNPDIMENSIONS; i++) {
-        s = s + pos[i] + ",";
-    }
-    s = s + ")";
-    return s;
-    }
-
-}
+//  public static class Coordinate implements Serializable {
+//
+//    public static int GNPDIMENSIONS = 8;
+//    public int index;
+//    public double[] pos = new double[GNPDIMENSIONS];
+//    
+//    public Coordinate(int _index, double[] arr) {
+//    for(int i=0; i<GNPDIMENSIONS; i++) {
+//        pos[i] = arr[i];
+//    }
+//    }
+//
+//    
+//    public double distance(Coordinate o) {
+//    double dpos[] = new double[GNPDIMENSIONS];
+//    double sumDist = 0;
+//    for(int i=0; i<GNPDIMENSIONS; i++) {
+//        dpos[i] = Math.abs(o.pos[i] - pos[i]);
+//        sumDist = sumDist + (dpos[i]*dpos[i]);
+//    }
+//    double dist = Math.sqrt(sumDist);
+//    return dist;
+//    
+//    }
+//
+//    public String toString() {
+//    String s = "(";
+//    for(int i=0; i < GNPDIMENSIONS; i++) {
+//        s = s + pos[i] + ",";
+//    }
+//    s = s + ")";
+//    return s;
+//    }
+//
+//}
 }

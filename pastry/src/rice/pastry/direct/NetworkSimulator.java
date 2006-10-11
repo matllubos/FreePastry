@@ -42,7 +42,7 @@ public interface NetworkSimulator {
    * 
    * @return proximity of b to a.
    */
-  public int proximity(DirectNodeHandle a, DirectNodeHandle b);
+  public float proximity(DirectNodeHandle a, DirectNodeHandle b);
   
   /**
    * Determines delivery time from a to b.
@@ -52,7 +52,7 @@ public interface NetworkSimulator {
    * 
    * @return proximity of b to a.
    */
-  public double networkDelay(DirectNodeHandle a, DirectNodeHandle b);
+  public float networkDelay(DirectNodeHandle a, DirectNodeHandle b);
   
   /**
    * Deliver message.

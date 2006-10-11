@@ -220,13 +220,18 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
             if (ft.time < expiration) {
               if (logger.level<=Logger.FINE)logger.log("CJP: Removing "+ft.handle+" from failed set.");
               i.remove(); 
-              ft.handle.deleteObserver(ConsistentJoinProtocol.this);              
+              ft.handle.deleteObserver(ConsistentJoinProtocol.this);   
+              observing.remove(ft.handle);
             } else {
               if (logger.level<=Logger.FINER)logger.log("CJP: Not Removing "+ft.handle+" from failed set until "+(ft.time+failedNodeExpirationTime)+" which is another "+(ft.time+failedNodeExpirationTime-now)+" millis.");               
             }
           }
         }
-      }    
+      }   
+      
+      public String toString() {
+        return "CJP$cleanupTask{"+thePastryNode+"}"+cancelled; 
+      }
     };
     ln.getEnvironment().getSelectorManager().schedule(cleanupTask, cleanupInterval, cleanupInterval);
   }
@@ -617,8 +622,16 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   }
   
   public void destroy() {
-    if (logger.level <= Logger.FINE) logger.log("CJP: destroy() called");
+    if (logger.level <= Logger.INFO) logger.log("CJP: destroy() called");
     thePastryNode.getEnvironment().getSelectorManager().removeLoopObserver(this);
     cleanupTask.cancel();
+    Iterator it2 = observing.iterator();
+    while(it2.hasNext()) {
+      NodeHandle nh = (NodeHandle)it2.next();
+      nh.deleteObserver(this);
+      it2.remove();
+    }
+    observing.clear();
+    observing = null;
   }
 }

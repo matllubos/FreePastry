@@ -323,7 +323,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    * @param b the second NodeId
    * @return the proximity between the two input NodeIds
    */
-  public double networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
+  public float networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
     NodeRecord nra = a.getRemote().record;
     NodeRecord nrb = b.getRemote().record;
 
@@ -334,7 +334,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     return nra.networkDelay(nrb);
   }
 
-  public int proximity(DirectNodeHandle a, DirectNodeHandle b) {
+  public float proximity(DirectNodeHandle a, DirectNodeHandle b) {
     NodeRecord nra = a.getRemote().record;
     NodeRecord nrb = b.getRemote().record;
 
@@ -357,12 +357,12 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public DirectNodeHandle getClosest(DirectNodeHandle nh) {
     Iterator it = nodes.iterator();
     DirectNodeHandle bestHandle = null;
-    int bestProx = Integer.MAX_VALUE;
+    float bestProx = Float.MAX_VALUE;
     Id theId;
 
     while (it.hasNext()) {
       DirectPastryNode theNode = (DirectPastryNode) it.next();
-      int theProx = theNode.record.proximity(nh.getRemote().record);
+      float theProx = theNode.record.proximity(nh.getRemote().record);
       theId = theNode.getNodeId();
       if (!theNode.isAlive() || !theNode.isReady()
           || theId.equals(nh.getNodeId())) {

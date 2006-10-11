@@ -163,6 +163,7 @@ public class MessageDispatch implements Destructable {
     Iterator i = addressBook.values().iterator();
     while(i.hasNext()) {
       PastryAppl mr = (PastryAppl)i.next();
+      if (logger.level <= Logger.INFO) logger.log("Destroying "+mr);
       mr.destroy(); 
     }      
     addressBook.clear();

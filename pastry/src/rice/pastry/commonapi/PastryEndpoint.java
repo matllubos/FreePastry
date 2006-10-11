@@ -530,6 +530,16 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     
     return Arrays.asList(ret);
   }
+
+  @Override
+  public void destroy() {
+    if (application != null) {
+      if (application instanceof Destructable) {
+        ((Destructable)application).destroy();
+      }
+    }
+    super.destroy();
+  }
   
 }
 

@@ -116,8 +116,8 @@ public class ClosestRegrTest {
 //    int cProx = simulator.proximity(closest, handle);
 //    System.out.println("cProx:"+cProx);
     if (! closest.getNodeId().equals(realClosest.getNodeId())) {
-      int cProx = simulator.proximity(closest, handle);
-      int rProx = simulator.proximity(realClosest, handle);
+      float cProx = simulator.proximity(closest, handle);
+      float rProx = simulator.proximity(realClosest, handle);
       if (cProx == 0) {
         System.out.println("ERROR: factory.getNearest("+handle+") returned "+closest); 
       }

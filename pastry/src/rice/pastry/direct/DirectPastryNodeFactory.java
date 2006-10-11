@@ -191,7 +191,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return The proximity of the provided handle
    */
   public int getProximity(NodeHandle local, NodeHandle remote) {
-    return simulator.proximity((DirectNodeHandle)local, (DirectNodeHandle)remote);
+    return (int)simulator.proximity((DirectNodeHandle)local, (DirectNodeHandle)remote);
   }
 
 //  protected int proximity(NodeHandle local, NodeHandle handle) {

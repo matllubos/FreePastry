@@ -527,5 +527,15 @@ public class RouteSet implements NodeSetI, Serializable,
     row = -1;
     col = -1;
   }
+
+  public void destroy() {
+    for (int i = 0; i < nodes.length; i++) {
+      if (nodes[i] != null) {
+        nodes[i].deleteObserver(this);
+        nodes[i] = null;
+      }
+    }
+    
+  }
   
 }

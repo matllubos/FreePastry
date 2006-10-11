@@ -5,8 +5,10 @@ package rice.pastry.direct;
 
 public interface NodeRecord {
 
-  double networkDelay(NodeRecord nrb);
+  float networkDelay(NodeRecord nrb);
   
-  int proximity(NodeRecord nrb);
+  float proximity(NodeRecord nrb);
+  
+  void markDead();
   
 }

@@ -551,5 +551,20 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
     d = new Id.Distance();
     listeners = new ArrayList();
   }
+
+  public String toString() {
+    return "SimilarSet{"+ln+"}";
+  }
+  
+  public void destroy() {
+    for (int i = 0; i < nodes.length; i++) {
+      if (nodes[i] != null) {
+        nodes[i].deleteObserver(this); 
+        nodes[i] = null;
+      }
+    }
+    theSize = 0;
+  }
+  
 }
 
