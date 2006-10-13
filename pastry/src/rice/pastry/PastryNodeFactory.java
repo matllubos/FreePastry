@@ -158,6 +158,7 @@ public abstract class PastryNodeFactory {
     final Hashtable<NodeHandle,Integer> localTable = pingCache.get(local);
     if (localTable == null) return null;
     
+    localTable.remove(local); 
     ArrayList<NodeHandle> handles = new ArrayList<NodeHandle>(localTable.keySet());
     Collections.sort(handles,new Comparator<NodeHandle>() {
     
