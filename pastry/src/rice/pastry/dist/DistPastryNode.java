@@ -160,8 +160,8 @@ public abstract class DistPastryNode extends PastryNode {
    */
   public void destroy() {
     super.destroy();
-    leafSetRoutineMaintenance.cancel();
-    routeSetRoutineMaintenance.cancel();
+    if (leafSetRoutineMaintenance != null) leafSetRoutineMaintenance.cancel();
+    if (routeSetRoutineMaintenance != null) routeSetRoutineMaintenance.cancel();
   }
 
 
