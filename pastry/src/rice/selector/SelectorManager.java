@@ -118,7 +118,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       throw new NullPointerException();
 
     SelectionKey key = channel.register(selector, ops, handler);
-    cancelledKeys.remove(key);
+    if (cancelledKeys != null) cancelledKeys.remove(key);
 
     return key;
   }

@@ -102,7 +102,7 @@ public class SocketPastryNode extends DistPastryNode {
       // destroy now
       try {
         super.destroy();
-        srManager.destroy();
+        if (srManager != null) srManager.destroy();
       } catch (IOException e) {
         getEnvironment().getLogManager().getLogger(SocketPastryNode.class,
             "ERROR: Got exception " + e + " while resigning node!");
