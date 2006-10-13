@@ -512,9 +512,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           throw soe;
         }
       } else {
+        
+        // clean up Environment
+        if (this.environment.getParameters().getBoolean(
+            "pastry_factory_multipleNodes")) {
+          environment.destroy();
+        }
+        
         throw new RuntimeException(e);
       }
     } catch (IOException ioe) {
+      
       throw new RuntimeException(ioe);      
     }
   }
@@ -668,11 +676,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     } catch (IOException ioe) {
       // this will usually be a bind exception
 
-      // clean up Environment
-      if (this.environment.getParameters().getBoolean(
-          "pastry_factory_multipleNodes")) {
-        environment.destroy();
-      }
       throw ioe;
 //    } catch (UPNPResponseException ure) {
 //      throw new RuntimeException(ure);
