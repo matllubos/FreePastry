@@ -118,20 +118,34 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     if (localAddress == null) {
       localAddress = InetAddress.getLocalHost();
       ServerSocket test = null;
+      ServerSocket test2 = null;
       try {
         test = new ServerSocket();
         test.bind(new InetSocketAddress(localAddress, port));
       } catch (SocketException e) {
         Socket temp = new Socket("yahoo.com", 80);
+        if (temp.getLocalAddress().equals(localAddress)) throw new IllegalStateException("Cannot bind to "+localAddress+":"+port);
         localAddress = temp.getLocalAddress();
         temp.close();
 
         if (logger.level <= Logger.WARNING)
-          logger.log("Error binding to default IP, using " + localAddress);
+          logger.log("Error binding to default IP, using " + localAddress+":"+port);
+        
+        try {
+          test2 = new ServerSocket();
+          test2.bind(new InetSocketAddress(localAddress, port));
+        } catch (SocketException e2) {
+          if (temp.getLocalAddress().equals(localAddress)) throw new IllegalStateException("Cannot bind to "+localAddress+":"+port);
+        }        
+        
       } finally {
         try {
           if (test != null)
             test.close();
+        } catch (Exception e) {}
+        try {
+          if (test2 != null)
+            test2.close();
         } catch (Exception e) {}
       }
     }
