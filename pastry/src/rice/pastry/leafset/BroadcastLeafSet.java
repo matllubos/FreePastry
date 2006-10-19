@@ -51,8 +51,10 @@ public class BroadcastLeafSet extends PRawMessage {
   public BroadcastLeafSet(Date stamp, NodeHandle from, LeafSet leafSet, int type, long requestTimeStamp) {
     super(LeafSetProtocolAddress.getCode(), stamp);
 
+    if (leafSet == null) throw new IllegalArgumentException("Leafset is null");
+    
     fromNode = from;
-    theLeafSet = leafSet;
+    theLeafSet = leafSet.copy();
     theType = type;
     this.requestTimeStamp = requestTimeStamp;
     setPriority(MAX_PRIORITY);
