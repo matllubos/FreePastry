@@ -204,7 +204,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     RETRY_INTERVAL = p.getInt("pastry_protocol_consistentJoin_retry_interval");
     failedNodeExpirationTime = p.getInt("pastry_protocol_consistentJoin_failedRetentionTime"); // 90000
     maxFailedEntries = p.getInt("pastry_protocol_consistentJoin_maxFailedToSend"); // 20
-    int cleanupInterval = p.getInt("pastry_protocol_consistentJoin_cleanup_interval"); // 30000
+    int cleanupInterval = p.getInt("pastry_protocol_consistentJoin_cleanup_interval"); // 300000
 
     ln.getEnvironment().getSelectorManager().addLoopObserver(this);
     
