@@ -602,6 +602,9 @@ public abstract class PastryRegrTest {
       pastryNodesSortedReady.remove(pn.getNodeId());
       killNode(pn);
       System.out.println("Killed " + pn.getNodeId());
+      try {
+        environment.getTimeSource().sleep(2000);
+      } catch (InterruptedException ie) {}
     }
   }
 

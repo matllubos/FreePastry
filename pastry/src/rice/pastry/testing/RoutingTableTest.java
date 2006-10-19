@@ -8,6 +8,7 @@ import java.util.*;
 import rice.Destructable;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.RouteMessage;
@@ -101,7 +102,7 @@ public class RoutingTableTest {
     // Generate the NodeIds Randomly
     nidFactory = new RandomNodeIdFactory(env);
     
-//    env.getParameters().setInt("pastry_direct_gtitm_max_overlay_size",numNodes);
+    env.getParameters().setInt("pastry_direct_gtitm_max_overlay_size",numNodes);
 //    if (numNodes > 2000) {
     env.getParameters().setString("pastry_direct_gtitm_matrix_file","sample_10k");
 //    env.getParameters().setString("pastry_direct_gtitm_matrix_file","sample_2k");
@@ -410,8 +411,15 @@ public class RoutingTableTest {
   private void testRoutingTables(int round) {    
     if (printLeafSets)
       testLeafSets();
-    double streatch = testRoutingTables1();
-    int holes = testRoutingTables2();
+    double streatch;
+    int holes;
+    if (numNodes <= 1000) {
+      streatch = testRoutingTables1();
+      holes = testRoutingTables2();
+    } else {
+      streatch = testRoutingTables1a();
+      holes = testRoutingTables2a();      
+    }
     System.out.println(round+","+streatch+","+holes+" numNodes:"+nodes.size());
   }
   
@@ -423,7 +431,6 @@ public class RoutingTableTest {
     
     // for each node
     Iterator nodeIterator = nodes.iterator();
-    int curNodeIndex = 0;
     int ctr = 0;
     double acc = 0;
     
@@ -450,10 +457,103 @@ public class RoutingTableTest {
           ctr++;
         }
       }
-      curNodeIndex++;
     }    
 //    System.out.println("Time "+env.getTimeSource().currentTimeMillis()+" = "+(acc/ctr));
     return acc/ctr;
+  }
+
+  private double testRoutingTables1a() {
+    
+    // for each node
+    int ctr = 0;
+    double acc = 0;
+    RandomSource rand = env.getRandomSource();
+    for (int i = 0; i < 1000000; i++) {
+      PastryNode node = (PastryNode)nodes.get(rand.nextInt(nodes.size()));
+      RoutingTable rt = node.getRoutingTable();
+      PastryNode that = (PastryNode)nodes.get(rand.nextInt(nodes.size()));
+      if ((that != node) && that.isReady() && node.isReady()) {
+        NodeHandle thatHandle = that.getLocalHandle();        
+        int latency = calcLatency(node,thatHandle);
+        int proximity = node.proximity(thatHandle);
+        if (proximity == 0) {
+          throw new RuntimeException("proximity zero:"+node+".proximity("+thatHandle+")"); 
+        }
+        if (latency < proximity) { // due to rounding error
+          latency = proximity;            
+//            calcLatency(node, thatHandle); 
+        }          
+        double streatch = (1.0*latency)/(1.0*proximity);
+//          if (streatch > 3.0) System.out.println("streatch: "+streatch);
+        acc+=streatch;
+        ctr++;
+      }
+    }
+//    System.out.println("Time "+env.getTimeSource().currentTimeMillis()+" = "+(acc/ctr));
+    return acc/ctr;
+  }
+
+  private int testRoutingTables2() {    
+    // for each node
+    Iterator nodeIterator = nodes.iterator();
+    int curNodeIndex = 0;
+    int ctr = 0;
+    int[] ctrs = new int[5];
+    while(nodeIterator.hasNext()) {      
+      PastryNode node = (PastryNode)nodeIterator.next();
+      if (!node.isReady()) continue;
+      DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);
+      RoutingTable rt = node.getRoutingTable();
+      Iterator i2 = nodes.iterator();
+      while(i2.hasNext()) {
+        PastryNode that = (PastryNode)i2.next();
+        if (!that.isReady()) continue;
+        NodeHandle thatHandle = that.getLocalHandle();
+        int response = rt.test(thatHandle);
+        if (response > 1) {
+          ctrs[response]++;
+          ctr++;
+          if (logHeavy)
+            System.out.println(response+": ("+curNodeIndex+")"+node+" could have held "+thatHandle);    
+        }
+      }
+      DirectPastryNode.setCurrentNode(temp);
+      curNodeIndex++;
+    }    
+//    System.out.println("Time "+env.getTimeSource().currentTimeMillis()+" = "+ctr+"   ENTRY_WAS_DEAD:"+ctrs[2]+" AVAILABLE_SPACE:"+ctrs[3]+" NO_ENTRIES:"+ctrs[4]);
+    return ctr;
+  }
+
+  private int testRoutingTables2a() {    
+    // for each node
+    Iterator nodeIterator = nodes.iterator();
+    int curNodeIndex = 0;
+    int ctr = 0;
+    int[] ctrs = new int[5];
+    RandomSource rand = env.getRandomSource();
+    for (int i = 0; i < 1000000; i++) {
+      PastryNode node = (PastryNode)nodes.get(rand.nextInt(nodes.size()));
+      if (!node.isReady()) continue;
+      DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);
+      RoutingTable rt = node.getRoutingTable();
+      Iterator i2 = nodes.iterator();
+      PastryNode that = (PastryNode)nodes.get(rand.nextInt(nodes.size()));
+      
+        if (!that.isReady()) continue;
+        NodeHandle thatHandle = that.getLocalHandle();
+        int response = rt.test(thatHandle);
+        if (response > 1) {
+          ctrs[response]++;
+          ctr++;
+          if (logHeavy)
+            System.out.println(response+": ("+curNodeIndex+")"+node+" could have held "+thatHandle);    
+        }
+        
+      DirectPastryNode.setCurrentNode(temp);
+      curNodeIndex++;
+    }    
+//    System.out.println("Time "+env.getTimeSource().currentTimeMillis()+" = "+ctr+"   ENTRY_WAS_DEAD:"+ctrs[2]+" AVAILABLE_SPACE:"+ctrs[3]+" NO_ENTRIES:"+ctrs[4]);
+    return ctr;
   }
 
   // recursively calculate the latency
@@ -565,37 +665,6 @@ public class RoutingTableTest {
     }
   }
   
-  private int testRoutingTables2() {    
-    // for each node
-    Iterator nodeIterator = nodes.iterator();
-    int curNodeIndex = 0;
-    int ctr = 0;
-    int[] ctrs = new int[5];
-    while(nodeIterator.hasNext()) {      
-      PastryNode node = (PastryNode)nodeIterator.next();
-      if (!node.isReady()) continue;
-      DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);
-      RoutingTable rt = node.getRoutingTable();
-      Iterator i2 = nodes.iterator();
-      while(i2.hasNext()) {
-        PastryNode that = (PastryNode)i2.next();
-        if (!that.isReady()) continue;
-        NodeHandle thatHandle = that.getLocalHandle();
-        int response = rt.test(thatHandle);
-        if (response > 1) {
-          ctrs[response]++;
-          ctr++;
-          if (logHeavy)
-            System.out.println(response+": ("+curNodeIndex+")"+node+" could have held "+thatHandle);    
-        }
-      }
-      DirectPastryNode.setCurrentNode(temp);
-      curNodeIndex++;
-    }    
-//    System.out.println("Time "+env.getTimeSource().currentTimeMillis()+" = "+ctr+"   ENTRY_WAS_DEAD:"+ctrs[2]+" AVAILABLE_SPACE:"+ctrs[3]+" NO_ENTRIES:"+ctrs[4]);
-    return ctr;
-  }
-
   public class MyApp implements Application {
     /**
      * The Endpoint represents the underlieing node.  By making calls on the 

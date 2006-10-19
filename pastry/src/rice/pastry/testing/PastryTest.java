@@ -63,7 +63,7 @@ public class PastryTest {
     synchronized (pn) {
       while(!pn.isReady()) {
         try {
-          pn.wait(300);
+          pn.wait();
         } catch (InterruptedException ie) {}
       }
     }

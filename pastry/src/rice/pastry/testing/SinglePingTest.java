@@ -74,7 +74,7 @@ public class SinglePingTest {
       }
     }    
     long now = System.currentTimeMillis();
-    if (now-start > 2000) 
+    if (now-start > 10000) 
       System.out.println("Took "+(now-start)+" to create node "+pn);
     
     return pn;
@@ -124,21 +124,29 @@ public class SinglePingTest {
 
   public void test() {
     int i;
-    Date prev = new Date();
+    long prev = environment.getTimeSource().currentTimeMillis();
 
     System.out.println("-------------------------");
     for (i = 0; i < testRecord.getNodeNumber(); i++) {
       PastryNode pn = makePastryNode();
-      while (simulate());
+//      while (simulate());
 //      System.out.println(pn.getLeafSet());
 
-      if (i != 0 && i % 500 == 0)
+      synchronized (pn) {
+        while(!pn.isReady()) {
+          try {
+            pn.wait();
+          } catch (InterruptedException ie) {}
+        }
+      }
+      
+      if (i != 0 && i % 100 == 0)
         System.out.println(i + " nodes constructed");
     }
     System.out.println(i + " nodes constructed");
 
-    Date curr = new Date();
-    long msec = curr.getTime() - prev.getTime();
+    long curr = environment.getTimeSource().currentTimeMillis();
+    long msec = curr - prev;
     System.out.println("time used " + (msec / 60000) + ":"
         + ((msec % 60000) / 1000) + ":" + ((msec % 60000) % 1000));
     prev = curr;
@@ -146,8 +154,8 @@ public class SinglePingTest {
     sendPings(testRecord.getTestNumber());
     System.out.println(testRecord.getTestNumber() + " lookups done");
 
-    curr = new Date();
-    msec = curr.getTime() - prev.getTime();
+    curr = environment.getTimeSource().currentTimeMillis();
+    msec = curr - prev;
     System.out.println("time used " + (msec / 60000) + ":"
         + ((msec % 60000) / 1000) + ":" + ((msec % 60000) % 1000));
 
