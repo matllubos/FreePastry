@@ -9,6 +9,7 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+import rice.environment.time.TimeSource;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.p2p.util.MathUtils;
@@ -119,6 +120,8 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   
   protected RandomSource random;
 
+  TimeSource timeSource;
+  
   MessageDeserializer defaultDeserializer;
   /**
    * Constructs a new SocketManager.
@@ -144,6 +147,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     if (random == null) {
       this.random = node.getEnvironment().getRandomSource(); 
     }
+    this.timeSource = node.getEnvironment().getTimeSource();
     
     Parameters p = pastryNode.getEnvironment().getParameters();
     
@@ -251,11 +255,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         manager.proximity(path); 
       }
       if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path+" prox:"+prox);
-      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES);      
 //      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
       
       int delay = prox*2;
       if (delay > PING_DELAY) delay = PING_DELAY;      
+      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES, delay);      
       ((SocketPastryNode) pastryNode).getTimer().schedule(checker, delay);
       pingManager.ping(path, checker);
     }
@@ -720,6 +724,9 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     }
   }
   
+  int totalPingsToResponders = 0;
+  int totalSuccessfulChecks = 0;
+  
   /**
    * DESCRIBE THE CLASS
    *
@@ -737,6 +744,11 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     // the path to check
     protected SourceRoute path;
 
+    
+    // for debugging
+    long startTime; // the start time
+    int initialDelay; // the initial expected delay
+    
     /**
      * Constructor for DeadChecker.
      *
@@ -744,11 +756,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param numTries DESCRIBE THE PARAMETER
      * @param mgr DESCRIBE THE PARAMETER
      */
-    public DeadChecker(SourceRoute path, int numTries) {
+    public DeadChecker(SourceRoute path, int numTries, int initialDelay) {
       if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + path + ") started.");
 
       this.path = path;
       this.numTries = numTries;
+      
+      this.initialDelay = initialDelay;
+      this.startTime = timeSource.currentTimeMillis();
     }
 
     /**
@@ -759,6 +774,13 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param timeHeardFrom DESCRIBE THE PARAMETER
      */
     public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom) {
+      totalPingsToResponders+=tries;
+      totalSuccessfulChecks++;
+      if (tries > 1) {
+        long delay = timeSource.currentTimeMillis()-startTime;
+        if (logger.level <= Logger.INFO) logger.log("DeadChecker.pingResponse("+path+") tries="+tries+" estimated="+initialDelay+" totalDelay="+delay+" pings="+totalPingsToResponders+" success="+totalSuccessfulChecks);        
+      }
+      
       if (logger.level <= Logger.FINE) logger.log("Terminated DeadChecker(" + path + ") due to ping.");
       manager.markAlive(path);
       cancel();

@@ -515,7 +515,7 @@ public class SocketSourceRouteManager {
         if (m.isRouteMessage()) {
           if (m.getOptions().multipleHopsAllowed() && m.getOptions().rerouteIfSuspected()) {
             // kick it back to pastry
-            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);            
+            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m + " because suspected address " + address);            
             RouteMessage rm = m.getRouteMessage();            
             rm.nextHop = null; 
             spn.receiveMessage(rm);
@@ -530,7 +530,7 @@ public class SocketSourceRouteManager {
       case SocketNodeHandle.LIVENESS_DEAD_FOREVER:
         if (m.isRouteMessage()) {
           if (m.getOptions().multipleHopsAllowed()) {
-            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m);
+            if (logger.level <= Logger.INFO) logger.log( "(SSRM) Attempting to reroute route message " + m + " because dead address " + address);
             RouteMessage rm = m.getRouteMessage();
             rm.nextHop = null; 
             spn.receiveMessage(rm);
@@ -1037,7 +1037,7 @@ public class SocketSourceRouteManager {
         SocketBuffer sb = (SocketBuffer)array[i];
         if (sb.isRouteMessage()) {
           if (sb.getOptions().multipleHopsAllowed() && sb.getOptions().rerouteIfSuspected()) {
-            if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + sb + " due to suspected next hop " + address);
+            //if (logger.level <= Logger.FINE) logger.log( "REROUTE: Rerouting message " + sb + " due to suspected next hop " + address);
             reroute(address.eaddress, sb);
             queue.remove(sb);
           }
