@@ -19,6 +19,9 @@ import java.io.*;
 // coordinates from input files
 public class GenericNetwork extends BasicNetworkSimulator 
 {
+  
+  float MIN_DIST = 2.0f;
+  
   // This stores the matrix
   private float distance[][];
 
@@ -65,8 +68,10 @@ public class GenericNetwork extends BasicNetworkSimulator
       float res = distance[index][nr.index];
       if (res < 0)
         return Float.MAX_VALUE;
-      else
-        return res;
+
+      if ((res < MIN_DIST) && !this.equals(that)) return MIN_DIST;
+
+      return res;
     }
 
     // this return the index in the matrix/CoordinateArray that this NodeRecord
@@ -96,6 +101,7 @@ public class GenericNetwork extends BasicNetworkSimulator
     super(env);
     
     MAXOVERLAYSIZE = env.getParameters().getInt("pastry_direct_gtitm_max_overlay_size");
+    MIN_DIST = env.getParameters().getFloat("pastry_direct_min_delay");
     
     inFile_Matrix = inFile;
     if (inFile_Matrix == null) {
