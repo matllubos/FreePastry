@@ -33,7 +33,7 @@ public class ConsistencyPLTest implements Observer {
 
   public static String BOOTPREFIX = "ricepl-1";
   public static String BOOTNODE = "ricepl-1.cs.rice.edu";
-  public static String ALT_BOOTNODE = "ricepl-3.cs.rice.edu";
+  public static String ALT_BOOTNODE = "planetlab01.mpi-sws.mpg.de";
   public static final int BASE_DELAY = 30000;
   public static final int RND_DELAY = 500000;
   
@@ -145,7 +145,7 @@ public class ConsistencyPLTest implements Observer {
       channelsOpened++;
     }      
   }  
-  
+  // killRingTime(mins) artificialChurnTime(mins) split/scribe/none sendInterval msgSize
   public static void main(String[] args) throws Exception {
     
     PrintStream ps = new PrintStream(new FileOutputStream("log4.txt", true));
