@@ -308,7 +308,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     // if this is a request for an old version of us, then we return
     // infinity as an answer
     if (lAddress.getAddress(addressList).equals(rAddress.getAddress(addressList))) {
-      return Integer.MAX_VALUE;
+      return SocketNodeHandle.DEFAULT_PROXIMITY;
     }
 
     DatagramSocket socket = null;
@@ -339,7 +339,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       return (int) (environment.getTimeSource().currentTimeMillis() - start);
     } catch (IOException e) {
       if (logger.level <= Logger.FINE) logger.logException("Error in getProximity("+local+","+handle+") ",e);
-      return Integer.MAX_VALUE - 1;
+      return SocketNodeHandle.DEFAULT_PROXIMITY;
     } finally {
       if (socket != null)
         socket.close();
