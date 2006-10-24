@@ -34,7 +34,7 @@ public class SocketNodeHandle extends DistNodeHandle {
   public static final int LIVENESS_DEAD_FOREVER = 4;
 
   // the default distance, which is used before a ping
-  public static int DEFAULT_PROXIMITY = Integer.MAX_VALUE;
+  public static int DEFAULT_PROXIMITY = 60*60*1000;
 
   protected EpochInetSocketAddress eaddress;
   
