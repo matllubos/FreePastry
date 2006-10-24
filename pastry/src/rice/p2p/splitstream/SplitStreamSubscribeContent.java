@@ -66,6 +66,7 @@ public class SplitStreamSubscribeContent implements RawScribeContent {
     switch(version) {
       case 0:
         stage = buf.readInt();
+        break;
       default:
         throw new IOException("Unknown Version: "+version);
     }
