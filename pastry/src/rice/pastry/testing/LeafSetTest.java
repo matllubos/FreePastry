@@ -286,7 +286,7 @@ public class LeafSetTest {
     }
 
     int base = (i + size / 2) % nodes;
-    LeafSet set = new LeafSet(handles[base], size);
+    LeafSet set = new LeafSet(handles[base], size, null);
 
     for (int j = 0; j < nodes; j++) {
       set.put(handles[j]);
