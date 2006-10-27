@@ -66,8 +66,14 @@ pastry_socket_repeater_buffer_size = 65536
 pastry_socket_pingmanager_smallPings=true
 pastry_socket_pingmanager_datagram_receive_buffer_size = 131072
 pastry_socket_pingmanager_datagram_send_buffer_size = 65536
-pastry_socket_srm_check_dead_throttle = 300000
-pastry_socket_srm_ping_throttle = 300000
+pastry_socket_srm_check_dead_throttle = 30000
+pastry_socket_srm_proximity_timeout = 3600000
+pastry_socket_srm_ping_throttle = 30000
+pastry_socket_srm_default_rto = 3000
+pastry_socket_srm_rto_ubound = 10000
+pastry_socket_srm_rto_lbound = 50
+pastry_socket_srm_gain_h = 0.25
+pastry_socket_srm_gain_g = 0.125
 pastry_socket_scm_max_open_sockets = 300
 pastry_socket_scm_max_open_source_routes = 30
 # the maximum number of source routes to attempt, setting this to 0 will 
@@ -77,7 +83,7 @@ pastry_socket_scm_max_open_source_routes = 30
 # determination, however, is more likely to lead to congestion collapse
 pastry_socket_srm_num_source_route_attempts = 8
 pastry_socket_scm_socket_buffer_size = 32768
-pastry_socket_scm_ping_delay = 500
+pastry_socket_scm_ping_delay = 800
 pastry_socket_scm_ping_jitter = 0.1
 pastry_socket_scm_num_ping_tries = 5
 pastry_socket_scm_write_wait_time = 30000
@@ -113,6 +119,15 @@ nat_discovery_timeout = 5000
 nat_find_port_max_tries = 10
 # uncomment this to use UPnP NAT port forwarding, you need to include in the classpath: commons-jxpath-1.1.jar:commons-logging.jar:sbbi-upnplib-xxx.jar
 nat_handler_class = rice.pastry.socket.nat.sbbi.SBBINatHandler
+# hairpinning: 
+# default "prefix" requires more bandwidth if you are behind a NAT.  It enables multiple IP 
+# addresses in the NodeHandle if you are behind a NAT.  These are usually the internet routable address, 
+# and the LAN address (usually 192.168.x.x)
+# you can set this to never if any of the following conditions hold:
+#  a) you are the only FreePastry node behind this address
+#  b) you firewall supports hairpinning see
+# http://scm.sipfoundry.org/rep/ietf-drafts/behave/draft-ietf-behave-nat-udp-03.html#rfc.section.6
+nat_nodehandle_multiaddress = prefix
 
 # if we are not scheduled for time on cpu in this time, we setReady(false)
 # otherwise there could be message inconsistency, because
