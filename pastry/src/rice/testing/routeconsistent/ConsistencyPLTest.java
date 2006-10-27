@@ -31,9 +31,10 @@ public class ConsistencyPLTest implements Observer {
   public static boolean useSplitStream = false;
   public static String INSTANCE = "ConsPLSplitStreamTest";
 
-  public static String BOOTPREFIX = "ricepl-1";
-  public static String BOOTNODE = "ricepl-1.cs.rice.edu";
-  public static String ALT_BOOTNODE = "planetlab01.mpi-sws.mpg.de";
+//  public static String BOOTPREFIX = "ricepl-1";
+//  public static String BOOTNODE = "ricepl-1.cs.rice.edu";
+  public static String BOOTNODE = "planetlab01.mpi-sws.mpg.de";
+  public static String ALT_BOOTNODE = "planetlab02.mpi-sws.mpg.de";
   public static final int BASE_DELAY = 30000;
   public static final int RND_DELAY = 500000;
   
@@ -157,7 +158,7 @@ public class ConsistencyPLTest implements Observer {
     
     boolean isBootNode = false;
     InetAddress localAddress = InetAddress.getLocalHost();
-    if (localAddress.getHostName().startsWith(BOOTPREFIX)) {
+    if (localAddress.getHostName().startsWith(BOOTNODE)) {
       isBootNode = true;      
     }
     int killRingTime = 3*60; // minutes
