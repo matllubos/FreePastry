@@ -250,17 +250,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   protected void checkLiveness(SourceRoute path) {    
     if (path.getLastHop().equals(localAddress)) return;
     if (! resigned) {
-      int prox = manager.proximity(path);
-      if (prox < 0) {
-        manager.proximity(path); 
-      }
-      if (logger.level <= Logger.FINE) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path+" prox:"+prox);
-//      ((SocketPastryNode) pastryNode).getTimer().scheduleAtFixedRate(checker, PING_DELAY + random.nextInt(PING_JITTER), PING_DELAY + random.nextInt(PING_JITTER));
+      int rto = manager.rto(path);
       
-      int delay = prox*2;
-      if (delay > PING_DELAY) delay = PING_DELAY;      
-      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES, delay);      
-      ((SocketPastryNode) pastryNode).getTimer().schedule(checker, delay);
+      DeadChecker checker = new DeadChecker(path, NUM_PING_TRIES, rto);      
+      ((SocketPastryNode) pastryNode).getTimer().schedule(checker, rto);
       pingManager.ping(path, checker);
     }
   }
@@ -757,7 +750,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param mgr DESCRIBE THE PARAMETER
      */
     public DeadChecker(SourceRoute path, int numTries, int initialDelay) {
-      if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + path + ") started.");
+      if (logger.level <= Logger.INFO) logger.log("CHECK DEAD: " + localAddress + " CHECKING DEATH OF PATH " + path+" rto:"+initialDelay);
 
       this.path = path;
       this.numTries = numTries;
@@ -774,13 +767,14 @@ public class SocketCollectionManager extends SelectionKeyHandler {
      * @param timeHeardFrom DESCRIBE THE PARAMETER
      */
     public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom) {
-      totalPingsToResponders+=tries;
-      totalSuccessfulChecks++;
-      if (tries > 1) {
-        long delay = timeSource.currentTimeMillis()-startTime;
-        if (logger.level <= Logger.INFO) logger.log("DeadChecker.pingResponse("+path+") tries="+tries+" estimated="+initialDelay+" totalDelay="+delay+" pings="+totalPingsToResponders+" success="+totalSuccessfulChecks);        
-      }
-      
+      if (!cancelled) {
+        totalPingsToResponders+=tries;
+        totalSuccessfulChecks++;
+        if (tries > 1) {
+          long delay = timeSource.currentTimeMillis()-startTime;
+          if (logger.level <= Logger.INFO) logger.log("DeadChecker.pingResponse("+path+") tries="+tries+" estimated="+initialDelay+" totalDelay="+delay+" pings="+totalPingsToResponders+" success="+totalSuccessfulChecks);        
+        }
+      }      
       if (logger.level <= Logger.FINE) logger.log("Terminated DeadChecker(" + path + ") due to ping.");
       manager.markAlive(path);
       cancel();

@@ -10,6 +10,7 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+import rice.environment.time.TimeSource;
 //import rice.p2p.commonapi.MessageDeserializer;
 //import rice.p2p.commonapi.AppSocketReceiver;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
@@ -41,8 +42,40 @@ public class SocketSourceRouteManager {
   
   public int NUM_SOURCE_ROUTE_ATTEMPTS;
   
+  /**
+   * millis for the timeout
+   * 
+   * The idea is that we don't want this parameter to change too fast, 
+   * so this is the timeout for it to increase, you could set this to infinity, 
+   * but that may be bad because it doesn't account for intermediate link failures
+   */
+  public int PROX_TIMEOUT;// = 60*60*1000;
+
+  public int DEFAULT_RTO;// = 3000;
+  
+  /**
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
+   */
+  int RTO_UBOUND;// = 10000; // 10 seconds
+  /**
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
+   */
+  int RTO_LBOUND;// = 50;
+
+  /**
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
+   */
+  double gainH;// = 0.25;
+
+  /**
+   * RTO helper see RFC 1122 for a detailed description of RTO calculation
+   */
+  double gainG;// = 0.125;
+
   // the local pastry node
   private SocketPastryNode spn;
+  
+  private TimeSource time;
   
   // the socket manager below this manager
   private SocketCollectionManager manager;
@@ -71,10 +104,18 @@ public class SocketSourceRouteManager {
    */
   protected SocketSourceRouteManager(SocketPastryNode node, EpochInetSocketAddress bindAddress, EpochInetSocketAddress proxyAddress, RandomSource random) throws IOException {
     this.spn = node;
+    this.time = spn.getEnvironment().getTimeSource();
+    
     Parameters p = node.getEnvironment().getParameters();
     CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
     NUM_SOURCE_ROUTE_ATTEMPTS = p.getInt("pastry_socket_srm_num_source_route_attempts");
+    PROX_TIMEOUT = p.getInt("pastry_socket_srm_proximity_timeout");
+    DEFAULT_RTO = p.getInt("pastry_socket_srm_default_rto"); // 3000 // 3 seconds
+    RTO_UBOUND = p.getInt("pastry_socket_srm_rto_ubound");//240000; // 240 seconds
+    RTO_LBOUND = p.getInt("pastry_socket_srm_rto_lbound");//1000;
+    gainH = p.getDouble("pastry_socket_srm_gain_h");//0.25;
+    gainG = p.getDouble("pastry_socket_srm_gain_g");//0.125;
     
     nodeHandles = new TimerWeakHashMap(node.getEnvironment().getSelectorManager().getTimer(),30000);
     
@@ -433,6 +474,10 @@ public class SocketSourceRouteManager {
     return getAddressManager(route.getLastHop(), false).proximity();    
   }
   
+  protected int rto(SourceRoute route) {
+    return getAddressManager(route.getLastHop(), false).rto();    
+  }
+  
   /**
    * This method should be called when a known route is declared
    * suspected.
@@ -735,6 +780,13 @@ public class SocketSourceRouteManager {
         return SocketNodeHandle.DEFAULT_PROXIMITY;
       else
         return getRouteManager(best).proximity();
+    }  
+    
+    public int rto() {
+      if (best == null)
+        return DEFAULT_RTO;
+      else
+        return getRouteManager(best).rto();
     }  
     
     /**
@@ -1108,6 +1160,22 @@ public class SocketSourceRouteManager {
      */
     public class SourceRouteManager {
       
+      /**
+       * Retransmission Time Out
+       */
+      int RTO = DEFAULT_RTO; 
+
+      /**
+       * Average RTT
+       */
+      double RTT = 0;
+
+      /**
+       * Standard deviation RTT
+       */
+      double standardD = RTO/4.0;  // RFC1122 recommends choose value to target RTO = 3 seconds
+      
+      
       // the remote route of this manager
       protected SourceRoute route;
       
@@ -1116,6 +1184,7 @@ public class SocketSourceRouteManager {
       
       // the current best-known proximity of this route
       protected int proximity;
+      protected long proximityTimeout; // when the proximity is no longer valid
       
       // the last time the liveness information was updated
       protected long updated;
@@ -1132,9 +1201,16 @@ public class SocketSourceRouteManager {
         if (route == null) throw new IllegalArgumentException("route is null");
         this.route = route;
         this.liveness = SocketNodeHandle.LIVENESS_SUSPECTED;
-        this.proximity = SocketNodeHandle.DEFAULT_PROXIMITY;
+
+        proximity = SocketNodeHandle.DEFAULT_PROXIMITY;
+        proximityTimeout = time.currentTimeMillis()+PROX_TIMEOUT;
+        
         this.pending = false;
         this.updated = 0L;
+      }
+      
+      public int rto() {
+        return (int)RTO; 
       }
       
       /**
@@ -1145,6 +1221,15 @@ public class SocketSourceRouteManager {
        * @return The ping value to the remote address
        */
       public int proximity() {
+        long now = time.currentTimeMillis();
+        // prevent from changing too much
+        if (proximityTimeout > now) return proximity;
+
+        proximity = (int)RTT;
+        proximityTimeout = now+PROX_TIMEOUT;
+        
+        // TODO, schedule notification
+        
         return proximity;
       }
        
@@ -1181,9 +1266,38 @@ public class SocketSourceRouteManager {
        */
       protected void markProximity(int proximity) {
         if (proximity < 0) throw new IllegalArgumentException("proximity must be >= 0, was:"+proximity);
-        if (this.proximity > proximity) 
+        updateRTO(proximity);
+        if (this.proximity > proximity) {
+          proximityTimeout = time.currentTimeMillis();
           this.proximity = proximity;
+        }
+        // TODO: Schedule notification
       }
+
+      /**
+       * Adds a new round trip time datapoint to our RTT estimate, and 
+       * updates RTO and standardD accordingly.
+       * 
+       * @param m new RTT
+       */
+      private void updateRTO(long m) {
+        // rfc 1122
+        double err = m-RTT;
+        double absErr = err;
+        if (absErr < 0) {
+          absErr *= -1;
+        }
+        RTT = RTT+gainG*err;
+        standardD = standardD + gainH*(absErr-standardD);
+        RTO = (int)(RTT+(4.0*standardD));
+        if (RTO > RTO_UBOUND) {
+          RTO = RTO_UBOUND;
+        }
+        if (RTO < RTO_LBOUND) {
+          RTO = RTO_LBOUND;
+        }
+//          System.out.println("CM.updateRTO() RTO = "+RTO+" standardD = "+standardD+" suspected in "+getTimeToSuspected(RTO)+" faulty in "+getTimeToFaulty(RTO));
+      }      
       
       /**
        * Method which checks to see this route is dead.  If this address has
