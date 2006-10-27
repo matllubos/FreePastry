@@ -1,6 +1,7 @@
 package rice.pastry.leafset;
 
 import rice.pastry.*;
+import rice.pastry.routing.*;
 
 import java.util.*;
 import java.io.*;
@@ -319,15 +320,128 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
   }
 
   public NodeHandle remove(NodeHandle nh) {
-    for (int i = 0; i < theSize; i++) {
-      if (nodes[i].equals(nh)) {
-        return remove(i);
+    try {
+      for (int i = 0; i < theSize; i++) {
+        if (nodes[i].equals(nh)) {
+          return remove(i);
+        }
       }
+      return null;
+    } finally {
+      findMoreEntriesFromRoutingTable(); 
     }
-
-    return null;
   }
 
+  private void findMoreEntriesFromRoutingTable() {
+    if (theSize < nodes.length) {
+      // ok, we have room for some entries
+      RoutingTable table = leafSet.routingTable;
+      if (table == null) return; // don't have this feature installed
+      
+      int numRows = table.numRows();
+      Id lnId = (rice.pastry.Id)ln.getId();
+      int numCols = table.numColumns();
+      int baseBitLength = table.baseBitLength();
+      
+      // TODO: make sure these entries are alive
+      
+      // crawl from bottom of the table to the top
+      for (int rowIndex = 0; rowIndex < numRows; rowIndex++) {
+        RouteSet[] row = table.getRow(rowIndex);      
+        if (row != null) {
+          int colIndexStart = lnId.getDigit(rowIndex,baseBitLength);
+          // note, don't want to include colIndexStart, it's a waste of time
+          if (clockwise) {
+            for (int colIndex = colIndexStart+1; colIndex < numCols; colIndex++) {
+              if (addNextEntry(row[colIndex])) return;
+            }
+          } else {
+            for (int colIndex = colIndexStart-1; colIndex >= 0; colIndex--) {
+              if (addNextEntry(row[colIndex])) return;
+            }          
+          }
+        } // fi (row != null)
+      }
+      
+      // crawl back up from bottom of the table
+      for (int rowIndex = numRows-1; rowIndex >= 0; rowIndex--) {
+        RouteSet[] row = table.getRow(rowIndex);
+        if (row != null) {
+          int colIndexEnd = lnId.getDigit(rowIndex,baseBitLength);
+          // note, don't want to include colIndexEnd, it's a waste of time
+          if (clockwise) {
+            for (int colIndex = 0; colIndex < colIndexEnd; colIndex++) {
+              if (addNextEntry(row[colIndex])) return;
+            }
+          } else {
+            for (int colIndex = numCols-1; colIndex > colIndexEnd; colIndex--) {
+              if (addNextEntry(row[colIndex])) return;
+            }          
+          }        
+        } // fi (row != null)
+      }
+    }
+  }
+
+  /**
+   * Return true if done
+   * @param rs
+   * @return
+   */
+  private boolean addNextEntry(RouteSet rs) {
+    if (rs == null) return false;
+    
+    // the fast case
+    if (rs.size() == 1) {
+      NodeHandle nh = rs.get(0);
+      if (nh.isAlive()) {        
+        if (put(nh)) { 
+//          System.out.println("SimilarSet.addNextEntry()1:"+nh+" "+leafSet);
+        }
+      }
+      return theSize == nodes.length;
+    }
+    
+    // the complicated case: we have to sort the live entries
+    ArrayList<NodeHandle> toUse = new ArrayList<NodeHandle>();
+    for (int index = 0; index < rs.size(); index++) {
+      NodeHandle nh = rs.get(index);
+      if (nh.isAlive())
+        toUse.add(nh);
+    }
+    
+    switch (toUse.size()) {
+      case 0:
+        return false;
+      case 1:
+        {
+          NodeHandle nh = toUse.get(0);
+          if (put(nh)) {     
+//            System.out.println("SimilarSet.addNextEntry()2:"+nh+" "+leafSet);
+          }
+        }
+        break;
+      default:
+        // more than 1 node, and both are live, need to sort by direction
+        Collections.sort(toUse,new Comparator<NodeHandle>() {
+        
+          public int compare(NodeHandle a, NodeHandle b) {
+            // smallest to biggest: TODO, verify this does the right thing... it's pretty minor though...
+            if (clockwise) return a.getId().compareTo(b.getId());
+            return b.getId().compareTo(a.getId());
+          }        
+        });
+        Iterator<NodeHandle> i = toUse.iterator();
+        while(i.hasNext()) {
+          NodeHandle nh = i.next();
+          if (put(nh)) {      
+//            System.out.println("SimilarSet.addNextEntry()3:"+nh+" "+leafSet);
+          }
+        }
+    }
+    return theSize == nodes.length;
+  }
+  
   /**
    * Removes a node id and its handle from the set.
    * 

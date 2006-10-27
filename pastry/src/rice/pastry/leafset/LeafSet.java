@@ -29,6 +29,9 @@ public class LeafSet extends Observable implements Serializable {
   transient boolean observe = true;
   private int theSize;
 
+  // can get backup entries from this when we remove
+  RoutingTable routingTable;
+  
   private LeafSet(LeafSet that) {
     this(that, true); 
   }
@@ -47,9 +50,11 @@ public class LeafSet extends Observable implements Serializable {
    *
    * @param localHandle the local node
    * @param size the size of the leaf set.
+   * @param rt (to fall back on for more entries on delete operations)
    */
-  public LeafSet(NodeHandle localNode, int size) {
+  public LeafSet(NodeHandle localNode, int size, RoutingTable rt) {
     this(localNode, size, true);
+    this.routingTable = rt;
   }
   
   public LeafSet(NodeHandle localNode, int size, boolean observe) {
@@ -170,16 +175,10 @@ public class LeafSet extends Observable implements Serializable {
    * @param nid the node to remove.
    * @return the node handle removed or null if nothing.
    */
-  public NodeHandle remove(NodeHandle nh)
+  public void remove(NodeHandle nh)
   {
     NodeHandle res1 = cwSet.remove(nh);
     NodeHandle res2 = ccwSet.remove(nh);
-    if (res1 != null) {
-      return res1;
-    }
-    else {
-      return res2;
-    }
   }
 
   /**

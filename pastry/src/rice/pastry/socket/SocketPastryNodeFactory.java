@@ -704,7 +704,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     MessageDispatch msgDisp = new MessageDispatch(pn);
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
         pn);
-    LeafSet leafSet = new LeafSet(localhandle, lSetSize);
+    LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
 
     StandardRouter router = new StandardRouter(pn);
 
