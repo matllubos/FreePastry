@@ -58,7 +58,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
       
       public void setReady(boolean r) {
         if (r != ready) {
-          ready = r;
+          synchronized(PastryNode.this) {
+            ready = r;
+          }
           notifyReadyObservers();
         }
       }
@@ -536,9 +538,15 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    */
   abstract public int proximity(NodeHandle nh);
 
+  
+  protected JoinFailedException joinFailedReason;
   public void joinFailed(JoinFailedException cje) {
     if (logger.level <= Logger.WARNING) logger.log("joinFailed("+cje+")");
-    joinFailed = true;
+    joinFailedReason = cje;
+    synchronized(this) {
+      joinFailed = true;
+      this.notifyAll();
+    }
     setChanged();
     this.notifyObservers(cje); 
   }
@@ -551,7 +559,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     return joinFailed; 
   }
   
-  
+  public JoinFailedException joinFailedReason() {
+    return joinFailedReason; 
+  }
   
 }
 

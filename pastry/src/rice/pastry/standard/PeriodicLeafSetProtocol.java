@@ -317,7 +317,9 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   boolean ready = false;
   public void setReady(boolean r) {
     if (ready != r) {
-      ready = r; 
+      synchronized(thePastryNode) {
+        ready = r; 
+      }
       thePastryNode.notifyReadyObservers();
     }
   }
