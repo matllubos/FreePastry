@@ -5,6 +5,25 @@ body {
 	margin: 2cm 15%;
 	text-align: center;
 }
+
+.nav { }
+
+.nav-left { 
+	float: left;
+	width: 33%;
+	text-align: left;
+}
+.nav-center { 
+	float: left;
+	width: 34%;
+	text-align: center;
+}
+.nav-right { 
+	float: left;
+	width: 33%;
+	text-align: right;
+}
+
 .content {
 	text-align: justify;
 	line-height: 140%;
@@ -70,7 +89,7 @@ div.note em, div.abstract em {
 }
 hr {
 	height: 0px;
-	border: 0; background-color: none;
+	border: 0;
 	border-bottom: 1px solid black;
 	margin: 2em 0;
 }
@@ -138,3 +157,5 @@ h1, h2, h3, h4, h5, h6 {
 		border-bottom: 3px solid black;
 	}
 }
+
+
