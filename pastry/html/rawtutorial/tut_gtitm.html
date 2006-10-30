@@ -1,0 +1,103 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<div class="nav">
+  <span class="nav-left"><a href="tut_simulator.html">Previous (Past)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="index.html">Next (Contents)</a></span>
+</div><br/><hr/>
+
+<a name="lessonGtitm"></a><h1>Simulator Tutorial 2</h1>
+<h2>FreePastry's Direct Simulator (Using Latency Matrix)</h2>
+<h3>Download the tutorial files: 
+<a href="./src/gtitm/DistTutorial.java">DistTutorial.java</a>
+<a href="./src/gtitm/MyApp.java">MyApp.java</a>,
+<a href="./src/gtitm/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/direct/.</h3>
+
+  <p>Before completing this Tutorial, we recommend completing <a href="tut_simulator.html">Simulator Tutorial</a> of the FreePastry tutorial.</p>
+  <p>FreePastry's Simulator is a Discreet Event Simulator.  The puropse of this tutorial is to show you how to use the GenericNetwork to use a <b>latency matrix</b> to more accurately simulate your application with FreePastry's Discreet Event Simulator.
+  
+Changes:
+  There is only 1 change to the code... the Netowork Topology, and a command line argument to specify the file name:
+  
+<pre>
+  new GenericNetwork(env, new File(fileName))
+</pre>  
+
+<p>The format of this file is a matrix of floats representing the table of latency values.  It should be N lines with N floats on each line representing N latencies.</p>  
+<p>You should also specify the <a href="params.html">parameter</a>: <code>pastry_direct_gtitm_max_overlay_size</code> if you want to provide an input file over 2000 nodes.  Note that FreePastry will automatically accpet a smaller file, but to save memory, it will not read more than <code>pastry_direct_gtitm_max_overlay_size</code> lines in an input file.</p>
+
+<p><i>If anyone has an example of how to use the <a href="http://www.cc.gatech.edu/fac/Ellen.Zegura/graphs.html">GT-ITM Topology Generator</a> to generate a latency matrix, please let <a href="mailto:jeffh@mpi-sws.mpg.de">me</a> know so I can integrate it into this tutorial.</i></p>
+  
+Complie and execute this code as before, but this time provide a Matrix file.  The tutorial directory includes <a href="GNPINPUT">this file</a> which must be copied to the working directory to execute this tutorial.
+
+<pre>
+<span class="input">java -cp .:FreePastry-@freepastry_version@.jar rice.tutorial.gtitm.DistTutorial 10 GNPINPUT</span>
+<span class="output">Size of Generic Network matrix= 1000
+:rice.pastry.direct.DirectPastryNodeFactory:0:No bootstrap node provided, starting a new ring...
+Finished creating new node Pastry node <0x7B5ABF..>
+Finished creating new node Pastry node <0xFFA2A6..>
+Finished creating new node Pastry node <0x74A71D..>
+Finished creating new node Pastry node <0x7B2F8A..>
+Finished creating new node Pastry node <0x18215A..>
+Finished creating new node Pastry node <0x8B5561..>
+Finished creating new node Pastry node <0xF5D135..>
+Finished creating new node Pastry node <0xB40815..>
+Finished creating new node Pastry node <0x0235C0..>
+Finished creating new node Pastry node <0x337A07..>
+MyApp <0x7B5ABF..> sending to <0x3535C9..>
+MyApp <0xFFA2A6..> sending to <0x203CDD..>
+MyApp <0x74A71D..> sending to <0xD78164..>
+MyApp <0x337A07..> received MyMsg from <0x7B5ABF..> to <0x3535C9..>
+MyApp <0x7B2F8A..> sending to <0x0F584A..>
+MyApp <0x18215A..> sending to <0x9D9264..>
+MyApp <0xF5D135..> received MyMsg from <0x74A71D..> to <0xD78164..>
+MyApp <0x18215A..> received MyMsg from <0xFFA2A6..> to <0x203CDD..>
+MyApp <0x8B5561..> sending to <0xD931FB..>
+MyApp <0xF5D135..> sending to <0xDFE72D..>
+MyApp <0x18215A..> received MyMsg from <0x7B2F8A..> to <0x0F584A..>
+MyApp <0xF5D135..> received MyMsg from <0xF5D135..> to <0xDFE72D..>
+MyApp <0xB40815..> sending to <0xC5E0B6..>
+MyApp <0xB40815..> received MyMsg from <0xB40815..> to <0xC5E0B6..>
+MyApp <0x0235C0..> sending to <0x2FF4DF..>
+MyApp <0x8B5561..> received MyMsg from <0x18215A..> to <0x9D9264..>
+MyApp <0x337A07..> sending to <0x3E6C26..>
+MyApp <0x337A07..> received MyMsg from <0x337A07..> to <0x3E6C26..>
+MyApp <0xF5D135..> received MyMsg from <0x8B5561..> to <0xD931FB..>
+
+
+...</span>
+</pre>
+
+<h3>Congratulations!  You have just simulated a handful of nodes in FreePastry's Discreet Event Simulator.  This should make it much easier to test your application.</h3>
+
+<hr/><div class="nav">
+  <span class="nav-left"><a href="tut_past.html">Previous (Past)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="tut_gtitm.html">Next (GT-ITM Topology)</a></span>
+</div><br/>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<div class="nav">
+  <span class="nav-left"><a href="tut_past.html">Previous (Past)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="tut_gtitm.html">Next (GT-ITM Topology)</a></span>
+</div><br/><hr/>
+
+<a name="lessonDirect"></a><h1>Simulator Tutorial</h1>
+<h2>FreePastry's Direct Simulator</h2>
+<h3>Download the tutorial files: 
+<a href="./src/direct/DistTutorial.java">DistTutorial.java</a>,
+<a href="./src/direct/MyApp.java">MyApp.java</a>,
+<a href="./src/direct/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/direct/.</h3>
+
+  <p>Before completing this Tutorial, we recommend completing <a href="tut_multiple_nodes.html#lesson4">Lesson 4</a> of the FreePastry tutorial.</p>
+  <p>FreePastry's Simulator is a Discreet Event Simulator.  The puropse of this tutorial is to show you how to test/simulate your application on a medium sized network ( < 100,000 Nodes) with a minimum of complications/chages to your code.  If you followed the advice of the FreePastry tutorial up to this point, it should be very easy to test your code in the simulator.  Before we continue, let's list what FreePastry's simulator does and doesn't do:
+  
+<h3>What the simulator does:</h3>
+<ul>
+  <li><i>Execute FreePastry applications without modification to the source code.</i>  (Other than the initiation code: Such as the PastryNodeFactory.)</li>
+  <li><i>Execute the code faster than real-time.</i>  The simulator uses a virtual clock, not the computer's clock.  So if you have the CPU/memory, a simulated environment can run much much faster than a real clock.  Or if you simulate a network too large or resource intensive to be simulated in real-time, then your accuracy won't be affected by insufficient resources, the virtual clock only advances when there are no immediate tasks to be executed.</li>
+  <li><i>Contrary to the previous point, the simulator can be executed with the system clock.</i>  This my be useful to interactive applications that run on a "human" timescale.   Because FreePastry supports a "real-time" clock, if you have a powerful enough computer, you can simulate interactive applications such as games and real-time collaborative applications without using multiple physical machines and a real network.</li>
+  <li><i>Accept a variety of topologies for network latency.</i>  FreePastry ships with 3 topologies: <code>Euclidean</code> (Planar), <code>Sphirical</code>, and <code>GenericNetwork</code> topologies.  The Eucliedean and Sphirical topologies use geometric equations to determine latencies between nodes.  The <code>GenericNetwork</code> accepts a <b>latency matrix</b> from a file that can be used to construct transit-stub, or more complex topologies.  In our attempt to simulate larger and more realistic networks, in the future, we intend to distribute an implementation of the technology discribed in this paper <a href="http://www.imconf.net/imc-2006/papers/p8-zhang.pdf">Measurement-Based Analysis, Modeling, and Synthesis of the Internet Delay Space</a>.</li>
+</ul>
+  
+<h3>What the simulator doesn't do:</h3>
+<ul>
+  <li><i>Simulate message loss, bandwidth, or varying latency.</i>To improve performance, and reduce implementation cost, FreePastry's simulator does not simulate all of the factors that a sumlator such as ns-2 attempts to simulate.  This is out of the scope of what we intend to include in the FreePastry distribution.</li>
+</ul> 
+  
+<h2>Converting the previous tutorials to use the simulator</h2>
+
+Simple, all you have to do is use a different <code>PastryNodeFactory</code>, specifically the <code>DirectPastryNodeFactory</code>.  You must also provide a network topology.  In this example, we will use the <code>EuclideanNetwork</code> topology.  The <a href="tut_gtitm.html">next tutorial</a> will show you how to import a latency matrix to simulate more realistic topology models.  In this case we are converting <a href="tut_multiple_nodes.html#lesson4">Lesson 4</a> to use the simulator.
+
+If you've completed <a href="tut_multiple_nodes.html#lesson4">Lesson 4</a>, you will see that it is very easy to convert to using FreePastry's Discreet Event Simulator.  
+
+Changes:
+  Other than the arguments (we don't need to accept a boot-port, socket, bind-port) and the Constructor.  Only 2 things have changed between these versions:
+  
+Here is the change to the PastryNodeFactory.
+
+<pre>
+  PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+</pre>  
+  
+has been changed to:
+
+<pre>
+  PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, new EuclideanNetwork(env), env);
+</pre>  
+  
+<p>Notice that the second argument is the EuclideanNetwork.  This is the network topology, in this case a <i>plane</i>.  In the <a href="tut_gtitm.html">next tutorial</a>, we will simulate using a latency matrix.</p>
+
+<p>And the bootHandle Code:</p>
+
+<pre>
+  NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
+</pre>  
+  
+has been changed to:
+
+<pre>
+  // this way we can boot off the previous node
+  bootHandle = node.getLocalHandle();
+</pre>  
+  
+
+<p>The difference being that we don't need to use an InetSocketAddress in the simulator because it is meaningliess in this context.</p>
+
+<p>One last note: Because some of the network topologies use random coordinates to generate latencies, it can be important to set a minimum delay, in case nodes are specified in the identical, or "very-near" coordinates.  In general, it is unlikely to get leas than a 2milli delay between nodes.  To specify a minimum delay, you must set the <a href="params.html">param</a> <code>pastry_direct_min_delay</code> to the appropriate value.  FreePastry defaults this value to <b>2 millis</b>.
+
+Complie and execute this code as before.  Note that it runs much much faster than with the socket transport layer.  Here is the example output of this code:
+
+<pre>
+<span class="input">java -cp .:FreePastry-@freepastry_version@.jar rice.tutorial.direct.DistTutorial 10</span>
+<span class="output">:rice.pastry.direct.DirectPastryNodeFactory:0:No bootstrap node provided, starting a new ring...
+Finished creating new node Pastry node <0x9C1733..>
+Finished creating new node Pastry node <0x8AE001..>
+Finished creating new node Pastry node <0x0CADFD..>
+Finished creating new node Pastry node <0x8682F1..>
+Finished creating new node Pastry node <0xADF8A8..>
+Finished creating new node Pastry node <0x1DF4B2..>
+Finished creating new node Pastry node <0x179344..>
+Finished creating new node Pastry node <0x1158EB..>
+Finished creating new node Pastry node <0x922D50..>
+Finished creating new node Pastry node <0x978B20..>
+MyApp <0x9C1733..> sending to <0xA3ACA6..>
+MyApp <0x9C1733..> received MyMsg from <0x9C1733..> to <0xA3ACA6..>
+MyApp <0x8AE001..> sending to <0x7E9F4A..>
+MyApp <0x0CADFD..> sending to <0x061EA3..>
+MyApp <0x0CADFD..> received MyMsg from <0x0CADFD..> to <0x061EA3..>
+MyApp <0x8682F1..> sending to <0x39641C..>
+MyApp <0xADF8A8..> sending to <0x3697C6..>
+MyApp <0x1DF4B2..> sending to <0x9B0436..>
+MyApp <0x1DF4B2..> received MyMsg from <0xADF8A8..> to <0x3697C6..>
+MyApp <0x1DF4B2..> received MyMsg from <0x8682F1..> to <0x39641C..>
+MyApp <0x8682F1..> received MyMsg from <0x8AE001..> to <0x7E9F4A..>
+MyApp <0x179344..> sending to <0x785330..>
+MyApp <0x1158EB..> sending to <0xEDC192..>
+MyApp <0x922D50..> sending to <0x5ADAEB..>
+
+...</span>
+</pre>
+
+<h3>Congratulations!  You have just simulated a handful of nodes in FreePastry's Discreet Event Simulator.  This should make it much easier to test your application.</h3>
+
+<hr/><div class="nav">
+  <span class="nav-left"><a href="tut_past.html">Previous (Past)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="tut_gtitm.html">Next (GT-ITM Topology)</a></span>
+</div><br/>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>
