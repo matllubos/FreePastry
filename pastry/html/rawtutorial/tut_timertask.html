@@ -73,7 +73,7 @@ cancel it later.
 
 
 <p/>Whenever we receive the MessageToSelf we are just going to print out the current time.
-However, in your application you could call a method to do routine maintenance, send 
+However, in your application you could call a method to do periodic maintenance, send 
 messages to other nodes etc.
 <pre>
   public void deliver(Id id, Message message) {
@@ -103,7 +103,7 @@ code after constructing the MyApp to cancel the task after 15 seconds.
     MyApp app = new MyApp(node);
     
     // wait 15 seconds
-    Thread.sleep(15000);
+    env.getTimeSource().sleep(15000);
     
     // cancel the task
     app.cancelTask();
@@ -111,7 +111,7 @@ code after constructing the MyApp to cancel the task after 15 seconds.
 
 <p/>Ok, time to run it!  Your output should resemble the following:
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson5.DistTutorial 9001 localhost 9001</span>
+<span class="input">java -cp .:FreePastry-@freepastry_version@.jar rice.tutorial.lesson5.DistTutorial 9001 localhost 9001</span>
 <span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 :1122932166578:No bootstrap node provided, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x3C1EEA..&gt;/FOO/10.9.8.7:9001 [9038308767327354496])
@@ -123,6 +123,12 @@ MyApp &lt;0x3C1EEA..&gt; received rice.tutorial.lesson5.MyApp$MessageToSelf@d70d
 I got the MessageToSelf at time:1115228563359
 </span></pre>
 <h3>Congratulations!  Now you can schedule and cancel tasks without launching your own thread.</h3>
+
+<hr/><div class="nav">
+  <span class="nav-left"><a href="tut_multiple_nodes.html">Previous (Multiple Nodes)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="tut_scribe.html">Next (Scribe)</a></span>
+</div><br/>
 
 <div class="footer">
 Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.

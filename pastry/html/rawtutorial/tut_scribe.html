@@ -48,7 +48,7 @@ Lesson 9: Advanced Scribe: Policies, will show you how to control tree formation
 <ul>
   <li><b>Scribe</b>&mdash;A scalable group communication system for topic-based publish-subscribe applications.<i>Scribe builds an efficient multicast tree for dissemination of events to a topic.</i></li>
   <li><b>Topic</b>&mdash;Group.  <i>A topic builds a hash of the group name which is used as a unique identifier for the topic, as well used as a rendezvous point in Pastry.</i></li>
-  <li><b>IdFactory</b>&mdash;A hash function.  <i>An IdFactory implements a hash function to build Ids that are compatable with pastry.</i></li>
+  <li><b>IdFactory</b>&mdash;A hash function.  <i>An IdFactory implements a hash function to build Ids that are compatible with pastry.</i></li>
   <li><b>PastryIdFactory</b>&mdash;A commonly used IdFactory in Pastry.  <i>The PastryIdFactory uses SHA1 as it's underlieing hash function.</i></li>
   <li><b>ScribeContent</b>&mdash;A scribe message.</li>
   <li><b>ScribeClient</b>&mdash;An application that receives ScribeContent.  <i>The client can subscribe to one or more topics.</i></li>
@@ -75,15 +75,20 @@ Here's the constructor and some member variables:
   protected Endpoint endpoint;
   public MyScribeClient(PastryNode node) {
     // you should recognize this from lesson 3
-    this.endpoint = node.registerApplication(this, "myinstance");
+    this.endpoint = node.buildEndpoint(this, "myinstance");
+
     // construct Scribe
     myScribe = new ScribeImpl(node,"lesson6instance");
+
     // construct the topic
-    myTopic = new Topic(new PastryIdFactory(), "example topic");
+    myTopic = new Topic(new PastryIdFactory(node.getEnvironment()), "example topic");
     System.out.println("myTopic = "+myTopic);
+    
+    // now we can receive messages
+    endpoint.register();
   }
 </pre>
-The only thing that should be new here is the construction of the ScribeImpl.  The instance name "lesson6instance" allows you to remain independent of other applications running on the 
+The only thing that should be new here is the construction of the ScribeImpl and Topic.  The instance name "lesson6instance" allows you to remain independent of other applications running on the 
 same ring who also use scribe.  They will have their own instance of Scribe that won't be confused with your instance.<br/>
 
 In this example, one of the nodes is going to publish content every 5 seconds.  We use the timer pattern described in Lesson 5.  Each time we are going to send 1 
@@ -300,7 +305,7 @@ After that we wait a few seconds then print the tree.
       app.subscribe();
     }
     
-    Thread.sleep(3000);
+    env.getTimeSource().sleep(3000);
     printTree(apps);
 </pre>
 
@@ -316,7 +321,7 @@ The parameters are identical to those in Lesson 4:
 Your output will resemble:
 
 <pre>
-<span class="input">java -cp .:FreePastry-1.4.2.jar rice.tutorial.lesson6.ScribeTutorial 9001 10.9.8.7 9001 10</span>
+<span class="input">java -cp .:FreePastry-@freepastry_version@.jar rice.tutorial.lesson6.ScribeTutorial 9001 10.9.8.7 9001 10</span>
 <span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 :1122932166578:No bootstrap node provided, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x489BCB..&gt;/FOO/10.9.8.7:9001 [3776408266594462189])
@@ -390,6 +395,12 @@ Note how each publish message is delivered to each node in the group.<br/>
 Note that anycast is called on different nodes until a node returns true.<br/>  
 
 <h3>Congratulations!  You have built and run your first scribe application!<br>
+
+<hr/><div class="nav">
+  <span class="nav-left"><a href="tut_timertask.html">Previous (Timer)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="tut_past.html">Next (Past)</a></span>
+</div><br/>
 
 <div class="footer">
 Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.

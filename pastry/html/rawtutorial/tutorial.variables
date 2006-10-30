@@ -1,6 +1,7 @@
 # this file contains variables to be substituted into the FreePastry Tutorial HTML files
 
-freepastry_version=2.0
+freepastry_version=2.0b2
 tutorial_version=2.0
-tutorial_date=14 September 2006
+tutorial_date=31 October 2006
 maintainer=<a href="mailto:jeffh@mpi-sws.mpg.de">Jeff Hoye</a> and <a href="jstewart@mpi-sws.mpg.de">James Stewart</a>
+min_jre_version=1.5.0_08

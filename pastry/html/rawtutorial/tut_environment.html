@@ -38,9 +38,9 @@ new feature of FreePastry 1.4.2.  The environment serves FreePastry in 6 key way
   <li><b>SelectorManager</b> &mdash You can control which nodes use which SelectorManager.  The SelectorManager is a single
   thread that handles all network IO and Timer events.  This model usually gives improved performance, and simpler 
   synchronization than several threads.  Note that the SelectorManager is a Daemon thread that will cause the JVM to not exit when the main method ends.  See below to find out how to destroy the SelectorManager.</li> 
-  <li><b>Processor</b> &mdash It is important that tasks done on the SelectorThread don't take long, as this is the network IO thread, and can cause other nodes to suspect you are faulty.  However, sometimes you need to do a CPU intensive task (like calculate a manifest for a bloom filter) that will cause problems if done on the SelectorThread.  For these tasks, you can use the "<i>Processor</i>.  This is simply a different thread that will be context switched automatically by the system.  Typically, you will access this by using the Node.process() or Endpoint.process() function call.  These calls result in a call to the <i>Processor</i>.  Future implementations could use more Threads for computers with several processors, or hyper-threading.</li> 
-  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  This will (for example) allow 
-  you to run a FreePastry node on a clock that is offset from your computers clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
+  <li><b>Processor/BlockingIO</b> &mdash It is important that tasks done on the SelectorThread don't take long, as this is the network IO thread, and can cause other nodes to suspect you are faulty.  However, sometimes you need to do a CPU intensive task (like calculate a manifest for a bloom filter), or a DiskIO task (java 1.4.2 doesn't support non-blocking disk IO) that will cause problems if done on the SelectorThread.  For these tasks, you can use the "<i>Processor</i>.  This is simply a different thread (or pool of threads) that will be context switched automatically by the system.  Typically, you will access this by using the Node.process(), Endpoint.process(), or environment.getProcessor().processBlockingIO()  function calls.  The task provided to these calls will be executed on another thread so they don't interfere with the network IO thread.  Future implementations could use more Threads for computers with several processors, or hyper-threading.</li> 
+  <li><b>TimeSource</b> &mdash FreePastry and its apps now call TimeSource.currentTimeMillis() rather than System.currentTimeMillis().  One benefit of this virtualization is that it allows a virtual clock in FreePastry's discreet event simulator.  Another benefit is that this approach allows 
+  you to run a FreePastry node on a clock that is offset from the physical computer's clock.  This can be particularly helpful in a situation like <a href="http://www.planet-lab.org/">Planetlab</a>
   where some nodes have incorrect system clocks due to misconfigured NTP servers.</li>
   <li><b>RandomSource</b> &mdash Has the same interface as <a href="http://www.javadocs.org/Random">java.util.Random</a>, but Allows for easier reproducability of some errors.  You can seed the RandomSource with the same parameter so you can reproduce conditions.</li>
 </ul>
@@ -51,20 +51,31 @@ PastryNodeFactory and the IdFactory.
 
 <h3>How should I get an environment?</h3>
 <ul>
-  <li>In your main method simply call <code>new Environment()</code>.</li>
+  <li>In your main method simply call <code>new Environment()</code>. Or if you are using the <a href="tut_simulator.html">simulator</a>, we recommend using Environment.directEnvironment().  <i>Note that this can only be done before you create the PastryNodeFactory, don't do this elsewhere or you will be working with a different environment!</i></li>
   <li>In your application, call <code>node.getEnvironment(), or endpoint.getEnvironment()</code>.</li>
 </ul> 
 
-The default constructor for an environment looks in the classpath for a params file called <b>freepastry.params</b>.  If you compiled
+<p>The default constructor for an environment looks in the classpath for a params file called <b>freepastry.params</b>.  If you compiled
 the jar with the included ant task, or used the jar from the web, this should work automagically.  If you are compiling FreePastry
 from an IDE (such as eclipse) or from the command line (javac) then you will need to make sure to put the freepastry.params file
-located in <b>jars/freepastry</b> in your classpath, or use a different contstructor for the Environment.<br/>
+located in <b>jars/freepastry</b> in your classpath, or use a different contstructor for the Environment.</p>
+<p>By default, the Environment also looks for a file in the local directory called <b>user.params</b>.</i> With this file you can alter FreePastry's parameters without re-compiling or rebuilding the jar.</p>
+See also: <a href="params.html">Adjusting FreePastry's parameters</a>.
+
+
+<br/>
 
 <h3>My JVM won't exit, or How should I get rid of an environment?</h3>
 The SelectorManager and Processor both have daemon threads that are used to handle communication and processing for the PastryNode.  For the JVM to be able to exit, you will need to properly destroy the environment, by calling environment.destroy().  This will call store on the parameters, and destroy the selector/processor threads.  Of course, you can also call System.exit(), but that is generally considered bad form.<br/><br/>
 
 This should be sufficient information for you to continue with the tutorial.  You can learn more in Lesson 10 Advanced Environment.
+
 <hr/>
+<div class="nav">
+  <span class="nav-left"><a href="tut_continuations.html">Previous (Continuations)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="tut_beginning.html">Next (Lession 1,2,3)</a></span>
+</div><br/>
 
 <div class="footer">
 Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.

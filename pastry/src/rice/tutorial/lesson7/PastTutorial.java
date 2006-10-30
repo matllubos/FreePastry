@@ -3,6 +3,7 @@
  */
 package rice.tutorial.lesson7;
 
+import java.io.IOException;
 import java.net.*;
 import java.util.Vector;
 
@@ -61,13 +62,19 @@ public class PastTutorial {
       // cause the node to start its own ring
       PastryNode node = factory.newNode((rice.pastry.NodeHandle) bootHandle);
 
-      // the node may require sending several messages to fully boot into the
-      // ring
-      while (!node.isReady()) {
-        // delay so we don't busy-wait
-        Thread.sleep(100);
+      // the node may require sending several messages to fully boot into the ring
+      synchronized(node) {
+        while(!node.isReady() && !node.joinFailed()) {
+          // delay so we don't busy-wait
+          node.wait(500);
+          
+          // abort if can't join
+          if (node.joinFailed()) {
+            throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
+          }
+        }       
       }
-
+      
       System.out.println("Finished creating new node " + node);
       
       
@@ -88,7 +95,7 @@ public class PastTutorial {
     }
     
     // wait 5 seconds
-    Thread.sleep(5000);
+    env.getTimeSource().sleep(5000);
 
     // We could cache the idf from whichever app we use, but it doesn't matter
     PastryIdFactory localFactory = new rice.pastry.commonapi.PastryIdFactory(env);
@@ -133,7 +140,7 @@ public class PastTutorial {
     }
     
     // wait 5 seconds
-    Thread.sleep(5000);
+    env.getTimeSource().sleep(5000);
     
     // let's do the "get" operation
     System.out.println("Looking up the 5 keys");
@@ -159,7 +166,7 @@ public class PastTutorial {
     }
     
     // wait 5 seconds
-    Thread.sleep(5000);
+    env.getTimeSource().sleep(5000);
     
     // now lets see what happens when we do a "get" when there is nothing at the key
     System.out.println("Looking up a bogus key");

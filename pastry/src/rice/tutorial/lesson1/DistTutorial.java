@@ -1,5 +1,6 @@
 package rice.tutorial.lesson1;
 
+import java.io.IOException;
 import java.net.*;
 
 import rice.environment.Environment;
@@ -38,9 +39,16 @@ public class DistTutorial {
     PastryNode node = factory.newNode(bootHandle);
       
     // the node may require sending several messages to fully boot into the ring
-    while(!node.isReady()) {
-      // delay so we don't busy-wait
-      Thread.sleep(100);
+    synchronized(node) {
+      while(!node.isReady() && !node.joinFailed()) {
+        // delay so we don't busy-wait
+        node.wait(500);
+        
+        // abort if can't join
+        if (node.joinFailed()) {
+          throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
+        }
+      }       
     }
     
     System.out.println("Finished creating new node "+node);    

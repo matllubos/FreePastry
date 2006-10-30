@@ -1,0 +1,57 @@
+<html>
+<title>Adjusting FreePastry's parameters</title>
+
+<h1><center>Adjusting FreePastry's parameters</center></h1>
+
+<h2>About FreePastry's Parameters</h2>
+<p>Because FreePastry is a research project used for a variety of purposes, there are a lot of "knobs" that can be adjusted.  We have attempted to tune these knobs for the most common configurations, but over the years we have had requests to adjust various aspects of FreePastry for the developer/researcher's unique purposes.  Thus we decided it would be useful to have a central place for all of these kinds of configurations rather than adjusting constants in the code.  To make this as useful as possible, FreePastry's paramter system has the following capabilities:</p>
+<ul>
+  <li>Ability to adjust the parameters programatically.</li>
+  <li>Ability to store the configuration without overwriting the defaults.</li>
+  <li>Ability to load a hierarchy of configurations.  This allows applications to override and extend FreePastry's defaults without touching the default freepastry.params file.  This is a forward compatability issue.  FreePastry can add more parameters without interfering with properly built user applications' build process.</li>
+</ul>
+
+<h3>How FreePastry "reads" the parameters.</h3>
+<p>Every PastryNode has access to the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/Environment.html">Environment</a>.  To read a parameter, FreePastry calls <code>environment.getParameters().getXXX("parameter_name")</code>.  A parameter can be of various types including ints, strings, and InetAddresses.  See the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/params/Parameters.html">JavaDoc for Parameters</a> for more information.</p>
+<h3>How FreePastry initializes the parameters.</h3>
+<p>Most applications use the default constructor for the Environment.  This will load a "default" parameter file from the jar called freepastry.params.  If java can find a file in the working directory called "user.params" it will load this as the mutable parameter store.  Any values in this file will overwrite the default configurations stored in the jar.</p>
+<p><b>Note:</b>If you want to use a different mutable parameters filename than "user.params", you can use the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/Environment.html#Environment(java.lang.String)">single argument constructor</a> of Environment.  If you wish to have additional defaults in your application, you can call the <a href="http://freepastry.org/FreePastry/javadoc/rice/environment/Environment.html#Environment(java.lang.String[],%20java.lang.String)">2 argument constructor</a> of the Environment.
+<h3>Format of the config file.</h3>
+Internally, FreePastry's Parameters system uses java's <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/util/Properties.html">java.util.Properties</a> class.  Thus the format is defined <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/util/Properties.html#load(java.io.InputStream)">here</a>.
+
+
+There are 3 ways to adjust FreePastry's parameters:
+<ul>
+  <li><a href="#paramsfile">By adding a "user.params" config file.</a></li>
+  <li><a href="#paramsjar">By changing the freepastry.params included in the Jar.</a></li>
+  <li><a href="#paramsprog">Programatically.</a></li>
+</ul>
+
+<a name="paramsfile">
+<h3>Adding a config file.</h3>
+<p>If your application uses the default Environment constructor, it will search for a user.params file in the working directory.  If it finds one, it will use it.</p>
+<p>Thus if you want to add/modify the parameter "external_address" and set it to "123.45.67.89:1234" do the following.</p>  
+
+<p>1) Create a text file named user.params in your working directory.</p>
+<p>2) Add the following line to freepastry.params</p>
+<pre>
+external_address = 123.45.67.89:1234
+</pre>  
+
+<a name="paramsjar">
+<h3>Changing the default freepastry.params file included in the Jar.</h3>
+<p>Before building (with ant), edit the file located in the source distribution in <code>jars/freepastry.params</code>.  The documentation for the parameters is in the file.</p>
+
+<a name="paramsprog">
+<h3>Changing the params programatically.</h3>
+<p>Right after you create the Environment, call <code>getParameters().setXXX("param_name");</code></p>
+<p>Thus if you want to add/modify the parameter "external_address" and set it to "123.45.67.89:1234" do the following.</p>  
+
+<pre>
+    Environment env = new Environment();
+    env.getParameters().setInetSocketAddress("external_address",new InetSocketAddress(InetAddress.getByName("123.45.67.89"),1234));
+</pre>
+
+<hr/>
+
+</html>

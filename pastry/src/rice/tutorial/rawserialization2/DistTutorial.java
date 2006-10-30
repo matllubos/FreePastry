@@ -1,5 +1,6 @@
 package rice.tutorial.rawserialization2;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
@@ -52,9 +53,16 @@ public class DistTutorial {
       PastryNode node = factory.newNode(bootHandle);
         
       // the node may require sending several messages to fully boot into the ring
-      while(!node.isReady()) {
-        // delay so we don't busy-wait
-        Thread.sleep(100);
+      synchronized(node) {
+        while(!node.isReady() && !node.joinFailed()) {
+          // delay so we don't busy-wait
+          node.wait(500);
+          
+          // abort if can't join
+          if (node.joinFailed()) {
+            throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
+          }
+        }       
       }
       
       System.out.println("Finished creating new node "+node);
@@ -66,7 +74,7 @@ public class DistTutorial {
     }
       
     // wait 10 seconds
-    Thread.sleep(10000);
+    env.getTimeSource().sleep(10000);
 
       
     // route 10 messages
@@ -84,11 +92,11 @@ public class DistTutorial {
         app.routeMyMsg(randId);
         
         // wait a bit
-        Thread.sleep(100);
+        env.getTimeSource().sleep(100);
       }
     }
     // wait 1 second
-    Thread.sleep(1000);
+    env.getTimeSource().sleep(1000);
       
     // for each app
     Iterator appIterator = apps.iterator();
@@ -110,7 +118,7 @@ public class DistTutorial {
           app.routeMyMsgDirect(nh);   
           
           // wait a bit
-          Thread.sleep(100);
+          env.getTimeSource().sleep(100);
         }
       }
     }

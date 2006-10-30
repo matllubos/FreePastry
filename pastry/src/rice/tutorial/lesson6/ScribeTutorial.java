@@ -1,5 +1,6 @@
 package rice.tutorial.lesson6;
 
+import java.io.IOException;
 import java.net.*;
 import java.util.*;
 
@@ -53,13 +54,19 @@ public class ScribeTutorial {
       // cause the node to start its own ring
       PastryNode node = factory.newNode(bootHandle);
 
-      // the node may require sending several messages to fully boot into the
-      // ring
-      while (!node.isReady()) {
-        // delay so we don't busy-wait
-        Thread.sleep(100);
+      // the node may require sending several messages to fully boot into the ring
+      synchronized(node) {
+        while(!node.isReady() && !node.joinFailed()) {
+          // delay so we don't busy-wait
+          node.wait(500);
+          
+          // abort if can't join
+          if (node.joinFailed()) {
+            throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
+          }
+        }       
       }
-
+      
       System.out.println("Finished creating new node: " + node);
 
       // construct a new scribe application
@@ -79,7 +86,7 @@ public class ScribeTutorial {
     }
 
     // now, print the tree
-    Thread.sleep(5000);
+    env.getTimeSource().sleep(5000);
     printTree(apps);
   }
 
