@@ -9,7 +9,9 @@ import rice.environment.time.TimeSource;
 import rice.selector.SelectorManager;
 
 /**
+ * Provides a mechanism to do time consuming tasks off of FreePastry's selecto thread.
  * 
+ * Usually acquired by calling environment.getProcessor().
  * 
  * @author Jeff Hoye
  */

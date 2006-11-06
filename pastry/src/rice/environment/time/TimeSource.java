@@ -4,8 +4,11 @@
 package rice.environment.time;
 
 /**
- * Interface to return the current time.  The simplest interface can simply 
- * return System.currentTimeMillis();  
+ * Virtualized clock for FreePastry.  
+ * 
+ * Can return the current time, or be blocked on.
+ * 
+ * Usually acquired by calling environment.getTimeSource().
  * 
  * @author Jeff Hoye
  */

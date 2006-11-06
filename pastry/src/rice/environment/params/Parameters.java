@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.net.*;
 
 /**
+ * Parameters interface for FreePastry
  * 
+ * Usually acquired by calling environment.getParameters().
  * 
  * @author Jeff Hoye
  */

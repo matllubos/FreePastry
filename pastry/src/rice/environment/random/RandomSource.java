@@ -4,6 +4,10 @@
 package rice.environment.random;
 
 /**
+ * Provides a virtualized random interface for FreePastry.
+ * 
+ * Usually acquired by calling environment.getRandomSource().
+ * 
  * @author Jeff Hoye
  */
 public interface RandomSource {

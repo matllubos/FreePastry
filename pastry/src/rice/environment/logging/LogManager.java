@@ -6,6 +6,8 @@ package rice.environment.logging;
 /**
  * Factory interface to generate loggers.
  * 
+ * Usually acquired by calling environment.getLogManager().
+ * 
  * @author Jeff Hoye
  */
 public interface LogManager {
