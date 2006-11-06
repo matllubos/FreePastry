@@ -25,7 +25,10 @@ public interface AppSocket {
   /**
    * Must be called every time a Read/Write occurs to continue operation.
    *
-   * @receiver will have receiveSelectResult() called on it
+   * @param wantToRead if you want to read from this socket
+   * @param wantToWrite if you want to write to this socket
+   * @param timeout // the socket's timeout value (this is a TCP level param)
+   * @param receiver will have receiveSelectResult() called on it
    * note that you must call select() each time receiveSelectResult() is called.  This is so
    * your application can properly handle flow control
    */
