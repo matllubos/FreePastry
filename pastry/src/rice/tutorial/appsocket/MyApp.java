@@ -39,7 +39,7 @@ public class MyApp implements Application {
   int MSG_LENGTH;
   
   public MyApp(Node node, final IdFactory factory) {
-    // We are only going to use one instance of this application on each PastryNode
+    // register the endpoint
     this.endpoint = node.buildEndpoint(this, "myinstance");
     this.node = node;
     
@@ -54,17 +54,24 @@ public class MyApp implements Application {
     
     // example receiver interface
     endpoint.accept(new AppSocketReceiver() {
+      /**
+       * When we accept a new socket.
+       */
+      public void receiveSocket(AppSocket socket) {
+        // this code reuses "this" AppSocketReceiver, and registers for reading only, and a timeout of 30000. 
+        socket.register(true, false, 30000, this);
+        
+        // it's critical to call this to be able to accept multiple times
+        endpoint.accept(this);
+      }    
 
       /**
-       * Called if we have a problem.
+       * Called when the socket is ready for reading or writing.
        */
-      public void receiveException(AppSocket socket, Exception e) {
-        e.printStackTrace();
-      }
-    
       public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {
         in.clear();
         try {
+          // read from the socket into ins
           long ret = socket.read(ins, 0, ins.length);    
           
           if (ret != MSG_LENGTH) {
@@ -82,18 +89,14 @@ public class MyApp implements Application {
       }
     
       /**
-       * When we accept a new socket.
+       * Called if we have a problem.
        */
-      public void receiveSocket(AppSocket socket) {
-//        System.out.println("Accepted socket: "+socket);
-        socket.register(true, false, 30000, this);
-        
-        // it's critical to call this to be able to accept multiple times
-        endpoint.accept(this);
-      }
-    
+      public void receiveException(AppSocket socket, Exception e) {
+        e.printStackTrace();
+      }    
     });
     
+    // register after we have set the AppSocketReceiver
     endpoint.register();
   }
 
@@ -110,6 +113,14 @@ public class MyApp implements Application {
   public void sendMyMsgDirect(NodeHandle nh) {
     System.out.println(this+" opening to "+nh);    
     endpoint.connect(nh, new AppSocketReceiver() {
+      
+      /**
+       * Called when the socket comes available.
+       */
+      public void receiveSocket(AppSocket socket) {
+        // register for writing
+        socket.register(false, true, 30000, this);
+      }    
 
       /**
        * Called if there is a problem.
@@ -124,7 +135,6 @@ public class MyApp implements Application {
       public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {   
         try {
           long ret = socket.write(outs,0,outs.length);        
-//          System.out.println("WROTE:"+ret+" to "+socket); 
           // see if we are done
           if (!out.hasRemaining()) {
             socket.close();           
@@ -137,14 +147,6 @@ public class MyApp implements Application {
           ioe.printStackTrace(); 
         }
       }
-    
-      /**
-       * Called when the socket comes available.
-       */
-      public void receiveSocket(AppSocket socket) {
-//        System.out.println("Connected socket: "+socket);
-        socket.register(false, true, 30000, this);
-      }    
     }, 30000);
   }
     

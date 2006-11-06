@@ -24,10 +24,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
  * 
  * @author Jeff Hoye
  */
-public class DistTutorial {
-
-  public static final boolean USE_DIRECT = true;
-
+public class Tutorial {
   
   // this will keep track of our applications
   Vector apps = new Vector();
@@ -41,13 +38,13 @@ public class DistTutorial {
    * @param bootaddress the IP:port of the node to boot from
    * @param numNodes the number of nodes to create in this JVM
    * @param env the environment for these nodes
+   * @param useDirect true for the simulator, false for the socket protocol
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env, boolean useDirect) throws Exception {
+  public Tutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env, boolean useDirect) throws Exception {
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
-
     // construct the PastryNodeFactory
     PastryNodeFactory factory;
     if (useDirect) {
@@ -59,7 +56,7 @@ public class DistTutorial {
     
     IdFactory idFactory = new PastryIdFactory(env);
     
-    NodeHandle bootHandle = null; //((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
+    NodeHandle bootHandle = null;
     
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
@@ -98,100 +95,89 @@ public class DistTutorial {
     }
       
     // wait 10 seconds
-//    Thread.sleep(10000);
+    env.getTimeSource().sleep(10000);
+          
+    // for each app
     Iterator appIterator = apps.iterator();
     while(appIterator.hasNext()) {
       MyApp app = (MyApp)appIterator.next();
       PastryNode node = (PastryNode)app.getNode();
       
-      // send directly to my leafset
-      LeafSet leafSet = node.getLeafSet();
-      System.out.println(leafSet);
-    }    
-    
-      
-    // for each app
-    appIterator = apps.iterator();
-    while(appIterator.hasNext()) {
-      MyApp app = (MyApp)appIterator.next();
-      PastryNode node = (PastryNode)app.getNode();
-      
-      // send directly to my leafset
+      // send directly to my leafset (including myself)
       LeafSet leafSet = node.getLeafSet();
       
       // this is a typical loop to cover your leafset.  Note that if the leafset
       // overlaps, then duplicate nodes will be sent to twice
       for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-        if (i != 0) { // don't send to self
-          // select the item
-          NodeHandle nh = leafSet.get(i);
-          
-          // send the message directly to the node
-          app.sendMyMsgDirect(nh);   
-          
-          // wait a bit
-          Thread.sleep(100);
-        }
+        // select the item
+        NodeHandle nh = leafSet.get(i);
+        
+        // send the message directly to the node
+        app.sendMyMsgDirect(nh);   
+        
+        // wait a bit
+        env.getTimeSource().sleep(100);
       }
-    }
-    
-    appIterator = apps.iterator();
-    while(appIterator.hasNext()) {
-      MyApp app = (MyApp)appIterator.next();
-      PastryNode node = (PastryNode)app.getNode();
-      app.sendMyMsgDirect(node.getLocalNodeHandle());   
-    }
+    }    
   }
 
   /**
    * Usage: 
-   * java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes
+   * java [-cp FreePastry-<version>.jar] rice.tutorial.appsocket.Tutorial localbindport bootIP bootPort numNodes
+   *   or
+   * java [-cp FreePastry-<version>.jar] rice.tutorial.appsocket.Tutorial -direct numNodes
+   * 
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
+   * example java rice.tutorial.DistTutorial -direct 10
    */
   public static void main(String[] args) throws Exception {
-//    System.setOut(new PrintStream(new FileOutputStream("appsock.txt")));
-//    System.setErr(System.out);
+    try {
     
-    boolean useDirect = USE_DIRECT;
-    if (args.length > 4) {
-      if (args[4].equalsIgnoreCase("-direct")) {
+      boolean useDirect;
+      if (args[0].equalsIgnoreCase("-direct")) {
         useDirect = true;
       } else {
         useDirect = false; 
       }
-    }
-      
+            
+      // Loads pastry settings
+      Environment env;
+      if (useDirect) {
+        env = Environment.directEnvironment();
+      } else {
+        env = new Environment(); 
+        
+        // disable the UPnP setting (in case you are testing this on a NATted LAN)
+        env.getParameters().setString("nat_search_policy","never");      
+      }
     
-    // Loads pastry settings
-    Environment env;
-    if (useDirect) {
-      env = Environment.directEnvironment();
-    } else {
-      env = new Environment(); 
+      int bindport = 0;
+      InetSocketAddress bootaddress = null;
       
-      // disable the UPnP setting (in case you are testing this on a NATted LAN)
-      env.getParameters().setString("nat_search_policy","never");      
-    }
-    
-    try {
-      // the port to use locally
-      int bindport = Integer.parseInt(args[0]);
+      // the number of nodes to use is always the last param
+      int numNodes = Integer.parseInt(args[args.length-1]);    
       
-      // build the bootaddress from the command line args
-      InetAddress bootaddr = InetAddress.getByName(args[1]);
-      int bootport = Integer.parseInt(args[2]);
-      InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-  
-      // the number of nodes to use
-      int numNodes = Integer.parseInt(args[3]);    
+      if (!useDirect) {
+        // the port to use locally
+        bindport = Integer.parseInt(args[0]);
+        
+        // build the bootaddress from the command line args
+        InetAddress bootaddr = InetAddress.getByName(args[1]);
+        int bootport = Integer.parseInt(args[2]);
+        bootaddress = new InetSocketAddress(bootaddr,bootport);    
+      }
       
       // launch our node!
-      DistTutorial dt = new DistTutorial(bindport, bootaddress, numNodes, env, useDirect);
+      Tutorial dt = new Tutorial(bindport, bootaddress, numNodes, env, useDirect);
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 
-      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes");
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.appsocket.Tutorial localbindport bootIP bootPort numNodes");
+      System.out.println("  or");
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.appsocket.Tutorial -direct numNodes");
+      System.out.println();
       System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
+      System.out.println("example java rice.tutorial.DistTutorial -direct 10");
       throw e; 
     }
   }
