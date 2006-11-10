@@ -436,7 +436,13 @@ public class ConsistencyPLTest implements Observer {
         System.out.println("LEAFSET"+num+":"+env.getTimeSource().currentTimeMillis()+":"+ls);
         Thread.sleep(1*60*1000);
         long testTime = env.getTimeSource().currentTimeMillis()-bootTime;
-        if (testTime > artificialChurnTime*1000*60) artificialChurn = true;
+        if (artificialChurnTime == 0) {
+          artificialChurn = false;
+        } else {
+          artificialChurn = true;
+        }
+        
+//        if (testTime > artificialChurnTime*1000*60) artificialChurn = true;
         if ((killRingTime > 0) && testTime > killRingTime*1000*60) {
           restartNode = false;
           artificialChurn = true;
@@ -444,7 +450,7 @@ public class ConsistencyPLTest implements Observer {
         if (artificialChurn) {
           if (!isBootNode) {            
             
-            if (env.getRandomSource().nextInt(60) == 0 || // kill self to cause churn
+            if (env.getRandomSource().nextInt(artificialChurnTime*2) == 0 || // kill self to cause churn
                 (maxLeafsetSize > 8 && ls.getUniqueCount() < 4)) { // kill self because of leafset collapse
               imaliveRunning.running = false;
               Runtime.getRuntime().removeShutdownHook(shutdownHook);
