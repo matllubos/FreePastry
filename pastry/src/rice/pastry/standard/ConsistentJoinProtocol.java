@@ -439,30 +439,30 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    *
    */
   void doneProbing() {
-    if (leafSet.isComplete()) {
+    int leftIndex = leafSet.ccwSize();
+    int rightIndex = leafSet.ccwSize();
+    if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
+    if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
+    if (leafSet.isComplete() || ((leftIndex == MAX_NUM_TO_HEAR_FROM/2) && (leftIndex == MAX_NUM_TO_HEAR_FROM/2))) {
       // here is where we see if we can go active
-      HashSet toHearFrom = new HashSet();
+      ArrayList toHearFrom = new ArrayList();
       HashSet seen = new HashSet();
-      String toHearFromStr = "";
-      int numToHearFrom = 0;
-      int leftIndex = leafSet.ccwSize();
+//      int leftIndex = leafSet.ccwSize();
       if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
-      int rightIndex = leafSet.ccwSize();
+//      int rightIndex = leafSet.ccwSize();
       if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
       for (int i=-leftIndex; i<=rightIndex; i++) {
 //      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
         if (i != 0) {
           NodeHandle nh = leafSet.get(i);          
           if (!seen.contains(nh) && (gotResponse.get(nh) == null)) {
-            numToHearFrom++;
             toHearFrom.add(nh);
-            if (logger.level <= Logger.FINE) toHearFromStr+=nh+":"+nh.getLiveness()+",";
           }
           seen.add(nh);
         }
       }
       
-      if (numToHearFrom == 0) {
+      if (toHearFrom.size() == 0) {
         if (!thePastryNode.isReady()) {
           // active_i = true;
           if (nextReadyStrategy == null) {
@@ -485,11 +485,19 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
 //          it2.remove();
 //        }
       } else {
-        if (logger.level <= Logger.FINE) logger.log("CJP: still need to hear from:"+toHearFromStr);
+        if (logger.level <= Logger.FINE) {
+          String toHearFromStr = "";
+          Iterator i = toHearFrom.iterator();
+          while(i.hasNext()) {
+            NodeHandle nh = (NodeHandle)i.next();
+            toHearFromStr+=nh+":"+nh.getLiveness()+",";
+          }
+          logger.log("CJP: still need to hear from:"+toHearFromStr);
+        }
       }
     } else {
       if (logger.level <= Logger.FINE) logger.log("CJP: LS is not complete: "+leafSet);      
-      // sendTheMessage to leftmost and rightmost?
+      // sendTheMessage to leftmost and rightmost
       
       NodeHandle left = null;
       NodeHandle right = null;
@@ -515,6 +523,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @param reply if the reason we are sending this message is just as a response
    */
   public void sendTheMessage(NodeHandle nh, boolean reply) {
+    // if we're not trying to go ready, no need to send out requests
     if (!reply) {
       if (!tryingToGoReady) return;
 //      logException(Logger.FINEST, "StackTrace", new Exception("Stack Trace")); 
