@@ -127,5 +127,35 @@ public interface NetworkSimulator {
    * @param period to deliver the message after the delay
    */
 //  public CancellableTask enqueueDelivery(Delivery del);  
-  public CancellableTask enqueueDelivery(Delivery del, int delay);  
+  public CancellableTask enqueueDelivery(Delivery del, int delay);
+
+  /**
+   * The max rate of the simulator compared to realtime. 
+   * 
+   * The rule is that the simulated clock will not be set to a value greater 
+   * than the factor from system-time that the call was made.  Thus
+   * 
+   * if 1 hour ago, you said the simulator should run at 10x realtime the simulated
+   * clock will only have advanced 10 hours.  
+   * 
+   * Note that if the simulator cannot keep up with the system clock in the early 
+   * part, it may move faster than the value you set to "catch up" 
+   * 
+   * To prevent this speed-up from becoming unbounded, you may wish to call
+   * setMaxSpeed() periodically or immeadiately after periods of expensive calculations.
+   * 
+   * Setting the simulation speed to zero will not pause the simulation, you must 
+   * call stop() to do that.
+   * 
+   * @param the multiple on realtime that the simulator is allowed to run at, 
+   * zero or less will cause no bound on the simulation speed
+   * 
+   */
+  public void setMaxSpeed(float rate);
+
+  /**
+   * unlimited maxSpeed
+   *
+   */
+  public void setFullSpeed();
 }

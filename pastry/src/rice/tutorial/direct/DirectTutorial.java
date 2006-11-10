@@ -41,9 +41,16 @@ public class DirectTutorial {
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
-    // construct the PastryNodeFactory, this is how we use rice.pastry.direct, with a Euclidean Network
-    PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, new EuclideanNetwork(env), env);
+    // create a new network
+    NetworkSimulator simulator = new EuclideanNetwork(env);
 
+    // set the max speed of the simulator so we can create several nodes in a short amount of time
+    // by default the simulator will advance very fast while we are slow on the main() thread
+    simulator.setMaxSpeed(1.0f);
+    
+    // construct the PastryNodeFactory, this is how we use rice.pastry.direct, with a Euclidean Network
+    PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, simulator, env);
+        
     // create the handle to boot off of
     NodeHandle bootHandle = null;
     
@@ -52,6 +59,7 @@ public class DirectTutorial {
   
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
       PastryNode node = factory.newNode(bootHandle);
+//      System.out.println("here:"+node+" "+env.getTimeSource().currentTimeMillis());
       
       // this way we can boot off the previous node
       bootHandle = node.getLocalHandle();
@@ -77,6 +85,9 @@ public class DirectTutorial {
       apps.add(app);
     }
       
+    // don't limit the simulation speed anymore
+    simulator.setFullSpeed();
+    
     // wait 10 seconds
     env.getTimeSource().sleep(10000);
 

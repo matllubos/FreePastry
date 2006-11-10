@@ -78,7 +78,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 //    }
     if (timeSource instanceof DirectTimeSource)
       isDirectTimeSource = true;
-    
+    manager.setSelect(false);
     testRecord = null;    
     start();
   }
@@ -94,17 +94,22 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
         manager.invoke(new Runnable() {    
           public void run() {
             if (!running) return;            
+            try {
             if (!simulate()) {
-              Selector sel = manager.getSelector();
-              synchronized(sel) {
+              synchronized(manager) {
                 try {
-                  sel.wait(100); // must wait on the real clock, because the simulated clock can only be advanced by simulate()
+                  manager.wait(100); // must wait on the real clock, because the simulated clock can only be advanced by simulate()
                 } catch (InterruptedException ie) {
                   logger.logException("BasicNetworkSimulator interrupted.",ie); 
                 }
               }
             }
+            // re-invoke the simulation task
             manager.invoke(this);
+            } catch (InterruptedException ie) {
+              if (logger.level <= Logger.SEVERE) logger.logException("BasicNetworkSimulator.start()",ie); 
+              stop();
+            }
           }
         });
       }
@@ -234,6 +239,22 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     return dtt;
   }
 
+  // System Time is the system clock
+  // Sim Time is the simulated clock
+  long maxSpeedRequestSystemTime = 0;
+  long maxSpeedRequestSimTime = 0;
+  float maxSpeed = 0.0f;
+  
+  public void setMaxSpeed(float speed) {
+    maxSpeedRequestSystemTime = System.currentTimeMillis();
+    maxSpeedRequestSimTime = timeSource.currentTimeMillis();
+    maxSpeed = speed;
+  }
+  
+  public void setFullSpeed() {
+    setMaxSpeed(-1.0f);
+  }
+  
   /**
    * Delivers 1 message. Will advance the clock if necessary.
    * 
@@ -241,14 +262,43 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    * is a message in the taskQueue, update the clock if necessary, deliver that,
    * then return true. If both are empty, return false;
    */  
-  private boolean simulate() {
+  private boolean simulate() throws InterruptedException {
     if (!isDirectTimeSource) return true;
     if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be on selector thread");
-    long scheduledExecutionTime = manager.getNextTaskExecutionTime();
-    if (scheduledExecutionTime > timeSource.currentTimeMillis()) {
-      if (logger.level <= Logger.FINER) logger.log("the time is now "+scheduledExecutionTime);        
-      ((DirectTimeSource)timeSource).setTime(scheduledExecutionTime);
-    }
+    synchronized(manager) { // so we can wait on it, and so the clock and nextExecution don't change
+      
+      long scheduledExecutionTime = manager.getNextTaskExecutionTime();
+      if (scheduledExecutionTime < 0) {
+        if (logger.level <= Logger.FINE) logger.log("taskQueue is empty");
+        return false;
+      }
+      
+      if (scheduledExecutionTime > timeSource.currentTimeMillis()) {
+        long newSimTime = scheduledExecutionTime;
+        if (maxSpeed > 0) {
+          long sysTime = System.currentTimeMillis();
+          long sysTimeDiff = sysTime-maxSpeedRequestSystemTime;
+          
+          long maxSimTime = (long)(maxSpeedRequestSimTime+(sysTimeDiff*maxSpeed));
+          
+          if (maxSimTime < newSimTime) {
+            // we need to throttle
+            long neededSysDelay = (long)((newSimTime-maxSimTime)/maxSpeed);
+//            System.out.println("Waiting for "+neededSysDelay);
+            if (neededSysDelay >= 1) {
+              manager.wait(neededSysDelay);          
+              long now = System.currentTimeMillis();
+              long delay = now-sysTime;
+  //            System.out.println("Woke up after "+delay);
+              if (delay < neededSysDelay) return true;
+            }
+          }
+        }
+          
+        if (logger.level <= Logger.FINER) logger.log("the time is now "+newSimTime);              
+        ((DirectTimeSource)timeSource).setTime(newSimTime);      
+      }
+    } // synchronized(manager)
     
 //    TimerTask task;
 //    synchronized(taskQueue) {
