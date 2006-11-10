@@ -51,6 +51,12 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   protected boolean running = true;
   
   /**
+   * Can be disabled for the simulator to improve performance, only do this
+   * if you know you don't need to select on anything
+   */
+  protected boolean select = true;
+  
+  /**
    * Constructor, which is private since there is only one selector per JVM.
    */
   public SelectorManager(String instance,
@@ -136,7 +142,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       throw new NullPointerException();
 
     invocations.add(d);
-    selector.wakeup();
+    wakeup();
   }
 
   /**
@@ -160,7 +166,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       throw new NullPointerException();
 
     modifyKeys.add(key);
-    selector.wakeup();
+    wakeup();
   }
 
   /**
@@ -189,30 +195,32 @@ public class SelectorManager extends Thread implements Timer, Destructable {
         executeDueTasks();
         onLoop();
         doInvocations();
-        doSelections();
-        synchronized (selector) {
-          int selectTime = SelectorManager.TIMEOUT;
-          if (timerQueue.size() > 0) {
-            TimerTask first = (TimerTask) timerQueue.first();
-            selectTime = (int) (first.nextExecutionTime - timeSource
-                .currentTimeMillis());
-          }
-
-          select(selectTime);
-
-          if (cancelledKeys.size() > 0) {
-            Iterator i = cancelledKeys.iterator();
-
-            while (i.hasNext())
-              ((SelectionKey) i.next()).cancel();
-
-            cancelledKeys.clear();
-
-            // now, hack to make sure that all cancelled keys are actually
-            // cancelled (dumb)
-            selector.selectNow();
-          }
-        }
+        if (select) {
+          doSelections();
+//          synchronized (selector) {
+            int selectTime = SelectorManager.TIMEOUT;
+            if (timerQueue.size() > 0) {
+              TimerTask first = (TimerTask) timerQueue.first();
+              selectTime = (int) (first.nextExecutionTime - timeSource
+                  .currentTimeMillis());
+            }
+  
+            select(selectTime);
+            
+            if (cancelledKeys.size() > 0) {
+              Iterator i = cancelledKeys.iterator();
+  
+              while (i.hasNext())
+                ((SelectionKey) i.next()).cancel();
+  
+              cancelledKeys.clear();
+  
+              // now, hack to make sure that all cancelled keys are actually
+              // cancelled (dumb)
+              selector.selectNow();
+            }
+//          }
+        } // if select
       }
     } catch (Throwable t) {
       if (logger.level <= Logger.SEVERE) logger.logException(
@@ -495,26 +503,50 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * 
    * @param task The task to add
    */
-  private void addTask(TimerTask task) {
-    synchronized (selector) {
+  private synchronized void addTask(TimerTask task) {
+//    synchronized (selector) {
       if (!timerQueue.add(task)) {
         System.out.println("ERROR: Got false while enqueueing task " + task
             + "!");
         Thread.dumpStack();
       }
-    }
 
     // need to interrupt thread if waiting too long in selector
-    if (wakeupTime >= task.scheduledExecutionTime())
-      selector.wakeup();
+    if (select) {
+      // using the network
+      if (wakeupTime >= task.scheduledExecutionTime()) {
+        // we need to wake up the selector because it's going to sleep too long
+        wakeup();
+      }
+    } else {
+      // using the simulator
+      if (task.scheduledExecutionTime() == getNextTaskExecutionTime()) {
+        // we need to wake up the selector because we are now the newest 
+        // shortest wait, and may be delaying because of a later event
+        wakeup();
+      }
+    }
+    
+//    } // synchronized
+
+  }
+  
+  /**
+   * Note, should hold the selector's (this) lock to call this.
+   *
+   */
+  public void wakeup() {
+    selector.wakeup();
+    this.notifyAll();
   }
 
   public long getNextTaskExecutionTime() {
+//    if (!invocations.isEmpty()) return timeSource.currentTimeMillis();
     if (timerQueue.size() > 0) {
       TimerTask next = (TimerTask) timerQueue.first();
       return next.nextExecutionTime;
     }
-    return 0;    
+    return -1;    
   }
   
   /**
@@ -526,7 +558,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     ArrayList executeNow = new ArrayList();
 
     // step 1, fetch all due timers
-    synchronized (selector) {
+    synchronized (this) {
       boolean done = false;
       while (!done) {
         if (timerQueue.size() > 0) {
@@ -561,7 +593,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     }
 
     // step 3, add them back if necessary
-    synchronized (selector) {
+    synchronized (this) {
       i = addBack.iterator();
       while (i.hasNext()) {
         TimerTask tt = (TimerTask) i.next();
@@ -583,5 +615,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   
   public Selector getSelector() {
     return selector; 
+  }
+
+  public void setSelect(boolean b) {
+    select = b;
   }
 }

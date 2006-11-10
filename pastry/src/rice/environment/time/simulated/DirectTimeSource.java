@@ -44,7 +44,11 @@ public class DirectTimeSource implements TimeSource {
     return time;
   }
   
-  public synchronized void setTime(long newTime) {
+  /**
+   * Should be synchronized on the selectorManager
+   * @param newTime
+   */
+  public void setTime(long newTime) {
     if (newTime < time) {
       throw new RuntimeException("Attempted to set time from "+time+" to "+newTime+".");
     }
@@ -52,6 +56,9 @@ public class DirectTimeSource implements TimeSource {
     time = newTime;
   }
 
+  /**
+   * Should be synchronized on the selectorManager
+   */
   public void incrementTime(int millis) {
     setTime(time+millis); 
   }
@@ -60,23 +67,27 @@ public class DirectTimeSource implements TimeSource {
     boolean done = false;
     
     public void run() {
-      synchronized(DirectTimeSource.this) {
+      synchronized(selectorManager) {
         done = true;
-        DirectTimeSource.this.notifyAll();
-        Thread.yield();
+        selectorManager.notifyAll();
+        // selector already yields enough
+//        Thread.yield();
       }
     }
     
   }
   
-  public synchronized void sleep(long delay) throws InterruptedException {
-    BlockingTimerTask btt = new BlockingTimerTask();
-    if (logger.level <= Logger.FINE) logger.log("DirectTimeSource.sleep("+delay+")");
-    
-    selectorManager.getTimer().schedule(btt,delay);
-    
-    while(!btt.done) {
-      wait(); 
+  public void sleep(long delay) throws InterruptedException {
+    synchronized(selectorManager) { // to prevent an out of order acquisition
+      // we only lock on the selector
+      BlockingTimerTask btt = new BlockingTimerTask();
+      if (logger.level <= Logger.FINE) logger.log("DirectTimeSource.sleep("+delay+")");
+      
+      selectorManager.getTimer().schedule(btt,delay);
+      
+      while(!btt.done) {
+        selectorManager.wait(); 
+      }
     }
   }
   
