@@ -134,7 +134,7 @@ public class DirectAppSocket {
       bytesInFlight-=lengthRead;
       simulator.enqueueDelivery(new Delivery() {              
         public void deliver() {
-          notifyCanWrite();            
+          counterpart.notifyCanWrite();            
         }            
         public int getSeq() {
           return 0;            

@@ -330,14 +330,19 @@ class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
         exceptionAndClose(ioe); 
       }
       
-      if (!toWrite.hasRemaining()) {
+      if (toWrite.hasRemaining()) {
+        // write will be called later
+        return;
+      } else {
         toWrite = null;
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 //        receiver.receiveSocket(this); moved to read
       }
-      return;
     }
     
+    if (writer == null) {
+      key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+      return;
+    }
     AppSocketReceiver temp = writer;
     clearTimer(writer);
     writer = null;
