@@ -303,6 +303,7 @@ class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
   }
   
   private void clearTimer(AppSocketReceiver theReceiver) {
+    if (theReceiver == null) return;
     TimerTask timer = (TimerTask)timers.remove(theReceiver);
 //    System.out.println("Clearing "+timer);
     if (timer == null) return;
