@@ -746,6 +746,7 @@ public class SocketSourceRouteManager {
         getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
         this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       }
+      if (address.isLocal()) best = SourceRoute.build(address.eaddress);
     }
     
     /**
@@ -959,16 +960,16 @@ public class SocketSourceRouteManager {
       // and in any case, we either send if we have a best route or add the message
       // to the queue
       
-      if (best == null) {
+      if (best == null /*&& !address.isLocal()*/) {
         pendingAppSockets.addLast(new PendingAppSocket(appAddress, receiver));
         hardLinks.add(this);
-      } else if (! getRouteManager(best).isOpen()) {
-        pendingAppSockets.addLast(new PendingAppSocket(appAddress, receiver));
-        hardLinks.add(this);
-        
-        getRouteManager(best).checkLiveness();
-        this.best = null;
-        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
+//      } else if (! getRouteManager(best).isOpen()) {
+//        pendingAppSockets.addLast(new PendingAppSocket(appAddress, receiver));
+//        hardLinks.add(this);
+//        
+//        getRouteManager(best).checkLiveness();
+//        this.best = null;
+//        this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       } else {
         getRouteManager(best).connect(appAddress, receiver, timeout);
       }
