@@ -28,34 +28,12 @@ import rice.pastry.client.PastryAppl;
 
 public class MessageDispatch implements Destructable {
 
-  private int bufferSize;
-
   // have modified from HashMap to HashMap to use the internal representation
   // of a LocalAddress.  Otherwise remote node cannot get its message delivered
   // because objects constructed differently are not mapped to the same value
   private HashMap addressBook;
 
-  // a buffer of messages received before an application has been added to handle
-  // the messages
-  private Hashtable buffer;
-  
-  // the current count of the number of messages in the bufer
-  private int bufferCount;
-
   protected PastryNode localNode;
-  
-  /**
-   * If the node is not ready, we do not deliver messages 
-   * to applications.  What should we do with these messages?
-   * Buffer or Drop?
-   * 
-   * true will buffer the messages that should be delivered
-   * false will drop them and print a message
-   */
-  private boolean bufferIfNotReady;
-  
-  public static final String BUFFER_IF_NOT_READY_PARAM = "pastry_messageDispatch_bufferIfNotReady";
-  public static final String BUFFER_SIZE_PARAM = "pastry_messageDispatch_bufferSize";
   
   protected Logger logger;
   
@@ -63,11 +41,7 @@ public class MessageDispatch implements Destructable {
    * Constructor.
    */
   public MessageDispatch(PastryNode pn) {
-    bufferIfNotReady = pn.getEnvironment().getParameters().getBoolean(BUFFER_IF_NOT_READY_PARAM);
-    bufferSize = pn.getEnvironment().getParameters().getInt(BUFFER_SIZE_PARAM);
     addressBook = new HashMap();
-    buffer = new Hashtable();
-    bufferCount = 0;
     this.localNode = pn;
     this.logger = pn.getEnvironment().getLogManager().getLogger(getClass(), null);    
   }
