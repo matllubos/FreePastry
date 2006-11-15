@@ -73,8 +73,9 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
     this.leafSet = leafSet;
     ln = localNode;
     clockwise = cw;
-    theSize = handles.length;
-    nodes = handles;
+    theSize = Math.min(handles.length,size); //handles.length;
+    nodes = new NodeHandle[size];
+    System.arraycopy(handles,0,nodes,0,theSize);
   }
 
   /**
