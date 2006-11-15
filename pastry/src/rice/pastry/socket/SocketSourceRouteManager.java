@@ -960,7 +960,7 @@ public class SocketSourceRouteManager {
       // and in any case, we either send if we have a best route or add the message
       // to the queue
       
-      if (best == null /*&& !address.isLocal()*/) {
+      if (best == null) {
         pendingAppSockets.addLast(new PendingAppSocket(appAddress, receiver));
         hardLinks.add(this);
 //      } else if (! getRouteManager(best).isOpen()) {
