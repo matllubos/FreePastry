@@ -253,7 +253,20 @@ public interface Endpoint extends NodeHandleReader {
   
   public NodeHandleSet readNodeHandleSet(InputBuffer buf, short type) throws IOException;
   
+  /**
+   * Call this after you have set up your Endpoint:
+   *   called setDeserializer(), called accept().
+   *
+   */
   public void register();
+  
+  /**
+   * This replaces NodeHandle.proximity(), so that you don't have to have a "coalesced" NodeHandle.
+   * 
+   * @param nh
+   * @return
+   */
+  public int proximity(NodeHandle nh);
 }
 
 

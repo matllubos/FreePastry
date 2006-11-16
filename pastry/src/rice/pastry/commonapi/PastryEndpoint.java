@@ -64,6 +64,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 //    this(pn, application, "[PORT " + address + "]", address, true);    
 //  }
   
+//    super(pn, application.getClass().getName() + instance, address, null, pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance));
   public PastryEndpoint(PastryNode pn, Application application, String instance, int address, boolean register) {
     super(pn, application.getClass().getName() + instance, address, null);
     appDeserializer = deserializer; // use this as the apps default deserializer
@@ -539,6 +540,10 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       }
     }
     super.destroy();
+  }
+
+  public int proximity(NodeHandle nh) {
+    return thePastryNode.proximity((rice.pastry.NodeHandle)nh);
   }
   
 }

@@ -276,6 +276,10 @@ public class GCEndpoint implements Endpoint {
   public void register() {
     endpoint.register(); 
   }
+
+  public int proximity(NodeHandle nh) {
+    return endpoint.proximity(nh);
+  }
 }
 
 

@@ -374,6 +374,10 @@ public class MultiringEndpoint implements Endpoint {
     endpoint.register(); 
   }
 
+  public int proximity(NodeHandle nh) {
+    return endpoint.proximity(nh);    
+  }
+
 }
 
 
