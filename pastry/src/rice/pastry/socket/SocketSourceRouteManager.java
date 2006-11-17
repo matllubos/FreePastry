@@ -746,7 +746,9 @@ public class SocketSourceRouteManager {
         getRouteManager(SourceRoute.build(address.eaddress)).checkLiveness();
         this.updated = spn.getEnvironment().getTimeSource().currentTimeMillis();
       }
-      if (address.isLocal()) best = SourceRoute.build(address.eaddress);
+      if ((address.getNodeId() != null) && address.isLocal()) {
+        best = SourceRoute.build(address.eaddress);
+      }
     }
     
     /**
