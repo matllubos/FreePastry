@@ -83,4 +83,8 @@ public class SimpleLogger extends HeirarchyLogger {
       exception.printStackTrace(alm.getPrintStream());
     }
   }
+  
+  public String toString() {
+    return loggerName; 
+  }
 }

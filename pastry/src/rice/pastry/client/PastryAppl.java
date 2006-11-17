@@ -21,7 +21,7 @@ import java.util.*;
  *
  * @author Peter Druschel
  */
-public abstract class PastryAppl implements Observer
+public abstract class PastryAppl /*implements Observer*/
 {
   protected MessageDeserializer deserializer;
   
@@ -37,7 +37,7 @@ public abstract class PastryAppl implements Observer
   /**
    * Buffered while node is not ready to prevent inconsistent routing.
    */
-  LinkedList undeliveredMessages = new LinkedList();
+//  LinkedList undeliveredMessages = new LinkedList();
   
   private class LeafSetObserver implements NodeSetListener {
     public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
@@ -77,6 +77,10 @@ public abstract class PastryAppl implements Observer
   }
   
   public PastryAppl(PastryNode pn, String instance, int address, MessageDeserializer md) {
+    this(pn, instance, address, md, null);
+  }
+  
+  public PastryAppl(PastryNode pn, String instance, int address, MessageDeserializer md, Logger logger) {
     this.address = address;
     if (instance != null) {
       this.instance = instance;
@@ -85,7 +89,10 @@ public abstract class PastryAppl implements Observer
     }
     
     thePastryNode = pn;
-    logger = pn.getEnvironment().getLogManager().getLogger(getClass(), instance);
+    this.logger = logger;
+    if (this.logger == null) {
+      this.logger = pn.getEnvironment().getLogManager().getLogger(getClass(), instance);
+    }
     deserializer = md;
     if (deserializer == null)
       deserializer = new JavaSerializedDeserializer(pn);
@@ -113,7 +120,7 @@ public abstract class PastryAppl implements Observer
 
     thePastryNode.registerApp(this); // just adds it to a list    
     
-    thePastryNode.addObserver(this);
+//    thePastryNode.addObserver(this); // for buffered messages
   }
   
   /**
@@ -151,27 +158,26 @@ public abstract class PastryAppl implements Observer
    * @param msg the message that is arriving.
    */
   public void receiveMessage(Message msg) {
-    // NOTE: the idea is to synchronize on undeliveredMessages while making the check as to whether or not to add to the queue
-    // the other part of the synchronization is just below, in update()
-    // we don't want to hold the lock to undeliveredMessages when calling receiveMessage()
-    synchronized(undeliveredMessages) {
-      if (deliverWhenNotReady() || thePastryNode.isReady()) {
-        // continue to receiveMessage()
-      } else {
-        // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
-//      if (msg instanceof RouteMessage) {
-//        RouteMessage rm = (RouteMessage)msg;
-//        rm.routeMessage(this.localNode.getLocalHandle());
-//        return;
-//      }
-//        undeliveredMessages.add(msg);
-        return;
-      }
-    }    
     
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] recv " + msg);
     if (msg instanceof RouteMessage) {
+      // NOTE: the idea is to synchronize on undeliveredMessages while making the check as to whether or not to add to the queue
+      // the other part of the synchronization is just below, in update()
+      // we don't want to hold the lock to undeliveredMessages when calling receiveMessage()
+//      synchronized(undeliveredMessages) {
+        if (deliverWhenNotReady() || thePastryNode.isReady()) {
+          // continue to receiveMessage()
+        } else {
+          if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
+          // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
+//          RouteMessage rm = (RouteMessage)msg;
+//          rm.routeMessage(this.localNode.getLocalHandle());
+
+//          undeliveredMessages.add(msg);
+          return;
+        }
+//      } // synchronized    
       RouteMessage rm = (RouteMessage) msg;
 
       try {
@@ -180,29 +186,30 @@ public abstract class PastryAppl implements Observer
       } catch (IOException ioe) {
         throw new RuntimeException("Error deserializing message "+rm,ioe); 
       }
+    } else {      
+      messageForAppl(msg);
     }
-    else messageForAppl(msg);
   }
 
-  public void update(Observable arg0, Object arg1) {
-    if (arg0 == thePastryNode) {
-      if (arg1 instanceof Boolean) {
-        Boolean b = (Boolean)arg1;
-        if (b.booleanValue()) {
-          Collection copy;
-          synchronized(undeliveredMessages) {
-            copy = new ArrayList(undeliveredMessages); 
-            undeliveredMessages.clear();
-          }
-          Iterator i = copy.iterator();
-          while(i.hasNext()) {
-            Message m = (Message)i.next(); 
-            receiveMessage(m);
-          }
-        }
-      }
-    }
-  }
+//  public void update(Observable arg0, Object arg1) {
+//    if (arg0 == thePastryNode) {
+//      if (arg1 instanceof Boolean) {
+//        Boolean b = (Boolean)arg1;
+//        if (b.booleanValue()) {
+//          Collection copy;
+//          synchronized(undeliveredMessages) {
+//            copy = new ArrayList(undeliveredMessages); 
+//            undeliveredMessages.clear();
+//          }
+//          Iterator i = copy.iterator();
+//          while(i.hasNext()) {
+//            Message m = (Message)i.next(); 
+//            receiveMessage(m);
+//          }
+//        }
+//      }
+//    }
+//  }
   
   // useful API methods
 

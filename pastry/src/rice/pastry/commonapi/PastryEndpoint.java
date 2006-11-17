@@ -64,9 +64,9 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 //    this(pn, application, "[PORT " + address + "]", address, true);    
 //  }
   
-//    super(pn, application.getClass().getName() + instance, address, null, pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance));
   public PastryEndpoint(PastryNode pn, Application application, String instance, int address, boolean register) {
-    super(pn, application.getClass().getName() + instance, address, null);
+    super(pn, application.getClass().getName() + instance, address, null, pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance));
+//    super(pn, application.getClass().getName() + instance, address, null);
     appDeserializer = deserializer; // use this as the apps default deserializer
     deserializer = new PEDeserializer();
     this.application = application;
@@ -397,6 +397,18 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       try {
       rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
 
+      if (deliverWhenNotReady() || thePastryNode.isReady()) {
+        // continue to receiveMessage()
+      } else {
+        if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
+        // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
+//        rm.routeMessage(this.localNode.getLocalHandle());
+        
+//      undeliveredMessages.add(msg);
+        return;
+      }
+      
+      
       // call application
       if (logger.level <= Logger.FINER) logger.log(
           "[" + thePastryNode + "] forward " + msg);
@@ -421,6 +433,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
         if (logger.level <= Logger.SEVERE) logger.logException(this.toString(),ioe); 
       }
     } else {
+      
       // if the message is not a RouteMessage, then it is for the local node and
       // was sent with a PastryAppl.routeMsgDirect(); we deliver it for backward compatibility
       messageForAppl(msg);
