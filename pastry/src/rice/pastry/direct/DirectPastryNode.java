@@ -15,7 +15,7 @@ import rice.pastry.client.PastryAppl;
 import rice.pastry.join.InitiateJoin;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
-import rice.selector.Timer;
+import rice.selector.*;
 
 /**
  * Direct pastry node. Subclasses PastryNode, and does about nothing else.
@@ -58,7 +58,7 @@ public class DirectPastryNode extends PastryNode {
   
   
   private NetworkSimulator simulator;
-  protected boolean alive = true;
+  private boolean alive = true;
   NodeRecord record;
   protected Timer timer;
   // used to control message order for messages destined to arrive at the same time
@@ -80,6 +80,16 @@ public class DirectPastryNode extends PastryNode {
   }
   
   public void destroy() {
+    SelectorManager sm = getEnvironment().getSelectorManager();
+    if (!sm.isSelectorThread()) {
+      sm.invoke(new Runnable() {
+      
+        public void run() {
+          destroy();
+        }      
+      });
+      return;
+    }
     record.markDead();
     routeSet.destroy();
     leafSet.destroy();
@@ -206,6 +216,7 @@ public class DirectPastryNode extends PastryNode {
   }
 
   public synchronized void receiveMessage(Message msg) {
+    if (!isAlive()) return;
     // System.out.println("setting currentNode from "+currentNode+" to "+this+"
     // on "+Thread.currentThread());
     if (!getEnvironment().getSelectorManager().isSelectorThread()) {

@@ -170,7 +170,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    * way too often.
    */
   public void update(Observable arg0, Object arg1) {
-    if (remoteNode.alive) {
+    if (remoteNode.isAlive()) {
 //      notifyObservers(NodeHandle.DECLARED_LIVE);      
     } else {
 //      System.out.println(this+"Notifying dead");

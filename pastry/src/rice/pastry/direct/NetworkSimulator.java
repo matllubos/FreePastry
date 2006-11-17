@@ -142,7 +142,7 @@ public interface NetworkSimulator {
    * part, it may move faster than the value you set to "catch up" 
    * 
    * To prevent this speed-up from becoming unbounded, you may wish to call
-   * setMaxSpeed() periodically or immeadiately after periods of expensive calculations.
+   * setMaxSpeed() periodically or immediately after periods of expensive calculations.
    * 
    * Setting the simulation speed to zero will not pause the simulation, you must 
    * call stop() to do that.
