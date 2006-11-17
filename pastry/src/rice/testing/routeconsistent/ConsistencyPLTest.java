@@ -72,15 +72,17 @@ public class ConsistencyPLTest implements Observer {
 //  }
 
   public void update(Observable observable, Object value) {
-    Boolean b = (Boolean)value;    
-    boolean rdy = b.booleanValue();
-    
-    long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
-    System.out.println("CPLT.update("+rdy+"):"+curTime);
-    int num = 2;    
-    if (!rdy) num = 5;
-    System.out.println("LEAFSET"+num+":"+curTime+":"+localNode.getLeafSet());
-//    System.out.println("CPLT.setReady("+rdy+"):"+localNode.getEnvironment().getTimeSource().currentTimeMillis()); 
+    if (value instanceof Boolean) {
+      Boolean b = (Boolean)value;    
+      boolean rdy = b.booleanValue();
+      
+      long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+      System.out.println("CPLT.update("+rdy+"):"+curTime);
+      int num = 2;    
+      if (!rdy) num = 5;
+      System.out.println("LEAFSET"+num+":"+curTime+":"+localNode.getLeafSet());
+  //    System.out.println("CPLT.setReady("+rdy+"):"+localNode.getEnvironment().getTimeSource().currentTimeMillis()); 
+    }
   }
   
   private static Id generateId() {
