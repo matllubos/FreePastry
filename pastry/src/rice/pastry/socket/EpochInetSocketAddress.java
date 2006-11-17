@@ -180,7 +180,7 @@ public class EpochInetSocketAddress implements Serializable {
       buf.read(addrBytes);
       InetAddress addr = InetAddress.getByAddress(addrBytes);
       short port = buf.readShort();
-      saddr[ctr] = new InetSocketAddress(addr, port);
+      saddr[ctr] = new InetSocketAddress(addr, 0xFFFF & port);
     }
 //    System.out.println("EISA.build():numAddresses:"+numAddresses);
     long epoch = buf.readLong();
