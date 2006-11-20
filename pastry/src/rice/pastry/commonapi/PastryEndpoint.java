@@ -43,7 +43,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       if (type == PastryEndpointMessage.TYPE)
         return new PastryEndpointMessage(getAddress(),buf,appDeserializer,(rice.pastry.NodeHandle)sender);
 //    return null;
-      throw new IllegalStateException("Unknown type "+type+" (priority:"+priority+" sender:"+sender+" appDes:"+appDeserializer+")");
+      throw new IllegalArgumentException("Unknown type "+type+" (priority:"+priority+" sender:"+sender+" appDes:"+appDeserializer+")");
     }    
   }
   
