@@ -30,10 +30,14 @@ public class GenericNetwork extends BasicNetworkSimulator
 
 //  private Vector transit = new Vector();
 
+  /**
+   * The number of stubs.
+   */
   public static int MAXOVERLAYSIZE = 2000;
 
   // This keeps track of the indices that have already been assigned
-  public HashSet assignedIndices = new HashSet();
+  // index -> ctr
+  public HashMap<Integer, Integer> assignedIndices = new HashMap<Integer, Integer>();
 
   public File inFile_Matrix;// = "GNPINPUT";
 
@@ -49,14 +53,15 @@ public class GenericNetwork extends BasicNetworkSimulator
     public int index; // index in the symmetric inter-host latency matrix
 
     public GNNodeRecord() {
-      if (assignedIndices.size() >= MAXOVERLAYSIZE) throw new RuntimeException("No more nodes int he network.");
+      if (numNodes >= MAXOVERLAYSIZE*nodesPerStub) throw new RuntimeException("No more nodes int he network.");
       // index = countIndex++;
       index = random.nextInt(MAXOVERLAYSIZE);
-      while (assignedIndices.contains(new Integer(index))) {
+      while (stubIsFull(index)) {
         index = random.nextInt(MAXOVERLAYSIZE);
       }
+      
+      incrementStub(index);
       // System.out.println("index= " + index);
-      assignedIndices.add(new Integer(index));
     }
 
     public float proximity(NodeRecord that) {
@@ -82,7 +87,7 @@ public class GenericNetwork extends BasicNetworkSimulator
 
     public void markDead() {
 //      System.out.println("a"+assignedIndices.size());
-      assignedIndices.remove(new Integer(index));
+      decrementStub(index);
 //      System.out.println("b"+assignedIndices.size());
     }
   }
@@ -102,22 +107,31 @@ public class GenericNetwork extends BasicNetworkSimulator
     
     MAXOVERLAYSIZE = env.getParameters().getInt("pastry_direct_gtitm_max_overlay_size");
     MIN_DIST = env.getParameters().getFloat("pastry_direct_min_delay");
+    float delayFactor = env.getParameters().getFloat("pastry_direct_gtitm_delay_factor");// 1.0
     
     inFile_Matrix = inFile;
     if (inFile_Matrix == null) {
       inFile_Matrix = new File(env.getParameters().getString("pastry_direct_gtitm_matrix_file"));
     }
-      
+  
+    setNodesPerStub(env.getParameters().getInt("pastry_direct_gtitm_nodes_per_stub"));// 1
+    
 //    System.out.println("TOPOLOGY : Generic toplogy");
     // rng = new Random(PastrySeed.getSeed());
-    readOverlayMatrix();
+    readOverlayMatrix(delayFactor);
     // readOverlayPos();
     // computeRawGNPError();
     // System.exit(1);
 
   }
+  
+  int nodesPerStub = 1;
 
-  public void readOverlayMatrix() {
+  public void setNodesPerStub(int numPerStub) {
+    this.nodesPerStub = numPerStub; 
+  }
+  
+  public void readOverlayMatrix(float delayFactor) {
     FileReader fr = null;
     try {
       fr = new FileReader(inFile_Matrix);
@@ -148,7 +162,7 @@ public class GenericNetwork extends BasicNetworkSimulator
 //                  .println("ERROR: the matrix has more entries than MAXOVERLAYSIZE which is a static variable set in main()");
 //              System.exit(1);
 //            }
-            distance[lineCount][nodeCount] = Float.parseFloat(words[i]);
+            distance[lineCount][nodeCount] = delayFactor*Float.parseFloat(words[i]);
             nodeCount++;
             if (nodeCount == MAXOVERLAYSIZE) break;
           }
@@ -161,6 +175,34 @@ public class GenericNetwork extends BasicNetworkSimulator
       System.out.println("Exception" + e);
     }
   }
+  
+  private boolean stubIsFull(int index) {
+    if (!assignedIndices.containsKey(index)) return false;
+    return assignedIndices.get(index)>=nodesPerStub; 
+  }
+
+  /**
+   * The number of nodes assigned.
+   */
+  int numNodes = 0;
+  
+  private void incrementStub(int index) {
+    numNodes++;
+
+    int val = 0;
+    if (assignedIndices.containsKey(index)) {
+      val = assignedIndices.get(index);
+    }
+    assignedIndices.put(index, val+1);
+  }
+  
+  private void decrementStub(int index) {
+    numNodes--;
+
+    int val = assignedIndices.get(index);
+    assignedIndices.put(index, val-1);
+  }
+  
 
 //  public void readOverlayPos() {
 //    BufferedReader fin = null;
