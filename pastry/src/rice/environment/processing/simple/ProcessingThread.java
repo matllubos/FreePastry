@@ -9,7 +9,7 @@ package rice.environment.processing.simple;
 public class ProcessingThread extends Thread {
   ProcessingQueue queue;
    
-  boolean running = false;
+  volatile boolean running = false;
   
    public ProcessingThread(String name, ProcessingQueue queue){
      super(name);

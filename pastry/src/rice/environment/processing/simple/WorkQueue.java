@@ -15,7 +15,7 @@ public class WorkQueue {
   /* A negative capacity, is equivalent to infinted capacity */
   int capacity = -1;
 
-  boolean running = true;
+  volatile boolean running = true;
   
   public WorkQueue() {
      /* do nothing */

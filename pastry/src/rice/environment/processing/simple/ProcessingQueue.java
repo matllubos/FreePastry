@@ -12,7 +12,7 @@ public class ProcessingQueue {
   
   List q = new LinkedList();
   int capacity = -1;
-  boolean running = true;
+  volatile boolean running = true;
   
   public ProcessingQueue() {
      /* do nothing */

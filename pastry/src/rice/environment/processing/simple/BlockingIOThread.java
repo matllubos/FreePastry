@@ -11,7 +11,7 @@ import rice.environment.processing.WorkRequest;
 public class BlockingIOThread extends Thread {
   WorkQueue workQ;
 
-  boolean running = true;
+  volatile boolean running = true;
 
   public BlockingIOThread(WorkQueue workQ) {
     super("Persistence Worker Thread");
