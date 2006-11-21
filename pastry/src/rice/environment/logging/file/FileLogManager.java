@@ -75,7 +75,11 @@ public class FileLogManager extends SimpleLogManager {
     try {
       String fname = filePrefix+detail+fileSuffix;
       PrintStream newPS = new PrintStream(new FileOutputStream(fname,true));
-      return new FileLogManager(newPS, time, params, "", filePrefix, fileSuffix, dateFormat);
+      String linePrefix = "";
+      if (params.getBoolean("fileLogManager_keepLinePrefix")) {
+        linePrefix = detail; 
+      }
+      return new FileLogManager(newPS, time, params, linePrefix, filePrefix, fileSuffix, dateFormat);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe); 
     }

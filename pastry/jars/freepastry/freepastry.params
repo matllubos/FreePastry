@@ -319,6 +319,7 @@ log_rotating_date_format = yyyyMMdd.HHmmss.SSS
 environment_logToFile = false
 fileLogManager_filePrefix = 
 fileLogManager_fileSuffix = .log
+fileLogManager_keepLinePrefix = false
 
 # 24 hours
 log_rotate_interval = 86400000
