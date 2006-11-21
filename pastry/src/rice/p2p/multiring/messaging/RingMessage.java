@@ -88,7 +88,14 @@ public class RingMessage implements RawScribeContent {
    *
    * @return The internal message of this message
    */
-  public RawMessage getMessage() {
+  public RawMessage getRawMessage() {
+    return message;
+  }
+  
+  public Message getMessage() {
+    if (message.getType() == 0) {
+      return ((JavaSerializedMessage)message).getMessage(); 
+    }
     return message;
   }
 

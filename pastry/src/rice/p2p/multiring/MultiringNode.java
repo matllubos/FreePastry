@@ -300,7 +300,7 @@ public class MultiringNode implements Node, ScribeClient {
     if (content instanceof RingMessage) {
       RingMessage rm = (RingMessage) content;
       //System.outt.println("RECEIVED ANYCAST TO " + rm.getId() + " AT NODE " + getId());
-      collection.route(rm.getId(), rm.getMessage(), rm.getApplication());
+      collection.route(rm.getId(), rm.getRawMessage(), rm.getApplication());
     } else {
       if (logger.level <= Logger.WARNING) logger.log(
           "Received unrecognized message " + content);
