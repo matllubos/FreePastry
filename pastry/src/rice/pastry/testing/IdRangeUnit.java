@@ -21,7 +21,7 @@ public class IdRangeUnit {
     r = new IdRange(Id.makeRandomId(rng), Id.makeRandomId(rng));
     return r;
   }
-
+  
   public IdRange createFullIdRange() {
     IdRange r;
     Id id = Id.makeRandomId(rng);
@@ -52,6 +52,20 @@ public class IdRangeUnit {
 
     data[data.length - 1] = b;
     return Id.build(data);
+  }
+  
+  public void halfTest() {
+    IdRange r = createFullIdRange();
+    IdRange ccw = r.ccwHalf();
+    IdRange cw = r.cwHalf();
+    
+    if (!cw.getCW().distance(cw.getCCW()).equals(cw.getCW().longDistance(cw.getCCW()))) {
+      System.out.println("ALERT: cw long distance not equal");
+    }
+    
+    if (!ccw.getCW().distance(ccw.getCCW()).equals(ccw.getCW().longDistance(ccw.getCCW()))) {
+      System.out.println("ALERT: ccw long distance not equal");
+    }
   }
 
   public void equalityTest(IdRange r1, IdRange r2) {
@@ -268,6 +282,8 @@ public class IdRangeUnit {
 
     System.out.println("IdRangeUnit test starting...");
 
+    halfTest();
+    
     for (int i = 0; i < 1000; i++) {
       IdRange r1 = createEmptyIdRange();
       IdRange r2 = createEmptyIdRange();

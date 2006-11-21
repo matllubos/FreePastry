@@ -51,7 +51,7 @@ public class Id implements rice.p2p.commonapi.Id {
   public final static int[] Null = {0, 0, 0, 0, 0};
   public final static int[] One = {1, 0, 0, 0, 0};
   public final static int[] NegOne = {-1, -1, -1, -1, -1};
-  public final static int[] Half = {0x80, 0, 0, 0, 0};
+  public final static int[] Half = {0, 0, 0, 0, 0x80000000};
   
   /**
    * The actual contents of this Id
