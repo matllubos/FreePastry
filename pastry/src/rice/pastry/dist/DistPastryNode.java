@@ -12,10 +12,7 @@ import rice.pastry.join.InitiateJoin;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.InitiateRouteSetMaintenance;
-import rice.persistence.PersistentStorage;
-import rice.selector.SelectorManager;
 import rice.selector.Timer;
-import sun.misc.SignalHandler;
 
 /**
  * Class which represents the abstraction of a "real" pastry node. Designed to
