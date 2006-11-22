@@ -187,7 +187,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       lastTime = timeSource.currentTimeMillis();
       // loop while waiting for activity
       while (running) {
-        notifyLoopListeners();
+        if (useLoopListeners)
+          notifyLoopListeners();
 
         // NOTE: This is so we aren't always holding the selector lock when we
         // get context switched
@@ -241,6 +242,21 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   
   public void destroy() {
     running = false; 
+  }
+  
+  /**
+   * LoopListeners is used in case you are worried that your process may not get scheduled for a while
+   * such as on an overloaded planetlab node, or if you hibernate your laptop, this is not needed 
+   * for the simulator
+   */
+  protected boolean useLoopListeners = true;
+  
+  /**
+   * Set this to false when using the simulator, because you don't need to notify loop observers.
+   * @param val
+   */
+  public void useLoopListeners(boolean val) {
+    useLoopListeners = val;
   }
   
   protected void notifyLoopListeners() {

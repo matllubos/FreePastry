@@ -50,6 +50,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public BasicNetworkSimulator(Environment env) {
     this.environment = env;
     manager = environment.getSelectorManager();
+    manager.useLoopListeners(false);
     Parameters params = env.getParameters();
     maxDiameter = params.getInt("pastry_direct_max_diameter");
     minDelay = params.getInt("pastry_direct_min_delay");
