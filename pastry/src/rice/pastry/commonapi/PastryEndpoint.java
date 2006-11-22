@@ -559,6 +559,10 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   public int proximity(NodeHandle nh) {
     return thePastryNode.proximity((rice.pastry.NodeHandle)nh);
   }
+ 
+  public int getAppId() {
+    return getAddress(); 
+  } 
   
 }
 
