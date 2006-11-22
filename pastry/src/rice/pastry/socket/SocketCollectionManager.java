@@ -62,7 +62,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   public final int BACKOFF_LIMIT;
   
   // the header which signifies a normal socket
-  protected static byte[] HEADER_DIRECT = new byte[] {0x06, 0x1B, 0x49, 0x74};
+  public static final byte[] HEADER_DIRECT = new byte[] {0x06, 0x1B, 0x49, 0x74};
   
   // the header which signifies a normal socket
   protected static byte[] HEADER_SOURCE_ROUTE = new byte[] {0x19, 0x53, 0x13, 0x00};
@@ -70,7 +70,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   // the length of the socket header
   public static int HEADER_SIZE = HEADER_DIRECT.length;
   
-  protected static byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
+  public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   
   // this is for historical purposes, and can definately be renamed
   // this got added in FP 2.0 when we added a magic number and version number
@@ -153,7 +153,7 @@ public class SocketCollectionManager extends SelectionKeyHandler {
     
     MAX_OPEN_SOCKETS = p.getInt("pastry_socket_scm_max_open_sockets");
     MAX_OPEN_SOURCE_ROUTES = p.getInt("pastry_socket_scm_max_open_source_routes");
-    SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size");
+    SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size"); // 32768
     PING_DELAY = p.getInt("pastry_socket_scm_ping_delay");
     PING_JITTER = p.getFloat("pastry_socket_scm_ping_jitter");
     NUM_PING_TRIES = p.getInt("pastry_socket_scm_num_ping_tries");

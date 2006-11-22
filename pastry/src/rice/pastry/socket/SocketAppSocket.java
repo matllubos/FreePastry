@@ -26,7 +26,7 @@ import rice.selector.TimerTask;
  * @version $Id: SocketCollectionManager.java 3061 2006-02-14 00:56:04Z jeffh $
  * @author jeffh
  */
-class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
+public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
 
   public static final byte CONNECTION_UNKNOWN_ERROR = -1;
   public static final byte CONNECTION_UNKNOWN = -100;
@@ -368,13 +368,13 @@ class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
       manager.pastryNode.acceptAppSocket(this, appId);
       toWrite.put(CONNECTION_OK);
     } catch (AppNotRegisteredException anre) {
-      if (manager.logger.level <= Logger.WARNING) manager.logger.logException("Sending error to connecter "+channel+" ",anre);
+      if (manager.logger.level <= Logger.WARNING) manager.logger.log("Sending error to connecter "+channel+" "+anre);
       toWrite.put(CONNECTION_NO_APP);
     } catch (NoReceiverAvailableException nrae) {
-      if (manager.logger.level <= Logger.WARNING) manager.logger.logException("Sending error to connecter "+channel+" ",nrae);
+      if (manager.logger.level <= Logger.WARNING) manager.logger.log("Sending error to connecter "+channel+" "+nrae);
       toWrite.put(CONNECTION_NO_ACCEPTOR);
     } catch (AppSocketException ase) {
-      if (manager.logger.level <= Logger.WARNING) manager.logger.logException("Sending error to connecter "+channel+" ",ase);
+      if (manager.logger.level <= Logger.WARNING) manager.logger.log("Sending error to connecter "+channel+" "+ase);
       toWrite.put(CONNECTION_UNKNOWN_ERROR);
     }
     toWrite.clear();
