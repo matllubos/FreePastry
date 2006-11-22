@@ -28,6 +28,10 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
   private NodeIdFactory nidFactory;
   private NetworkSimulator simulator;
 
+  boolean guaranteeConsistency;
+  
+
+  
   /**
    * Main constructor.
    * 
@@ -38,6 +42,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
   public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim, Environment env) {    
     super(env);
     env.getParameters().setInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled",120000);
+    guaranteeConsistency = env.getParameters().getBoolean("pastry_direct_guarantee_consistency"); // true
     nidFactory = nf;
     simulator = sim;
   }
@@ -108,12 +113,21 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     router.register();
     rsProtocol.register();
 
-    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-        localhandle, leafSet, routeTable);
-    lsProtocol.register();
-    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-        localhandle, routeTable, leafSet, lsProtocol);
-    jProtocol.register();
+    if (guaranteeConsistency) {    
+        PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
+            localhandle, leafSet, routeTable);
+        lsProtocol.register();
+        ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
+            localhandle, routeTable, leafSet, lsProtocol);
+        jProtocol.register();
+    } else {
+      StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn,
+          localhandle, leafSet, routeTable);
+      lsProtocol.register();
+      StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn,
+          localhandle, routeTable, leafSet);
+      jProtocol.register();      
+    }
     
     // pn.doneNode(bootstrap);
     //pn.doneNode( simulator.getClosest(localhandle) );    
