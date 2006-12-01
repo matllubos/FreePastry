@@ -85,4 +85,34 @@ public abstract class Logger {
    * @param exception the exception to print
    */
   public abstract void logException(String message, Throwable exception);
+  
+  /**
+   * Prints the message if the priority is equal to or higher than the minimum priority.
+   * 
+   * Deprecated because string construction performance was the bottleneck
+   * 
+   * @param priority the priority of this log message
+   * @param message the message to print
+   * @deprecated use if (logger.level <= priority) log(String);
+   */
+  public void log(int priority, String message) {
+    if (level <= priority) log(message); 
+  }
+
+  /**
+   * Prints the stack trace of the exception.  If you only want to print the 
+   * exception's string, use the log() method.
+   * 
+   * This is necessary because Exception doesn't have a convienient way of printing the stack trace as a string.
+   * 
+   * Deprecated because string construction performance was the bottleneck
+   * 
+   * @param priority the priority of this log message
+   * @param exception the exception to print
+   * @deprecated use if (logger.level <= priority) logException(String, Throwable);
+   */
+  public void logException(int priority, String message, Throwable exception) {
+    if (level <= priority) logException(message, exception);     
+  }
+
 }
