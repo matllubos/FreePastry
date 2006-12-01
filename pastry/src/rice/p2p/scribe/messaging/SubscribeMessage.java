@@ -95,7 +95,7 @@ public class SubscribeMessage extends AnycastMessage {
    * @return A String of this message
    */
   public String toString() {
-    return "[SubscribeMessage " + topic + " subscriber " + subscriber + " ID " + id + "]";
+    return "[SubscribeMessage{"+System.identityHashCode(this)+"} " + topic + " subscriber " + subscriber + " ID " + id + "]";
   }
 
   /***************** Raw Serialization ***************************************/

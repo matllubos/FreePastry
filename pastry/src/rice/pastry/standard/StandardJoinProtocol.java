@@ -35,7 +35,7 @@ public class StandardJoinProtocol extends PastryAppl {
       super(pn);
     }
 
-    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+    public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       switch(type) {
         case JoinRequest.TYPE:
           return new JoinRequest(buf,pn, (NodeHandle)sender, pn);

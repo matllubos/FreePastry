@@ -168,7 +168,7 @@ public class AggregationImpl implements GCPast, VersioningPast, Aggregation, App
 
     this.endpoint = node.buildEndpoint(this, instance);
     this.endpoint.setDeserializer(new MessageDeserializer() {    
-      public Message deserialize(InputBuffer buf, short type, byte priority,
+      public Message deserialize(InputBuffer buf, short type, int priority,
           NodeHandle sender) throws IOException {
         switch(type) {
 //          case AggregationTimeoutMessage.TYPE:

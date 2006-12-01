@@ -17,12 +17,12 @@ import java.io.*;
 public interface Message extends Serializable {
   
   // different priority levels
-  public static final byte MAX_PRIORITY = 0;
-  public static final byte HIGH_PRIORITY = 5;
-  public static final byte MEDIUM_HIGH_PRIORITY = 10;
-  public static final byte MEDIUM_PRIORITY = 15;
-  public static final byte MEDIUM_LOW_PRIORITY = 20;
-  public static final byte LOW_PRIORITY = 25;
+  public static final int MAX_PRIORITY = -15;
+  public static final int HIGH_PRIORITY = -10;
+  public static final int MEDIUM_HIGH_PRIORITY = -5;
+  public static final int MEDIUM_PRIORITY = 0;
+  public static final int MEDIUM_LOW_PRIORITY = 5;
+  public static final int LOW_PRIORITY = 10;
 
   /**
    * Method which should return the priority level of this message.  The messages
@@ -35,7 +35,7 @@ public interface Message extends Serializable {
    *
    * @return This message's priority
    */
-  public byte getPriority();
+  public int getPriority();
   
 }
 

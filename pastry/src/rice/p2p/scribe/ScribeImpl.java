@@ -104,7 +104,7 @@ public class ScribeImpl implements Scribe, Application {
     this.contentDeserializer = new JavaScribeContentDeserializer();
     this.endpoint.setDeserializer(new MessageDeserializer() {
     
-      public Message deserialize(InputBuffer buf, short type, byte priority,
+      public Message deserialize(InputBuffer buf, short type, int priority,
           NodeHandle sender) throws IOException {
         try {
           switch(type) {
@@ -145,7 +145,7 @@ public class ScribeImpl implements Scribe, Application {
     // schedule the period liveness checks of the parent
     endpoint.scheduleMessage(new MaintenanceMessage(), environment.getRandomSource().nextInt(MAINTENANCE_INTERVAL), MAINTENANCE_INTERVAL);
 
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Starting up Scribe");
+    if (logger.level <= Logger.FINER) logger.log("Starting up Scribe");
   }
 
   public Environment getEnvironment() {
@@ -253,7 +253,7 @@ public class ScribeImpl implements Scribe, Application {
   private void sendSubscribe(Topic topic, ScribeClient client, RawScribeContent content, Id previousParent) {
     id++;
 
-    if (logger.level <= Logger.FINEST) logger.log(endpoint.getId() + ": Sending subscribe message for topic " + topic + " client:"+client);
+    if (logger.level <= Logger.FINEST) logger.log("Sending subscribe message for topic " + topic + " client:"+client);
     //logException(Logger.FINEST,"Stack Trace",new Exception("StackTrace"));
     
     // TODO: This should go to the ScribeImpl
@@ -279,7 +279,7 @@ public class ScribeImpl implements Scribe, Application {
    */
   private void ackMessageReceived(SubscribeAckMessage message) {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Removing client " + client + " from list of outstanding for ack " + message.getId());
+    if (logger.level <= Logger.FINER) logger.log("Removing client " + client + " from list of outstanding for ack " + message.getId());
     CancellableTask task = (CancellableTask) lost.remove(new Integer(message.getId()));
     
     if (task != null)
@@ -295,7 +295,7 @@ public class ScribeImpl implements Scribe, Application {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
     lost.remove(new Integer(message.getId()));
     
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Telling client " + client + " about FAILURE for outstanding ack " + message.getId());
+    if (logger.level <= Logger.FINER) logger.log("Telling client " + client + " about FAILURE for outstanding ack " + message.getId());
     
     if (client != null)
       client.subscribeFailed(message.getTopic());
@@ -310,7 +310,7 @@ public class ScribeImpl implements Scribe, Application {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
     lost.remove(new Integer(message.getId()));
 
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Telling client " + client + " about LOSS for outstanding ack " + message.getId());
+    if (logger.level <= Logger.FINER) logger.log("Telling client " + client + " about LOSS for outstanding ack " + message.getId());
     
     if (client != null)
       client.subscribeFailed(message.getTopic());
@@ -341,7 +341,7 @@ public class ScribeImpl implements Scribe, Application {
   }
   
   public void subscribe(Topic topic, ScribeClient client, RawScribeContent content) {
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Subscribing client " + client + " to topic " + topic);
+    if (logger.level <= Logger.FINER) logger.log("Subscribing client " + client + " to topic " + topic);
 
     // if we don't know about this topic, subscribe
     // otherwise, we simply add the client to the list
@@ -366,7 +366,7 @@ public class ScribeImpl implements Scribe, Application {
    * @param client The client to unsubscribe
    */
   public void unsubscribe(Topic topic, ScribeClient client) {
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Unsubscribing client " + client + " from topic " + topic);
+    if (logger.level <= Logger.FINER) logger.log("Unsubscribing client " + client + " from topic " + topic);
 
     if (topics.get(topic) != null) {
       TopicManager manager = (TopicManager) topics.get(topic);
@@ -382,7 +382,7 @@ public class ScribeImpl implements Scribe, Application {
         }
       }
     } else {
-      if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Attempt to unsubscribe client " + client + " from unknown topic " + topic);
+      if (logger.level <= Logger.WARNING) logger.log("Attempt to unsubscribe client " + client + " from unknown topic " + topic);
     }
   }
 
@@ -397,7 +397,7 @@ public class ScribeImpl implements Scribe, Application {
   }
   
   public void publish(Topic topic, RawScribeContent content) {
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Publishing content " + content + " to topic " + topic);
+    if (logger.level <= Logger.FINER) logger.log("Publishing content " + content + " to topic " + topic);
 
     endpoint.route(topic.getId(), new PublishRequestMessage(handle, topic, content), null);
   }
@@ -417,7 +417,7 @@ public class ScribeImpl implements Scribe, Application {
   }
   
   public void anycast(Topic topic, RawScribeContent content) {
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Anycasting content " + content + " to topic " + topic);
+    if (logger.level <= Logger.FINER) logger.log("Anycasting content " + content + " to topic " + topic);
 
     endpoint.route(topic.getId(), new AnycastMessage(handle, topic, content), null);
   }
@@ -441,7 +441,7 @@ public class ScribeImpl implements Scribe, Application {
    * @param id THe seuqnce number
    */
   protected void addChild(Topic topic, NodeHandle child, int id) {
-    if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Adding child " + child + " to topic " + topic);
+    if (logger.level <= Logger.FINER) logger.log("Adding child " + child + " to topic " + topic);
     TopicManager manager = (TopicManager) topics.get(topic);
 
     // if we don't know about the topic, we subscribe, otherwise,
@@ -450,7 +450,7 @@ public class ScribeImpl implements Scribe, Application {
       manager = new TopicManager(topic, child);
       topics.put(topic, manager);
 
-      if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Implicitly subscribing to topic " + topic);
+      if (logger.level <= Logger.FINER) logger.log("Implicitly subscribing to topic " + topic);
       sendSubscribe(topic, null, null);
     } else {
       manager.addChild(child);
@@ -487,7 +487,7 @@ public class ScribeImpl implements Scribe, Application {
    * @param sendDrop Whether or not to send a drop message to the chil
    */
   protected void removeChild(Topic topic, NodeHandle child, boolean sendDrop) {
-    if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Removing child " + child + " from topic " + topic);
+    if (logger.level <= Logger.FINE) logger.log("Removing child " + child + " from topic " + topic);
 
     if (topics.get(topic) != null) {
       TopicManager manager = (TopicManager) topics.get(topic);
@@ -497,7 +497,7 @@ public class ScribeImpl implements Scribe, Application {
       if (manager.removeChild(child)) {
         topics.remove(topic);
         NodeHandle parent = manager.getParent();
-        if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": We no longer need topic " + topic + " - unsubscribing from parent " + parent);
+        if (logger.level <= Logger.FINE) logger.log("We no longer need topic " + topic + " - unsubscribing from parent " + parent);
 
         if (parent != null) {
           endpoint.route(null, new UnsubscribeMessage(handle, topic), parent);
@@ -505,7 +505,7 @@ public class ScribeImpl implements Scribe, Application {
       }
 
       if ((sendDrop) && (child.isAlive())) {
-        if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Informing child " + child + " that he has been dropped from topic " + topic);
+        if (logger.level <= Logger.FINE) logger.log("Informing child " + child + " that he has been dropped from topic " + topic);
         
         // now, we tell the child that he has been dropped
         endpoint.route(null, new DropMessage(handle, topic), child);
@@ -520,7 +520,7 @@ public class ScribeImpl implements Scribe, Application {
         clients[i].childRemoved(topic, child);
       }
     } else {
-      if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Unexpected attempt to remove child " + child + " from unknown topic " + topic);
+      if (logger.level <= Logger.WARNING) logger.log("Unexpected attempt to remove child " + child + " from unknown topic " + topic);
     }
   }
   
@@ -566,7 +566,7 @@ public class ScribeImpl implements Scribe, Application {
     } catch (IOException ioe) {
       throw new RuntimeException(ioe); 
     }
-    if (logger.level <= Logger.FINEST) logger.log(endpoint.getId() + ": Forward called with " + internalMessage);
+    if (logger.level <= Logger.FINEST) logger.log("Forward called with " + internalMessage);
     if (internalMessage instanceof AnycastMessage) {
       AnycastMessage aMessage = (AnycastMessage) internalMessage;
 
@@ -589,7 +589,7 @@ public class ScribeImpl implements Scribe, Application {
           List path = Arrays.asList(manager.getPathToRoot());
 
           if (path.contains(previousParent)) {
-            if (logger.level <= Logger.INFO) logger.log(endpoint.getId() + ": Rejecting subscribe message from " +
+            if (logger.level <= Logger.INFO) logger.log("Rejecting subscribe message from " +
                       sMessage.getSubscriber() + " for topic " + sMessage.getTopic() +
                       " because we are on the subscriber's path to the root.");
             return true;
@@ -611,7 +611,7 @@ public class ScribeImpl implements Scribe, Application {
 
         // see if the policy will allow us to take on this child
         if (policy.allowSubscribe(sMessage, clients, handles)) {
-          if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Hijacking subscribe message from " +
+          if (logger.level <= Logger.FINER) logger.log("Hijacking subscribe message from " +
             sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
 
           // if so, add the child
@@ -620,7 +620,7 @@ public class ScribeImpl implements Scribe, Application {
         }
 
         // otherwise, we are effectively rejecting the child
-        if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Rejecting subscribe message from " +
+        if (logger.level <= Logger.FINER) logger.log("Rejecting subscribe message from " +
           sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
 
         // if we are not associated with this topic at all, we simply let the subscribe go
@@ -640,7 +640,7 @@ public class ScribeImpl implements Scribe, Application {
         // see if one of our clients will accept the anycast
         for (int i = 0; i < clients.length; i++) {
           if (clients[i].anycast(aMessage.getTopic(), aMessage.getContent())) {
-            if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Accepting anycast message from " +
+            if (logger.level <= Logger.FINER) logger.log("Accepting anycast message from " +
               aMessage.getSource() + " for topic " + aMessage.getTopic());
 
             return false;
@@ -655,7 +655,7 @@ public class ScribeImpl implements Scribe, Application {
           return true;
         }
 
-        if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Rejecting anycast message from " +
+        if (logger.level <= Logger.FINER) logger.log("Rejecting anycast message from " +
           aMessage.getSource() + " for topic " + aMessage.getTopic());
       }
 
@@ -676,16 +676,16 @@ public class ScribeImpl implements Scribe, Application {
         handle = aMessage.getNext();
       }
 
-      if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Forwarding anycast message for topic " + aMessage.getTopic() + "on to " + handle);
+      if (logger.level <= Logger.FINER) logger.log("Forwarding anycast message for topic " + aMessage.getTopic() + "on to " + handle);
 
       if (handle == null) {
-        if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Anycast " + aMessage + " failed.");
+        if (logger.level <= Logger.FINE) logger.log("Anycast " + aMessage + " failed.");
 
         // if it's a subscribe message, send a subscribe failed message back
         // as a courtesy
         if (aMessage instanceof SubscribeMessage) {
           SubscribeMessage sMessage = (SubscribeMessage) aMessage;
-          if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Sending SubscribeFailedMessage to " + sMessage.getSubscriber());
+          if (logger.level <= Logger.FINER) logger.log("Sending SubscribeFailedMessage to " + sMessage.getSubscriber());
 
           endpoint.route(null,
                          new SubscribeFailedMessage(handle, sMessage.getTopic(), sMessage.getId()),
@@ -708,7 +708,7 @@ public class ScribeImpl implements Scribe, Application {
    * @param message The message being sent
    */
   public void deliver(Id id, Message message) {
-    if (logger.level <= Logger.FINEST) logger.log(endpoint.getId() + ": Deliver called with " + id + " " + message);
+    if (logger.level <= Logger.FINEST) logger.log("Deliver called with " + id + " " + message);
     
     if (message instanceof AnycastMessage) {
       AnycastMessage aMessage = (AnycastMessage) message;
@@ -722,10 +722,10 @@ public class ScribeImpl implements Scribe, Application {
           SubscribeMessage sMessage = (SubscribeMessage) message;
 
           outstanding.remove(new Integer(sMessage.getId()));
-          if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Received our own subscribe message " + aMessage + " for topic " +
-            aMessage.getTopic() + " - we are the root.");
+          if (logger.level <= Logger.FINE) 
+            logger.log("Received our own subscribe message " + aMessage + " for topic " + aMessage.getTopic() + " - we are the root.");
         } else {
-          if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unexpected delivered anycast message " + aMessage + " for topic " +
+          if (logger.level <= Logger.WARNING) logger.log("Received unexpected delivered anycast message " + aMessage + " for topic " +
             aMessage.getTopic() + " - was generated by us.");
         }
       } else {
@@ -733,13 +733,13 @@ public class ScribeImpl implements Scribe, Application {
         // our policy says that we cannot take on this child
         if (aMessage instanceof SubscribeMessage) {
           SubscribeMessage sMessage = (SubscribeMessage) aMessage;
-          if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Sending SubscribeFailedMessage (at root) to " + sMessage.getSubscriber());
+          if (logger.level <= Logger.FINE) logger.log("Sending SubscribeFailedMessage (at root) to " + sMessage.getSubscriber());
 
           endpoint.route(null,
                          new SubscribeFailedMessage(handle, sMessage.getTopic(), sMessage.getId()),
                          sMessage.getSubscriber());
         } else {
-          if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unexpected delivered anycast message " + aMessage + " for topic " +
+          if (logger.level <= Logger.WARNING) logger.log("Received unexpected delivered anycast message " + aMessage + " for topic " +
                       aMessage.getTopic() + " - not generated by us, but was expected to be.");
         }
       }
@@ -749,15 +749,15 @@ public class ScribeImpl implements Scribe, Application {
 
       ackMessageReceived(saMessage);
 
-      if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Received subscribe ack message from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
+      if (logger.level <= Logger.FINE) logger.log("Received subscribe ack message from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
 
       if (! saMessage.getSource().isAlive()) {
-        if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received subscribe ack message from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
+        if (logger.level <= Logger.WARNING) logger.log("Received subscribe ack message from " + saMessage.getSource() + " for topic " + saMessage.getTopic());
       }
       
       // if we're the root, reject the ack message
       if (isRoot(saMessage.getTopic())) {
-        if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Received unexpected subscribe ack message (we are the root) from " +
+        if (logger.level <= Logger.FINE) logger.log("Received unexpected subscribe ack message (we are the root) from " +
                  saMessage.getSource() + " for topic " + saMessage.getTopic());
         endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
       } else {
@@ -772,7 +772,7 @@ public class ScribeImpl implements Scribe, Application {
           if (manager.getParent().equals(saMessage.getSource())) {
             manager.setPathToRoot(saMessage.getPathToRoot());
           } else {
-            if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received somewhat unexpected subscribe ack message (already have parent " + manager.getParent() +
+            if (logger.level <= Logger.WARNING) logger.log("Received somewhat unexpected subscribe ack message (already have parent " + manager.getParent() +
                         ") from " + saMessage.getSource() + " for topic " + saMessage.getTopic() + " - the new policy is now to accept the message");
   
             
@@ -783,7 +783,7 @@ public class ScribeImpl implements Scribe, Application {
             endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), parent);
           }
         } else {
-          if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unexpected subscribe ack message from " +
+          if (logger.level <= Logger.WARNING) logger.log("Received unexpected subscribe ack message from " +
                       saMessage.getSource() + " for unknown topic " + saMessage.getTopic());
               
           endpoint.route(null, new UnsubscribeMessage(handle, saMessage.getTopic()), saMessage.getSource());
@@ -801,13 +801,13 @@ public class ScribeImpl implements Scribe, Application {
       PublishRequestMessage prMessage = (PublishRequestMessage) message;
       TopicManager manager = (TopicManager) topics.get(prMessage.getTopic());
 
-      if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Received publish request message with data " +
+      if (logger.level <= Logger.FINER) logger.log("Received publish request message with data " +
         prMessage.getContent() + " for topic " + prMessage.getTopic());
 
       // if message is for a non-existant topic, drop it on the floor (we are the root, after all)
       // otherwise, turn it into a publish message, and forward it on
       if (manager == null) {
-        if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Received publish request message for non-existent topic " +
+        if (logger.level <= Logger.FINE) logger.log("Received publish request message for non-existent topic " +
           prMessage.getTopic() + " - dropping on floor.");
       } else {
         deliver(prMessage.getTopic().getId(), new PublishMessage(prMessage.getSource(), prMessage.getTopic(), prMessage.getContent()));
@@ -816,7 +816,7 @@ public class ScribeImpl implements Scribe, Application {
       PublishMessage pMessage = (PublishMessage) message;
       TopicManager manager = (TopicManager) topics.get(pMessage.getTopic());
 
-      if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Received publish message with data " + pMessage.getContent() + " for topic " + pMessage.getTopic());
+      if (logger.level <= Logger.FINER) logger.log("Received publish message with data " + pMessage.getContent() + " for topic " + pMessage.getTopic());
 
       // if we don't know about this topic, or this message did
       // not come from our parent, send an unsubscribe message
@@ -828,7 +828,7 @@ public class ScribeImpl implements Scribe, Application {
         ScribeClient[] clients = manager.getClients();
 
         for (int i = 0; i < clients.length; i++) {
-          if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Delivering publish message with data " + pMessage.getContent() + " for topic " +
+          if (logger.level <= Logger.FINER) logger.log("Delivering publish message with data " + pMessage.getContent() + " for topic " +
             pMessage.getTopic() + " to client " + clients[i]);
           clients[i].deliver(pMessage.getTopic(), pMessage.getContent());
         }
@@ -836,25 +836,25 @@ public class ScribeImpl implements Scribe, Application {
         NodeHandle[] handles = manager.getChildren();
 
         for (int i = 0; i < handles.length; i++) {
-          if (logger.level <= Logger.FINER) logger.log(endpoint.getId() + ": Forwarding publish message with data " + pMessage.getContent() + " for topic " +
+          if (logger.level <= Logger.FINER) logger.log("Forwarding publish message with data " + pMessage.getContent() + " for topic " +
             pMessage.getTopic() + " to child " + handles[i]);
           endpoint.route(null, new PublishMessage(endpoint.getLocalNodeHandle(), pMessage.getTopic(), pMessage.getContent()), handles[i]);
         }
       } else {
-        if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unexpected publish message from " +
+        if (logger.level <= Logger.WARNING) logger.log("Received unexpected publish message from " +
           pMessage.getSource() + " for unknown topic " + pMessage.getTopic());
 
         endpoint.route(null, new UnsubscribeMessage(handle, pMessage.getTopic()), pMessage.getSource());
       }
     } else if (message instanceof UnsubscribeMessage) {
       UnsubscribeMessage uMessage = (UnsubscribeMessage) message;
-      if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Received unsubscribe message from " +
+      if (logger.level <= Logger.FINE) logger.log("Received unsubscribe message from " +
         uMessage.getSource() + " for topic " + uMessage.getTopic());
 
       removeChild(uMessage.getTopic(), uMessage.getSource(), false);
     } else if (message instanceof DropMessage) {
       DropMessage dMessage = (DropMessage) message;
-      if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Received drop message from " + dMessage.getSource() + " for topic " + dMessage.getTopic());
+      if (logger.level <= Logger.FINE) logger.log("Received drop message from " + dMessage.getSource() + " for topic " + dMessage.getTopic());
       
       TopicManager manager = (TopicManager) topics.get(dMessage.getTopic());
 
@@ -869,17 +869,18 @@ public class ScribeImpl implements Scribe, Application {
           else
             sendSubscribe(dMessage.getTopic(), null, null);
         } else {
-          if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unexpected drop message from non-parent " +
+          if (logger.level <= Logger.WARNING) logger.log("Received unexpected drop message from non-parent " +
                       dMessage.getSource() + " for topic " + dMessage.getTopic() + " - ignoring");
         }
       } else {
-        if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unexpected drop message from " +
+        if (logger.level <= Logger.WARNING) logger.log("Received unexpected drop message from " +
                     dMessage.getSource() + " for unknown topic " + dMessage.getTopic() + " - ignoring");
       }
     } else if (message instanceof MaintenanceMessage) {
-      if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Received maintenance message");
+      if (logger.level <= Logger.FINE) logger.log("Received maintenance message");
 
-      Iterator i = topics.values().iterator();
+      // to prevent concurrent modification exception when subscribe, this is wrapped in an ArrayList
+      Iterator i = new ArrayList(topics.values()).iterator();
       
       // for each topic, make sure our parent is still alive
       while (i.hasNext()) {
@@ -893,7 +894,7 @@ public class ScribeImpl implements Scribe, Application {
         }
       }
     } else {
-      if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unknown message " + message + " - dropping on floor.");
+      if (logger.level <= Logger.WARNING) logger.log("Received unknown message " + message + " - dropping on floor.");
     }
   }
 
@@ -919,13 +920,15 @@ public class ScribeImpl implements Scribe, Application {
 
       if (joined) {
         // check if new guy is root, we were old root, then subscribe
-        if (manager.getParent() == null){
+        if (!isRoot(topic) && manager.getParent() == null){
           // send subscribe message
           sendSubscribe(topic, null, null);
         }
       } else {
+        // if you should be the root, but you are only a member
+        // unsubscribe from previous root to prevent loops (this guy is probably faulty anyway)
         if (isRoot(topic) && (manager.getParent() != null)) {
-          endpoint.route(null, new UnsubscribeMessage(handle, topic), manager.getParent());
+          endpoint.route(null, new UnsubscribeMessage(endpoint.getLocalNodeHandle(), topic), manager.getParent());
           manager.setParent(null);
         }
       }
@@ -1087,8 +1090,12 @@ public class ScribeImpl implements Scribe, Application {
      * @param handle The new Parent value
      */
     public void setParent(NodeHandle handle) {
+      if ((handle != null) && !handle.isAlive()) {
+        if (logger.level <= Logger.WARNING) logger.log("Setting dead parent "+handle+" for " + topic);        
+      }
+      
       if ((handle != null) && (parent != null)) {
-        if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Unexpectedly changing parents for topic " + topic);
+        if (logger.level <= Logger.WARNING) logger.log("Unexpectedly changing parents for topic " + topic);
       }
       
       if (parent != null) {
@@ -1103,6 +1110,10 @@ public class ScribeImpl implements Scribe, Application {
       }
     }
 
+    public String toString() {
+      return topic.toString();
+    }
+    
     /**
      * DESCRIBE THE METHOD
      *
@@ -1112,7 +1123,7 @@ public class ScribeImpl implements Scribe, Application {
     public void update(Observable o, Object arg) {
       if (arg.equals(NodeHandle.DECLARED_DEAD)) {
         if (children.contains(o)) {
-          if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Child " + o + " for topic " + topic + " has died - removing.");
+          if (logger.level <= Logger.FINE) logger.log("Child " + o + " for topic " + topic + " has died - removing.");
 
           ScribeImpl.this.removeChild(topic, (NodeHandle) o);
           return;
@@ -1120,7 +1131,7 @@ public class ScribeImpl implements Scribe, Application {
         
         if (o.equals(parent)) {
           // if our parent has died, then we must resubscribe to the topic
-          if (logger.level <= Logger.FINE) logger.log(endpoint.getId() + ": Parent " + parent + " for topic " + topic + " has died - resubscribing.");
+          if (logger.level <= Logger.FINE) logger.log("Parent " + parent + " for topic " + topic + " has died - resubscribing.");
           
           setParent(null);
 
@@ -1129,7 +1140,9 @@ public class ScribeImpl implements Scribe, Application {
           else
             sendSubscribe(topic, null, null, ((NodeHandle) o).getId());
         } else {
-          if (logger.level <= Logger.WARNING) logger.log(endpoint.getId() + ": Received unexpected update from " + o);
+          if (parent != null) {
+            if (logger.level <= Logger.WARNING) logger.log(this+" Received unexpected update from " + o);
+          }
           o.deleteObserver(this);
         }
       }

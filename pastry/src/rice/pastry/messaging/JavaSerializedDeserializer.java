@@ -30,7 +30,7 @@ public class JavaSerializedDeserializer implements MessageDeserializer {
     deserializeOnlyTypeZero = !val; 
   }
   
-  public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+  public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
     if (deserializeOnlyTypeZero && (type != 0)) throw new IllegalArgumentException("Type must be zero, was "+type+".  See http://freepastry.org/FreePastry/extendingRawMessages.html for more information."); 
     // the plan here is to provide a mechanism to easily java serialize RawMessages in case the user is having problems
     // provide a static method to java serialize the object then setAlwaysUsejavaSerialization(true)

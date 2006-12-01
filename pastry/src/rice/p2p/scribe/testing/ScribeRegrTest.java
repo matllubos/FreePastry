@@ -1,9 +1,10 @@
-
 package rice.p2p.scribe.testing;
+
 import java.io.IOException;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
@@ -49,6 +50,16 @@ public class ScribeRegrTest extends CommonAPITest {
   }
 
 
+  public void setupParams(Environment env) {
+    super.setupParams(env);
+    // we want to see if messages are dropped because not ready
+//    if (!env.getParameters().contains("rice.p2p.scribe.ScribeImpl@ScribeRegrTest_loglevel"))
+//      env.getParameters().setInt("rice.p2p.scribe.ScribeImpl@ScribeRegrTest_loglevel",Logger.INFO);
+    
+    // want to retry fast because of problems with isReady()
+    env.getParameters().setInt("p2p_scribe_message_timeout",3000); 
+  }
+  
   /**
    * Usage: DistScribeRegrTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (rmi|wire)]
    * [-help]
@@ -469,11 +480,16 @@ public class ScribeRegrTest extends CommonAPITest {
       simulate();
     }
 
+    pause(20000);
     stepDone(SUCCESS);
 
     stepStart("Tree Recovery");
-    ScribeImpl local = scribes[environment.getRandomSource().nextInt(NUM_NODES/2) + NUM_NODES/2];
+    
+    int localIndex = environment.getRandomSource().nextInt(NUM_NODES/2) + NUM_NODES/2;
+    ScribeImpl local = scribes[localIndex];
 
+//    System.out.println("Local:"+nodes[localIndex]);
+    
     for (int i = 0; i < NUM_MESSAGES; i++) {
       local.publish(topic, new TestScribeContent(topic, i));
       simulate();
@@ -482,7 +498,7 @@ public class ScribeRegrTest extends CommonAPITest {
     boolean failed = false;
     for (int i=NUM_NODES/2; i < NUM_NODES; i++) {
       if (clients[i].getPublishMessages().length != NUM_MESSAGES) {
-        stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().length);
+        stepDone(FAILURE, "Expected client " + nodes[i] +":"+clients[i]+ " to receive all messages, received " + clients[i].getPublishMessages().length);
         failed = true;
       }
     }
@@ -741,6 +757,7 @@ public class ScribeRegrTest extends CommonAPITest {
      * @param content DESCRIBE THE PARAMETER
      */
     public void deliver(Topic topic, ScribeContent content) {
+//      scribe.getEnvironment().getLogManager().getLogger(TestScribeClient.class,null).log(this+"deliver("+topic+","+content+")");
       publishMessages.add(content);
     }
 
@@ -766,10 +783,15 @@ public class ScribeRegrTest extends CommonAPITest {
 
     public void subscribeFailed(Topic topic) {
       subscribeFailed = true;
+      scribe.subscribe(topic, this);
     }
 
     public boolean getSubscribeFailed() {
       return subscribeFailed;
+    }
+    
+    public String toString() {
+      return topic.toString(); 
     }
   }
 

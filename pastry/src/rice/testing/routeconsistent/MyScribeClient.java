@@ -161,7 +161,7 @@ public class MyScribeClient implements ScribeClient, Application {
   }
 
   class PublishContent implements Message {
-    public byte getPriority() {
+    public int getPriority() {
       return MAX_PRIORITY;
     }
   }

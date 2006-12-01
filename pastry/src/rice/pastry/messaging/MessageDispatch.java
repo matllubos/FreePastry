@@ -101,7 +101,7 @@ public class MessageDispatch implements Destructable {
 
     if (mr == null) {
       if ((logger.level <= Logger.FINE) ||
-          (localNode.isReady() && (logger.level <= Logger.WARNING))) { 
+          (localNode.isReady() && (logger.level <= Logger.INFO))) { 
         logger.log(
           "Dropping message " + msg + " because the application address " + msg.getDestination() + " is unknown.");
       }

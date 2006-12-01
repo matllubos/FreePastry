@@ -328,7 +328,7 @@ public class PingManager extends SelectionKeyHandler {
       this.logger = logger; 
     }
     
-    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, byte priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
+    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
       switch (type) {        
         case IPAddressRequestMessage.TYPE:          
           return new IPAddressRequestMessage(buf);          

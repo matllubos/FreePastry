@@ -65,7 +65,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       super(pn); 
     }
     
-    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+    public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       switch (type) {
         case RequestLeafSet.TYPE:
           return new RequestLeafSet(sender, buf);

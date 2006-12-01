@@ -70,7 +70,7 @@ public class RingMessage implements RawScribeContent {
    *
    * @return This message's priority
    */
-  public byte getPriority() {
+  public int getPriority() {
     return message.getPriority();
   }
 
@@ -116,8 +116,13 @@ public class RingMessage implements RawScribeContent {
     id.serialize(buf);
     buf.writeUTF(application);
     buf.writeShort(message.getType());
-    buf.writeByte(message.getPriority());
-//    message.getSender().seria
+    
+    // range check priority
+    int priority = message.getPriority();
+    if (priority > Byte.MAX_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+message+" was "+priority+".");
+    if (priority < Byte.MIN_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+message+" was "+priority+".");
+    buf.writeByte((byte)priority);
+
     message.serialize(buf);
   }
   

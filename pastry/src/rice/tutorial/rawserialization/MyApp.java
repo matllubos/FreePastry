@@ -42,7 +42,7 @@ public class MyApp implements Application {
     // TODO: better documentation
     endpoint.setDeserializer(new MessageDeserializer() {
     
-      public Message deserialize(InputBuffer buf, short type, byte priority,
+      public Message deserialize(InputBuffer buf, short type, int priority,
           NodeHandle sender) throws IOException {
         if (type == MyMsg.TYPE)
           return new MyMsg(buf, endpoint);

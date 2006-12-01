@@ -399,7 +399,7 @@ public class MultiringRegrTest {
       this.source = source;
     }
     
-    public byte getPriority() {
+    public int getPriority() {
       return MEDIUM_PRIORITY;
     }
   }

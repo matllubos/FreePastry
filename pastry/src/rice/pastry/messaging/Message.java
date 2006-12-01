@@ -17,7 +17,7 @@ import rice.pastry.*;
 public abstract class Message implements Serializable, rice.p2p.commonapi.Message {
   private static final long serialVersionUID = 8921944904321235696L;
 
-  public static final int DEFAULT_PRIORITY_LEVEL = 5;
+  public static final int DEFAULT_PRIORITY_LEVEL = rice.p2p.commonapi.Message.MEDIUM_PRIORITY;
 
   private int destination;
 
@@ -29,7 +29,7 @@ public abstract class Message implements Serializable, rice.p2p.commonapi.Messag
    */
   private boolean priority;
 
-  private byte priorityLevel = DEFAULT_PRIORITY_LEVEL;
+  private int priorityLevel = DEFAULT_PRIORITY_LEVEL;
 
   private transient Date theStamp;
 
@@ -86,7 +86,7 @@ public abstract class Message implements Serializable, rice.p2p.commonapi.Messag
    * 
    * @return the priority of this message.
    */
-  public byte getPriority() {
+  public int getPriority() {
     return priorityLevel;
   }
 
@@ -95,7 +95,7 @@ public abstract class Message implements Serializable, rice.p2p.commonapi.Messag
    * 
    * @param the new priority.
    */
-  protected void setPriority(byte prio) {
+  protected void setPriority(int prio) {
     priorityLevel = prio;
   }
 

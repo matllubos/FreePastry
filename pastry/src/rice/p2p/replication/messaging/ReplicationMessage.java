@@ -45,7 +45,7 @@ public abstract class ReplicationMessage implements RawMessage {
    *
    * @return This message's priority
    */
-  public byte getPriority() {
+  public int getPriority() {
     return MEDIUM_PRIORITY;
   }
   

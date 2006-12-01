@@ -43,7 +43,7 @@ public class MyMsg extends LookupMessage {
   /**
    * Use low priority to prevent interference with overlay maintenance traffic.
    */
-  public byte getPriority() {
+  public int getPriority() {
     return Message.LOW_PRIORITY;
   }
 

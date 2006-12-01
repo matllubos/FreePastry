@@ -12,7 +12,7 @@ import rice.p2p.commonapi.rawserialization.*;
 public class SynchronizeMessage implements RawMessage {
   public static final short TYPE = 14;
 
-  public byte getPriority() {
+  public int getPriority() {
     return MEDIUM_PRIORITY;
   }
 

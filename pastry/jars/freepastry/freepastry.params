@@ -73,7 +73,8 @@ pastry_socket_repeater_buffer_size = 65536
 pastry_socket_pingmanager_smallPings=true
 pastry_socket_pingmanager_datagram_receive_buffer_size = 131072
 pastry_socket_pingmanager_datagram_send_buffer_size = 65536
-pastry_socket_srm_check_dead_throttle = 30000
+# the time before it will retry a route
+pastry_socket_srm_check_dead_throttle = 300000
 pastry_socket_srm_proximity_timeout = 3600000
 pastry_socket_srm_ping_throttle = 30000
 pastry_socket_srm_default_rto = 3000

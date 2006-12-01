@@ -114,7 +114,7 @@ public class ReplicationImpl implements Replication, Application {
     
     endpoint.setDeserializer(new MessageDeserializer() {
     
-      public Message deserialize(InputBuffer buf, short type, byte priority,
+      public Message deserialize(InputBuffer buf, short type, int priority,
           NodeHandle sender) throws IOException {
         switch(type) {
           case RequestMessage.TYPE:

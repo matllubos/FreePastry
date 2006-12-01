@@ -117,13 +117,9 @@ public abstract class CommonAPITest {
    */
   public CommonAPITest(Environment env) throws IOException {
     this.environment = env;
-    this.logger = env.getLogManager().getLogger(getClass(),null);
-    params = env.getParameters();
-    NUM_NODES = params.getInt("commonapi_testing_num_nodes");
-    PORT = params.getInt("commonapi_testing_startPort");
-    PROTOCOL = params.getString("commonapi_testing_protocol");
-    SIMULATOR = params.getString("direct_simulator_topology");
     
+    setupParams(env);
+        
       FACTORY = new PastryIdFactory(env);
       //idFactory = new IPNodeIdFactory(PORT); 
       idFactory = new RandomNodeIdFactory(environment);
@@ -148,10 +144,26 @@ public abstract class CommonAPITest {
     nodes = new Node[NUM_NODES];
   }
 
+  public void setupParams(Environment env) {
+    // reduce the check liveness policy to make test run faster
+    env.getParameters().setInt("pastry_socket_scm_num_ping_tries",2);
+
+    // disable the UPnP setting (in case you are testing this on a NATted LAN)
+    env.getParameters().setString("nat_search_policy","never");
+
+    this.logger = env.getLogManager().getLogger(getClass(),null);
+    params = env.getParameters();
+    NUM_NODES = params.getInt("commonapi_testing_num_nodes");
+    PORT = params.getInt("commonapi_testing_startPort");
+    PROTOCOL = params.getString("commonapi_testing_protocol");
+    SIMULATOR = params.getString("direct_simulator_topology"); 
+  }
+  
   /**
    * Method which creates the nodes
    */
   public void createNodes() {
+    if (simulator != null) simulator.setMaxSpeed(10.0f);
     for (int i=0; i<NUM_NODES; i++) {
       nodes[i] = createNode(i);
       
@@ -160,9 +172,10 @@ public abstract class CommonAPITest {
       processNode(i, nodes[i]);
       simulate();
     
-      System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId());
+      System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId()+" at "+environment.getTimeSource().currentTimeMillis());
     }
     if (logger.level <= Logger.INFO) logger.log(((PastryNode)nodes[0]).getLeafSet().toString());
+    if (simulator != null) simulator.setFullSpeed();
   }
   
   /**
@@ -250,8 +263,11 @@ public abstract class CommonAPITest {
    * @param ms The number of milliseconds to pause
    */
   protected synchronized void pause(int ms) {
-    if (!PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT))
-      try { wait(ms); } catch (InterruptedException e) {}
+    try { 
+      environment.getTimeSource().sleep(ms); 
+    } catch (InterruptedException e) {}
+    //    if (!PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT))
+//      try { wait(ms); } catch (InterruptedException e) {}
   }
 
   /**
@@ -264,7 +280,7 @@ public abstract class CommonAPITest {
       ((PastryNode)nodes[n]).destroy();
     if (!PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
       // give node time to show up dead
-      pause(60000);
+      pause(2000);
     }
       
 //      simulator.setAlive((rice.pastry.NodeId) nodes[n].getId(), false);
@@ -313,7 +329,7 @@ public abstract class CommonAPITest {
    * @param name The name of step
    */
   protected final void stepStart(String name) {
-    System.out.print(pad("  " + name));
+    System.out.print(/*environment.getTimeSource().currentTimeMillis()+*/pad("  " + name));
   }
 
   /**
@@ -347,8 +363,9 @@ public abstract class CommonAPITest {
       System.out.println("     " + message);
     }
 
-    if(status.equals(FAILURE))
-      System.exit(0);
+    if(status.equals(FAILURE)) {
+      System.exit(1);
+    }
   }
 
   /**
@@ -357,10 +374,9 @@ public abstract class CommonAPITest {
    * @param e The exception which was thrown
    */
   protected final void stepException(Exception e) {
-    System.out.println("\nException " + e + " occurred during testing.");
+    logger.logException("\nException occurred during testing.",e);
 
-    e.printStackTrace();
-    System.exit(0);
+    System.exit(2);
   }
 
   /**

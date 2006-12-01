@@ -107,7 +107,7 @@ public class SocketSourceRouteManager {
     this.time = spn.getEnvironment().getTimeSource();
     
     Parameters p = node.getEnvironment().getParameters();
-    CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle");
+    CHECK_DEAD_THROTTLE = p.getLong("pastry_socket_srm_check_dead_throttle"); // 300000
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
     NUM_SOURCE_ROUTE_ATTEMPTS = p.getInt("pastry_socket_srm_num_source_route_attempts");
     PROX_TIMEOUT = p.getInt("pastry_socket_srm_proximity_timeout");
@@ -583,7 +583,7 @@ public class SocketSourceRouteManager {
           }
         }        
     }
-    if (logger.level <= Logger.WARNING) logger.log("(SSRM) Dropping message " + m + " because next hop "+address+" is dead!");    
+    if (logger.level <= Logger.INFO) logger.log("(SSRM) Dropping message " + m + " because next hop "+address+" is dead!");    
   }
   
   /**
@@ -661,6 +661,16 @@ public class SocketSourceRouteManager {
     return result;
   }
   
+  /**
+   * This is a helper method for getAllRoutes()
+   * 
+   * Return true if the member should be added.  
+   * 
+   * @param handle
+   * @param destination
+   * @param result
+   * @return
+   */
   private boolean addMember(SocketNodeHandle handle, EpochInetSocketAddress destination, Collection result) {
     if ((handle != null) && 
         (! handle.isLocal()) && 
@@ -874,8 +884,10 @@ public class SocketSourceRouteManager {
         boolean found = false;
 
         for (int i=0; i<routes.length; i++) 
-          if (getRouteManager(routes[i]).checkLiveness()) 
+          if (getRouteManager(routes[i]).checkLiveness()) {
+//            logger.log(this+" Found "+routes[i]);
             found = true;
+          }
         
         if (! found) 
           setDead();
@@ -1123,6 +1135,10 @@ public class SocketSourceRouteManager {
 
       purgeQueue();
     }
+
+    public String toString() {
+      return "AM"+this.address; 
+    }
     
     /**
      * Internal method which marks this address as being dead.  If we were alive or suspected before, it
@@ -1357,6 +1373,10 @@ public class SocketSourceRouteManager {
        */
       public boolean isOpen() {
         return manager.isOpen(route);
+      }
+      
+      public String toString() {
+        return "SRM"+route;
       }
     }
   }

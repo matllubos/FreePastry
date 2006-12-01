@@ -27,7 +27,7 @@ public class SocketBuffer implements RawMessageDelivery {
   
   private int address;
   private short type;
-  byte priority;
+  int priority;
   private NodeHandle sender;
   
   // RouteMessage stuff
@@ -223,8 +223,12 @@ public class SocketBuffer implements RawMessageDelivery {
         boolean hasSender = (sender != null);
         o.writeBoolean(hasSender);
 
+        
+        // range check priority
         priority = msg.getPriority();
-        o.writeByte(priority);
+        if (priority > Byte.MAX_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+msg+" was "+priority+".");
+        if (priority < Byte.MIN_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+msg+" was "+priority+".");
+        o.writeByte((byte)priority);
         
         type = msg.getType();        
         o.writeShort(type);

@@ -384,7 +384,7 @@ class SocketManager extends SelectionKeyHandler {
   // short circuit the deserialization step
   class SMDeserializer implements MessageDeserializer {
 
-    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, byte priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
+    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
       byte version;
       switch (type) {        
         case SourceRoute.TYPE:

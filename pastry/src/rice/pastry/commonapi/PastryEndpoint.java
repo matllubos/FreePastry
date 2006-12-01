@@ -38,7 +38,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   
   
   class PEDeserializer implements MessageDeserializer {
-    public Message deserialize(InputBuffer buf, short type, byte priority,
+    public Message deserialize(InputBuffer buf, short type, int priority,
         NodeHandle sender) throws IOException {
       if (type == PastryEndpointMessage.TYPE)
         return new PastryEndpointMessage(getAddress(),buf,appDeserializer,(rice.pastry.NodeHandle)sender);
@@ -408,7 +408,6 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 //      undeliveredMessages.add(msg);
         return;
       }
-      
       
       // call application
       if (logger.level <= Logger.FINER) logger.log(

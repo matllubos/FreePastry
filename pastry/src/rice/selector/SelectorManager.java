@@ -34,7 +34,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   protected HashSet cancelledKeys;
 
   // the set used to store the timer events
-  protected TreeSet timerQueue = new TreeSet();
+//  protected TreeSet timerQueue = new TreeSet();
+  protected Queue timerQueue = new PriorityQueue();
 
   // the next time the selector is schedeled to wake up
   protected long wakeupTime = 0;
@@ -201,7 +202,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 //          synchronized (selector) {
             int selectTime = SelectorManager.TIMEOUT;
             if (timerQueue.size() > 0) {
-              TimerTask first = (TimerTask) timerQueue.first();
+              TimerTask first = (TimerTask) timerQueue.peek();
               selectTime = (int) (first.nextExecutionTime - timeSource
                   .currentTimeMillis());
             }
@@ -559,7 +560,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   public long getNextTaskExecutionTime() {
 //    if (!invocations.isEmpty()) return timeSource.currentTimeMillis();
     if (timerQueue.size() > 0) {
-      TimerTask next = (TimerTask) timerQueue.first();
+      TimerTask next = (TimerTask) timerQueue.peek();
       return next.nextExecutionTime;
     }
     return -1;    
@@ -578,11 +579,12 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       boolean done = false;
       while (!done) {
         if (timerQueue.size() > 0) {
-          TimerTask next = (TimerTask) timerQueue.first();
+          TimerTask next = (TimerTask) timerQueue.peek();
           if (next.nextExecutionTime <= now) {
             executeNow.add(next);
             //System.out.println("Removing:"+next);
-            timerQueue.remove(next);
+//            timerQueue.remove(next);
+            timerQueue.poll();
           } else {
             done = true;
           }

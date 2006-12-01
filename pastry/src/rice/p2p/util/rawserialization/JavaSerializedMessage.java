@@ -53,7 +53,7 @@ public class JavaSerializedMessage implements RawMessage {
     return msg; 
   }
 
-  public byte getPriority() {
+  public int getPriority() {
     return msg.getPriority();
   }
   

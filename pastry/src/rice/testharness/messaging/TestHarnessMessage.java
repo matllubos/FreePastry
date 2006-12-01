@@ -13,7 +13,7 @@ import rice.testharness.*;
  */
 public abstract class TestHarnessMessage implements Message, ScribeContent {
   
-  public byte getPriority() {
+  public int getPriority() {
     return Message.LOW_PRIORITY;
   }
 }

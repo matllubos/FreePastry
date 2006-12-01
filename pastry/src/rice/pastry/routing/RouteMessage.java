@@ -192,7 +192,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
    * @return the priority of this message.
    */
 
-  public byte getPriority() {
+  public int getPriority() {
     if (internalMsg != null)
       return internalMsg.getPriority();
     return internalPriority;
@@ -367,7 +367,13 @@ public class RouteMessage extends PRawMessage implements Serializable,
       } else {
         buf.writeBoolean(false);
       }
-      buf.writeByte(rawInternalMsg.getPriority());      
+      
+      // range check priority
+      int priority = rawInternalMsg.getPriority();
+      if (priority > Byte.MAX_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+rawInternalMsg+" was "+priority+".");
+      if (priority < Byte.MIN_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+rawInternalMsg+" was "+priority+".");
+      buf.writeByte((byte)priority);
+
       buf.writeShort(rawInternalMsg.getType());
 
       if (hasSender) {
@@ -438,7 +444,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
       sub = md;
     }
 
-    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+    public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       // just in case we have to do java serialization
       pn = RouteMessage.this.pn;
       switch(type) {

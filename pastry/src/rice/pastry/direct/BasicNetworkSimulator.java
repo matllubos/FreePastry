@@ -157,7 +157,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public CancellableTask enqueueDelivery(Delivery d, int delay) {
     long time = timeSource.currentTimeMillis()+delay;
     if (logger.level <= Logger.FINE)      
-      logger.log("GNS: enqueueDelivery " + d+":"+time);
+      logger.log("BNS: enqueueDelivery " + d+":"+time);
     DeliveryTimerTask dtt = null;
     dtt = new DeliveryTimerTask(d, time, d.getSeq());
     addTask(dtt);
@@ -169,7 +169,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    */
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node) {
     if (logger.level <= Logger.FINE)
-      logger.log("GNS: deliver " + msg + " to " + node);
+      logger.log("BNS: deliver " + msg + " to " + node);
     DirectTimerTask dtt = null;
     
     DirectNodeHandle sender = null;
@@ -188,7 +188,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
       int delay) {
     if (logger.level <= Logger.FINE)
-      logger.log("GNS: deliver("+delay+") " + msg + " to " + node);
+      logger.log("BNS: deliver("+delay+") " + msg + " to " + node);
     DirectTimerTask dtt = null;
     
     DirectNodeHandle sender = null;

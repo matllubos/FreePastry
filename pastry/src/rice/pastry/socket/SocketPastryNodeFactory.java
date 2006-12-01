@@ -788,7 +788,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
   class SPNFDeserializer implements MessageDeserializer {
     public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type,
-        byte priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
+        int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
       switch (type) {
         case NodeIdResponseMessage.TYPE:
           return new NodeIdResponseMessage(buf);

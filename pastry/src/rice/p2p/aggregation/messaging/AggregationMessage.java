@@ -42,7 +42,7 @@ public abstract class AggregationMessage implements Message {
    *
    * @return This message's priority
    */
-  public byte getPriority() {
+  public int getPriority() {
     return MEDIUM_LOW_PRIORITY;
   }
   

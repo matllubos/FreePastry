@@ -124,7 +124,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
   
   
   protected class PastDeserializer implements MessageDeserializer {
-    public Message deserialize(InputBuffer buf, short type, byte priority,
+    public Message deserialize(InputBuffer buf, short type, int priority,
         NodeHandle sender) throws IOException {
       try {
         switch(type) {

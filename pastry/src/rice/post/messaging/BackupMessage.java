@@ -12,7 +12,7 @@ public class BackupMessage implements RawMessage {
   
   public static final short TYPE = 1;
   
-  public byte getPriority() {
+  public int getPriority() {
     return MEDIUM_PRIORITY;
   }
 

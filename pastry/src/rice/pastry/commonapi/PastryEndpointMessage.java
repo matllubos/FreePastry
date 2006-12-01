@@ -96,7 +96,12 @@ public class PastryEndpointMessage extends PRawMessage {
 //    buf.writeBoolean(isRaw); 
     
     buf.writeByte((byte)0); // version
-    buf.writeByte(message.getPriority());
+    // range check priority
+    int priority = message.getPriority();
+    if (priority > Byte.MAX_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+message+" was "+priority+".");
+    if (priority < Byte.MIN_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+message+" was "+priority+".");
+    buf.writeByte((byte)priority);
+
     buf.writeShort(message.getType());    
     message.serialize(buf);
 //    System.out.println("PEM.serialize() message:"+message+" type:"+message.getType());

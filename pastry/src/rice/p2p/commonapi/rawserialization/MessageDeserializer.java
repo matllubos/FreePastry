@@ -22,5 +22,5 @@ public interface MessageDeserializer {
    *      return new MyMessage(buf, endpoint);
    * }
    */
-  Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException;
+  Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException;
 }

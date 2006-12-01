@@ -50,7 +50,7 @@ public abstract class ScribeMessage implements RawMessage {
    *
    * @return This message's priority
    */
-  public byte getPriority() {
+  public int getPriority() {
     return MEDIUM_HIGH_PRIORITY;
   }
 

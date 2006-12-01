@@ -215,7 +215,7 @@ public class PostImpl implements Post, Application, ScribeClient {
     this.endpoint = node.buildEndpoint(this, instance);
     this.endpoint.setDeserializer(new rice.p2p.util.rawserialization.JavaSerializedDeserializer(endpoint) {
     
-      public Message deserialize(InputBuffer buf, short type, byte priority,
+      public Message deserialize(InputBuffer buf, short type, int priority,
           NodeHandle sender) throws IOException {
         switch(type) {
           case BackupMessage.TYPE:

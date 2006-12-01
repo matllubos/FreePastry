@@ -44,7 +44,7 @@ public class GCPastImpl extends PastImpl implements GCPast {
   
   protected class GCPastDeserializer extends PastDeserializer {
 
-    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+    public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       try {
         switch(type) {
           case GCInsertMessage.TYPE:

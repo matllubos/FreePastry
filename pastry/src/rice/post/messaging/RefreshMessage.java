@@ -11,7 +11,7 @@ import rice.p2p.commonapi.*;
 public class RefreshMessage implements Message {
   public static final short TYPE = 12;
 
-  public byte getPriority() {
+  public int getPriority() {
     return MEDIUM_PRIORITY;
   }
   

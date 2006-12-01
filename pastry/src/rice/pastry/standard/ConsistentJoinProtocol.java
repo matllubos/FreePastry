@@ -165,7 +165,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       super(pn);
     }
 
-    public Message deserialize(InputBuffer buf, short type, byte priority, NodeHandle sender) throws IOException {
+    public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       switch(type) {
         case ConsistentJoinMsg.TYPE:
           return new ConsistentJoinMsg(buf,pn,(NodeHandle)sender);

@@ -50,7 +50,7 @@ public class MyApp implements Application {
    * NotSerializableException!
    */
   class MessageToSelf implements Message {
-    public byte getPriority() {
+    public int getPriority() {
       return MAX_PRIORITY;
     }    
   }
