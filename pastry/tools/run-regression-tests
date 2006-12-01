@@ -1,0 +1,119 @@
+#!/usr/bin/perl
+# usage: ./run-regression-tests pastry.jar
+
+use warnings;
+use strict;
+
+our $jar;
+
+if (@ARGV) {
+	$jar = shift @ARGV;
+} else {
+	die "usage: $0 freepastry.jar\n";
+}
+
+our $java_exe = "/usr/bin/java -cp $jar";
+our $logdir;
+
+our @attachments;
+our $msg;
+our $fail_count;
+
+our @commonapi_tests = qw(
+rice.p2p.scribe.testing.ScribeRegrTest
+rice.p2p.scribe.testing.RawScribeRegrTest
+rice.p2p.past.testing.PastRegrTest
+rice.p2p.past.testing.RawPastRegrTest
+rice.p2p.splitstream.testing.SplitStreamRegrTest
+rice.p2p.replication.testing.ReplicationRegrTest
+rice.p2p.replication.testing.ReplicationManagerRegrTest
+);
+
+sub out {
+	my $s = shift;
+	
+	print $s;
+	$msg .= $s;
+}
+
+sub run_commonapi_test {
+	my ($test,$proto,$nodes) = @_;
+	
+	my $testname="$test-$proto-$nodes";
+	
+	my $exec = "$java_exe $test -protocol $proto -nodes $nodes 2>&1 >$logdir/$testname.out";
+	print "running $exec\n";
+	system($exec);
+	
+	my $ret = $?;
+	
+	if ($ret) {
+		out "FAIL: $testname [$ret]\n";
+		push @attachments, $testname;
+		$fail_count++;
+	} else {
+		out "$testname succeeded\n";
+	}
+}
+
+sub random_node_distro {
+  return int(10+8*(rand()*4.7)**2);
+}
+
+sub run_commonapi_tests {
+  for my $test (@commonapi_tests) {
+	  run_commonapi_test($test,"direct",random_node_distro());
+	  run_commonapi_test($test,"socket",random_node_distro());
+  }
+}
+
+# main
+
+# process args
+my $TODAY = `date +%Y%m%d`;
+my $date = `date`;
+chomp $TODAY;
+chomp $date;
+my $autobuild_dir = '/DS/usr/jeffh/pastry/autobuild';
+$logdir = "$autobuild_dir/logs/$TODAY";
+
+run_commonapi_tests();
+
+if ($fail_count) {
+	# compute date, today
+	my $recipient = "jeffh\@cs.rice.edu"; # "Pastry Team <freepastry\@cs.rice.edu>";
+	my $whole_msg = <<EOM;
+From: Automatic Build Server <no-reply\@mpi-sws.mpg.de>
+To: $recipient
+Subject: [pastry-build] Nightly regression tests $TODAY failed
+Date: $date
+Content-Type: multipart/mixed; boundary="---------MONKEYBUTTER"
+
+This is a multipart message in MIME format.
+-----------MONKEYBUTTER
+Content-Type: text/plain; charset=US-ASCII; format=flowed
+
+$fail_count regression tests failed
+
+$msg
+
+See attachments for details.
+EOM
+
+	for my $test (@attachments) {
+		my $content = `cat $logdir/$test.out`;
+		$whole_msg .= <<EOM;
+-----------MONKEYBUTTER
+Content-Type: text/plain; name=$test-$TODAY.txt
+Content-Description: regression test $test output
+Content-Disposition: attachment; filename=$test-$TODAY.txt
+
+$content
+EOM
+	}
+
+	$whole_msg .= "-----------MONKEYBUTTER--\n";
+	
+	open my $fh, "|sendmail $recipient";
+	print $fh $whole_msg;
+}
