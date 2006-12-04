@@ -332,11 +332,15 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeByte((byte)0); // version
-    buf.writeInt(auxAddress);
-    target.serialize(buf);
-    prevNode.serialize(buf);
-    if (serializedMsg != null) {
+    buf.writeByte((byte)0); // version (deserialized in build())
+    buf.writeInt(auxAddress); // (deserialized in build())
+    target.serialize(buf); // (deserialized in build())
+    prevNode.serialize(buf); // (deserialized in build())
+    if (serializedMsg != null) { // pri, sdr
+      // fixed Fabio's bug from Nov 2006 (these were deserialized in the constructer above, but not added back into the internal stream.)
+      buf.writeBoolean(hasSender);
+      buf.writeByte(internalPriority);      
+      
       // optimize this, possibly by extending InternalBuffer interface to access the raw underlieing bytes
       byte[] raw = new byte[serializedMsg.bytesRemaining()]; 
       serializedMsg.read(raw);
@@ -468,6 +472,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
       }        
       return 0;
     }
+    // we don't yet know the internal type because we haven't deserialized it far enough yet
     return -1;
   }
   
