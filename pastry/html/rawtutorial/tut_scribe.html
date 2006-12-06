@@ -275,7 +275,7 @@ This code can be found in <code>ScribeTutorial.java</code><br/><br/>
   public static void recursivelyPrintChildren(NodeHandle curNode, int recursionDepth, Hashtable appTable) {
     // print self at appropriate tab level
     String s = "";
-    for (int numTabs = 0; numTabs < recursionDepth; numTabs++) {
+    for (int numTabs = 0; numTabs &lt; recursionDepth; numTabs++) {
       s+="  "; 
     }
     s+=curNode.getId().toString();
@@ -284,7 +284,7 @@ This code can be found in <code>ScribeTutorial.java</code><br/><br/>
     // recursively print all children
     MyScribeClient app = (MyScribeClient)appTable.get(curNode);
     NodeHandle[] children = app.getChildren();
-    for (int curChild = 0; curChild < children.length; curChild++) {
+    for (int curChild = 0; curChild &lt; children.length; curChild++) {
       recursivelyPrintChildren(children[curChild], recursionDepth+1, appTable);
     }    
   }
