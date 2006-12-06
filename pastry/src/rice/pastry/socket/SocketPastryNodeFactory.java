@@ -115,19 +115,30 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         localAddress = params.getInetAddress("socket_bindAddress");
       }
     }
+    
+    // user didn't specify localAddress via param or config file, ask OS
     if (localAddress == null) {
       localAddress = InetAddress.getLocalHost();
-      ServerSocket test = null;
+      
+      Socket temp = null;
+//      ServerSocket test = null;
       ServerSocket test2 = null;
+//      try {
+//        test = new ServerSocket();
+//        test.bind(new InetSocketAddress(localAddress, port));
+//      } catch (SocketException e) {
+      if (localAddress.isLoopbackAddress() &&
+          !params.getBoolean("pastry_socket_allow_loopback")) {
       try {
-        test = new ServerSocket();
-        test.bind(new InetSocketAddress(localAddress, port));
-      } catch (SocketException e) {
-        Socket temp = new Socket("yahoo.com", 80);
+        // os gave us the loopback address, and the user doesn't want that
+        
+        // try the internet
+        temp = new Socket("yahoo.com", 80);
         if (temp.getLocalAddress().equals(localAddress)) throw new IllegalStateException("Cannot bind to "+localAddress+":"+port);
         localAddress = temp.getLocalAddress();
         temp.close();
-
+        temp = null;
+        
         if (logger.level <= Logger.WARNING)
           logger.log("Error binding to default IP, using " + localAddress+":"+port);
         
@@ -136,20 +147,25 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           test2.bind(new InetSocketAddress(localAddress, port));
         } catch (SocketException e2) {
           if (temp.getLocalAddress().equals(localAddress)) throw new IllegalStateException("Cannot bind to "+localAddress+":"+port);
-        }        
-        
+        }                
       } finally {
-        try {
-          if (test != null)
-            test.close();
-        } catch (Exception e) {}
+//        try {
+//          if (test != null)
+//            test.close();
+//        } catch (Exception e) {}
         try {
           if (test2 != null)
             test2.close();
         } catch (Exception e) {}
+        try {
+          if (temp != null)
+            temp.close();
+        } catch (Exception e) {}
+      }
       }
     }
 
+    // see if there is a firewall
     if (natHandler == null) {
       if (params.contains("nat_handler_class")) {
         try {

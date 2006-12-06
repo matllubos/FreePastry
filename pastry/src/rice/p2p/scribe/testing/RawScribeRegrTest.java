@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
@@ -480,7 +481,7 @@ public class RawScribeRegrTest extends CommonAPITest {
       simulate();
     }
 
-    pause(20000);    
+    pause(40000);    
     stepDone(SUCCESS);
 
     stepStart("Tree Recovery");

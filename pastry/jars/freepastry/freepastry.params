@@ -99,6 +99,9 @@ pastry_socket_scm_backoff_initial = 250
 pastry_socket_scm_backoff_limit = 5
 pastry_socket_pingmanager_testSourceRouting = false
 pastry_socket_increment_port_after_construction = true
+# if you want to allow connection to 127.0.0.1, set this to true
+pastry_socket_allow_loopback = false
+
 
 # NAT/UPnP settings
 nat_network_prefixes = 127.0.0.1;10.;192.168.

@@ -1118,6 +1118,7 @@ public class SocketSourceRouteManager {
      * sends an update out to the observers.
      */
     protected void setDead() {
+//      logger.log(this+" marking as dead.");
       switch (liveness) {
         case SocketNodeHandle.LIVENESS_DEAD:
           return;
