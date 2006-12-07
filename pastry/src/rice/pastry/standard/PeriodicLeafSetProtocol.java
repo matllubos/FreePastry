@@ -469,7 +469,6 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     if (wasAdded) {
       nh.addObserver(this); 
     } else {
-      logger.log("Removed "+nh+" from the LeafSet.");
       if (logger.level <= Logger.FINE) logger.log("Removed "+nh+" from the LeafSet.");
       nh.deleteObserver(this); 
     }
@@ -489,7 +488,6 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
         long leaseExpiration = l_time.longValue()+LEASE_PERIOD;
         long now = thePastryNode.getEnvironment().getTimeSource().currentTimeMillis();
         if (leaseExpiration > now) {
-          logger.log("Removing "+o+" from leafset later."+(leaseExpiration-now));
           if (logger.level <= Logger.INFO) logger.log("Removing "+o+" from leafset later."+(leaseExpiration-now));
           // remove it later when lease expries
           thePastryNode.getEnvironment().getSelectorManager().getTimer().schedule(new TimerTask() {          
