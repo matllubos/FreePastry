@@ -101,6 +101,9 @@ pastry_socket_pingmanager_testSourceRouting = false
 pastry_socket_increment_port_after_construction = true
 # if you want to allow connection to 127.0.0.1, set this to true
 pastry_socket_allow_loopback = false
+# these params will be used if the computer attempts to bind to the loopback address, they will open a socket to this address/port to identify which network adapter to bind to
+pastry_socket_known_network_address = yahoo.com
+pastry_socket_known_network_address_port = 80
 
 
 # NAT/UPnP settings

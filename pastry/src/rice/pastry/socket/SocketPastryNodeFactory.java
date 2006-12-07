@@ -133,7 +133,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         // os gave us the loopback address, and the user doesn't want that
         
         // try the internet
-        temp = new Socket("yahoo.com", 80);
+        temp = new Socket(params.getString("pastry_socket_known_network_address"), 
+            params.getInt("pastry_socket_known_network_address_port"));
         if (temp.getLocalAddress().equals(localAddress)) throw new IllegalStateException("Cannot bind to "+localAddress+":"+port);
         localAddress = temp.getLocalAddress();
         temp.close();
