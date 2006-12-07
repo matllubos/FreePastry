@@ -85,9 +85,13 @@ public class StandardRouter extends PastryAppl {
       NodeHandle handle = thePastryNode.getLeafSet().get(lsPos);
 
       if (handle.isAlive() == false) {
-        // node is dead - get rid of it and try again
-        thePastryNode.getLeafSet().remove(handle);
-        receiveRouteMessage(msg);
+        // node is dead but still in the leafset 
+        // we must have given him a lease
+        // drop the message
+        if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because next hop is dead but has lease. 1");
+        // node is dead - get rid of it and try again        
+//        thePastryNode.getLeafSet().remove(handle);
+//        receiveRouteMessage(msg);
         return;
       } else {
         msg.nextHop = handle;
@@ -124,8 +128,13 @@ public class StandardRouter extends PastryAppl {
           handle = thePastryNode.getLeafSet().get(lsPos);
 
           if (handle.isAlive() == false) {
-            thePastryNode.getLeafSet().remove(handle);
-            receiveRouteMessage(msg);
+            // node is dead but still in the leafset 
+            // we must have given him a lease
+            // drop the message
+            if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because next hop is dead but has lease. 2");
+            // node is dead - get rid of it and try again        
+//            thePastryNode.getLeafSet().remove(handle);
+//            receiveRouteMessage(msg);
             return;
           } else {
             msg.getOptions().setRerouteIfSuspected(false);
@@ -141,8 +150,13 @@ public class StandardRouter extends PastryAppl {
             handle = thePastryNode.getLeafSet().get(lsPos);
 
             if (handle.isAlive() == false) {
-              thePastryNode.getLeafSet().remove(handle);
-              receiveRouteMessage(msg);
+              // node is dead but still in the leafset 
+              // we must have given him a lease
+              // drop the message
+              if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because next hop is dead but has lease. 3");
+              // node is dead - get rid of it and try again        
+//              thePastryNode.getLeafSet().remove(handle);
+//              receiveRouteMessage(msg);
               return;
             } else {
               msg.getOptions().setRerouteIfSuspected(false);

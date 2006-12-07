@@ -16,8 +16,7 @@ import java.io.*;
  * @author Peter Druschel
  */
 
-public class SimilarSet extends Observable implements NodeSetEventSource, Serializable,
-    Observer {
+public class SimilarSet extends Observable implements NodeSetEventSource, Serializable /*, Observer*/ {
 
   private static final long serialVersionUID = 2289610430696506873L;
   
@@ -138,8 +137,8 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
           notifyListeners(nodes[theSize], false);
         }
       }
-      if (leafSet.observe)
-        nodes[theSize].deleteObserver(this);
+//      if (leafSet.observe)
+//        nodes[theSize].deleteObserver(this);
 
       theSize++;
 
@@ -169,8 +168,8 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
 
     // register as an observer, so we'll be notified if the handle is declared
     // dead
-    if (leafSet.observe)
-      handle.addObserver(this);
+//    if (leafSet.observe)
+//      handle.addObserver(this);
 
     return true;
   }
@@ -466,8 +465,8 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
         notifyListeners(handle, false);
     }
 
-    if (leafSet.observe)
-      handle.deleteObserver(this);
+//    if (leafSet.observe)
+//      handle.deleteObserver(this);
 
     return handle;
   }
@@ -674,7 +673,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
   public void destroy() {
     for (int i = 0; i < nodes.length; i++) {
       if (nodes[i] != null) {
-        nodes[i].deleteObserver(this); 
+//        nodes[i].deleteObserver(this); 
         nodes[i] = null;
       }
     }

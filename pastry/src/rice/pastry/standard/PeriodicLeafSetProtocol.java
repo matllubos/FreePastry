@@ -27,7 +27,7 @@ import rice.selector.TimerTask;
  * 
  * @author Alan Mislove
  */
-public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy, NodeSetListener {
+public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy, NodeSetListener, Observer {
 
   protected NodeHandle localHandle;
 
@@ -41,8 +41,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * NodeHandle -> Long remembers the TIME when we received a BLS from that
    * NodeHandle
    */
-  protected WeakHashMap lastTimeReceivedBLS;
-  protected WeakHashMap lastTimeSentBLS;
+  protected WeakHashMap lastTimeReceivedBLS; // the leases you have
+  protected WeakHashMap lastTimeSentBLS; // the leases you have issued
 
   /**
    * Related to rapidly determining direct neighbor liveness.
@@ -103,13 +103,21 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     }
     
     this.localHandle = local;
+    
+    // make sure to register all the existing leafset entries
     this.leafSet = ls;
+    Iterator i = this.leafSet.asList().iterator();
+    while(i.hasNext()) {
+      NodeHandle nh = (NodeHandle)i.next(); 
+      nh.addObserver(this);
+    }
+
     this.routeTable = rt;
     this.lastTimeReceivedBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
     this.lastTimeSentBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
     Parameters p = ln.getEnvironment().getParameters();
     PING_NEIGHBOR_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period");
-    LEASE_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_lease_period");
+    LEASE_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_lease_period");  // 30000
     CHECK_LIVENESS_PERIOD = PING_NEIGHBOR_PERIOD
         + p.getInt("pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod");
     this.lastTimeRenewedLease = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), LEASE_PERIOD*2);
@@ -381,10 +389,9 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    */
   private boolean sendBLS(NodeHandle sendTo) {
     Long time = (Long) lastTimeSentBLS.get(sendTo);
+    long currentTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
     if (time == null
-        || (time.longValue() < (localNode.getEnvironment().getTimeSource()
-            .currentTimeMillis() - BLS_THROTTLE))) {
-      long currentTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+        || (time.longValue() < (currentTime - BLS_THROTTLE))) {
       if (logger.level <= Logger.FINE) // only log if not throttled
         logger.log("PeriodicLeafSetProtocol: Checking liveness on neighbor:"
               + sendTo+" "+time);
@@ -392,8 +399,6 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
 
       thePastryNode.send(sendTo, new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
       thePastryNode.send(sendTo, new RequestLeafSet(localHandle, currentTime));
-//      sendTo.receiveMessage(new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
-//      sendTo.receiveMessage(new RequestLeafSet(localHandle, currentTime));
       sendTo.checkLiveness();
       return true;
     } 
@@ -402,6 +407,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   
   /**
    * NodeHandle -> time
+   * 
+   * Leases we have issued.  We cannot remove the node from the leafset until this expires.
    * 
    * If this node is found faulty (and you took over the leafset), must go non-ready until lease expires
    */
@@ -455,5 +462,51 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     lastTimeSentBLS.clear();
     deadLeases.clear();
   }
+
+  @Override
+  public void leafSetChange(NodeHandle nh, boolean wasAdded) {
+    super.leafSetChange(nh, wasAdded);
+    if (wasAdded) {
+      nh.addObserver(this); 
+    } else {
+      logger.log("Removed "+nh+" from the LeafSet.");
+      if (logger.level <= Logger.FINE) logger.log("Removed "+nh+" from the LeafSet.");
+      nh.deleteObserver(this); 
+    }
+  }
+
+  /**
+   * Only remove the item if you did not give a lease.
+   */
+  public void update(final Observable o, final Object arg) {
+//  if (o instanceof NodeHandle) {      
+    if (arg == NodeHandle.DECLARED_DEAD) {
+      Long l_time = (Long)lastTimeRenewedLease.get(o);
+      if (l_time == null) {
+        // there is no lease on record
+        leafSet.remove((NodeHandle)o);
+      } else {
+        long leaseExpiration = l_time.longValue()+LEASE_PERIOD;
+        long now = thePastryNode.getEnvironment().getTimeSource().currentTimeMillis();
+        if (leaseExpiration > now) {
+          logger.log("Removing "+o+" from leafset later."+(leaseExpiration-now));
+          if (logger.level <= Logger.INFO) logger.log("Removing "+o+" from leafset later."+(leaseExpiration-now));
+          // remove it later when lease expries
+          thePastryNode.getEnvironment().getSelectorManager().getTimer().schedule(new TimerTask() {          
+            @Override
+            public void run() {
+              if (logger.level <= Logger.FINE) logger.log("Calling update("+o+","+arg+")");
+              // do this recursively in case we issue a new lease
+              update(o,arg);
+            }          
+          }, leaseExpiration-now);
+        } else {
+          // lease has expired
+          leafSet.remove((NodeHandle)o);
+        }      
+      }        
+    }
+//  }    
+}
 
 }

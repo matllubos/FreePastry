@@ -371,7 +371,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           if (nh.getLiveness() == NodeHandle.LIVENESS_DEAD) {
             // if we already found them dead, don't bother
             // hopefully this is redundant with the leafset protocol
-            leafSet.remove(nh); 
+            
+            // Note, can't remove from leafset, this is to only be done by the LeafSetProtocol
+//            leafSet.remove(nh); 
           } else {
             if (logger.level <= Logger.FINE) logger.log("CJP: checking liveness2 on "+nh);
             nh.checkLiveness();
@@ -591,7 +593,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         if (!failed.containsKey(nh)) {
           failed.put(nh, new FailedTime(nh, thePastryNode.getEnvironment().getTimeSource().currentTimeMillis()));
         }
-        leafSet.remove(nh); 
+        
+        // Note, can't remove from the leafset, this is the LeafSetProtocol's job
+//        leafSet.remove(nh); 
         doneProbing();
       }
   

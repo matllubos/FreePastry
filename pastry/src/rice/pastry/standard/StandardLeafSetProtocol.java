@@ -18,7 +18,7 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class StandardLeafSetProtocol extends PastryAppl {
+public class StandardLeafSetProtocol extends PastryAppl implements Observer {
   protected final boolean failstop = true;
 
   // nodes are assumed to fail silently
@@ -33,6 +33,11 @@ public class StandardLeafSetProtocol extends PastryAppl {
       LeafSet ls, RoutingTable rt) {
     super(ln, LeafSetProtocolAddress.getCode());
     leafSet = ls;
+    Iterator i = leafSet.asList().iterator();
+    while(i.hasNext()) {
+      NodeHandle nh = (NodeHandle)i.next(); 
+      nh.addObserver(this);
+    }    
     cachedSet = new HashSet(leafSet.maxSize() * 2);  
     routeTable = rt;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
@@ -339,6 +344,32 @@ public class StandardLeafSetProtocol extends PastryAppl {
 
   public boolean deliverWhenNotReady() {
     return true;
+  }
+
+  /**
+   * We manage the leafset now.  Implementation is simple, remove items that die.
+   * 
+   * We should be observers on everything in the leafset, and nothing else.
+   */
+  @Override
+  public void leafSetChange(NodeHandle nh, boolean wasAdded) {
+    super.leafSetChange(nh, wasAdded);
+    if (wasAdded) {
+      nh.addObserver(this); 
+    } else {
+      nh.deleteObserver(this); 
+    }
+  }
+
+  /**
+   * If nodehandle is dead, remove it from the leafset.
+   */
+  public void update(Observable o, Object arg) {
+//    if (o instanceof NodeHandle) {      
+      if (arg == NodeHandle.DECLARED_DEAD) {
+        leafSet.remove((NodeHandle)o);
+      }
+//    }    
   }
 
 }
