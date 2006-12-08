@@ -272,11 +272,12 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   public void start() {
     if (!hasSetStrategy) {
       if (logger.level <= Logger.INFO) logger.log("PLSP.start(): Setting self as ReadyStrategy");
-      ready = true;
       localNode.setReadyStrategy(this);
       hasSetStrategy = true;
       localNode.addLeafSetListener(this);
-    }    
+      // to notify listeners now if we have proper leases
+      isReady();
+    }
   }
   
   /**
