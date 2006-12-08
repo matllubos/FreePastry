@@ -246,7 +246,18 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   long maxSpeedRequestSimTime = 0;
   float maxSpeed = 0.0f;
   
+  /**
+   * This is a guardian for printing the "Invalid TimeSource" warning.  So that it is only printed once.
+   */
+  boolean printedDirectTimeSourceWarning = false;
+  
   public void setMaxSpeed(float speed) {
+    if (!isDirectTimeSource) {
+      if (!printedDirectTimeSourceWarning) {
+        if (logger.level <= Logger.WARNING) logger.log("Invalid TimeSource for setMaxSpeed()/setFullSpeed().  Use Environment.directEnvironment() to construct your Environment.");
+        printedDirectTimeSourceWarning = true;
+      }
+    }
     maxSpeedRequestSystemTime = System.currentTimeMillis();
     maxSpeedRequestSimTime = timeSource.currentTimeMillis();
     maxSpeed = speed;
