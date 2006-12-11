@@ -135,8 +135,7 @@ public class SplitStreamTutorial {
       int bindport = 0;
       InetSocketAddress bootaddress = null;
       
-      // the number of nodes to use is always the last param
-      int numNodes = Integer.parseInt(args[args.length-1]);    
+      int numNodes;    
       
       if (!useDirect) {
         // the port to use locally
@@ -145,7 +144,10 @@ public class SplitStreamTutorial {
         // build the bootaddress from the command line args
         InetAddress bootaddr = InetAddress.getByName(args[1]);
         int bootport = Integer.parseInt(args[2]);
+        numNodes = Integer.parseInt(args[3]);
         bootaddress = new InetSocketAddress(bootaddr,bootport);    
+      } else {
+        numNodes = Integer.parseInt(args[1]);
       }
       
       // launch our node!
