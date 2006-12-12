@@ -269,7 +269,7 @@
 
   <!-- freepastry-core-jar: creates ./pastry-core.jar which excludes Glacier
        and SplitStream, as well as rice.pastry.testing.* -->
-  <target name="freepastry-core-jar" depends="appendthencompile">
+  <target name="freepastry-core-jar" depends="compile">
     <jar destfile="pastry-core.jar" compress="true">
       <fileset dir="${build.dir}">
         <include name="rice/*.class"/>
