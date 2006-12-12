@@ -29,13 +29,6 @@
     <pathelement path="${build.dir}"/>
   </path>
   
-  <!-- Source we need to build RMIC stubs for -->
-  <path id="project.rmic.files">
-    <fileset dir="${build.dir}">
-      <include name="rice/pastry/rmi/RMIRemoteNodeI.class"/>
-    </fileset>
-  </path>
-
   <!-- TASKS BELOW -->
 
   <target name="clean">
@@ -48,12 +41,6 @@
   <target name="init">
     <!-- make the directory to put all classes in -->
     <mkdir dir="${build.dir}"/>
-  </target>
-
-  <target name="make_rmic_stubs" depends="init">
-    <rmic  base="${build.dir}"
-           classpathref="project.classpath"
-           includes="${rmic.includes.files}"/>
   </target>
 
   <target name="make_imap_parser" depends="init">
@@ -87,7 +74,6 @@
            debuglevel="lines,vars,source"
            debug="true">           
     </javac>
-<!--    <antcall target="make_rmic_stubs"/> -->
   </target>
 
   
@@ -104,7 +90,11 @@
     <antcall target="beautify"/>
     <antcall target="appendlicense"/>
   </target>  
-    
+ 
+  <target name="appendthencompile">
+    <antcall target="appendlicense"/>
+    <antcall target="compile"/>
+  </target>
   
   <target name="beautify" depends="init">
     <pathconvert refid="pretty.classpath"
@@ -279,12 +269,13 @@
 
   <!-- freepastry-core-jar: creates ./pastry-core.jar which excludes Glacier
        and SplitStream, as well as rice.pastry.testing.* -->
-  <target name="freepastry-core-jar" depends="beautifythencompile">
+  <target name="freepastry-core-jar" depends="appendthencompile">
     <jar destfile="pastry-core.jar" compress="true">
       <fileset dir="${build.dir}">
         <include name="rice/*.class"/>
         <include name="rice/environment/**/*.class"/>
         <include name="rice/p2p/commonapi/**/*.class"/>
+        <include name="rice/p2p/multiring/**/*.class"/>
         <include name="rice/p2p/past/**/*.class"/>
         <include name="rice/p2p/replication/**/*.class"/>
         <include name="rice/p2p/scribe/**/*.class"/>
@@ -300,10 +291,10 @@
         <include name="rice/pastry/routing/**/*.class"/>
         <include name="rice/pastry/security/**/*.class"/>
         <include name="rice/pastry/socket/**/*.class"/>
-        <exclude name="rice/pastry/socket/testing/*.class"/>
         <include name="rice/pastry/standard/**/*.class"/>
         <include name="rice/persistence/**/*.class"/>
         <include name="rice/selector/**/*.class"/>
+        <exclude name="**/testing/*.class"/>
       </fileset>
       <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
     </jar>
