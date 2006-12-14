@@ -417,7 +417,7 @@ JoinRequest:
     boolean hasJoinHandle
       NodeHandle joinHandle // if hasJoinHandle
     // the table
-    byte lastRow // decremented on a push call
+    short lastRow // decremented on a push call
     // the routing table has this many rows: (NodeId bit length)/rtBaseBitLength = 160/4 = 40
     // and this many columns 2^rtBaseBitLength = 2^4=16
     // each entry is a RouteSet

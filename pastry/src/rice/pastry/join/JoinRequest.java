@@ -33,7 +33,7 @@ public class JoinRequest extends PRawMessage {
 
   private NodeHandle joinHandle;
 
-  private byte rowCount;
+  private short rowCount;
 
   private RouteSet rows[][];
 
@@ -156,7 +156,7 @@ public class JoinRequest extends PRawMessage {
   private void initialize(byte rtBaseBitLength) {
     joinHandle = null;
     this.rtBaseBitLength = rtBaseBitLength;
-    rowCount = (byte)(Id.IdBitLength / rtBaseBitLength);
+    rowCount = (short)(Id.IdBitLength / rtBaseBitLength);
 
     rows = new RouteSet[rowCount][];
   }
@@ -183,7 +183,7 @@ public class JoinRequest extends PRawMessage {
     }
     
     // encode the table
-    buf.writeByte((byte) rowCount);
+    buf.writeShort((short) rowCount);
     int maxIndex = Id.IdBitLength / rtBaseBitLength;
     for (int i=0; i<maxIndex; i++) {
       RouteSet[] thisRow = rows[i];
@@ -225,7 +225,7 @@ public class JoinRequest extends PRawMessage {
         if (buf.readBoolean())
           joinHandle = nhf.readNodeHandle(buf);
     
-        rowCount = buf.readByte();
+        rowCount = buf.readShort();
         int numRows = Id.IdBitLength / rtBaseBitLength;
         int numCols = 1 << rtBaseBitLength;
         for (int i=0; i<numRows; i++) {
