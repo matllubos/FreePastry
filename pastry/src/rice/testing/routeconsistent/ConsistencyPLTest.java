@@ -9,6 +9,7 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.logging.simple.SimpleLogManager;
 import rice.environment.params.simple.SimpleParameters;
 import rice.environment.random.simple.SimpleRandomSource;
@@ -254,6 +255,10 @@ public class ConsistencyPLTest implements Observer {
       
       environment = env;
       
+      // turn on consistent join protocol's logger
+      environment.getParameters().setBoolean("logging_packageOnly",false);
+      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol",Logger.INFO);
+
 //      if (args.length > 0) {
 //        int theVal = Integer.parseInt(args[0]);
 //        if (theVal >= 0) {
