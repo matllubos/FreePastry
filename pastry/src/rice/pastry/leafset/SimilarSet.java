@@ -116,8 +116,11 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
    * 
    * @return true if the put succeeded, false otherwise.
    */
-
   public boolean put(NodeHandle handle) {
+    return put(handle,false);
+  }
+
+  public boolean put(NodeHandle handle, boolean suppressNotify) {
     Id nid = handle.getNodeId();
     //int index;
 
@@ -161,7 +164,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
           break;
     }
 
-    if (!leafSet.testOtherSet(this, handle)) {
+    if (!suppressNotify && !leafSet.testOtherSet(this, handle)) {
       if (leafSet.observe)
         notifyListeners(handle, true);
     }
@@ -206,7 +209,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
     }
   }
   
-  private void notifyListeners(NodeHandle handle, boolean added) {
+  protected void notifyListeners(NodeHandle handle, boolean added) {
     // pass the event to the Observers of this RoutingTable
     synchronized (listeners) {
       for (int i = 0; i < listeners.size(); i++) {

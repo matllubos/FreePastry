@@ -74,13 +74,17 @@ public class LeafSet extends Observable implements Serializable {
    * @param handle the handle to put.
    * @return true if successful, false otherwise.
    */
-  public boolean put(NodeHandle handle)
+  public boolean put(NodeHandle handle) {
+    return put(handle, false);
+  }
+  
+  public boolean put(NodeHandle handle, boolean suppressNotification)
   {
     Id nid = handle.getNodeId();
     if (nid.equals(baseId)) return false;
     if (member(handle)) return false;
 
-    boolean res = cwSet.put(handle) | ccwSet.put(handle);
+    boolean res = cwSet.put(handle, suppressNotification) | ccwSet.put(handle, suppressNotification);
     return res;
   }
 
@@ -532,10 +536,14 @@ public class LeafSet extends Observable implements Serializable {
    */
   public boolean merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable,
                        boolean testOnly, Set insertedHandles) {
-
+//    System.out.println(this+".merge("+remotels+","+from+",...,"+testOnly+","+insertedHandles+")");
+    
     boolean changed, result = false;
     int cwSize = remotels.cwSize();
     int ccwSize = remotels.ccwSize();
+    
+    // this is the only way to get the notification correct
+    Set<NodeHandle> myInsertedHandles = new HashSet<NodeHandle>();
 
     // merge the received leaf set into our own
     // to minimize inserts/removes, we do this from nearest to farthest nodes
@@ -637,8 +645,10 @@ public class LeafSet extends Observable implements Serializable {
       }
       else {
         // merge into our cw leaf set half
-        changed = cwSet.put(nh);
+        changed = cwSet.put(nh, true);
 
+        if (changed) myInsertedHandles.add(nh);
+        
         // update RT as well
         routeTable.put(nh);
       }
@@ -662,8 +672,10 @@ public class LeafSet extends Observable implements Serializable {
       }
       else {
         // merge into our leaf set
-        changed = ccwSet.put(nh);
+        changed = ccwSet.put(nh, true);
 
+        if (changed) myInsertedHandles.add(nh);
+        
         // update RT as well
         routeTable.put(nh);
       }
@@ -689,6 +701,11 @@ public class LeafSet extends Observable implements Serializable {
         else {
           // merge into our leaf set
           changed = put(nh);
+          
+          if (changed) myInsertedHandles.add(nh);
+          
+          // update RT as well
+          routeTable.put(nh);
         }
 
         result |= changed;
@@ -696,7 +713,11 @@ public class LeafSet extends Observable implements Serializable {
       }
     }
 
-
+    Iterator<NodeHandle> i = myInsertedHandles.iterator();
+    while(i.hasNext()) {
+      cwSet.notifyListeners(i.next(), true); 
+    }
+    
     return result;
   }
   /**
