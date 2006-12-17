@@ -118,7 +118,7 @@ public class SocketPastryNode extends DistPastryNode {
   }
 
   public NodeHandle coalesce(NodeHandle newHandle) {
-    return srManager.coalesce(newHandle);
+    return srManager.coalesce((SocketNodeHandle)newHandle);
   }
 
   public void setSocketSourceRouteManager(SocketSourceRouteManager srManager) {

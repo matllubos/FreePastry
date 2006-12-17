@@ -56,10 +56,10 @@ public class PingManager extends SelectionKeyHandler {
   public final int MIN_RTT = 2;
   
   // SourceRoute -> ArrayList of PingResponseListener
-  protected WeakHashMap pingListeners;
+  protected Map pingListeners;
 
   // SourceRoute -> Long 
-  protected WeakHashMap lastPingTime;
+  protected Map lastPingTime;
   
   // The list of pending meesages
   protected ArrayList pendingMsgs;

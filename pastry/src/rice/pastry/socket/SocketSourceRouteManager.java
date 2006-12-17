@@ -92,7 +92,7 @@ public class SocketSourceRouteManager {
    */
   HashSet hardLinks = new HashSet();
 
-  TimerWeakHashMap nodeHandles; 
+  TimerWeakHashSet nodeHandles; 
   
   /**
    * Constructor
@@ -117,7 +117,8 @@ public class SocketSourceRouteManager {
     gainH = p.getDouble("pastry_socket_srm_gain_h");//0.25;
     gainG = p.getDouble("pastry_socket_srm_gain_g");//0.125;
     
-    nodeHandles = new TimerWeakHashMap(node.getEnvironment().getSelectorManager().getTimer(),30000);
+//    nodeHandles = Collections.synchronizedMap(new TimerWeakHashMap(node.getEnvironment().getSelectorManager().getTimer(),30000));
+    nodeHandles = new TimerWeakHashSet(30000, spn);
     
     this.logger = node.getEnvironment().getLogManager().getLogger(SocketSourceRouteManager.class, null);
     this.manager = new SocketCollectionManager(node, this, bindAddress, proxyAddress, random);
@@ -125,29 +126,12 @@ public class SocketSourceRouteManager {
     
   }
   
+  /**
+   * 
+   * @return the best source route for each known EpochInetSocketAddress, keyed by the EISA
+   */
   public HashMap getBest() {
-    HashMap result = new HashMap();
-    
-    synchronized(nodeHandles) {
-      Iterator i = nodeHandles.keySet().iterator();
-      
-      while (i.hasNext()) {
-        Object addr = i.next();
-        
-        WeakReference wr = (WeakReference)nodeHandles.get(addr);
-        if (wr != null) {
-          SocketNodeHandle snh = (SocketNodeHandle)wr.get();
-          if (snh != null) {
-            AddressManager am = snh.addressManager;
-            if (am != null) {              
-              if (am.getLiveness() < SocketNodeHandle.LIVENESS_DEAD)
-                result.put(addr, am.best);
-            }
-          }           
-        }
-      }
-    }      
-    return result;
+    return nodeHandles.getBest();
   }
   
   /**
@@ -205,58 +189,68 @@ public class SocketSourceRouteManager {
    * And I mean the same object!!! not .equals(). The whole memory management
    * will get confused if this is not the case.
    */
-  public NodeHandle coalesce(NodeHandle newHandle) {
-    SocketNodeHandle snh = (SocketNodeHandle) newHandle;
-    synchronized (nodeHandles) {
-      WeakReference wr = (WeakReference) nodeHandles.get(snh.eaddress);
-      if (wr == null) {
-        addNodeHandle(snh);
-        return snh;
-      } else {
-        SocketNodeHandle ret = (SocketNodeHandle) wr.get();
-        if (ret == null) {
-          // if this happens, then the handle got collected, but not the
-          // eaddress yet. Grumble...
-          addNodeHandle(snh);
-          return snh;
-        } else {
-          // inflates a stub NodeHandle
-          if (ret.getNodeId() == null) {
-            ret.setNodeId(newHandle.getNodeId());
-          }
-          return ret;
-        }
-      }
-    }
+  public SocketNodeHandle coalesce(SocketNodeHandle newHandle) {
+    return nodeHandles.coalesce(newHandle); 
   }
+//  public NodeHandle coalesce(NodeHandle newHandle) {
+//    SocketNodeHandle snh = (SocketNodeHandle) newHandle;
+//    synchronized (nodeHandles) {
+//      WeakReference wr = (WeakReference) nodeHandles.get(snh.eaddress);
+//      if (wr == null) {
+//        logger.log("SSRM.coalesce1("+snh+")");
+//        addNodeHandle(snh);
+//        return snh;
+//      } else {
+//        SocketNodeHandle ret = (SocketNodeHandle) wr.get();
+//        if (ret == null) {
+//          // if this happens, then the handle got collected, but not the
+//          // eaddress yet. Grumble...
+//          logger.log("SSRM.coalesce2("+snh+")");
+//          addNodeHandle(snh);
+//          return snh;
+//        } else {
+//          // inflates a stub NodeHandle
+//          if (ret.getNodeId() == null) {
+//            ret.setNodeId(newHandle.getNodeId());
+//          }
+////          logger.log("SSRM.coalesce3("+newHandle+";"+snh.eaddress.hashCode()+"):"+ret+";"+ret.eaddress.hashCode());
+//          return ret;
+//        }
+//      }
+//    }
+//  }
 
-  private void addNodeHandle(SocketNodeHandle snh) {
-    WeakReference wr = new WeakReference(snh);
-    nodeHandles.put(snh.eaddress, wr);
-    snh.setLocalNode(spn);
-  }
+//  private void addNodeHandle(SocketNodeHandle snh) {
+//    logger.log("addNodeHandle("+snh+"):"+spn.getEnvironment().getSelectorManager().isSelectorThread());
+//    WeakReference wr = new WeakReference(snh);
+//    nodeHandles.put(snh.eaddress, wr);
+//    snh.setLocalNode(spn);
+//  }
 
   public SocketNodeHandle getNodeHandle(EpochInetSocketAddress address) {
-    synchronized (nodeHandles) {
-      WeakReference wr = (WeakReference) nodeHandles.get(address);
-      if (wr == null)
-        return null;
-
-      SocketNodeHandle ret = (SocketNodeHandle) wr.get();
-      if (ret == null)
-        return null;
-      if (ret.getNodeId() == null)
+    SocketNodeHandle ret = nodeHandles.get(address);
+//    synchronized (nodeHandles) {
+//      WeakReference wr = (WeakReference) nodeHandles.get(address);
+//      if (wr == null)
+//        return null;
+//
+//      SocketNodeHandle ret = (SocketNodeHandle) wr.get();
+//      if (ret == null)
+//        return null;
+      if (ret == null || ret.getNodeId() == null)
         return null;
       return ret;
-    }
+//    }
   }
 
   public AddressManager getAddressManager(EpochInetSocketAddress address) {
-    WeakReference wr = (WeakReference) nodeHandles.get(address);
-    if (wr == null)
-      return null;
-
-    SocketNodeHandle snh = (SocketNodeHandle) wr.get();
+    SocketNodeHandle snh = nodeHandles.get(address);
+    
+//    WeakReference wr = (WeakReference) nodeHandles.get(address);
+//    if (wr == null)
+//      return null;
+//
+//    SocketNodeHandle snh = (SocketNodeHandle) wr.get();
     if (snh == null)
       return null;
     return snh.addressManager;
@@ -271,36 +265,42 @@ public class SocketSourceRouteManager {
   public AddressManager putAddressManager(EpochInetSocketAddress address,
       boolean search) {
 
-    WeakReference wr = (WeakReference) nodeHandles.get(address);
-    SocketNodeHandle snh;
-    AddressManager manager;
-    if (wr == null) {
-      snh = new SocketNodeHandle(address, null);
-      snh.setLocalNode(spn);
-      wr = new WeakReference(snh);
-      nodeHandles.put(address, wr);
-    } else {
-      snh = (SocketNodeHandle) wr.get();
-      if (snh == null) {
-        // WARNING: this code must be repeated because of a very slight timing
-        // issue with the garbage collector
-        snh = new SocketNodeHandle(address, null);
-        snh.setLocalNode(spn);
-        wr = new WeakReference(snh);
-        nodeHandles.put(address, wr);
-      }
+    SocketNodeHandle snh = nodeHandles.get(address);
+    if (snh == null) {
+      snh = nodeHandles.coalesce(new SocketNodeHandle(address, null)); 
     }
+    
+//    WeakReference wr = (WeakReference) nodeHandles.get(address);
+//    logger.log("putAddressManager("+address+","+search+"):"+wr+" "+spn.getEnvironment().getSelectorManager().isSelectorThread());
+//    SocketNodeHandle snh;
+//    if (wr == null) {
+//      snh = new SocketNodeHandle(address, null);
+//      addNodeHandle(snh);    
+//    } else {
+//      snh = (SocketNodeHandle) wr.get();
+//      if (snh == null) {
+//        // WARNING: this code must be repeated because of a very slight timing
+//        // issue with the garbage collector
+//        snh = new SocketNodeHandle(address, null);
+//        addNodeHandle(snh);      
+//      }
+//    }
 
     if (snh.addressManager != null)
       throw new IllegalStateException("Address manager for address " + address
           + " already exists.");
 
-    manager = new AddressManager(snh, search);
+    AddressManager manager = new AddressManager(snh, search);
     
     // TODO make this time configurable
     // yes, this is bizarre, becasue manager is not actually a key in nodeHandles, but it will work
-    // I can't exactly remember why we have this...
-    nodeHandles.refresh(manager);
+    // refresh will hold a hard link to the manager for an amount of time, this keeps it from 
+    // expiring early, and the manager holds a reference to the snh.  This is important in case no 
+    // data-structures in FP are holding a reference to the SNH, we don't want it to evaporate and 
+    // for all of this work to go away.
+    spn.getEnvironment().getSelectorManager().getTimer().schedule(
+        new TimerWeakHashMap.HardLinkTimerTask(manager), 30000);
+    //nodeHandles.refresh(manager);
     snh.addressManager = manager;
     return manager;
   }

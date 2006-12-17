@@ -980,9 +980,10 @@ public class SocketCollectionManager extends SelectionKeyHandler {
         if (((SocketChannel) key.channel()).finishConnect()) 
           removeInterestOp(key.channel(), SelectionKey.OP_CONNECT);
         
-        if (logger.level <= Logger.FINE) logger.log("(SRM) Found connectable source route channel - completed connection");
+        if (logger.level <= Logger.FINE) logger.log("(SRM) "+this+" Found connectable source route channel - completed connection");
       } catch (IOException e) {
-        if (logger.level <= Logger.WARNING) logger.log( "(SRM) Got exception " + e + " on connect - killing off source route");
+        // TODO: The remote node probably just keeps retrying... need to find a way to indicate that this source route is not valid.        
+        if (logger.level <= Logger.WARNING) logger.log( "(SRM) "+this+" Got exception " + e + " on connect - killing off source route");
         
         close();
       }
