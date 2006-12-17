@@ -277,7 +277,7 @@ public class ScribeImpl implements Scribe, Application {
    *
    * @param message The ackMessage
    */
-  private void ackMessageReceived(SubscribeAckMessage message) {
+  protected void ackMessageReceived(SubscribeAckMessage message) {
     ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
     if (logger.level <= Logger.FINER) logger.log("Removing client " + client + " from list of outstanding for ack " + message.getId());
     CancellableTask task = (CancellableTask) lost.remove(new Integer(message.getId()));
