@@ -631,8 +631,8 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   
   public static void main(String[] args) throws Exception {
 
-    String dir = "n:/planetlab/cons";
-//    String dir = "c:/cons/cons";
+//    String dir = "n:/planetlab/cons";
+    String dir = "c:/planetlab/cons";
     
     if (args.length <= 1) {
       String number = "1";
@@ -682,9 +682,9 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     
     JMenu editMenu = new JMenu("edit");
     menuBar.add(editMenu);
-    JMenuItem removeSelected = new JMenuItem("Remove Selected");
+    JMenuItem removeSelected = new JMenuItem("Remove Selected (mmb)");
     editMenu.add(removeSelected);
-    JMenuItem moveSelected = new JMenuItem("Move Selected");
+    JMenuItem moveSelected = new JMenuItem("Move Selected (ctl alt lmb)");
     editMenu.add(moveSelected);
 
     JMenu searchMenu = new JMenu("search");
