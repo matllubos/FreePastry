@@ -22,7 +22,7 @@ public class TimerWeakHashMap extends WeakHashMap {
     timer = t;
   }
   
-  static class HardLinkTimerTask extends TimerTask {
+  public static class HardLinkTimerTask extends TimerTask {
     Object hardLink;
     public HardLinkTimerTask(Object hardLink) {
       this.hardLink = hardLink;
