@@ -41,8 +41,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * NodeHandle -> Long remembers the TIME when we received a BLS from that
    * NodeHandle
    */
-  protected WeakHashMap lastTimeReceivedBLS; // the leases you have
-  protected WeakHashMap lastTimeSentBLS; // the leases you have issued
+  protected Map lastTimeReceivedBLS; // the leases you have
+  protected Map lastTimeSentBLS; // the leases you have issued
 
   /**
    * Related to rapidly determining direct neighbor liveness.
@@ -130,10 +130,12 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   }
 
   private void updateRecBLS(NodeHandle from, long time) {
+    if (time == 0) return;
     Long oldTime = (Long) lastTimeReceivedBLS.get(from);
     if ((oldTime == null) || (oldTime.longValue() < time)) {
       lastTimeReceivedBLS.put(from, new Long(time));      
       if (logger.level <= Logger.FINE) logger.log("PLSP.updateRecBLS("+from+","+time+")");
+      // need to do this so that nodes are notified
       if (hasSetStrategy)
         isReady();
     } 
@@ -286,31 +288,31 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   NodeHandle lastLeft;
   NodeHandle lastRight;
   public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
-    if ((!added) && (
-      handle == lastLeft ||
-      handle == lastRight
-      )) {
-      // check to see if we have an existing lease
-      long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
-      long leaseOffset = curTime-LEASE_PERIOD;
-
-      Long time = (Long)lastTimeRenewedLease.get(handle);
-      if (time != null
-          && (time.longValue() >= leaseOffset)) {
-        // we gave out a lease too recently
-        TimerTask deadLease = 
-        new TimerTask() {        
-          public void run() {
-            deadLeases.remove(this);
-            isReady();            
-          }        
-        };
-        deadLeases.add(deadLease);
-        localNode.getEnvironment().getSelectorManager().getTimer().schedule(deadLease,
-            time.longValue()-leaseOffset);
-        isReady();
-      }      
-    }
+//    if ((!added) && (
+//      handle == lastLeft ||
+//      handle == lastRight
+//      )) {
+//      // check to see if we have an existing lease
+//      long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+//      long leaseOffset = curTime-LEASE_PERIOD;
+//
+//      Long time = (Long)lastTimeRenewedLease.get(handle);
+//      if (time != null
+//          && (time.longValue() >= leaseOffset)) {
+//        // we gave out a lease too recently
+//        TimerTask deadLease = 
+//        new TimerTask() {        
+//          public void run() {
+//            deadLeases.remove(this);
+//            isReady();            
+//          }        
+//        };
+//        deadLeases.add(deadLease);
+//        localNode.getEnvironment().getSelectorManager().getTimer().schedule(deadLease,
+//            time.longValue()-leaseOffset);
+//        isReady();
+//      }      
+//    }
     NodeHandle newLeft = leafSet.get(-1);
     if (newLeft != null && (lastLeft != newLeft)) {
       lastLeft = newLeft;
@@ -348,10 +350,12 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     if (shouldBeReady != ready) {
       thePastryNode.setReady(shouldBeReady); // will call back in to setReady() and notify the observers
     }
+    
+//    logger.log("isReady() = "+shouldBeReady);
     return shouldBeReady;
   }
   
-  HashSet deadLeases = new HashSet();
+//  HashSet deadLeases = new HashSet();
   
   public boolean shouldBeReady() {
     long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
@@ -379,7 +383,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
         return false;
       }      
     }     
-    if (deadLeases.size() > 0) return false;
+//    if (deadLeases.size() > 0) return false;
     return true;
   }
   
@@ -413,7 +417,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * 
    * If this node is found faulty (and you took over the leafset), must go non-ready until lease expires
    */
-  WeakHashMap lastTimeRenewedLease;
+  Map lastTimeRenewedLease;
   
   /**
    * Used to kill self if leafset shrunk by too much. NOTE: PLSP is not
@@ -461,7 +465,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     lastTimeReceivedBLS.clear();
     lastTimeRenewedLease.clear();
     lastTimeSentBLS.clear();
-    deadLeases.clear();
+//    deadLeases.clear();
   }
 
   @Override

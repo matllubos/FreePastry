@@ -52,7 +52,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   /**
    * Set of NodeHandles that know about us. -> Object
    */
-  WeakHashMap gotResponse;
+  Map gotResponse;
   
   /**
    * Nodes that we think are dead.
