@@ -172,9 +172,9 @@ public class Proxy {
          System.getProperty("os.name").toLowerCase().indexOf("mac os x") >= 0)) {
 //      Moved from the FAQ to the source:
 //      For the curious, using the <tt>java.nio</tt> package on dual
-//      G5 machines with Java 1.4.2 is known to cause kernel panics.  However,
+//      G5 machines with Java 1.4.2 is known to cause kernel panics.  However,
 //      by forcing the JVM to use the <tt>select()</tt> system call instead
-//      of the <tt>kqueue</tt> call, the panics can be avoided.  For more information,
+//      of the <tt>kqueue</tt> call, the panics can be avoided.  For more information,
 //      click <a href="http://sourceforge.net/forum/message.php?msg_id=2837986">here</a>.
       result.append(" -Djava.nio.preferSelect=true");
     }
