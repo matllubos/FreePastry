@@ -14,7 +14,7 @@ import rice.selector.*;
 
 public class TimerWeakHashSet implements WeakHashSet {
 
-  static ReferenceQueue<SNHWeakReference> queue = new ReferenceQueue<SNHWeakReference>();
+  static ReferenceQueue queue = new ReferenceQueue();
   
   static {
     new Thread(new Runnable() {
