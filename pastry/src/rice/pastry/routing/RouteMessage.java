@@ -259,6 +259,10 @@ public class RouteMessage extends PRawMessage implements Serializable,
     return nextHop;
   }
 
+  /**
+   * @deprecated use getMessage(MessageDeserializer)
+   */
+  @SuppressWarnings("deprecation")
   public rice.p2p.commonapi.Message getMessage() {
     return ((PastryEndpointMessage) unwrap()).getMessage();
   }

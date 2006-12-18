@@ -34,7 +34,8 @@ public class GCNode implements Node {
    * This returns a VirtualizedNode specific to the given application and
    * instance name to the application, which the application can then use
    * in order to send an receive messages.
-   *
+   * 
+   * @deprecated use buildEndpoint() endpoint.register()
    * @param application The Application
    * @param instance An identifier for a given instance
    * @return The endpoint specific to this applicationk, which can be used

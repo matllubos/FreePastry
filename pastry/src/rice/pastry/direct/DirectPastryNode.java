@@ -215,6 +215,7 @@ public class DirectPastryNode extends PastryNode {
     return ret;
   }
 
+  @SuppressWarnings("deprecation")
   public synchronized void receiveMessage(Message msg) {
     if (!isAlive()) return;
     // System.out.println("setting currentNode from "+currentNode+" to "+this+"

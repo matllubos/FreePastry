@@ -136,6 +136,7 @@ public class SocketNodeHandle extends DistNodeHandle {
   /**
    * Called to send a message to the node corresponding to this handle.
    *
+   * @deprecated use PastryNode.send(msg, nh)
    * @param msg Message to be delivered, may or may not be routeMessage.
    */
   public void receiveMessage(Message msg) {
@@ -205,6 +206,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * activity. Smaller values imply greater proximity. The exact nature and
    * interpretation of the proximity metric implementation-specific.
    *
+   * @deprecated use PastryNode.proximity(nh)
    * @return the proximity metric value
    */
   public int proximity() {

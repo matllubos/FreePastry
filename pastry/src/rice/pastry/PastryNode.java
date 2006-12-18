@@ -413,6 +413,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * instance name to the application, which the application can then use in
    * order to send an receive messages.
    * 
+   * @deprecated use buildEndpoint() endpoint.register()
+   * 
    * @param application
    *          The Application
    * @param instance

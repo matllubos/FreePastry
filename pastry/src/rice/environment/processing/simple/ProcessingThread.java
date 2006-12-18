@@ -24,6 +24,7 @@ public class ProcessingThread extends Thread {
      }
    }
    
+   @SuppressWarnings("deprecation")
    public void destroy() {
      running = false;
    }

@@ -239,8 +239,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     timerQueue = null;
     if (logger.level <= Logger.INFO) logger.log("Selector "+instance+" shutting down.");
   }
-
   
+  @SuppressWarnings("deprecation")
   public void destroy() {
     running = false; 
   }

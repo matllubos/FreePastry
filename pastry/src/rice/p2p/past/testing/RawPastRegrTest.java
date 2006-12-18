@@ -1028,6 +1028,9 @@ public class RawPastRegrTest extends CommonAPITest {
       return nextHop;
     }
 
+    /**
+     * @deprecated
+     */
     public Message getMessage() {
       return message;
     }

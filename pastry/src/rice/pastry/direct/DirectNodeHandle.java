@@ -106,6 +106,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
   /**
    * DESCRIBE THE METHOD
    *
+   * @deprecated
    * @return DESCRIBE THE RETURN VALUE
    */
   public int proximity() {
@@ -116,6 +117,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
   /**
    * DESCRIBE THE METHOD
    *
+   * @deprecated use PastryNode.send()
    * @param msg DESCRIBE THE PARAMETER
    */
   public void receiveMessage(Message msg) {

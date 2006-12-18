@@ -315,6 +315,9 @@ public class LeafSetTest {
       return LIVENESS_ALIVE;
     }
 
+    /**
+     * @deprecated
+     */
     public int proximity() {
       return 1;
     }
@@ -335,6 +338,9 @@ public class LeafSetTest {
       return id.hashCode();
     }
 
+    /**
+     * @deprecated
+     */
     public void receiveMessage(Message m) {
     };
 

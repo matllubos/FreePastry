@@ -191,6 +191,9 @@ public class MergeTest {
       return NodeHandle.LIVENESS_ALIVE;
     }
 
+    /**
+     * @deprecated
+     */
     public int proximity() {
       return 1;
     }
@@ -211,6 +214,9 @@ public class MergeTest {
       return id.hashCode();
     }
 
+    /**
+     * @deprecated
+     */
     public void receiveMessage(Message m) {
     };
 

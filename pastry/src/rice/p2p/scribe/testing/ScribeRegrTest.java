@@ -622,7 +622,8 @@ public class ScribeRegrTest extends CommonAPITest {
 
     /**
      * Gets the Message attribute of the TestRouteMessage object
-     *
+     * 
+     * @deprecated
      * @return The Message value
      */
     public Message getMessage() {
