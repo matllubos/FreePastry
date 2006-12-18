@@ -271,11 +271,10 @@ public class DirectPastryNode extends PastryNode {
         logger.log("DirectNodeHandle: attempt to send message " + m
             + " to a dead node " + getNodeId() + "!");
     } else {
-      // simulator.deliverMessage(msg, remoteNode, 0);
-      // Note: June 8, 2006, if we want to add proximity here, need to update
-      // the tests to not be busted
+      int delay = proximity(nh);
+      simulator.notifySimulatorListeners(m, this.getLocalHandle(), nh, delay);
       simulator.deliverMessage(m, ((DirectNodeHandle) nh).getRemote(),
-          proximity(nh));
+          delay);
     }
   }
 

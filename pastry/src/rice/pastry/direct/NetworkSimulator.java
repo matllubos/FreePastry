@@ -158,4 +158,28 @@ public interface NetworkSimulator {
    *
    */
   public void setFullSpeed();
+
+  /**
+   * Call this when a message is sent.
+   * @param m the message
+   * @param from the source
+   * @param to the destination 
+   * @param delay the network proximity (when the message will be received)
+   */
+  public void notifySimulatorListeners(Message m, NodeHandle from, NodeHandle to, int delay);
+  
+  /**
+   * 
+   * @param sl
+   * @return true if added, false if already a listener
+   */
+  public boolean addSimulatorListener(SimulatorListener sl);
+  
+  /**
+   * 
+   * @param sl
+   * @return true if removed, false if not already a listener
+   */
+  public boolean removeSimulatorListener(SimulatorListener sl);
+  
 }

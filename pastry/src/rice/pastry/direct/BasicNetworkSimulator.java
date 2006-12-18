@@ -451,4 +451,34 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     return environment;
   }
 
+  
+  /************** SimulatorListeners handling *******************/
+  List<SimulatorListener> listeners = new ArrayList<SimulatorListener>();  
+  public boolean addSimulatorListener(SimulatorListener sl) {
+    synchronized(listeners) {
+      if (listeners.contains(sl)) return false;
+      listeners.add(sl);
+      return true;
+    }
+  }
+
+  public boolean removeSimulatorListener(SimulatorListener sl) {
+    synchronized(listeners) {
+      return listeners.remove(sl);
+    }
+  }
+
+  public void notifySimulatorListeners(Message m, NodeHandle from, NodeHandle to, int delay) {
+    List<SimulatorListener> temp;
+    
+    // so we aren't holding a lock while iterating/calling
+    synchronized(listeners) {
+       temp = new ArrayList<SimulatorListener>(listeners);
+    }
+  
+    for(SimulatorListener listener : temp) {
+      listener.messageSent(m, from, to, delay);
+    }
+  }
+
 }
