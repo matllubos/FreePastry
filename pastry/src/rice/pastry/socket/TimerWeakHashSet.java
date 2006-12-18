@@ -45,7 +45,7 @@ public class TimerWeakHashSet implements WeakHashSet {
     }
      
     public void expunge() {
-      logger.log("expunging "+refString);
+//      logger.log("expunging "+refString);
       // there a synchronization problem here:
       // Is it possible that we were in the queue, and we got replaced
       synchronized(hashMap) {
