@@ -4,11 +4,13 @@
 package rice.pastry.socket;
 
 import java.lang.ref.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
+import rice.selector.*;
 
 public class TimerWeakHashSet implements WeakHashSet {
 
@@ -77,9 +79,22 @@ public class TimerWeakHashSet implements WeakHashSet {
     }
   }
 
+  public static class HardLinkTimerTask extends TimerTask {
+    Object hardLink;
+    public HardLinkTimerTask(Object hardLink) {
+      this.hardLink = hardLink;
+    }
+    public void run() {
+      // do nothing, just expire, taking the hard link away with you
+    }
+  }  
+  
   SocketPastryNode spn;
   HashMap<EpochInetSocketAddress,SNHWeakReference> hashMap;  
   Logger logger;
+  
+  int defaultDelay;
+  Timer timer;
   
   /**
    * Minimum time to hold the item.
@@ -87,6 +102,8 @@ public class TimerWeakHashSet implements WeakHashSet {
    * @param timeout
    */
   public TimerWeakHashSet(int timeout, SocketPastryNode spn) {
+    this.timer = spn.getEnvironment().getSelectorManager().getTimer();
+    this.defaultDelay = timeout;
     this.spn = spn;
     hashMap = new HashMap<EpochInetSocketAddress, SNHWeakReference>();
     logger = spn.getEnvironment().getLogManager().getLogger(getClass(),null);
@@ -103,6 +120,7 @@ public class TimerWeakHashSet implements WeakHashSet {
         ret = snh;
         hashMap.put(snh.eaddress, new SNHWeakReference(snh)); 
         snh.setLocalNode(spn);
+        refresh(snh);
       } else {
       // inflates a stub NodeHandle
         if (ret.getNodeId() == null) {
@@ -120,6 +138,15 @@ public class TimerWeakHashSet implements WeakHashSet {
 //    }
 //  }
 
+  public void refresh(Object key) {
+    refresh(key, defaultDelay);
+  }
+  
+  public void refresh(Object key, int delay) {      
+    timer.schedule(
+        new HardLinkTimerTask(key), delay);
+  }
+  
   public SocketNodeHandle get(EpochInetSocketAddress eisa) {
     SNHWeakReference wr = hashMap.get(eisa);
     if (wr == null) return null;
