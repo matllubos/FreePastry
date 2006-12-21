@@ -66,5 +66,6 @@ else
 	echo "Build succeeded."
 fi
 
+chmod a+x ./tools/run-regression-tests.pl
 ./tools/run-regression-tests.pl FreePastry-$VERSION.jar
 

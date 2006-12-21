@@ -78,7 +78,8 @@ else
 	
 	# run regression tests
 	cd pastry/
-	../run-regression-tests.pl FreePastry-$VERSION.jar
+	chmod a+x ./tools/run-regression-tests.pl
+	./tools/run-regression-tests.pl FreePastry-$VERSION.jar
 fi
 
 
