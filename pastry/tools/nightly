@@ -66,5 +66,5 @@ else
 	echo "Build succeeded."
 fi
 
-./tools/run-regression-tests FreePastry-$VERSION.jar
+./tools/run-regression-tests.pl FreePastry-$VERSION.jar
 

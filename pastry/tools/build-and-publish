@@ -78,7 +78,7 @@ else
 	
 	# run regression tests
 	cd pastry/
-	../run-regression-tests FreePastry-$VERSION.jar
+	../run-regression-tests.pl FreePastry-$VERSION.jar
 fi
 
 
