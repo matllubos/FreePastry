@@ -49,8 +49,10 @@ echo "Logging to $LOGFILE"
 declare -x ANT_OPTS=-Xmx1024m
 
 cd pastry
-#ant beautifyandlicense
 #ant javadoc
+
+./tools/verify-license.pl license/License.txt src/
+
 
 # NOTE: the parser does not like these commented out 
 # line continuations within the ant call
@@ -73,6 +75,12 @@ else
 	echo "Build succeeded."
 	cd ..
 	scp -i build.dsa pastry/FreePastry-$VERSION* build@svn.mpi-sws.mpg.de:/var/www/freepastry.org/FreePastry/snapshots/
+	
+	# run regression tests
+	cd pastry/
+	../run-regression-tests FreePastry-$VERSION.jar
 fi
 
-../run-regression-tests FreePastry-$VERSION.jar
+
+
+

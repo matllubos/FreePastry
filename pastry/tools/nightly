@@ -45,9 +45,10 @@ echo "Logging to $LOGFILE"
 declare -x ANT_OPTS=-Xmx1024m
 
 cd pastry
-#ant beautifyandlicense
+
+./tools/verify-license.pl license/License.txt src/
+
 ant/bin/ant freepastry-release \
-	-Ddontbeautify=1 \
 	-Ddontjavadoc=1 \
 	-Dfreepastry-version="$VERSION" \
 	>$LOGFILE 2>&1
@@ -65,4 +66,5 @@ else
 	echo "Build succeeded."
 fi
 
-../run-regression-tests FreePastry-$VERSION.jar
+./tools/run-regression-tests FreePastry-$VERSION.jar
+
