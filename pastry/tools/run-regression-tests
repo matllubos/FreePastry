@@ -4,7 +4,7 @@
 use warnings;
 use strict;
 
-our $jar;
+our $jar; 
 
 if (@ARGV) {
 	$jar = shift @ARGV;

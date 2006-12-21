@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-#verifyLicense.pl
+#verifyLicense.pl 
 #usage ./verifyLicense.pl licensefile src-dir
 
 use warnings;
