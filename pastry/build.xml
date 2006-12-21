@@ -77,49 +77,7 @@
   </target>
 
   
-  
-  <!-- Beautify -->
-  
-  <!-- We want to do this so the line numbers match up with the prefixed license -->
-  <target name="beautifythencompile">    
-    <antcall target="beautifyandlicense"/>
-    <antcall target="compile-epost"/>    
-  </target>
-  
-  <target name="beautifyandlicense" unless="dontbeautify">
-    <antcall target="beautify"/>
-    <antcall target="appendlicense"/>
-  </target>  
- 
-  <target name="appendthencompile">
-    <antcall target="appendlicense"/>
-    <antcall target="compile"/>
-  </target>
-  
-  <target name="beautify" depends="init">
-    <pathconvert refid="pretty.classpath"
-                 pathsep=":"
-                 property="pretty.classpath.path"/>
-    <taskdef name="pretty" 
-             classname="org.acm.seguin.ant.Pretty" 
-             classpath="${pretty.classpath.path}"/>
-    <pretty settingsDir="${pretty.dir}" compileDir="${build.dir}">      
-      <fileset dir="${src.dir}" includes="**/*.java"> 
-        <exclude name="rice/p2p/util/Base64.java"/> <!-- this file blows up Pretty -->
-      </fileset> 
-    </pretty>  
-  </target> 
-
-  <target name="compileappend" depends="init">
-    <javac srcdir="${pretty.lib.dir}"
-           destdir="."
-           deprecation="yes"
-           debuglevel="lines,vars,source"
-           debug="true">
-    </javac>
-  </target> 
-
-  <target name="appendlicense" depends="compileappend">
+    <target name="appendlicense">
     <taskdef name="append" 
              classname="Append"
              classpath="."/>
@@ -128,6 +86,7 @@
     </append>
   </target>  
   
+
 
   <!-- todo add *.html, *.htm -->
   <target name="javadoc" depends="init" unless="dontjavadoc">
@@ -230,7 +189,7 @@
 
   <!-- ********************** freepastry release section ********************* -->
   
-  <target name="freepastry-jar" depends="beautifythencompile">
+  <target name="freepastry-jar" depends="compile-epost">
     <jar destfile="pastry.jar" compress="true">
       <fileset dir="${build.dir}">
         <include name="rice/*.class"/>
