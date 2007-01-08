@@ -147,16 +147,20 @@ The second difference is in the way characters outside the BMP are encoded. In s
 
 EpochInetSocketAddress:  
   EpochInetSocketAddress: (IPV4 FreePastry Version 0):
+  +-+-+-+-+-+-+-+-+
+  +   numAddrs    +
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  +   numAddrs    +   internet address 0                    ...   +
+  +   internet address 0                                          +
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  +   (cont'd)    +   port 0                      +   inet addr1  +
+  +   port 0                      +
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  + (cont'd)                                      +   port 1...   +
+  +   internet address 1                                          +
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  +   (cont'd)    +  ...
+  +   port 1                      +
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  ... repeated up to numAddrs
+  +   internet address k                                          +
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  +   port k                      +       ...
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   + epoch (long)                                                  +
   +                                                               +
