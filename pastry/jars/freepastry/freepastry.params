@@ -328,14 +328,22 @@ logging_packageOnly = true
 
 logging_date_format = 
 logging_enable=true
-log_rotating_date_format = yyyyMMdd.HHmmss.SSS
-
-environment_logToFile = false
-fileLogManager_filePrefix = 
-fileLogManager_fileSuffix = .log
-fileLogManager_keepLinePrefix = false
 
 # 24 hours
 log_rotate_interval = 86400000
+# the name of the active log file, and the filename prefix of rotated log
+log_rotate_filename = freepastry.log
+# the format of the date for the rotating log
+log_rotating_date_format = yyyyMMdd.HHmmss.SSS
+
+# true will tell the environment to ues the FileLogManager
+environment_logToFile = false
+# the prefix for the log files (otherwise will be named after the nodeId)
+fileLogManager_filePrefix = 
+# the suffix for the log files
+fileLogManager_fileSuffix = .log
+# wether to keep the line prefix (declaring the node id) for each line of the log
+fileLogManager_keepLinePrefix = false
+
 
 
