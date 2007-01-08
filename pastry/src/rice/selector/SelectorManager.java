@@ -40,6 +40,7 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.Destructable;
+import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.environment.time.TimeSource;
 
@@ -115,9 +116,24 @@ public class SelectorManager extends Thread implements Timer, Destructable {
               + e);
     }
     lastTime = timeSource.currentTimeMillis();
-    start();
   }
 
+  Environment environment;
+  
+  /**
+   * Can only be called once.  The rest of the time the argument is rejected.
+   * This is needed so that when the NodeFactory clones the Environment, it doesn't
+   * get restarted/have multiple different environments etc...
+   * 
+   * @param env
+   */
+  public void setEnvironment(Environment env) {
+    if (env == null) throw new IllegalArgumentException("env is null!");
+    if (environment != null) return;
+    environment = env;
+    start();
+  }
+  
   /**
    * Method which asks the Selector Manager to add the given key to the
    * cancelled set. If noone calls register on this key during the rest of this
@@ -216,13 +232,13 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * to be started when this thread's start() method is invoked.
    */
   public void run() {
-    try {
-      //System.out.println("SelectorManager starting...");
-      if (logger.level <= Logger.INFO) logger.log("SelectorManager -- " + instance + " starting...");
+    //System.out.println("SelectorManager starting...");
+    if (logger.level <= Logger.INFO) logger.log("SelectorManager -- " + instance + " starting...");
 
-      lastTime = timeSource.currentTimeMillis();
-      // loop while waiting for activity
-      while (running) {
+    lastTime = timeSource.currentTimeMillis();
+    // loop while waiting for activity
+    while (running) {
+      try {
         if (useLoopListeners)
           notifyLoopListeners();
 
@@ -234,35 +250,34 @@ public class SelectorManager extends Thread implements Timer, Destructable {
         doInvocations();
         if (select) {
           doSelections();
-//          synchronized (selector) {
-            int selectTime = SelectorManager.TIMEOUT;
-            if (timerQueue.size() > 0) {
-              TimerTask first = (TimerTask) timerQueue.peek();
-              selectTime = (int) (first.nextExecutionTime - timeSource
-                  .currentTimeMillis());
-            }
-  
-            select(selectTime);
-            
-            if (cancelledKeys.size() > 0) {
-              Iterator i = cancelledKeys.iterator();
-  
-              while (i.hasNext())
-                ((SelectionKey) i.next()).cancel();
-  
-              cancelledKeys.clear();
-  
-              // now, hack to make sure that all cancelled keys are actually
-              // cancelled (dumb)
-              selector.selectNow();
-            }
-//          }
+          int selectTime = SelectorManager.TIMEOUT;
+          if (timerQueue.size() > 0) {
+            TimerTask first = (TimerTask) timerQueue.peek();
+            selectTime = (int) (first.nextExecutionTime - timeSource
+                .currentTimeMillis());
+          }
+
+          select(selectTime);
+          
+          if (cancelledKeys.size() > 0) {
+            Iterator i = cancelledKeys.iterator();
+
+            while (i.hasNext())
+              ((SelectionKey) i.next()).cancel();
+
+            cancelledKeys.clear();
+
+            // now, hack to make sure that all cancelled keys are actually
+            // cancelled (dumb)
+            selector.selectNow();
+          }
         } // if select
+      } catch (Throwable t) {
+        if (logger.level <= Logger.SEVERE) logger.logException(
+            "ERROR (SelectorManager.run): " , t);
+        environment.getExceptionStrategy().handleException(this, t);
+        System.exit(-1);
       }
-    } catch (Throwable t) {
-      if (logger.level <= Logger.SEVERE) logger.logException(
-          "ERROR (SelectorManager.run): " , t);
-      System.exit(-1);
     }
     invocations.clear();
     loopObservers.clear();

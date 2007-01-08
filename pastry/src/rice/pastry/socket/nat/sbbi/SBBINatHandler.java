@@ -46,7 +46,6 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.socket.nat.NATHandler;
 
-import net.sbbi.upnp.Discovery;
 import net.sbbi.upnp.impls.InternetGatewayDevice;
 import net.sbbi.upnp.messages.*;
 
@@ -71,7 +70,7 @@ public class SBBINatHandler implements NATHandler {
 
   public synchronized InetAddress findFireWall(InetAddress bindAddress)
       throws IOException {
-    NetworkInterface ni = NetworkInterface.getByInetAddress(bindAddress);
+//    NetworkInterface ni = NetworkInterface.getByInetAddress(bindAddress);
     if (searchedForFireWall)
       return fireWallExternalAddress;
     searchedForFireWall = true;

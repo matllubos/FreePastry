@@ -35,14 +35,12 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 package rice.pastry;
 
-import java.io.IOException;
 import java.util.*;
 
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
-import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
@@ -238,7 +236,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
       nodeIsReady(true);
 
       setChanged();
-      notifyObservers(new Boolean(true));
+      notifyObservers(Boolean.valueOf(true));
 
       if (neverBeenReady) {
         // notify applications
@@ -253,6 +251,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
 
       // signal any apps that might be waiting for the node to get ready
       synchronized (this) {
+        // NN: not a problem, because we already changed the state in the calling method
         notifyAll();
       }
     } else {

@@ -44,17 +44,13 @@ import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.NodeSet;
 import rice.pastry.PastryNode;
-import rice.pastry.NodeHandleFactory;
 import rice.pastry.client.PastryAppl;
-import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.SendOptions;
-import rice.selector.TimerTask;
 
 /**
  * This class serves as gluecode, which allows applications written for the common
@@ -68,10 +64,7 @@ import rice.selector.TimerTask;
 public class PastryEndpoint extends PastryAppl implements Endpoint {
 
   protected Application application;
-  
-  protected String instance;
-  
-  
+    
   class PEDeserializer implements MessageDeserializer {
     public Message deserialize(InputBuffer buf, short type, int priority,
         NodeHandle sender) throws IOException {
@@ -405,7 +398,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     }
   }
 
-  public final boolean enrouteMessage(Message msg, Id key, NodeHandle nextHop, SendOptions opt) {
+  public final boolean enrouteMessage(rice.pastry.messaging.Message msg, rice.pastry.Id key, rice.pastry.NodeHandle nextHop, SendOptions opt) {
     if (msg instanceof RouteMessage) {
       if (logger.level <= Logger.FINER) logger.log(
           "[" + thePastryNode + "] forward " + msg);
@@ -504,12 +497,12 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     return thePastryNode.getEnvironment();
   }
 
-  /**
-   * Translate to a pastry.NodeHandle, otherwise, this is a passthrough function.
-   */
-  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout) {
-    connect((rice.pastry.NodeHandle)handle, receiver, timeout);
-  }
+//  /**
+//   * Translate to a pastry.NodeHandle, otherwise, this is a passthrough function.
+//   */
+//  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout) {
+//    connect((rice.pastry.NodeHandle)handle, receiver, timeout);
+//  }
 
   public String toString() {
     return "PastryEndpoint "+application+" "+instance+" "+getAddress();

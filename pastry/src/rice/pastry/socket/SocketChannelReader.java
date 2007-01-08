@@ -41,12 +41,9 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 
-import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
-import rice.pastry.messaging.Message;
-import rice.pastry.routing.RouteMessage;
 
 /**
  * Class which serves as an "reader" for messages sent across the wire via the

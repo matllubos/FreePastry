@@ -39,7 +39,6 @@ package rice.pastry.socket;
 import java.io.*;
 import java.net.*;
 
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 
 /**
@@ -109,6 +108,7 @@ public class EpochInetSocketAddress implements Serializable {
    */
   public boolean equals(Object o) {
     if (o == null) return false;
+    if (! (o instanceof EpochInetSocketAddress)) return false;
     EpochInetSocketAddress that = (EpochInetSocketAddress)o;
     if (this.epoch != that.epoch) return false;
     return addressEquals(that);
@@ -172,7 +172,7 @@ public class EpochInetSocketAddress implements Serializable {
         s+=local[ctr];
         if (ctr < local.length-1) s+=":";  
       }
-      throw new RuntimeException("ArrayIndexOutOfBoundsException in "+this+".getAddress("+local+")",aioobe);
+      throw new RuntimeException("ArrayIndexOutOfBoundsException in "+this+".getAddress("+local.length+")",aioobe);
     }
     return address[address.length-1]; // the last address if we are on the same computer
   }
@@ -194,16 +194,20 @@ public class EpochInetSocketAddress implements Serializable {
 
   /**
    *   EpochInetSocketAddress: (IPV4):
+   *   +-+-+-+-+-+-+-+-+
+   *   +   numAddrs    +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   numAddrs    +   internet address 0                    ...   +
+   *   +   internet address 0                                          +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   (cont'd)    +   port 0                      +   inet addr1  +
+   *   +   port 0                      +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   + (cont'd)                                      +   port 1...   +
+   *   +   internet address 1                                          +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   (cont'd)    +  ...
+   *   +   port 1                      +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   ... repeated up to numAddrs
+   *   +   internet address k                                          +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   +   port k                      +       ...
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    *   + epoch (long)                                                  +
    *   +                                                               +
@@ -230,16 +234,20 @@ public class EpochInetSocketAddress implements Serializable {
 
   /**
    *   EpochInetSocketAddress: (IPV4):
+   *   +-+-+-+-+-+-+-+-+
+   *   +   numAddrs    +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   numAddrs    +   internet address 0                    ...   +
+   *   +   internet address 0                                          +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   (cont'd)    +   port 0                      +   inet addr1  +
+   *   +   port 0                      +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   + (cont'd)                                      +   port 1...   +
+   *   +   internet address 1                                          +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   (cont'd)    +  ...
+   *   +   port 1                      +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   ... repeated up to numAddrs
+   *   +   internet address k                                          +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   +   port k                      +       ...
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    *   + epoch (long)                                                  +
    *   +                                                               +

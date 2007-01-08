@@ -39,8 +39,6 @@ package rice.pastry.socket.messaging;
 import java.io.*;
 
 import rice.p2p.commonapi.rawserialization.*;
-import rice.pastry.*;
-import rice.pastry.leafset.*;
 
 /**
 * Message which represents a request to get the leafset from the remote node.
@@ -51,6 +49,10 @@ import rice.pastry.leafset.*;
 */
 public class LeafSetRequestMessage extends SocketMessage {
 
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 4037491659184267798L;
   public static final short TYPE = 4;
   /**
   * Constructor

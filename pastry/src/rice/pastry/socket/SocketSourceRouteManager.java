@@ -36,10 +36,6 @@ if advised of the possibility of such damage.
 package rice.pastry.socket;
 
 import java.io.*;
-import java.lang.ref.WeakReference;
-import java.net.*;
-import java.nio.*;
-import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.logging.Logger;
@@ -50,15 +46,10 @@ import rice.environment.time.TimeSource;
 //import rice.p2p.commonapi.AppSocketReceiver;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.exception.NodeIsDeadException;
-import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.p2p.util.TimerWeakHashMap;
-import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
-import rice.pastry.socket.messaging.*;
-import rice.selector.*;
-import rice.selector.TimerTask;
 
 /**
  * Class which keeps track of the best routes to remote nodes.  This class
@@ -1164,7 +1155,7 @@ public class SocketSourceRouteManager {
           this.best = null;
           this.liveness = SocketNodeHandle.LIVENESS_DEAD;
           if (address != null) address.update(SocketNodeHandle.DECLARED_DEAD);   
-          manager.declaredDead(address.eaddress);
+          if (address.eaddress != null) manager.declaredDead(address.eaddress);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be dead.");
           break;
       }

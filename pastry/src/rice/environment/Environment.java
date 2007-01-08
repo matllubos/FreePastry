@@ -42,6 +42,8 @@ import java.io.IOException;
 import java.util.*;
 
 import rice.Destructable;
+import rice.environment.exception.ExceptionStrategy;
+import rice.environment.exception.simple.SimpleExceptionStrategy;
 import rice.environment.logging.*;
 import rice.environment.logging.file.FileLogManager;
 import rice.environment.logging.simple.SimpleLogManager;
@@ -76,6 +78,7 @@ public class Environment implements Destructable {
   private LogManager logManager;
   private Parameters params;
   private Logger logger;
+  private ExceptionStrategy exceptionStrategy;
 
   private HashSet destructables = new HashSet();
   
@@ -90,13 +93,14 @@ public class Environment implements Destructable {
    * @param lm the LogManager.  Default: rice.environment.logging.simple.SimpleLogManager
    * @param props the Properties.  Default: empty properties
    */
-  public Environment(SelectorManager sm, Processor proc, RandomSource rs, TimeSource time, LogManager lm, Parameters params) {
+  public Environment(SelectorManager sm, Processor proc, RandomSource rs, TimeSource time, LogManager lm, Parameters params, ExceptionStrategy strategy) {
     this.selectorManager = sm;    
     this.randomSource = rs;
     this.time = time; 
     this.logManager = lm;
     this.params = params;
     this.processor = proc;
+    this.exceptionStrategy = strategy;
     
     if (params == null) {
       throw new IllegalArgumentException("params cannot be null"); 
@@ -104,6 +108,8 @@ public class Environment implements Destructable {
     
     // choose defaults for all non-specified parameters
     chooseDefaults();
+    
+    selectorManager.setEnvironment(this);
     
 //    addDestructable(this.selectorManager);
 //    addDestructable(this.processor);
@@ -118,7 +124,7 @@ public class Environment implements Destructable {
    * @throws IOException
    */
   public Environment(String[] orderedDefaultFiles, String paramFileName) {
-    this(null,null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName));
+    this(null,null,null,null,null,new SimpleParameters(orderedDefaultFiles,paramFileName), null);
   }
   
   public static Environment directEnvironment(int randomSeed) {
@@ -141,7 +147,7 @@ public class Environment implements Destructable {
     dts.setSelectorManager(selector);
     Processor proc = new SimProcessor(selector);
     Environment ret = new Environment(selector,proc,rs,dts,lm,
-        params);
+        params, new SimpleExceptionStrategy());
     return ret;
   }
   
@@ -184,6 +190,14 @@ public class Environment implements Destructable {
         processor = generateDefaultProcessor(); 
       }
     }
+    
+    if (exceptionStrategy == null) {
+      exceptionStrategy = generateDefaultExceptionStrategy(); 
+    }
+  }
+
+  public static ExceptionStrategy generateDefaultExceptionStrategy() {
+    return new SimpleExceptionStrategy();
   }
   
   public static RandomSource generateDefaultRandomSource(Parameters params, LogManager logging) {
@@ -274,6 +288,16 @@ public class Environment implements Destructable {
   
   public void removeDestructable(Destructable destructable) {
     destructables.remove(destructable);
+  }
+
+  public ExceptionStrategy getExceptionStrategy() {
+    return exceptionStrategy;
+  }
+  
+  public ExceptionStrategy setExceptionStrategy(ExceptionStrategy newStrategy) {
+    ExceptionStrategy ret = exceptionStrategy;
+    exceptionStrategy = newStrategy;
+    return ret;
   }
 }
 

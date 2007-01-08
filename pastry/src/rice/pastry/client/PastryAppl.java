@@ -46,7 +46,6 @@ import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
 import java.io.IOException;
-import java.util.*;
 
 /**
  * A PastryAppl is an abstract class that every Pastry application
@@ -427,8 +426,8 @@ public abstract class PastryAppl /*implements Observer*/
   /**
    * Called to open an ApplicationLevelSocket
    */
-  public void connect(NodeHandle handle, AppSocketReceiver receiver, int timeout) {
-    thePastryNode.connect(handle, receiver, this, timeout);    
+  public void connect(rice.p2p.commonapi.NodeHandle handle, AppSocketReceiver receiver, int timeout) {
+    thePastryNode.connect((rice.pastry.NodeHandle)handle, receiver, this, timeout);    
   }  
 
   /**

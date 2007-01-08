@@ -49,7 +49,6 @@ import rice.pastry.*;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.dist.DistPastryNode;
 import rice.pastry.messaging.*;
-import rice.pastry.socket.messaging.LeafSetResponseMessage;
 import rice.selector.TimerTask;
 
 /**
@@ -193,7 +192,7 @@ public class SocketPastryNode extends DistPastryNode {
       Boolean resultB = (Boolean) ec.getResult();
       boolean result = resultB.booleanValue();
       if (result) {
-        c.receiveResult(new Boolean(true)); 
+        c.receiveResult(Boolean.valueOf(true)); 
         return;
       } 
       try {
@@ -202,7 +201,7 @@ public class SocketPastryNode extends DistPastryNode {
         throw new RuntimeException(ie); 
       }
     }
-    c.receiveResult(new Boolean(false));
+    c.receiveResult(Boolean.valueOf(false));
   }
   
   // this code tests the firewall using a ping
@@ -216,7 +215,7 @@ public class SocketPastryNode extends DistPastryNode {
       public void run() {
         synchronized(fireWallContinuations) {
           if (fireWallContinuations.remove(c)) {
-            c.receiveResult(new Boolean(false));
+            c.receiveResult(Boolean.valueOf(false));
           }          
         }    
       }    
@@ -231,7 +230,7 @@ public class SocketPastryNode extends DistPastryNode {
       public void pingResponse(SourceRoute path, long RTT, long timeHeardFrom) {
         synchronized(fireWallContinuations) {
           if (fireWallContinuations.remove(c)) {
-            c.receiveResult(new Boolean(true));
+            c.receiveResult(Boolean.valueOf(true));
           }          
         }    
       }    

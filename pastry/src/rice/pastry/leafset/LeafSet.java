@@ -65,7 +65,7 @@ public class LeafSet extends Observable implements Serializable {
   private int theSize;
 
   // can get backup entries from this when we remove
-  RoutingTable routingTable;
+  transient RoutingTable routingTable;
   
   private LeafSet(LeafSet that) {
     this(that, true); 
@@ -103,6 +103,17 @@ public class LeafSet extends Observable implements Serializable {
     ccwSet = new SimilarSet(this, localNode, size/2, false);
   }
 
+  /**
+   * Internal method for reading in this data object
+   *
+   * @param ois The current input stream
+   */
+  private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    
+    observe = true;
+  }
+  
   /**
    * Puts a NodeHandle into the set.
    *
@@ -216,8 +227,8 @@ public class LeafSet extends Observable implements Serializable {
    */
   public void remove(NodeHandle nh)
   {
-    NodeHandle res1 = cwSet.remove(nh);
-    NodeHandle res2 = ccwSet.remove(nh);
+    cwSet.remove(nh);
+    ccwSet.remove(nh);
   }
 
   /**

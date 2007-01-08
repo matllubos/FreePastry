@@ -69,9 +69,6 @@ public abstract class DistPastryNode extends PastryNode {
   // the list of network listeners
   private Vector listeners;
 
-  // the list of errors
-  private static Vector errors = new Vector();
-
   // join retransmission stuff
   private ScheduledMessage joinEvent;
 

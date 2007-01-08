@@ -41,14 +41,12 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.messaging.Message;
 import rice.pastry.socket.messaging.*;
 import rice.selector.SelectionKeyHandler;
-import rice.pastry.NodeHandle;
 
 /**
  * Private class which is tasked with reading the greeting message off of a
@@ -246,7 +244,7 @@ class SocketManager extends SelectionKeyHandler {
         while (i.hasNext()) {
           Object o = i.next();
 
-          if ((o instanceof Message) && (manager.manager != null)) 
+          if ((o instanceof SocketBuffer) && (manager.manager != null)) 
             manager.manager.reroute(path.getLastHop(), (SocketBuffer) o);
         } 
 

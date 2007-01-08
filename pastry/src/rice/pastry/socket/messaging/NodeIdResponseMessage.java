@@ -38,9 +38,7 @@ package rice.pastry.socket.messaging;
 
 import java.io.*;
 
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
-import rice.pastry.*;
 import rice.pastry.Id;
 
 /**
@@ -52,6 +50,11 @@ import rice.pastry.Id;
  * @author Alan Mislove
  */
 public class NodeIdResponseMessage extends SocketMessage {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -4729909593019149492L;
+
   public static final short TYPE = 7;
 
   private Id nid;

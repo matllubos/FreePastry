@@ -55,19 +55,22 @@ public class NodeSet implements NodeSetI, Serializable {
   
   static final long serialVersionUID = 4410658508346287677L;
   
-  private Vector set;
+  /**
+   * of NodeHandle
+   */
+  private Vector<NodeHandle> set;
 
   /**
    * Constructor.
    */
   public NodeSet() {
-    set = new Vector();
+    set = new Vector<NodeHandle>();
   }
 
   /**
    * Constructor.
    */
-  public NodeSet(Vector s) {
+  public NodeSet(Vector<NodeHandle> s) {
     set = s;
   }
 
@@ -104,7 +107,7 @@ public class NodeSet implements NodeSetI, Serializable {
     for (int i = 0; i < set.size(); i++) {
       int a = random.nextInt(set.size());
       int b = random.nextInt(set.size());
-      Object tmp = set.elementAt(a);
+      NodeHandle tmp = set.elementAt(a);
       set.setElementAt(set.elementAt(b), a);
       set.setElementAt(tmp, b);
     }
@@ -119,8 +122,6 @@ public class NodeSet implements NodeSetI, Serializable {
    */
 
   public NodeHandle get(Id nid) {
-    NodeHandle h;
-
     try {
       return (NodeHandle) set.elementAt(getIndex(nid));
     } catch (Exception e) {
@@ -352,7 +353,12 @@ public class NodeSet implements NodeSetI, Serializable {
    *         found.
    */
   public rice.p2p.commonapi.NodeHandle getHandle(rice.p2p.commonapi.Id id) {
-    return getHandle(id);
+    synchronized(set) {
+      for (NodeHandle nh : set) {
+        if (nh.getId().equals(id)) return nh; 
+      }
+    }
+    return null;
   }
 
   /**

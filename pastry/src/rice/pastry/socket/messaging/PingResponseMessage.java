@@ -36,13 +36,9 @@ if advised of the possibility of such damage.
 
 package rice.pastry.socket.messaging;
 
-import java.net.*;
 import java.io.*;
 
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.pastry.socket.*;
-import rice.pastry.*;
 
 /**
 * Class which represents a "ping" message sent through the
@@ -54,6 +50,10 @@ import rice.pastry.*;
 */
 public class PingResponseMessage extends DatagramMessage {
       
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -2835241938747821133L;
   public static final short TYPE = 9;
 
   /**

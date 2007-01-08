@@ -265,16 +265,17 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
    * @param o The node handle
    * @param arg the event type (PROXIMITY_CHANGE, DECLARED_LIVE, DECLARED_DEAD)
    */
-  public void update(Observable o, Object arg) {
-    // if the node is declared dead, remove it immediately
-    if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
-      remove((NodeHandle) o);
-    }
-    if (((Integer) arg) == NodeHandle.DECLARED_LIVE) {
-      leafSet.put((NodeHandle) o);
-    }
-
-  }
+//  public void update(Observable o, Object arg) {
+//    if (o instanceof NodeHandle) {
+//      // if the node is declared dead, remove it immediately
+//      if (((Integer) arg) == NodeHandle.DECLARED_DEAD) {
+//        remove((NodeHandle) o);
+//      }
+//      if (((Integer) arg) == NodeHandle.DECLARED_LIVE) {
+//        leafSet.put((NodeHandle) o);
+//      }
+//    }
+//  }
 
   /**
    * Finds the NodeHandle associated with the Id.
@@ -627,9 +628,9 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
    * @return the handle associated with that id or null if no such handle is
    *         found.
    */
-  public rice.p2p.commonapi.NodeHandle getHandle(rice.p2p.commonapi.Id id) {
-    return getHandle((Id) id);
-  }
+//  public rice.p2p.commonapi.NodeHandle getHandle(rice.p2p.commonapi.Id id) {
+//    return getHandle((Id) id);
+//  }
 
   /**
    * Gets the ith element in the set.

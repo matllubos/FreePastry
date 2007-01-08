@@ -77,7 +77,7 @@ public abstract class AbstractLogManager implements LogManager {
   protected boolean packageOnly = true;
   
   protected boolean enabled;
-  protected static PrintStream nullPrintStream = new PrintStream(new NullOutputStream());
+  protected static final PrintStream nullPrintStream = new PrintStream(new NullOutputStream());
 
   public DateFormatter dateFormatter;
   

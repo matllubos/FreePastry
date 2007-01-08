@@ -35,7 +35,6 @@ if advised of the possibility of such damage.
 ********************************************************************************/
 package rice.pastry;
 
-import java.util.*;
 import java.io.*;
 
 import rice.p2p.commonapi.rawserialization.*;
@@ -49,6 +48,11 @@ import rice.p2p.commonapi.rawserialization.*;
  */
 
 public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -361018850912613915L;
+
   private boolean empty;
 
   private Id ccw;
@@ -99,6 +103,12 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
     this.cw = o.cw;
   }
 
+  public int hashCode() {
+    if (empty) return 0;
+    if (isFull()) return 1;
+    return ccw.hashCode()^cw.hashCode();
+  }
+  
   /**
    * equality operator
    * 
@@ -106,6 +116,8 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
    * @return true if the IdRanges are equal
    */
   public boolean equals(Object obj) {
+    if (obj == null) return false;
+    if (!(obj instanceof IdRange)) return false;
     IdRange o = (IdRange) obj;
 
     if (empty && o.empty)
@@ -195,20 +207,20 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
    * 
    * @param ccw the new id at the counterclockwise edge of the range (inclusive)
    */
-  private void setCCW(Id ccw) {
-    this.ccw = ccw;
-    empty = false;
-  }
+//  private void setCCW(Id ccw) {
+//    this.ccw = ccw;
+//    empty = false;
+//  }
 
   /**
    * set clockwise edge of range
    * 
    * @param cw the new id at the clockwise edge of the range (exclusive)
    */
-  private void setCW(Id cw) {
-    this.cw = cw;
-    empty = false;
-  }
+//  private void setCW(Id cw) {
+//    this.cw = cw;
+//    empty = false;
+//  }
 
   /**
    * merge two ranges if this and other don't overlap, are not adjacent, and

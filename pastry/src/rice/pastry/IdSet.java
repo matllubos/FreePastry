@@ -36,20 +36,28 @@ if advised of the possibility of such damage.
 
 package rice.pastry;
 
-import java.io.Serializable;
 import java.util.*;
 import java.security.*;
 import rice.p2p.util.*;
 
 /**
  * Represents a set of Pastry ids.
- * *
+ * 
+ * needs to be final otherwise:
+ * clone method does not call super.clone()
+ * This non-final class defines a clone() method that does not call super.
+ * clone(). If this class ("A") is extended by a subclass ("B"), and the subclass 
+ * B calls super.clone(), then it is likely that B's clone() method will return an 
+ * object of type A, which violates the standard contract for clone(). 
+ * If all clone() methods call super.clone(), then they are guaranteed to use 
+ * Object.clone(), which always returns an object of the correct type.
+ * 
  * @version $Id$
  *
  * @author Peter Druschel
  */
 
-public class IdSet implements rice.p2p.commonapi.IdSet {
+public final class IdSet implements rice.p2p.commonapi.IdSet {
   
   
   static final long serialVersionUID = -1565571743719309172L;

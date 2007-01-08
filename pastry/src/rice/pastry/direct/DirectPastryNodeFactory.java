@@ -120,7 +120,8 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
           this.environment.getRandomSource(),
           this.environment.getTimeSource(),
           ((CloneableLogManager)this.environment.getLogManager()).clone("0x"+nodeId.toStringBare()),
-          this.environment.getParameters());
+          this.environment.getParameters(), 
+          this.environment.getExceptionStrategy());
       }
     }    
 
@@ -190,7 +191,7 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * This CancellableTask is just a placeholder.
    * @author Jeff Hoye
    */
-  class NullCancellableTask implements CancellableTask {
+  static class NullCancellableTask implements CancellableTask {
     public void run() {
     }
 

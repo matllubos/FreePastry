@@ -36,11 +36,7 @@ if advised of the possibility of such damage.
 
 package rice.pastry.socket.messaging;
 
-import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.socket.*;
-
-import java.net.*;
 
 /**
  * Class which represents an abstract control message

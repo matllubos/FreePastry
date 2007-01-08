@@ -45,7 +45,6 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.time.TimeSource;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.util.*;
 import rice.pastry.*;
@@ -78,7 +77,7 @@ public class PingManager extends SelectionKeyHandler {
 //  protected static byte[] HEADER_SHORT_PING_RESPONSE = new byte[] {0x31, 0x1C, 0x0E, 0x12};  
   
   // the length of the ping header
-  public static int HEADER_SIZE = SocketCollectionManager.PASTRY_MAGIC_NUMBER.length;
+  public static final int HEADER_SIZE = SocketCollectionManager.PASTRY_MAGIC_NUMBER.length;
 
   // the size of the buffer used to read incoming datagrams must be big enough
   // to encompass multiple datagram packets
@@ -203,7 +202,7 @@ public class PingManager extends SelectionKeyHandler {
     if (logger.level <= Logger.FINE) logger.log(
         "(PM) Sending Ping["+curTime+"] via path " + path + "("+path.hashCode()+") local " + localAddress+" for "+prl);
 
-    lastPingTime.put(path, new Long(curTime));
+    lastPingTime.put(path, Long.valueOf(curTime));
     
     addPingResponseListener(path, prl);    
     
@@ -699,6 +698,9 @@ public class PingManager extends SelectionKeyHandler {
    * handler.
    */
   protected void readHeader(InetSocketAddress address) throws IOException {
+    if (buffer.remaining() < HEADER_SIZE) {
+      throw new IOException("Not a pastry message from "+address+": message size:"+buffer.remaining());
+    }
     byte[] header = new byte[HEADER_SIZE];
     buffer.get(header, 0, HEADER_SIZE);
     if (!Arrays.equals(header, SocketCollectionManager.PASTRY_MAGIC_NUMBER)) throw new IOException("Not a pastry message from "+address+":"+header[0]+","+header[1]+","+header[2]+","+header[3]);

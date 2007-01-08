@@ -39,11 +39,7 @@ package rice.pastry.socket.messaging;
 import java.io.*;
 import java.net.*;
 
-import rice.environment.Environment;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
-import rice.pastry.socket.*;
-import rice.pastry.*;
 
 /**
 * Class which represents a request for the external visible IP address
@@ -53,6 +49,11 @@ import rice.pastry.*;
  * @author Alan Mislove
  */
 public class IPAddressResponseMessage extends DatagramMessage {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 7249313366944169691L;
+
   public static final short TYPE = 3;
 
   protected InetSocketAddress address;

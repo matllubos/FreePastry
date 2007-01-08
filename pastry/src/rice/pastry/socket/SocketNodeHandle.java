@@ -41,13 +41,11 @@ import java.net.*;
 import java.util.*;
 
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.Id;
 import rice.pastry.PastryNode;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
-import rice.pastry.socket.SocketBuffer.SocketDataInputStream;
 import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
 
 /**
@@ -69,7 +67,7 @@ public class SocketNodeHandle extends DistNodeHandle {
   public static final int LIVENESS_DEAD_FOREVER = 4;
 
   // the default distance, which is used before a ping
-  public static int DEFAULT_PROXIMITY = 60*60*1000;
+  public static final int DEFAULT_PROXIMITY = 60*60*1000;
 
   protected EpochInetSocketAddress eaddress;
   

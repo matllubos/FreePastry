@@ -44,7 +44,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.*;
 
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.*;
 import rice.p2p.commonapi.exception.*;
 import rice.pastry.client.PastryAppl;
@@ -95,7 +94,7 @@ public class DirectAppSocket {
     DirectNodeHandle localNodeHandle;
     int seq = 0;
     
-    boolean inputClosed;
+//    boolean inputClosed;
     boolean outputClosed;
     
     // these three are tightly related, and should only be modified in synchronized methods on DirectAppSocketEndpoint.this
@@ -128,7 +127,7 @@ public class DirectAppSocket {
       
       synchronized(this) {
         if (byteDeliveries.getFirst() == EOF) {
-          inputClosed = true;
+//          inputClosed = true;
           return -1;          
         }
         Iterator i = byteDeliveries.iterator();
@@ -307,7 +306,7 @@ public class DirectAppSocket {
     }
   
     public void shutdownInput() {
-      inputClosed = true;
+//      inputClosed = true;
     }
   
     public void close() {

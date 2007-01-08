@@ -39,7 +39,6 @@ package rice.pastry.socket.messaging;
 import java.io.*;
 
 import rice.p2p.commonapi.rawserialization.*;
-import rice.pastry.*;
 
 /**
  * Message which represents a request to get a node Id from the remote node.
@@ -53,6 +52,10 @@ import rice.pastry.*;
  */
 public class NodeIdRequestMessage extends SocketMessage {
 
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -8098453067976812984L;
   public static final short TYPE = 6;
 
   /**

@@ -42,7 +42,6 @@ import java.lang.ref.*;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
 import rice.selector.*;
@@ -52,7 +51,7 @@ public class TimerWeakHashSet implements WeakHashSet {
   static ReferenceQueue queue = new ReferenceQueue();
   
   static {
-    new Thread(new Runnable() {
+    Thread expunger = new Thread(new Runnable() {
     
       public void run() {
         try {
@@ -66,17 +65,20 @@ public class TimerWeakHashSet implements WeakHashSet {
         }
       }
     
-    },"TimerWeakHashSetExpunger").start();
+    },"TimerWeakHashSetExpunger");
+    
+    expunger.setDaemon(true);    
+    expunger.start();
   }
   
   private class SNHWeakReference extends WeakReference {
     EpochInetSocketAddress eaddress;
-    String refString; // for debugging
+//    String refString; // for debugging
     
     public SNHWeakReference(SocketNodeHandle referent) {
       super(referent, queue);
       eaddress = referent.eaddress;
-      refString = referent.toString();
+//      refString = referent.toString();
     }
      
     public void expunge() {

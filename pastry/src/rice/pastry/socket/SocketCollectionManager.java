@@ -50,9 +50,7 @@ import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.p2p.util.MathUtils;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
 import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
-import rice.pastry.socket.messaging.*;
 import rice.selector.*;
 
 /**
@@ -100,16 +98,16 @@ public class SocketCollectionManager extends SelectionKeyHandler {
   public static final byte[] HEADER_DIRECT = new byte[] {0x06, 0x1B, 0x49, 0x74};
   
   // the header which signifies a normal socket
-  protected static byte[] HEADER_SOURCE_ROUTE = new byte[] {0x19, 0x53, 0x13, 0x00};
+  protected static final byte[] HEADER_SOURCE_ROUTE = new byte[] {0x19, 0x53, 0x13, 0x00};
   
   // the length of the socket header
-  public static int HEADER_SIZE = HEADER_DIRECT.length;
+  public static final int HEADER_SIZE = HEADER_DIRECT.length;
   
   public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   
   // this is for historical purposes, and can definately be renamed
   // this got added in FP 2.0 when we added a magic number and version number
-  public static int TOTAL_HEADER_SIZE = PASTRY_MAGIC_NUMBER.length+4+HEADER_SIZE;
+  public static final int TOTAL_HEADER_SIZE = PASTRY_MAGIC_NUMBER.length+4+HEADER_SIZE;
   
   // the pastry node which this manager serves
   SocketPastryNode pastryNode;

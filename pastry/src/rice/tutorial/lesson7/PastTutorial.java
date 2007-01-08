@@ -92,7 +92,11 @@ public class PastTutorial {
       // This will return null if we there is no node at that location
       NodeHandle bootHandle = ((SocketPastryNodeFactory) factory)
           .getNodeHandle(bootaddress);
-
+      if (curNode > 0) {
+        InetSocketAddress[] bootaddressArray = new InetSocketAddress[1];
+        bootaddressArray[0] = bootaddress;      
+        SocketPastryNodeFactory.verifyConnection(10000, bootaddress, bootaddressArray, env, env.getLogManager().getLogger(PastTutorial.class, null));     
+      }      
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
       PastryNode node = factory.newNode((rice.pastry.NodeHandle) bootHandle);
@@ -121,10 +125,11 @@ public class PastTutorial {
       String storageDirectory = "./storage"+node.getId().hashCode();
 
       // create the persistent part
-      Storage stor = new PersistentStorage(idf, storageDirectory, 4 * 1024 * 1024, node
-          .getEnvironment());
+//      Storage stor = new PersistentStorage(idf, storageDirectory, 4 * 1024 * 1024, node
+//          .getEnvironment());
+      Storage stor = new MemoryStorage(idf);
       Past app = new PastImpl(node, new StorageManagerImpl(idf, stor, new LRUCache(
-          new MemoryStorage(idf), 512 * 1024, node.getEnvironment())), 3, "");
+          new MemoryStorage(idf), 512 * 1024, node.getEnvironment())), 0, "");
       
       apps.add(app);      
     }

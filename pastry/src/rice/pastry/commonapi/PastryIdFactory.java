@@ -41,9 +41,6 @@ import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.*;
 
-import java.lang.Comparable;
-import java.lang.ref.*;
-import java.io.*;
 import java.util.*;
 import java.security.*;
 

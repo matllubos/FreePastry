@@ -53,9 +53,9 @@ import rice.pastry.messaging.*;
  */
 
 public class DirectNodeHandle extends NodeHandle implements Observer {
-  private DirectPastryNode remoteNode;
-  public NetworkSimulator simulator;
-  protected Logger logger;
+  private transient DirectPastryNode remoteNode;
+  public transient NetworkSimulator simulator;
+
   /**
    * Constructor for DirectNodeHandle.
    *

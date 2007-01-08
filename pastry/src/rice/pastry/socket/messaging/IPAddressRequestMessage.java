@@ -37,13 +37,8 @@ if advised of the possibility of such damage.
 package rice.pastry.socket.messaging;
 
 import java.io.*;
-import java.net.*;
 
-import rice.environment.Environment;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
-import rice.pastry.socket.*;
-import rice.pastry.*;
 
 /**
 * Class which represents a request for the external visible IP address
@@ -54,6 +49,10 @@ import rice.pastry.*;
  */
 public class IPAddressRequestMessage extends DatagramMessage {
   
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 8262546476237933836L;
   public static final short TYPE = 2;
   
   /**

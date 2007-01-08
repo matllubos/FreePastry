@@ -41,7 +41,6 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.messaging.*;
 
 import java.io.*;
-import java.util.*;
 
 /**
  * Interface for handles to remote nodes.

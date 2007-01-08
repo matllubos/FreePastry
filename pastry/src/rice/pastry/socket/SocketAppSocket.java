@@ -42,13 +42,9 @@ import java.nio.channels.*;
 import java.util.*;
 
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.*;
 import rice.p2p.commonapi.exception.*;
-import rice.p2p.util.MathUtils;
 import rice.pastry.NetworkListener;
-import rice.pastry.messaging.Message;
-import rice.pastry.socket.messaging.*;
 import rice.selector.*;
 import rice.selector.TimerTask;
 
@@ -454,7 +450,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
     return channel.write(srcs, offset, length);
   }
 
-  public void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver) {
+  public synchronized void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver) {
     if (wantToRead) {
       reader = receiver; 
     }

@@ -40,19 +40,15 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
 import java.util.Vector;
 
 import rice.environment.Environment;
-import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.commonapi.PastryIdFactory;
-import rice.pastry.direct.*;
-import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.appsocket.*;
 import rice.pastry.standard.RandomNodeIdFactory;
@@ -94,10 +90,6 @@ public class Tutorial {
   
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
       PastryNode node = factory.newNode(bootHandle);
-      if (bootHandle == null) {
-        // This will return null if we there is no node at that location
-        bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
-      }
       
       // the node may require sending several messages to fully boot into the ring
       synchronized(node) {
@@ -143,7 +135,7 @@ public class Tutorial {
       bootaddress = new InetSocketAddress(bootaddr,bootport);    
       
       // launch our node!
-      Tutorial dt = new Tutorial(bindport, bootaddress, env);
+      new Tutorial(bindport, bootaddress, env);
       
       BlockingAppSocketFactory asf = new BlockingAppSocketFactory();
       SocketChannel sc = asf.connect(bootaddress, -1050614594);

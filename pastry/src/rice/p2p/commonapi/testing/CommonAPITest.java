@@ -556,6 +556,6 @@ public abstract class CommonAPITest {
       timeSource = new SimpleTimeSource(); 
     }
 
-    return new Environment(selector,proc,null,timeSource,logManager,params);
+    return new Environment(selector,proc,null,timeSource,logManager,params,null);
   }
 }

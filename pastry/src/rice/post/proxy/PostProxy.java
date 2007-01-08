@@ -1682,7 +1682,7 @@ public class PostProxy {
       SelectorManager selectorManager = Environment.generateDefaultSelectorManager(timeSource, logManager);
       Processor proc = Environment.generateDefaultProcessor();
       logManager.startRotateTask(selectorManager);
-      Environment env = new Environment(selectorManager, proc, randomSource, timeSource, logManager, parameters);
+      Environment env = new Environment(selectorManager, proc, randomSource, timeSource, logManager, parameters, null);
       environment = env;
       if (parameters.contains("pastry_proxy_connectivity_check_enable") &&
           !parameters.getBoolean("pastry_proxy_connectivity_check_enable")) {

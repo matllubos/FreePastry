@@ -37,7 +37,6 @@ if advised of the possibility of such damage.
 package rice.pastry;
 
 import java.io.*;
-import java.lang.Comparable;
 import java.lang.ref.*;
 import java.util.*;
 
@@ -424,18 +423,18 @@ public class Id implements rice.p2p.commonapi.Id {
    * @param i which bit to set.
    * @param v new value of bit
    */
-  private void setBit(int i, int v) {
-    int index = i / 32;
-    int shift = i % 32;
-    int val = Id[index];
-    int mask = (1 << shift);
-
-    if (v == 1) {
-      Id[index] = val | mask;
-    } else {
-      Id[index] = val & ~mask;
-    }
-  }
+//  private void setBit(int i, int v) {
+//    int index = i / 32;
+//    int shift = i % 32;
+//    int val = Id[index];
+//    int mask = (1 << shift);
+//
+//    if (v == 1) {
+//      Id[index] = val | mask;
+//    } else {
+//      Id[index] = val & ~mask;
+//    }
+//  }
 
 
   /**
@@ -990,6 +989,9 @@ public class Id implements rice.p2p.commonapi.Id {
    * @author amislove
    */
   public static class Distance implements rice.p2p.commonapi.Id.Distance {
+
+    private static final long serialVersionUID = 5464763824924998962L;
+    
     private int difference[];
 
     /**

@@ -174,7 +174,7 @@ public class Echo implements Application {
        */
       public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {   
         try {
-          long ret = socket.write(outs,0,outs.length);        
+          socket.write(outs,0,outs.length);        
           // see if we are done
           if (!out.hasRemaining()) {
             socket.close();           

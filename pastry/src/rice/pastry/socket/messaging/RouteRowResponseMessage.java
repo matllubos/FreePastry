@@ -38,10 +38,8 @@ package rice.pastry.socket.messaging;
 
 import java.io.*;
 
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
-import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
 /**
@@ -53,6 +51,11 @@ import rice.pastry.routing.*;
 * @author Alan Mislove
 */
 public class RouteRowResponseMessage extends SocketMessage {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 126923905375233048L;
+
   public static final short TYPE = 11;
 
   private RouteSet[] set;

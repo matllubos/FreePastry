@@ -63,7 +63,7 @@ public class CertificateServer {
 
     public Map arguments;
 
-    public static String METHOD = "GET";
+    public final static String METHOD = "GET";
 
     public Request(String _uri, Map _headers) {
       uri = _uri;
@@ -99,7 +99,7 @@ public class CertificateServer {
   }
 
   public static class GetRequest extends Request {
-    public static String METHOD = "GET";
+    public static final String METHOD = "GET";
 
     public GetRequest(String u, Map h) {
       super(u, h);
@@ -113,7 +113,7 @@ public class CertificateServer {
   public static class PostRequest extends Request {
     public String body;
 
-    public static String METHOD = "POST";
+    public static final String METHOD = "POST";
 
     public PostRequest(String u, Map h, StringBuffer _bodyBuf) {
       super(u, h);
@@ -135,7 +135,7 @@ public class CertificateServer {
   }
 
   public static class PutRequest extends PostRequest {
-    public static String METHOD = "PUT";
+    public static final String METHOD = "PUT";
 
     public PutRequest(String u, Map h, StringBuffer _bodyBuf) {
       super(u, h, _bodyBuf);

@@ -243,7 +243,7 @@ public interface Continuation {
 
     public synchronized void sleep() {
       try {
-        if (! done) {
+        while (! done) {
           wait();
         }
       } catch (InterruptedException e) {

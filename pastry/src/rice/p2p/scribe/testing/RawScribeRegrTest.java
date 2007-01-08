@@ -107,7 +107,6 @@ public class RawScribeRegrTest extends CommonAPITest {
     
     RawScribeRegrTest scribeTest = new RawScribeRegrTest(env);
     
-    
     scribeTest.start();
     env.destroy();
   }

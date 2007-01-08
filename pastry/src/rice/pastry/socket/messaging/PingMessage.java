@@ -37,13 +37,8 @@ if advised of the possibility of such damage.
 package rice.pastry.socket.messaging;
 
 import java.io.*;
-import java.net.*;
 
-import rice.environment.Environment;
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.pastry.socket.*;
-import rice.pastry.*;
 
 /**
  * Class which represents a "ping" message sent through the

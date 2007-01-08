@@ -41,7 +41,6 @@ package rice.pastry.socket;
 import java.io.*;
 import java.nio.ByteBuffer;
 
-import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.util.MathUtils;
 import rice.pastry.*;
@@ -74,7 +73,7 @@ public class SocketBuffer implements RawMessageDelivery {
   // low level stuff
   public static final int DEFAULT_BUFFER_SIZE = 1024;
   // Hack to not have to allocate buffers I know to be zero
-  public static final byte[] ZERO = new byte[8];
+  private static final byte[] ZERO = new byte[8];
   SocketDataInputStream str;
   private ByteBuffer buffer;
   ExposedDataOutputStream o;
@@ -141,6 +140,7 @@ public class SocketBuffer implements RawMessageDelivery {
     o.write(SocketCollectionManager.PASTRY_MAGIC_NUMBER);
     o.writeInt(0); // version
 //    o.write(PingManager.HEADER_PING, 0, PingManager.HEADER_PING.length);
+    // current hop
     o.writeByte((byte) 1);
     int numHops = path.getNumHops() + 1;
     o.writeByte((byte) (numHops));
@@ -223,7 +223,7 @@ public class SocketBuffer implements RawMessageDelivery {
    * @param msg
    */
   public void serialize(PRawMessage msg, boolean reset) throws IOException {
-    // asdf consider backing with a DataOutputStream to properly handle String
+    // consider backing with a DataOutputStream to properly handle String
 //    boolean done = false;
 //    while (!done) {
 //      try {
@@ -309,8 +309,8 @@ public class SocketBuffer implements RawMessageDelivery {
             new ByteArrayInputStream(buffer.array()));
        
         // don't forget to advance the stream past the header info
-        str.skipBytes(amtToSkip);
-        
+        int skipped = str.skipBytes(amtToSkip);
+        if (skipped != amtToSkip) throw new RuntimeException("Couldn't skip the right amount of bytes. Attempted:"+amtToSkip+" skipped:"+skipped);
         
 //        done = true;
 //      } catch (Exception e) {
@@ -410,11 +410,11 @@ public class SocketBuffer implements RawMessageDelivery {
 
   static class SocketDataInputStream extends DataInputStream implements
       InputBuffer {
-    ByteArrayInputStream bais;
+//    ByteArrayInputStream bais;
 
     public SocketDataInputStream(ByteArrayInputStream arg0) {
       super(arg0);
-      bais = arg0;
+//      bais = arg0;
     }
 
 //    public short peakShort() throws IOException {

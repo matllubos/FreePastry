@@ -40,6 +40,11 @@ package rice.pastry;
 
 public class JoinFailedException extends Exception {
 
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 7582828712730559215L;
+
   public JoinFailedException() {
     super();
   }

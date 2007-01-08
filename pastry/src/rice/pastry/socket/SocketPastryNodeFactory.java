@@ -39,15 +39,12 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.*;
 import java.nio.channels.*;
-import java.util.*;
-
 
 import rice.Continuation;
 import rice.Continuation.ExternalContinuation;
 import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.environment.params.Parameters;
-import rice.environment.params.simple.SimpleParameters;
 import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
@@ -63,7 +60,6 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 import rice.pastry.socket.messaging.*;
 import rice.pastry.socket.nat.*;
-import rice.pastry.socket.nat.sbbi.SBBINatHandler;
 import rice.pastry.standard.*;
 import rice.selector.*;
 import rice.pastry.NodeHandle;
@@ -88,8 +84,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public static final int USE_DIFFERENT_PORT = 2;
 
   public static final int FAIL = 3;
-
-  private Environment environment;
 
   private NodeIdFactory nidFactory;
 
@@ -182,7 +176,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           test2 = new ServerSocket();
           test2.bind(new InetSocketAddress(localAddress, port));
         } catch (SocketException e2) {
-          if (temp.getLocalAddress().equals(localAddress)) throw new IllegalStateException("Cannot bind to "+localAddress+":"+port);
+          throw new IllegalStateException("Cannot bind to "+localAddress+":"+port,e2);
         }                
       } finally {
 //        try {
@@ -435,18 +429,20 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return (NodeHandle) c.ret;
   }
 
-  class TimerContinuation implements Continuation {
+  static class TimerContinuation implements Continuation {
     public Object ret = null;
-
+    public Exception exception = null;
+    
     public void receiveResult(Object result) {
-      ret = result;
       synchronized (this) {
+        ret = result;
         this.notify();
       }
     }
 
     public void receiveException(Exception result) {
       synchronized (this) {
+        this.exception = result;
         this.notify();
       }
     }
@@ -549,7 +545,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    *          behind NATs
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(NodeHandle bootstrap, Id nodeId,
+  public synchronized PastryNode newNode(NodeHandle bootstrap, Id nodeId,
       InetSocketAddress pAddress) {
     try {
       return newNode(bootstrap, nodeId, pAddress, true); // fix the method just
@@ -632,7 +628,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
 
         environment = new Environment(sman, proc, this.environment
             .getRandomSource(), this.environment.getTimeSource(), lman,
-            this.environment.getParameters());
+            this.environment.getParameters(), this.environment.getExceptionStrategy());
 
         this.environment.addDestructable(environment);
       }
@@ -659,7 +655,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     SocketSourceRouteManager srManager = null;
 
     try {
-      synchronized (this) {
         localAddress = getEpochAddress(port, epoch);
                 
         boolean probeForExternalAddress = environment.getParameters().getBoolean("probe_for_external_address");
@@ -681,6 +676,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           }
         }
         
+        // pAddress is null only if !probeForExternalAddress, but may not be null
+        // proxyAddress is null
         if (!probeForExternalAddress) {
           findFireWallIfNecessary();
           if (pAddress == null) {
@@ -724,7 +721,9 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
             }
             proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);
           }
-        }        
+        } else {
+          proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);          
+        }
         
         updateAddressList(proxyAddress);
         
@@ -738,7 +737,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
             "pastry_socket_increment_port_after_construction"))
           port++; // this statement must go after the construction of srManager
                   // because the
-      }
     } catch (IOException ioe) {
       // this will usually be a bind exception
 
@@ -821,6 +819,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return pn;
   }
 
+  /**
+   * This list is the list of addresses of the local computer.  This is needed
+   * to get correct routing if you are on the same LAN, and your router doesn't
+   * support hairpinning.
+   * 
+   * @param proxyAddress
+   */
   private void updateAddressList(EpochInetSocketAddress proxyAddress) {
     addressList = new InetAddress[proxyAddress.address.length];
     for (int i = 0; i < addressList.length; i++) {
@@ -954,7 +959,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     return o.deserialize(deserializer);
   }
 
-  public static byte[] TOTAL_HEADER;
+  static final byte[] TOTAL_HEADER;
   static {
     TOTAL_HEADER = new byte[SocketCollectionManager.TOTAL_HEADER_SIZE + 4]; // plus
                                                                             // the
@@ -1143,8 +1148,41 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   }
   
   public static InetSocketAddress verifyConnection(int timeout, int tries,
-      InetSocketAddress local, InetSocketAddress[] existing, Environment env,
+      InetSocketAddress local, InetSocketAddress[] existingInput, Environment env,
       Logger logger) throws IOException {
+    
+    // You can't use yourself as the existing node to verify off of, this 
+    // code removes yourself from existingInput, and builds the array "existing"
+    int existingLength = 0;
+    for (int i = 0; i < existingInput.length; i++) {
+      if (existingInput[i].equals(local)) {
+        // don't increment 
+      } else {
+        existingLength++; 
+      }
+    }
+    
+    if (existingLength == 0) {
+      // there is a problem
+      if (existingInput.length == 0) {
+        throw new IllegalArgumentException("verifyConnection("+local+") called without any addresses to connect to.");
+      } else {
+        throw new IllegalArgumentException("verifyConnection("+local+","+existingInput[0]+") called with only self as address to connect to, this is not allowed.");        
+      }
+    }
+      
+    InetSocketAddress[] existing = new InetSocketAddress[existingLength];
+    int index = 0;
+    for (int i = 0; i < existingInput.length; i++) {
+      if (existingInput[i].equals(local)) {
+        // don't add
+      } else {
+        existing[index] = existingInput[i];
+        index++; 
+      }
+    }
+    
+    
     if (logger.level <= Logger.INFO)
       logger.log("Verifying connection of local node " + local + " using "
           + existing[0] + " and " + existing.length + " more");
@@ -1187,11 +1225,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
         }
         subTimeout*=2;
 
-        byte[] data = new byte[receive.getLength() - 38];
-        System.arraycopy(receive.getData(), 38, data, 0, data.length);
-  
-        return ((IPAddressResponseMessage) new SocketBuffer(data)
-            .deserialize(new PingManager.PMDeserializer(logger))).getAddress();
+//        [39, 64, 117, 58, 0, 0, 0, 0,  1, 2   , 0, 30, 1, -64, -88, 1, 65, 35, 47, -1, -1, -1, -1, -1, -1, -1, -1, 1, -64, -88, 1, 65, 35, 47, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0,  0,  0, 0, 2, 0, 0, 1, 15, -96, 16, 47, 100, ]
+//        | Magic Number  | version   |hop|nhops|length|len| inetaddr      | port  | epoch                         |len| inetaddr      | port  | epoch                         | app addr  |sdr|pri| type|  long timestamp              | 
+//                                                     | EISA  (local)                                             |  SR EISA[]                                                | 
+        int headerLength = 42;
+        if (receive.getLength() > headerLength) {
+          byte[] data = new byte[receive.getLength() - headerLength];
+          System.arraycopy(receive.getData(), headerLength, data, 0, data.length);
+    
+          return ((IPAddressResponseMessage) new SocketBuffer(data, null)
+              .deserialize(new PingManager.PMDeserializer(logger))).getAddress();
+        }
       } // retry loop
       throw toThrow;
       // return ((IPAddressResponseMessage) PingManager.deserialize(data, env,

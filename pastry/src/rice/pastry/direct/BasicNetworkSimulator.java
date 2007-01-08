@@ -38,7 +38,6 @@ if advised of the possibility of such damage.
  */
 package rice.pastry.direct;
 
-import java.nio.channels.Selector;
 import java.util.*;
 
 import rice.environment.Environment;
@@ -51,7 +50,6 @@ import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.messaging.Message;
-import rice.pastry.routing.BroadcastRouteRow;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 

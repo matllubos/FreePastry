@@ -38,7 +38,6 @@ package rice.pastry.socket.messaging;
 
 import java.io.*;
 
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
 import rice.pastry.leafset.*;
@@ -52,6 +51,11 @@ import rice.pastry.leafset.*;
 * @author Alan Mislove
 */
 public class LeafSetResponseMessage extends SocketMessage {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -3052514344757407526L;
+
   public static final short TYPE = 5;
 
   private LeafSet leafset;

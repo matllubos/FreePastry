@@ -94,13 +94,13 @@ public class MessageDispatch implements Destructable {
         "Registering "+receiver+" for address " + address);
     if (logger.level <= Logger.FINEST) logger.logException(
         "Registering receiver for address " + address, new Exception("stack trace"));
-    if (addressBook.get(new Integer(address)) != null) {
+    if (addressBook.get(Integer.valueOf(address)) != null) {
       throw new IllegalArgumentException("Registering receiver for already-registered address " + address);
 //      if (logger.level <= Logger.SEVERE) logger.logException(
 //          "ERROR - Registering receiver for already-registered address " + address, new Exception("stack trace"));
     }
 
-    addressBook.put(new Integer(address), receiver);
+    addressBook.put(Integer.valueOf(address), receiver);
   }
   
   public PastryAppl getDestination(Message msg) {
@@ -108,7 +108,7 @@ public class MessageDispatch implements Destructable {
   }
 
   public PastryAppl getDestinationByAddress(int addr) {
-    PastryAppl mr = (PastryAppl) addressBook.get(new Integer(addr));    
+    PastryAppl mr = (PastryAppl) addressBook.get(Integer.valueOf(addr));    
     return mr;
   }
 
@@ -132,7 +132,7 @@ public class MessageDispatch implements Destructable {
     }
     // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
     // PastryThread, and the only way to set a node ready is also on the ready thread.
-    PastryAppl mr = (PastryAppl) addressBook.get(new Integer(msg.getDestination()));
+    PastryAppl mr = (PastryAppl) addressBook.get(Integer.valueOf(msg.getDestination()));
 
     if (mr == null) {
       if ((logger.level <= Logger.FINE) ||
@@ -156,7 +156,7 @@ public class MessageDispatch implements Destructable {
     }
     // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
     // PastryThread, and the only way to set a node ready is also on the ready thread.
-    PastryAppl mr = (PastryAppl) addressBook.get(new Integer(msg.getAddress()));
+    PastryAppl mr = (PastryAppl) addressBook.get(Integer.valueOf(msg.getAddress()));
 
     if (mr == null) {
       if (logger.level <= Logger.WARNING) logger.log(

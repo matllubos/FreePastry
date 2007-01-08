@@ -47,6 +47,11 @@ import rice.pastry.testing.*;
 public class SourceRouteTest {
   
   public static class TestMessage extends Message {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 5475045785330415042L;
+
     public TestMessage(Environment env) {
       super(StandardAddress.getAddress(TestMessage.class, "monkey", env));
     }
@@ -54,7 +59,7 @@ public class SourceRouteTest {
  
   public static void main2(String[] args) throws Exception {
     Environment env = new Environment();
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new RandomNodeIdFactory(env), 20001, env);
+    new SocketPastryNodeFactory(new RandomNodeIdFactory(env), 20001, env);
     /*
     InetSocketAddress bind = new InetSocketAddress(InetAddress.getLocalHost(), 10001);
     InetSocketAddress local = new InetSocketAddress(InetAddress.getLocalHost(), 10001);
@@ -74,6 +79,10 @@ public class SourceRouteTest {
   
   public static class TestMessage2 extends Message {
     
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -7835492989946022022L;
     byte[] payload;
     
     public TestMessage2() {
@@ -132,7 +141,7 @@ public class SourceRouteTest {
     InetSocketAddress address7 = new InetSocketAddress(InetAddress.getLocalHost(), 20007);
     InetSocketAddress address8 = new InetSocketAddress(InetAddress.getLocalHost(), 20008);
     InetSocketAddress address9 = new InetSocketAddress(InetAddress.getLocalHost(), 20009);
-    InetSocketAddress address10 = new InetSocketAddress(InetAddress.getLocalHost(), 20010);
+//    InetSocketAddress address10 = new InetSocketAddress(InetAddress.getLocalHost(), 20010);
     
     System.out.println("Starting 1...");
     node1 = (SocketPastryNode) factory.newNode(null);

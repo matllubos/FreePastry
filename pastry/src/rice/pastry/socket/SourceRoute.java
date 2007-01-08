@@ -41,10 +41,7 @@ import java.lang.ref.*;
 import java.net.*;
 import java.util.*;
 
-import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.*;
-import rice.pastry.*;
-import rice.pastry.dist.*;
 import rice.pastry.messaging.*;
 
 /**
@@ -147,6 +144,9 @@ public class SourceRoute extends PRawMessage implements Serializable {
    */
   public boolean equals(Object o) {
     if (o == null)
+      return false;
+    
+    if (!(o instanceof SourceRoute))
       return false;
     
     boolean ret = Arrays.equals(path, ((SourceRoute) o).path);

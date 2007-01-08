@@ -143,7 +143,7 @@ public abstract class Message implements Serializable, rice.p2p.commonapi.Messag
    *         timestamp.
    */
   public boolean stamp(Date time) {
-    if (theStamp.equals(null)) {
+    if (theStamp == null) {
       theStamp = time;
       return true;
     } else
