@@ -86,7 +86,7 @@
   </target> 
 
   
-  <target name="appendlicense" depends "compileappend">
+  <target name="appendlicense" depends="compileappend">
     <taskdef name="append" 
              classname="Append"
              classpath="."/>
