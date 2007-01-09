@@ -76,8 +76,17 @@
     </javac>
   </target>
 
+  <target name="compileappend" depends="init">
+    <javac srcdir="${pretty.lib.dir}"
+           destdir="."
+           deprecation="yes"
+           debuglevel="lines,vars,source"
+           debug="true">
+    </javac>
+  </target> 
+
   
-    <target name="appendlicense">
+  <target name="appendlicense" depends "compileappend">
     <taskdef name="append" 
              classname="Append"
              classpath="."/>
