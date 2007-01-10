@@ -416,7 +416,7 @@ BloomFilter:
 1.7.2: Join Protocol **********************************************************
 JoinRequest:
   address: 0xe80c17e8 (Join Protocol)
-  type: 2
+  type: 1
   use: During bootstrap, to find the nearest node to you in Id Space.
   package: rice.pastry.standard
   
@@ -601,7 +601,8 @@ Header contains 3 things:
   1) Magic Number byte[4]
   2) Protocol version int (0)
   3) Source Route
-
+  4) Message Header
+  
 1.9.2 Header specification ****************************************************  
 Detail:  
   // Magic Number
@@ -613,10 +614,19 @@ Detail:
   // source route part
   byte 1 // the current hop counter (incremented at each step)
   byte numHops // in the source route
-  EpochInetSocketAddress localAddress
+  short size // of the following EpochInetSocketAddresses
+  EpochInetSocketAddress first address
   // for each hop
     EpochInetSocketAddress hop
 
+  // Message Header Part
+  int address
+  boolean hasSender
+  byte priority
+  short type (app specific)
+  // if hasSender
+    NodeHandle sender
+  
 1.9.3 Messages
   IPAddressRequestMessage:
     type: 2
