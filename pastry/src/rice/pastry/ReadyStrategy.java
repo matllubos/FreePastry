@@ -47,4 +47,5 @@ public interface ReadyStrategy {
    *
    */
   public void start();
+  public void stop();
 }

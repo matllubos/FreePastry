@@ -134,7 +134,7 @@ public class DirectPastryNode extends PastryNode {
     alive = false;
     if (joinTask != null) joinTask.cancel();
     setReadyStrategy(new ReadyStrategy() {
-    
+      // destroyed ready strategy
       public void start() {
         throw new RuntimeException("Can't start!");
       }
@@ -144,6 +144,10 @@ public class DirectPastryNode extends PastryNode {
       }
     
       public void setReady(boolean r) {
+      }
+
+      public void stop() {
+        throw new RuntimeException("Can't stop!");        
       }    
     });
     setReady(false); 

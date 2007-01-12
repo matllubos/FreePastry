@@ -236,7 +236,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     ls.addNodeSetListener(this);
     ln.addObserver(this);
     Parameters p = ln.getEnvironment().getParameters();
-    MAX_TIME_TO_BE_SCHEDULED = p.getInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled");
+    MAX_TIME_TO_BE_SCHEDULED = p.getInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled"); // 15000
     RETRY_INTERVAL = p.getInt("pastry_protocol_consistentJoin_retry_interval");
     failedNodeExpirationTime = p.getInt("pastry_protocol_consistentJoin_failedRetentionTime"); // 90000
     maxFailedEntries = p.getInt("pastry_protocol_consistentJoin_maxFailedToSend"); // 20
@@ -348,7 +348,16 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   public void otherNodesMaySuspectFaulty(int timeNotScheduled) {
     if (logger.level <= Logger.WARNING) logger.log("WARNING: CJP.otherNodesMaySuspectFaulty("+timeNotScheduled+")");
+    // need to recover ownership of the readiness process
+    nextReadyStrategy.stop();
+    
+    thePastryNode.setReadyStrategy(thePastryNode.getDefaultReadyStrategy());
+    tryingToGoReady = false;
+
     thePastryNode.setReady(false);
+    
+    // restart self
+    setReady();
   }
   
   /**

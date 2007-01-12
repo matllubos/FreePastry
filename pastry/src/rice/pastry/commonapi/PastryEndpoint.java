@@ -160,6 +160,10 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     thePastryNode.receiveMessage(rm);
   }
   
+  /**
+   * This duplication of the above code is to make a fast path for the RawMessage.  Though the codeblock
+   * looks identical, it is acually calling a different PEM constructor.
+   */
   public void route(Id key, RawMessage msg, NodeHandle hint) {
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] route " + msg + " to " + key);

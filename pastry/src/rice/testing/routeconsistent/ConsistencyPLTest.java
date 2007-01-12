@@ -56,11 +56,12 @@ import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
 import rice.pastry.standard.*;
+import rice.selector.LoopObserver;
 
 /**
  * @author Jeff Hoye
  */
-public class ConsistencyPLTest implements Observer {
+public class ConsistencyPLTest implements Observer, LoopObserver {
   public static final int startPort = 21854;
   public static final int WAIT_TO_SUBSCRIBE_DELAY = 60000;
   
@@ -91,6 +92,7 @@ public class ConsistencyPLTest implements Observer {
     this.localNode = localNode;
     this.leafSet = leafSet;
     localNode.addObserver(this);
+    localNode.getEnvironment().getSelectorManager().addLoopObserver(this);
 //    leafSet.addObserver(this);
   }
   
@@ -511,5 +513,14 @@ public class ConsistencyPLTest implements Observer {
         }
       }    
     }
+  }
+
+  public int delayInterest() {
+    return 15000;
+  }
+
+  public void loopTime(int loopTime) {
+    System.out.println("loopTime("+loopTime+"):"+environment.getTimeSource().currentTimeMillis());
+    System.out.println("LEAFSET5:"+(environment.getTimeSource().currentTimeMillis()-loopTime)+":"+localNode.getLeafSet());
   }  
 }

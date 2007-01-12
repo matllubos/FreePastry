@@ -318,6 +318,14 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     }
   }
   
+  public void stop() {
+    if (hasSetStrategy) {
+      if (logger.level <= Logger.INFO) logger.log("PLSP.start(): Removing self as ReadyStrategy");
+      hasSetStrategy = false; 
+      localNode.deleteLeafSetListener(this);
+    }
+  }
+  
   /**
    * Called when the leafset changes
    */

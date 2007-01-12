@@ -87,7 +87,17 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     myEnvironment = e;
     myNodeId = id;
     
-    readyStrategy = new ReadyStrategy() {
+    readyStrategy = getDefaultReadyStrategy();
+    
+    apps = new Vector();
+    logger = e.getLogManager().getLogger(getClass(), null);
+  }
+  
+  /**
+   * Simple Ready Strategy
+   */
+  public ReadyStrategy getDefaultReadyStrategy() {
+    return new ReadyStrategy() {
       private boolean ready = false; 
       
       public void setReady(boolean r) {
@@ -106,10 +116,11 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
       public void start() {
         // don't need to do any initialization 
       }
+
+      public void stop() {
+        // don't need to do any initialization
+      }
     };
-    
-    apps = new Vector();
-    logger = e.getLogManager().getLogger(getClass(), null);
   }
   
   public void setReadyStrategy(ReadyStrategy rs) {
