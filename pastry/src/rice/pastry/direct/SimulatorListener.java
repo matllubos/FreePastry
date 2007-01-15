@@ -44,6 +44,8 @@ import rice.p2p.commonapi.*;
 /**
  * Notified for every message that is sent over the network.
  * 
+ * to install this, call NetworkSimulator.addSimulatorListener().
+ * 
  * @author Jeff Hoye
  */
 public interface SimulatorListener {
