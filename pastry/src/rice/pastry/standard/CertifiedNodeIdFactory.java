@@ -162,10 +162,6 @@ public class CertifiedNodeIdFactory implements NodeIdFactory {
     
     byte[] cipher = (byte[]) ois.readObject();
       
-    File pwFile = new File(caDirectory,"pw"); 
-    StreamTokenizer st = new StreamTokenizer(new BufferedReader(new InputStreamReader(new FileInputStream(pwFile))));
-    st.nextToken();
-    
     KeyPair caPair = (KeyPair) SecurityUtils.deserialize(SecurityUtils.decryptSymmetric(cipher, SecurityUtils.hash(pw.getBytes())));
           
     Environment env = new Environment();
