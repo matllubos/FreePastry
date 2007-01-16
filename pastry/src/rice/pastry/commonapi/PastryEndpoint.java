@@ -52,6 +52,7 @@ import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.SendOptions;
+import rice.pastry.standard.StandardAddress;
 
 /**
  * This class serves as gluecode, which allows applications written for the common
@@ -95,7 +96,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 //  }
   
   public PastryEndpoint(PastryNode pn, Application application, String instance, int address, boolean register) {
-    super(pn, application.getClass().getName() + instance, address, null, pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance));
+    super(pn, application.getClass().getName() + instance, address == 0 ? StandardAddress.getAddress(application.getClass(),instance,pn.getEnvironment()): address, null, pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance));
 //    super(pn, application.getClass().getName() + instance, address, null);
     appDeserializer = deserializer; // use this as the apps default deserializer
     deserializer = new PEDeserializer();
