@@ -71,6 +71,8 @@ public class SocketBuffer implements RawMessageDelivery {
   short rmSubType = -2;
   int rmSubAddress = -2;
 
+  byte[] bytes = null;
+  
   // low level stuff
   public static final int DEFAULT_BUFFER_SIZE = 1024;
   // Hack to not have to allocate buffers I know to be zero
@@ -94,6 +96,7 @@ public class SocketBuffer implements RawMessageDelivery {
   
   // from a read
   public SocketBuffer(byte[] input, SocketPastryNode spn) throws IOException {
+    this.bytes = input;
     str = new SocketDataInputStream(new ByteArrayInputStream(input));
     nhf = spn;
     this.spn = spn;
@@ -334,6 +337,10 @@ public class SocketBuffer implements RawMessageDelivery {
     if (buffer != null) return buffer;    
     buffer = (ByteBuffer)ByteBuffer.wrap(ebaos.buf()).limit(o.bytesWritten());
     return buffer; 
+  }
+  
+  public byte[] getBytes() {
+    return bytes; 
   }
   
   public int getAddress() {
