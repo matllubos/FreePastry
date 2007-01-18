@@ -122,7 +122,7 @@ public class BlockingAppSocketFactory {
       case SocketAppSocket.CONNECTION_OK:
         break;
       case SocketAppSocket.CONNECTION_NO_APP:
-        throw new AppNotRegisteredException();
+        throw new AppNotRegisteredException(appId);
       case SocketAppSocket.CONNECTION_NO_ACCEPTOR:
         throw new NoReceiverAvailableException();            
       default:

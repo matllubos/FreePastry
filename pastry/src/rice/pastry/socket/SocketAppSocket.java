@@ -290,7 +290,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
             receiver.receiveSocket(this); // on connector side
             return;
           case CONNECTION_NO_APP:
-            exceptionAndClose(new AppNotRegisteredException());
+            exceptionAndClose(new AppNotRegisteredException(appId));
             return;
           case CONNECTION_NO_ACCEPTOR:
             exceptionAndClose(new NoReceiverAvailableException());            

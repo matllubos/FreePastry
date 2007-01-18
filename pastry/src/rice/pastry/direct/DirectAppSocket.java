@@ -332,7 +332,7 @@ public class DirectAppSocket {
     public void deliver() {
       if (acceptorNodeHandle.isAlive()) {
         if (acceptorAppl == null) {
-          simulator.enqueueDelivery(new ConnectorExceptionDelivery(new AppNotRegisteredException()),
+          simulator.enqueueDelivery(new ConnectorExceptionDelivery(new AppNotRegisteredException(connectorAppl.getAddress())),
               (int)Math.round(simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle()))); 
         } else {
           if (acceptorAppl.receiveSocket(acceptorEndpoint)) {

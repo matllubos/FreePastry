@@ -250,7 +250,7 @@ public class SocketPastryNode extends DistPastryNode {
 
   public void acceptAppSocket(SocketAppSocket socket, int appId) throws AppSocketException {
     PastryAppl acceptorAppl = getMessageDispatch().getDestinationByAddress(appId);
-    if (acceptorAppl == null) throw new AppNotRegisteredException();
+    if (acceptorAppl == null) throw new AppNotRegisteredException(appId);
     if (!acceptorAppl.receiveSocket(socket)) throw new NoReceiverAvailableException();
   }
 

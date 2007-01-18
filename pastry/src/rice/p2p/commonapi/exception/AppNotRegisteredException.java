@@ -47,7 +47,14 @@ import rice.p2p.commonapi.NodeHandle;
  * @author Jeff Hoye
  */
 public class AppNotRegisteredException extends AppSocketException {
-  public AppNotRegisteredException() {
-    super();
+  private int appid;
+
+  public AppNotRegisteredException(int appid) {
+    super("Application with id "+appid+" not registered.");
+    this.appid = appid;
+  }
+
+  public int getAppid() {
+    return appid;
   }
 }
