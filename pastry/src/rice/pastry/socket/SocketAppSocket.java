@@ -144,8 +144,8 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
 //     }     
      toWrite = sb.getBuffer(); //ByteBuffer.wrap(toWriteBytes);
     // build the entire connection
-     startTimer(timeout, receiver);
      createConnection(path);
+     startTimer(timeout, receiver);
   }
   
   public String toString() {
@@ -157,19 +157,30 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    * shutdownOutput().  This has the effect of removing the manager from
    * the open list.
    */
-  public void shutdownOutput() {
-    try {
-      if (manager.logger.level <= Logger.FINE) manager.logger.log("Shutting down output on app connection " + this);
-      
-      if (channel != null)
-        channel.socket().shutdownOutput();
-      else
-        if (manager.logger.level <= Logger.SEVERE) manager.logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
-
-      manager.appSocketClosed(this);
-      manager.pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
-    } catch (IOException e) {
-      if (manager.logger.level <= Logger.SEVERE) manager.logger.log( "ERROR: Received exception " + e + " while shutting down output.");
+  public void shutdownOutput() {    
+    boolean closeMe = false;
+    synchronized(this) {
+      if (key == null) throw new IllegalStateException("Socket already closed.");
+      try {
+        if (manager.logger.level <= Logger.FINE) manager.logger.log("Shutting down output on app connection " + this);
+        
+        // do we need to do this?  or does this happen twice now?
+        manager.appSocketClosed(this);
+        
+        if (channel != null)
+          channel.socket().shutdownOutput();
+        else
+          if (manager.logger.level <= Logger.SEVERE) manager.logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
+  
+      } catch (IOException e) {
+        if (manager.logger.level <= Logger.SEVERE) manager.logger.log( "ERROR: Received exception " + e + " while shutting down output.");
+        closeMe = true;
+      }
+    } // synchronized(this)
+    manager.pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
+    
+    // close has it's own synchronization semantics, don't want to be holding a lock when calling
+    if (closeMe) {
       close();
     }
   }
@@ -178,62 +189,77 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    * Method which closes down this socket manager, by closing the socket,
    * cancelling the key and setting the key to be interested in nothing
    */
-  public synchronized void close() {
-    if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
-      manager.pastryNode.getEnvironment().getSelectorManager().invoke(new Runnable() {      
-        public void run() {
-          close();      
-        }      
-      });
-    }
-    
-    if (key == null) {
-      if (manager.logger.level <= Logger.WARNING) {
-        manager.logger.log("Already closed connection with " + this);
-      }    
-      return;
-    }
-    try {
-//      System.out.println("SocketAppSocket.close()");
-      if (manager.logger.level <= Logger.FINE) {
-        manager.logger.log("Closing connection with " + this);
+  public void close() {
+    List<AppSocketReceiver> timers = null;
+    synchronized (this) {
+      if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
+        manager.pastryNode.getEnvironment().getSelectorManager().invoke(new Runnable() {      
+          public void run() {
+            close();      
+          }      
+        });
       }
       
-      fireAllTimers();
-      
-      if (manager.pastryNode != null)
-        manager.pastryNode.broadcastChannelClosed((InetSocketAddress) channel.socket().getRemoteSocketAddress());
-      
-//        if (manager.logger.level <= Logger.WARNING) {
-//          if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
-//            manager.logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
-//          }
-//        }
-        key.cancel();
-        key.attach(null);
-        key = null;
-      
-      manager.unIdentifiedSM.remove(this);
-      
-      if (channel != null) 
-        channel.close();
-
+      if (key == null) {
+        if (manager.logger.level <= Logger.WARNING) {
+          manager.logger.log("Already closed connection with " + this);
+        }    
+        return;
+      }
+      try {
+  //      System.out.println("SocketAppSocket.close()");
+        if (manager.logger.level <= Logger.FINE) {
+          manager.logger.log("Closing connection with " + this);
+        }
         manager.appSocketClosed(this);
-    } catch (IOException e) {
-      if (manager.logger.level <= Logger.SEVERE) manager.logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
-    }
+        
+        
+        
+  //        if (manager.logger.level <= Logger.WARNING) {
+  //          if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
+  //            manager.logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
+  //          }
+  //        }
+          key.cancel();
+          key.attach(null);
+          key = null;
+        
+        manager.unIdentifiedSM.remove(this);
+        
+        if (channel != null) {
+          channel.close();
+          channel = null; 
+        }
+  
+      } catch (IOException e) {
+        if (manager.logger.level <= Logger.SEVERE) manager.logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
+      }
+      timers = cancelTimers();
+      
+    } // synchronized(this)    
+    
+    // don't hold locks when calling into user code
+    if (manager.pastryNode != null)
+      manager.pastryNode.broadcastChannelClosed((InetSocketAddress) channel.socket().getRemoteSocketAddress());
+    
+    for (AppSocketReceiver rec : timers) { 
+      rec.receiveException(this, new TimeoutException());
+    }    
   }
   
-  private void fireAllTimers() {
+  // should be synchronized(this) when calling
+  private List<AppSocketReceiver> cancelTimers() {
+    ArrayList<AppSocketReceiver> list = new ArrayList<AppSocketReceiver>();
     Iterator i = timers.keySet().iterator();
     while(i.hasNext()) {
       AppSocketReceiver rec = (AppSocketReceiver)i.next(); 
-      rec.receiveException(this, new TimeoutException());
+      list.add(rec);
       TimerTask timer = (TimerTask)timers.get(rec);
       timer.cancel();
 //      System.out.println("fired"+timer);
       i.remove();
-    }
+    }    
+    return list;
   }
 
   /**
@@ -286,44 +312,47 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    *
    * @param key The selection key for this manager
    */
-  public synchronized void read(SelectionKey key) {
-    //System.out.println(this+"Reading");
-    if (connectResult == CONNECTION_UNKNOWN) {
-      try {
-        clearTimer(receiver); 
-        manager.pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
-        ByteBuffer answer = ByteBuffer.allocate(1);
-        ((SocketChannel)key.channel()).read(answer);
-        answer.clear();
-        connectResult = answer.get();
-        //System.out.println(this+"Read "+connectResult);
-        switch(connectResult) {
-          case CONNECTION_OK:
-            receiver.receiveSocket(this); // on connector side
-            return;
-          case CONNECTION_NO_APP:
-            exceptionAndClose(new AppNotRegisteredException(appId));
-            return;
-          case CONNECTION_NO_ACCEPTOR:
-            exceptionAndClose(new NoReceiverAvailableException());            
-            return;
-          default:
-            exceptionAndClose(new AppSocketException("Unknown error "+connectResult));
-            return;
+  public void read(SelectionKey key) {
+    AppSocketReceiver temp = null;
+    synchronized(this) {
+      //System.out.println(this+"Reading");
+      if (connectResult == CONNECTION_UNKNOWN) {
+        try {
+          clearTimer(receiver); 
+          manager.pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
+          ByteBuffer answer = ByteBuffer.allocate(1);
+          ((SocketChannel)key.channel()).read(answer);
+          answer.clear();
+          connectResult = answer.get();
+          //System.out.println(this+"Read "+connectResult);
+          switch(connectResult) {
+            case CONNECTION_OK:
+              receiver.receiveSocket(this); // on connector side
+              return;
+            case CONNECTION_NO_APP:
+              exceptionAndClose(new AppNotRegisteredException(appId));
+              return;
+            case CONNECTION_NO_ACCEPTOR:
+              exceptionAndClose(new NoReceiverAvailableException());            
+              return;
+            default:
+              exceptionAndClose(new AppSocketException("Unknown error "+connectResult));
+              return;
+          }
+        } catch (IOException ioe) {
+          exceptionAndClose(ioe); 
         }
-      } catch (IOException ioe) {
-        exceptionAndClose(ioe); 
+        return;
       }
-      return;
-    }
-    
-    if (reader == null) {
-      key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-      return;
-    }
-    AppSocketReceiver temp = reader;
-    clearTimer(reader);
-    reader = null;
+      
+      if (reader == null) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+        return;
+      }
+      temp = reader;
+      clearTimer(reader);
+      reader = null;
+    } // synchronized(this)
     temp.receiveSelectResult(this, true, false);
     manager.pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
   }
@@ -333,7 +362,9 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    */
   Hashtable timers = new Hashtable();
   
+  // should be synchronized on this, or be in the constructor
   private void startTimer(int millis, final AppSocketReceiver theReceiver) {    
+    if (key == null) throw new IllegalStateException("Socket "+this+" already Closed");
     if (millis <= 0) return;
     clearTimer(theReceiver);
     TimerTask timer = new TimerTask() {
@@ -371,37 +402,42 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    *
    * @param key The selection key for this manager
    */
-  public synchronized void write(SelectionKey key) {
-    if (toWrite != null) {
-      try {
-       // System.out.println(this+"SocketAppSocket.wroteHeader."+toWrite.remaining());
-        ((SocketChannel)key.channel()).write(toWrite);        
-      } catch (IOException ioe) {
-        exceptionAndClose(ioe); 
+  public void write(SelectionKey key) {
+    AppSocketReceiver temp = null;
+    synchronized(this) {
+      if (toWrite != null) {
+        try {
+         // System.out.println(this+"SocketAppSocket.wroteHeader."+toWrite.remaining());
+          ((SocketChannel)key.channel()).write(toWrite);        
+        } catch (IOException ioe) {
+          exceptionAndClose(ioe); 
+        }
+        
+        if (toWrite.hasRemaining()) {
+          // write will be called later
+          return;
+        } else {
+          toWrite = null;
+  //        receiver.receiveSocket(this); moved to read
+        }
       }
       
-      if (toWrite.hasRemaining()) {
-        // write will be called later
+      if (writer == null) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
         return;
-      } else {
-        toWrite = null;
-//        receiver.receiveSocket(this); moved to read
       }
+      temp = writer;
+      clearTimer(writer);
+      writer = null;
     }
-    
-    if (writer == null) {
-      key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-      return;
-    }
-    AppSocketReceiver temp = writer;
-    clearTimer(writer);
-    writer = null;
     temp.receiveSelectResult(this, false, true);
     manager.pastryNode.getEnvironment().getSelectorManager().modifyKey(key);
   }
 
   /**
    * Accepts a new connection on the given key
+   *
+   * these methods (createConnection/acceptConnection) could be synchronized, but they are only called in the constructor who does not expose his reference.
    *
    * @param serverKey The server socket key
    * @exception IOException DESCRIBE THE EXCEPTION
@@ -469,10 +505,23 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
   }
 
   public synchronized void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver) {
-    // TODO: throw exception if output is closed, or socket is closed
+    if (key == null) throw new IllegalStateException("Socket "+this+" is already closed.");
+
+    // this check happens before setting the reader because we don't want to change any state if the exception is going ot be thrown
+    // so don't put this check down below!
+    if (wantToWrite) {
+      if (writer != null) {
+        if (writer != receiver) throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!"); 
+      }
+    }
+    
     if (wantToRead) {
+      if (reader != null) {
+        if (reader != receiver) throw new IllegalStateException("Already registered "+reader+" for reading, you can't register "+receiver+" for reading as well!"); 
+      }
       reader = receiver; 
     }
+    
     if (wantToWrite) {
       writer = receiver; 
     }
