@@ -178,7 +178,21 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    * Method which closes down this socket manager, by closing the socket,
    * cancelling the key and setting the key to be interested in nothing
    */
-  public void close() {
+  public synchronized void close() {
+    if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
+      manager.pastryNode.getEnvironment().getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          close();      
+        }      
+      });
+    }
+    
+    if (key == null) {
+      if (manager.logger.level <= Logger.WARNING) {
+        manager.logger.log("Already closed connection with " + this);
+      }    
+      return;
+    }
     try {
 //      System.out.println("SocketAppSocket.close()");
       if (manager.logger.level <= Logger.FINE) {
@@ -190,16 +204,14 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
       if (manager.pastryNode != null)
         manager.pastryNode.broadcastChannelClosed((InetSocketAddress) channel.socket().getRemoteSocketAddress());
       
-      if (key != null) {
-        if (manager.logger.level <= Logger.WARNING) {
-          if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
-            manager.logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
-          }
-        }
+//        if (manager.logger.level <= Logger.WARNING) {
+//          if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
+//            manager.logger.logException("WARNING: cancelling key:"+key+" on the wrong thread.", new Exception("Stack Trace"));
+//          }
+//        }
         key.cancel();
         key.attach(null);
         key = null;
-      }
       
       manager.unIdentifiedSM.remove(this);
       
@@ -219,7 +231,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
       rec.receiveException(this, new TimeoutException());
       TimerTask timer = (TimerTask)timers.get(rec);
       timer.cancel();
-      System.out.println("fired"+timer);
+//      System.out.println("fired"+timer);
       i.remove();
     }
   }
@@ -274,7 +286,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    *
    * @param key The selection key for this manager
    */
-  public void read(SelectionKey key) {
+  public synchronized void read(SelectionKey key) {
     //System.out.println(this+"Reading");
     if (connectResult == CONNECTION_UNKNOWN) {
       try {
@@ -302,6 +314,11 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
       } catch (IOException ioe) {
         exceptionAndClose(ioe); 
       }
+      return;
+    }
+    
+    if (reader == null) {
+      key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
       return;
     }
     AppSocketReceiver temp = reader;
@@ -452,6 +469,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
   }
 
   public synchronized void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver) {
+    // TODO: throw exception if output is closed, or socket is closed
     if (wantToRead) {
       reader = receiver; 
     }
