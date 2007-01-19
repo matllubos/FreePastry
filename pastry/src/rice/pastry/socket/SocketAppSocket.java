@@ -191,6 +191,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
    */
   public void close() {
     List<AppSocketReceiver> timers = null;
+    InetSocketAddress myAddress = null;
     synchronized (this) {
       if (!manager.pastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
         manager.pastryNode.getEnvironment().getSelectorManager().invoke(new Runnable() {      
@@ -227,6 +228,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
         manager.unIdentifiedSM.remove(this);
         
         if (channel != null) {
+          myAddress = (InetSocketAddress) channel.socket().getRemoteSocketAddress();
           channel.close();
           channel = null; 
         }
@@ -240,7 +242,7 @@ public class SocketAppSocket extends SelectionKeyHandler implements AppSocket {
     
     // don't hold locks when calling into user code
     if (manager.pastryNode != null)
-      manager.pastryNode.broadcastChannelClosed((InetSocketAddress) channel.socket().getRemoteSocketAddress());
+      manager.pastryNode.broadcastChannelClosed(myAddress);
     
     for (AppSocketReceiver rec : timers) { 
       rec.receiveException(this, new TimeoutException());
