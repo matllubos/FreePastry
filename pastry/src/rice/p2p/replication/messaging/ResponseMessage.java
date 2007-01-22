@@ -96,6 +96,13 @@ public class ResponseMessage extends ReplicationMessage {
     return ids;
   }
   
+  public String toString() {
+    int numResponses = 0;
+    for (int a = 0; a < ids.length; a++) {
+      numResponses+=ids[a].length;
+    }
+    return "ResponseMessage("+getSource()+"):"+numResponses; 
+  }
   
 
   /***************** Raw Serialization ***************************************/

@@ -58,7 +58,7 @@ public class ReplicationRegrTest extends CommonAPITest {
   /**
    * The replication factor to use
    */
-  public static int REPLICATION_FACTOR = 3;
+  public static final int REPLICATION_FACTOR = 3;
   
   /**
    * the instance name to use
@@ -198,6 +198,9 @@ public class ReplicationRegrTest extends CommonAPITest {
     
     kill(num);
     
+    // wait for notification of failure to propegate
+    synchronized(this) {try { wait(15000); } catch (InterruptedException e) {}}
+    
     stepDone(SUCCESS);
     
     stepStart("Initiating Maintenance");
@@ -308,7 +311,11 @@ public class ReplicationRegrTest extends CommonAPITest {
     public void insert(Id id) {
       storage.store(id, null, id, new ListenerContinuation("Insertion of id " + id, environment));
     }
-  }
+    
+    public String toString() {
+      return "TestRepClient "+node.toString();
+    }
+  }  
 }
 
 

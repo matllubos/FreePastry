@@ -93,7 +93,10 @@ public class RequestMessage extends ReplicationMessage {
   public IdBloomFilter[] getFilters() {
     return filters;
   }
-  
+
+  public String toString() {
+    return "RequestMessage("+getSource()+"):"+(ranges == null?null:ranges.length); 
+  }
 
   /***************** Raw Serialization ***************************************/
   public short getType() {
