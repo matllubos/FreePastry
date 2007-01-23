@@ -51,7 +51,7 @@ import java.util.*;
 public class IdBloomFilterUnit {
   
   public static void main(String[] args) throws IOException {
-    int n = Integer.parseInt(args[0]);
+    int n = 300;
     Environment env = new Environment();
     RandomSource random = env.getRandomSource();
     PastryIdFactory pFactory = new PastryIdFactory(env);
@@ -84,5 +84,38 @@ public class IdBloomFilterUnit {
     System.out.println("Done3: " + System.currentTimeMillis());
     
     System.out.println("FALSE POSITIVE RATE: " + count + "/" + set.numElements());
+    
+    IdSet set2 = pFactory.buildIdSet();
+    Id id = pFactory.buildRandomId(random);
+    for (int k=0; k<16; k++) {
+      set2.addId(addToId(pFactory, id, k));
+    }
+    
+    System.out.println("Start: " + System.currentTimeMillis());
+    IdBloomFilter filter2 = new IdBloomFilter(set2);
+    System.out.println("Done1: " + System.currentTimeMillis());
+    Iterator i2 = set2.getIterator();
+    
+    while (i2.hasNext()) {
+      if (! filter2.check((Id) i2.next()))
+        System.out.println("FAILURE: Element did not exist!");
+    }
+    
+    for (int k=16; k<32; k++) {
+      Id id2 = addToId(pFactory, id, k);
+      if (filter2.check(id2))
+        System.out.println("WARNING: Element existed when it probably shouldn't! " + k);
+    }
+    
+    System.out.println("Done2: " + System.currentTimeMillis());
+    
+    env.destroy();
+  }
+  
+  private static Id addToId(IdFactory FACTORY, Id id, int num) {
+    byte[] bytes = id.toByteArray();
+    bytes[0] += num;
+    
+    return FACTORY.buildId(bytes);
   }
 }

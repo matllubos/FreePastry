@@ -142,6 +142,30 @@ public class MathUtils {
     
     return result;
   }
+  
+  /**
+   * A simple and fast hash function for hashing an arbitirary length
+   * byte array into an int.  Not for crypto.  Not to be trusted.  
+   * 
+   * From Wikipedia: http://en.wikipedia.org/wiki/Hash_table
+   * 
+   * @param b
+   * @return A hash of b
+   */
+  public static int simpleHash(byte[] b) {
+    int hash = 0;
+      
+    for (int i = 0; i < b.length; i++) {
+      hash += b[i];
+      hash += (hash << 10);
+      hash ^= (hash >> 6);
+    }
+    
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    return hash;
+  }
 
   /**  
    * Utility method for converting a char to a byte

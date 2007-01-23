@@ -89,7 +89,8 @@ public class IdBloomFilter implements Serializable {
    * @param length The length of the underlying bit set
    */
   public IdBloomFilter(IdSet set) {
-    this.filter = new BloomFilter(NUM_HASH_FUNCTIONS, NUM_BITS_PER_KEY * set.numElements());
+    int size = (set.numElements() < 64 ? 64 : set.numElements());
+    this.filter = new BloomFilter(NUM_HASH_FUNCTIONS, NUM_BITS_PER_KEY * size);
     Iterator i = set.getIterator();  
     
     while (i.hasNext())

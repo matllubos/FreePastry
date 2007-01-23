@@ -403,7 +403,7 @@ public class IdRange implements rice.p2p.commonapi.IdRange, Serializable {
     if (empty)
       return "IdRange: empty";
     else
-      return "IdRange: from:" + ccw + " to:" + cw;
+      return "IdRange: from:" + ccw + " to:" + cw;//+" " + (isFull() ? "full" : " size:"+size());
   }
 
   // Common API Support

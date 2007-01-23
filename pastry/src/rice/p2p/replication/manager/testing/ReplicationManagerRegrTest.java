@@ -36,7 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.p2p.replication.manager.testing;
 
-import java.io.IOException;
+import java.io.*;
 
 import rice.Continuation;
 import rice.environment.Environment;
@@ -59,7 +59,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
   /**
    * The replication factor to use
    */
-  public static int REPLICATION_FACTOR = 3;
+  public static final int REPLICATION_FACTOR = 3;
   
   /**
    * the instance name to use
@@ -209,8 +209,11 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     stepStart("Killing Primary Replica");
     
     kill(num);
-    
+        
     stepDone(SUCCESS);
+    
+    // wait for notification of failure to propegate
+    synchronized(this) {try { wait(15000); } catch (InterruptedException e) {}}
     
     stepStart("Initiating Maintenance");
     
@@ -278,7 +281,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
           count++;
       }
       
-      assertTrue("Correct number of replicas for " + thisId + " should be " + (REPLICATION_FACTOR + 1) + " was " + count, 
+      assertTrue("Correct number of replicas for "+j+":" + thisId + " should be " + (REPLICATION_FACTOR + 1) + " was " + count, 
                  count == REPLICATION_FACTOR + 1);
     }
     
@@ -305,7 +308,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     for (int i=0; i<NUM_TO_INSERT; i++) {
       ids[i] = addToId(id, i);
       clients[num].insert(ids[i]);
-    }
+    }    
     
     stepDone(SUCCESS);
     
@@ -341,14 +344,25 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     sectionDone();
   }
   
+  public void printValsForRange(IdRange range) {
+    for (int i=0; i<NUM_NODES; i++)  {
+      System.out.println(i+" "+clients[i]+":"+clients[i].scan(range));
+    }
+  }
+  
   public void runMaintenance() {
-    for (int i=0; i<NUM_NODES; i++) {
-      replications[i].getReplication().replicate();
+    for ( int i=0; i<NUM_NODES; i++) {
+      final int j = i;
+      environment.getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          replications[j].getReplication().replicate();      
+        }      
+      });
     }
     
     simulate();
   }
-
+  
   /**
    * Private method which generates a random Id
    *
@@ -415,19 +429,13 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
       // XXX we don't test this new functionality yet
       command.receiveResult(Boolean.TRUE);
     }
+    
+    public String toString() {
+      String s = "TRMC:"+node;
+//      for (int i = 0; i < 4; i++) {
+//        s+=" r"+i+":"+endpoint.range(node.getLocalNodeHandle(),i,node.getLocalNodeHandle().getId(), true); 
+//      }
+      return s;
+    }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

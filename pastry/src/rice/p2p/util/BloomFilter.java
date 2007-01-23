@@ -145,8 +145,8 @@ public class BloomFilter implements Serializable {
   protected int hash(byte[] array, int i) {
     if (length <= 0)
       return 0;
-    else
-      return MathUtils.mod(doHash(array, parameters[i]), length);    
+
+    return MathUtils.mod(doHash(array, parameters[i]), length);
   }
   
   /**
@@ -156,15 +156,11 @@ public class BloomFilter implements Serializable {
    * @return The result, which is guaranteed to be 0..length
    */
   protected int doHash(byte[] array, int seed) {
-    int result = 0;
-    byte[] tmp = new byte[4];
+    byte[] tmp = new byte[array.length+4];
+    MathUtils.intToByteArray(seed,tmp,0);
+    System.arraycopy(array, 0, tmp, 4, array.length);
     
-    for (int i=0; i<array.length; i+=4) {
-      System.arraycopy(array, i, tmp, 0, ((array.length - i < 4) ? (array.length - i) : 4));
-      result += (result * seed) + MathUtils.byteArrayToInt(tmp); 
-    }
-    
-    return result;
+    return MathUtils.simpleHash(tmp);
   }
   
   /**

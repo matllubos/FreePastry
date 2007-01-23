@@ -258,7 +258,7 @@ public class ReplicationImpl implements Replication, Application {
 	              public void receiveResult(Object o) {
 	                IdBloomFilter filter = (IdBloomFilter) o;
 	
-	                if (logger.level <= Logger.FINE) logger.log( "COUNT: Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
+	                if (ReplicationImpl.this.logger.level <= Logger.FINE) ReplicationImpl.this.logger.log( "COUNT: Sending request to " + handle + " for range " + range + ", " + ourRange + " in instance " + instance);
 	                
 	                RequestMessage request = new RequestMessage(ReplicationImpl.this.handle, new IdRange[] {range, ourRange}, new IdBloomFilter[] {filter, ourFilter});
 	                endpoint.route(null, request, handle);
