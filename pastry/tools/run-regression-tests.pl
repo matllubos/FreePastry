@@ -30,7 +30,7 @@ rice.p2p.past.testing.PastRegrTest
 rice.p2p.past.testing.RawPastRegrTest
 rice.p2p.splitstream.testing.SplitStreamRegrTest
 rice.p2p.replication.testing.ReplicationRegrTest
-rice.p2p.replication.testing.ReplicationManagerRegrTest
+rice.p2p.replication.manager.testing.ReplicationManagerRegrTest
 );
 
 sub out {
