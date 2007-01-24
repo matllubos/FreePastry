@@ -180,15 +180,42 @@ public abstract class CommonAPITest {
     nodes = new Node[NUM_NODES];
   }
 
+  public static final int LEASE_PERIOD = 10000; // 10 seconds
+  public static final int TIME_TO_FIND_FAULTY = 15000; // 15 seconds
+  
+  /**
+   * Nodes will be non-ready for a while after killing.  Need to account for this in the test.  
+   * 
+   * wait for LEASE+TimeToFindFaulty+periodic protocol
+   */
+  public void waitToRecoverFromKilling(int additionalTime) {
+    waitOnClock(LEASE_PERIOD+TIME_TO_FIND_FAULTY+additionalTime);
+  }
+
+  public void waitOnClock(int time) {
+    if (environment.getSelectorManager().isSelectorThread()) return;
+    
+    try {
+      environment.getTimeSource().sleep(time);
+    } catch (InterruptedException e) {}    
+  }
+  
   public void setupParams(Environment env) {
+    params = env.getParameters();
+    
     // reduce the check liveness policy to make test run faster
-    env.getParameters().setInt("pastry_socket_scm_num_ping_tries",2);
+    params.setInt("pastry_socket_scm_num_ping_tries",2);
 
     // disable the UPnP setting (in case you are testing this on a NATted LAN)
-    env.getParameters().setString("nat_search_policy","never");
-
+    params.setString("nat_search_policy","never");
+    
+    // reduce the LEASE/Lease-Refresh
+    params.setInt("pastry_protocol_periodicLeafSet_ping_neighbor_period",8000); // 8 seconds
+    params.setInt("pastry_protocol_periodicLeafSet_lease_period",LEASE_PERIOD);  // 10 seconds
+    params.setInt("pastry_protocol_periodicLeafSet_request_lease_throttle",2000);// 2 seconds
+    
+    
     this.logger = env.getLogManager().getLogger(getClass(),null);
-    params = env.getParameters();
     NUM_NODES = params.getInt("commonapi_testing_num_nodes");
     PORT = params.getInt("commonapi_testing_startPort");
     PROTOCOL = params.getString("commonapi_testing_protocol");

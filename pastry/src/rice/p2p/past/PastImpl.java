@@ -594,7 +594,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param max The maximum number of handles to return
    * @param command The command to call with the result (NodeHandle[])
    */
-  protected void getHandles(Id id, int max, Continuation command) {
+  protected void getHandles(Id id, final int max, Continuation command) {
     NodeHandleSet set = endpoint.replicaSet(id, max);
 
     if (set.size() == max) {
@@ -605,7 +605,12 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
           NodeHandleSet replicas = (NodeHandleSet) o;
 
           // check to make sure we've fetched the correct number of replicas
-          if (endpoint.replicaSet(endpoint.getLocalNodeHandle().getId(), replicationFactor+1).size() > replicas.size()) 
+          // the deal with this is for the small ring.  If you are requesting 
+          // 4 nodes, but the ring is only 3, you are only going to get 3
+          // Note: this is still kind of funky, because the replicationFactor+1 
+          // argument is kind of weird, but I don't know how to get it right
+          // -Jeff 1/24/07
+          if (Math.min(max,endpoint.replicaSet(endpoint.getLocalNodeHandle().getId(), replicationFactor+1).size()) > replicas.size()) 
             parent.receiveException(new PastException("Only received " + replicas.size() + " replicas - cannot insert as we know about more nodes."));
           else
             parent.receiveResult(replicas);

@@ -70,7 +70,7 @@ public class PastRegrTest extends CommonAPITest {
   public static String INSTANCE = "PastRegrTest";
   
   // the replication factor in Past
-  public static int REPLICATION_FACTOR = 3;
+  public static final int REPLICATION_FACTOR = 3;
 
   // the storage services in the ring
   protected StorageManager storages[];

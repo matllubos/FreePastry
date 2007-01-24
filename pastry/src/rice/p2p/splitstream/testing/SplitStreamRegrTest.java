@@ -192,6 +192,11 @@ public class SplitStreamRegrTest extends CommonAPITest {
       kill(i);
       simulate();
     }
+    
+    // wait for LEASE+TimeToFindFaulty+SubscribeRetry
+    // wait for notification of failure to propegate
+    waitToRecoverFromKilling(params.getInt("p2p_scribe_message_timeout"));
+    
     if (checkTree(num, NUM_NODES))
       stepDone(SUCCESS);
     else {
@@ -215,10 +220,11 @@ public class SplitStreamRegrTest extends CommonAPITest {
               + ssclients[j + num].getNumMesgs());
         ssclients[j + num].reset();
       }
-      //System.out.println("Expected " + ((NUM_NODES - num) * 16) + " messages,
-      // got " + totalmsgs);
-      if (totalmsgs != ((NUM_NODES - num) * 16))
+      if (totalmsgs != ((NUM_NODES - num) * 16)) {
+        System.out.println("Expected " + ((NUM_NODES - num) * 16) + " messages, got " + totalmsgs);
         pass = false;
+        stepDone(FAILURE);
+      }
     }
 
     if (pass) {
