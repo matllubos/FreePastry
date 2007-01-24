@@ -49,52 +49,126 @@ import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
 
 /**
- * Holds 1 serialized message for receiving or sending.
+ * Holds 1 serialized message for receiving or sending.  Has a growable buffer.
  * 
  * Has specialized code for RouteMessage, Liveness Message, and byte arrays.
+ *  
+ * This code is ugly and does too many things.  However right now this is what 
+ * we have.
+ * 
+ * There are Several Different Constructors.  Depending which one you use, different
+ * other methods will work.  Look at the docs on the individual constructors for more info.
  *  
  * @author Jeff Hoye
  */
 public class SocketBuffer implements RawMessageDelivery {
+  
+  /**
+   * Used for reverse compatibility.  So you can use the getMessage()/unpack() methods
+   * of the RouteMessage and we will be able to deserialize the messages as java messages.
+   */
   private MessageDeserializer defaultDeserializer;
+  
+  /**
+   * Needed to deserialize the NodeHandle -- sender
+   */
   private NodeHandleFactory nhf;
+  
+  /**
+   * This is really ugly, and also for reverse compatibility.  It is needed
+   * for a JavaDeserializer ... ugh...
+   */
   private SocketPastryNode spn;
   
+  // these variables contain details of the message that are necessary for 
+  // further deserialization
+  
+  /**
+   * The application address.
+   */
   private int address;
+  /**
+   * The message type.
+   */
   private short type;
+  /**
+   * The priority of the message
+   */
   int priority;
+  /**
+   * The sender (can be null if there isn't a sender)
+   */
   private NodeHandle sender;
   
-  // RouteMessage stuff
+  /**
+   * RouteMessage stuff: tells if the message can be rapidly rerouted etc...
+   */
   private SendOptions sendOpts;
   
+  /**
+   * If it is a routeMessage, the types of the internal message
+   */
   short rmSubType = -2;
   int rmSubAddress = -2;
 
-  byte[] bytes = null;
-  
   // low level stuff
+  /**
+   * One way to hold bytes... ugh...
+   */
+  byte[] bytes = null;
+  /**
+   * The initial buffer size (it is growable)
+   */
   public static final int DEFAULT_BUFFER_SIZE = 1024;
-  // Hack to not have to allocate buffers I know to be zero
+  /**
+   * Hack to not have to allocate buffers I know to be zero
+   */
   private static final byte[] ZERO = new byte[8];
+  /**
+   * To read the serialized object we got off the wire
+   */
   SocketDataInputStream str;
+  /**
+   * Another way to hold bytes
+   */
   private ByteBuffer buffer;
+  /**
+   * To read in bytes while we are serializing an object.
+   */
   ExposedDataOutputStream o;
+  /**
+   * The guts of the EDOS
+   */
   ExposedByteArrayOutputStream ebaos;
 
   /**
-   * True if was just part of session initiation.
+   * True if was just part of session initiation.  
+   * 
+   * The theory with this boolean is that we will eventually be able to reuse 
+   * the SocketBuffer in some kind of pool.  This is not yet implemented.
    */
   boolean discard = false;
   
-  // writing bytes
-  public SocketBuffer(byte[] output) {
-    buffer = ByteBuffer.wrap(output);
-    priority = -1;
-    discard = true;
+  /**
+   * Main Constructor for writing an object.  
+   * 
+   * The purpose of the defaultDeserializer is to handle reverse compatibility 
+   * with JavaSerialization and the old method calls.  If the code calls
+   * RouteMessage.unpack() instead of RouteMessage.unpack(Deserializer) then 
+   * the defaultDeserializer is used.
+   * 
+   * @param defaultDeserializer
+   */
+  public SocketBuffer(MessageDeserializer defaultDeserializer, NodeHandleFactory nhf) {
+    this.defaultDeserializer = defaultDeserializer;
+    this.nhf = nhf;
+    initialize(DEFAULT_BUFFER_SIZE);
   }
   
-  // from a read
+  /**
+   * When you expect to read a message.  This will deserialize the message
+   * header.  Then you can call deserialize with an appropriate deserializer.
+   */
   public SocketBuffer(byte[] input, SocketPastryNode spn) throws IOException {
     this.bytes = input;
     str = new SocketDataInputStream(new ByteArrayInputStream(input));
@@ -125,20 +199,29 @@ public class SocketBuffer implements RawMessageDelivery {
   }
     
   /**
-   * For quick write
-   * @param rm
-   * @param logger
+   * This serializes UDP messages with the appropriate source route header.
+   * 
+   * @param address the local address
+   * @param path the path to the destination
+   * @param msg the message
+   * @throws IOException
    */
-  public SocketBuffer(PRawMessage rm) throws IOException {
-    initialize(DEFAULT_BUFFER_SIZE);
-    serialize(rm, true); 
+  public SocketBuffer(EpochInetSocketAddress address, SourceRoute path, PRawMessage msg) throws IOException {
+    this(address, path);
+//    System.out.println("SB "+msg);
+    serialize(msg, false);
   }
   
   /**
-   * For a quick write.
+   * This constructor is a helper for the previous one.
+   * Sets up the header part of a UDP message, without 
+   * serializing the message itself.
+   * 
+   * @param address the local address
+   * @param path the path to the destination
    * @throws IOException
    */
-  public SocketBuffer(EpochInetSocketAddress address, SourceRoute path) throws IOException {
+  private SocketBuffer(EpochInetSocketAddress address, SourceRoute path) throws IOException {
     initialize(DEFAULT_BUFFER_SIZE);
     
     o.write(SocketCollectionManager.PASTRY_MAGIC_NUMBER);
@@ -162,14 +245,12 @@ public class SocketBuffer implements RawMessageDelivery {
       path.getHop(i).serialize(o);
   }
   
-  public SocketBuffer(EpochInetSocketAddress address, SourceRoute path, PRawMessage msg) throws IOException {
-    this(address, path);
-//    System.out.println("SB "+msg);
-    serialize(msg, false);
-  }
-  
   /**
-   * Used to initialize the sourceroute path.  Counterpart reading of the header is found in SocketChannelRepeater.read()
+   * Used to initialize a TCP stream header.
+   * 
+   * The counterpart reading of the header is found in 
+   * SocketChannelRepeater.read()
+   * 
    * @param path
    * @param appId
    * @throws IOException
@@ -186,15 +267,38 @@ public class SocketBuffer implements RawMessageDelivery {
     o.write(SocketCollectionManager.HEADER_DIRECT,0,SocketCollectionManager.HEADER_DIRECT.length);
     o.write(MathUtils.intToByteArray(appId), 0, 4);    
   }
+
+  // these constructors are bogus, and should probably be gotten rid of, or documented better
+  /**
+   * Just bytes (no real concept of a message.)
+   * This is for 
+   *   a) sourcerouting bytes
+   *   b) for a usually a stream header for getResponse().
+   * 
+   * TODO: The stream header version should probably use the one that is designed
+   * to initialize a TCP stream.
+   * 
+   * @param output
+   * @return
+   */
+  public SocketBuffer(byte[] output) {
+    buffer = ByteBuffer.wrap(output);
+    priority = -1;
+    discard = true;
+  }
+  
   
   /**
-   * Main Constructor
-   * @param defaultDeserializer
+   *   Serializes a SourceRoute (don't know why this isn't done in the stream
+   *     header serializer.
+   *   Serializes a Message for getResponse() should probably use normal constructor.
+   * 
+   * @param rm
+   * @param logger
    */
-  public SocketBuffer(MessageDeserializer defaultDeserializer, NodeHandleFactory nhf) {
-    this.defaultDeserializer = defaultDeserializer;
-    this.nhf = nhf;
+  public SocketBuffer(PRawMessage rm) throws IOException {
     initialize(DEFAULT_BUFFER_SIZE);
+    serialize(rm, true); 
   }
 
   protected void initialize(int size) {
