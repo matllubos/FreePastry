@@ -73,6 +73,11 @@ public class IdBloomFilter implements Serializable {
   
   /**
    * An internal byte[] for managing ids in a memory-efficent manner
+   * 
+   * The deal with this is that we will be creating a ton of arrays in addId/check.  
+   * So, what we do is allocate only 1 on a lazy basis.  The call to checkArray()
+   * will construct a new array if there isn't one yet, then it will encode the 
+   * id into the array.
    */
   protected transient byte[] array;
   
@@ -100,6 +105,8 @@ public class IdBloomFilter implements Serializable {
   /**
    * Internal method for checking to see if the array exists, and if not,
    * instanciating it.  It also places the given Id into the array.
+   * 
+   * See the documentation of the member variable array for more info.
    *
    * @param id An id to build the array from
    */
