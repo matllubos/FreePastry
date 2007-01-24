@@ -225,7 +225,7 @@ public class RawScribeRegrTest extends CommonAPITest {
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       if (clients[i].equals(client)) {
         if (clients[i].getAnycastMessages().length != 1) {
-          stepDone(FAILURE, "Expected node to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().length);
+          stepDone(FAILURE, "Expected node to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().length+" local "+local);
           failed = true;
         }
       } else {
@@ -511,12 +511,13 @@ public class RawScribeRegrTest extends CommonAPITest {
 
     stepStart("Killing Nodes");
     for (int i=0; i<NUM_NODES/2; i++) {
+      System.out.println("Killing " + scribes[i].getId());
       scribes[i].destroy();
       kill(i);
       simulate();
     }
 
-    pause(40000);    
+    waitToRecoverFromKilling(scribes[0].MESSAGE_TIMEOUT);    
     stepDone(SUCCESS);
 
     stepStart("Tree Recovery");

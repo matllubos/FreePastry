@@ -235,7 +235,7 @@ public abstract class CommonAPITest {
       processNode(i, nodes[i]);
       simulate();
     
-      System.out.println("Created node " + i + " with id " + ((PastryNode) nodes[i]).getNodeId()+" at "+environment.getTimeSource().currentTimeMillis());
+      System.out.println("Created node " + i + " with id " + nodes[i]+" at "+environment.getTimeSource().currentTimeMillis());
     }
     if (logger.level <= Logger.INFO) logger.log(((PastryNode)nodes[0]).getLeafSet().toString());
     if (simulator != null) simulator.setFullSpeed();
