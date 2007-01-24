@@ -83,13 +83,11 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   /**
    * Related to rapidly determining direct neighbor liveness.
    */
-  public final int PING_NEIGHBOR_PERIOD;
+  public final int PING_NEIGHBOR_PERIOD; // 20 sec
 
-  public final int LEASE_PERIOD;
+  public final int LEASE_PERIOD; // 30 sec
   
-  public final int CHECK_LIVENESS_PERIOD;
-
-  public final int BLS_THROTTLE = 5000;
+  public final int BLS_THROTTLE; // 10 sec
 
   ScheduledMessage pingNeighborMessage;
 
@@ -152,10 +150,9 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     this.lastTimeReceivedBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
     this.lastTimeSentBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
     Parameters p = ln.getEnvironment().getParameters();
-    PING_NEIGHBOR_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period");
-    LEASE_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_lease_period");  // 30000
-    CHECK_LIVENESS_PERIOD = PING_NEIGHBOR_PERIOD
-        + p.getInt("pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod");
+    PING_NEIGHBOR_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"); // 20 seconds
+    LEASE_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_lease_period");  // 30 seconds
+    BLS_THROTTLE = p.getInt("pastry_protocol_periodicLeafSet_request_lease_throttle");// 10 seconds
     this.lastTimeRenewedLease = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), LEASE_PERIOD*2);
 
     // Removed after meeting on 5/5/2005 Don't know if this is always the
@@ -252,41 +249,14 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       NodeHandle left = leafSet.get(-1);
       NodeHandle right = leafSet.get(1);
 
-      // send BLS to left neighbor
+      // send BLS to left/right neighbor
+      // ping if we don't currently have a lease
       if (left != null) {
-        sendBLS(left);
+        sendBLS(left, !hasLease(left));
       }
       if (right != null) {
-        sendBLS(right);
+        sendBLS(right, !hasLease(right));
       }
-      // see if received BLS within past 30 seconds from right neighbor
-      // now handled in sendBLS()
-//      if (right != null) {
-//        Long time = (Long) lastTimeReceivedBLS.get(right);
-//        if (time == null
-//            || (time.longValue() < (localNode.getEnvironment().getTimeSource()
-//                .currentTimeMillis() - CHECK_LIVENESS_PERIOD))) {
-//          // else checkLiveness() on right neighbor
-//          if (logger.level <= Logger.FINE)
-//            logger
-//                .log("PeriodicLeafSetProtocol: Checking liveness on right neighbor:"
-//                    + right);
-//          right.checkLiveness();
-//        }
-//      }
-//      if (left != null) {
-//        Long time = (Long) lastTimeReceivedBLS.get(left);
-//        if (time == null
-//            || (time.longValue() < (localNode.getEnvironment().getTimeSource()
-//                .currentTimeMillis() - CHECK_LIVENESS_PERIOD))) {
-//          // else checkLiveness() on left neighbor
-//          if (logger.level <= Logger.FINE)
-//            logger
-//                .log("PeriodicLeafSetProtocol: Checking liveness on left neighbor:"
-//                    + left);
-//          left.checkLiveness();
-//        }
-//      }
     }
   }
 
@@ -360,12 +330,12 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     NodeHandle newLeft = leafSet.get(-1);
     if (newLeft != null && (lastLeft != newLeft)) {
       lastLeft = newLeft;
-      sendBLS(lastLeft);
+      sendBLS(lastLeft,true);
     }
     NodeHandle newRight = leafSet.get(1);
     if (newRight != null && (lastRight != newRight)) {
       lastRight = newRight;
-      sendBLS(lastRight);
+      sendBLS(lastRight,true);
     }
   }
   
@@ -402,32 +372,49 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
 //  HashSet deadLeases = new HashSet();
   
   public boolean shouldBeReady() {
-    long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
-    long leaseOffset = curTime-LEASE_PERIOD;
     
     NodeHandle left = leafSet.get(-1);
     NodeHandle right = leafSet.get(1);
     
-    // see if received BLS within past 30 seconds from right neighbor
-    if (right != null) {
-      Long time = (Long) lastTimeReceivedBLS.get(right);
-      if (time == null
-          || (time.longValue() < leaseOffset)) {
-            sendBLS(right);
-        // we don't have a lease
-        return false;
-      }      
+    // do it this way so we get going on both leases if need be
+    boolean ret = true;
+    
+    // see if received BLS within past LEASE_PERIOD seconds from left neighbor
+    if (!hasLease(left)) {
+      ret = false;
+      sendBLS(left, true); 
     }
-    if (left != null) {
-      Long time = (Long) lastTimeReceivedBLS.get(left);
+    
+    // see if received BLS within past LEASE_PERIOD seconds from right neighbor
+    if (!hasLease(right)) {
+      ret = false;
+      sendBLS(right, true); 
+    }
+    
+//    if (deadLeases.size() > 0) return false;
+    return ret;
+  }
+  
+  /**
+   * Do we have a lease from this node?
+   * 
+   * Returns true if nh is null.
+   * 
+   * @param nh the NodeHandle we are interested if we have a lease from
+   * @return if we have a lease from the NodeHandle
+   */
+  public boolean hasLease(NodeHandle nh) {
+    long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+    long leaseOffset = curTime-LEASE_PERIOD;
+
+    if (nh != null) {
+      Long time = (Long) lastTimeReceivedBLS.get(nh);
       if (time == null
           || (time.longValue() < leaseOffset)) {
-            sendBLS(left);
         // we don't have a lease
         return false;
       }      
     }     
-//    if (deadLeases.size() > 0) return false;
     return true;
   }
   
@@ -436,7 +423,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * @param sendTo
    * @return true if we sent it, false if we didn't because of throttled
    */
-  private boolean sendBLS(NodeHandle sendTo) {
+  private boolean sendBLS(NodeHandle sendTo, boolean checkLiveness) {
     Long time = (Long) lastTimeSentBLS.get(sendTo);
     long currentTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
     if (time == null
@@ -448,7 +435,9 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
 
       thePastryNode.send(sendTo, new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
       thePastryNode.send(sendTo, new RequestLeafSet(localHandle, currentTime));
-      sendTo.checkLiveness();
+      if (checkLiveness) {
+        sendTo.checkLiveness();
+      }
       return true;
     } 
     return false;

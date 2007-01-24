@@ -170,7 +170,7 @@ pastry_protocol_periodicLeafSet_lease_period = 30000
 
 # what the grace period is to receive a periodic update, before checking 
 # liveness
-pastry_protocol_periodicLeafSet_checkLiveness_neighbor_gracePeriod = 10000
+pastry_protocol_periodicLeafSet_request_lease_throttle = 10000
 
 # how many entries are kept in the partition handler's table
 partition_handler_max_history_size=20
