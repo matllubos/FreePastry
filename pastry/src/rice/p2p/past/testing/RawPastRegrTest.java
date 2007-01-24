@@ -125,6 +125,8 @@ public class RawPastRegrTest extends CommonAPITest {
               return new TestPastContent(buf, endpoint, this);
             case VersionedTestPastContent.TYPE:
               return new VersionedTestPastContent(buf, endpoint, this);              
+            case NonOverwritingTestPastContent.TYPE:
+              return new NonOverwritingTestPastContent(buf, endpoint, this);              
           }
           throw new IllegalArgumentException("Unknown type:"+contentType);
         }      
@@ -973,6 +975,7 @@ public class RawPastRegrTest extends CommonAPITest {
   }
   
   protected static class NonOverwritingTestPastContent extends VersionedTestPastContent {
+    public static final short TYPE = 3;
 
     public NonOverwritingTestPastContent(Id id, int version) {
       super(id, version);
@@ -980,6 +983,26 @@ public class RawPastRegrTest extends CommonAPITest {
     
     public PastContent checkInsert(Id id, PastContent existingContent) throws PastException {
       return existingContent;
+    }
+    
+    public String toString() {
+      return "NonOverwritingTestPastContent(" + id + ", " + version + ")";
+    }
+    
+    public short getType() {
+      return TYPE; 
+    }
+    
+    public NonOverwritingTestPastContent(InputBuffer buf, Endpoint endpoint, PastContentDeserializer pcd) throws IOException {
+      super(buf, endpoint, pcd);
+    }
+    
+    
+    public boolean equals(Object o) {
+      if (! (o instanceof NonOverwritingTestPastContent)) return false;
+
+      return (((NonOverwritingTestPastContent) o).id.equals(id) &&
+              (((NonOverwritingTestPastContent) o).version == version));
     }
   }
 
