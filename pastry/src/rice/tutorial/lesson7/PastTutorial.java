@@ -78,11 +78,10 @@ public class PastTutorial {
    * @param env the Environment
    */
   public PastTutorial(int bindport, InetSocketAddress bootaddress,
-      int numNodes, Environment env) throws Exception {
+      int numNodes, final Environment env) throws Exception {
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
-
 
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory,
@@ -93,11 +92,7 @@ public class PastTutorial {
       // This will return null if we there is no node at that location
       NodeHandle bootHandle = ((SocketPastryNodeFactory) factory)
           .getNodeHandle(bootaddress);
-      if (curNode > 0) {
-        InetSocketAddress[] bootaddressArray = new InetSocketAddress[1];
-        bootaddressArray[0] = bootaddress;      
-        SocketPastryNodeFactory.verifyConnection(10000, bootaddress, bootaddressArray, env, env.getLogManager().getLogger(PastTutorial.class, null));     
-      }      
+      
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
       PastryNode node = factory.newNode((rice.pastry.NodeHandle) bootHandle);
@@ -220,11 +215,13 @@ public class PastTutorial {
     p.lookup(bogusKey, new Continuation() {
       public void receiveResult(Object result) {
         System.out.println("Successfully looked up " + result + " for key "+bogusKey+".  Notice that the result is null.");
+        env.destroy();
       }
 
       public void receiveException(Exception result) {
         System.out.println("Error looking up "+bogusKey);
         result.printStackTrace();
+        env.destroy();
       }
     });
   }
