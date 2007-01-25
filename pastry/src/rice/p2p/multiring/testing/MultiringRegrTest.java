@@ -269,7 +269,7 @@ public class MultiringRegrTest {
   }
 
   /**
-   * Method which creates a single node, given it's node
+   * Method which creates a non-gateway node, given it's node
    * number
    *
    * @param num The number of creation order
@@ -301,7 +301,7 @@ public class MultiringRegrTest {
   }
   
   /**
-   * Method which creates a single node, given it's node
+   * Method which creates a gateway node, given it's node
    * number
    *
    * @param num The number of creation order
