@@ -213,7 +213,9 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     stepDone(SUCCESS);
     
     // wait for notification of failure to propegate
-    synchronized(this) {try { wait(15000); } catch (InterruptedException e) {}}
+    // No routing involved... but we need to wait long enough for the node
+    // to be found faulty.
+    waitToRecoverFromKilling(5000);  
     
     stepStart("Initiating Maintenance");
     
