@@ -489,7 +489,7 @@ RequestRouteRow:
 
   format: 
     byte version (0)
-    byte row // the row requested
+    short row // the row requested
     
 BroadcastRouteRow:
   address: 0x89ce110e (Route Protocol)
@@ -500,9 +500,12 @@ BroadcastRouteRow:
   format:
     byte version (0)
     NodeHandle fromNode  
-    byte numRows
-      byte null? (0 if null, 1 if non-null)
-        RouteSet row // if non-null
+    // encoding a sparse array
+    int numRouteSets
+    // for each routeSet
+      boolean notNull
+      // if (notNull)
+        RouteSet set
 
 1.7.5 CommonAPI impl **********************************************************
 PastryEndpointMessage:
@@ -512,6 +515,7 @@ PastryEndpointMessage:
   package: rice.pastry.commonapi
   
   format:
+    byte version (0)
     byte priority
     short type (the type of the sub message)
     CommonAPIMessage message
@@ -814,6 +818,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -825,6 +830,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -845,6 +851,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -866,6 +873,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -888,6 +896,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -901,7 +910,7 @@ Chapter 2 CommonApi Apps ******************************************************
         byte[errorLength] // platform dependent error message
                 
       int max // the number of replicas to fetch
-      short idType
+      short idType // the type of the id (next value)
       Id id // the Id to fetch     
   
   LookupMessage:    
@@ -910,6 +919,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -924,7 +934,7 @@ Chapter 2 CommonApi Apps ******************************************************
                 
       boolean hasHandle
         NodeHandle handle // where this message has been        
-      short idType
+      short idType // the type of the id (next value)
       Id id // the id to fetch
       boolean cached // whether or not this message has been cached
   
@@ -933,6 +943,7 @@ Chapter 2 CommonApi Apps ******************************************************
   GCId 
     type 3
     use: Holds an id and an expiration, used to refresh Ids
+    short idType // the type of the id (next value)
     Id id
     time expiration
 
@@ -943,6 +954,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -958,7 +970,8 @@ Chapter 2 CommonApi Apps ******************************************************
 
       int numKeys
       // for each numKey
-        GCId id 
+        short idType // the type of the id (next value)
+        GCId gcid 
         
         
   GCInsertMessage:    
@@ -967,6 +980,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     
@@ -992,6 +1006,7 @@ Chapter 2 CommonApi Apps ******************************************************
     format:
       byte version (0)
       int id // unique id of this message
+      short idType // the type of the dest (next value)
       Id dest // the destination of this request
       NodeHandle source // the source of this request
       boolean isResponse // if this is a response     

@@ -135,8 +135,8 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * @return number of rows
    */
 
-  public byte numRows() {
-    return (byte)routingTable.length;
+  public short numRows() {
+    return (short)routingTable.length;
   }
 
   /**

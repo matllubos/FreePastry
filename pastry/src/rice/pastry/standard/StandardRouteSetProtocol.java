@@ -170,7 +170,7 @@ public class StandardRouteSetProtocol extends PastryAppl {
       "maintainRouteSet " + thePastryNode.getLocalHandle().getNodeId());
 
     // for each populated row in our routing table
-    for (byte i = (byte)(routeTable.numRows() - 1); i >= 0; i--) {
+    for (short i = (short)(routeTable.numRows() - 1); i >= 0; i--) {
       RouteSet row[] = routeTable.getRow(i);
       BroadcastRouteRow brr = new BroadcastRouteRow(thePastryNode.getLocalHandle(), row);
       RequestRouteRow rrr = new RequestRouteRow(thePastryNode.getLocalHandle(), i);

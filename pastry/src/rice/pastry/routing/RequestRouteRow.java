@@ -54,7 +54,7 @@ import java.util.*;
 public class RequestRouteRow extends PRawMessage implements Serializable {
   public static final short TYPE = 1;
 
-  private byte row;
+  private short row;
 
   /**
    * Constructor.
@@ -63,7 +63,7 @@ public class RequestRouteRow extends PRawMessage implements Serializable {
    * @param r which row
    */
 
-  public RequestRouteRow(NodeHandle nh, byte r) {
+  public RequestRouteRow(NodeHandle nh, short r) {
     this(null, nh, r);
   }
 
@@ -74,7 +74,7 @@ public class RequestRouteRow extends PRawMessage implements Serializable {
    * @param nh the return handle
    * @param r which row
    */
-  public RequestRouteRow(Date stamp, NodeHandle nh, byte r) {
+  public RequestRouteRow(Date stamp, NodeHandle nh, short r) {
     super(RouteProtocolAddress.getCode(), stamp);
     setSender(nh);
     row = r;
@@ -97,7 +97,7 @@ public class RequestRouteRow extends PRawMessage implements Serializable {
    * @return the row.
    */
 
-  public int getRow() {
+  public short getRow() {
     return row;
   }
 
@@ -116,7 +116,7 @@ public class RequestRouteRow extends PRawMessage implements Serializable {
   
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeByte((byte)0); // version    
-    buf.writeByte(row);
+    buf.writeShort(row);
   }
   
   public RequestRouteRow(NodeHandle sender, InputBuffer buf) throws IOException {
@@ -126,7 +126,7 @@ public class RequestRouteRow extends PRawMessage implements Serializable {
     byte version = buf.readByte();
     switch(version) {
       case 0:
-        row = buf.readByte();
+        row = buf.readShort();
         setPriority(MAX_PRIORITY);
         break;
       default:

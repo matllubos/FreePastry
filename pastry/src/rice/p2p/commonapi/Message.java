@@ -59,10 +59,11 @@ public interface Message extends Serializable {
   public static final int MEDIUM_PRIORITY = 0;
   public static final int MEDIUM_LOW_PRIORITY = 5;
   public static final int LOW_PRIORITY = 10;
+  public static final int LOWEST_PRIORITY = 15;
 
   /**
    * Method which should return the priority level of this message.  The messages
-   * can range in priority from 0 (highest priority) to Integer.MAX_VALUE (lowest) -
+   * can range in priority from -15 (highest priority) to 15 (lowest) -
    * when sending messages across the wire, the queue is sorted by message priority.
    * If the queue reaches its limit, the lowest priority messages are discarded.  Thus,
    * applications which are very verbose should have LOW_PRIORITY or lower, and
