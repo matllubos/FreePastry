@@ -216,6 +216,7 @@ public class ReplicationManagerRegrTest extends CommonAPITest {
     // No routing involved... but we need to wait long enough for the node
     // to be found faulty.
     waitToRecoverFromKilling(5000);  
+    waitToRecoverFromKilling(5000);  // 1ce was not enough?  try waiting more?
     
     stepStart("Initiating Maintenance");
     
