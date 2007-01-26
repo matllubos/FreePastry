@@ -293,10 +293,14 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       environment = env;
       
-      // turn on consistent join protocol's logger
       environment.getParameters().setBoolean("logging_packageOnly",false);
-      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol",Logger.INFO);
-
+      // turn on consistent join protocol's logger to make sure this is correct for consistency
+      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
+      
+      // to see rapid rerouting and dropping from consistency if gave lease
+      environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
 //      if (args.length > 0) {
 //        int theVal = Integer.parseInt(args[0]);
 //        if (theVal >= 0) {
@@ -521,6 +525,6 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 
   public void loopTime(int loopTime) {
     System.out.println("loopTime("+loopTime+"):"+environment.getTimeSource().currentTimeMillis());
-    System.out.println("LEAFSET5:"+(environment.getTimeSource().currentTimeMillis()-loopTime)+":"+localNode.getLeafSet());
+    System.out.println("LEAFSET5:"+(environment.getTimeSource().currentTimeMillis()-loopTime+delayInterest())+":"+localNode.getLeafSet());
   }  
 }
