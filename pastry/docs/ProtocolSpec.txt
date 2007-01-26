@@ -380,9 +380,11 @@ IdRange: Represents a contiguous range of Pastry ids.
   boolean empty
   
 NodeHandleSet: Represents a set of NodeHandles
-  short size
-  // for each size
-    NodeHandle handle
+  type: 1 (the normal NodeHandleSet)
+  format:
+    short size
+      // for each size
+      NodeHandle handle
 
 BloomFilter: 
   int length
@@ -1056,20 +1058,29 @@ Multiring doesn't use any specific messages, but it does define a new object:
 RingId and a ScribeContent (RingMessage) which is anycasted to get to the 
 appropriate ring.
 
-  RingId:
+  RingId: (A type of Id)
+    type: 2
     short ringIdType
     Id ringId // the ring
     short idType
     Id id // the id in the ring
 
   RingMessage (a ScribeContent):
-    type 
+    type: 1 
     format:
       RingId id
       String application
       short messageType
       byte priority
       Message message
+      
+  MultiringNodeHandleSet: (A type of NodeHandleSet)
+    type: 10
+    format: 
+      short idType
+      Id ringId
+      short internalNodeHandleSetType
+      NodeHandleSet set      
   
 2.5 Glacier *******************************************************************
 2.5.1 Glacier Objects *********************************************************
