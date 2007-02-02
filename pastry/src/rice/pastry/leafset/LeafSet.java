@@ -230,6 +230,11 @@ public class LeafSet extends Observable implements Serializable {
   {
     cwSet.remove(nh);
     ccwSet.remove(nh);
+    
+    // don't do this inside SimalerSet.remove() otherwise you may get an 
+    // add notification before a removal
+    cwSet.findMoreEntriesFromRoutingTable();
+    ccwSet.findMoreEntriesFromRoutingTable();
   }
 
   /**

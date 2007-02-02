@@ -360,19 +360,27 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
   }
 
   public NodeHandle remove(NodeHandle nh) {
-    try {
+//    try {
       for (int i = 0; i < theSize; i++) {
         if (nodes[i].equals(nh)) {
           return remove(i);
         }
       }
       return null;
-    } finally {
-      findMoreEntriesFromRoutingTable(); 
-    }
+//    } finally {
+//      findMoreEntriesFromRoutingTable(); 
+//    }
   }
 
-  private void findMoreEntriesFromRoutingTable() {
+  /**
+   * The purpose of this code is to keep the ends of leafset in better shape by adding
+   * routing table entries if there are holes in the leafset.  Otherwise,
+   * sometimes the leafset shows a very small ring size, because a node
+   * that should go in the opposite side, gets added to the near side
+   * 
+   * this will confuse density checking code
+   */
+  void findMoreEntriesFromRoutingTable() {
     if (theSize < nodes.length) {
       // ok, we have room for some entries
       RoutingTable table = leafSet.routingTable;

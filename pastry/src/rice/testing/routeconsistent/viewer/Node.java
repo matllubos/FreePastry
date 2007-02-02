@@ -301,13 +301,34 @@ public class Node {
   /**
    * @param absTime
    */
-  public void move(long absTime) {
+  public void move(long absTime, boolean allOnSameComputer, ConsRenderer cr) {
     long diff = absTime-t1;
+    if (allOnSameComputer) {
+      List<Node> l = cr.getNodesByFileName(fileName);
+      for (Node n : l) {
+        n.shift(diff, true, cr);
+      }
+    } else {
+      shift(diff, true, cr);
+    }
+  }
+  
+  public void shift(long diff, boolean updateTable, ConsRenderer cr) {
     t1+=diff;
     t2+=diff;
     readyTime+=diff;
     primary.move(diff);
-    secondary.move(diff);
+    secondary.move(diff);    
+    if (updateTable) {
+      Long l = cr.offsets.get(this.nodeName);
+      if (l == null) {
+        // add the value if it isn't already there
+        cr.offsets.put(this.nodeName, new Long(diff));        
+      } else {
+        // update the value if it is already there
+        cr.offsets.put(this.nodeName, new Long(diff+l.longValue()));
+      }
+    }
   }
 
   /**

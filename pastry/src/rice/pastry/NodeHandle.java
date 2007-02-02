@@ -42,6 +42,7 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.messaging.*;
 
 import java.io.*;
+import java.util.*;
 
 /**
  * Interface for handles to remote nodes.
@@ -182,6 +183,164 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle
   public abstract void receiveMessage(Message msg);
 
   public abstract void serialize(OutputBuffer buf) throws IOException;
+  
+  /****************** Overriding of the Observer pattern to include priority **********/
+  
+  /**
+   * Class which holds an observer and a priority.  For sorting.
+   * @author Jeff Hoye
+   */
+  static class ObsPri implements Comparable {
+    Observer obs;
+    int pri;
+    
+    public ObsPri(Observer o, int priority) {
+      obs = o;
+      pri = priority;
+    }
+
+    public int compareTo(Object o) {
+      ObsPri that = (ObsPri)o;
+      int ret = that.pri - pri;
+      if (ret == 0) {
+        if (that.equals(o)) {
+          return 0;
+        } else {
+          return System.identityHashCode(that)-System.identityHashCode(this);
+        }
+      }
+//      System.out.println(this+".compareTo("+that+"):"+ret);
+      return ret;
+    }
+    
+    public String toString() {
+      return obs+":"+pri;      
+    }
+  }
+
+  transient List<ObsPri> obs = new ArrayList<ObsPri>();
+  /**
+   * Need to construct obs in deserialization.
+   */
+  private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    obs = new ArrayList<ObsPri>();
+  }
+  
+  public void addObserver(Observer o) {
+    addObserver(o, 0);  
+  }
+  
+  /**
+   * 
+   * @param o
+   * @param priority higher priority observers will be called first
+   */
+  public void addObserver(Observer o, int priority) {
+    if (logger.level <= Logger.FINER) logger.log(this+".addObserver("+o+")");
+    synchronized (obs) {
+      // this pass makes sure it's not already an observer, and also finds 
+      // the right spot for it
+      for (int i = 0; i < obs.size(); i++) {
+        ObsPri op = obs.get(i);
+        if (op.obs.equals(o)) {
+          if (op.pri != priority) {
+            // change the priority, resort, return
+            // Should we warn?  Hopefully this won't happen very often...
+            if (logger.level <= Logger.WARNING) logger.log(this+".addObserver("+o+","+priority+") changed priority, was:"+op);      
+            op.pri = priority;
+            Collections.sort(obs);
+            return;
+          }
+          // TODO: can optimize this if need be, make this look for the insertPoint.  For now, we're just going to add then sort.
+//        } else {
+//          if (op.pri <= priority) {
+//            insertPoint = i; 
+//          }
+        }
+      }
+      obs.add(new ObsPri(o,priority));
+//      logger.log(this+"addObserver("+o+")list1:"+obs);
+      Collections.sort(obs);
+//      logger.log(this+"addObserver("+o+")list2:"+obs);
+    }
+//    super.addObserver(o); 
+  }
+  
+  public void deleteObserver(Observer o) {
+    if (logger.level <= Logger.FINER) logger.log(this+".deleteObserver("+o+")");
+//    super.deleteObserver(o); 
+    synchronized (obs) {
+      for (int i = 0; i < obs.size(); i++) {
+        ObsPri op = obs.get(i);
+        if (op.obs.equals(o)) {
+          if (logger.level <= Logger.FINEST) logger.log(this+".deleteObserver("+o+"):success");
+          obs.remove(i);
+          return;
+        }
+      }
+      if (logger.level <= Logger.WARNING) logger.log(this+".deleteObserver("+o+"):failure");      
+    }
+  }
+  
+  public void notifyObservers(Object arg) {
+    List<ObsPri> l;
+    synchronized(obs) {
+      l = new ArrayList<ObsPri>(obs);    
+//      logger.log(this+"notifyObservers("+arg+")list1:"+obs);
+//      logger.log(this+"notifyObservers("+arg+")list2:"+l);
+    }
+    for(ObsPri op : l) {
+//      logger.log(this+".notifyObservers("+arg+"):notifying "+op);            
+      if (logger.level <= Logger.FINEST) logger.log(this+".notifyObservers("+arg+"):notifying "+op);            
+      op.obs.update(this, arg); 
+    }    
+  }
+
+  public synchronized int countObservers() {
+    return obs.size();
+  }
+
+  public synchronized void deleteObservers() {
+    obs.clear();
+  }
+
+  
+  /**
+   * Method which allows the observers of this socket node handle to be updated.
+   * This method sets this object as changed, and then sends out the update.
+   *
+   * @param update The update
+   */
+  public void update(Object update) {
+    if (logger != null) {
+//      logger.log(this+".update("+update+")"+countObservers());
+      if (logger.level <= Logger.FINE) {
+//        String s = "";
+//        if (obs != null)
+//          synchronized(obs) {
+//            Iterator i = obs.iterator(); 
+//            while(i.hasNext())
+//              s+=","+i.next();
+//          }
+        logger.log(this+".update("+update+")"+countObservers());
+      }
+    }
+//    setChanged();
+    notifyObservers(update);
+    if (logger != null) {
+      if (logger.level <= Logger.FINEST) {
+//        String s = "";
+//        if (obs != null)
+//          synchronized(obs) {
+//            Iterator i = obs.iterator(); 
+//            while(i.hasNext())
+//              s+=","+i.next();
+//          }
+        logger.log(this+".update("+update+")"+countObservers()+" done");
+      }
+    }
+  }  
 }
 
 

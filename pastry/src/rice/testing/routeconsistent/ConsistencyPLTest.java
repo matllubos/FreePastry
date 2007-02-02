@@ -293,14 +293,16 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       environment = env;
       
-      environment.getParameters().setBoolean("logging_packageOnly",false);
+//      environment.getParameters().setBoolean("logging_packageOnly",false);
       // turn on consistent join protocol's logger to make sure this is correct for consistency
-      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
-      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
+//      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
+//      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
       
       // to see rapid rerouting and dropping from consistency if gave lease
-      environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
-      environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
+//      environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
+//      environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
+      
+//      environment.getParameters().setInt("rice.pastry.socket.SocketNodeHandle_loglevel",Logger.ALL);
 //      if (args.length > 0) {
 //        int theVal = Integer.parseInt(args[0]);
 //        if (theVal >= 0) {

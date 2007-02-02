@@ -39,32 +39,13 @@ advised of the possibility of such damage.
  */
 package rice.testing.routeconsistent.viewer;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.StreamTokenizer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Iterator;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.text.*;
+import java.util.*;
 import java.util.List;
-import java.util.Vector;
+import java.util.prefs.Preferences;
 
 import javax.swing.*;
 
@@ -103,7 +84,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   
   File lsdir;
   
-  public ConsRenderer(JLabel statusBar, File lsdir) {
+  public ConsRenderer(JLabel statusBar, File lsdir) throws Exception {
     this.lsdir = lsdir;
     this.statusBar = statusBar; 
 //    System.out.println("maxRingSpaceValue = "+maxRingSpaceValue);
@@ -124,7 +105,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
           if (e.getButton() == MouseEvent.BUTTON1) {
             if (e.isAltDown()) {
               // move 
-              moveSelected(d);
+              moveSelected(d,e.isControlDown());
             } else {
               if (e.isShiftDown()) {
                 toggleSelect(d); 
@@ -134,15 +115,16 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
             }
             repaint();
           } else if (e.getButton() == MouseEvent.BUTTON3) {
+            // don't know what this was for
             if (e.isAltDown() && e.isControlDown()) {
               Iterator i = nodes.values().iterator();
               while(i.hasNext()) {
                 Node n = (Node)i.next(); 
                 if (n.t1 < d.absTime) {
-                  n.move(d.absTime); 
+                  n.move(d.absTime,false,ConsRenderer.this); 
                 }
               }  
-              recalcBounds(null);
+              recalcBounds();
               return;
             }
             d1 = new Details(e.getX(), e.getY());
@@ -163,7 +145,8 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
               if (o != null) {
                 selected.remove(n);
                 nodes.remove(n.nodeName);
-                recalcBounds(null);
+                delme.add(n.nodeName);
+                recalcBounds();
                 repaint();
                 return;
               }
@@ -180,13 +163,13 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     });
   }
   
-  private void moveSelected(Details d) {
+  private void moveSelected(Details d, boolean allOnSameComputer) {
     Iterator i = selected.iterator();
     while(i.hasNext()) {
       Node n = (Node)i.next(); 
-      n.move(d.absTime);            
+      n.move(d.absTime, allOnSameComputer, ConsRenderer.this);            
     }
-    recalcBounds(null);
+    recalcBounds();
   }
   
   private void selectNone() {
@@ -411,7 +394,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }
   
   // recalculate endTime, fristTime based on the nodes that were removed
-  public void recalcBounds(Vector removed) {
+  public void recalcBounds() {
     synchronized(this) {
       startTime = Long.MAX_VALUE;      
       endTime = 0;
@@ -550,12 +533,14 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     if (n == null) {
       n = new Node(s.nodeName, s.fileName); 
       nodes.put(s.nodeName,n);
+      addToNodesByFileName(n);
     } else if (n.empty) {
       // replace crappy old node with the new good one
       Node n1 = new Node(s.nodeName, s.fileName); 
       n1.ip = n.ip;
       n = n1;
       nodes.put(s.nodeName,n);      
+      addToNodesByFileName(n);
     }
     n.addSquare(s);
     if (s.time < startTime) startTime = s.time; 
@@ -574,6 +559,23 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       // there is a non-hollow one, so just set the ip
       n.ip = s.ip;
     }
+  }
+
+  HashMap<String, List<Node>> nodesByFile = new HashMap<String, List<Node>>();
+  
+  private void addToNodesByFileName(Node s) {
+//    System.out.println("addToNodesByFileName("+s.fileName+")");
+    List<Node> l = nodesByFile.get(s.fileName);
+    if (l == null) {
+      l = new ArrayList<Node>();
+      nodesByFile.put(s.fileName,l);
+    }
+    l.add(s);    
+  }
+  
+  public List<Node> getNodesByFileName(String s) {
+    System.out.println("getNodesByFileName("+s+")");
+    return nodesByFile.get(s);
   }
 
   double timeFactor = 1;
@@ -613,7 +615,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   
   boolean firstTime = true;
   protected void paintComponent(Graphics gr) {
-//    System.out.println("paintComponent begin");
+    System.out.println("paintComponent begin");
     if (firstTime) zoomToGlobal();
     firstTime = false;
     
@@ -665,10 +667,45 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
 //    System.out.println("paintComponent end");
   }  
   
+  static String ourNodeName = "/de/mpi-sws/ConsRenderer";
+  
+  static class ReturnValue {
+    boolean done = false;
+    int val = 0;
+    String dir = null;
+  }
+  
+  static class DoubleComponent extends JPanel {
+    public DoubleComponent(Component a, Component b) {
+      super();
+      setLayout(new FlowLayout(FlowLayout.CENTER));
+      add(a);
+      add(b);
+    }
+    
+    public DoubleComponent(String label, Component component) {
+      this(new JLabel(label), component);
+    }
+  }
+  
+  public static void center(JFrame frame) {
+    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+    Point center = ge.getCenterPoint();
+    Rectangle bounds = ge.getMaximumWindowBounds();
+    int w = Math.max(bounds.width/2, Math.min(frame.getWidth(), bounds.width));
+    int h = Math.max(bounds.height/2, Math.min(frame.getHeight(), bounds.height));
+    int x = center.x - w/2, y = center.y - h/2;
+    frame.setBounds(x, y, w, h);
+    if (w == bounds.width && h == bounds.height)
+        frame.setExtendedState(Frame.MAXIMIZED_BOTH);
+    frame.validate();
+  }
+
+  
   public static void main(String[] args) throws Exception {
 
-//    String dir = "n:/planetlab/cons";
-    String dir = "c:/planetlab/cons";
+    String dir = "n:/planetlab/cons";
+//    String dir = "c:/planetlab/cons";
     
     if (args.length <= 1) {
       String number = "1";
@@ -676,7 +713,76 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
         number = args[0];
       } else {
         System.out.println("opening dialog");
-        number = JOptionPane.showInputDialog(new JFrame(), "Enter the run number", "1"); 
+//        number = JOptionPane.showInputDialog(new JFrame(), "Enter the run number", "1"); 
+        final Preferences prefs = Preferences.userRoot().node(ourNodeName);
+        dir = prefs.get("dirname","n:/planetlab/cons");
+        int num = prefs.getInt("runnum",1);
+   
+        final ReturnValue ret = new ReturnValue();
+        
+        JFrame option = new JFrame();
+        option.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        Container container = option.getContentPane();
+        container.setLayout(new GridLayout(3,1));
+        
+        String[] dirOptions = {
+            "n:/planetlab/cons",
+            "c:/planetlab/cons",
+        };
+        final JComboBox dirChooser = new JComboBox(dirOptions);
+        dirChooser.setEditable(true);
+        dirChooser.setSelectedItem(dir);       
+        container.add(new DoubleComponent("Directory:",dirChooser));
+
+        Format integerFormat = NumberFormat.getIntegerInstance();
+        final JFormattedTextField integerChooser = new JFormattedTextField(integerFormat);
+        integerChooser.setColumns(9);
+        integerChooser.setValue(num);
+        
+        container.add(new DoubleComponent("Val:",integerChooser));
+        
+        JButton ok = new JButton("ok");
+        JButton cancel = new JButton("cancel");
+        
+        cancel.addActionListener(new ActionListener() {
+        
+          public void actionPerformed(ActionEvent e) {
+            System.exit(0);
+          }        
+        });
+        
+        ok.addActionListener(new ActionListener() {
+        
+          public void actionPerformed(ActionEvent e) {
+            synchronized(ret) {
+              ret.dir = (String)dirChooser.getSelectedItem();
+              ret.val = new Integer(integerChooser.getValue().toString()).intValue();
+              prefs.put("dirname",ret.dir);
+              prefs.putInt("runnum",ret.val);
+              ret.done = true;
+              ret.notifyAll();
+            }                    
+          }        
+        });
+        
+        container.add(new DoubleComponent(ok, cancel));
+        
+
+        // wait until done
+        option.pack();
+        option.setLocationRelativeTo( null );
+//        center(option);
+        option.setVisible(true);
+        synchronized(ret) {
+          while(!ret.done) {
+            ret.wait();
+          }
+        }
+        option.dispose();
+        dir = ret.dir;
+        number = ""+ret.val;
+        
+        System.out.println("dir:"+dir+" number:"+number);
       }
       args = new String[3];
       // m:/planetlab/plcons/cons1/viz m:/planetlab/plcons/cons1/node_index.txt m:/planetlab/plcons/cons1/
@@ -685,7 +791,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       args[2] = dir+number+"/";
     }
     
-    JFrame frame = new JFrame("ConsRenderer");
+    final JFrame frame = new JFrame("ConsRenderer");
     JMenuBar menuBar = new JMenuBar();
     JMenu preLifeMenu = new JMenu("preReady");
     menuBar.add(preLifeMenu);
@@ -720,9 +826,13 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     menuBar.add(editMenu);
     JMenuItem removeSelected = new JMenuItem("Remove Selected (mmb)");
     editMenu.add(removeSelected);
-    JMenuItem moveSelected = new JMenuItem("Move Selected (ctl alt lmb)");
+    JMenuItem moveSelected = new JMenuItem("Move Selected (alt lmb)");
     editMenu.add(moveSelected);
 
+    JMenuItem moveSelectedAll = new JMenuItem("Move Selected (all nodes on computer) (ctl alt lmb)");
+    editMenu.add(moveSelectedAll);
+
+    
     JMenu searchMenu = new JMenu("search");
     menuBar.add(searchMenu);
     JMenuItem liveOverlaps = new JMenuItem("Live Overlaps");
@@ -749,6 +859,22 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     frame.setSize(1000, 1000);
     frame.setVisible(true);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.addWindowListener(new WindowAdapter() {
+    
+      @Override
+      public void windowClosing(WindowEvent e) {
+        super.windowClosing(e);
+        int ret = JOptionPane.showConfirmDialog(frame,"Save?","Save?",JOptionPane.YES_NO_OPTION);
+        if (ret == JOptionPane.YES_OPTION) {
+          try {
+            cr.saveOffsets(); 
+          } catch (Exception ex) {
+             ex.printStackTrace();
+          }
+        }
+      }    
+    });
+    
     if (args.length > 0) {
       File f = new File(args[0]);
       reader.read(f);
@@ -839,10 +965,11 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
         while(i.hasNext()) {
           Node n = (Node)i.next();
           cr.nodes.remove(n.nodeName);
+          cr.delme.add(n.nodeName);
           i.remove();
         }
         cr.selectedString = "";
-        cr.recalcBounds(null);
+        cr.recalcBounds();
         cr.setText("");
         cr.repaint();
       }
@@ -852,7 +979,19 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       public void actionPerformed(ActionEvent arg0) {
         cr.setClickState(MouseEvent.BUTTON1, new Clicker() {
           public void click(Details d) {
-            cr.moveSelected(d);
+            cr.moveSelected(d, false);
+            cr.setClickState(MouseEvent.BUTTON1, null);
+            cr.repaint();
+          }
+        });
+      }
+    });
+    
+    moveSelectedAll.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent arg0) {
+        cr.setClickState(MouseEvent.BUTTON1, new Clicker() {
+          public void click(Details d) {
+            cr.moveSelected(d, true);
             cr.setClickState(MouseEvent.BUTTON1, null);
             cr.repaint();
           }
@@ -889,7 +1028,50 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     
   }
 
+  HashMap<String,Long> offsets = new HashMap<String,Long>();
+  List<String> delme = new ArrayList<String>();
   
+  protected void saveOffsets() throws FileNotFoundException, IOException {
+    for(String s: delme) {
+      offsets.remove(s); 
+    }
+    File f = new File(lsdir,"offsets");
+    ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(f));
+    oos.writeObject(delme);
+    oos.writeObject(offsets);
+    oos.close();
+  }
+
+  protected void loadOffsets() {
+    File f = new File(lsdir,"offsets");
+    if (f.exists()) {
+      try {
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
+        delme = (List<String>)ois.readObject();
+        offsets = (HashMap<String,Long>)ois.readObject();
+        ois.close();
+        
+        for(String s:delme) {
+          nodes.remove(s);
+          recalcBounds();
+        }
+        for(String s:offsets.keySet()) {
+          Node n = (Node)nodes.get(s);
+          Long l = offsets.get(s);
+//          try {
+            n.shift(l.longValue(), false, this);
+//          } catch (NullPointerException npe) {
+//            System.err.println(s+":"+n);
+//            npe.printStackTrace(); 
+//          }
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
+        f.delete(); 
+      }
+    }
+  }
+
   /**
    * Adds n to the selected set.
    * @param n
@@ -966,6 +1148,14 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   protected void renderNot() {
     prelifeRenderType = PL_RENDER_NOT;
     repaint();
+  }
+
+  public void done() {
+    try {
+      loadOffsets();    
+    } catch (Exception e) {
+      e.printStackTrace(); 
+    }
   }
 
 }

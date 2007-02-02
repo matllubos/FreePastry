@@ -143,7 +143,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     Iterator i = this.leafSet.asList().iterator();
     while(i.hasNext()) {
       NodeHandle nh = (NodeHandle)i.next(); 
-      nh.addObserver(this);
+      nh.addObserver(this, 50);
     }
 
     this.routeTable = rt;
@@ -213,7 +213,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
         leafSet.merge(bls.leafSet(), bls.from(), routeTable, false,
             null);
       }
-      // do this only if you are his proper neighbor and he is yours !!!
+      // do this only if you are his proper neighbor !!!
       if ((bls.leafSet().get(1) == localHandle) ||
           (bls.leafSet().get(-1) == localHandle)) {
         updateRecBLS(bls.from(), bls.getTimeStamp());
@@ -223,12 +223,32 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       // request for leaf set from a remote node
       RequestLeafSet rls = (RequestLeafSet) msg;
 
-      thePastryNode.send(rls.returnHandle(),
-          new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, rls.getTimeStamp()));
-      if (rls.getTimeStamp() > 0) {
+      if (rls.getTimeStamp() > 0) { // without a timestamp, this is just a normal request, not a lease request
         // remember that we gave out a lease, and go unReady() if the node goes faulty
         lastTimeRenewedLease.put(rls.returnHandle(),new Long(localNode.getEnvironment().getTimeSource().currentTimeMillis()));
+
+        // it's important to put the node in the leafset so that we don't accept messages for a node that
+        // we issued a lease to
+        // it's also important to record issuing the lease before putting into the leafset, so we can 
+        // call removeFromLeafsetIfPossible() in leafSetChange()
+        leafSet.put(rls.returnHandle());
+                
+        // nodes were never coming back alive when we called them faulty incorrectly
+        if (!rls.returnHandle().isAlive()) {
+          if (logger.level <= Logger.INFO) logger.log("Issued lease to dead node:"+rls.returnHandle()+" initiating checkLiveness()");
+          rls.returnHandle().checkLiveness();
+          
+        }
       }
+      
+      // I don't like that we're sending the message after setting lastTimeRenewedLease, becuase there
+      // could be a delay between here and above, but this should still be fine, because with
+      // the assumption that the clocks are both advancing normally, we still should not get inconsistency
+      // because the other node will stop receiving 30 seconds after he requested the lease, and we
+      // wont receive until 30 seconds after the lastTimeRenewedLease.put() above
+      thePastryNode.send(rls.returnHandle(),
+          new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, rls.getTimeStamp()));
+      
     } else if (msg instanceof InitiateLeafSetMaintenance) {
       // perform leafset maintenance
       NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
@@ -504,8 +524,13 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   @Override
   public void leafSetChange(NodeHandle nh, boolean wasAdded) {
     super.leafSetChange(nh, wasAdded);
+    logger.log("leafSetChange("+nh+","+wasAdded+")");
     if (wasAdded) {
-      nh.addObserver(this); 
+      nh.addObserver(this, 50); 
+      if (!nh.isAlive()) {
+        // nh.checkLiveness(); // this is done in all of the calling code (in this Protocol)
+        removeFromLeafsetIfPossible(nh); 
+      }
     } else {
       if (logger.level <= Logger.FINE) logger.log("Removed "+nh+" from the LeafSet.");
       nh.deleteObserver(this); 
@@ -516,33 +541,40 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * Only remove the item if you did not give a lease.
    */
   public void update(final Observable o, final Object arg) {
+//    logger.log("update("+o+","+arg+")");
 //  if (o instanceof NodeHandle) {      
     if (arg == NodeHandle.DECLARED_DEAD) {
-      Long l_time = (Long)lastTimeRenewedLease.get(o);
-      if (l_time == null) {
-        // there is no lease on record
-        leafSet.remove((NodeHandle)o);
-      } else {
-        long leaseExpiration = l_time.longValue()+LEASE_PERIOD;
-        long now = thePastryNode.getEnvironment().getTimeSource().currentTimeMillis();
-        if (leaseExpiration > now) {
-          if (logger.level <= Logger.INFO) logger.log("Removing "+o+" from leafset later."+(leaseExpiration-now));
-          // remove it later when lease expries
-          thePastryNode.getEnvironment().getSelectorManager().getTimer().schedule(new TimerTask() {          
-            @Override
-            public void run() {
-              if (logger.level <= Logger.FINE) logger.log("Calling update("+o+","+arg+")");
-              // do this recursively in case we issue a new lease
-              update(o,arg);
-            }          
-          }, leaseExpiration-now);
-        } else {
-          // lease has expired
-          leafSet.remove((NodeHandle)o);
-        }      
-      }        
+      removeFromLeafsetIfPossible((NodeHandle)o);
     }
 //  }    
 }
 
+  public void removeFromLeafsetIfPossible(final NodeHandle nh) {
+    if (nh.isAlive()) return;
+    Long l_time = (Long)lastTimeRenewedLease.get(nh);
+    if (l_time == null) {
+      // there is no lease on record
+      leafSet.remove(nh);
+    } else {
+      // verify doesn't have a current lease
+      long leaseExpiration = l_time.longValue()+LEASE_PERIOD;
+      long now = thePastryNode.getEnvironment().getTimeSource().currentTimeMillis();
+      if (leaseExpiration > now) {
+        if (logger.level <= Logger.INFO) logger.log("Removing "+nh+" from leafset later."+(leaseExpiration-now));
+        // remove it later when lease expries
+        thePastryNode.getEnvironment().getSelectorManager().getTimer().schedule(new TimerTask() {          
+          @Override
+          public void run() {
+            if (logger.level <= Logger.FINE) logger.log("removeFromLeafsetIfPossible("+nh+")");
+            // do this recursively in case we issue a new lease
+            removeFromLeafsetIfPossible(nh);
+          }          
+        }, leaseExpiration-now);
+      } else {
+        // lease has expired
+        leafSet.remove(nh);
+      }      
+    }            
+  }
+  
 }

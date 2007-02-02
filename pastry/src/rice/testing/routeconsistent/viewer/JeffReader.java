@@ -128,6 +128,7 @@ public class JeffReader implements Runnable {
           event = null;
           if (firstTime) {
             firstTime = false;
+            consumer.done();
             System.out.println("done loading");
           }
           try {

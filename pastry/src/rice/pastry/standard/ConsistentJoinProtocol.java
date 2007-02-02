@@ -300,7 +300,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     leafSet.put(nh);
     if (!observing.contains(nh)) {
       if (logger.level <= Logger.FINE) logger.log("CJP observing "+nh);
-      nh.addObserver(this);
+      nh.addObserver(this, 40);
       observing.add(nh);
     }
   }

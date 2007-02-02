@@ -44,4 +44,6 @@ package rice.testing.routeconsistent.viewer;
  */
 public interface SquareConsumer {
   void addSquare(Square s);
+
+  void done();
 }

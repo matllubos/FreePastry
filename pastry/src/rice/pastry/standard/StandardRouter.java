@@ -253,7 +253,10 @@ public class StandardRouter extends PastryAppl {
         
         // generally, there shouldn't be anyone between us (handle and localHandle) in the leafset, and if
         // there is, he is probably not ready, or if he is, he shouldn't be, so drop the message          
-        if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
+        if (logger.level <= Logger.INFO) {
+          logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
+//          logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
+        }
         return null;
     }
     return handle;

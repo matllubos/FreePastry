@@ -286,57 +286,8 @@ public class SocketNodeHandle extends DistNodeHandle {
   public void update(Observable o, Object obj) {
   }
 
-//  transient HashSet obs = new HashSet();
-//  public void addObserver(Observer o) {
-//    if (obs == null) obs = new HashSet();
-//    if (logger.level <= Logger.FINER) logger.log(this+".addObserver("+o+")");
-//    synchronized (obs) {
-//      obs.add(o);
-//    }
-//    super.addObserver(o); 
-//  }
-//  
-//  public void deleteObserver(Observer o) {
-//    if (logger.level <= Logger.FINER) logger.log(this+".deleteObserver("+o+")");
-//    super.deleteObserver(o); 
-//    synchronized (obs) {
-//      obs.remove(o);
-//    }
-//  }
-  
-  /**
-   * Method which allows the observers of this socket node handle to be updated.
-   * This method sets this object as changed, and then sends out the update.
-   *
-   * @param update The update
-   */
-  protected void update(Object update) {
-    if (logger != null) 
-      if (logger.level <= Logger.FINE) {
-//        String s = "";
-//        if (obs != null)
-//          synchronized(obs) {
-//            Iterator i = obs.iterator(); 
-//            while(i.hasNext())
-//              s+=","+i.next();
-//          }
-        logger.log(this+".update("+update+")"+countObservers());
-      }
-    setChanged();
-    notifyObservers(update);
-    if (logger != null)
-      if (logger.level <= Logger.FINEST) {
-//        String s = "";
-//        if (obs != null)
-//          synchronized(obs) {
-//            Iterator i = obs.iterator(); 
-//            while(i.hasNext())
-//              s+=","+i.next();
-//          }
-        logger.log(this+".update("+update+")"+countObservers()+" done");
-      }
-  }
 
+/*********************** Serialization ***********************/  
   public void setNodeId(Id nodeId) {
     this.nodeId = nodeId;    
   }
