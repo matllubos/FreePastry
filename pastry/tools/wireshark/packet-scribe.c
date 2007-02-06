@@ -263,7 +263,7 @@ dissect_scribe(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
   }
 
   if(check_col(pinfo->cinfo,COL_INFO)){
-    print_id_into_col_info(tvb, pinfo, offset, " Topic =");
+    print_id_into_col_info(tvb, pinfo, offset, "Topic");
   }
 
   if (tree){
