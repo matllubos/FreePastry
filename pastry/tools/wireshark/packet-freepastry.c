@@ -69,7 +69,6 @@ static int hf_freepastry_rs_capacity = -1;
 static int hf_freepastry_rs_size = -1;
 static int hf_freepastry_rs_closest = -1;
 static int hf_freepastry_ns_size = -1;
-static int hf_freepastry_mns_id = -1;
 static int hf_freepastry_mns_type = -1;
 static int hf_freepastry_liveness_msg_sent_time = -1;
 static int hf_freepastry_ls_size = -1;
@@ -649,7 +648,7 @@ decode_nodehandleset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar 
 {
   proto_item *ti = NULL;
   proto_tree *nodeset_tree = NULL;
-  guint8 nodeset_size;
+  guint16 nodeset_size;
   int i;
 
   ti = proto_tree_add_text(parent_tree, tvb, offset, 1,
@@ -679,10 +678,7 @@ decode_nodehandleset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar 
 gint
 decode_multiring_nodehandleset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name)
 {
-  if (tvb_reported_length_remaining(tvb, offset) < 22){
-    return -1;
-  }
-  proto_tree_add_string(parent_tree, hf_freepastry_mns_id, tvb, offset, 20, get_id_full(tvb, offset));
+  offset = decode_type_and_id(tvb, parent_tree, offset);
   proto_tree_add_item(parent_tree, hf_freepastry_mns_type, tvb, offset + 20, 2, FALSE);
   offset = decode_nodehandleset(tvb, parent_tree, offset + 22, attribute_name);
   return offset;
@@ -1778,10 +1774,6 @@ proto_register_freepastry(void)
     { &hf_freepastry_ns_size,
     { "NodeHandleSet size",	"freepastry.nodehandleset.size",
     FT_UINT8, BASE_DEC, NULL, 0x0,
-    "", HFILL }},
-    { &hf_freepastry_mns_id,
-    { "Ring ID",	"freepastry.multiringnodehandleset.ringId",
-    FT_STRING, BASE_NONE, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_mns_type,
     { "Internal node handle set type",	"freepastry.multiringnodehandleset.type",
