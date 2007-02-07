@@ -270,6 +270,7 @@ FreePastry has several Objects that are often sent over the wire, here is their 
 The version is so fundamental to FreePastry that it is tied to the protocol version defined at the beginning of the stream.
 
 Id: 
+  type: 1
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     +   160 Bit (20 byte)                                           +
     +                                                               +
@@ -277,9 +278,12 @@ Id:
     +                                                               +
     +                                                               +
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-NodeId // format inherited from Id (identical)
+Note that Id is extended in at least two places, it is important to always encode
+ the (short) type of Id you are serializing unless you can guarantee the type of Id will
+ always be the same.
   
-NodeHandle: // associates an Id with an EpochInetSocketAddress
+NodeHandle: // associates an Id with an EpochInetSocketAddress (Note: this Id will
+// always be of the default type.
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     + EpochInetSocketAddress                                        +
     +                                                               +           
@@ -750,6 +754,11 @@ Chapter 2 CommonApi Apps ******************************************************
       int visitedLength
         // for each visitedLength
         NodeHandle node
+
+      boolean hasContent
+        // if hasContent
+        short contentType
+        ScribeContent payload
       
       int id // unique id of the request
       

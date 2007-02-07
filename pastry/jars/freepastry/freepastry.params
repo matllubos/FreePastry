@@ -67,7 +67,9 @@ pastry_factory_processorPerNode = false
 # number of bootstap nodehandles to fetch in parallel
 pastry_factory_bootsInParallel = 1
 
+# the maximum size of a message
 pastry_socket_reader_selector_deserialization_max_size = 1000000
+# the maximum number of outgoing messages to queue when a socket is slower than the number of messages you are queuing
 pastry_socket_writer_max_queue_length = 30
 pastry_socket_repeater_buffer_size = 65536
 pastry_socket_pingmanager_smallPings=true
