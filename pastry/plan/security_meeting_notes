@@ -1,0 +1,28 @@
+Quick to-dos:  
+  Put these on a Wiki (done)
+  Forward PR emails. (coming soon to an inbox near you)
+  Make sure the protocol_spec is online, send link to everyone: 
+  
+1)  Do we need SSL?
+    Yes, because we want to offer a toolbox of different security features to perspective users.  Different features cost different overhead, but offer protection from different attacks.
+        
+2)  Note: Even with PR in place there may be possible attacks that do not violate the protocol.  Must review the protocol to make sure such things dont exist.
+  Concern that there is an issue with the liveness checks in the RT/CRT.
+
+3) Proposed Cert infrastructure to allow for certs to not have IP address:    
+Certs don't contain IP addresses, but have to have a lifetime on the order of 1 day.  (This makes clocks required to be in sync within 1 day)
+Have to worry about PNS attack (conspiring nodes can pose as eachother to give good proximity to all their friends), make sure PR can control this, with a rule such as: "You can't accept messages from the older cert."
+
+4) Upgrading FreePastry to use Java 1.5.  And can use new features such as generics.
+    
+Open questions:
+  Do we need to authenticate liveness checks.
+
+Next steps:
+Jeff:       
+  Look at bamboo paper to see validity of CRT vs Churn.
+  
+Atul:
+  Determine Churn vs. CRT accuracy and what the maintenance interval should be as a factor of churn.  
+
+

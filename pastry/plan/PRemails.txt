@@ -1,0 +1,391 @@
+************* From Andreas ****************
+Hello Jeff, hello Jim,
+
+here are some ideas about adding PeerReview to FreePastry.
+Please let me know what you think.
+
+Thanks,
+
+          - Andreas
+
+
+  INTERFACE CHANGES:
+
+    1) The 'PeerReviewComponent' interface
+          This interface is implemented by all components that
+          can be part of the PeerReview state machine. It has
+          three methods:
+             - byte[] checkpoint(): Creates a snapshot of the
+               entire state of the component and returns it
+               as a stream of bytes
+             - restore(byte[] chkpoint): When invoked with a
+               valid checkpoint, returns the component to the
+               exact state it was in before the checkpoint.
+             - replay(String eventType, byte[] data): Replays an
+               event from the log
+          Instead of byte[] arrays, we may want to use a buffer
+          object similar to ReplayBuffer (for efficiency, and to
+          reduce the load on the garbage collector).
+
+    2) The 'AuditLog' component
+          This new component is added to the Environment. It has
+          four methods:
+             - registerComponent(class x) is called when a new
+               component is instantiated. This makes the component
+               known to the AuditLog, so it can checkpoint it
+               periodically.
+             - registerEvent(class x, String evtID) is called
+               by new components for every type of log entry
+               they may want to write later. Thus, the AuditLog
+               knows which component should be called when a
+               log entry of that type is encountered during replay.
+             - appendEvent(String evtID, Buffer someBytes) is
+               called by components when they want to append some
+               event to the log.
+             - eventEnabled(String evtID) may be called by components
+               to check whether a particular event should be logged
+               at all. For example, PAST events should only be logged
+               if PAST is currently watched by PeerReview. If this
+               method returns false, the component does not need to
+               serialize the event and call appendEvent().
+
+  USAGE EXAMPLE:
+
+    Assume that only Pastry routing and Scribe are part of the state machine.
+      - The system starts up. All components (Pastry, Scribe, PAST, ...)
+        invoke registerComponent(this) as soon as they are initialized.
+        Pastry also invokes registerEvent(this, "sendWire"), registerEvent(this,
+        "receiveWire"), registerEvent(this, "sendScribe"), registerEvent(this,
+        "receiveScribe") etc. Scribe also invokes registerEvent(this, "sendPastry"),
+        registerEvent(this, "receivePastry"), registerEvent(this, "sendApp")
+        and registerEvent(this, "receiveApp").
+      - A message is received from another node. Pastry first invokes
+        eventEnabled("receiveWire"), which returns true. Therefore it
+        serializes the message and calls appendEvent("receiveWire", buffer).
+      - Now Pastry determines that the message should be forwarded to Scribe.
+        It calls eventEnabled("sendScribe"), which returns false because
+        the interface between Pastry and Scribe is internal to the state
+        machine.
+      - Scribe gets the message and calls eventEnabled("receivePastry"). This
+        also returns false (for the same reasons).
+      - Now Scribe decides it must forward the message to another node, and
+        also to the local application. It calls eventEnabled("sendPastry"),
+        which returns false again, and eventEnabled("sendApp"), which returns
+        true (because this interface is on the boundary between the state
+        machine and the 'outside world'). Hence, Scribe serializes the
+        message payload and calls appendEvent("sendApp", payload).
+      - Pastry invokes eventEnabled("receiveScribe") -> false, and
+        eventEnabled("sendWire") -> true, therefore it serializes the
+        outgoing message and invokes appendEvent("sendWire", message).
+    The log now looks like this:
+        receiveWire(message1)
+        sendApp(message1_payload)
+        sendWire(message2)
+    Later, another node audits this node and receives the above log.
+      - It first instantiates a new PastryNode and all the components; however,
+        it replaces the AuditLog in the environment with a ReplayLog, which
+        shares the same interface. The components register themselves with
+        the ReplayLog as usual.
+      - The ReplayLog reads the checkpoints from the log and invokes
+        restore() on all components.
+      - Now the ReplayLog reads the first log entry, receiveWire(). It looks
+        who registered 'receiveWire' and then invokes replay(receiveWire, bytes)
+        on Pastry. Pastry then behaves exactly like it had received the
+        bytes from another node. It even checks eventEnabled() like before.
+      - Eventually, the message arrives in Scribe. Again, Scribe checks
+        eventEnabled("sendApp"), which returns true, and then invokes
+        appendEvent("sendApp", payload) on the ReplayLog. The ReplayLog looks
+        at the next log entry and compares it to the one that Scribe wants
+        to append. Since they are identical, it discards the event and
+        proceeds.
+      - The message goes back through Pastry, which eventually calls
+        appendEvent("sendWire", message2). Again, ReplayLog compares the
+        event to the one in the log, sees they are identical, and discards
+        the new event.
+
+   LOW-LEVEL CHANGES:
+
+      - The transport layer must have access to the node certificate and
+        sign all outgoing messages.
+      - It must also ensure that the signatures on incoming messages are
+        checked, retrieve the node certificates if necessary, and discard
+        any messages that are not properly signed.
+      - It must extract the authenticators from incoming messages,
+        maintain a pool of such authenticators, and periodically forward
+        them to the corresponding witness sets. This requires a mechanism
+        to identify the current witness set of a given node.
+      - Finally, a mechanism is needed that allows the transport layer
+        to 'ignore' a given node when PeerReview determines that has
+        misbehaved. When this happens, any existing connections should
+        be terminated, and any attempt by the remote node to reestablish
+        the connection should throw an exception on the remote node.
+        The remote node must then catch this exception and contact the
+        PeerReview instance on the local node to prove its innocence.
+        This can be done over an outside channel, e.g. a direct TCP
+        connection.
+        
+***************** From Jeff **********************        
+Andreas,
+  Sorry for taking a while to respond.  I'm not sure I completely follow everything yet, but here are my current thoughts.
+Thanks!
+-Jeff
+
+
+Andreas Haeberlen wrote:
+
+> Hello Jeff, hello Jim,
+>
+> here are some ideas about adding PeerReview to FreePastry.
+> Please let me know what you think.
+>
+> Thanks,
+>
+>           - Andreas
+>
+Great!
+
+>
+>   INTERFACE CHANGES:
+>
+>     1) The 'PeerReviewComponent' interface
+>           This interface is implemented by all components that
+>           can be part of the PeerReview state machine. It has
+>           three methods:
+>              - byte[] checkpoint(): Creates a snapshot of the
+>                entire state of the component and returns it
+>                as a stream of bytes
+>              - restore(byte[] chkpoint): When invoked with a
+>                valid checkpoint, returns the component to the
+>                exact state it was in before the checkpoint.
+>              - replay(String eventType, byte[] data): Replays an
+>                event from the log
+
+I wonder if eventType should be a unique number such as the "getType()" interface on the binary protocol.  This makes each application have control over its namespace.  It also may significantly reduce the size of the PR log.
+
+>           Instead of byte[] arrays, we may want to use a buffer
+>           object similar to ReplayBuffer (for efficiency, and to
+>           reduce the load on the garbage collector).
+>
+I recommend doing this, I already have the components do do this easily, and I think it makes application development much lower effort.
+
+>     2) The 'AuditLog' component
+>           This new component is added to the Environment. It has
+>           four methods:
+>              - registerComponent(class x) is called when a new
+>                component is instantiated. This makes the component
+>                known to the AuditLog, so it can checkpoint it
+>                periodically.
+>              - registerEvent(class x, String evtID) is called
+>                by new components for every type of log entry
+>                they may want to write later. Thus, the AuditLog
+>                knows which component should be called when a
+>                log entry of that type is encountered during replay.
+>              - appendEvent(String evtID, Buffer someBytes) is
+>                called by components when they want to append some
+>                event to the log.
+>              - eventEnabled(String evtID) may be called by components
+>                to check whether a particular event should be logged
+>                at all. For example, PAST events should only be logged
+>                if PAST is currently watched by PeerReview. If this
+>                method returns false, the component does not need to
+>                serialize the event and call appendEvent().
+
+In addition to using ints or shorts as the evtIDs:
+  Rather than "class x"  I recommend "Application x" which can use the mechanism we have to do unique application addressing in FP.  This way when we have 7 pasts like in ePost, we can decide to enable PeerReview on each instance individually.
+
+>
+>   USAGE EXAMPLE:
+>
+>     Assume that only Pastry routing and Scribe are part of the state machine.
+>       - The system starts up. All components (Pastry, Scribe, PAST, ...)
+>         invoke registerComponent(this) as soon as they are initialized.
+>         Pastry also invokes registerEvent(this, "sendWire"), registerEvent(this,
+>         "receiveWire"), registerEvent(this, "sendScribe"), registerEvent(this,
+>         "receiveScribe") etc. Scribe also invokes registerEvent(this, "sendPastry"),
+>         registerEvent(this, "receivePastry"), registerEvent(this, "sendApp")
+>         and registerEvent(this, "receiveApp").
+
+How does pastry "know" about scribe?  Maybe this will be easier when you register application instances (as mentioned above) with the audit log.  The MessageDispatch in FP can ask the audit log if "send" is enabled on each such application.
+
+>       - A message is received from another node. Pastry first invokes
+>         eventEnabled("receiveWire"), which returns true. Therefore it
+>         serializes the message and calls appendEvent("receiveWire", buffer).
+>       - Now Pastry determines that the message should be forwarded to Scribe.
+>         It calls eventEnabled("sendScribe"), which returns false because
+>         the interface between Pastry and Scribe is internal to the state
+>         machine.
+
+so this would look more like:
+
+/**
+ * @param address // the application address to deliver the Message m to.
+ */
+MessageDispatch.receiveMessage(Message m, int address) {
+  Application app = getApplication(int address); // in this case app is an instance of Scribe because the address is Scribe's address
+  if (eventEnabled(ID_SEND, app) {
+    ...
+  }
+  ...
+}
+
+>       - Scribe gets the message and calls eventEnabled("receivePastry"). This
+>         also returns false (for the same reasons).
+>       - Now Scribe decides it must forward the message to another node, and
+>         also to the local application. It calls eventEnabled("sendPastry"),
+>         which returns false again, and eventEnabled("sendApp"), which returns
+>         true (because this interface is on the boundary between the state
+>         machine and the 'outside world'). Hence, Scribe serializes the
+>         message payload and calls appendEvent("sendApp", payload).
+>       - Pastry invokes eventEnabled("receiveScribe") -> false, and
+>         eventEnabled("sendWire") -> true, therefore it serializes the
+>         outgoing message and invokes appendEvent("sendWire", message).
+>     The log now looks like this:
+>         receiveWire(message1)
+>         sendApp(message1_payload)
+>         sendWire(message2)
+>     Later, another node audits this node and receives the above log.
+>       - It first instantiates a new PastryNode and all the components; however,
+>         it replaces the AuditLog in the environment with a ReplayLog, which
+>         shares the same interface. The components register themselves with
+>         the ReplayLog as usual.
+>       - The ReplayLog reads the checkpoints from the log and invokes
+>         restore() on all components.
+>       - Now the ReplayLog reads the first log entry, receiveWire(). It looks
+>         who registered 'receiveWire' and then invokes replay(receiveWire, bytes)
+>         on Pastry. Pastry then behaves exactly like it had received the
+>         bytes from another node. It even checks eventEnabled() like before.
+>       - Eventually, the message arrives in Scribe. Again, Scribe checks
+>         eventEnabled("sendApp"), which returns true, and then invokes
+>         appendEvent("sendApp", payload) on the ReplayLog. The ReplayLog looks
+>         at the next log entry and compares it to the one that Scribe wants
+>         to append. Since they are identical, it discards the event and
+>         proceeds.
+>       - The message goes back through Pastry, which eventually calls
+>         appendEvent("sendWire", message2). Again, ReplayLog compares the
+>         event to the one in the log, sees they are identical, and discards
+>         the new event.
+>
+>    LOW-LEVEL CHANGES:
+>
+>       - The transport layer must have access to the node certificate and
+>         sign all outgoing messages.
+
+For efficiency, do we want a way to do this only on PR related messages?
+
+>       - It must also ensure that the signatures on incoming messages are
+>         checked, retrieve the node certificates if necessary, and discard
+>         any messages that are not properly signed.
+
+Sure.  If we are doing this, I wonder if we still have any need for encrypted/authenticated channels.
+
+>       - It must extract the authenticators from incoming messages,
+>         maintain a pool of such authenticators, and periodically forward
+>         them to the corresponding witness sets. This requires a mechanism
+>         to identify the current witness set of a given node.
+
+Can you remind me what is an authenticator?  Who adds the authenticator to the message?  Is it the hash?
+
+>       - Finally, a mechanism is needed that allows the transport layer
+>         to 'ignore' a given node when PeerReview determines that has
+>         misbehaved. When this happens, any existing connections should
+>         be terminated, and any attempt by the remote node to reestablish
+>         the connection should throw an exception on the remote node.
+>         The remote node must then catch this exception and contact the
+>         PeerReview instance on the local node to prove its innocence.
+>         This can be done over an outside channel, e.g. a direct TCP
+>         connection.
+
+This won't work with our current nor potential future NAT solutions.  Perhaps the MessageDispatch can give messages of "banned" nodes only to "privileged security apps."  Then PR can just be another app, registered with the MessageDispatch, and we don't need to create any new mechanisms, except the concept of "banned" nodes, and "privileged security apps."   However this is much much easier than creating new communication mechanisms.
+
+**************** From Andreas ******************
+Hi Jeff,
+
+I agree that scalar type identifiers would save overhead,
+so I think we should use them. I also agree that we need
+to name individual instances rather than entire classes.
+
+Pastry would have to know its own applications and register
+upcalls for them separately. I think there already is a
+mechanism that applications use to register with Pastry
+(so they can send and receive messages); this could be the
+spot where registerEvent() is invoked.
+
+> /**
+>  * @param address // the application address to deliver the Message m to.
+>  */
+> MessageDispatch.receiveMessage(Message m, int address) {
+>   Application app = getApplication(int address); // in this case app is
+> an instance of Scribe because the address is Scribe's address
+>   if (eventEnabled(ID_SEND, app) {
+>     ...
+>   }
+>   ...
+> }
+
+This looks good. The block under eventEnabled() would serialize
+and log the message; the code after this block would then pass
+the message on to Scribe.
+
+>>       - The transport layer must have access to the node certificate and
+>>         sign all outgoing messages.
+> For efficiency, do we want a way to do this only on PR related messages?
+
+PeerReview will only work if _all_ messages passing through the
+state machine are signed and acknowledged. For example, if a
+Glacier message is being sent, PeerReview will not check the
+content of the message, but it will check the routing decision.
+
+>>       - It must also ensure that the signatures on incoming messages are
+>>         checked, retrieve the node certificates if necessary, and discard
+>>         any messages that are not properly signed.
+> Sure.  If we are doing this, I wonder if we still have any need for
+> encrypted/authenticated channels.
+
+Even if this is done, you would still have to authenticate the remote
+endpoint for outgoing channels to prevent malicious nodes from impersonating
+good nodes. Regarding encryption, I have always felt that this should be
+done end-to-end.
+
+>>       - It must extract the authenticators from incoming messages,
+>>         maintain a pool of such authenticators, and periodically forward
+>>         them to the corresponding witness sets. This requires a mechanism
+>>         to identify the current witness set of a given node.
+> Can you remind me what is an authenticator?  Who adds the authenticator
+> to the message?  Is it the hash?
+
+An authenticator consists of a) a sequence number, b) the top-level hash
+of the sender's audit log, and c) a signature covering a) and b). It is
+basically a signed statement saying 'this was my log at the time I sent
+the message'. The authenticator is added to the message by the sender;
+for example, this could be done when messages are handed over to the
+transport layer.
+
+>>       - Finally, a mechanism is needed that allows the transport layer
+>>         to 'ignore' a given node when PeerReview determines that has
+>>         misbehaved. When this happens, any existing connections should
+>>         be terminated, and any attempt by the remote node to reestablish
+>>         the connection should throw an exception on the remote node.
+>>         The remote node must then catch this exception and contact the
+>>         PeerReview instance on the local node to prove its innocence.
+>>         This can be done over an outside channel, e.g. a direct TCP
+>>         connection.
+> This won't work with our current nor potential future NAT solutions.
+> Perhaps the MessageDispatch can give messages of "banned" nodes only to
+> "privileged security apps."  Then PR can just be another app, registered
+> with the MessageDispatch, and we don't need to create any new
+> mechanisms, except the concept of "banned" nodes, and "privileged
+> security apps."   However this is much much easier than creating new
+> communication mechanisms.
+
+Hmmm, I didn't think of that. So we have to let even 'banned' nodes
+establish a transport layer connection. But I am not sure whether
+integrating PeerReview as 'just another app' will work either. Maybe
+it can be interposed between MessageDispatch and the transport layer.
+This would enable it to a) attach authenticators to all outgoing messages,
+b) scan and remove authenticators from all incoming messages,
+c) send acknowledgments when appropriate, and d) drop messages from
+'banned' nodes.
+
+Thanks,
+
+             - Andreas 

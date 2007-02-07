@@ -1,0 +1,206 @@
+documentation:
+  wireshark (document that this is gpl, not freebsd-based)
+  make sure tutorials are up to date
+  make pseudocode for all the FP alogorithms (request by ahae)
+  bandwidth analysis spreadsheet
+    compare with planetlab/simulator  
+  rawserialization tutorials
+  write up consistency better
+    adaptive?
+  setDaemon() does the opposite of what is described in FreePastry.
+  leafSet is more reliable near you, less reliable away from you
+  Document NetworkListener in simulator/socket. (tutorial?)
+    New Features
+      indicate that outer more neighbors of the leafset are less and less likely to be valid (liveness, as well as correctness) due to efficient leafset maintenance algortihm          
+      Explain what exactly is the algorithm for the Consistent Join Protocol (make visio diagrams available):
+    Tutorials:
+      update all simulation tutorials to use the new maxSpeed mechanism
+      build a tutorial to use new features: appsockets, raw serialization, forwarding, direct
+      update tutorial 7 to include xmlpp...
+    Update/review Bandwidth Estimator    
+    run regression tests
+    
+PeriodicLeafSetProtocol:
+  This protocol allows reception of messages in FreePastry only when it can ensure that the 2 nearest neighbors know of our existence.
+  
+  Definitions:
+    Ready: we authorize the receipt of messages in FreePastry.
+    NOW: the current time
+    TAO: the lease period
+    
+  Assumptions:
+    Consistent local clock: the clock doesn't irratically change time, but maintains a consistent (but unknown) offset to some global clock.
+  Non-assumptions:
+    Synchronized Clocks
+    
+  The mechanism:
+    For each nearest neighbor (the left and right):
+       We keep a minimum bound on their knowledge of our existence:
+         Periodically send LeafSetRequest(LSR) with a timestamp.
+         Reception of a BroadcastLeafSet(BLS) (the response to the LeafSetRequest) will contain the timestamp from the LSR.
+         To be "ready" we must have received the BLS such that NOW-timestamp that is less than TAO
+      
+  Invariant:
+    To receive messages, I must: have a response from my neighbor who's timestamp is less than 30s old.  The timestamp is the echo of the request.  
+    To receive messages, you need to know that your neighbors know of you, and that they agreed that you were the direct neighbor    
+    
+  other:      
+    go through bug database
+    review/update wikipedia entry on Pastry/FreePastry
+  
+  
+routing table simulations again?  
+  look at rt simulations on odins, see that results are still the same with the new code, maybe use the simpler leafset protocol, see if it differs, since it is so much faster
+  RT - Make sure the back-propegation of the routing table hole filling still works (maybe add it to the ACK).  Note that there could be a timing issue here because of the suspected stuff, however the best strategy to this may just be to add more routing table entries (per pigeon-hole).  Simulate to see if the periodic maintenance does anything for you.
+  Routing Table Quality:
+    Still getting comprehensive results of factors of routing table quality.  Have extensive results for 100-1000 nodes.  Waiting for more CPU time on the cluster.  
+      
+update consistency viewer 
+  see why the html/visual colors are different
+examine last pl test
+gnuplot> load "~/planetlab/plcons/splitstream.plot"
+
+
+make hammer tests for all FP apps
+get the NAT test in the repository
+play with findbugs more
+some script to bitch when code isn't pretty  
+consider replacing RedBlackMap as Kasper suggests 11/17/06
+see if routing table is an observer on the NodeHandle... mayhap it should be, but will break my routing table test.  Maybe a flag to disable this.
+does this work in the simulator?
+reuse initiation sockets (see response to Luigi's message Dec 8th.)
+make coalesce() work across nodes in socket
+  2) make a listener for IdRange (see "potential commonapi feature" Jeff Hoye, 2:45pm July 31st)
+     just notify when IdRange may have changed, maybe you can do the range, consider other topologies to keep leafset seperate
+  3) getNetworkNeighbors()
+      also add that feature to check only leafset vs routing table (proximial neighbors)
+
+  4) TimerTask.cancel() remove immeadiately from the list
+
+  5) make it optional for the PastryAppl to register as leafset/rt listener
+  
+  6) in Socket Protocol, if they use an exception make sure fp can be reconfigured to handle it	at runtime and retry
+
+  7) Get InitiateJoin, InitiateLeafSetMaint, InitiateRouteSetMaint out of DistPastryNode, DirectPastryNode
+    make joinEvent.cancel() be called after first JoinMessage is received.
+      move leafSetMaintFreq/routeSetMaintFreq to the protocols
+Why does the firewall test fail?  Why is the test broken when it fails.
+If there is no "left-most neighbor", make it probe the first neighbor on the right
+    
+
+nightly build:
+  check on deprecation messages when build
+  build actual release  
+  automated tests    
+  egrep -r 'logger\.level' src/rice | egrep -v '<=' | wc -l // should be zero
+  egrep -r 'com\.sun\.rsasign\.r' src/rice | wc -l // should be zero
+  Past put/get hammer. 
+
+
+
+project outlines
+  services:  
+    survey of email traffic by project type/downloads
+    Scribe: saar/scribe/splitstream enhancements
+    Past: make past/replication work with multi-writers
+      need to discuss with ahae on what technique to use
+    Post: detangle with epost, add to distro
+    Visualization/Control interface application
+      allow to dynamically change log levels, introspect nodes etc (can leverage epost code?)
+    
+  security:
+    look for problems that can easily take down a pastry node 
+    SSL
+    certificate service (make sure is compatible with PR,ePost,SSL)
+      Evaluate the cost of Checking Certified node Ids
+    PeerReview
+      Evaluate cost of PeerReview
+        in various attacks, such as ignoring all messages except from the witnesses
+    Secure Routing/Bobby's thing
+      CRT - See if this can be made completely push based.  The theory being that both malicious and correct nodes want to get themselves added to routing tables.  Note that we will need to do a push both on Join and Leave.  Because of symmetry, you can figure out who to notify when your leafset changes.  Need to consider how much redundancy to use.
+      Constrained Routing Table Pseudocode
+        cost of CRT:
+         a) Joining from multiple bootstraps
+         b) Maintenance overhead (how do we actually exploit CRT symmetry?)
+             
+  usability:
+    detangle transport layer better:
+      allows possible integration with stunt
+      makes PeerReview easier to impl
+    play with STUNT/livewire udp thing
+
+  performance:
+    Accordion - Good idea, just make sure that common api exposes the "no-shortcuts" flag in routing.  This can be useful.
+  
+scribe notes:
+  default scribe policy per instance (and a default default)
+    consider no client-specific policy (perhaps only a policy for anycast, not for membership)
+  make sure we have policy chaining for anycast for multiple clients on the same node
+  consider (and see if we already have) a mechanism to repair long chains in pathological condition of root chaining
+  need to add subscribeSuccess() to the interface
+
+
+FreePastry Develpmnet
+
+Todo (in order):
+  FP 2.0 Release:
+    Understand current sources of inconsistency on Planetlab (esp under load)
+    Profile (very little has been done)
+    Profile Direct Simulator again
+    release FP 2.0 (non-beta)
+    Document (include state machine)
+  
+Next Projects:
+  add CommonAPI call: 
+    NodeHandleSet networkNeighbors(int num)
+    returns ordered list of neighbors by proximity, requested recently by 2 different groups
+    Effort: Low
+    
+  add Neighbor Caching (like Accordion, SSR, ties into previous idea)
+    // may need strategy pattern, to decide who to keep
+    Effort: Med
+  
+  UDP support (I feel this is necessary for games, VoIP, some streaming apps, and pretty easy to add considering the binary protocol)
+    What should the programmer interface be?  Similar to App-Level Sockets?
+    Effort: Med
+      
+  Stun (for additional NAT support)  
+    Effort: High
+    
+  Security (in order of level in system, not necessarally implementation order):
+    Socket Layer:
+      Better management of FileDescriptors (current impl can be clobbered by opening lots of sockets and not writing data, creates too many FDs and causes FP to crash in some random location.)
+        Effort: Med-High
+ 			Other Wire Level attacks (TCP Hijack, Sniff Traffic, Use SSL?)
+ 			  Effort: High (have key distribution problem)
+ 			Buffer Overflow? (In Java this would be an OutOfMemoryError by allocating too large a message buffer.)
+ 		Pastry Layer:	   
+      Secure Routing Primitive
+        Effort Medium
+      PeerReview
+        Effort High
+      Eclipse Resistance
+        Effort Med-High
+    Service Layer:
+      examine Scribe/Past for sources of Attack...
+  
+  Replication:
+    Tons to do here:
+      Fix bugs
+      Use hash-trees?
+      Understand ability to handle lots of tiny objects/a few large objects
+    Effort: High  
+      
+  Testing:
+    Past Hammer
+    Scribe Hammer
+    Automated:
+      Add existing regression tests to nightly build
+        Effort: Med-Low
+      Build framework for clusterwide/planetlab-wide regression tests
+		    Effort: High  
+	
+  Tutorials:
+    SplitStream
+    Scribe Policies
+    Environment  

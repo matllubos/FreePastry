@@ -1,0 +1,54 @@
+What period should we do maintenance at?
+
+USENIX '04 Rhea et Al.  "Handling Churn in a DHT"
+  Shows effectiveness of different techniques given a budget for each, based on a single median churn rate of 47mins.
+  Recommendation is Global Sampling + 1 other thenchique.  However all recursive techniques have the same elbow in latency vs bandwidth.
+    Don't know what the elbow is in terms of what period to choose, because we don't know the message size, and different techniques aren't really comparable.  Global sampling does lookups = log N msgs, while resursive neighbors neighbors requires larger and more messages per probe, but makes more progress on each sample.  Thus for the same bandwidth, the global sampling rate would be much higher
+    Which values to fill in?  Obviously want priority to top level entries because they are more often used.
+    What to do with backup entries for the same hole?
+      + If your primary entry fails, then you have an obvious replacement.
+      - You have to check these replacements, and if your primary fails, it is likely that all replacements have also failed.
+    
+      
+Accordion:
+  Concept of a bandwidth budget.
+  
+  How much effort to spend probing vs finding new entries.
+    Maybe we should use estimated network size to decide this.  If there are holes where we expect to find nodes based on the network size, then spend time filling in values.
+    Can use the dT_alive, dT_since factor to determine nodes who are likely alive, to figure out who to probe
+    
+  When you route around, then the next point can determine this and send back a new neighbor for you in the ack.  Furthermore a node can always determine if you should know about an intermediate entry based on your name.  Ex: A -> B -> C, but B determines that C should have been in A's table.  Then B informs A of C.
+  
+  Need to understand the Accordion paper better to see how it calculates i_thresh based on observed churn.
+  
+Recommendation:
+  
+Thus 3 was to spend time:
+  1) Filling in holes (add)
+  2) Probing and eliminating dead entries (remove)
+  3) Finding more proximal neighbors (overwrite)
+  
+  Argument for this order:
+    (1) Should stabalize quickly.
+    (2) Can also stabalize if your probing budget is sufficient compared to the churn.
+    (3) Can also stabalize, but is least likely to, so you can probably always do better.
+    
+  Note that 3 leads to 2 which leads to 1.  
+  
+Proposed algorithm:
+  on each routing table timeout:
+    if we suspect we can fill in a whole
+      Pick highest hole and try to fill.  How?
+        a) lookup
+        b) neighbor swap on row
+        // note, need to have a "don't search for me" timestamp entry if the search is unsuccessful
+          perhaps the correct approach is to try (b) and if that fails then try (a) How many times should we try (b) before switching to (a)?
+          
+    // no suspected holes, or can't find any new entries because we have recently tried
+    else if there is anyone we should probe based on observed churn 
+      Probe most likely to have failed
+      // we can piggyback (3)? but the liveness checks are UDP, do we want to bloat this?
+    // routing table is "full" and "healthy"
+    find more proximal nodes (normal routing protocol)
+    
+    Still have the question:  What should the maintenance timeout be?  Can adapt based on quality of (1) and (2).  Note that churn will degrade these which will increase routing activity, which can cause a positive feedback loop.   Perhaps we set a max bandwidth budget and backoff based on RT health.

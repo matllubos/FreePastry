@@ -1,0 +1,58 @@
+java -Xmx1536M -cp pastry.jar rice.pastry.testing.RoutingTableTest 2000 10 > out.txt.2000_10 2>&1 &
+
+complete (~jeffh/planetlab/rtt):
+
+100_0-100
+100_1000
+100_10000
+200_0
+200_10
+200_100
+200_1000
+200_10000
+
+
+odin04: 500_10 y
+odin05: 500_100 y
+odin06: 500_10000 y
+odin07: 500_1000 y
+odin08: 1000_0 y
+odin09: 500_0 y
+
+odin26: 1000_10 y
+odin27: 1000_100 y 
+odin28: 10000_0 slow
+odin29: 1000_1000 y
+odin30: 1000_10000 y
+odin31: 2000_0 y
+odin32: 2000_10 reset 24/10: better version
+odin33: 2000_100 reset 24/10: better version
+odin34: 2000_1000 reset 24/10: better version
+odin35: 2000_10000 y
+odin36: 5000_0 reset 23/10: better version y
+odin37: 5000_10 reset 24/10: better version, out of memory
+odin38: 5000_100 reset 24/10: better version, out of memory
+odin39: 5000_1000 reset 23/10: better version, out of memory
+odin40: 5000_10000 reset 24/10: better version
+
+cd /local/jeffh
+ps aux | egrep java
+cp ~/planetlab/pastry.jar .
+ls
+java -Xmx1536M -cp pastry.jar rice.pastry.testing.RoutingTableTest 5000 10000 > out.txt.5000_10000 2>&1 &
+
+
+
+jeffh@swsao9532:/local/jeffh [505] ls -l pastry.jar
+-rw-r--r--  1 jeffh ds-science 2579847 Oct 23 11:13 pastry.jar
+
+jeffh@swsao9530:/local/jeffh [502] ls -l pastry.jar
+-rw-r--r--  1 jeffh ds-science 2579847 Oct 19 14:16 pastry.jar
+
+jeffh@swsao9530:/local/jeffh [504] md5sum pastry.jar
+f26025e49eaa85e29d9d94b91632c303  pastry.jar
+
+jeffh@swsao9528:/local/jeffh [502] ls -l pastry.jar
+-rw-r--r--  1 jeffh ds-science 2579847 Oct 19 14:09 pastry.jar
+jeffh@swsao9528:/local/jeffh [503] md5sum pastry.jar
+f26025e49eaa85e29d9d94b91632c303  pastry.jar
