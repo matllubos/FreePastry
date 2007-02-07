@@ -524,7 +524,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   @Override
   public void leafSetChange(NodeHandle nh, boolean wasAdded) {
     super.leafSetChange(nh, wasAdded);
-    logger.log("leafSetChange("+nh+","+wasAdded+")");
+//    logger.log("leafSetChange("+nh+","+wasAdded+")");
     if (wasAdded) {
       nh.addObserver(this, 50); 
       if (!nh.isAlive()) {

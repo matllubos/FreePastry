@@ -279,7 +279,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle
           return;
         }
       }
-      if (logger.level <= Logger.WARNING) logger.log(this+".deleteObserver("+o+"):failure");      
+      if (logger.level <= Logger.INFO) logger.log(this+".deleteObserver("+o+"):failure "+o+" was not an observer.");      
     }
   }
   
