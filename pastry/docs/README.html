@@ -5,9 +5,9 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 2.0beta,&nbsp; 15 May 2006.
+Release 2.0beta2,&nbsp; 07 Feb 2007.
 </h2>
-<p>FreePastry is a modular, open source implementation of the <a href="http://www.cs.rice.edu/CS/Systems/Pastry/"> Pastry</a> p2p structured overlay network. <br>
+<p>FreePastry is a modular, open source implementation of the <a href="http://freepastry.org/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
 <h3> Contributors</h3>
 <a href="http://www.mpi-sws.mpg.de/people/Peter_Druschel">Peter Druschel</a>, 
@@ -113,8 +113,28 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 </ul>
 
 <h3>Requirements</h3>
-The software requires a Java runtime, version 1.4.2+. The software was
-developed using Sun's SDK, version 1.4.2_03+
+The software requires a Java runtime, version 1.5.0+. The software was
+developed using Sun's SDK, version 1.5.0+
+<h3>Changes since release 2.0beta</h3>
+<ul>
+  <li>Depends on Java 1.5 to use new features</li>
+  <li>Numerous Bug Fixes, Performance Optimizations, Documentation improvements.</li>  
+  <li>Tap interface for simulator: see <a href="">SimulatorListener</a></li>
+  <li>Routing Consistency works much better</li>
+    <ul>
+    <li>Lots of evaluation on PlanetLab</li>
+	  <li><i>Note:</i>The PeriodicLeafSetProtocol is very low bandwidth and provides routing consistency in almost all situations other than network partitions.  However, the accuracy of the LeafSet is most accurate near the center.  This is because leafset changes are gossiped.  With the default setup, changes to the leafset may take over 4 minutes to propegate to all nodes.  However, your nearest neighbor to the left and right are guaranteed to be accurate.</li>  
+	  <li><i>Note:</i>The node may go ready and not ready depending on lease validity.  Not ready means that the node will not accept routing messages.  This is necessary to guarantee routing consistency.  To find out if you are ready, you can call PastryNode.isReady(), or register yourself as an Observer of the PastryNode.  You can expect a value of true when the node goes ready, and a value of false when it goes not-ready.</li>
+    </ul>
+  <li>Better support of NATs:
+    <ul>
+    <li>Integration of optional UPnP provider: <a href="http://www.sbbi.net/site/upnp/index.html">SBBI's UPNPLib</a></li>
+    <li>EpochInetSocketAddress supports a list of IP addresses to work properly with NATs that don't support hairpinning.</li>
+    </ul></li>
+  <li>FreePastry will scan the working directory for user.params to override the freepastry.params file in the jar</li>  
+</ul>
+  
+
 <h3>Changes since release 1.4.4</h3>
 <ul>
   <li>Elimination of Java Serialization.  Is reverse compatible with the <i>code</i> of previous version, but the protocol is not reverse compatible.  Your application needs to implement rice.p2p.commonapi.rawserialization.RawMessage to gain the benefits of non-java serialization.</li>
