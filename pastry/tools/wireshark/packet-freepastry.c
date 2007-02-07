@@ -656,7 +656,7 @@ decode_nodehandleset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar 
     "%s :", attribute_name);
   nodeset_tree = proto_item_add_subtree(ti, ett_freepastry_ns);
 
-  nodeset_size = tvb_get_guint8(tvb, offset);
+  nodeset_size = tvb_get_ntohs(tvb, offset);
   proto_tree_add_uint(nodeset_tree, hf_freepastry_ns_size, tvb, offset, 2, nodeset_size);
   offset +=2;
 
