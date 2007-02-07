@@ -18,7 +18,6 @@ Table of contents:
   1.4: Message Header 
   1.5: FreePastry Objects 
     Id 
-    NodeId
     NodeHandle
     Leafset
     RouteSet
@@ -168,7 +167,7 @@ EpochInetSocketAddress:
 
 Hard Coded values: 
 
-NodeId bit length 160
+Id bit length 160
 Routing Table Base Bit Length 4 
 
 
@@ -434,7 +433,7 @@ JoinRequest:
       NodeHandle joinHandle // if hasJoinHandle
     // the table
     short lastRow // decremented on a push call
-    // the routing table has this many rows: (NodeId bit length)/rtBaseBitLength = 160/4 = 40
+    // the routing table has this many rows: (Id bit length)/rtBaseBitLength = 160/4 = 40
     // and this many columns 2^rtBaseBitLength = 2^4=16
     // each entry is a RouteSet
     // for each row
@@ -545,7 +544,7 @@ LeafSetResponseMessage:
 
 NodeIdRequestMessage:
   type: 6
-  use: request a NodeId from a node
+  use: request the Id of a node
   format:
     byte version (0)
 
@@ -554,7 +553,7 @@ NodeIdResponseMessage:
   use: respond to a NodeIdRequest
   format:
     byte version (0)
-    NodeId nodeId
+    Id nodeId
     long epoch
     
 RouteRowRequestMessage:
