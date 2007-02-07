@@ -67,7 +67,7 @@ public class SplitStreamDistTest {
   public static final boolean nameSelf = true;
   
   /**
-   * Usage java rice.p2p.splitstream.testing.SplitStreamDistTest <artificialchurn?> <bootstrap> <port> <bootport>
+   * Usage java rice.p2p.splitstream.testing.SplitStreamDistTest [artificialchurn] [bootstrap] [port] [bootport]
    * 
    * @param args
    * @throws Exception
