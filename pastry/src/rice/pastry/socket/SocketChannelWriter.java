@@ -64,7 +64,6 @@ import rice.pastry.messaging.*;
  * @author Alan Mislove
  */
 public class SocketChannelWriter {
-    
   // the maximum length of the queue
   private final int MAXIMUM_QUEUE_LENGTH;
   
@@ -101,10 +100,11 @@ public class SocketChannelWriter {
   public SocketChannelWriter(Environment env, SourceRoute path) {
     this.environment = env;
     this.path = path;
+    
+    MAXIMUM_QUEUE_LENGTH = env.getParameters().getInt("pastry_socket_writer_max_queue_length");
+    
     queue = new LinkedList();
-    Parameters p = environment.getParameters();
-    MAXIMUM_QUEUE_LENGTH = p.getInt("pastry_socket_writer_max_queue_length");
-
+    
     logger = environment.getLogManager().getLogger(SocketChannelWriter.class, null);
   }
   

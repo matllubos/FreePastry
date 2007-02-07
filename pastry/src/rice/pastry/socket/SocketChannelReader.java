@@ -59,7 +59,9 @@ import rice.pastry.*;
  * @author Alan Mislove
  */
 public class SocketChannelReader {
-  
+  // the maximum message size
+  private final int MAX_MESSAGE_SIZE;
+
   // the pastry node
   private SocketPastryNode spn;
 
@@ -95,6 +97,9 @@ public class SocketChannelReader {
   public SocketChannelReader(Environment env, SourceRoute path) {
     this.environment = env;
     this.path = path;
+    
+    MAX_MESSAGE_SIZE = env.getParameters().getInt("pastry_socket_reader_selector_deserialization_max_size"); // 1MB
+    
     this.logger = env.getLogManager().getLogger(SocketChannelReader.class, null);
     sizeBuffer = ByteBuffer.allocateDirect(4);
   }
@@ -212,14 +217,30 @@ public class SocketChannelReader {
       throw new IOException("Found message of improper number of bytes - " + objectSize + " bytes");
     
     if (logger.level <= Logger.FINER) logger.log(
-        "(R) Found object of " + objectSize + " bytes from "+sc.socket().getRemoteSocketAddress());
+        "(R) Found object of " + objectSize + " bytes from "+sc.socket().getRemoteSocketAddress());    
+    
+    // in case we are asked to deserialize something too big, produce a proper error
+    if (objectSize > MAX_MESSAGE_SIZE) {
+      if (logger.level <= Logger.SEVERE) {
+        buffer = ByteBuffer.allocateDirect(100);
+        int bytesRead = sc.read(buffer);
+        
+        String s = "";
+        byte[] arr = buffer.array();
+        for (int i = 0; i< bytesRead; i++) {
+          s+=arr[i]+",";
+        }
+        logger.log("SCR aborting deserializing a message of size "+objectSize+" from "+path+" context: read "+bytesRead+":"+s);
+      }
+      throw new OutOfMemoryError("SCR aborting deserializing a message of size "+objectSize+" from "+path+" max message size is "+MAX_MESSAGE_SIZE+" you can specify this by setting the parameter: pastry_socket_reader_selector_deserialization_max_size"); 
+    }
     
     // allocate the appropriate space
     try {
       buffer = ByteBuffer.allocateDirect(objectSize);
     } catch (OutOfMemoryError oome) {
       if (logger.level <= Logger.SEVERE) logger.logException(
-          "SCR ran out of memory allocating an object of size "+objectSize+" from "+path, oome);
+          "SCR ran out of memory allocating an message of size "+objectSize+" from "+path+".  You can specify the max message size with this parameter: pastry_socket_reader_selector_deserialization_max_size which is currently "+MAX_MESSAGE_SIZE, oome);       
       throw oome; 
     }
   }

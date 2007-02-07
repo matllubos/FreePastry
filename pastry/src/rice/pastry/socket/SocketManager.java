@@ -349,6 +349,8 @@ class SocketManager extends SelectionKeyHandler {
         manager.checkLiveness(path);
       
       close();
+    } catch (OutOfMemoryError oome) {
+      close(); 
     }
   }
 
