@@ -1054,8 +1054,10 @@ decode_msg_route_row(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
     offset = decode_nodehandle(tvb, tree, offset + 1, "From Handle");
   } else {
-    offset = get_node_handle_len(tvb, offset + 1);
+    offset++;
+    offset += get_node_handle_len(tvb, offset);
   }
+  
   
   if (offset == -1) {
     return;
@@ -1106,7 +1108,8 @@ decode_msg_route(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     proto_tree_add_string(tree, hf_freepastry_router_target, tvb, offset, 20, get_id_full(tvb, offset));
     offset = decode_nodehandle(tvb, tree, offset + 20, "Previous Hop");
   } else {
-    offset = get_node_handle_len(tvb, offset + 25);
+    offset += 25;
+    offset += get_node_handle_len(tvb, offset);
   }
 
   if (offset != -1){
