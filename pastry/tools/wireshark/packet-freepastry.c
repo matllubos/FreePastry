@@ -725,12 +725,16 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   guint8 num_unique_handle;
   guint8 num_cw_size;
   guint8 num_ccw_size;
-  gchar *base_handle_id;
   
-  /*these 3 vars are for drawing the LeafSet, they need to be filled in with the sub values before the LS can be rendered*/
+  /*these vars are for drawing the LeafSet, they need to be filled in with the sub values before the LS can be rendered*/
+  gchar *base_handle_id;
   gchar *node_handle_id[24];
   guint8 ccw_index[12];
   guint8 cw_index[12];
+  guint32 leafset_string_length;
+  char* leafset_string;
+  guint32 leafset_string_offset;
+
   int i;
 
   ti = proto_tree_add_text(parent_tree, tvb, offset, 1, attribute_name);
@@ -785,16 +789,29 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   }
   proto_item_set_end(ti_ccw, tvb, offset);
   
-  /*draw the leafset*/
-  proto_item_append_text(ti, " ");
+  /* draw the leafset: heading space 2 brackets, null terminator */
+  leafset_string_length = 4+(num_ccw_size+num_cw_size+1)*ID_PRINT_SIZE;
+  leafset_string = ep_alloc(leafset_string_length);
+  leafset_string_offset = 0;
+
+  strncpy(leafset_string, " ", 1);
+  leafset_string_offset++;
+
   for (i=num_ccw_size-1; i>=0; i--) {
-    proto_item_append_text(ti, node_handle_id[ccw_index[i]]);
+    strncpy(leafset_string+leafset_string_offset, node_handle_id[ccw_index[i]],  leafset_string_length - leafset_string_offset);
+    leafset_string_offset+=ID_PRINT_SIZE;
   }
-  proto_item_append_text(ti, ep_strdup_printf("[%s]", base_handle_id));
+
+  sprintf(leafset_string+leafset_string_offset, "[%s]", base_handle_id);
+  leafset_string_offset+=2+ID_PRINT_SIZE;
+
   for (i=0; i < num_ccw_size; i++) {
-    proto_item_append_text(ti, node_handle_id[cw_index[i]]);
+    strncpy(leafset_string+leafset_string_offset, node_handle_id[cw_index[i]],  leafset_string_length - leafset_string_offset);
+    leafset_string_offset+=ID_PRINT_SIZE;
   }
-  
+
+  proto_item_append_text(ti,leafset_string);
+
   proto_item_set_end(ti, tvb, offset);
   return offset;
 }

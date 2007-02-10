@@ -86,6 +86,9 @@
 #define ID_TYPE_VERSIONKEY  41
 #define ID_TYPE_FRAGMENTKEY 42
 
+/* FreePastry constants */
+#define LEAFSET_SIZE        24
+#define ID_PRINT_SIZE       12
 
 /*Prototype for message decoder function calls.*/
 typedef void (*msg_decoder_t)(tvbuff_t *, packet_info *, proto_tree *, gint, guint16);
