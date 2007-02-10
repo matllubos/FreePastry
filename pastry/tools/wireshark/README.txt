@@ -52,11 +52,16 @@ plugins/Makefile.in  (~line 333)
 
 * Windows:
 
+/Makefile.nmake
+  copy the plugin dll to the distribution
+  xcopy ".\plugins\freepastry\freepastry.dll" $(INSTALL_DIR)\plugins\$(VERSION) /d (~line 852)
+
+
 plugins/Makefile.nmake
 	add "freepastry \" to the list of "all" directive (~line 18)
 	
 	add the freepastry directive (~line 75)
-	freepastry::
+freepastry::
 	cd freepastry
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
 	cd ..
@@ -78,6 +83,7 @@ plugins/Makefile.nmake
 
 	add "xcopy freepastry\*.dll $(VERSION) /d" to the install-plugins directive (~line 330)
 
+	
 4. Build
 
 UNIX:
