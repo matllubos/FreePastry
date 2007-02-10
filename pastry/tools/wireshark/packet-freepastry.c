@@ -564,7 +564,7 @@ get_id_from_node_handle(tvbuff_t *tvb, gint offset)
   offset += get_epoch_inet_socket_address_len(tvb, offset);
   id = tvb_get_ntohl(tvb, offset + 16);
   /* returned buffer is automatically freed once the current packet dissection completes*/
-  return ep_strdup_printf(" <0x%02X%02X%02X..>", (id >> 24) & 0xff,
+  return ep_strdup_printf("<0x%02X%02X%02X..>", (id >> 24) & 0xff,
     (id >> 16) & 0xff, (id >> 8) & 0xff);
 }
 
@@ -725,9 +725,16 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   guint8 num_unique_handle;
   guint8 num_cw_size;
   guint8 num_ccw_size;
+  gchar *base_handle_id;
+  
+  /*these 3 vars are for drawing the LeafSet, they need to be filled in with the sub values before the LS can be rendered*/
+  gchar *node_handle_id[24];
+  guint8 ccw_index[12];
+  guint8 cw_index[12];
   int i;
 
   ti = proto_tree_add_text(parent_tree, tvb, offset, 1, attribute_name);
+  
   leafset_tree = proto_item_add_subtree(ti, ett_freepastry_ls);
   /*The total capacity of the leafset (not including the base handle)*/
   proto_tree_add_item(leafset_tree, hf_freepastry_ls_size, tvb, offset, 1, FALSE);
@@ -748,18 +755,22 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
     tvb, offset, 1, num_ccw_size);
   offset++;
   /*The base NodeHandle*/
+  base_handle_id = get_id_from_node_handle(tvb,offset);
   offset = decode_nodehandle(tvb, leafset_tree, offset, "Base Node Handle");
+  
   /*The unique handles*/
   for (i = 0; i < num_unique_handle; ++i){
     if (offset == -1) {
       return -1;
     }
-    offset = decode_nodehandle(tvb, leafset_tree, offset, ep_strdup_printf("Node Handle #%d", i+1));
+    node_handle_id[i] = get_id_from_node_handle(tvb,offset);
+    offset = decode_nodehandle(tvb, leafset_tree, offset, ep_strdup_printf("Node Handle #%d", i));
   }
   /*The cw addresses*/
   ti_cw = proto_tree_add_text(leafset_tree, tvb, offset, num_cw_size, "Clockwise Similar Set");
   cw_tree = proto_item_add_subtree(ti_cw, ett_freepastry_ls_cw);
   for (i = 0; i < num_cw_size; ++i){
+    cw_index[i] = tvb_get_guint8(tvb, offset);
     proto_tree_add_item(cw_tree, hf_freepastry_ls_handle_index, tvb, offset, 1, FALSE);
     offset++;
   }
@@ -768,10 +779,21 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   ti_ccw = proto_tree_add_text(leafset_tree, tvb, offset, num_ccw_size, "Counter Clockwise Similar Set");
   ccw_tree = proto_item_add_subtree(ti_ccw, ett_freepastry_ls_ccw);
   for (i = 0; i < num_ccw_size; ++i){
+    ccw_index[i] = tvb_get_guint8(tvb, offset);
     proto_tree_add_item(ccw_tree, hf_freepastry_ls_handle_index, tvb, offset, 1, FALSE);
     offset++;
   }
   proto_item_set_end(ti_ccw, tvb, offset);
+  
+  /*draw the leafset*/
+  for (i=num_ccw_size-1; i>=0; i--) {
+    proto_item_append_text(ti, node_handle_id[ccw_index[i]]);
+  }
+  proto_item_append_text(ti, ep_strdup_printf("[%s]", base_handle_id));
+  for (i=0; i < num_ccw_size; i++) {
+    proto_item_append_text(ti, node_handle_id[cw_index[i]]);
+  }
+  
   proto_item_set_end(ti, tvb, offset);
   return offset;
 }
