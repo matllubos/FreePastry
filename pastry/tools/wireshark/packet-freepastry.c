@@ -786,6 +786,7 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   proto_item_set_end(ti_ccw, tvb, offset);
   
   /*draw the leafset*/
+  proto_item_append_text(ti, " ");
   for (i=num_ccw_size-1; i>=0; i--) {
     proto_item_append_text(ti, node_handle_id[ccw_index[i]]);
   }
