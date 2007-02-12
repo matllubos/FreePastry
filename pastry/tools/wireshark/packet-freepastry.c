@@ -90,6 +90,7 @@ static int hf_freepastry_direct_routerow_row = -1;
 static int hf_freepastry_direct_routerow_numroutesets = -1;
 static int hf_freepastry_direct_routerow_notnull = -1;
 static int hf_freepastry_direct_sourceroute_numhops = -1;
+static int hf_freepastry_direct_sourceroute_numsourceroutes = -1;
 static int hf_freepastry_join_consistent_join_is_request  = -1;
 static int hf_freepastry_join_consistent_join_num_failed  = -1;
 static int hf_freepastry_join_join_rtbasebitlength  = -1;
@@ -307,11 +308,27 @@ decode_sourceroute(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *a
   proto_tree_add_uint(sourceroute_tree, hf_freepastry_direct_sourceroute_numhops, tvb, offset, 4, sourceroute_size);
   offset += 4;
   
-  for (i=0; i < sourceroute_size; ++i){
+  /*for each hop (do not parse the last hop)*/
+  for (i=0; i < (sourceroute_size - 1); ++i){
     offset = decode_epoch_inet_socket_address(tvb, sourceroute_tree, offset, "Hop");
     if (offset == -1){
       return -1;
     }
+  }
+  /*Parse the last node in the sourceroute*/
+  if (sourceroute_size > 0) {
+    gchar *ip_str;
+    guint16 port_number;
+    gint former_offset = offset;
+    offset = decode_epoch_inet_socket_address(tvb, sourceroute_tree, offset, "Hop");
+    if (offset == -1){
+      return -1;
+    }
+    /*Print final destination on the subtree root*/
+    ip_str = ip_to_str(tvb_get_ptr(tvb, former_offset + 1, 4));
+    former_offset += 5;
+    port_number = tvb_get_ntohs(tvb, former_offset);
+    proto_item_append_text(ti, " -> %s:%d", ip_str, port_number);
   }
   proto_item_set_end(ti, tvb, offset);
   return offset;
@@ -926,8 +943,21 @@ static void
 decode_msg_routes_response(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
                            gint offset, guint16 short_address _U_) {
   if (tree){
+    guint32 i;
+    guint32 num_sourceroutes = tvb_get_ntohl(tvb, offset+1);
     proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    decode_sourceroute(tvb, tree, offset + 1, "Source Route");
+    offset++;
+    proto_tree_add_uint(tree, hf_freepastry_direct_sourceroute_numsourceroutes, 
+      tvb, offset, 4, num_sourceroutes);
+    offset += 4;
+    for (i=0; i < num_sourceroutes; ++i){
+      proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
+      offset++;
+      offset = decode_sourceroute(tvb, tree, offset, "Source Route");
+      if (offset == -1){
+        return;
+      }
+    }
   }
 }
 
@@ -1935,15 +1965,19 @@ proto_register_freepastry(void)
     FT_UINT32, BASE_DEC, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_direct_routerow_numroutesets,
-    { "Number of RouteSets",	"freepastry.direct.route_row.numrouteset",
+    { "Number of RouteSets",	"freepastry.direct.route_row.num_route_sets",
     FT_UINT32, BASE_DEC, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_direct_routerow_notnull,
-    { "RouteSet is not null",	"freepastry.direct.route_row.notnullrouteset",
+    { "RouteSet is not null",	"freepastry.direct.route_row.not_null_routeset",
     FT_BOOLEAN, 8, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_direct_sourceroute_numhops,
     { "Number of hops",	"freepastry.direct.source_route.num_hops",
+    FT_UINT32, BASE_DEC, NULL, 0x0,
+    "", HFILL }},
+    { &hf_freepastry_direct_sourceroute_numsourceroutes,
+    { "Number of SourceRoutes",	"freepastry.direct.source_route.num_source_routes",
     FT_UINT32, BASE_DEC, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_join_consistent_join_is_request,
@@ -1951,7 +1985,7 @@ proto_register_freepastry(void)
     FT_BOOLEAN, 8, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_join_consistent_join_num_failed,
-    { "Number of failed set",	"freepastry.join.consistent_join.num_failed_set",
+    { "Number of failed set",	"freepastry.join.consistent_join.num_failed_sets",
     FT_UINT32, BASE_DEC, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_join_join_rtbasebitlength,
@@ -1995,11 +2029,11 @@ proto_register_freepastry(void)
     FT_UINT8, BASE_DEC, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_routingtable_broadcast_routerow_num_row,
-    { "Number of RouteSets",	"freepastry.routingtable.broadcast_routerow.numrouteset",
+    { "Number of RouteSets",	"freepastry.routingtable.broadcast_routerow.num_routesets",
     FT_UINT8, BASE_DEC, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_routingtable_broadcast_routerow_notnull,
-    { "RouteSet is not null",	"freepastry.routingtable.broadcast_routerow.notnullrouteset",
+    { "RouteSet is not null",	"freepastry.routingtable.broadcast_routerow.not_null_routeset",
     FT_BOOLEAN, 8, NULL, 0x0,
     "", HFILL }},
     { &hf_freepastry_commonapi_pastry_endpoint_version,
