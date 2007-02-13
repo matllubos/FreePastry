@@ -816,19 +816,19 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   leafset_string = ep_alloc(leafset_string_length);
   leafset_string_offset = 0;
 
-  strncpy(leafset_string, " ", 1);
+  g_snprintf(leafset_string, leafset_string_length - leafset_string_offset, " ");
   leafset_string_offset++;
 
   for (i=num_ccw_size-1; i>=0; i--) {
-    strncpy(leafset_string+leafset_string_offset, node_handle_id[ccw_index[i]],  leafset_string_length - leafset_string_offset);
+    g_snprintf(leafset_string+leafset_string_offset, leafset_string_length - leafset_string_offset, node_handle_id[ccw_index[i]]);
     leafset_string_offset+=ID_PRINT_SIZE;
   }
 
-  sprintf(leafset_string+leafset_string_offset, "[%s]", base_handle_id);
+  g_snprintf(leafset_string+leafset_string_offset, leafset_string_length - leafset_string_offset, "[%s]", base_handle_id);
   leafset_string_offset+=2+ID_PRINT_SIZE;
 
   for (i=0; i < num_ccw_size; i++) {
-    strncpy(leafset_string+leafset_string_offset, node_handle_id[cw_index[i]],  leafset_string_length - leafset_string_offset);
+    g_snprintf(leafset_string+leafset_string_offset, leafset_string_length - leafset_string_offset, node_handle_id[cw_index[i]]);
     leafset_string_offset+=ID_PRINT_SIZE;
   }
 
