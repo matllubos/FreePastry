@@ -29,6 +29,7 @@ PLUGIN_NAME = freepastry
 # the dissector sources (without any helpers)
 DISSECTOR_SRC = \
 	packet-freepastry.c \
+	packet-freepastry-core-v0.c \
 	packet-past.c \
 	packet-gcpast.c \
 	packet-replication.c \

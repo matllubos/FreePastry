@@ -36,9 +36,6 @@ ion
 
 #include "packet-freepastry.h"
 
-/* forward references */
-static void decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset, guint32 address);
-
 /* desegmentation of FreePastry over TCP */
 static gboolean freepastry_desegment = TRUE;
 
@@ -64,7 +61,6 @@ static int hf_freepastry_versionkey_version = -1;
 static int hf_freepastry_fragmentkey_id = -1;
 static int hf_freepastry_ringid = -1;
 static int hf_freepastry_gcid_expiration = -1;
-static int hf_freepastry_direct_nodeid_resp_epoch = -1;
 static int hf_freepastry_rs_capacity = -1;
 static int hf_freepastry_rs_size = -1;
 static int hf_freepastry_rs_closest = -1;
@@ -82,34 +78,20 @@ static int hf_freepastry_leafset_msg_type = -1;
 static int hf_freepastry_routingtable_msg_type = -1;
 static int hf_freepastry_msg_size = -1;
 static int hf_freepastry_commonapi_msg_type = -1;
-static int hf_freepastry_direct_access_msg_type = -1;
-static int hf_freepastry_msg_version = -1;
+static int hf_freepastry_direct_msg_type = -1;
 static int hf_freepastry_router_sub_address = -1;
 static int hf_freepastry_router_target = -1;
-static int hf_freepastry_direct_routerow_row = -1;
-static int hf_freepastry_direct_routerow_numroutesets = -1;
-static int hf_freepastry_direct_routerow_notnull = -1;
-static int hf_freepastry_direct_sourceroute_numhops = -1;
-static int hf_freepastry_direct_sourceroute_numsourceroutes = -1;
-static int hf_freepastry_join_consistent_join_is_request  = -1;
-static int hf_freepastry_join_consistent_join_num_failed  = -1;
-static int hf_freepastry_join_join_rtbasebitlength  = -1;
-static int hf_freepastry_join_join_has_join_handle  = -1;
-static int hf_freepastry_join_join_last_row  = -1;
-static int hf_freepastry_join_join_has_row  = -1;
-static int hf_freepastry_join_join_has_col  = -1;
-static int hf_freepastry_join_join_has_leafset  = -1;
-static int hf_freepastry_leafset_request_leafset_timestamp  = -1;
-static int hf_freepastry_leafset_broadcast_leafset_type  = -1;
-static int hf_freepastry_leafset_broadcast_leafset_timestamp  = -1;
-static int hf_freepastry_routingtable_request_routerow_row  = -1;
-static int hf_freepastry_routingtable_broadcast_routerow_num_row  = -1;
-static int hf_freepastry_routingtable_broadcast_routerow_notnull  = -1;
+static int hf_freepastry_direct_msg_version = -1;
+static int hf_freepastry_router_msg_version = -1;
+static int hf_freepastry_commonapi_msg_version = -1;
+static int hf_freepastry_join_msg_version = -1;
+static int hf_freepastry_routingtable_msg_version = -1;
+static int hf_freepastry_leafset_proto_msg_version = -1;
 static int hf_freepastry_direct = -1;
 static int hf_freepastry_router  = -1;
 static int hf_freepastry_commonapi = -1;
-static int hf_freepastry_join_proto = -1;
-static int hf_freepastry_route_proto = -1;
+static int hf_freepastry_join = -1;
+static int hf_freepastry_routingtable = -1;
 static int hf_freepastry_leafset_proto = -1;
 static int hf_freepastry_liveness = -1;
 
@@ -127,7 +109,7 @@ static gint ett_freepastry_sr = -1;
 static dissector_handle_t freepastry_udp_handle; 
 static dissector_handle_t freepastry_tcp_handle;
 
-static dissector_table_t subdissector_table;
+static dissector_table_t subdissector_encapsulated_table;
 
 /*
  * State information stored with a conversation.
@@ -139,25 +121,25 @@ struct freepastry_tcp_stream_data {
 
 /* Address mapping */
 static const value_string freepastry_address[] = {
-  { DIRECT_ACCESS, 	"Direct Access" },
-  { ROUTER, 	        "Router" },
-  { JOIN_PROTOCOL, 	"Join Protocol" },
-  { LEAF_PROTOCOL, 	"Leafset Protocol" },
-  { ROUTE_PROTOCOL,  	"Route Protocol" }, 
-  { 0,       		NULL }
+  { DIRECT_ACCESS, 	       "Direct Access" },
+  { ROUTER, 	             "Router" },
+  { JOIN_PROTOCOL, 	       "Join Protocol" },
+  { LEAFSET_PROTOCOL, 	   "Leafset Protocol" },
+  { ROUTINGTABLE_PROTOCOL, "Route Protocol" }, 
+  { 0, NULL }
 };
 
 /*Messages for "Direct access" module*/
 static const value_string freepastry_direct_access_msg[] = {
-  { SOURCE_ROUTE, 	        "Source Route" },
-  { LEAFSET_REQUEST_MSG, 	  "LeafSet Request" },
-  { LEAFSET_RESPONSE_MSG,   "LeafSet Response" },
-  { NODE_ID_REQUEST_MSG, 	  "Node ID Request" },
-  { NODE_ID_RESPONSE_MSG,   "Node ID Response" }, 
-  { ROUTE_ROW_REQUEST_MSG,  "Route Row Request" },
-  { ROUTE_ROW_RESPONSE_MSG, "Route Row Response" }, 
-  { ROUTES_REQUEST_MSG, 	  "Routes Request" },
-  { ROUTES_RESPONSE_MSG,    "Routes Response" },
+  { SOURCEROUTE_MSG,   	     "Source Route" },
+  { LEAFSET_REQUEST_MSG, 	   "LeafSet Request" },
+  { LEAFSET_RESPONSE_MSG,    "LeafSet Response" },
+  { NODE_ID_REQUEST_MSG, 	   "Node ID Request" },
+  { NODE_ID_RESPONSE_MSG,    "Node ID Response" }, 
+  { ROUTE_ROW_REQUEST_MSG,   "Route Row Request" },
+  { ROUTE_ROW_RESPONSE_MSG,  "Route Row Response" }, 
+  { SOURCEROUTE_REQUEST_MSG, "Routes Request" },
+  { SOURCEROUTE_RESPONSE_MSG,"Routes Response" },
   { 0, NULL }
 };
 
@@ -219,7 +201,7 @@ static const value_string freepastry_id_type[] = {
 static const value_string freepastry_liveness_message[] = {
   { IP_ADDRESS_REQUEST_MSG, 	"IP Address Request" },
   { IP_ADDRESS_RESPONSE_MSG, 	"IP Address Response" },
-  { PING_MSG, 	              "Ping" },
+  { PING_MSG, 	              "Ping Request" },
   { PING_RESPONSE_MESSAGE, 	  "Ping Response" },
   { WRONG_EPOCH_MESSAGE,  	  "Wrong Epoch" },
   { 0, NULL }
@@ -293,49 +275,6 @@ decode_epoch_inet_socket_address(tvbuff_t *tvb, proto_tree *parent_tree, gint of
     proto_tree_add_item(epoch_inet_socket_address_tree, hf_freepastry_eisa_epoch, tvb, offset, 8, FALSE);
     offset += 8;
   }
-  return offset;
-}
-
-/**
-*   Decode a "Source Route" object.
-*   @return the new offset or -1 on error.
-**/
-gint
-decode_sourceroute(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name)
-{
-  proto_item *ti = NULL;
-  proto_tree *sourceroute_tree = NULL; 
-  guint32 i;
-  guint32 sourceroute_size = tvb_get_ntohl(tvb, offset);
-
-  ti = proto_tree_add_text(parent_tree, tvb, offset, 1, attribute_name);
-  sourceroute_tree = proto_item_add_subtree(ti, ett_freepastry_sr);
-  proto_tree_add_uint(sourceroute_tree, hf_freepastry_direct_sourceroute_numhops, tvb, offset, 4, sourceroute_size);
-  offset += 4;
-  
-  /*for each hop (do not parse the last hop)*/
-  for (i=0; i < (sourceroute_size - 1); ++i){
-    offset = decode_epoch_inet_socket_address(tvb, sourceroute_tree, offset, "Hop");
-    if (offset == -1){
-      return -1;
-    }
-  }
-  /*Parse the last node in the sourceroute*/
-  if (sourceroute_size > 0) {
-    gchar *ip_str;
-    guint16 port_number;
-    gint former_offset = offset;
-    offset = decode_epoch_inet_socket_address(tvb, sourceroute_tree, offset, "Hop");
-    if (offset == -1){
-      return -1;
-    }
-    /*Print final destination on the subtree root*/
-    ip_str = ip_to_str(tvb_get_ptr(tvb, former_offset + 1, 4));
-    former_offset += 5;
-    port_number = tvb_get_ntohs(tvb, former_offset);
-    proto_item_append_text(ti, " -> %s:%d", ip_str, port_number);
-  }
-  proto_item_set_end(ti, tvb, offset);
   return offset;
 }
 
@@ -837,390 +776,35 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   proto_item_set_end(ti, tvb, offset);
   return offset;
 }
+
+gint decode_message_version(tvbuff_t *tvb, proto_tree *tree, gint offset, guint32 address)
+{
+  /*We already know that there is enough byte for version field here*/
+  switch (address){
+    case DIRECT_ACCESS:
+      proto_tree_add_item(tree, hf_freepastry_direct_msg_version, tvb, offset, 1, FALSE);
+      break;
+    case ROUTER:
+      proto_tree_add_item(tree, hf_freepastry_router_msg_version, tvb, offset, 1, FALSE);
+      break;
+    case JOIN_PROTOCOL:
+      proto_tree_add_item(tree, hf_freepastry_join_msg_version, tvb, offset, 1, FALSE);
+      break;
+    case LEAFSET_PROTOCOL:
+      proto_tree_add_item(tree, hf_freepastry_leafset_proto_msg_version, tvb, offset, 1, FALSE);
+      break;
+    case ROUTINGTABLE_PROTOCOL:
+      proto_tree_add_item(tree, hf_freepastry_routingtable_msg_version, tvb, offset, 1, FALSE);
+      break;
+    default:/*Common API*/
+      proto_tree_add_item(tree, hf_freepastry_commonapi_msg_version, tvb, offset, 1, FALSE);
+  }
+  return offset+1;
+}
 /*
  * End: Common FreePastry Objects dissection.
  */
 
-
-/*
- * Start: TCP FreePastry Core Message dissection.
- */
-
-/*Direct Acces Messages*/
-static void
-decode_msg_leafset_request(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                           gint offset, guint16 short_address _U_) {
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-  }
-}
-
-static void
-decode_msg_leafset_response(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                            gint offset, guint16 short_address _U_) {
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    offset = decode_leafset(tvb, tree, offset + 1, "Leafset");
-  }
-}
-
-static void
-decode_msg_id_request(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                      gint offset, guint16 short_address _U_) {
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-  }
-}
-
-static void
-decode_msg_id_response(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
-                       gint offset, guint16 short_address _U_) {
-  if (tvb_reported_length_remaining(tvb, offset) < 29){
-    proto_tree_add_text(tree, tvb, offset, -1, "Malformed message!");
-    return;
-  }
-
-  if (check_col(pinfo->cinfo, COL_INFO)){
-    col_append_str(pinfo->cinfo, COL_INFO, get_id(tvb, offset + 1));
-  }
-
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    offset++;
-    proto_tree_add_string(tree, hf_freepastry_id_value, tvb, offset, 20, get_id_full(tvb, offset));
-    proto_tree_add_item(tree, hf_freepastry_direct_nodeid_resp_epoch, tvb, offset+20, 8, FALSE);
-  }
-}
-
-static void
-decode_msg_row_request(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
-                       gint offset, guint16 short_address _U_) {
-  guint32 requested_row = tvb_get_ntohl(tvb, offset +1);
-  if (check_col(pinfo->cinfo, COL_INFO)){
-    col_append_fstr(pinfo->cinfo, COL_INFO, " %d", requested_row);
-  }
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    proto_tree_add_uint(tree, hf_freepastry_direct_routerow_row, tvb, offset+1, 4, requested_row);
-  }
-}
-
-static void
-decode_msg_row_response(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
-                        gint offset, guint16 short_address _U_) {
-  guint32 num_routeset = tvb_get_ntohl(tvb, offset +1);
-  if (check_col(pinfo->cinfo, COL_INFO)){
-    col_append_fstr(pinfo->cinfo, COL_INFO, " (%d Route Sets)", num_routeset);
-  }
-  if (tree)
-  {
-    guint32 i;
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    proto_tree_add_uint(tree, hf_freepastry_direct_routerow_numroutesets, tvb, offset+1, 4, num_routeset);
-    offset += 5;
-    for (i = 0; i < num_routeset; ++i){
-      gboolean not_null = FALSE;
-      /*has sender?*/
-      if (tvb_get_guint8(tvb, offset) != 0){
-        not_null = TRUE;
-      }
-      proto_tree_add_boolean(tree, hf_freepastry_direct_routerow_notnull, tvb, offset, 1, not_null);
-      offset++;
-      if (not_null){
-        offset = decode_routeset(tvb, tree, offset, ep_strdup_printf("RouteSet for col 0x%X", i));
-        if (offset == -1){
-          return;
-        }
-      }
-    }
-  }
-}
-
-static void
-decode_msg_routes_request(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                          gint offset, guint16 short_address _U_) {
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-  }
-}
-
-static void
-decode_msg_routes_response(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                           gint offset, guint16 short_address _U_) {
-  if (tree){
-    guint32 i;
-    guint32 num_sourceroutes = tvb_get_ntohl(tvb, offset+1);
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    offset++;
-    proto_tree_add_uint(tree, hf_freepastry_direct_sourceroute_numsourceroutes, 
-      tvb, offset, 4, num_sourceroutes);
-    offset += 4;
-    for (i=0; i < num_sourceroutes; ++i){
-      proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-      offset++;
-      offset = decode_sourceroute(tvb, tree, offset, "Source Route");
-      if (offset == -1){
-        return;
-      }
-    }
-  }
-}
-
-static void
-decode_msg_source_route(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                        gint offset, guint16 short_address _U_) {
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    decode_sourceroute(tvb, tree, offset + 1, "Source Route");
-  }
-}
-
-/* Join Messages */
-
-static void
-decode_msg_join_request(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                        gint offset, guint16 short_address _U_) {
-  if (tree){
-    gboolean has_join_handle = FALSE;
-    gboolean has_leafset = FALSE;
-    guint8 rt_base_bit_length;
-    guint8 num_row;
-    guint8 num_col;
-    guint8 i;
-    guint8 j;
-
-    rt_base_bit_length = tvb_get_guint8(tvb, offset + 1);
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    proto_tree_add_item(tree, hf_freepastry_join_join_rtbasebitlength, tvb, offset + 1, 1, rt_base_bit_length);
-    offset += 2;
-    offset = decode_nodehandle(tvb, tree, offset, "Node Handle");
-    if (offset == -1) {
-      return;
-    }
-    if (tvb_get_guint8(tvb, offset) != 0){
-      has_join_handle = TRUE;
-    }
-    proto_tree_add_boolean(tree, hf_freepastry_join_join_has_join_handle, tvb, offset, 1, has_join_handle);
-    offset++;
-    if (has_join_handle) {
-      offset = decode_nodehandle(tvb, tree, offset, "Join Handle");
-    }
-    if (offset == -1) {
-      return;
-    }
-    proto_tree_add_item(tree, hf_freepastry_join_join_last_row, tvb, offset, 2, FALSE);
-    offset += 2;
-    if (rt_base_bit_length) {
-      num_row = 160/rt_base_bit_length;
-    } else {/*division by zero*/
-      return;
-    }
-    num_col = 1 << rt_base_bit_length;
-    for (i = 0; i < num_row; ++i){
-      gboolean has_row = FALSE;
-      if (tvb_get_guint8(tvb, offset) != 0){
-        has_row = TRUE;
-      }
-      proto_tree_add_boolean(tree, hf_freepastry_join_join_has_row, tvb, offset, 1, has_row);
-      offset++;
-      if (has_row) {
-        for (j = 0; j < num_col; ++j){
-          gboolean has_col = FALSE;
-          if (tvb_get_guint8(tvb, offset) != 0){
-            has_col = TRUE;
-          }
-          proto_tree_add_boolean(tree, hf_freepastry_join_join_has_col, tvb, offset, 1, has_col);
-          offset++;
-          if (has_col) {
-            offset = decode_routeset(tvb, tree, offset, ep_strdup_printf("RouteSet (%d, 0x%X)", i+1, j));
-            if (offset == -1){
-              return;
-            }
-          }
-        }/*end for each col*/
-      }/*end has row entry*/
-    }/*end for each row*/
-
-    if (tvb_get_guint8(tvb, offset) != 0){
-      has_leafset = TRUE;
-    }
-    proto_tree_add_boolean(tree, hf_freepastry_join_join_has_leafset, tvb, offset, 1, has_leafset);
-    if (has_leafset) {
-      offset = decode_leafset(tvb, tree, offset + 1, "LeafSet");
-    }
-  }
-}
-
-static void
-decode_msg_consistent_join(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                           gint offset, guint16 short_address _U_) {
-  if (tree){
-    guint32 num_failed;
-    guint32 i;
-
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    offset = decode_leafset(tvb, tree, offset + 1, "Leafset");
-    if (offset == -1){
-      return;
-    }
-    proto_tree_add_boolean(tree, hf_freepastry_join_consistent_join_is_request, tvb, offset, 1, FALSE);
-    num_failed = tvb_get_ntohl(tvb, offset + 1);
-    proto_tree_add_uint(tree, hf_freepastry_join_consistent_join_num_failed, tvb, offset+1, 4, num_failed);
-    offset += 5;
-    for (i = 0; i < num_failed; ++i){
-      if (offset == -1) {
-        return;
-      }
-      offset = decode_nodehandle(tvb, tree, offset, "Failed Node Handle");
-    }
-  }
-}
-
-/* Leafset Maintenance Messages*/
-
-static void
-decode_msg_request_leafset(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                           gint offset, guint16 short_address _U_) {
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    proto_tree_add_item(tree, hf_freepastry_leafset_request_leafset_timestamp, tvb, offset + 1, 8, FALSE);
-  }
-}
-
-static void
-decode_msg_broadcast_leafset(tvbuff_t *tvb, packet_info *pinfo _U_, proto_tree *tree,
-                             gint offset, guint16 short_address _U_) {
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    offset = decode_nodehandle(tvb, tree, offset + 1, "From Handle");
-    if (offset == -1) {
-      return;
-    }
-    offset = decode_leafset(tvb, tree, offset, "LeafSet");
-    if (offset == -1) {
-      return;
-    }
-    proto_tree_add_item(tree, hf_freepastry_leafset_broadcast_leafset_type, tvb, offset, 1, FALSE);
-    proto_tree_add_item(tree, hf_freepastry_leafset_broadcast_leafset_timestamp, tvb, offset + 1, 8, FALSE);
-  }
-}
-
-/* Routing Table Maintenance Messages*/
-
-static void
-decode_msg_request_route_row(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
-                             gint offset, guint16 short_address _U_) {
-  guint32 requested_row = tvb_get_ntohl(tvb, offset +1);
-  if (check_col(pinfo->cinfo, COL_INFO)){
-    col_append_fstr(pinfo->cinfo, COL_INFO, " %d", requested_row);
-  }
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    proto_tree_add_uint(tree, hf_freepastry_routingtable_request_routerow_row, tvb, offset+1, 4, requested_row);
-  }
-}
-
-static void
-decode_msg_route_row(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
-                     gint offset, guint16 short_address _U_) {
-  guint8 num_rows;
-  if (tree)
-  {
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    offset = decode_nodehandle(tvb, tree, offset + 1, "From Handle");
-  } else {
-    offset++;
-    offset += get_node_handle_len(tvb, offset);
-  }
-  
-  
-  if (offset == -1) {
-    return;
-  }
-
-  num_rows = tvb_get_guint8(tvb, offset);
-  if (check_col(pinfo->cinfo, COL_INFO)){
-    col_append_fstr(pinfo->cinfo, COL_INFO, " (%d Rows)", num_rows);
-  }
-
-  if (tree)
-  {
-    guint32 i;
-    proto_tree_add_uint(tree, hf_freepastry_routingtable_broadcast_routerow_num_row, tvb, offset, 1, num_rows);
-    offset++;
-    for (i = 0; i < num_rows; ++i){
-      gboolean not_null = FALSE;
-      /*row is not null?*/
-      if (tvb_get_guint8(tvb, offset) != 0){
-        not_null = TRUE;
-      }
-      proto_tree_add_boolean(tree, hf_freepastry_routingtable_broadcast_routerow_notnull, tvb, offset, 1, not_null);
-      offset++;
-      if (not_null){
-        offset = decode_routeset(tvb, tree, offset, ep_strdup_printf("RouteSet for col 0x%X", i));
-        if (offset == -1){
-          return;
-        }
-      }
-    }
-  }
-}
-
-/* Router Message */
-
-static void
-decode_msg_route(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
-                 gint offset, guint16 short_address _U_){
-  guint32 address = tvb_get_ntohl(tvb, offset+1);
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    proto_tree_add_item(tree, hf_freepastry_router_sub_address, tvb, offset + 1, 4, FALSE);
-    offset += 5;
-    if (tvb_reported_length_remaining(tvb, offset) < 20){
-      proto_tree_add_text(tree, tvb, offset, -1, "Malformed message!");
-      return;
-    }
-    proto_tree_add_string(tree, hf_freepastry_router_target, tvb, offset, 20, get_id_full(tvb, offset));
-    offset = decode_nodehandle(tvb, tree, offset + 20, "Previous Hop");
-  } else {
-    offset += 25;
-    offset += get_node_handle_len(tvb, offset);
-  }
-
-  if (offset != -1){
-    decode_freepastry_tcp_msg_invariant(tvb, pinfo, tree, offset, address);
-  }
-}
-
-/* Common API Message */
-
-static void
-decode_msg_pastry_endpoint(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
-                           gint offset, guint16 short_address) {
-  tvbuff_t *next_tvb;
-
-  if (tvb_reported_length_remaining(tvb, offset+2) <= 0){
-      return;	/* no more data */
-  }
-
-  if (tree){
-    proto_tree_add_item(tree, hf_freepastry_msg_version, tvb, offset, 1, FALSE);
-    proto_tree_add_item(tree, hf_freepastry_msg_header_priority, tvb, offset+1, 1, FALSE);
-  }
-
-  next_tvb = tvb_new_subset(tvb, offset + 2, -1, -1);
-  dissector_try_port(subdissector_table, short_address, next_tvb, pinfo, tree);
-}
-
-static void
-handle_not_supported_msg(tvbuff_t *tvb _U_, packet_info *pinfo  _U_, proto_tree *tree _U_,
-                         gint offset _U_, guint16 short_address _U_) {
-  return;
-}
-
-/*
- * End: TCP FreePastry Core Message dissection.
- */
 
 /**
 *   Dissect a FreePastry UDP Message
@@ -1359,13 +943,14 @@ dissect_freepastry_common_udp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
  * Such a function is needed because a FreePastry Message can be
  * Encapsulated into another one (e.g. into a Route Message)
 **/
-static void
+void
 decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset, guint32 address)
 {
   gboolean has_sender = FALSE;
-  msg_decoder_t decode_msg = handle_not_supported_msg;
   gint16  type          = 0;
   guint16 short_address = 0;
+  sub_message_info_t *sub_message_info = NULL;
+  tvbuff_t *next_tvb = NULL;
   const gchar *type_string;
 
   /*has sender?*/
@@ -1386,37 +971,7 @@ decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tre
       type_string = val_to_str(type, freepastry_direct_access_msg, "<Unknown type %d>");
       if (tree){
         proto_tree_add_item_hidden(tree, hf_freepastry_direct, tvb, offset, -1, FALSE);
-        proto_tree_add_item(tree, hf_freepastry_direct_access_msg_type, tvb, offset, 2, FALSE);
-      }
-      switch (type){
-        case SOURCE_ROUTE:
-          decode_msg = decode_msg_source_route;
-          break;
-        case LEAFSET_REQUEST_MSG:
-          decode_msg = decode_msg_leafset_request;
-          break;
-        case LEAFSET_RESPONSE_MSG:
-          decode_msg = decode_msg_leafset_response;
-          break;
-        case NODE_ID_REQUEST_MSG:
-          decode_msg = decode_msg_id_request;
-          break;
-        case NODE_ID_RESPONSE_MSG:
-          decode_msg = decode_msg_id_response;
-          break;
-        case ROUTE_ROW_REQUEST_MSG:
-          decode_msg = decode_msg_row_request;
-          break;
-        case ROUTE_ROW_RESPONSE_MSG:
-          decode_msg = decode_msg_row_response;
-          break;
-        case ROUTES_REQUEST_MSG:
-          decode_msg = decode_msg_routes_request;
-          break;
-        case ROUTES_RESPONSE_MSG:
-          decode_msg = decode_msg_routes_response;
-          break;
-        /*default: nothing to be done here*/
+        proto_tree_add_item(tree, hf_freepastry_direct_msg_type, tvb, offset, 2, FALSE);
       }
       break;
     case ROUTER:
@@ -1425,64 +980,33 @@ decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tre
         proto_tree_add_item_hidden(tree, hf_freepastry_router, tvb, offset, -1, FALSE);
         proto_tree_add_item(tree, hf_freepastry_router_msg_type, tvb, offset, 2, FALSE);
       }
-      if (type == ROUTE){
-        decode_msg = decode_msg_route;
-      }
       break;
     case JOIN_PROTOCOL:
       type_string = val_to_str(type, freepastry_join_msg, "<Unknown type %d>");
       if (tree){
-        proto_tree_add_item_hidden(tree, hf_freepastry_join_proto, tvb, offset, -1, FALSE);
+        proto_tree_add_item_hidden(tree, hf_freepastry_join, tvb, offset, -1, FALSE);
         proto_tree_add_item(tree, hf_freepastry_join_msg_type, tvb, offset, 2, FALSE);
       }
-      switch (type){
-        case JOIN_REQUEST:
-          decode_msg = decode_msg_join_request;
-          break;
-        case CONSISTENT_JOIN_MSG:
-          decode_msg = decode_msg_consistent_join;
-          break;
-      }
       break;
-    case LEAF_PROTOCOL:
+    case LEAFSET_PROTOCOL:
       type_string = val_to_str(type, freepastry_leafset_msg, "<Unknown type %d>");
       if (tree){
         proto_tree_add_item_hidden(tree, hf_freepastry_leafset_proto, tvb, offset, -1, FALSE);
         proto_tree_add_item(tree, hf_freepastry_leafset_msg_type, tvb, offset, 2, FALSE);
       }
-      switch (type){
-        case REQUEST_LEAFSET:
-          decode_msg = decode_msg_request_leafset;
-          break;
-        case BROADCAST_LEAFSET:
-          decode_msg = decode_msg_broadcast_leafset;
-          break;
-      }
       break;
-    case ROUTE_PROTOCOL:
+    case ROUTINGTABLE_PROTOCOL:
       type_string = val_to_str(type, freepastry_routingtable_msg, "<Unknown type %d>");
       if (tree){
-        proto_tree_add_item_hidden(tree, hf_freepastry_route_proto, tvb, offset, -1, FALSE);
+        proto_tree_add_item_hidden(tree, hf_freepastry_routingtable, tvb, offset, -1, FALSE);
         proto_tree_add_item(tree, hf_freepastry_routingtable_msg_type, tvb, offset, 2, FALSE);
-      }
-      switch (type){
-        case REQUEST_ROUTE_ROW:
-          decode_msg = decode_msg_request_route_row;
-          break;
-        case BROADCAST_ROUTE_ROW:
-          decode_msg = decode_msg_route_row;
-          break;
       }
       break;
     default:
-      type_string = val_to_str(type, freepastry_commonapi_msg, "<Unknown type %d>");
+      type_string = val_to_str(type, freepastry_commonapi_msg, "<Unknown address %d>");
       if (tree){
         proto_tree_add_item_hidden(tree, hf_freepastry_commonapi, tvb, offset, -1, FALSE);
         proto_tree_add_item(tree, hf_freepastry_commonapi_msg_type, tvb, offset, 2, FALSE);
-      }
-      if (type == PASTRY_ENDPOINT_MESSAGE){
-          decode_msg = decode_msg_pastry_endpoint;
-          short_address = (guint16) ((address >> 16) & 0xffff);
       }
   }
 
@@ -1499,10 +1023,19 @@ decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tre
     }
   }
 
-  if (offset != -1) {
-    decode_msg(tvb, pinfo, tree, offset, short_address);
-  }
+  /*Call the FreePastry messages dissector*/
+  /*We need to read protocol version*/
+  if (tvb_reported_length_remaining(tvb, offset) >= 1){
+    
+    /*Save internal data for message dissector*/
+    sub_message_info = ep_new(sub_message_info_t);
+    sub_message_info->address = address;
+    sub_message_info->type = type;
+    pinfo->private_data = sub_message_info;
 
+    next_tvb = tvb_new_subset(tvb, offset, -1, -1);
+    dissector_try_port(subdissector_encapsulated_table, tvb_get_guint8(tvb, offset), next_tvb, pinfo, tree);
+  }
 }
 
 /**
@@ -1812,12 +1345,12 @@ proto_register_freepastry(void)
 	  { "Common API messages", "freepastry.commonapi", 
     FT_NONE, BASE_NONE, NULL, 0x0, 
     "Show only common API traffic", HFILL }},
-    { &hf_freepastry_join_proto,
-	  { "Join protocol", "freepastry.join_proto", 
+    { &hf_freepastry_join,
+	  { "Join protocol", "freepastry.join", 
     FT_NONE, BASE_NONE, NULL, 0x0, 
     "Show only join protocol traffic", HFILL }},
-    { &hf_freepastry_route_proto,
-	  { "Routing table maintenance protocol", "freepastry.route_proto", 
+    { &hf_freepastry_routingtable,
+	  { "Routing table maintenance protocol", "freepastry.routingtable", 
     FT_NONE, BASE_NONE, NULL, 0x0, 
     "Show only routing table maintenance protocol traffic", HFILL }},
     { &hf_freepastry_leafset_proto,
@@ -1957,9 +1490,9 @@ proto_register_freepastry(void)
     FT_INT16, BASE_DEC, VALS(freepastry_liveness_message), 0x0,
     "Message type for liveness messages", HFILL }},
     { &hf_freepastry_liveness_msg_sent_time,
-    { "When a Ping message has been sent",	"freepastry.liveness.send_time",
+    { "Sent",	"freepastry.liveness.send_time",
     FT_UINT64, BASE_DEC, NULL, 0x0,
-    "", HFILL }},
+    "When a Ping message has been sent", HFILL }},
     { &hf_freepastry_router_msg_type,
     { "Message type",	"freepastry.router.type",
     FT_INT16, BASE_DEC, VALS(freepastry_router_msg), 0x0,
@@ -1976,7 +1509,7 @@ proto_register_freepastry(void)
     { "Message type",	"freepastry.routingtable.type",
     FT_INT16, BASE_DEC, VALS(freepastry_routingtable_msg), 0x0,
     "Message type for routing table maintenance protocol messages", HFILL }},
-    { &hf_freepastry_direct_access_msg_type,
+    { &hf_freepastry_direct_msg_type,
     { "Message type",	"freepastry.direct.type",
     FT_INT16, BASE_DEC, VALS(freepastry_direct_access_msg), 0x0,
     "Message type for direct access messages", HFILL }},
@@ -1984,98 +1517,30 @@ proto_register_freepastry(void)
     { "Message type",	"freepastry.commonapi.type",
     FT_INT16, BASE_DEC, VALS(freepastry_commonapi_msg), 0x0,
     "Message type for common API messages", HFILL }},
-    { &hf_freepastry_msg_version,
-    { "Version",	"freepastry.msg.version",
+    { &hf_freepastry_direct_msg_version,
+    { "Version",	"freepastry.direct.msg_version",
     FT_UINT8, BASE_DEC, NULL, 0x0,
-    "Version", HFILL }},
-    { &hf_freepastry_router_sub_address,
-    { "Sub message address",	"freepastry.router.route.sub",
-    FT_UINT32, BASE_HEX, VALS(freepastry_address), 0x0,
-    "Address for messages encapsulated in a route message", HFILL }},
-    { &hf_freepastry_router_target,
-    { "Target", "freepastry.router.route.target",
-    FT_STRING, BASE_NONE, NULL, 0x0,
-    "target for a route message", HFILL }},
-    { &hf_freepastry_direct_nodeid_resp_epoch,
-    { "Epoch",	"freepastry.direct.nodeid.resp.epoch",
-    FT_UINT64, BASE_DEC, NULL, 0x0,
-    "Epoch", HFILL }},
-    { &hf_freepastry_direct_routerow_row,
-    { "Requested row",	"freepastry.direct.route_row.row",
-    FT_UINT32, BASE_DEC, NULL, 0x0,
-    "Index of the requested row", HFILL }},
-    { &hf_freepastry_direct_routerow_numroutesets,
-    { "Number of RouteSets",	"freepastry.direct.route_row.num_route_sets",
-    FT_UINT32, BASE_DEC, NULL, 0x0,
-    "Number of RouteSets", HFILL }},
-    { &hf_freepastry_direct_routerow_notnull,
-    { "RouteSet is not null",	"freepastry.direct.route_row.not_null_routeset",
-    FT_BOOLEAN, 8, NULL, 0x0,
-    "True if the Routeset is not null", HFILL }},
-    { &hf_freepastry_direct_sourceroute_numhops,
-    { "Number of hops",	"freepastry.direct.source_route.num_hops",
-    FT_UINT32, BASE_DEC, NULL, 0x0,
-    "Number of hops in the SourceRoute", HFILL }},
-    { &hf_freepastry_direct_sourceroute_numsourceroutes,
-    { "Number of SourceRoutes",	"freepastry.direct.source_route.num_source_routes",
-    FT_UINT32, BASE_DEC, NULL, 0x0,
-    "Number of SourceRoutes", HFILL }},
-    { &hf_freepastry_join_consistent_join_is_request,
-    { "Is request",	"freepastry.direct.join_proto.consistent_join.is_request",
-    FT_BOOLEAN, 8, NULL, 0x0,
-    "True if the ConsistentJoin message is a request", HFILL }},
-    { &hf_freepastry_join_consistent_join_num_failed,
-    { "Number of failed set",	"freepastry.join_proto.consistent_join.num_failed_sets",
-    FT_UINT32, BASE_DEC, NULL, 0x0,
-    "Number of failed set", HFILL }},
-    { &hf_freepastry_join_join_rtbasebitlength,
-    { "RT base bit length",	"freepastry.join_proto.join.rtbasebitlength",
-    FT_UINT32, BASE_DEC, NULL, 0x0,
-    "RT base bit length", HFILL }},
-    { &hf_freepastry_join_join_has_join_handle,
-    { "Has join handle",	"freepastry.join_proto.join.has_join_handle",
-    FT_BOOLEAN, 8, NULL, 0x0,
-    "True if Join message has a join handle", HFILL }},
-    { &hf_freepastry_join_join_last_row,
-    { "Row index",	"freepastry.join_proto.join.last_row",
-    FT_UINT16, BASE_DEC, NULL, 0x0,
-    "index of the last row", HFILL }},
-    { &hf_freepastry_join_join_has_row,
-    { "Has row",	"freepastry.join_proto.join.has_row",
-    FT_BOOLEAN, 8, NULL, 0x0,
-    "True if there is a row for the current column", HFILL }},
-    { &hf_freepastry_join_join_has_col,
-    { "Has column",	"freepastry.join_proto.join.has_col",
-    FT_BOOLEAN, 8, NULL, 0x0,
-    "True if there is an entry", HFILL }},
-    { &hf_freepastry_join_join_has_leafset,
-    { "Has leafset",	"freepastry.join_proto.join.has_leafset",
-    FT_BOOLEAN, 8, NULL, 0x0,
-    "True is the response contains a leafset", HFILL }},
-    { &hf_freepastry_leafset_request_leafset_timestamp,
-    { "Timestamp",	"freepastry.leafset_proto.request_leafset.timestamp",
-    FT_UINT64, BASE_DEC, NULL, 0x0,
-    "Timestamp for LeafsetRequest message", HFILL }},
-    { &hf_freepastry_leafset_broadcast_leafset_type,
-    { "Type",	"freepastry.leafset_proto.broadcast_leafset.type",
+    "Version for direct access messages", HFILL }},
+    { &hf_freepastry_router_msg_version,
+    { "Version",	"freepastry.router_proto.msg_version",
     FT_UINT8, BASE_DEC, NULL, 0x0,
-    "Type", HFILL }},
-    { &hf_freepastry_leafset_broadcast_leafset_timestamp,
-    { "Timestamp",	"freepastry.leafset_proto.broadcast_leafset.timestamp",
-    FT_UINT64, BASE_DEC, NULL, 0x0,
-    "Timestamp for LeafsetResponse message", HFILL }},
-    { &hf_freepastry_routingtable_request_routerow_row,
-    { "Row",	"freepastry.route_proto.request_routerow.row",
+    "Version for routing table maintenance messages", HFILL }},
+    { &hf_freepastry_commonapi_msg_version,
+    { "Version",	"freepastry.commonapi.msg_version",
     FT_UINT8, BASE_DEC, NULL, 0x0,
-    "Index of the requested row", HFILL }},
-    { &hf_freepastry_routingtable_broadcast_routerow_num_row,
-    { "Number of RouteSets",	"freepastry.route_proto.broadcast_routerow.num_routesets",
+    "Version for common API messages", HFILL }},
+    { &hf_freepastry_join_msg_version,
+    { "Version",	"freepastry.join.msg_version",
     FT_UINT8, BASE_DEC, NULL, 0x0,
-    "Number of RouteSets", HFILL }},
-    { &hf_freepastry_routingtable_broadcast_routerow_notnull,
-    { "RouteSet is not null",	"freepastry.route_proto.broadcast_routerow.not_null_routeset",
-    FT_BOOLEAN, 8, NULL, 0x0,
-    "True if the row has a RouteSet at the current index", HFILL }}
+    "Version for join protocol messages", HFILL }},
+    { &hf_freepastry_routingtable_msg_version,
+    { "Version",	"freepastry.routingtable.msg_version",
+    FT_UINT8, BASE_DEC, NULL, 0x0,
+    "Version for routing table maintenance messages", HFILL }},
+    { &hf_freepastry_leafset_proto_msg_version,
+    { "Version",	"freepastry.leafset_proto.msg_version",
+    FT_UINT8, BASE_DEC, NULL, 0x0,
+    "Version for leafset maintenance messages", HFILL }}
   };
   
   /* Setup protocol subtree array */
@@ -2088,8 +1553,7 @@ proto_register_freepastry(void)
     &ett_freepastry_ns,
     &ett_freepastry_ls,
     &ett_freepastry_ls_cw,
-    &ett_freepastry_ls_ccw,
-    &ett_freepastry_sr
+    &ett_freepastry_ls_ccw
   };
 
   module_t *freepastry_module;	
@@ -2109,7 +1573,8 @@ proto_register_freepastry(void)
   proto_register_field_array(proto_freepastry, hf, array_length(hf));
   proto_register_subtree_array(ett, array_length(ett));
 
-	subdissector_table = register_dissector_table("commonapi.app", "Common API Application", FT_UINT16, BASE_HEX);
+  subdissector_encapsulated_table = register_dissector_table("freepastry.msg", "FreePastry Message", 
+    FT_UINT8, BASE_DEC);
 }
 
 

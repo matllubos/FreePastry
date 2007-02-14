@@ -38,16 +38,16 @@
 
 /* Valid FreePastry address values and message types (TCP)*/
 /*Core Messages*/
-#define DIRECT_ACCESS   0x00000000 
-#define SOURCE_ROUTE            1
-#define LEAFSET_REQUEST_MSG     4 
-#define LEAFSET_RESPONSE_MSG    5
-#define NODE_ID_REQUEST_MSG     6
-#define NODE_ID_RESPONSE_MSG    7
-#define ROUTE_ROW_REQUEST_MSG   10
-#define ROUTE_ROW_RESPONSE_MSG  11
-#define ROUTES_REQUEST_MSG      12
-#define ROUTES_RESPONSE_MSG     13
+#define DIRECT_ACCESS    0x00000000 
+#define SOURCEROUTE_MSG           1
+#define LEAFSET_REQUEST_MSG       4 
+#define LEAFSET_RESPONSE_MSG      5
+#define NODE_ID_REQUEST_MSG       6
+#define NODE_ID_RESPONSE_MSG      7
+#define ROUTE_ROW_REQUEST_MSG    10
+#define ROUTE_ROW_RESPONSE_MSG   11
+#define SOURCEROUTE_REQUEST_MSG  12
+#define SOURCEROUTE_RESPONSE_MSG 13
 
 /*Route Messages are used by the Common API*/
 #define ROUTER	        0xACBDFE17
@@ -58,11 +58,11 @@
 #define JOIN_REQUEST        1
 #define CONSISTENT_JOIN_MSG 2
 
-#define LEAF_PROTOCOL 	0xf921def1 
+#define LEAFSET_PROTOCOL 	0xf921def1 
 #define REQUEST_LEAFSET   1
 #define BROADCAST_LEAFSET 2
 
-#define ROUTE_PROTOCOL	0x89ce110e 
+#define ROUTINGTABLE_PROTOCOL	0x89ce110e 
 #define REQUEST_ROUTE_ROW   1
 #define BROADCAST_ROUTE_ROW 2
 
@@ -90,12 +90,13 @@
 #define LEAFSET_SIZE        24
 #define ID_PRINT_SIZE       12
 
-/*Prototype for message decoder function calls.*/
-typedef void (*msg_decoder_t)(tvbuff_t *, packet_info *, proto_tree *, gint, guint16);
+typedef struct sub_message_info_t {
+  guint32 address;
+  gint16 type;
+} sub_message_info_t;
 
 extern gint get_epoch_inet_socket_address_len(tvbuff_t *tvb, gint offset);
 extern gint decode_epoch_inet_socket_address(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name);
-extern gint decode_sourceroute(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name);
 extern gint get_node_handle_len(tvbuff_t *tvb, gint offset);
 extern gchar* get_id_full(tvbuff_t *tvb, gint offset);
 extern gchar* get_id(tvbuff_t *tvb, gint offset);
@@ -113,8 +114,14 @@ extern gint decode_gcid(tvbuff_t *tvb, proto_tree *tree, gint offset);
 extern gint decode_versionkey(tvbuff_t *tvb, proto_tree *tree, gint offset);
 extern gint decode_fragmentkey(tvbuff_t *tvb, proto_tree *tree, gint offset);
 
+extern gint decode_message_version(tvbuff_t *tvb, proto_tree *tree, gint offset, guint32 address);
+
 extern gint decode_nodehandle(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name);
 extern gint decode_routeset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name);
+extern gint decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name);
 extern gint decode_nodehandleset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name);
 extern gint decode_multiring_nodehandleset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attribute_name);
+
+extern void decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset, guint32 address);
+
 #endif
