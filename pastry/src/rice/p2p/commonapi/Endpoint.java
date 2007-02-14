@@ -277,7 +277,7 @@ public interface Endpoint extends NodeHandleReader {
    * @param num
    * @return List of NodeHandle
    */
-  List networkNeighbors(int num);
+  public List networkNeighbors(int num);
   
   /**
    * To use Raw Serialization
