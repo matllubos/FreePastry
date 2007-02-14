@@ -97,7 +97,7 @@ public interface NetworkSimulator {
    * @param node the Pastry node to deliver it to.
    * @param how long to delay to deliver the message
    */
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay);
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay);
 
   /**
    * Deliver message.
@@ -107,7 +107,7 @@ public interface NetworkSimulator {
    * @param how long to delay to deliver the message
    * @param period to deliver the message after the delay
    */
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, int delay, int period);
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay, int period);
 
   /**
    * Deliver message.
@@ -117,7 +117,7 @@ public interface NetworkSimulator {
    * @param how long to delay to deliver the message
    * @param period to deliver the message after the delay
    */
-  public ScheduledMessage deliverMessageFixedRate(Message msg, DirectPastryNode node, int delay, int period);
+  public ScheduledMessage deliverMessageFixedRate(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay, int period);
 
   /**
    * Deliver message ASAP.
@@ -202,7 +202,15 @@ public interface NetworkSimulator {
    * @param to the destination 
    * @param delay the network proximity (when the message will be received)
    */
-  public void notifySimulatorListeners(Message m, NodeHandle from, NodeHandle to, int delay);
+  public void notifySimulatorListenersSent(Message m, NodeHandle from, NodeHandle to, int delay);
+  
+  /**
+   * Call this when a message is received.
+   * @param m the message
+   * @param from the source
+   * @param to the destination 
+   */
+  public void notifySimulatorListenersReceived(Message m, NodeHandle from, NodeHandle to);
   
   /**
    * 

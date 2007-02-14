@@ -59,4 +59,13 @@ public interface SimulatorListener {
    * @param delay when the message will be delivered (in millis)
    */
   public void messageSent(Message m, NodeHandle from, NodeHandle to, int delay);
+  
+  /**
+   * Called for every message received over the network.
+   * 
+   * @param m the Message that was sent.
+   * @param from the source.
+   * @param to the destination
+   */
+  public void messageReceived(Message m, NodeHandle from, NodeHandle to);
 }

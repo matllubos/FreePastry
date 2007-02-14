@@ -50,13 +50,17 @@ import rice.pastry.messaging.Message;
     protected DirectPastryNode node;    
     protected Logger logger;
     protected int seq;
+    NetworkSimulator networkSimulator;
+    DirectNodeHandle from;
     
     /**
      * Constructor for MessageDelivery.
      */
-    public MessageDelivery(Message m, DirectPastryNode pn) {
+    public MessageDelivery(Message m, DirectPastryNode pn, DirectNodeHandle from, NetworkSimulator sim) {
       msg = m;
       node = pn;
+      this.from = from;
+      this.networkSimulator = sim;
       this.seq = pn.seq++;
       
       // Note: this is done to reduce memory thrashing.  There are a ton of strings created
@@ -68,7 +72,7 @@ import rice.pastry.messaging.Message;
     public void deliver() {
       if (logger.level <= Logger.FINE) logger.log("MD: deliver "+msg+" to "+node);
       node.receiveMessage(msg);
-      
+      networkSimulator.notifySimulatorListenersReceived(msg, from, node.getLocalHandle());
       
 //      if (isAlive(msg.getSenderId())) {
 //        environment.getLogManager().getLogger(EuclideanNetwork.class, null).log(Logger.FINER, 

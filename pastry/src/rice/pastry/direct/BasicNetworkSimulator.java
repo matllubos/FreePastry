@@ -212,14 +212,14 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 //    if (senderNode != null)
 //      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
     if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node);
+      MessageDelivery md = new MessageDelivery(msg, node,(DirectNodeHandle)node.getLocalHandle(),this);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis());
       addTask(dtt);
     }
     return dtt;
   }
 
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from,
       int delay) {
     if (logger.level <= Logger.FINE)
       logger.log("BNS: deliver("+delay+") " + msg + " to " + node);
@@ -231,14 +231,14 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 //    if (senderNode != null)
 //      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
     if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node);
+      MessageDelivery md = new MessageDelivery(msg, node, from, this);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay);
       addTask(dtt);
     }
     return dtt;
   }
 
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node,
+  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from,
       int delay, int period) {
     DirectTimerTask dtt = null;
     
@@ -248,7 +248,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 //    if (senderNode != null)
 //      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
     if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node);
+      MessageDelivery md = new MessageDelivery(msg, node, from, this);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period);
       addTask(dtt);
@@ -257,7 +257,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   }
 
   public ScheduledMessage deliverMessageFixedRate(Message msg,
-      DirectPastryNode node, int delay, int period) {
+      DirectPastryNode node, DirectNodeHandle from, int delay, int period) {
     DirectTimerTask dtt = null;
 
     DirectNodeHandle sender = null;
@@ -266,7 +266,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
 //    if (senderNode != null)
 //      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
     if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node);
+      MessageDelivery md = new MessageDelivery(msg, node, from, this);
       dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
           period, true);
       addTask(dtt);
@@ -502,7 +502,7 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     }
   }
 
-  public void notifySimulatorListeners(Message m, NodeHandle from, NodeHandle to, int delay) {
+  public void notifySimulatorListenersSent(Message m, NodeHandle from, NodeHandle to, int delay) {
     List<SimulatorListener> temp;
     
     // so we aren't holding a lock while iterating/calling
@@ -512,6 +512,19 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   
     for(SimulatorListener listener : temp) {
       listener.messageSent(m, from, to, delay);
+    }
+  }
+
+  public void notifySimulatorListenersReceived(Message m, NodeHandle from, NodeHandle to) {
+    List<SimulatorListener> temp;
+    
+    // so we aren't holding a lock while iterating/calling
+    synchronized(listeners) {
+       temp = new ArrayList<SimulatorListener>(listeners);
+    }
+  
+    for(SimulatorListener listener : temp) {
+      listener.messageReceived(m, from, to);
     }
   }
 

@@ -200,7 +200,7 @@ public class DirectPastryNode extends PastryNode {
    * @return the scheduled event object; can be used to cancel the message
    */
   public ScheduledMessage scheduleMsg(Message msg, long delay) {
-    return simulator.deliverMessage(msg, this, (int)delay);
+    return simulator.deliverMessage(msg, this, (DirectNodeHandle)this.getLocalHandle(), (int)delay);
   }
 
   /**
@@ -220,7 +220,7 @@ public class DirectPastryNode extends PastryNode {
    */
   public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
     DirectPastryNode temp = setCurrentNode(this);
-    ScheduledMessage ret = simulator.deliverMessage(msg, this, (int)delay, (int)period);
+    ScheduledMessage ret = simulator.deliverMessage(msg, this, (DirectNodeHandle)this.getLocalHandle(), (int)delay, (int)period);
     setCurrentNode(temp);
     return ret;
   }
@@ -242,7 +242,7 @@ public class DirectPastryNode extends PastryNode {
    */
   public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay,
       long period) {
-    return simulator.deliverMessageFixedRate(msg, this, (int)delay, (int)period);
+    return simulator.deliverMessageFixedRate(msg, this, (DirectNodeHandle)this.getLocalHandle(), (int)delay, (int)period);
   }
 
   Hashtable nodeHandles = new Hashtable();
@@ -313,9 +313,10 @@ public class DirectPastryNode extends PastryNode {
             + " to a dead node " + getNodeId() + "!");
     } else {
       int delay = (int)Math.round(simulator.networkDelay((DirectNodeHandle)localhandle, (DirectNodeHandle)nh));
-      simulator.notifySimulatorListeners(m, this.getLocalHandle(), nh, delay);
-      simulator.deliverMessage(m, ((DirectNodeHandle) nh).getRemote(),
+      simulator.notifySimulatorListenersSent(m, this.getLocalHandle(), nh, delay);
+      simulator.deliverMessage(m, ((DirectNodeHandle) nh).getRemote(), (DirectNodeHandle)this.getLocalHandle(),
           delay);
+      simulator.notifySimulatorListenersReceived(m, this.getLocalHandle(), nh);
     }
   }
 
