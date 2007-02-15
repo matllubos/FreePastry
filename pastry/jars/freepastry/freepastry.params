@@ -55,7 +55,7 @@ pastry_direct_gtitm_delay_factor=1.0
 #millis of the maximum network delay for the generated network topologies
 pastry_direct_max_diameter=200
 pastry_direct_min_delay=2
-#setting this to false will use the old protocols which are about 200 times as fast, but may cause routing inconsistency in a rean network.  Probably won't in a simulator because it will never be incorrect about liveness
+#setting this to false will use the old protocols which are about 200 times as fast, but may cause routing inconsistency in a real network.  Probably won't in a simulator because it will never be incorrect about liveness
 pastry_direct_guarantee_consistency=true
 
 # rice.pastry.socket parameters
