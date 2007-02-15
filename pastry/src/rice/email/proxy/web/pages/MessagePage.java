@@ -58,7 +58,7 @@ public class MessagePage extends WebPage {
   
   public String getName() { return "/hierarchy"; }
   
-	public void execute(WebConnection conn, final WebState state)	throws WebException, IOException {    
+  public void execute(WebConnection conn, final WebState state)  throws WebException, IOException {    
     try {
       writeHeader(conn);
       

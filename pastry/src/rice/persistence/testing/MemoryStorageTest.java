@@ -81,7 +81,7 @@ public class MemoryStorageTest extends Test {
     int[] x = new int[5];
     for (int i = 0; i < 500; i ++){
         x[3] = i;
-      	data[i] = FACTORY.buildId(x);
+        data[i] = FACTORY.buildId(x);
         metadata[i] = new Integer(i);
     }
     this.store = store;
@@ -815,7 +815,7 @@ public class MemoryStorageTest extends Test {
   
   public void start() {
     testVariableLength();
-	try{	Thread.sleep(20000);}catch(InterruptedException ie){;}
+  try{  Thread.sleep(20000);}catch(InterruptedException ie){;}
   }
 
   public static void main(String[] args) throws IOException {

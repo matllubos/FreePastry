@@ -70,8 +70,8 @@ public class LoginCommand
     {
         try
         {
-        	User user = getState().getUser(username);
-        	user.authenticate(password);
+          User user = getState().getUser(username);
+          user.authenticate(password);
             getState().setUser(user);
             taggedSimpleSuccess();
         }

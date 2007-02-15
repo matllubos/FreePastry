@@ -209,16 +209,16 @@ public class Visualization implements DataProvider {
   }
 
   class MyTimerTask extends TimerTask {
-		public void run() {
+    public void run() {
       curStep++;
       getRoot().rootCenterIsStale = true;
       
       if (curStep >= NUM_STEPS) {
-        cancel();		
-        myTask = null;	
+        cancel();    
+        myTask = null;  
       }
       frame.pastryRingPanel.repaint();
-		}    
+    }    
   }
 
   int NUM_STEPS = 30;

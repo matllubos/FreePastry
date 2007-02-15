@@ -158,7 +158,7 @@ public class NodeSet implements NodeSetI, Serializable {
    */
 
   //    public boolean member(NodeId nid) {
-  //	return (getIndex(nid) >= 0);
+  //  return (getIndex(nid) >= 0);
   //    }
   private boolean memberId(rice.p2p.commonapi.Id id) {
     return (getIndexId(id) >= 0);

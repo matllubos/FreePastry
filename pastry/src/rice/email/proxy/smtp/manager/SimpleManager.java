@@ -111,13 +111,13 @@ public class SimpleManager implements SmtpManager {
   }
 
   public String checkSender(SmtpConnection conn, SmtpState state, MailAddress sender) {
-	  boolean isLocal = false;
-	  try {
-		  isLocal = conn.isLocal();
-	  } catch (IOException e) {
-		  if (logger.level <= Logger.INFO)
-			  logger.logException("Exception checking local port: ",e);
-	  }
+    boolean isLocal = false;
+    try {
+      isLocal = conn.isLocal();
+    } catch (IOException e) {
+      if (logger.level <= Logger.INFO)
+        logger.logException("Exception checking local port: ",e);
+    }
     if ((!isLocal || !relayLocal) && (! gateway) && (! isPostAddress(sender)))
       return sender + ": Sender address rejected: Relay access denied";
     else 
@@ -125,13 +125,13 @@ public class SimpleManager implements SmtpManager {
   }
 
   public String checkRecipient(SmtpConnection conn, SmtpState state, MailAddress rcpt) {
-	  boolean isLocal = false;
-	  try {
-		  isLocal = conn.isLocal();
-	  } catch (IOException e) {
-		  if (logger.level <= Logger.INFO)
-			  logger.logException("Exception checking local port: ",e);
-	  }
+    boolean isLocal = false;
+    try {
+      isLocal = conn.isLocal();
+    } catch (IOException e) {
+      if (logger.level <= Logger.INFO)
+        logger.logException("Exception checking local port: ",e);
+    }
     if ((!isLocal || !relayLocal) && gateway && (! isPostAddress(rcpt)))
       return rcpt + ": Recipient address rejected: Relay access denied";
     else 

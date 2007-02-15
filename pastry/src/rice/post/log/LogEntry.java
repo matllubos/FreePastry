@@ -141,7 +141,7 @@ public abstract class LogEntry implements PostData {
     if (previousEntryReferences != null) {
       return previousEntryReferences[0];
     } else {
-    	  return previousEntryReference;
+        return previousEntryReference;
     }
   }
   

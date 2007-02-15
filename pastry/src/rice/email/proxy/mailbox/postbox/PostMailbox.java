@@ -289,14 +289,14 @@ public class PostMailbox implements Mailbox {
 
   public void subscribe(final String fullName) throws MailboxException {
     if (listSubscriptions(fullName).length != 0)
-	  return;
-	  
+    return;
+    
     try {
       getFolder(fullName);
     } catch (MailboxException e) {
       return;
     }
-	
+  
     try {
       new ExternalContinuationRunnable() {
         protected void execute(Continuation c) {
@@ -310,7 +310,7 @@ public class PostMailbox implements Mailbox {
 
   public void unsubscribe(final String fullName) throws MailboxException {
     if (listSubscriptions(fullName).length == 0)
-	  return;
+    return;
 
     try {
       new ExternalContinuationRunnable() {

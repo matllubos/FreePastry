@@ -81,7 +81,7 @@ public class LRUCacheTest extends Test {
 
     for (int i = 0; i < 500; i ++){
         x[3] = i;
-      	data[i] = FACTORY.buildId(x);
+        data[i] = FACTORY.buildId(x);
     }
     
   }

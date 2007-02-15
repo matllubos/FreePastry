@@ -111,7 +111,7 @@ public class DistPastTest {
         
         
         stor = new PersistentStorage(idf,".",4*1024*1024,node.getEnvironment());
-        	p = new PastImpl(node, new StorageManagerImpl(idf,stor,new LRUCache(new MemoryStorage(idf),512*1024,node.getEnvironment())), 3, "");
+          p = new PastImpl(node, new StorageManagerImpl(idf,stor,new LRUCache(new MemoryStorage(idf),512*1024,node.getEnvironment())), 3, "");
       }
       Thread.sleep(5000);
         

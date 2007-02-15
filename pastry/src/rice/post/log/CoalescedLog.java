@@ -271,8 +271,8 @@ public class CoalescedLog extends EncryptedLog {
      */
     public LogEntryReference getPreviousEntryReference() {
       if (topEntryReferences != null)
-        	return topEntryReferences[0];
-      else	
+          return topEntryReferences[0];
+      else  
         return topEntryReference;
     }
     

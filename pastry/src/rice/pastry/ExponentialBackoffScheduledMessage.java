@@ -63,11 +63,11 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
   long lastTime = 0;
 
   /**
-	 * @param node
-	 * @param msg
-	 * @param initialPeriod
-	 * @param expBase
-	 */
+   * @param node
+   * @param msg
+   * @param initialPeriod
+   * @param expBase
+   */
   public ExponentialBackoffScheduledMessage(PastryNode node, Message msg, Timer timer, long delay, long initialPeriod, double expBase) {
     super(node,msg);
     this.timer = timer;
@@ -92,7 +92,7 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
   }
   
   public boolean cancel() {
-		super.cancel();
+    super.cancel();
     if (myTask!=null) {
       myTask.cancel();
       myTask = null;

@@ -35,7 +35,7 @@ advised of the possibility of such damage.
 
 *******************************************************************************/ 
 /*
- * @(#)RedBlackMap.java	1.56 03/01/23
+ * @(#)RedBlackMap.java  1.56 03/01/23
  *
  * Copyright 2003 Sun Microsystems, Inc. All rights reserved.
  * SUN PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
@@ -186,7 +186,7 @@ public class RedBlackMap extends AbstractMap implements SortedMap, Cloneable, ja
      *
      * @param value value whose presence in this Map is to be tested.
      * @return  <tt>true</tt> if a mapping to <tt>value</tt> exists;
-     *		<tt>false</tt> otherwise.
+     *    <tt>false</tt> otherwise.
      * @since 1.2
      */
     public synchronized boolean containsValue(Object value) {

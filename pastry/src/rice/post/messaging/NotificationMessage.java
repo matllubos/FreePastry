@@ -58,7 +58,7 @@ public abstract class NotificationMessage /*extends PostMessage*/ {
    * Constructs a NotificationMessage for the given Email.
    *
    * @param clientAddress The address of the service to which this message
-   *	    should be delivered.
+   *      should be delivered.
    * @param destination The address of the user or group to which this
    *        message should be delivered. 
    */

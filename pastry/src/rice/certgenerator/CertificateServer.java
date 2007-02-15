@@ -403,7 +403,7 @@ public class CertificateServer {
 
           Class.forName("com.mysql.jdbc.Driver");
           Connection connection = DriverManager.getConnection(
-        		  "jdbc:mysql://svn.mpi-sws.mpg.de/epost",
+              "jdbc:mysql://svn.mpi-sws.mpg.de/epost",
                   "epost", "monkey");
           PreparedStatement insert = connection
               .prepareStatement("insert into cert_servers (hostname, alive) values ('"
@@ -501,7 +501,7 @@ public class CertificateServer {
 
           Class.forName("com.mysql.jdbc.Driver");
           Connection connection = DriverManager.getConnection(
-        		  "jdbc:mysql://svn.mpi-sws.mpg.de/epost",
+              "jdbc:mysql://svn.mpi-sws.mpg.de/epost",
                   "epost", "monkey");
           PreparedStatement stmt = connection
               .prepareStatement("update certificates set cert_data=?, nodeid_data=? where name=? and ring=?");

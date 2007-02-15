@@ -479,36 +479,36 @@ public class MessagePropertyPart extends FetchPart {
 
         StringBuffer result = new StringBuffer();
 
-		InternetAddress[] from = null;
-		InternetAddress[] sender = null;
+    InternetAddress[] from = null;
+    InternetAddress[] sender = null;
         InternetAddress[] replyTo = null;
-		InternetAddress[] to = null;
+    InternetAddress[] to = null;
         InternetAddress[] cc = null;
         InternetAddress[] bcc = null;
 
         InternetAddress[] fallback = new InternetAddress[1];
-		fallback[0] = new InternetAddress("malformed@cs.rice.edu","MalformedAddress");
+    fallback[0] = new InternetAddress("malformed@cs.rice.edu","MalformedAddress");
 
         //from, sender, reply-to, to, cc, bcc, in-reply-to, and message-id.
-		try{
-			from = InternetAddress.parse(collapse(headers.getHeader("From")));
-		} catch (AddressException ae) { from = fallback;}
-		try{
-			sender = InternetAddress.parse(collapse(headers.getHeader("Sender")));
-		} catch (AddressException ae) { sender = fallback;}
-		try{
-		    replyTo = InternetAddress.parse(collapse(headers.getHeader("Reply-To")));
-		} catch (AddressException ae) { replyTo = fallback; }
-		try{
-		    to = InternetAddress.parse(collapse(headers.getHeader("To")));
-		} catch (AddressException ae) { to = fallback;}
-		try{
-		    cc = InternetAddress.parse(collapse(headers.getHeader("Cc")));
-		} catch (AddressException ae) { cc = fallback; }
-		try{
-		     bcc = InternetAddress.parse(collapse(headers.getHeader("Bcc")));
-		} catch (AddressException ae) { bcc = fallback;}
-		
+    try{
+      from = InternetAddress.parse(collapse(headers.getHeader("From")));
+    } catch (AddressException ae) { from = fallback;}
+    try{
+      sender = InternetAddress.parse(collapse(headers.getHeader("Sender")));
+    } catch (AddressException ae) { sender = fallback;}
+    try{
+        replyTo = InternetAddress.parse(collapse(headers.getHeader("Reply-To")));
+    } catch (AddressException ae) { replyTo = fallback; }
+    try{
+        to = InternetAddress.parse(collapse(headers.getHeader("To")));
+    } catch (AddressException ae) { to = fallback;}
+    try{
+        cc = InternetAddress.parse(collapse(headers.getHeader("Cc")));
+    } catch (AddressException ae) { cc = fallback; }
+    try{
+         bcc = InternetAddress.parse(collapse(headers.getHeader("Bcc")));
+    } catch (AddressException ae) { bcc = fallback;}
+    
        
         if (addresses(sender).equals("NIL"))
           sender = from;

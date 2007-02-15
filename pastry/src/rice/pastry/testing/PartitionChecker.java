@@ -187,9 +187,9 @@ public class PartitionChecker {
                   }
                   
                   synchronized (unseen) {
-	                  for (int i=1; i<ns.size(); i++) 
-	                    if ((! ring.contains(ns.get(i))) && (! dead.contains(ns.get(i))))
-	                      unseen.add(ns.get(i));
+                    for (int i=1; i<ns.size(); i++) 
+                      if ((! ring.contains(ns.get(i))) && (! dead.contains(ns.get(i))))
+                        unseen.add(ns.get(i));
                   }
                 
                 } catch (java.net.ConnectException e) {

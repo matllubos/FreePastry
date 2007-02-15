@@ -47,7 +47,7 @@ public class LoginPage extends WebPage {
   
   public String getName() { return "/"; }
   
-	public void execute(WebConnection conn, WebState state)	throws WebException, IOException {
+  public void execute(WebConnection conn, WebState state)  throws WebException, IOException {
     String error = null;
     
     String username = conn.getParameter("username");

@@ -803,7 +803,7 @@ public class Base64
         {
             bytes = s.getBytes();
         }   // end catch
-		//</change>
+    //</change>
         
         // Decode
         bytes = decode( bytes, 0, bytes.length );

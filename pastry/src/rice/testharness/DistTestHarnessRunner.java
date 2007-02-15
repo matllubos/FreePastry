@@ -216,10 +216,10 @@ public class DistTestHarnessRunner {
     } else {
       NodeHandle ret = factory.getNodeHandle(address);
       
-	return ret;
+  return ret;
 
-	// eliminated wire dependency -PD
-	//return factory.getNodeHandle(((WireNodeHandle) ((PastryNode) pastryNodes.elementAt(pastryNodes.size() - 1)).getLocalHandle()).getAddress());
+  // eliminated wire dependency -PD
+  //return factory.getNodeHandle(((WireNodeHandle) ((PastryNode) pastryNodes.elementAt(pastryNodes.size() - 1)).getLocalHandle()).getAddress());
     }
   }
 
@@ -265,17 +265,17 @@ public class DistTestHarnessRunner {
       if (args[i].equals("-protocol") && i+1 < args.length) {
         String s = args[i+1];
 
-//	if (s.equalsIgnoreCase("wire"))
+//  if (s.equalsIgnoreCase("wire"))
 //          PROTOCOL = DistPastryNodeFactory.PROTOCOL_WIRE;
 //  else if (s.equalsIgnoreCase("rmi"))
 //    PROTOCOL = DistPastryNodeFactory.PROTOCOL_RMI;
 //  else 
     if (s.equalsIgnoreCase("socket"))
     PROTOCOL = DistPastryNodeFactory.PROTOCOL_SOCKET;
-	else
+  else
           System.out.println("ERROR: Unsupported protocol: " + s);
 
-	break;
+  break;
       }
     }
 

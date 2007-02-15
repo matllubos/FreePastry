@@ -153,16 +153,16 @@ public class Proxy {
     }
     
     if ((parameters.getString("java_home") != null && !("".equals(parameters.getString("java_home"))))
-    		&& !(new File(parameters.getString("java_home"))).exists()) {
-		parameters.remove("java_home");
-		try {
-			parameters.store();
-		} catch (IOException e) {
-			if (logger.level <= Logger.FINE)
-				logger.logException(
-						"Got error storing java_home parameter -- is your proxy.params file writable?", e);
-		}
-    }	
+        && !(new File(parameters.getString("java_home"))).exists()) {
+    parameters.remove("java_home");
+    try {
+      parameters.store();
+    } catch (IOException e) {
+      if (logger.level <= Logger.FINE)
+        logger.logException(
+            "Got error storing java_home parameter -- is your proxy.params file writable?", e);
+    }
+    }  
 
     if (((parameters.getString("java_home") == null) ||
          (parameters.getString("java_home").equals(""))) && 
@@ -172,7 +172,7 @@ public class Proxy {
         parameters.store();
       } catch (IOException e) {
         if (logger.level <= Logger.FINE) 
-        		logger.logException("Got error storing java_home parameter -- is your proxy.params file writable?",e);
+            logger.logException("Got error storing java_home parameter -- is your proxy.params file writable?",e);
       }
     }
     

@@ -338,9 +338,9 @@ public class LeafSet extends Observable implements Serializable {
 
     /*
      if (cwMinDist.compareTo(ccwMinDist) <= 0)
-	    return cwMS + 1;
+      return cwMS + 1;
      else
-	    return -ccwMS - 1;
+      return -ccwMS - 1;
      */
 
   }

@@ -531,7 +531,7 @@ public abstract class PastryRegrTest {
             rt.baseBitLength());
         //System.out.println("prefixes " + rta.getNodeId() + domainFirst +
         // domainLast
-        //	   + "compareTo=" + domainFirst.compareTo(domainLast));
+        //     + "compareTo=" + domainFirst.compareTo(domainLast));
 
         if (rs == null || rs.size() == 0) {
           // no entry

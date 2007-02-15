@@ -116,7 +116,7 @@ public class SmtpClient {
   }
   
   public void send(String returnPath, String rcptTo, Reader message, String username, String password) throws IOException, SmtpProtocolException {
-		String response = sendCommand("AUTH CRAM-MD5");
+    String response = sendCommand("AUTH CRAM-MD5");
     
     if (response.startsWith("334")) {
       String text = new String(Base64.decode(response.substring(response.indexOf(" ")+1)));
@@ -141,7 +141,7 @@ public class SmtpClient {
 
       if (! response4.startsWith("235")) throw new SmtpProtocolException("Authentication failed: " + response4);
     }
-		
+    
     send(returnPath, rcptTo, message);
   }
   

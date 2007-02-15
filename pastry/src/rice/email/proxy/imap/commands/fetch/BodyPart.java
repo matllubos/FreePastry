@@ -131,7 +131,7 @@ public class BodyPart extends FetchPart {
         result = fetchPart(breq, clone(breq.getType()), message);
       }
 
-      if ((! breq.getPeek()) &&	(! msg.getFlagList().isSeen())) {
+      if ((! breq.getPeek()) &&  (! msg.getFlagList().isSeen())) {
         msg.getFlagList().setSeen(true);
         msg.getFlagList().commit();
         result += " ";

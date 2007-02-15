@@ -65,13 +65,13 @@ public class MailAddress
         Matcher mat = pat.matcher(str);
         if (!mat.matches()){
             user = "malformed";
-			host = "cs.rice.edu";
-			   //throw new MalformedAddressException("Malformed MailAddress");
-		}
-		else{
+      host = "cs.rice.edu";
+         //throw new MalformedAddressException("Malformed MailAddress");
+    }
+    else{
            user = mat.group(2);
            host = mat.group(3);
-		}
+    }
     }
 
     public String getHost()
@@ -87,6 +87,6 @@ public class MailAddress
     }
     
     public String toString() {
-    	return getUser() + "@" + getHost();
+      return getUser() + "@" + getHost();
     }
 }

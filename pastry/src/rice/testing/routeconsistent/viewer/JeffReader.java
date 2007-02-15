@@ -54,9 +54,9 @@ public class JeffReader implements Runnable {
   JeffStreamTokenizer st;
   SquareConsumer consumer;
   
-	public JeffReader(SquareConsumer sc) {
+  public JeffReader(SquareConsumer sc) {
     consumer = sc;
-	}
+  }
 
   FileInputStream is = null;
   BufferedReader r = null;
@@ -237,10 +237,10 @@ public class JeffReader implements Runnable {
     st.eolIsSignificant(true);
   }
 
-	public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception {
     JeffReader r = new JeffReader(null);
     r.read(new File("c:/pastry/vizdata"));
-	}
+  }
 
 
   public void unpause() {
@@ -256,10 +256,10 @@ public class JeffReader implements Runnable {
     }
   }
 
-	public void stop() {
+  public void stop() {
    reading = false;
    unpause();
-	}
+  }
   
   public boolean isPaused() {
     return paused; 

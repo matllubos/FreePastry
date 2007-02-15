@@ -157,8 +157,8 @@ public abstract class DistPastryNode extends PastryNode {
     // cancel join retransmissions
   }
 
-	protected ScheduledMessage leafSetRoutineMaintenance = null;
-	protected ScheduledMessage routeSetRoutineMaintenance = null;
+  protected ScheduledMessage leafSetRoutineMaintenance = null;
+  protected ScheduledMessage routeSetRoutineMaintenance = null;
 
   /**
    * Called after the node is initialized.

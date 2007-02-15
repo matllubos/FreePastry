@@ -70,7 +70,7 @@ public class ImmutableSortedMap implements SortedMap, Serializable {
    * <tt>null</tt> if it uses its keys' natural ordering.
    *
    * @return the comparator associated with this sorted map, or
-   * 	       <tt>null</tt> if it uses its keys' natural ordering.
+   *          <tt>null</tt> if it uses its keys' natural ordering.
    */
   public Comparator comparator() {
     return map.comparator();
@@ -179,7 +179,7 @@ public class ImmutableSortedMap implements SortedMap, Serializable {
    *
    * @param key key whose associated value is to be returned.
    * @return the value to which this map maps the specified key, or
-   *	       <tt>null</tt> if the map contains no mapping for this key.
+   *         <tt>null</tt> if the map contains no mapping for this key.
    */
   public Object get(Object key) {
     return map.get(key);
@@ -195,13 +195,13 @@ public class ImmutableSortedMap implements SortedMap, Serializable {
    * @param key key with which the specified value is to be associated.
    * @param value value to be associated with the specified key.
    * @return previous value associated with specified key, or <tt>null</tt>
-   *	       if there was no mapping for key.  A <tt>null</tt> return can
-   *	       also indicate that the map previously associated <tt>null</tt>
-   *	       with the specified key, if the implementation supports
-   *	       <tt>null</tt> values.
+   *         if there was no mapping for key.  A <tt>null</tt> return can
+   *         also indicate that the map previously associated <tt>null</tt>
+   *         with the specified key, if the implementation supports
+   *         <tt>null</tt> values.
    * 
    * @throws UnsupportedOperationException if the <tt>put</tt> operation is
-   *	          not supported by this map.
+   *            not supported by this map.
    */
   public Object put(Object key, Object value) {
     throw new UnsupportedOperationException("put not supported by immutablemap");
@@ -216,7 +216,7 @@ public class ImmutableSortedMap implements SortedMap, Serializable {
    *
    * @param key key whose mapping is to be removed from the map.
    * @return previous value associated with specified key, or <tt>null</tt>
-   *	       if there was no mapping for key.
+   *         if there was no mapping for key.
    */
   public Object remove(Object key) {
     throw new UnsupportedOperationException("remove not supported by immutablemap");
@@ -236,7 +236,7 @@ public class ImmutableSortedMap implements SortedMap, Serializable {
    * Removes all mappings from this map (optional operation).
    *
    * @throws UnsupportedOperationException clear is not supported by this
-   * 		  map.
+   *       map.
    */
   public void clear() {
     throw new UnsupportedOperationException("clear not supported by immutablemap");

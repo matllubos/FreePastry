@@ -144,7 +144,7 @@ public class PersistentStorage implements Storage {
    */
    public static final String ZERO_LENGTH_NAME = "!";
   
-  private IdFactory factory;			  // the factory used for creating ids
+  private IdFactory factory;        // the factory used for creating ids
   
   private String name;              // the name of this instance
   private File rootDirectory;       // root directory to store stuff in
@@ -1831,7 +1831,7 @@ public class PersistentStorage implements Storage {
    */
   private static long writeObject(Serializable obj, Serializable metadata, Id key, long version, File file) throws IOException {
     FileOutputStream fout = null;
-	  
+    
     try {
       fout = new FileOutputStream(file);
       ObjectOutputStream objout = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(fout)));
@@ -2119,9 +2119,9 @@ public class PersistentStorage implements Storage {
   /* Inner Classes for Worker Thread                               */
   /*****************************************************************/
 
-	private static class PersistenceException extends Exception {
-	}
-	
-	private static class OutofDiskSpaceException extends PersistenceException {
-	}	
+  private static class PersistenceException extends Exception {
+  }
+  
+  private static class OutofDiskSpaceException extends PersistenceException {
+  }  
 }

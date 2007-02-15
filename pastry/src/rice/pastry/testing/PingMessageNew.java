@@ -55,19 +55,19 @@ import java.util.*;
 public class PingMessageNew extends Message {
     private Id target;
 
-    private int		nHops = 0;
-    private double	fDistance = 0;
+    private int    nHops = 0;
+    private double  fDistance = 0;
 
     public PingMessageNew(int pingAddress, NodeHandle src, Id tgt) {
-	super(pingAddress);
-	setSender(src);
-	target = tgt;
+  super(pingAddress);
+  setSender(src);
+  target = tgt;
     }
 
     public String toString() {
-	String s="";
-	s += "ping from " + getSender().getNodeId() + " to " + target;
-	return s;
+  String s="";
+  s += "ping from " + getSender().getNodeId() + " to " + target;
+  return s;
     }
 
     public void incrHops( ){ nHops++; }

@@ -58,8 +58,8 @@ public class NodeSetUpdate
      */
 
     public NodeSetUpdate(NodeHandle which, boolean how) {
-	changed = which;
-	added = how;
+  changed = which;
+  added = how;
     }
 
     /**

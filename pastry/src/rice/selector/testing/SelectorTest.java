@@ -60,7 +60,7 @@ public class SelectorTest {
   public static boolean logIssues = true;
   public static Environment environment;
   
-	public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException {
     environment = new Environment();
     
     System.out.println("hello world <selector test>");
@@ -74,7 +74,7 @@ public class SelectorTest {
       } catch (InterruptedException ie) {
       }
     }
-	}
+  }
 
   public static void scheduleRepeated(Timer timer, SelectorManager sman) {
     final long t1Start = environment.getTimeSource().currentTimeMillis();

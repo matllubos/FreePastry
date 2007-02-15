@@ -1043,7 +1043,7 @@ public class PostImpl implements Post, Application, ScribeClient {
           public void receiveResult(Object o) {
             if ((new Boolean(true)).equals(o)) {
               if (!storage.verifySigned(log, log.getPublicKey())) {
-            	  	if (logger.level <= Logger.WARNING) logger.log("PostLog could not be verified for entity " + entity);
+                  if (logger.level <= Logger.WARNING) logger.log("PostLog could not be verified for entity " + entity);
                  passException(new PostException("PostLog could not verified for entity: " + entity), parent);
                  return;
               }
@@ -1112,7 +1112,7 @@ public class PostImpl implements Post, Application, ScribeClient {
    */
   public StorageService getStorageService() {
     return storage;
-  }	    
+  }      
   
   /**
    * Registers a client with this Post 

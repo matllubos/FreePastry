@@ -697,41 +697,41 @@ public class ConfigurationFrame extends JFrame {
     protected String label;
     protected JCheckBox box;
     
-	  	public LogEnableBox(String parameter, String label, String tip) {
-	  	  this(parameter, label, new GridBagLayout(), true, tip);
-	  	}
-	  	
-	  	public LogEnableBox(String parameter, String label, GridBagLayout layout, boolean small, String tip) {
-	  	  super(parameter, layout);
+      public LogEnableBox(String parameter, String label, String tip) {
+        this(parameter, label, new GridBagLayout(), true, tip);
+      }
+      
+      public LogEnableBox(String parameter, String label, GridBagLayout layout, boolean small, String tip) {
+        super(parameter, layout);
 
-	  	  this.label = label; 
-	      
-	  	  this.box = new JCheckBox();
-	  	  JLabel boxLabel = new JLabel(label + ": ", JLabel.TRAILING);
-	  	  boxLabel.setLabelFor(box);
-	  	  boxLabel.setToolTipText(tip);
-	      
-	  	  if (small)
-	  	    setPreferredSize(ENABLE_BOX_SIZE);
-	  	  else
-	  	    setPreferredSize(TEXT_BOX_SIZE);
-	      
-	  	  GridBagConstraints gbc1 = new GridBagConstraints();
-	  	  layout.setConstraints(boxLabel, gbc1);      
-	  	  add(boxLabel);
-	      
-	  	  GridBagConstraints gbc2 = new GridBagConstraints();
-	  	  gbc2.gridx = 1;
-	  	  layout.setConstraints(box, gbc2);      
-	  	  add(box);
+        this.label = label; 
+        
+        this.box = new JCheckBox();
+        JLabel boxLabel = new JLabel(label + ": ", JLabel.TRAILING);
+        boxLabel.setLabelFor(box);
+        boxLabel.setToolTipText(tip);
+        
+        if (small)
+          setPreferredSize(ENABLE_BOX_SIZE);
+        else
+          setPreferredSize(TEXT_BOX_SIZE);
+        
+        GridBagConstraints gbc1 = new GridBagConstraints();
+        layout.setConstraints(boxLabel, gbc1);      
+        add(boxLabel);
+        
+        GridBagConstraints gbc2 = new GridBagConstraints();
+        gbc2.gridx = 1;
+        layout.setConstraints(box, gbc2);      
+        add(box);
 
-	  	  box.setSelected(!parameters.getString(parameter).equalsIgnoreCase("INFO"));
-	  	}
-	  
-	  	protected String getValue() {
-	  	  return box.isSelected() ? "ALL" : "INFO";
-	  	}
-	}
+        box.setSelected(!parameters.getString(parameter).equalsIgnoreCase("INFO"));
+      }
+    
+      protected String getValue() {
+        return box.isSelected() ? "ALL" : "INFO";
+      }
+  }
 
   protected class TextBox extends ConfigurationPanel {
     

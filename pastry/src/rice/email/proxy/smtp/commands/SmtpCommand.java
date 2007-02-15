@@ -46,11 +46,11 @@ public abstract class SmtpCommand {
   
   public abstract boolean authenticationRequired();
 
-	public abstract void execute(
-		SmtpConnection conn,
-		SmtpState state,
-		SmtpManager manager,
-		String commandLine)
-		throws IOException;
+  public abstract void execute(
+    SmtpConnection conn,
+    SmtpState state,
+    SmtpManager manager,
+    String commandLine)
+    throws IOException;
 
 }

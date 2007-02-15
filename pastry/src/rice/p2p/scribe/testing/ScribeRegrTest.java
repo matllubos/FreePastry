@@ -309,14 +309,14 @@ public class ScribeRegrTest extends CommonAPITest {
     * Tests basic publish functionality
    */
     protected void testAPI() {
-	sectionStart("Scribe API Functionality");
+  sectionStart("Scribe API Functionality");
     int NUM_MESSAGES = 5;
     Topic topic = new Topic(generateId());
     TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
 
     stepStart("Tree Construction");
     for(int i = 0; i < NUM_NODES; i++)
-	policies[i].allowSubscribe(false);
+  policies[i].allowSubscribe(false);
 
     for (int i = 0; i < NUM_NODES/2; i++) {
       clients[i] = new TestScribeClient(scribes[i], topic, i);
@@ -445,39 +445,39 @@ public class ScribeRegrTest extends CommonAPITest {
 
 
     protected void testSingleRoot(String name) {
-	sectionStart(name + "");
-	int numTrees = 10;
-	boolean failed = false;
+  sectionStart(name + "");
+  int numTrees = 10;
+  boolean failed = false;
 
-	for(int num=0; num<numTrees; num ++) {
-	    Topic topic = new Topic(generateId());
-	    TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
-	    
-	    stepStart(name + " TopicId=" + topic.getId());
-	    for (int i = 0; i < NUM_NODES; i++) {
-	    clients[i] = new TestScribeClient(scribes[i], topic, i);
-	    scribes[i].subscribe(topic, clients[i]);
-	    simulate();
-	    }
-	    
-	    int numRoot = 0;
-	    for (int i=0; i < NUM_NODES; i++) {
-		if (scribes[i].isRoot(topic)) {
-		    numRoot++;
-		    //System.out.println("myId= " + scribes[i].getId());
-		}
-	    }
-	    
-	    if (numRoot != 1) {
-		stepDone(FAILURE, "Number of roots= " + numRoot);
-		failed = true;
-	    }
-	    else
-		stepDone(SUCCESS);
-	    
-	}
-	sectionDone();
-	
+  for(int num=0; num<numTrees; num ++) {
+      Topic topic = new Topic(generateId());
+      TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+      
+      stepStart(name + " TopicId=" + topic.getId());
+      for (int i = 0; i < NUM_NODES; i++) {
+      clients[i] = new TestScribeClient(scribes[i], topic, i);
+      scribes[i].subscribe(topic, clients[i]);
+      simulate();
+      }
+      
+      int numRoot = 0;
+      for (int i=0; i < NUM_NODES; i++) {
+    if (scribes[i].isRoot(topic)) {
+        numRoot++;
+        //System.out.println("myId= " + scribes[i].getId());
+    }
+      }
+      
+      if (numRoot != 1) {
+    stepDone(FAILURE, "Number of roots= " + numRoot);
+    failed = true;
+      }
+      else
+    stepDone(SUCCESS);
+      
+  }
+  sectionDone();
+  
     }
     
 
@@ -486,10 +486,10 @@ public class ScribeRegrTest extends CommonAPITest {
    * Tests basic publish functionality
    */
     protected void testMaintenance() {
-	sectionStart("Tree Maintenance Under Node Death");
-	int NUM_MESSAGES = 5;
-	Topic topic = new Topic(generateId());
-	TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+  sectionStart("Tree Maintenance Under Node Death");
+  int NUM_MESSAGES = 5;
+  Topic topic = new Topic(generateId());
+  TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
 
     stepStart("Tree Construction");
     for (int i = 0; i < NUM_NODES; i++) {
@@ -857,7 +857,7 @@ public class ScribeRegrTest extends CommonAPITest {
     }
 
     public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
-	//System.out.println("Allow subscribe , client.size "+clients.length+", children "+children.length+" for subscriber "+message.getSubscriber());
+  //System.out.println("Allow subscribe , client.size "+clients.length+", children "+children.length+" for subscriber "+message.getSubscriber());
       return (! neverAllowSubscribe) && (allowSubscribe || (clients.length > 0) || this.scribe.isRoot(message.getTopic()));
     }
   }

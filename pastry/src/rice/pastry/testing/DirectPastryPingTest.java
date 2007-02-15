@@ -80,7 +80,7 @@ public class DirectPastryPingTest {
     } else if (token.startsWith("s")) { //standalone
       Vector trlist = new Vector();
 
-      //	    k = 200000;
+      //      k = 200000;
 
       for (i = 0; i < 8; i++) {
         n = k = (i + 1) * 1000;
@@ -89,7 +89,7 @@ public class DirectPastryPingTest {
         spt.test();
         System.out.println(tr.getNodeNumber() + "\t" + tr.getAveHops() + "\t"
             + tr.getAveDistance());
-        //		System.out.println( "probability of " + i + " hops: " +
+        //    System.out.println( "probability of " + i + " hops: " +
         // tr.getProbability()[i] );
       }
       /*

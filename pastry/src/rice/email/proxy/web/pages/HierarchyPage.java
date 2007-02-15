@@ -47,7 +47,7 @@ public class HierarchyPage extends WebPage {
   
   public String getName() { return "/hierarchy"; }
   
-	public void execute(WebConnection conn, WebState state)	throws WebException, IOException {    
+  public void execute(WebConnection conn, WebState state)  throws WebException, IOException {    
     String error = null;
     String folder = conn.getParameter("folder");
     

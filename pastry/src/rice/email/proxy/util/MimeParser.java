@@ -62,7 +62,7 @@ public class MimeParser {
   /**
    * Where we are reading the data from
    */
-	protected InputStream in;
+  protected InputStream in;
   
   /**
    * The current event
@@ -87,21 +87,21 @@ public class MimeParser {
    */
   protected Stack boundaries;
     
-	/**
-	 * The sole constructor for this class, which takes any kind
-	 * of InputStream as a parameter. 
-	 *
-	 * @param    inStream    an InputStream that contains a Multi-part MIME message
-	 */
-	public MimeParser(InputStream inStream) {
-		this.in = new BufferedInputStream(inStream, 4096);
+  /**
+   * The sole constructor for this class, which takes any kind
+   * of InputStream as a parameter. 
+   *
+   * @param    inStream    an InputStream that contains a Multi-part MIME message
+   */
+  public MimeParser(InputStream inStream) {
+    this.in = new BufferedInputStream(inStream, 4096);
     this.event = START_DOCUMENT;
     this.boundaries = new Stack();
     this.bufferLength = 0;
     this.buffer = new byte[BUFFER_SIZE];
-	}  
+  }  
   
-	/**
+  /**
    * ----- PUBLIC METHODS -----
    */
   
@@ -113,17 +113,17 @@ public class MimeParser {
   public int getEventType() {
     return event;
   }
-	
-	/**
-	 * Advances to the next part of the message, if there is a
-	 * next part. When you create an instance of a MimeParser,
-	 * you need to call nextPart() before you start getting data.
-	 *
-	 * @return    true if there is a next part, false if there isn't 
-	 *            (which generally means you're at the end of the
-	 *            message)
-	 */
-	public int next() throws MimeException {
+  
+  /**
+   * Advances to the next part of the message, if there is a
+   * next part. When you create an instance of a MimeParser,
+   * you need to call nextPart() before you start getting data.
+   *
+   * @return    true if there is a next part, false if there isn't 
+   *            (which generally means you're at the end of the
+   *            message)
+   */
+  public int next() throws MimeException {
     switch (event) {
       case START_DOCUMENT:
         parseHeader();
@@ -183,92 +183,92 @@ public class MimeParser {
     
     throw new MimeException("UNKNOWN STATE " + event);
   }
-	
-	/**
+  
+  /**
    * Returns the current boundary 
-	 *
-	 * @return    The current boundary
-	 */
-	public String getCurrentBoundary() {
+   *
+   * @return    The current boundary
+   */
+  public String getCurrentBoundary() {
     return (boundaries.size() == 0 ? null : (String) boundaries.peek());
-	}
-	
-	/**
+  }
+  
+  /**
     * Get the boundary that we're breaking the message up on
-	 *
-	 * @return    a String containing the message boundary,
-	 *            or an empty String if the boundary isn't available
-	 */
-	public String getBoundary() throws MimeException {
+   *
+   * @return    a String containing the message boundary,
+   *            or an empty String if the boundary isn't available
+   */
+  public String getBoundary() throws MimeException {
     assertEvent(START_MULTIPART);
     return ((String) boundaries.peek()).substring(2);
-	}
-	
-	/**
-	 * Get the header of the current message part that we're
-	 * looking at
-	 *
-	 * @return    a String containing the current part's header,
-	 *            or an empty String if the header isn't available
-	 */
-	public byte[] getHeader() throws MimeException {
+  }
+  
+  /**
+   * Get the header of the current message part that we're
+   * looking at
+   *
+   * @return    a String containing the current part's header,
+   *            or an empty String if the header isn't available
+   */
+  public byte[] getHeader() throws MimeException {
     assertEvent(START_HEADERS_PART);
     return header;
-	}
-	
-	/**
-	 * Gets the data contained in the current message part as
-	 * a byte array (this will return an empty byte array if you've already 
-	 * got the data from this message part)
-	 *
-	 * @return    a byte array containing the data in this message part,
-	 *            or an empty byte array if you've already read this data
-	 */
-	public byte[] getPart() throws MimeException {
+  }
+  
+  /**
+   * Gets the data contained in the current message part as
+   * a byte array (this will return an empty byte array if you've already 
+   * got the data from this message part)
+   *
+   * @return    a byte array containing the data in this message part,
+   *            or an empty byte array if you've already read this data
+   */
+  public byte[] getPart() throws MimeException {
     assertEvent(SINGLE_PART);
     return part;
   }
-	
-	/**
-	 * Gets the specified value from a specified header, or null if
-	 * the entry does not exist
-	 *
-	 * @param header    the header to look at
-	 * @param entry      the name of the entry you're looking for
-	 * @return    a String containing the value you're looking for,
-	 *            or null if the entry cannot be found
-	 */
-	public String getHeaderValue(String entry) throws MimeException {
-    assertEvent(START_HEADERS_PART);
-		String value = null;
-		boolean gotit = false;
-		
-		// use the lowercase version of the name, to avoid any case issues
-		entry = entry.toLowerCase();
-		if (! entry.endsWith(":"))
-			entry = entry + ":";
-		
-		StringTokenizer st = new StringTokenizer(new String(header), "\r\n");
-		while (st.hasMoreTokens()) {
-			String line = st.nextToken();
-      
-			if (line.toLowerCase().startsWith(entry)) {
-				value = line.substring(entry.length()).trim();
-				gotit = true;
-			} else if ((gotit) && (line.length() > 0)) {
-				// headers can actually span multiple lines, as long as
-				// the next line starts with whitespace
-				if (Character.isWhitespace(line.charAt(0)))
-					value += " " + line.trim();
-				else
-					gotit = false;
-			}
-		}
-		
-		return value;
-	}
   
-	/**
+  /**
+   * Gets the specified value from a specified header, or null if
+   * the entry does not exist
+   *
+   * @param header    the header to look at
+   * @param entry      the name of the entry you're looking for
+   * @return    a String containing the value you're looking for,
+   *            or null if the entry cannot be found
+   */
+  public String getHeaderValue(String entry) throws MimeException {
+    assertEvent(START_HEADERS_PART);
+    String value = null;
+    boolean gotit = false;
+    
+    // use the lowercase version of the name, to avoid any case issues
+    entry = entry.toLowerCase();
+    if (! entry.endsWith(":"))
+      entry = entry + ":";
+    
+    StringTokenizer st = new StringTokenizer(new String(header), "\r\n");
+    while (st.hasMoreTokens()) {
+      String line = st.nextToken();
+      
+      if (line.toLowerCase().startsWith(entry)) {
+        value = line.substring(entry.length()).trim();
+        gotit = true;
+      } else if ((gotit) && (line.length() > 0)) {
+        // headers can actually span multiple lines, as long as
+        // the next line starts with whitespace
+        if (Character.isWhitespace(line.charAt(0)))
+          value += " " + line.trim();
+        else
+          gotit = false;
+      }
+    }
+    
+    return value;
+  }
+  
+  /**
    * ----- INTERNAL PARSING METHODS -----
    */
   
@@ -298,36 +298,36 @@ public class MimeParser {
     
     return new String(boundary).startsWith(getCurrentBoundary() + "--");
   }
-	
-	/**
-	 * A private method to attempt to read the MIME boundary from the
-	 * Content-Type entry in the first header it finds. This should be
-	 * called once, when the class is first instantiated.
-	 */
-	protected String retrieveBoundary() throws MimeException {
-		String value = getHeaderValue("content-type");
+  
+  /**
+   * A private method to attempt to read the MIME boundary from the
+   * Content-Type entry in the first header it finds. This should be
+   * called once, when the class is first instantiated.
+   */
+  protected String retrieveBoundary() throws MimeException {
+    String value = getHeaderValue("content-type");
     
-		if (value != null) {
-			int pos1 = value.toLowerCase().indexOf("boundary");
-			int pos2 = value.indexOf(";", pos1);
-			if (pos2 < 0)
-				pos2 = value.length();
-			if ((pos1 > 0) && (pos2 > pos1))
-				value = value.substring(pos1+9, pos2);
-		}
+    if (value != null) {
+      int pos1 = value.toLowerCase().indexOf("boundary");
+      int pos2 = value.indexOf(";", pos1);
+      if (pos2 < 0)
+        pos2 = value.length();
+      if ((pos1 > 0) && (pos2 > pos1))
+        value = value.substring(pos1+9, pos2);
+    }
     
     // now, trim any whitespace off of the end
     value = value.trim();
-		
-		// you're allowed to enclose your boundary in quotes too,
-		// so we need to account for that possibility
-		if (value.startsWith("\"") || value.startsWith("'"))
-			value = value.substring(1);
-		if (value.endsWith("\"") || value.endsWith("'"))
-			value = value.substring(0, value.length()-1);
+    
+    // you're allowed to enclose your boundary in quotes too,
+    // so we need to account for that possibility
+    if (value.startsWith("\"") || value.startsWith("'"))
+      value = value.substring(1);
+    if (value.endsWith("\"") || value.endsWith("'"))
+      value = value.substring(0, value.length()-1);
     
     return "--" + value;
-	}
+  }
   
   /**
    * Internal method for parsing a MIME boundary
@@ -354,12 +354,12 @@ public class MimeParser {
     System.arraycopy(buffer, 0, boundary, 0, boundary.length);
   }
   
-	/**
-	 * A private method to get the next header block on the InputStream.
-	 * For our purposes, a header is a block of text that ends with a
-	 * blank line.
-	 */
-	protected void parseHeader() throws MimeException {
+  /**
+   * A private method to get the next header block on the InputStream.
+   * For our purposes, a header is a block of text that ends with a
+   * blank line.
+   */
+  protected void parseHeader() throws MimeException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     part = null;
     boundary = null;
@@ -373,9 +373,9 @@ public class MimeParser {
       
       baos.write(buffer, 0, bufferLength);
     }
-		
-		header = baos.toByteArray();
-	}
+    
+    header = baos.toByteArray();
+  }
   
   /**
    * Internal method which parses and stores the given part. NOTE:
@@ -387,16 +387,16 @@ public class MimeParser {
     header = null;
     boundary = null;
     
-		byte[] other = new byte[buffer.length];
+    byte[] other = new byte[buffer.length];
     int otherLength = 0;
-		
-		// start getting data -- this is going to seem a little cumbersome because
-		// technically the CRLF (\r\n) that is supposed to appear just before the
-		// boundary actually belongs to the boundary, not to the body data (if the
-		// body is binary, an extra CRLF at the end could screw it up), so we're
-		// always writing the previous line until we find the boundary
     
-		while (true) {
+    // start getting data -- this is going to seem a little cumbersome because
+    // technically the CRLF (\r\n) that is supposed to appear just before the
+    // boundary actually belongs to the boundary, not to the body data (if the
+    // body is binary, an extra CRLF at the end could screw it up), so we're
+    // always writing the previous line until we find the boundary
+    
+    while (true) {
       // check to see if we've reached the EOF
       if (readLine() == 0) break;
       
@@ -404,27 +404,27 @@ public class MimeParser {
       // data in the last line, minus the CRLF that's supposed to be
       // at the end (just to be nice, we'll even try to act properly
       // if the line terminates with a \n instead of a \r\n)
-			if (startsWith(buffer, getCurrentBoundary())) {
-				if (otherLength > 1) 
-					baos.write(other, 0, (other[otherLength-2] == (byte) '\r' ? otherLength-2 : otherLength-1));
+      if (startsWith(buffer, getCurrentBoundary())) {
+        if (otherLength > 1) 
+          baos.write(other, 0, (other[otherLength-2] == (byte) '\r' ? otherLength-2 : otherLength-1));
         
         storeBoundary();
         part = baos.toByteArray();
-				return;
-			} else {
-				baos.write(other, 0, otherLength);
-			}
-			
-			byte[] tmp = other;
+        return;
+      } else {
+        baos.write(other, 0, otherLength);
+      }
+      
+      byte[] tmp = other;
       other = buffer;
       otherLength = bufferLength;
       buffer = tmp;
-		}
-		
-		// if we hit the end of the file, make sure we write the blineLast
-		// data before we finish up
+    }
+    
+    // if we hit the end of the file, make sure we write the blineLast
+    // data before we finish up
     baos.write(other, 0, otherLength);
-		
+    
     part = baos.toByteArray();
   }
   
@@ -450,12 +450,12 @@ public class MimeParser {
   
   /**
    * A way to read a single "line" of bytes from an InputStream.
-	 * The byte array that is returned will include the line
-	 * terminator (\n), unless we reached the end of the stream.
+   * The byte array that is returned will include the line
+   * terminator (\n), unless we reached the end of the stream.
    *
    * @return the number of characters read
-	 */
-	private int readLine() throws MimeException {
+   */
+  private int readLine() throws MimeException {
     try {
       bufferLength = 0;
       int c;

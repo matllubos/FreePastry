@@ -43,7 +43,7 @@ advised of the possibility of such damage.
 package rice.environment.params;
 
 /**
- *	 Listener interface for changes to a parameters object
+ *   Listener interface for changes to a parameters object
  *
  * @author jstewart
  *

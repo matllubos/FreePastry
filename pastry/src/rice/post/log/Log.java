@@ -384,11 +384,11 @@ public class Log implements PostData {
   protected final void getRealTopEntry(Continuation command) {
     if ((topEntry == null) && ((topEntryReferences != null) || (topEntryReference != null))) {
       LogEntryReference top;
-      	if (topEntryReferences != null) {
-      	  top = topEntryReferences[0];
-      	} else {
-      	  top = topEntryReference;
-     	}
+        if (topEntryReferences != null) {
+          top = topEntryReferences[0];
+        } else {
+          top = topEntryReference;
+       }
       post.getStorageService().retrieveContentHash(top, new StandardContinuation(command) {
         public void receiveResult(Object o) {
           try {
@@ -546,8 +546,8 @@ public class Log implements PostData {
       if (topEntryReferences != null) {
         newlength = topEntryReferences.length + 1;
       }
-      	if (newlength > N_TOP_ENTRIES)
-      	  newlength = N_TOP_ENTRIES;
+        if (newlength > N_TOP_ENTRIES)
+          newlength = N_TOP_ENTRIES;
       LogEntryReference[] temp = new LogEntryReference[newlength];
       for (int i = 1; i < newlength; i++) {
         temp[i] = topEntryReferences[i-1];
@@ -595,15 +595,15 @@ public class Log implements PostData {
     StringBuffer result = new StringBuffer();
     result.append("[ ");
 
-    	if (topEntryReferences != null) {
-    	  for (int i=0; i<topEntryReferences.length; i++) {
-    	    if (topEntryReferences[i] == null) {
-    	      result.append("null ");
-    	    } else {
-    	      result.append(topEntryReferences[i].toString());
-    	    }
-    	  }
-    	}
+      if (topEntryReferences != null) {
+        for (int i=0; i<topEntryReferences.length; i++) {
+          if (topEntryReferences[i] == null) {
+            result.append("null ");
+          } else {
+            result.append(topEntryReferences[i].toString());
+          }
+        }
+      }
     
     result.append(" ]");
     

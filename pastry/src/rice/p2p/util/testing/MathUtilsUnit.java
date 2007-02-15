@@ -96,57 +96,57 @@ public class MathUtilsUnit {
     RandomSource r = new SimpleRandomSource(null);
     boolean passed = true;
 
-  		for (int n=0; n<100000; n++) {
-  	    int l = r.nextInt();
-  	    byte[] ar = MathUtils.intToByteArray(l);
-  	    int res = MathUtils.byteArrayToInt(ar);
-  	    /*
-  	    long l = r.nextLong();
-  	    byte[] ar = longToByteArray(l);
-  	    long result = byteArrayToLong(ar);
-  	    */
+      for (int n=0; n<100000; n++) {
+        int l = r.nextInt();
+        byte[] ar = MathUtils.intToByteArray(l);
+        int res = MathUtils.byteArrayToInt(ar);
+        /*
+        long l = r.nextLong();
+        byte[] ar = longToByteArray(l);
+        long result = byteArrayToLong(ar);
+        */
 
-  	    if (res != l) {
-  	      passed = false;
-  	      System.out.println("[ FAILED ]");
-  	      System.out.println("input:  "+l);
-  	      System.out.print  ("byte[]: ");
-  	      for (int i=0; i<ar.length; i++) {
-  	        System.out.print(ar[i]+" ");
-  	      }
-  	      System.out.println();
-  	      System.out.println("output: "+result);
-  	      break;
-  	    	}
-  		}
-  		
-  		if (passed) System.out.println("[ PASSED ]");
+        if (res != l) {
+          passed = false;
+          System.out.println("[ FAILED ]");
+          System.out.println("input:  "+l);
+          System.out.print  ("byte[]: ");
+          for (int i=0; i<ar.length; i++) {
+            System.out.print(ar[i]+" ");
+          }
+          System.out.println();
+          System.out.println("output: "+result);
+          break;
+          }
+      }
+      
+      if (passed) System.out.println("[ PASSED ]");
 
     System.out.print("    Testing long->byte[]->long conversion\t\t\t");
     
     passed = true;
 
-  		for (int n=0; n<100000; n++) {
-  	    long l = r.nextLong();
-  	    byte[] ar = MathUtils.longToByteArray(l);
-  	    long res = MathUtils.byteArrayToLong(ar);
+      for (int n=0; n<100000; n++) {
+        long l = r.nextLong();
+        byte[] ar = MathUtils.longToByteArray(l);
+        long res = MathUtils.byteArrayToLong(ar);
 
-  	    if (res != l) {
-  	      passed = false;
-  	      System.out.println("[ FAILED ]");
-  	      System.out.println("input:  "+l);
-  	      System.out.print  ("byte[]: ");
-  	      for (int i=0; i<ar.length; i++) {
-  	        System.out.print(ar[i]+" ");
-  	      }
-  	      System.out.println();
-  	      System.out.println("output: "+result);
-  	      break;
-  	    	}
-  		}
-  		
-  		if (passed) System.out.println("[ PASSED ]");
-  		
+        if (res != l) {
+          passed = false;
+          System.out.println("[ FAILED ]");
+          System.out.println("input:  "+l);
+          System.out.print  ("byte[]: ");
+          for (int i=0; i<ar.length; i++) {
+            System.out.print(ar[i]+" ");
+          }
+          System.out.println();
+          System.out.println("output: "+result);
+          break;
+          }
+      }
+      
+      if (passed) System.out.println("[ PASSED ]");
+      
     System.out.println("-------------------------------------------------------------");
   }
 }

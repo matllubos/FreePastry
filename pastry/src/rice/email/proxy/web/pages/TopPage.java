@@ -47,7 +47,7 @@ public class TopPage extends WebPage {
   
   public String getName() { return "/top"; }
   
-	public void execute(WebConnection conn, WebState state)	throws WebException, IOException {    
+  public void execute(WebConnection conn, WebState state)  throws WebException, IOException {    
     writeHeader(conn);
     conn.println("<h3>ePOST Webmail for " + state.getUser().getName() + "<h3>");
     writeFooter(conn);

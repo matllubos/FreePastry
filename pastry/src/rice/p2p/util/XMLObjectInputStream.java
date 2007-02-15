@@ -433,15 +433,15 @@ public class XMLObjectInputStream extends ObjectInputStream {
    * register the object with the stream so that when all of the objects are
    * restored a final set of validations can be performed.
    *
-   * @param	obj the object to receive the validation callback.
-   * @param	prio controls the order of callbacks
-   * @throws	NotActiveException The stream is not currently reading objects
-   * 		so it is invalid to register a callback.
-   * @throws	InvalidObjectException The validation object is null.
+   * @param  obj the object to receive the validation callback.
+   * @param  prio controls the order of callbacks
+   * @throws  NotActiveException The stream is not currently reading objects
+   *     so it is invalid to register a callback.
+   * @throws  InvalidObjectException The validation object is null.
    */
   public void registerValidation(ObjectInputValidation obj, int prio) throws NotActiveException, InvalidObjectException {
     if (currentObjects.peek() == null) 
-	    throw new NotActiveException("registerValidation called with empty stack!");
+      throw new NotActiveException("registerValidation called with empty stack!");
     
     vlist.register(obj, prio);
   }
@@ -1147,7 +1147,7 @@ public class XMLObjectInputStream extends ObjectInputStream {
       f.setAccessible(true);
 
       int mask = Modifier.STATIC;
-	    if ((f.getModifiers() & mask) != 0)
+      if ((f.getModifiers() & mask) != 0)
         throw new NoSuchFieldException("Field read was static!");
 
       if (reader.getStartTag().equals("primitive")) {
@@ -1382,15 +1382,15 @@ public class XMLObjectInputStream extends ObjectInputStream {
   private static class ValidationList {
     
     private static class Callback {
-	    final ObjectInputValidation obj;
-	    final int priority;
-	    Callback next;
-	    
-	    Callback(ObjectInputValidation obj, int priority, Callback next) {
+      final ObjectInputValidation obj;
+      final int priority;
+      Callback next;
+      
+      Callback(ObjectInputValidation obj, int priority, Callback next) {
         this.obj = obj;
         this.priority = priority;
         this.next = next;
-	    }
+      }
     }
     
     /** linked list of callbacks */
@@ -1407,20 +1407,20 @@ public class XMLObjectInputStream extends ObjectInputStream {
      * object is null.
      */
     void register(ObjectInputValidation obj, int priority) throws InvalidObjectException {
-	    if (obj == null) {
+      if (obj == null) {
         throw new InvalidObjectException("null callback");
-	    }
-	    
-	    Callback prev = null, cur = list;
-	    while (cur != null && priority < cur.priority) {
+      }
+      
+      Callback prev = null, cur = list;
+      while (cur != null && priority < cur.priority) {
         prev = cur;
         cur = cur.next;
-	    }
-	    if (prev != null) {
+      }
+      if (prev != null) {
         prev.next = new Callback(obj, priority, cur);
-	    } else {
+      } else {
         list = new Callback(obj, priority, list);
-	    }
+      }
     }
     
     /**
@@ -1431,22 +1431,22 @@ public class XMLObjectInputStream extends ObjectInputStream {
      * and the exception propagated upwards.
      */
     void doCallbacks() throws InvalidObjectException {
-	    try {
+      try {
         while (list != null) {
           list.obj.validateObject();
           list = list.next;
         }
-	    } catch (InvalidObjectException ex) {
+      } catch (InvalidObjectException ex) {
         list = null;
         throw ex;
-	    }
+      }
     }
     
     /**
      * Resets the callback list to its initial (empty) state.
      */
     public void clear() {
-	    list = null;
+      list = null;
     }
   }
 }

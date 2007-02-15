@@ -47,7 +47,7 @@ public class MainPage extends WebPage {
   
   public String getName() { return "main"; }
   
-	public void execute(WebConnection conn, WebState state)	throws WebException, IOException {    
+  public void execute(WebConnection conn, WebState state)  throws WebException, IOException {    
     writeHeader(conn);
     conn.print("<frameset name=overall rows=70,* border=0>");
     conn.print("  <frame src=top name=top frameborder=0>");

@@ -54,7 +54,7 @@ import java.util.*;
 
 public class PingAddress {
     private static int myCode = 0x9219d8ff;
-	
+  
     public static int getCode() { return myCode; }
 }
 

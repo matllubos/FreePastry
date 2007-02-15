@@ -60,7 +60,7 @@ public class FolderPage extends WebPage {
   
   public String getName() { return "/folder"; }
   
-	public void execute(WebConnection conn, final WebState state)	throws WebException, IOException {    
+  public void execute(WebConnection conn, final WebState state)  throws WebException, IOException {    
     String uid = conn.getParameter("message");
     
     try {

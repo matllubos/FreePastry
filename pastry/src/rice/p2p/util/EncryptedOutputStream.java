@@ -125,12 +125,12 @@ public class EncryptedOutputStream extends OutputStream {
    */
   public void write(byte b[], int off, int len) throws IOException {
     if (b == null) {
-	    throw new NullPointerException();
+      throw new NullPointerException();
     } else if ((off < 0) || (off > b.length) || (len < 0) ||
                ((off + len) > b.length) || ((off + len) < 0)) {
-	    throw new IndexOutOfBoundsException();
+      throw new IndexOutOfBoundsException();
     } else if (len == 0) {
-	    return;
+      return;
     }
     
     // if it will fit in the buffer, just fill it up

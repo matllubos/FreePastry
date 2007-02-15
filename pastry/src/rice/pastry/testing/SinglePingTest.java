@@ -155,7 +155,7 @@ public class SinglePingTest {
     System.out.println("time used " + (msec / 60000) + ":"
         + ((msec % 60000) / 1000) + ":" + ((msec % 60000) % 1000));
 
-    //	simulator.checkRoutingTable();
+    //  simulator.checkRoutingTable();
   }
 
   public void test() {

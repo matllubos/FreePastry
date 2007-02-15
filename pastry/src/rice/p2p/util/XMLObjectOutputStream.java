@@ -486,17 +486,17 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     Method meth = null;
     Class defCl = cl;
     while (defCl != null) {
-	    try {
+      try {
         meth = defCl.getDeclaredMethod("writeReplace", new Class[0]);
         break;
-	    } catch (NoSuchMethodException ex) {
+      } catch (NoSuchMethodException ex) {
         defCl = defCl.getSuperclass();
-	    }
+      }
     }
     
     if (meth == null) {
       WRITE_REPLACES.put(cl, meth);
-	    return null;
+      return null;
     }
     
     meth.setAccessible(true);
@@ -504,9 +504,9 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
     if ((mods & (Modifier.STATIC | Modifier.ABSTRACT)) != 0) {
     } else if ((mods & (Modifier.PUBLIC | Modifier.PROTECTED)) != 0) {
       WRITE_REPLACES.put(cl, meth);
-	    return meth;
+      return meth;
     } else if ((mods & Modifier.PRIVATE) != 0) {
-	    if (cl == defCl) {
+      if (cl == defCl) {
         WRITE_REPLACES.put(cl, meth);
         return meth;
       }
@@ -577,9 +577,9 @@ public class XMLObjectOutputStream extends ObjectOutputStream {
    */
   protected Field[] getSerialPersistentFields(Class c) {    
     try {
-	    Field f = c.getDeclaredField("serialPersistentFields");
-	    int mask = Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL;
-	    if ((f.getModifiers() & mask) != mask) {
+      Field f = c.getDeclaredField("serialPersistentFields");
+      int mask = Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL;
+      if ((f.getModifiers() & mask) != mask) {
         return null;
       }
       

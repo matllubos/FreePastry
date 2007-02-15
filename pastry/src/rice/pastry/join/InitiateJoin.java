@@ -61,7 +61,7 @@ public class InitiateJoin extends Message implements Serializable {
 
 //  public InitiateJoin(NodeHandle nh) {
 //    this((NodeHandle[])null);
-//  	handle = new NodeHandle[1];
+//    handle = new NodeHandle[1];
 //    handle[0] = nh;
 //  }
 

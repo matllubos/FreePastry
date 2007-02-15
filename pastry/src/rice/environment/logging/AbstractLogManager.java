@@ -125,10 +125,10 @@ public abstract class AbstractLogManager implements LogManager {
     this.globalLogLevel = parseVal("loglevel");
 
     params.addChangeListener(new ParameterChangeListener() {
-	    public void parameterChange(String paramName, String newVal) {
-	      if (paramName.equals("logging_enable")) {
+      public void parameterChange(String paramName, String newVal) {
+        if (paramName.equals("logging_enable")) {
             enabled = Boolean.valueOf(newVal).booleanValue();
-	      } else if (paramName.equals("loglevel")) {            
+        } else if (paramName.equals("loglevel")) {            
             synchronized(this) {
               // iterate over all loggers, if they are default loggers,
               // set the level
@@ -141,7 +141,7 @@ public abstract class AbstractLogManager implements LogManager {
                 }
               }
             } // synchronized
-	      } else if (paramName.endsWith("_loglevel")) {
+        } else if (paramName.endsWith("_loglevel")) {
             String loggerName = paramName.substring(0,paramName.length()-"_loglevel".length());
             if ((newVal == null) || (newVal.equals(""))) {
               // parameter "removed" 
@@ -170,9 +170,9 @@ public abstract class AbstractLogManager implements LogManager {
                   hl.level = parseVal(paramName);
                 } 
               }
-	        }
-	      }
-	    }
+          }
+        }
+      }
     });
   }
 
