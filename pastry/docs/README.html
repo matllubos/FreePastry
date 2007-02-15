@@ -123,7 +123,7 @@ developed using Sun's SDK, version 1.5.0+
   <li>Routing Consistency works much better</li>
     <ul>
     <li>Lots of evaluation on PlanetLab</li>
-	  <li><i>Note:</i>The PeriodicLeafSetProtocol is very low bandwidth and provides routing consistency in almost all situations other than network partitions.  However, the accuracy of the LeafSet is most accurate near the center.  This is because leafset changes are gossiped.  With the default setup, changes to the leafset may take over 4 minutes to propegate to all nodes.  However, your nearest neighbor to the left and right are guaranteed to be accurate.</li>  
+	  <li><i>Note:</i>The PeriodicLeafSetProtocol is very low bandwidth and provides routing consistency in almost all situations other than network partitions.  However, the accuracy of the LeafSet is most accurate near the center.  This is because leafset changes are gossiped.  With the default setup, changes to the leafset may take over 4 minutes to propagate to all nodes.  However, your nearest neighbor to the left and right are guaranteed to be accurate.</li>  
 	  <li><i>Note:</i>The node may go ready and not ready depending on lease validity.  Not ready means that the node will not accept routing messages.  This is necessary to guarantee routing consistency.  To find out if you are ready, you can call PastryNode.isReady(), or register yourself as an Observer of the PastryNode.  You can expect a value of true when the node goes ready, and a value of false when it goes not-ready.</li>
     </ul>
   <li>Better support of NATs:
