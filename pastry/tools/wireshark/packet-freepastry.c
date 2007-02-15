@@ -79,8 +79,6 @@ static int hf_freepastry_routingtable_msg_type = -1;
 static int hf_freepastry_msg_size = -1;
 static int hf_freepastry_commonapi_msg_type = -1;
 static int hf_freepastry_direct_msg_type = -1;
-static int hf_freepastry_router_sub_address = -1;
-static int hf_freepastry_router_target = -1;
 static int hf_freepastry_direct_msg_version = -1;
 static int hf_freepastry_router_msg_version = -1;
 static int hf_freepastry_commonapi_msg_version = -1;
@@ -104,12 +102,11 @@ static gint ett_freepastry_rs = -1;
 static gint ett_freepastry_ls = -1;
 static gint ett_freepastry_ls_cw = -1;
 static gint ett_freepastry_ls_ccw = -1;
-static gint ett_freepastry_sr = -1;
 
 static dissector_handle_t freepastry_udp_handle; 
 static dissector_handle_t freepastry_tcp_handle;
 
-static dissector_table_t subdissector_encapsulated_table;
+static dissector_table_t subdissector_message_version_table;
 
 /*
  * State information stored with a conversation.
@@ -209,8 +206,9 @@ static const value_string freepastry_liveness_message[] = {
 
 /*
  * Start: Common FreePastry Objects dissection.
+ * These functions can be used by other files in the FreePastry plugin 
+ * (Common API dissectors, core message dissectors).
  */
-
 
 /**
 *   @return the size of a "EpochInetSocketAddress" object.
@@ -236,16 +234,14 @@ decode_epoch_inet_socket_address(tvbuff_t *tvb, proto_tree *parent_tree, gint of
   guint8 nb_addr;
   gchar *ip_str;
   guint16 port_number;
-  gint remaining;
   int i;
 
   /*Get the number of (IPv4 address, port number) couple*/
   nb_addr = tvb_get_guint8(tvb, offset);
   offset++;
 
-  remaining = tvb_reported_length_remaining(tvb, offset);
-  if (remaining < (8+nb_addr*6)){
-    proto_tree_add_text(parent_tree, tvb, offset, remaining, "Too short EISA attribute!");
+  if (tvb_reported_length_remaining(tvb, offset) < (8+nb_addr*6)){
+    proto_tree_add_text(parent_tree, tvb, offset, -1, "Too short EISA attribute!");
     return -1;
   }
 
@@ -326,9 +322,15 @@ get_id(tvbuff_t *tvb, gint offset)
     (id >> 16) & 0xff, (id >> 8) & 0xff);
 }
 
+/**
+*   Print an ID in the info column.
+*   Used by common API applications.
+*   @return the new offset or -1 on failure.
+**/
 gint
 print_id_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gchar* info_string){
   gint16 type;
+  /*We need to read the ID type*/
   if (tvb_reported_length_remaining(tvb, offset) < 2){
     col_append_fstr(pinfo->cinfo, COL_INFO, " %s (Malformed Message)",
       info_string);
@@ -350,6 +352,10 @@ print_id_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gchar* in
   }
 }
 
+/**
+*   Print an ID value (2O bytes) in the info column.
+*   @return the new offset or -1 on failure.
+**/
 gint
 print_id_value_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gchar* info_string){
   if (tvb_reported_length_remaining(tvb, offset) < 20){
@@ -362,6 +368,10 @@ print_id_value_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gch
   return offset + 20;
 }
 
+/**
+*   Print a ring ID in the info column.
+*   @return the new offset or -1 on failure.
+**/
 gint
 print_ringid_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gchar* info_string){
   if (tvb_reported_length_remaining(tvb, offset) < 44){
@@ -385,6 +395,10 @@ print_ringid_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gchar
   }
 }
 
+/**
+*   Print a GCID in the info column.
+*   @return the new offset or -1 on failure.
+**/
 gint
 print_gcid_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gchar* info_string){
   if (tvb_reported_length_remaining(tvb, offset) < 30){
@@ -411,6 +425,11 @@ print_gcid_into_col_info(tvbuff_t *tvb, packet_info *pinfo, gint offset, gchar* 
   }
 }
 
+/**
+*   Decode into the tree an ID.
+*   Used by common API applications.
+*   @return the new offset or -1 on failure.
+**/
 gint
 decode_type_and_id(tvbuff_t *tvb, proto_tree *tree, gint offset)
 {
@@ -424,6 +443,10 @@ decode_type_and_id(tvbuff_t *tvb, proto_tree *tree, gint offset)
   return decode_id_from_type(tvb, tree, type, offset + 2);
 }
 
+/**
+*   Decode into the tree an ID depending on its type.
+*   @return the new offset or -1 on failure.
+**/
 gint
 decode_id_from_type(tvbuff_t *tvb, proto_tree *tree, short type, gint offset)
 {
@@ -444,6 +467,10 @@ decode_id_from_type(tvbuff_t *tvb, proto_tree *tree, short type, gint offset)
 
 }
 
+/**
+*   Decode into the tree an ID value.
+*   @return the new offset or -1 on failure.
+**/
 gint
 decode_id_value(tvbuff_t *tvb, proto_tree *tree, gint offset)
 {
@@ -455,6 +482,10 @@ decode_id_value(tvbuff_t *tvb, proto_tree *tree, gint offset)
   return offset + 20;
 }
 
+/**
+*   Decode into the tree a ring ID.
+*   @return the new offset or -1 on failure.
+**/
 gint
 decode_ringid(tvbuff_t *tvb, proto_tree *tree, gint offset)
 {
@@ -467,6 +498,10 @@ decode_ringid(tvbuff_t *tvb, proto_tree *tree, gint offset)
   return offset;
 }
 
+/**
+*   Decode into the tree a GCID.
+*   @return the new offset or -1 on failure.
+**/
 gint
 decode_gcid(tvbuff_t *tvb, proto_tree *tree, gint offset)
 {
@@ -490,6 +525,10 @@ decode_gcid(tvbuff_t *tvb, proto_tree *tree, gint offset)
   return decode_type_and_id(tvb, tree, offset + 8);
 }
 
+/**
+*   Decode into the tree a VersionKey (used by Glacier).
+*   @return the new offset or -1 on failure.
+**/
 gint
 decode_versionkey(tvbuff_t *tvb, proto_tree *tree, gint offset)
 {
@@ -501,6 +540,10 @@ decode_versionkey(tvbuff_t *tvb, proto_tree *tree, gint offset)
   return decode_type_and_id(tvb, tree, offset + 8);
 }
 
+/**
+*   Decode into the tree a FragmentKey (used by Glacier).
+*   @return the new offset or -1 on failure.
+**/
 gint
 decode_fragmentkey(tvbuff_t *tvb, proto_tree *tree, gint offset)
 {
@@ -544,9 +587,8 @@ decode_nodehandle(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *at
   offset = decode_epoch_inet_socket_address(tvb, node_handle_tree, offset, "EpochInetSocketAddress");
   
   if (offset != -1){
-    gint remaining = tvb_reported_length_remaining(tvb, offset);
     /*20 bytes = ID Length*/
-    if (remaining >= 20) {
+    if (tvb_reported_length_remaining(tvb, offset) >= 20) {
       gchar* short_id = get_id(tvb, offset);
       
       proto_item_append_text(ti, short_id);
@@ -554,7 +596,7 @@ decode_nodehandle(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *at
       offset += 20;
       proto_item_set_end(ti, tvb, offset);
     } else {
-      proto_tree_add_text(node_handle_tree, tvb, offset, remaining, "Too short attribute!");
+      proto_tree_add_text(node_handle_tree, tvb, offset, -1, "Too short attribute!");
       return -1;
     }
   }
@@ -920,7 +962,6 @@ dissect_freepastry_common_udp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
         case WRONG_EPOCH_MESSAGE:
           proto_tree_add_item(freepastry_tree, hf_freepastry_liveness_msg_sent_time, tvb, offset, 8, FALSE);
           offset += 8;
-          /*TODO? test if there are enough bytes available*/
           offset = decode_epoch_inet_socket_address(tvb, tree, offset, "Incorrect");
           if (offset != -1){
             offset = decode_epoch_inet_socket_address(tvb, tree, offset, "Correct");
@@ -941,14 +982,15 @@ dissect_freepastry_common_udp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
  * Decode the common structure of a FreePastry TCP message.
  * TCP fragments are already reassembled (message is complete)
  * Such a function is needed because a FreePastry Message can be
- * Encapsulated into another one (e.g. into a Route Message)
+ * Encapsulated into another one (e.g. into a Route Message).
+ * This function can be called from this file or a 
+ * packet-freepastry-core-vX.c file.
 **/
 void
 decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset, guint32 address)
 {
   gboolean has_sender = FALSE;
   gint16  type          = 0;
-  guint16 short_address = 0;
   sub_message_info_t *sub_message_info = NULL;
   tvbuff_t *next_tvb = NULL;
   const gchar *type_string;
@@ -1034,7 +1076,7 @@ decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tre
     pinfo->private_data = sub_message_info;
 
     next_tvb = tvb_new_subset(tvb, offset, -1, -1);
-    dissector_try_port(subdissector_encapsulated_table, tvb_get_guint8(tvb, offset), next_tvb, pinfo, tree);
+    dissector_try_port(subdissector_message_version_table, tvb_get_guint8(tvb, offset), next_tvb, pinfo, tree);
   }
 }
 
@@ -1051,7 +1093,7 @@ static guint get_freepastry_pdu_len(packet_info *pinfo _U_, tvbuff_t *tvb, int o
 }
  
 /*
- * Dissect a TCP FreePastry message
+ * Dissect a TCP FreePastry message. Called by the desegmentation feature
  * TCP fragments are already reassembled (message is complete)
  */
 static void
@@ -1082,13 +1124,17 @@ dissect_freepastry_pdu(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
   decode_freepastry_tcp_msg_invariant(tvb, pinfo, freepastry_tree, offset, address);
 }
 
-/* associate data with conversation */
+/**
+*   Save FreePastry data for this conversation:
+*     - ID of the packet related to FreePastry TCP stream header
+*     - True if this session is an AppSocket
+**/
 static void
 attach_data_to_conversation(conversation_t *conversation, guint32 id, gboolean is_app_stream)
 {
   struct freepastry_tcp_stream_data *tcp_stream_data;
   
-  /* Is there a request structure attached to this conversation?*/
+  /* Is there already some data attached to this conversation?*/
   tcp_stream_data = conversation_get_proto_data(conversation, proto_freepastry);
   if (!tcp_stream_data) {
     tcp_stream_data = se_alloc(sizeof(struct freepastry_tcp_stream_data));
@@ -1209,7 +1255,8 @@ dissect_freepastry_tcp_header(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
   conversation_set_dissector(conversation, freepastry_tcp_handle);
   
   /*TODO Test tvb+offset stuff*/
-  /*if (next_message_to_parse) {    
+  /*if (next_message_to_parse) {
+    g_warning("There is another message to parse!!!");
     tcp_dissect_pdus(tvb+offset, pinfo, tree, freepastry_desegment, 4, get_freepastry_pdu_len,
       dissect_freepastry_pdu);
   }*/
@@ -1573,7 +1620,7 @@ proto_register_freepastry(void)
   proto_register_field_array(proto_freepastry, hf, array_length(hf));
   proto_register_subtree_array(ett, array_length(ett));
 
-  subdissector_encapsulated_table = register_dissector_table("freepastry.msg", "FreePastry Message", 
+  subdissector_message_version_table = register_dissector_table("freepastry.msg", "FreePastry Message", 
     FT_UINT8, BASE_DEC);
 }
 

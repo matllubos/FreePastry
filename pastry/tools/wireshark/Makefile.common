@@ -33,7 +33,7 @@ DISSECTOR_SRC = \
 	packet-past.c \
 	packet-gcpast.c \
 	packet-replication.c \
-	packet-scribe.c \
+	packet-scribe.c
 
 # corresponding headers
 DISSECTOR_INCLUDES =	\
@@ -41,5 +41,5 @@ DISSECTOR_INCLUDES =	\
 	packet-past.h \
 	packet-gcpast.h \
 	packet-replication.h \
-	packet-scribe.h \
+	packet-scribe.h
 	
