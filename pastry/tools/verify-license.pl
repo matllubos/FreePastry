@@ -94,6 +94,6 @@ EOM
    open my $fh, "|sendmail $recipient";
         print $fh $whole_msg;
 } else {
-  print "All $numFiles java files have the license. \n";	
+  print "All $numFiles java files are fine. \n";	
 }
 
