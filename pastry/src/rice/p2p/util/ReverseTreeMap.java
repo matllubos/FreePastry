@@ -144,8 +144,6 @@ public class ReverseTreeMap implements Serializable {
   }
   
   
-  Object blah = new rice.p2p.past.gc.GCPastMetadata(1096560000000L);
-  
   /**
    * Method which caputures the insert and adds it to the
    * reverse map
