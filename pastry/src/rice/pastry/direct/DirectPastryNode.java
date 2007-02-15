@@ -316,7 +316,6 @@ public class DirectPastryNode extends PastryNode {
       simulator.notifySimulatorListenersSent(m, this.getLocalHandle(), nh, delay);
       simulator.deliverMessage(m, ((DirectNodeHandle) nh).getRemote(), (DirectNodeHandle)this.getLocalHandle(),
           delay);
-      simulator.notifySimulatorListenersReceived(m, this.getLocalHandle(), nh);
     }
   }
 
