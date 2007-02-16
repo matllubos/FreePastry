@@ -735,7 +735,7 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   guint8 ccw_index[12];
   guint8 cw_index[12];
   guint32 leafset_string_length;
-  char* leafset_string;
+  gchar *leafset_string;
   guint32 leafset_string_offset;
 
   int i;
@@ -748,16 +748,30 @@ decode_leafset(tvbuff_t *tvb, proto_tree *parent_tree, gint offset, gchar *attri
   offset++;
   /*The number of NodeHandles to read*/
   num_unique_handle = tvb_get_guint8(tvb, offset);
+  if (num_unique_handle > 24){
+    proto_tree_add_text(leafset_tree, tvb, 1, -1, "Too many node handles");
+    return -1;
+  }
   proto_tree_add_uint(leafset_tree, hf_freepastry_ls_num_unique_handle,
     tvb, offset, 1, num_unique_handle);
   offset++;
   /*The number of element of the clockwise similar set*/
   num_cw_size = tvb_get_guint8(tvb, offset);
+  if (num_cw_size > 12){
+    proto_tree_add_text(leafset_tree, tvb, 1, -1, 
+      "Too many node handles in clockwise similar set");
+    return -1;
+  }
   proto_tree_add_uint(leafset_tree, hf_freepastry_ls_cw_size,
     tvb, offset, 1, num_cw_size);
   offset++;  
   /*The number of element of the counter clockwise similar set*/
   num_ccw_size = tvb_get_guint8(tvb, offset);
+  if (num_ccw_size > 12){
+    proto_tree_add_text(leafset_tree, tvb, 1, -1, 
+      "Too many node handles in counterclockwise similar set");
+    return -1;
+  }
   proto_tree_add_uint(leafset_tree, hf_freepastry_ls_ccw_size,
     tvb, offset, 1, num_ccw_size);
   offset++;
