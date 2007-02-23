@@ -53,7 +53,7 @@ import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
- * This tutorial shows how to setup a FreePastry node using the Socket Protocol.
+ * This tutorial shows how to use FreePastry 2.0's raw serialization (instead of Java Serialization).
  * 
  * @author Jeff Hoye
  */
