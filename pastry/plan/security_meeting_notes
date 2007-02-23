@@ -13,8 +13,6 @@ Quick to-dos:
 Certs don't contain IP addresses, but have to have a lifetime on the order of 1 day.  (This makes clocks required to be in sync within 1 day)
 Have to worry about PNS attack (conspiring nodes can pose as eachother to give good proximity to all their friends), make sure PR can control this, with a rule such as: "You can't accept messages from the older cert."
 
-4) Upgrading FreePastry to use Java 1.5.  And can use new features such as generics.
-    
 Open questions:
   Do we need to authenticate liveness checks.
 

@@ -1,0 +1,63 @@
+This is a proposal for an interface for the Transport Layer that will make FreePatry more maintainable and hackable (esp for PeerReview, but also for Limewire/STUN/STUNT).  Most of the work is just in defining proper interfaces, and moving the existing implementations to the interfaces.
+
+Philosophy
+  The transport layer is not Pastry Specific, but would be useful for any P2P overlay (even unstructured?).  Where possible any decisions are pushed off into a Strategy with a default implementation.  This way hackers can override the default behaviours easily.
+
+Services (What the TL provides):
+  Sending of Messages w/ Priority, but maximum message size
+  SocketChannels not "messagized" data.  (IE, no max message size)
+
+  NodeHandles (need mechanism to define Overlay specific details, such as Id)
+    Liveness
+    Epochs
+    HairPinning (strategy)
+
+  Certificates
+    (via Strategy Pattern)
+    Message for requesting Certificat
+    Crypto Strategy
+
+  SourceRouting
+    Strategy Interface for Finding Nodes
+
+  Rapid Rerouting (Strategy Interface)
+    when send() is called, has a condition under which it will be returned
+      suspected
+      faulty
+      never
+  Proximity (Strategy Interface)
+
+  Introspection:
+    Listeners for:
+      Message Sent/Received (TCP/UDP/SourceRoute)
+      Access to the Message Buffer
+      
+    Strategy for:
+      ability to sign/verify message before receiving
+
+  Modularity:
+    Factory for Socket/UDP channels (can enable easier SSH/NAT etc)
+
+  Fix:
+    Get rid of the single socket per question during bootstrapping (causes too many TCP connections)
+
+
+  
+
+Uses of SocketLayer:
+  end-to-end flow control per object/application/node-paring (object = file, application = past, node-paring = Alice -> Bob)
+  use tcp to handle congestion between such competing flows (including the one for messaging)
+    Don't want to use 1 single TCP socket, because if the bottle neck is disk in Past, we don't want to congest Scribe or FreePastry's maintenance.  Could be done with multiple queues, but then we'll have to provide our own backoff messages or acks for each "pseudo-channel".  Much simpler to use actual TCP.
+
+  
+
+
+Wire Layer (bottom):
+  
+
+Identity Layer:
+
+Wire Layer (bottom):
+  send(bytes, socketId)
+  send(Message, SourceRoute);
+  receive(

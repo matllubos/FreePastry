@@ -1,11 +1,27 @@
+look at emails for most popular applications
+  Past: 208 40 fabio.varesano@gmail.com freepastry@googlemail.com jstewart@mpi-sws.mpg.de dav176fr@yahoo.fr pintux@crs4.it milane@di.unito.it jmnisha@gmail.com reim@informatik.hu-berlin.de derDoc@gmx.de philipp.stockhammer@tu-clausthal.de enigmatic2002@gmail.com francesquini@gmail.com c.sergio@gmail.com jstewart@rice.epostmail.org mail.wli@gmail.com jstewart@cs.rice.edu svk@quantumleap.us jstewart@mpi-sb.mpg.de Gabriel.Vasile@inria.fr ntarmos@ceid.upatras.gr papagdim@ceid.upatras.gr jeffh@cs.rice.edu michel.oey@gmail.com maragkod@ceid.upatras.gr babis85@freemail.gr npoirot.ext@rd.francetelecom.com loupasak@ceid.upatras.gr liangsteve@gmail.com daniel.weber@in.tum.de rahohe@gmail.com johannou@ifi.uio.no amislove@mpi-sws.mpg.de pleng_c@hotmail.com iamnoah@gmail.com luigi@diacronic.org jane.summerxie@gmail.com jeffh@mpi-sws.mpg.de andrehoe@uni-paderborn.de kathayat_lai@yahoo.com almamou@mi.fu-berlin.de
+  Scribe: 130 33 fabio.varesano@gmail.com freepastry@googlemail.com jstewart@mpi-sws.mpg.de uchikubi@gmail.com dav176fr@yahoo.fr prithula@yahoo.com enigmatic2002@gmail.com francesquini@gmail.com animesh@cs.rice.edu jstewart@rice.epostmail.org jeffh@rice.edu jstewart@cs.rice.edu svk@quantumleap.us michal.ejdys@gmail.com jstewart@mpi-sb.mpg.de thomas.darcet@mines.inpl-nancy.fr jeffh@cs.rice.edu ss47314029@hotmail.com brinksmeier@upb.de npoirot.ext@rd.francetelecom.com SuryaBahadur.Kathayat@ait.ac.th mac.ibook@gmail.com firefly8003@gmail.com luigi@diacronic.org ss47314029@163.com jane.summerxie@gmail.com jeffh@mpi-sws.mpg.de emg@quantumleap.us kathayat_lai@yahoo.com kav@it.edu dsandler@cs.rice.edu bzahler@students.unibe.ch jean.f.cloutier@gmail.com
+  Splitstream: 45 10 freepastry@googlemail.com jstewart@rice.epostmail.org lufe@jd06-coah.ife.org.mx mindtriggerz@gmail.com jeffh@mpi-sws.mpg.de npoirot.ext@orange-ft.com thomas.darcet@mines.inpl-nancy.fr shwlai@gmail.com Andrea.Busa@diit.unict.it mac.ibook@gmail.com
+
+spec out transport layer
+PR overhead under attack
+Constrained Routing Table Pseudocode
+  cost of CRT:
+    a) Joining from multiple bootstraps
+    b) Maintenance overhead (how do we actually exploit CRT symmetry?)
+    
+update andreas' codebase
+update version numbers, tag
+
+
+
 documentation:
   wireshark (document that this is gpl, not freebsd-based)
   Tutorials:
-    setDaemon() does the opposite of what is described in FreePastry.
     rawserialization tutorials
     SplitStream
     Scribe Policies
-    Environment      
+    Environment
     update all simulation tutorials to use the new maxSpeed mechanism
     build a tutorial to use new features: appsockets, raw serialization, forwarding, direct
     update tutorial 7 to include xmlpp...
@@ -66,9 +82,9 @@ documentation:
 	    review/update wikipedia entry on Pastry/FreePastry
   
   
-play with findbugs more
 
 small projects:
+  play with findbugs more
   consider replacing RedBlackMap as Kasper suggests 11/17/06
   see if routing table is an observer on the NodeHandle... mayhap it should be, but will break my routing table test.  Maybe a flag to disable this.
     does this work in the simulator?
@@ -95,15 +111,17 @@ small projects:
      If there is no "left(-most) neighbor", make it probe the first neighbor on the right    
 	nightly build:
 	  check on deprecation messages when build
-	  build actual release  
-	  automated tests    
+	  more automated tests    
 	  egrep -r 'logger\.level' src/rice | egrep -v '<=' | wc -l // should be zero
 	  egrep -r 'com\.sun\.rsasign\.r' src/rice | wc -l // should be zero
 	  Past put/get hammer. 
 		get the NAT test (uml linux) 
 		  in the repository
 		  in the nightly regression
-    some script to complain when code isn't pretty    
+    some script to complain when code isn't pretty  
+    check for no tabs, no dos files
+    emacs formatting to all java files
+    binary versions of the wireshark plugin (windows, linux, mac)      
 	update consistency viewer/automate test/scripts more
 	  see why the html/visual colors are different  
   	gnuplot> load "~/planetlab/plcons/splitstream.plot"
@@ -111,19 +129,31 @@ small projects:
 major project outlines
   security:
     certificate service (make sure is compatible with PR,ePost,SSL) // this is not the implementation of the CA, just the ability to use Certificates in FP
-      Evaluate the cost of Checking Certified node Ids      
+      Evaluate the cost of Checking Certified node Ids   
+      revokation   
     SSL option?: (TCP Hijack, Sniff Traffic) (have key distribution problem)
-    look for problems that can compromise a pastry node (bugs/implementation limitations, not algorithimic issues)
+    look for problems that can compromise/take_down a pastry node (bugs/implementation limitations, not algorithimic issues)
 	    Socket Layer:
 	      Better management of FileDescriptors (current impl can be clobbered by opening lots of sockets and not writing data, creates too many FDs and causes FP to crash in some random location.)
 	 			Buffer Overflow? (In Java this would be an OutOfMemoryError by allocating too large a message buffer.)
+	 			Bogus liveness updates via source routed nodes?
+	 			  don't use timestamps in the message, rather a hash-code.  This prevents nodes from claiming long liveness in the future
+	 			  forged WrongEpochAddressMessage
+	 			FD overflow
+	 			  Bogus streams that do something nasty, or take up FDs forever
+	 			Attacks on Node State:
+	 			  verify integrity of data in leafset/rt, cant be filled with bogus values by using certificates that have expirations and assume loosely synchronized clocks?
+	 			  attacks on consistency?  not source routing?  PR?	 			  
+	 			Enforce closed network:
+	 			  TCP, but use Certs
+	 			  SSL (also use certs)
 	    Service Layer:
 	      examine Scribe/Past for sources of Attack...	      
  		Pastry Layer (protocol additions):	   
       Secure Routing Primitive
       PeerReview
       Eclipse Resistance    
-    PeerReview
+    State machine/protocol compliance: PeerReview 
       Evaluate cost of PeerReview
         in various attacks, such as ignoring all messages except from the witnesses
     Secure Routing/Bobby's thing
