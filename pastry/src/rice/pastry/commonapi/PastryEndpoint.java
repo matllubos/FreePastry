@@ -96,7 +96,11 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 //  }
   
   public PastryEndpoint(PastryNode pn, Application application, String instance, int address, boolean register) {
-    super(pn, instance, address == 0 ? StandardAddress.getAddress(application.getClass(),instance,pn.getEnvironment()): address, null, pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance));
+    super(pn, 
+        instance, 
+        address == 0 ? StandardAddress.getAddress(application.getClass(),instance,pn.getEnvironment()): address, 
+        null, 
+        pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance == null ? "-endpoint" : instance+"-endpoint"));
 //    super(pn, application.getClass().getName() + instance, address, null);
     appDeserializer = deserializer; // use this as the apps default deserializer
     deserializer = new PEDeserializer();
