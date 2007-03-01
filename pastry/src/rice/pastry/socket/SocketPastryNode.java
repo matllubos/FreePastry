@@ -73,7 +73,7 @@ public class SocketPastryNode extends DistPastryNode {
    * 
    * @param id The NodeId of this Pastry node.
    */
-  public SocketPastryNode(Id id, Environment e) {
+  protected SocketPastryNode(Id id, Environment e) {
     super(id, e);
   }
 
