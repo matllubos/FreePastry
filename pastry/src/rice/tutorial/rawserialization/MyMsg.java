@@ -84,14 +84,24 @@ public class MyMsg implements RawMessage {
     return TYPE;
   }
 
+  /**
+   * Deserializing constructor.  This does the "real" deserialization.
+   * 
+   * @param buf
+   * @param endpoint
+   * @throws IOException
+   */
   public MyMsg(InputBuffer buf, Endpoint endpoint) throws IOException {
     from = endpoint.readId(buf, buf.readShort()); 
     to = endpoint.readId(buf, buf.readShort()); 
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
+    // serialize from, and its type
     buf.writeShort(from.getType());
     from.serialize(buf);
+    
+    // serialize to, and its type
     buf.writeShort(to.getType());
     to.serialize(buf);    
   }

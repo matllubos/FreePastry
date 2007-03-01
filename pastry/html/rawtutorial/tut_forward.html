@@ -1,0 +1,100 @@
+<html><head>
+  <title>FreePastry Tutorial</title>
+  <link rel="stylesheet" href="tutorial.css" />
+</head>
+<body>
+
+<div class="content">
+<div class="frontmatter">
+
+<h1>The FreePastry Tutorial.</h1>
+
+<div class="abstract">This tutorial is designed to get you cooking quickly with the FreePastry
+API and software toolkit.</div>
+
+<h4>Version @tutorial_version@; @tutorial_date@.  For <a
+href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Maintained by @maintainer@.</h4>
+
+</div>
+
+<div class="nav">
+  <span class="nav-left"><a href="tut_raw_serialization2.html">Previous (Raw Serialization 2)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="index.html">Next (Contents)</a></span>
+</div><br/><hr/>
+
+A powerful feature of Key Based Routing in the commonAPI is the ability for your application to intercept and modify a routed message along its path to the key.  For example, Past uses this feature to cache popular immutable data along the lookup path.  Scribe uses it to implement anycast.  
+
+<h3>Download the tutorial files: 
+<a href="./src/rawserialization2/DistTutorial.java">DistTutorial.java</a>
+<a href="./src/rawserialization2/MyApp.java">MyApp.java</a>,
+<a href="./src/rawserialization2/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/rawserialization2/.</h3>
+
+<p/>In previous tutorials, you had to implement the <code>forward()</code> method because it is part of the Application interface, but we didn't do anything with it except return true.  In this tutorial, we will add a "passport" to MyMsg.java.  Each hop along ther route will add its NodeHandle to the MyMsg so that the destination can see how the message got there.
+
+<p/>First, we'll take a look at the changes to MyMsg from tutorial 4.  We added the passport (an ArrayList), and modified the toString to print the path.  We also created the <code>addHop()</code> method which simply appends the NodeHandle to the passport.
+
+<pre>
+  ArrayList passport = new ArrayList();
+  public void addHop(NodeHandle hop) {
+    passport.add(hop);
+  }
+
+  public String toString() {
+    String path = "";
+    for (int i = 0; i < passport.size(); i++) {
+      path+=passport.get(i)+",";
+    }
+    return "MyMsg along path "+path;
+  }
+</pre>
+
+<i>Note that we are using Java Serialization.  If you extend the RawSerialization tutorial to have this function, you will need to encode the passport in the serialize() method and the deserialization constructor.</i>
+
+<p/>Now we need MyApp to call <code>addHop()</code> on the message at each hop.  To improve performance, FreePastry only deserializes the message along the intermediate hops if you actually examine/modify the message.  For this reason, we have to first deserialize the internal message before we can modify it.
+
+<pre>
+    try {
+      MyMsg msg = (MyMsg)message.getMessage(endpoint.getDeserializer());
+    } catch (IOException ioe) {
+      ioe.printStackTrace(); 
+    }
+</pre>
+
+Note that we assume the message will be the MyMsg.  If your application routes multiple messages, you will have to do one of the following to disambiguate the messages:
+<ul>
+  <li>If you are using java serialization, use instanceof to determine which message it is.</li>
+  <li>If you are using raw serialization, cast the returned message to a RawMessage, and call <code>getType()</code></li>
+</ul>
+
+Now that we've deserialized the message, just call <code>addHop()</code> with our NodeHandle.
+
+<pre>
+      msg.addHop(endpoint.getLocalNodeHandle());
+</pre>
+
+<p/>Finally, we return <i>true</i> to tell the message to continue to be forwarded.  If the message can be satisfied at this hop, we can return <i>false</i>.  This will cause the message to be delivered to your application on the local node rather than forwarding it to the next hop.  
+
+<pre>
+    return true;
+</pre>
+
+<p/>Note: You may need to increase the size of the network to be able to see more than 1 hop in the passport.  Do this by increasing the number of nodes when you execute the DistTutorial. (The last parameter.)
+
+<h3>Congratulations!  You have learned to intercept messages along a route path!</h3>
+
+<hr/>
+<div class="nav">
+  <span class="nav-left"><a href="tut_raw_serialization2.html">Previous (Raw Serialization 2)</a></span> 
+  <span class="nav-center"><a href="index.html">Contents</a></span> 
+  <span class="nav-right"><a href="index.html">Next (Contents)</a></span>
+</div><br/>
+
+<div class="footer">
+Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.
+&nbsp;&nbsp;&nbsp; For FreePastry @freepastry_version@. &nbsp;&nbsp;&nbsp; Maintained by @maintainer@.
+</div>
+
+</div>
+</body>
+</html>

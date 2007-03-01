@@ -23,14 +23,156 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
   <span class="nav-right"><a href="tut_raw_serialization2.html">Next (Raw Serialization 2)</a></span>
 </div><br/><hr/>
 
+<a name="raw"><h1>Raw Serialization</h1></a>
+<h2>Adding Raw Serialization to an existing Application.</h2>
+<h3>Download the tutorial files: 
+<a href="./src/rawserialization/DistTutorial.java">DistTutorial.java</a>
+<a href="./src/rawserialization/MyApp.java">MyApp.java</a>,
+<a href="./src/rawserialization/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/rawserialization/.</h3>
 
+<p/>This tutorial will show you how to modify the code from <a href="">Lesson 4</a> to use the raw serialization mechanism introduced in FreePastry 2.0.  Previous imlementations of FreePastry relied on Java Serialization for the message format.  Java Serialization requried very little work to create a new message, and handled circular references.  Unfortunately, it created a lot of overhead: cpu, memory, and bandwidth.  To provide reverse compatibility and keep the existing ease of use, we continue to support Java Serialization.  As this tutorial will show, upgrading your applications to use raw serialization is simple and requires a minimum of code changes, though these changes must be made to every message in your application.<br/>
+
+<h3>Overview:</h3>
+<p/>When you send a raw serializable message, FreePastry will call the <code>serialialize()</code> method on this object with an <a href="#outputbuffer">OutputBuffer</a>.  The OutputBuffer interface has the most common calls that you will need for serialization.  To deserialize the message, your application will install a <a href="#messagedeserializer">MessageDeserializer</a> on the endpoint.  When your application receives the message (on another node) your MessageDeserializer's <code>deserialize()</code> method will be called with an InputBuffer.  InputBuffer has the corresponding functions to the OutputBuffer.  Special commonAPI objects such as NodeHandle and Id have serialize methods on them that take the OutputBuffer.  The Endpoint provides special methods to deserialzie these special objects.  We will see how to serialize/deserialize an Id in the tutorial.<br/> 
+
+Here's what we must do to add raw serialization to MyApp:
+<ul>
+  <li>There is no change between the DistTutorial.java files in the 2 tutorials.</li>
+  <li>Add Serialization code to MyMsg.java.</li>
+  <li>And to add deserialization code to MyApp.java.</li>
+</ul>
+
+<a name="outputbuffer"><h3>OutputBuffer</h3></a>
+The OutputBuffer does the work of converting java's primitive types to bytes, so you don't have to.  Here is the OutputBuffer interface.  The InputBuffer has corresponding <code>readXXX()</code> methods.
+<pre>
+  void write(byte[] b, int off, int len) throws IOException;
+  void writeBoolean(boolean v) throws IOException;
+  void writeByte(byte v) throws IOException;
+  void writeChar(char v) throws IOException;
+  void writeDouble(double v) throws IOException;
+  void writeFloat(float v) throws IOException;
+  void writeInt(int v) throws IOException;
+  void writeLong(long v) throws IOException;
+  void writeShort(short v) throws IOException;
+  void writeUTF(String str) throws IOException; // based on java's modified UTF format
+  
+  int bytesRemaining(); // how much space is left in the buffer
+</pre>
+
+<h3>Serialilze MyMsg.java</h3>
+<h4>Implement RawMessage.</h4>
+RawMessage extends Message, and tells FreePastry/commonAPI to use the special serialization rather than Java Serialization.  It adds the <code>getType()</code> and <code>serialize()</code> methods to Message.  
+<pre>
+public class MyMsg implements RawMessage {
+</pre>
+Type:
+<p/>The type is a unique short for each message in your Application.  The purpose is to disambiguate the different messages so they can be properly deserialized.  It is not necessary for the type to be globally unique as FreePastry routes the message to the appropriate application before the type is used.  Since MyApp only uses the MyMsg, we will choose the type 1 for this message.  
+<p/><i>Note that FreePastry reserves type 0 for java serialized messages.  Setting a message as type 0 will cause an error.</i>  
+<p/>It is a good idea to define the TYPE as a static final short so that it can be used later in the deserializer.
+
+<pre>
+  protected static final short TYPE = 1;
+
+  ...
+
+  public short getType() {
+    return TYPE;
+  }
+</pre>  
+  
+<p/>The only things we need to serialize in MyMsg are the from and to fields.  These fields are both Ids.  There are a few types of ids in FreePastry.  In this application, we could assume that the type was Id.TYPE.  However, to make this more portable, and to demonstrate how to use the OutputBuffer we will also store each Id type in the serialized message.  
+<p/>For the java primitives, you simply need to call the appropriate <code>buf.writeXXX()</code> on the OutputBuffer.  Special objects in the commonAPI such as Id have a <code>serialize()</code> method on them.  To serialize these special types, just call <code>serialize()</code> on them with the OutputBuffer.  Here is how we serialize the Ids.
+
+<pre>
+  public void serialize(OutputBuffer buf) throws IOException {
+    // serialize from, and its type
+    buf.writeShort(from.getType());
+    from.serialize(buf);
+    
+    // serialize to, and its type
+    buf.writeShort(to.getType());
+    to.serialize(buf);    
+  }
+</pre>
+
+We added a new constructor to MyMsg.java as well, but we will return to this later in the tutorial.
+
+<a name="messagedeserializer"><h3>Install a MessageDeserializer in MyApp.java</h3></a>
+The MessageDeserializer interface has 1 method, <code>deserialize()</code>.  It provdes you with an InputBuffer and your Message's type which you specified in the <code>getType()</code> method above.  
+
+<pre>
+  /**
+   * Typical implementation:
+   * 
+   * RawMessage ret = super.deserialize();
+   * if (ret != null) return ret;
+   *
+   * Endpoint endpoint;
+   * switch(type) {
+   *    case 1:
+   *      return new MyMessage(buf, endpoint);
+   * }
+   * 
+   * @param buf accessor to the bytes
+   * @param type the message type, defined in RawMessage.getType()
+   * @param priority the priority of the message
+   * @param sender the sender of the Message (may be null if not specified).
+   * @return The deserialized message.
+   * @throws IOException
+   */
+  Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException;
+</pre>
+
+You should install the deserializer on the endpoint before registering your application, otherwise you may receive messages before installing the deserializer which will result in an exception.  Here is how to do this:
+
+<pre>
+    this.endpoint = node.buildEndpoint(this, "myinstance");
+    
+    endpoint.setDeserializer(/* the deserializer */);
+
+    this.endpoint.register();
+</pre>
+
+Here is our implementation (using an anonymous inner class).  We simply create a switch statement (in case we want to add additional Messages in the future) and then call the Message specific constructor with the InputBuffer.  Note that we could have done the deserialization here, but using a constructor is generally better because it keeps the serialization/deserialization code together in the Message.
+
+<pre>
+    new MessageDeserializer() {
+    
+      public Message deserialize(InputBuffer buf, short type, int priority,
+          NodeHandle sender) throws IOException {
+        switch (type) {
+        case MyMsg.TYPE:
+          // just call the special deserialization constructor.
+          return new MyMsg(buf, endpoint);
+        }
+        // maybe throw an IOException if you want
+        return null;
+      }    
+    }
+</pre>
+
+<h3>Deserialize MyMsg.java</h3>
+Here is the new "deserialization constructor."  We use <code>endpoint.readId()</code> to deserialize an Id.  <code>readId()</code> needs a type for the id to disambiguate with other types of Ids, such as MultiRingId.  Fortunately we have serialized this in with the message.  We call <code>buf.readShort()</code> to get the Id type necessary to call <code>readId()</code>.
+
+Here is the implementation to deserialize the to and from.
+
+<pre>
+  public MyMsg(InputBuffer buf, Endpoint endpoint) throws IOException {
+    from = endpoint.readId(buf, buf.readShort()); 
+    to = endpoint.readId(buf, buf.readShort()); 
+  }
+</pre>
+
+<h3>Congratulations!  You have just updated your application to use the new raw serialization format available in FreePastry 2.0!</h3>
 
 <hr/>
+
 <div class="nav">
   <span class="nav-left"><a href="tut_splitstream.html">Previous (SplitStream)</a></span> 
   <span class="nav-center"><a href="index.html">Contents</a></span> 
   <span class="nav-right"><a href="tut_raw_serialization2.html">Next (Raw Serialization 2)</a></span>
 </div><br/>
+
 
 <div class="footer">
 Pastry tutorial version @tutorial_version@. &nbsp;&nbsp;&nbsp; Last updated @tutorial_date@.

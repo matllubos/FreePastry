@@ -75,16 +75,18 @@ public class MyApp implements Application {
     // We are only going to use one instance of this application on each PastryNode
     this.endpoint = node.buildEndpoint(this, "myinstance");
     
-    // TODO: better documentation
     endpoint.setDeserializer(new MessageDeserializer() {
     
       public Message deserialize(InputBuffer buf, short type, int priority,
           NodeHandle sender) throws IOException {
-        if (type == MyMsg.TYPE)
+        switch (type) {
+        case MyMsg.TYPE:
+          // just call the special deserialization constructor.
           return new MyMsg(buf, endpoint);
+        }
+        // maybe throw an IOException if you want
         return null;
-      }
-    
+      }    
     });
     this.node = node;
     

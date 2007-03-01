@@ -52,8 +52,6 @@ import rice.p2p.util.rawserialization.JavaSerializer;
  * @author Jeff Hoye
  */
 public class MyMsg extends LookupMessage {
-  protected static final short TYPE = 1;
-  
   /**
    * Where the Message came from.
    */
@@ -81,10 +79,6 @@ public class MyMsg extends LookupMessage {
    */
   public int getPriority() {
     return Message.LOW_PRIORITY;
-  }
-
-  public short getType() {
-    return TYPE;
   }
 
   public void serialize(OutputBuffer buf) throws IOException {

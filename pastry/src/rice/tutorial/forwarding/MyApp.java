@@ -42,6 +42,8 @@ advised of the possibility of such damage.
  */
 package rice.tutorial.forwarding;
 
+import java.io.IOException;
+
 import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.Id;
@@ -118,13 +120,15 @@ public class MyApp implements Application {
   }
   
   /**
-   * Called a message travels along your path.
-   * Don't worry about this method for now.
+   * @return true if it should continue along the path.  false will deliver it locally
    */
-  @SuppressWarnings("deprecation")
   public boolean forward(RouteMessage message) {
-    MyMsg msg = (MyMsg)message.getMessage();
-    msg.addHop(endpoint.getLocalNodeHandle());    
+    try {
+      MyMsg msg = (MyMsg)message.getMessage(endpoint.getDeserializer());
+      msg.addHop(endpoint.getLocalNodeHandle());    
+    } catch (IOException ioe) {
+      ioe.printStackTrace(); 
+    }
     return true;
   }
   
