@@ -37,7 +37,7 @@ advised of the possibility of such damage.
 /*
  * Created on May 4, 2005
  */
-package rice.tutorial.lesson6;
+package rice.tutorial.scribe;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.Application;
@@ -100,7 +100,7 @@ public class MyScribeClient implements ScribeClient, Application {
     this.endpoint = node.buildEndpoint(this, "myinstance");
 
     // construct Scribe
-    myScribe = new ScribeImpl(node,"lesson6instance");
+    myScribe = new ScribeImpl(node,"myScribeInstance");
 
     // construct the topic
     myTopic = new Topic(new PastryIdFactory(node.getEnvironment()), "example topic");

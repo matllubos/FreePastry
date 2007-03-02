@@ -37,7 +37,7 @@ advised of the possibility of such damage.
 /*
  * Created on Jun 24, 2005
  */
-package rice.tutorial.lesson7;
+package rice.tutorial.past;
 
 import java.io.IOException;
 import java.net.*;
@@ -66,7 +66,7 @@ public class PastTutorial {
   Vector apps = new Vector();
 
   /**
-   * Based on the rice.tutorial.lesson6.ScribeTutorial
+   * Based on the rice.tutorial.scribe.ScribeTutorial
    * 
    * This constructor launches numNodes PastryNodes. They will bootstrap to an
    * existing ring if one exists at the specified location, otherwise it will
@@ -228,8 +228,8 @@ public class PastTutorial {
 
   /**
    * Usage: java [-cp FreePastry- <version>.jar]
-   * rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes
-   * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
+   * rice.tutorial.past.PastTutorial localbindport bootIP bootPort numNodes
+   * example java rice.tutorial.past.PastTutorial 9001 pokey.cs.almamater.edu 9001 10
    */
   public static void main(String[] args) throws Exception {
     // Loads pastry configurations
@@ -256,9 +256,9 @@ public class PastTutorial {
       // remind user how to use
       System.out.println("Usage:");
       System.out
-          .println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes");
+          .println("java [-cp FreePastry-<version>.jar] rice.tutorial.past.PastTutorial localbindport bootIP bootPort numNodes");
       System.out
-          .println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
+          .println("example java rice.tutorial.past.PastTutorial 9001 pokey.cs.almamater.edu 9001 10");
       throw e;
     }
   }

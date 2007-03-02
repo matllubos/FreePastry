@@ -34,7 +34,7 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.tutorial.lesson6;
+package rice.tutorial.scribe;
 
 import java.io.IOException;
 import java.net.*;
@@ -213,9 +213,9 @@ public class ScribeTutorial {
       // remind user how to use
       System.out.println("Usage:");
       System.out
-          .println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson6.ScribeTutorial localbindport bootIP bootPort numNodes");
+          .println("java [-cp FreePastry-<version>.jar] rice.tutorial.scribe.ScribeTutorial localbindport bootIP bootPort numNodes");
       System.out
-          .println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
+          .println("example java rice.tutorial.scribe.ScribeTutorial 9001 pokey.cs.almamater.edu 9001 10");
       throw e;
     }
   }

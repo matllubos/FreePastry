@@ -35,43 +35,43 @@ advised of the possibility of such damage.
 
 *******************************************************************************/ 
 /*
- * Created on Jun 27, 2005
+ * Created on May 4, 2005
  */
-package rice.tutorial.lesson7;
+package rice.tutorial.scribe;
 
-import rice.p2p.commonapi.Id;
-import rice.p2p.past.ContentHashPastContent;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.scribe.ScribeContent;
 
 /**
  * @author Jeff Hoye
  */
-public class MyPastContent extends ContentHashPastContent {
+public class MyScribeContent implements ScribeContent {
+  /**
+   * The source of this content.
+   */
+  NodeHandle from;
   
   /**
-   * Store the content.
-   * 
-   * Note that this class is Serializable, so any non-transient field will 
-   * automatically be stored to to disk.
+   * The sequence number of the content.
    */
-  String content;
-    
+  int seq;
+  
   /**
-   * Takes an environment for the timestamp
-   * An IdFactory to generate the hash
-   * The content to be stored.
+   * Simple constructor.  Typically, you would also like some
+   * interesting payload for your application.
    * 
-   * @param idf to generate a hash of the content
-   * @param content to be stored
+   * @param from Who sent the message.
+   * @param seq the sequence number of this content.
    */
-  public MyPastContent(Id id, String content) {
-    super(id);
-    this.content = content;
+  public MyScribeContent(NodeHandle from, int seq) {
+    this.from = from;
+    this.seq = seq;
   }
-  
+
   /**
-   * A descriptive toString()
+   * Ye ol' toString() 
    */
   public String toString() {
-    return "MyPastContent ["+content+"]";
-  }
+    return "MyScribeContent #"+seq+" from "+from;
+  }  
 }

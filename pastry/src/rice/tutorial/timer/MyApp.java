@@ -37,7 +37,7 @@ advised of the possibility of such damage.
 /*
  * Created on Apr 15, 2005
  */
-package rice.tutorial.lesson5;
+package rice.tutorial.timer;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.Application;

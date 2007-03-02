@@ -18,17 +18,17 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
 </div>
 
 <div class="nav">
-  <span class="nav-left"><a href="tut_timertask.html">Previous (Timer)</a></span> 
+  <span class="nav-left"><a href="tut_timertask.html#timer">Previous (Timer)</a></span> 
   <span class="nav-center"><a href="index.html">Contents</a></span> 
-  <span class="nav-right"><a href="tut_past.html">Next (Past)</a></span>
+  <span class="nav-right"><a href="tut_past.html#past">Next (Past)</a></span>
 </div><br/><hr/>
 
-<a name="lesson6"></a><h1>Lesson 6</h1>
+<a name="scribe"><h1>Scribe</h1></a>
 <h2>Introducing Scribe.</h2>
 <h3>Download the tutorial files: 
-<a href="./src/lesson6/MyScribeClient.java">MyScribeClient.java</a>,
-<a href="./src/lesson6/MyScribeContent.java">MyScribeContent.java</a>,
-<a href="./src/lesson6/ScribeTutorial.java">ScribeTutorial.java</a> into a directory called rice/tutorial/lesson6/.</h3>
+<a href="./src/scribe/MyScribeClient.java">MyScribeClient.java</a>,
+<a href="./src/scribe/MyScribeContent.java">MyScribeContent.java</a>,
+<a href="./src/scribe/ScribeTutorial.java">ScribeTutorial.java</a> into a directory called rice/tutorial/scribe/.</h3>
 
 <p/>Scribe is an application that allows you to subscribe to groups and publish messages to that group.  This tutorial will show you how to get scribe up and running.  You will learn how to do the following:
 <ul>
@@ -39,10 +39,8 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
  <li><a href="#l6Receive">Receive content.</a></li>
  <li><a href="#l6Anycast">Anycast content.</a></li>
  <li><a href="#l6Tree">Introspect into the tree.</a></li>
+ <li>Advanced Scribe Lesson: Policies, will show you how to control tree formation and anycast selection.</li>
 </ul>
-
-
-Lesson 9: Advanced Scribe: Policies, will show you how to control tree formation and anycast selection.
 
 <h2>Terms:</h2>
 <ul>
@@ -67,7 +65,7 @@ This constructs a topic with the "common name" of "example topic".  It uses the 
 appropriate Id for this topic. 
 
 <a name="l6Client"></a><h3>Creating a ScribeClient.</h3>
-Let's take a look at MyScribeClient.  We are only going to subscribe to a single topic.  We are going to publish content every 5 seconds using the FreePastry timer.  See <a href="tut_timertask.html#lesson5">Lesson 5</a> for more details on the timer.  The client is also going to implement rice.p2p.commonapi.Application in addition to rice.p2p.scribe.ScribeClient.  This will allow us to send and receive non-scribe messages should this be important.  Specifically it will allow us to receive messages queued on the timer.<br/><br/>
+Let's take a look at MyScribeClient.  We are only going to subscribe to a single topic.  We are going to publish content every 5 seconds using the FreePastry timer.  See <a href="tut_timertask.html#timer">Timer</a> for more details on the timer.  The client is also going to implement rice.p2p.commonapi.Application in addition to rice.p2p.scribe.ScribeClient.  This will allow us to send and receive non-scribe messages should this be important.  Specifically it will allow us to receive messages queued on the timer.<br/><br/>
 Here's the constructor and some member variables:
 <pre>
   Scribe myScribe;
@@ -78,7 +76,7 @@ Here's the constructor and some member variables:
     this.endpoint = node.buildEndpoint(this, "myinstance");
 
     // construct Scribe
-    myScribe = new ScribeImpl(node,"lesson6instance");
+    myScribe = new ScribeImpl(node,"myScribeInstance");
 
     // construct the topic
     myTopic = new Topic(new PastryIdFactory(node.getEnvironment()), "example topic");
@@ -88,10 +86,10 @@ Here's the constructor and some member variables:
     endpoint.register();
   }
 </pre>
-The only thing that should be new here is the construction of the ScribeImpl and Topic.  The instance name "lesson6instance" allows you to remain independent of other applications running on the 
+The only thing that should be new here is the construction of the ScribeImpl and Topic.  The instance name "myScribeInstance" allows you to remain independent of other applications running on the 
 same ring who also use scribe.  They will have their own instance of Scribe that won't be confused with your instance.<br/>
 
-In this example, one of the nodes is going to publish content every 5 seconds.  We use the timer pattern described in Lesson 5.  Each time we are going to send 1 
+In this example, one of the nodes is going to publish content every 5 seconds.  We use the timer pattern described in the Timer tutorial.  Each time we are going to send 1 
 multicast, and 1 anycast.
 <pre>
   class PublishContent implements Message {
@@ -109,7 +107,7 @@ multicast, and 1 anycast.
     }
   }
 </pre>
-In case you forgot, the <code>PublishContent</code> is similar to Lesson 5's <code>MessageToSelf</code>.  
+In case you forgot, the <code>PublishContent</code> is similar to the Timer tutorial's <code>MessageToSelf</code>.  
 The <code>startPublishTask()</code> method schedules this to be delivered locally every 5 seconds.
 The <code>deliver(id,message)</code> method calls <code>sendMulticast()</code> when the <code>PublishMethod</code> is received.  
 In your application you will likely have some other event that causes content to be published.
@@ -321,7 +319,7 @@ The parameters are identical to those in Lesson 4:
 Your output will resemble:
 
 <pre>
-<span class="input">java -cp .:FreePastry-@freepastry_version@.jar rice.tutorial.lesson6.ScribeTutorial 9001 10.9.8.7 9001 10</span>
+<span class="input">java -cp .:FreePastry-@freepastry_version@.jar rice.tutorial.scribe.ScribeTutorial 9001 10.9.8.7 9001 10</span>
 <span class="output">:1122932166578:Error connecting to address /10.9.8.7:9001: java.net.ConnectException: Connection refused: no further information
 :1122932166578:No bootstrap node provided, starting a new ring...
 Finished creating new node SocketNodeHandle (&lt;0x489BCB..&gt;/FOO/10.9.8.7:9001 [3776408266594462189])
@@ -397,9 +395,9 @@ Note that anycast is called on different nodes until a node returns true.<br/>
 <h3>Congratulations!  You have built and run your first scribe application!<br>
 
 <hr/><div class="nav">
-  <span class="nav-left"><a href="tut_timertask.html">Previous (Timer)</a></span> 
+  <span class="nav-left"><a href="tut_timertask.html#timer">Previous (Timer)</a></span> 
   <span class="nav-center"><a href="index.html">Contents</a></span> 
-  <span class="nav-right"><a href="tut_past.html">Next (Past)</a></span>
+  <span class="nav-right"><a href="tut_past.html#past">Next (Past)</a></span>
 </div><br/>
 
 <div class="footer">
