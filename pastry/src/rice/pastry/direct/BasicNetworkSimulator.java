@@ -516,16 +516,17 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   }
 
   public void notifySimulatorListenersReceived(Message m, NodeHandle from, NodeHandle to) {
-    List<SimulatorListener> temp;
-    
-    // so we aren't holding a lock while iterating/calling
-    synchronized(listeners) {
-       temp = new ArrayList<SimulatorListener>(listeners);
-    }
-  
-    for(SimulatorListener listener : temp) {
-      listener.messageReceived(m, from, to);
-    }
+    // todo, revert this when fp2.0 is released
+//    List<SimulatorListener> temp;
+//    
+//    // so we aren't holding a lock while iterating/calling
+//    synchronized(listeners) {
+//       temp = new ArrayList<SimulatorListener>(listeners);
+//    }
+//  
+//    for(SimulatorListener listener : temp) {
+//      listener.messageReceived(m, from, to);
+//    }
   }
 
 }

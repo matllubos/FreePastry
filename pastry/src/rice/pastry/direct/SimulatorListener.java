@@ -67,5 +67,6 @@ public interface SimulatorListener {
    * @param from the source.
    * @param to the destination
    */
-  public void messageReceived(Message m, NodeHandle from, NodeHandle to);
+  // TODO: revert this when FP2.0 is released, as well as the bottom of BasicNetworkSimulator
+//  public void messageReceived(Message m, NodeHandle from, NodeHandle to);
 }
