@@ -241,7 +241,7 @@ public class StandardRouter extends PastryAppl {
           // we found someone closer, turn on rapid rerouting
           msg.getOptions().setRerouteIfSuspected(true);
         } else {
-          // we didn't find anyone better, don't reroue if suspected, 
+          // we didn't find anyone better, don't reroute if suspected, 
           // cause everyone is suspected
           msg.getOptions().setRerouteIfSuspected(false);            
         }
