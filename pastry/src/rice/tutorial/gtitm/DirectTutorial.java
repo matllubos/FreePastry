@@ -77,13 +77,13 @@ public class DirectTutorial {
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
-    NetworkSimulator ns = new GenericNetwork(env, new File(fileName));
+    NetworkSimulator simulator = new GenericNetwork(env, new File(fileName));
     
     // limit the max speed so the simulation doesn't run away
-    ns.setMaxSpeed(1.0f);
+    simulator.setMaxSpeed(1.0f);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.direct, from a file
-    PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, ns, env);
+    PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, simulator, env);
 
     // create the handle to boot off of
     NodeHandle bootHandle = null;
@@ -98,7 +98,7 @@ public class DirectTutorial {
       bootHandle = node.getLocalHandle();
         
       // accelerate the simulation as we give it more work
-      ns.setMaxSpeed(curNode+1);
+      simulator.setMaxSpeed(curNode+1);
       
       // the node may require sending several messages to fully boot into the ring
       synchronized(node) {
@@ -125,7 +125,7 @@ public class DirectTutorial {
     env.getTimeSource().sleep(10000);
 
     // let it go at full speed
-    ns.setFullSpeed();
+    simulator.setFullSpeed();
     
     // route 10 messages
     for (int i = 0; i < 10; i++) {
