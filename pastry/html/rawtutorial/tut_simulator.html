@@ -31,7 +31,7 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
 <a href="./src/direct/MyMsg.java">MyMsg.java</a> into a directory called rice/tutorial/direct/.</h3>
 
   <p>Before completing this Tutorial, we recommend completing <a href="tut_multiple_nodes.html#lesson4">Lesson 4</a> of the FreePastry tutorial.</p>
-  <p>FreePastry's Simulator is a Discreet Event Simulator.  The puropse of this tutorial is to show you how to test/simulate your application on a medium sized network ( < 100,000 Nodes) with a minimum of complications/chages to your code.  If you followed the advice of the FreePastry tutorial up to this point, it should be very easy to test your code in the simulator.  Before we continue, let's list what FreePastry's simulator does and doesn't do:
+  <p>FreePastry's Simulator is a Discreet Event Simulator.  The puropse of this tutorial is to show you how to test/simulate your application on a medium sized network ( < 100,000 Nodes) with a minimum of complications/changes to your code.  If you followed the advice of the FreePastry tutorial up to this point, it should be very easy to test your code in the simulator.  Before we continue, let's list what FreePastry's simulator does and doesn't do:
   
 <h3>What the simulator does:</h3>
 <ul>
@@ -64,12 +64,22 @@ Here is the change to the PastryNodeFactory.
 has been changed to:
 
 <pre>
-  PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, new EuclideanNetwork(env), env);
+    // create a new network
+    NetworkSimulator simulator = new EuclideanNetwork(env);
+
+    // set the max speed of the simulator so we can create several nodes in a short amount of time
+    // by default the simulator will advance very fast while we are slow on the main() thread
+    simulator.setMaxSpeed(1.0f);
+    
+    // construct the PastryNodeFactory, this is how we use rice.pastry.direct, with a Euclidean Network
+    PastryNodeFactory factory = new DirectPastryNodeFactory(nidFactory, simulator, env);
 </pre>  
   
-<p>Notice that the second argument is the EuclideanNetwork.  This is the network topology, in this case a <i>plane</i>.  In the <a href="tut_gtitm.html">next tutorial</a>, we will simulate using a latency matrix.</p>
+<p>First we create a implementation of a NetworkSimulator, the EuclideanNetwork.  This is the network topology, in this case a <i>plane</i>.  In the <a href="tut_gtitm.html">next tutorial</a>, we will simulate using a latency matrix.</p>
+<p>By default, the simulator is very aggressive at advancing time.  The call to setMaxSpeed() limits the rate at wich the simulator can progress to "real-time".  It is helpful to do this while you are setting up your network, because until you have some nodes to simulate, time will advance very quickly.</p>
+<p>Finally we create our PastryNodeFactory which is similar to the construction of the SocketPastryNodeFactory, but takes a NetworkSimulator instead of a bindport.</p>
 
-<p>And the bootHandle Code:</p>
+<p>The bootHandle Code:</p>
 
 <pre>
   NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
@@ -84,6 +94,13 @@ has been changed to:
   
 
 <p>The difference being that we don't need to use an InetSocketAddress in the simulator because it is meaningliess in this context.</p>
+
+Once we complete the creation of our network, we go ahead and tell the simulator to run as fast as possible:
+
+<pre>
+    // don't limit the simulation speed anymore
+    simulator.setFullSpeed();
+</pre>
 
 <p>One last note: Because some of the network topologies use random coordinates to generate latencies, it can be important to set a minimum delay, in case nodes are specified in the identical, or "very-near" coordinates.  In general, it is unlikely to get leas than a 2milli delay between nodes.  To specify a minimum delay, you must set the <a href="params.html">param</a> <code>pastry_direct_min_delay</code> to the appropriate value.  FreePastry defaults this value to <b>2 millis</b>.
 

@@ -45,7 +45,14 @@ Changes:
 
 <p><i>If anyone has an example of how to use the <a href="http://www.cc.gatech.edu/fac/Ellen.Zegura/graphs.html">GT-ITM Topology Generator</a> to generate a latency matrix, please let <a href="mailto:jeffh@mpi-sws.mpg.de">me</a> know so I can integrate it into this tutorial.</i></p>
   
-Complie and execute this code as before, but this time provide a Matrix file.  The tutorial directory includes <a href="GNPINPUT">this file</a> which must be copied to the working directory to execute this tutorial.
+<p/>One other note.  To create larger networks, it may be necessary to accelerate the simulator as you construct more nodes.  This tutorial employs a simple trick to accomplish this:
+
+<pre>
+      // accelerate the simulation as we give it more work
+      simulator.setMaxSpeed(curNode+1);
+</pre>
+
+<p/>Complie and execute this code as before, but this time provide a Matrix file.  The tutorial directory includes <a href="GNPINPUT">this file</a> which must be copied to the working directory to execute this tutorial.
 
 <pre>
 <span class="input">java -cp .:FreePastry-@freepastry_version@.jar rice.tutorial.gtitm.DistTutorial 10 GNPINPUT</span>
