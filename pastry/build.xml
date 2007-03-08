@@ -316,6 +316,7 @@
       <tarfileset dir="jars/freepastry" includes="freepastry.params" prefix="pastry-${freepastry-version}/jars/freepastry"/>
       <tarfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license"/>
       <tarfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing"/>
+      <tarfileset dir="tools/wireshark" includes="**/*" prefix="pastry-${freepastry-version}/tools/wireshark"/>
       <tarfileset dir="${lib.dir}" prefix="pastry-${freepastry-version}/lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
@@ -323,7 +324,7 @@
         <include name="sbbi*.jar"/>
         <include name="commons*.jar"/>
       </tarfileset> 
-      <tarfileset dir="${docs.dir}" includes="README*" prefix="pastry-${freepastry-version}/docs" />
+      <tarfileset dir="${docs.dir}" includes="**/*" prefix="pastry-${freepastry-version}/docs" />
       <tarfileset dir="." includes="build.xml" prefix="pastry-${freepastry-version}"/>
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-source.zip">
@@ -363,6 +364,7 @@
       <zipfileset dir="jars/freepastry" includes="freepastry.params" prefix="pastry-${freepastry-version}/jars/freepastry" />
       <zipfileset dir="license" includes="**/*" prefix="pastry-${freepastry-version}/license" />
       <zipfileset dir="licensing" includes="**/*" prefix="pastry-${freepastry-version}/licensing" />
+      <zipfileset dir="tools/wireshark" includes="**/*" prefix="pastry-${freepastry-version}/tools/wireshark"/>
       <zipfileset dir="${lib.dir}" prefix="pastry-${freepastry-version}/lib">
         <include name="xmlpull*.jar"/> 
         <include name="bouncy*.jar"/> 
@@ -370,7 +372,7 @@
         <include name="sbbi*.jar"/>
         <include name="commons*.jar"/>
       </zipfileset> 
-      <zipfileset dir="${docs.dir}" includes="README*" prefix="pastry-${freepastry-version}/docs" />
+      <zipfileset dir="${docs.dir}" includes="**/**" prefix="pastry-${freepastry-version}/docs" />
       <zipfileset dir="." includes="build.xml" prefix="pastry-${freepastry-version}"/>
     </zip>
     <tar destfile="FreePastry-${freepastry-version}-docs.tgz" compression="gzip">
