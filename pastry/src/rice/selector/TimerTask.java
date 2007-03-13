@@ -39,6 +39,8 @@ advised of the possibility of such damage.
  */
 package rice.selector;
 
+import java.util.Queue;
+
 import rice.environment.time.TimeSource;
 import rice.p2p.commonapi.CancellableTask;
 
@@ -49,7 +51,8 @@ public abstract class TimerTask implements Comparable, CancellableTask {
   protected long nextExecutionTime;
   protected boolean cancelled = false;
   protected int seq;
-  
+  protected Queue queue;
+
   /**
    * If period is positive, task will be rescheduled.
    */
@@ -85,6 +88,9 @@ public abstract class TimerTask implements Comparable, CancellableTask {
     if (cancelled) {
       return false;
     }
+    if (queue != null) {
+      queue.remove(this); 
+    }
     cancelled = true;
     return true;
   }
@@ -114,4 +120,12 @@ public abstract class TimerTask implements Comparable, CancellableTask {
     return cancelled;
   }
    
+  /**
+   * Makes the cancel operation remove the task from the queue as well.
+   * 
+   * @param timerQueue that we are enqueued on
+   */
+  public void setQueue(Queue timerQueue) {
+    queue = timerQueue;
+  }
 }

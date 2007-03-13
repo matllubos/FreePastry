@@ -577,6 +577,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
         System.out.println("ERROR: Got false while enqueueing task " + task
             + "!");
         Thread.dumpStack();
+      } else {
+        task.setQueue(timerQueue); 
       }
 
     // need to interrupt thread if waiting too long in selector
