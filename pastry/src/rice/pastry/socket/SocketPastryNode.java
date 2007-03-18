@@ -162,12 +162,12 @@ public class SocketPastryNode extends DistPastryNode {
 
   public void send(NodeHandle handle, Message message) {
     SocketNodeHandle snh = (SocketNodeHandle) handle;
-    if (getNodeId().equals(snh.getId())) {
+    if (logger.level <= Logger.FINER) logger.log(
+        "send("+snh+","+message+")");
+    if (snh.isLocal()) {
       //debug("Sending message " + msg + " locally");
       receiveMessage(message);
     } else {
-      if (logger.level <= Logger.FINER) logger.log(
-          "Passing message " + message + " to the socket controller for writing");
       try {
         getSocketSourceRouteManager().send(snh.getEpochAddress(), message);
       } catch (IOException ioe) {

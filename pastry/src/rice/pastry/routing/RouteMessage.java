@@ -78,6 +78,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
   
   boolean hasSender;
   byte internalPriority;
+  short internalType;
   
   private RMDeserializer endpointDeserializer = new RMDeserializer();
   
@@ -145,6 +146,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
   public RouteMessage(Id target, PRawMessage msg, NodeHandle firstHop, SendOptions opts) {
     this(target, (Message)msg, firstHop, opts);
     rawInternalMsg = msg;
+    if (msg != null) internalType = msg.getType();
   }
   
   /**
@@ -279,8 +281,10 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
 
   public String toString() {
-    String str = "";
-      str += "[ " + internalMsg + " ]";
+    if (internalMsg == null) {
+      return "[ serialized{"+auxAddress+","+internalType+"} ]";
+    }
+    String str = "[ " + internalMsg + " ]";
 
     return str;
   }
@@ -364,6 +368,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
     this(target, null, null, null);
     hasSender = buf.readBoolean();
     internalPriority = buf.readByte();
+    internalType = buf.readShort();
     prevNode = prev;
     serializedMsg = buf;
     this.nhf = nhf;
@@ -457,7 +462,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
 //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     
     NodeHandle internalSender = null;
-    short internalType = serializedMsg.readShort();
+//    short internalType = serializedMsg.readShort();
     if (hasSender) {
       internalSender = nhf.readNodeHandle(serializedMsg);
     }
