@@ -52,6 +52,7 @@ import rice.p2p.scribe.rawserialization.*;
  */
 public interface Scribe extends Destructable {
 
+  // ***************** Membership functions messages **************
   /**
    * Subscribes the given client to the provided topic.  Any message published
    * to the topic will be delivered to the Client via the deliver() method.
@@ -73,6 +74,17 @@ public interface Scribe extends Destructable {
   public void subscribe(Topic topic, ScribeClient client, RawScribeContent content);
 
   /**
+   * Subscribes the given client to the provided topic.  Any message published
+   * to the topic will be delivered to the Client via the deliver() method.
+   *
+   * @param topic The topic to subscribe to
+   * @param client The client to give messages to
+   * @param content The content to include in the subscribe
+   * @param hint The first hop of the message ( Helpful to implement a centralized solution)
+   */
+  public void subscribe(Topic topic, ScribeClient client, ScribeContent content, NodeHandle hint);
+  public void subscribe(Topic topic, ScribeClient client, RawScribeContent content, NodeHandle hint);
+  /**
    * Unsubscribes the given client from the provided topic. 
    *
    * @param topic The topic to unsubscribe from
@@ -80,6 +92,23 @@ public interface Scribe extends Destructable {
    */
   public void unsubscribe(Topic topic, ScribeClient client);
 
+  /**
+   * Adds a child to the given topic
+   * 
+   * @param topic The topic to add the child to
+   * @param child The child to add
+   */
+  public void addChild(Topic topic, NodeHandle child);
+
+  /**
+   * Removes a child from the given topic
+   *
+   * @param topic The topic to remove the child from
+   * @param child The child to remove
+   */
+  public void removeChild(Topic topic, NodeHandle child);
+  
+  // ***************** Messaging functions ****************
   /**
    * Publishes the given message to the topic.
    *
@@ -99,19 +128,20 @@ public interface Scribe extends Destructable {
   public void anycast(Topic topic, RawScribeContent content);
 
   /**
-   * Returns the current policy for this scribe object
+   * Anycasts the given content to a member of the given topic
+   * 
+   * The hint helps us to implement centralized algorithms where the hint is the 
+   * cachedRoot for the topic. Additionally it enables us to do more fancy 
+   * anycasts that explore more portions of the Scribe tree
    *
-   * @return The current policy for this scribe
+   * @param topic The topic to anycast to
+   * @param content The content to anycast
+   * @param hint the first hop of the Anycast
    */
-  public ScribePolicy getPolicy();
-
-  /**
-   * Sets the current policy for this scribe object
-   *
-   * @param policy The current policy for this scribe
-   */
-  public void setPolicy(ScribePolicy policy);
-
+  public void anycast(Topic topic, ScribeContent content, NodeHandle hint);
+  public void anycast(Topic topic, RawScribeContent content, NodeHandle hint);
+     
+  // *********************** Query functions *********************  
   /**
    * Returns whether or not this Scribe is the root for the given topic
    *
@@ -137,22 +167,6 @@ public interface Scribe extends Destructable {
   public NodeHandle getParent(Topic myTopic);
   
   /**
-   * Adds a child to the given topic
-   *
-   * @param topic The topic to add the child to
-   * @param child The child to add
-   */
-  public void addChild(Topic topic, NodeHandle child);
-
-  /**
-   * Removes a child from the given topic
-   *
-   * @param topic The topic to remove the child from
-   * @param child The child to remove
-   */
-  public void removeChild(Topic topic, NodeHandle child);
-  
-  /**
    * Returns the list of topics the given client is subscribed
    * to.
    *
@@ -162,13 +176,48 @@ public interface Scribe extends Destructable {
   public Topic[] getTopics(ScribeClient client);
 
   /**
-   * @return
+   * This returns the topics for which the parameter 'parent' is a Scribe tree
+   * parent of the local node
    */
+  public Topic[] topicsAsParent(NodeHandle parent);
+
+  /**
+   * This returns the topics for which the parameter 'child' is a Scribe tree
+   * child of the local node
+   */
+  public Topic[] topicsAsChild(NodeHandle child);
+  
+  
+  public int numChildren(Topic topic);
+
+  /**
+   *  Returns true if there is a TopicManager object corresponding to this topic
+   */
+  public boolean containsTopic(Topic myTopic);
+
+  public boolean containsChild(Topic myTopic, NodeHandle child);
+  
+  // ********************* Application management functions **************
+  /**
+   * Returns the current policy for this scribe object
+   * 
+   * @return The current policy for this scribe
+   */
+  public ScribePolicy getPolicy();
+
+  /**
+   * Sets the current policy for this scribe object
+   *
+   * @param policy The current policy for this scribe
+   */
+  public void setPolicy(ScribePolicy policy);
+
   public Environment getEnvironment();
 
   public void destroy();
 
   public void setContentDeserializer(ScribeContentDeserializer deserializer);
+  public ScribeContentDeserializer getContentDeserializer();
 
 }
 

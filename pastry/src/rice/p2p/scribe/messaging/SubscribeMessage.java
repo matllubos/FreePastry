@@ -140,7 +140,7 @@ public class SubscribeMessage extends AnycastMessage {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeByte((byte)0); // version
+    buf.writeByte((byte)1); // version
     super.serializeHelper(buf);
     buf.writeInt(id);
     if (previousParent == null) {
@@ -156,7 +156,7 @@ public class SubscribeMessage extends AnycastMessage {
   public static SubscribeMessage buildSM(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer scd) throws IOException {
     byte version = buf.readByte();
     switch(version) {
-      case 0:
+      case 1:
         return new SubscribeMessage(buf, endpoint, scd);
       default:
         throw new IOException("Unknown Version: "+version);

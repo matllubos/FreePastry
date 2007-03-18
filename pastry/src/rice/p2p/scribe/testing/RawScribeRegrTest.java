@@ -36,7 +36,9 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 
 package rice.p2p.scribe.testing;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.*;
 
 import rice.environment.Environment;
@@ -104,6 +106,8 @@ public class RawScribeRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
+    System.setOut(new PrintStream(new FileOutputStream("rsrt.txt")));
+    System.setErr(System.out);
     Environment env = parseArgs(args);
     
     RawScribeRegrTest scribeTest = new RawScribeRegrTest(env);

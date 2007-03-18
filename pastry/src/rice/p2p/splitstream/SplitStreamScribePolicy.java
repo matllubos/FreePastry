@@ -465,7 +465,11 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    */
   public void childRemoved(Topic topic, NodeHandle child) {
   }
-
+  
+  public void intermediateNode(ScribeMessage message) {
+  }
+  public void recvAnycastFail(Topic topic, NodeHandle failedAtNode, ScribeContent content) {
+  }
 }
 
 

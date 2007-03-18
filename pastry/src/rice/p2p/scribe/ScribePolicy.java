@@ -95,6 +95,17 @@ public interface ScribePolicy {
    * @param child The child that was removed
    */
   public void childRemoved(Topic topic, NodeHandle child);
+  
+  /**
+   * This notifies us when we receive a failure for a anycast
+   */
+  public void recvAnycastFail(Topic topic, NodeHandle failedAtNode, ScribeContent content);
+
+  /**
+   * This is invoked whenever this message arrives on any overlay node, this gives the ScribeClient's power
+   * to tap into some datastructures they might wanna edit
+   */
+  public void intermediateNode(ScribeMessage message);
 
   /**
    * The default policy for Scribe, which always allows new children to join and adds children in
@@ -164,6 +175,10 @@ public interface ScribePolicy {
      * @param child The child that was removed
      */
     public void childRemoved(Topic topic, NodeHandle child) {
+    }
+    public void intermediateNode(ScribeMessage message) {
+    }
+    public void recvAnycastFail(Topic topic, NodeHandle failedAtNode, ScribeContent content) {
     }
   }
 

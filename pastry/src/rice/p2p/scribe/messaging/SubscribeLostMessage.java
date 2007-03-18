@@ -54,9 +54,11 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
  *
  * @author Alan Mislove
  */
-public class SubscribeLostMessage extends AbstractSubscribeMessage {
-  public static final short TYPE = 5;
+public class SubscribeLostMessage implements Message {
 
+  protected Topic topic;
+  protected int id;
+  
   /**
    * Constructor which takes a unique integer Id
    *
@@ -65,16 +67,20 @@ public class SubscribeLostMessage extends AbstractSubscribeMessage {
    * @param dest The destination address
    */
   public SubscribeLostMessage(NodeHandle source, Topic topic, int id) {
-    super(source, topic, id);
-  }
-
-  /***************** Raw Serialization ***************************************/
-  public short getType() {
-    return TYPE; 
+    this.topic = topic;
+    this.id = id;
   }
   
-  public void serialize(OutputBuffer buf) throws IOException {
-    throw new RuntimeException("serialize() not supported in SubscribeLostMessage"); 
-  }  
+  public Topic getTopic() {
+    return topic; 
+  }
+  
+  public int getId() {
+    return id; 
+  }
+
+  public int getPriority() {
+    return DEFAULT_PRIORITY;
+  }
 }
 

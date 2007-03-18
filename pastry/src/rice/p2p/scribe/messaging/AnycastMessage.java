@@ -71,6 +71,8 @@ public class AnycastMessage extends ScribeMessage {
    */
   protected LinkedList toVisit;
   
+  protected NodeHandle initialRequestor;
+  
   /**
    * Constructor which takes a unique integer Id
    *
@@ -84,6 +86,7 @@ public class AnycastMessage extends ScribeMessage {
   
   public AnycastMessage(NodeHandle source, Topic topic, RawScribeContent content) {
     super(source, topic);
+    this.initialRequestor = source;
 //    if (content == null) throw new IllegalArgumentException
     this.content = content;
     this.visited = new Vector();
@@ -196,6 +199,18 @@ public class AnycastMessage extends ScribeMessage {
     }
   }
 
+  public NodeHandle getInitialRequestor() {
+    return initialRequestor;
+  }
+
+  public NodeHandle getLastVisited() {
+    if (visited.size() == 0) {
+      return null;
+    } else {
+      return (NodeHandle) visited.lastElement();
+    }
+  }
+  
   /**
    * Removes the node handle from the to visit and visited lists
    *
@@ -210,14 +225,25 @@ public class AnycastMessage extends ScribeMessage {
     visited.remove(handle);
   }
   
-  /***************** Raw Serialization ***************************************/
+  public int getVisitedSize() {
+    return visited.size();
+  }
+
+  // This method will be called on the intermediate hops to check if the list is
+  // already big, in which case it will not append to this list
+  public int getToVisitSize() {
+    return toVisit.size();
+  }
+  
+  
+  /** *************** Raw Serialization ************************************** */
   public short getType() {
     return TYPE; 
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
 //  super.serialize(buf); // note, can't make this a hierarchy, because of the super() must be first line rule in java
-    buf.writeByte((byte)0); // version
+    buf.writeByte((byte)1); // version
     serializeHelper(buf);
     
   }
@@ -228,6 +254,8 @@ public class AnycastMessage extends ScribeMessage {
    */
   protected void serializeHelper(OutputBuffer buf) throws IOException {    
     super.serialize(buf);
+    
+    initialRequestor.serialize(buf);
     
     buf.writeInt(toVisit.size());
     Iterator i = toVisit.iterator();
@@ -253,7 +281,7 @@ public class AnycastMessage extends ScribeMessage {
   public static AnycastMessage build(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer scd) throws IOException {
     byte version = buf.readByte();
     switch(version) {
-      case 0:
+      case 1:
         return new AnycastMessage(buf, endpoint, scd);
       default:
         throw new IOException("Unknown Version: "+version);
@@ -267,6 +295,8 @@ public class AnycastMessage extends ScribeMessage {
    */
   protected AnycastMessage(InputBuffer buf, Endpoint endpoint, ScribeContentDeserializer cd) throws IOException {
     super(buf, endpoint);
+
+    initialRequestor = endpoint.readNodeHandle(buf);
     
     toVisit = new LinkedList();
     int toVisitLength = buf.readInt();
