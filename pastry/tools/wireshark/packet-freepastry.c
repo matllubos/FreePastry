@@ -42,6 +42,7 @@ static gboolean freepastry_desegment = TRUE;
 static int proto_freepastry = -1;
 static int hf_freepastry_header_magic_number = -1;
 static int hf_freepastry_header_version_number = -1;
+static int hf_freepastry_header_source_route = -1;
 static int hf_freepastry_header_current_hop = -1;
 static int hf_freepastry_header_num_hop = -1;
 static int hf_freepastry_header_source_route_len = -1;
@@ -1250,6 +1251,8 @@ dissect_freepastry_tcp_header(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tre
     offset += 4;
     /*is it a source route header or a direct header?*/
     if (tvb_get_ntohl(tvb, offset) == HEADER_SOURCE_ROUTE){
+      proto_tree_add_item(freepastry_tree, hf_freepastry_header_source_route, tvb, offset, 4, FALSE);
+      offset += 4;
       do {
         offset = decode_epoch_inet_socket_address(tvb, tree, offset, "Hops");
         if (offset == -1){
@@ -1510,6 +1513,10 @@ proto_register_freepastry(void)
     { "Magic number",		"freepastry.header.magic_number",
     FT_UINT32, BASE_HEX, NULL, 0x0,
     "Magic Number", HFILL }},
+    { &hf_freepastry_header_source_route,
+    { "Source Route Header",		"freepastry.header.sourceroute",
+    FT_UINT32, BASE_HEX, NULL, 0x0,
+    "Source Route Header", HFILL }},
     { &hf_freepastry_header_version_number,
     { "Version number",		"freepastry.header.version",
     FT_UINT32, BASE_DEC, NULL, 0x0,
