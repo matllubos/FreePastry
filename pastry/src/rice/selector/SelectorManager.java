@@ -578,7 +578,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
             + "!");
         Thread.dumpStack();
       } else {
-        task.setQueue(timerQueue); 
+        task.setSelectorManager(this); 
       }
 
     // need to interrupt thread if waiting too long in selector
@@ -601,6 +601,10 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 
   }
   
+  public synchronized void removeTask(TimerTask task) {
+    timerQueue.remove(task);
+  }
+
   /**
    * Note, should hold the selector's (this) lock to call this.
    *
@@ -691,4 +695,5 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   public void setSelect(boolean b) {
     select = b;
   }
+
 }

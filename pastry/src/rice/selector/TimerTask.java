@@ -51,7 +51,7 @@ public abstract class TimerTask implements Comparable, CancellableTask {
   protected long nextExecutionTime;
   protected boolean cancelled = false;
   protected int seq;
-  protected Queue queue;
+  protected SelectorManager selector;
 
   /**
    * If period is positive, task will be rescheduled.
@@ -88,8 +88,8 @@ public abstract class TimerTask implements Comparable, CancellableTask {
     if (cancelled) {
       return false;
     }
-    if (queue != null) {
-      queue.remove(this); 
+    if (selector != null) {
+      selector.removeTask(this); 
     }
     cancelled = true;
     return true;
@@ -125,7 +125,7 @@ public abstract class TimerTask implements Comparable, CancellableTask {
    * 
    * @param timerQueue that we are enqueued on
    */
-  public void setQueue(Queue timerQueue) {
-    queue = timerQueue;
+  public void setSelectorManager(SelectorManager selector) {
+    this.selector = selector;
   }
 }
