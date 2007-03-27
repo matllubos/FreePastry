@@ -106,8 +106,8 @@ public class RawScribeRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-    System.setOut(new PrintStream(new FileOutputStream("rsrt.txt")));
-    System.setErr(System.out);
+//    System.setOut(new PrintStream(new FileOutputStream("rsrt.txt")));
+//    System.setErr(System.out);
     Environment env = parseArgs(args);
     
     RawScribeRegrTest scribeTest = new RawScribeRegrTest(env);
@@ -287,8 +287,8 @@ public class RawScribeRegrTest extends CommonAPITest {
     stepStart(name + " Tree Completely Demolished");
     failed = false;
     for (int i=0; i < NUM_NODES; i++) {
-      if (scribes[i].getClients(topic).length > 0) {
-        stepDone(FAILURE, "Expected scribe " + scribes[i] + " to have no clients, had " + scribes[i].getClients(topic).length);
+      if (scribes[i].getClients(topic).size() > 0) {
+        stepDone(FAILURE, "Expected scribe " + scribes[i] + " to have no clients, had " + scribes[i].getClients(topic).size());
         failed = true;
       }
 
@@ -383,9 +383,15 @@ public class RawScribeRegrTest extends CommonAPITest {
         }
       }
 
-      NodeHandle[] children = scribe.getChildren(topic);
+      Collection<NodeHandle> children = scribe.getChildrenOfTopic(topic);
 
-      if (Arrays.asList(children).contains(child)) {
+      if (children.contains(child)) {
+        String s = "children.size():"+children.size();
+        for (NodeHandle achild : children) {
+          s+=achild+","; 
+        }
+        logger.log(s);
+
         stepDone(FAILURE, "Child resubscribed to previous node, policy should prevent this.");
         failed = true;
       }
@@ -890,7 +896,9 @@ public class RawScribeRegrTest extends CommonAPITest {
 
     public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
   //System.out.println("Allow subscribe , client.size "+clients.length+", children "+children.length+" for subscriber "+message.getSubscriber());
-      return (! neverAllowSubscribe) && (allowSubscribe || (clients.length > 0) || this.scribe.isRoot(message.getTopic()));
+      boolean ret = (! neverAllowSubscribe) && (allowSubscribe || (clients.length > 0) || this.scribe.isRoot(message.getTopic()));
+//      System.out.println("allowSubscribe("+message.getSubscriber()+"):"+ret);
+      return ret;
     }
   }
 }

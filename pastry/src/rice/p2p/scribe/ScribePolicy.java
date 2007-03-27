@@ -59,12 +59,27 @@ public interface ScribePolicy {
    * children and clients is both 0, allowing the child to join will have the effect of implicitly
    * subscribing this node the the given topic.
    *
+   * For each Topic that you are willing to accept, call message.accept(Topic);
+   * 
+   * Here is some example code:
+   * 
+   * <pre>
+   * for (Topic topic : new ArrayList<Topic>(message.getTopics())) {
+   *   message.accept(topic);
+   * }
+   * </pre>
+   *
+   * Some calls that are likely useful are: 
+   * <ul> 
+   *   <li>scribe.getChildren(topic)</li>
+   *   <li>scribe.getClients(topic)</li>
+   * </ul>
+   *
    * @param message The subscribe message in question
    * @param children The list of children who are currently subscribed to this topic
    * @param clients The list of clients are are currently subscribed to this topic
-   * @return Whether or not this child should be allowed add.
    */
-  public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children);
+  public List<Topic> allowSubscribe(Scribe scribe, NodeHandle source, List<Topic> topics, ScribeContent content);
 
   /**
    * This method is called when an anycast is received which is not satisfied at the local node.
@@ -76,7 +91,7 @@ public interface ScribePolicy {
    * @param parent Our current parent for this message's topic
    * @param children Our current children for this message's topic
    */
-  public void directAnycast(AnycastMessage message, NodeHandle parent, NodeHandle[] children);
+  public void directAnycast(AnycastMessage message, NodeHandle parent, Collection<NodeHandle> children);
   
   /**
    * Informs this policy that a child was added to a topic - the topic is free to ignore this
@@ -120,42 +135,80 @@ public interface ScribePolicy {
       environment = env;
     }
     /**
-     * This method always return true;
+     * If you don't override the deprecated allowSubscribe(), This method always return true;
      *
      * @param message The subscribe message in question
      * @param children The list of children who are currently subscribed
      * @param clients The list of clients are are currently subscribed
-     * @return True.
+     * @return the topics to accept
+     */
+    public List<Topic> allowSubscribe(Scribe scribe, NodeHandle source, List<Topic> topics, ScribeContent content) {
+      Iterator<Topic> i = topics.iterator();
+      while(i.hasNext()) {
+        Topic topic = i.next();        
+        if (!allowSubscribe(
+            new BogusSubscribeMessage(source, topic, 0, content),
+            scribe.getClients(topic).toArray(new ScribeClient[0]), 
+            scribe.getChildrenOfTopic(topic).toArray(new NodeHandle[0]))) {
+          i.remove();
+        }
+      }
+      return topics;
+    }
+
+    class BogusSubscribeMessage extends SubscribeMessage {
+      ScribeContent theContent;
+      
+      public BogusSubscribeMessage(NodeHandle source, Topic topic, int i, ScribeContent content) {
+        super(source, topic, i, null);
+        theContent = content;
+      }
+      
+      
+      public ScribeContent getContent() {
+        return theContent;
+      }
+    }
+    
+    /**
+     * This method should be deprecated, but is here for reverse compatibility.  We changed the 
+     * allowSubscribe() method, but classes that extend DefaultScribePolicy object could make a mistake
+     * and not override the new one.
+     * 
+     * @param message
+     * @param clients
+     * @param children
+     * @return
      */
     public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
       return true;
     }
-
+    
     /**
      * Simply adds the parent and children in order, which implements a depth-first-search.
+     *
+     * randomly picks a child
      *
      * @param message The anycast message in question
      * @param parent Our current parent for this message's topic
      * @param children Our current children for this message's topic
      */
-    public void directAnycast(AnycastMessage message, NodeHandle parent, NodeHandle[] children) {
+    public void directAnycast(AnycastMessage message, NodeHandle parent, Collection<NodeHandle> theChildren) {
       if (parent != null) {
         message.addLast(parent);
       }
       
+      ArrayList<NodeHandle> children = new ArrayList<NodeHandle>(theChildren);
+      
       // now randomize the children list
-      for (int i=0; i<children.length; i++) {
-        int j = environment.getRandomSource().nextInt(children.length);
-        int k = environment.getRandomSource().nextInt(children.length);
-        NodeHandle tmp = children[j];
-        children[j] = children[k];
-        children[k] = tmp;
-      }
-
-      for (int l=0; l<children.length; l++) {
-        message.addFirst(children[l]);
+      while (!children.isEmpty()) {
+        message.addFirst(
+            children.remove(
+                environment.getRandomSource().nextInt(
+                    children.size())));
       }
     }
+    
     
     /**
      * Informs this policy that a child was added to a topic - the topic is free to ignore this

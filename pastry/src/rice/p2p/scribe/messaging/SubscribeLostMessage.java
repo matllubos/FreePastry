@@ -38,6 +38,9 @@ advised of the possibility of such damage.
 package rice.p2p.scribe.messaging;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -56,8 +59,10 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
  */
 public class SubscribeLostMessage implements Message {
 
-  protected Topic topic;
+  protected Set<Topic> topics;
   protected int id;
+  CancellableTask task;    
+  ScribeMultiClient client;
   
   /**
    * Constructor which takes a unique integer Id
@@ -66,13 +71,18 @@ public class SubscribeLostMessage implements Message {
    * @param source The source address
    * @param dest The destination address
    */
-  public SubscribeLostMessage(NodeHandle source, Topic topic, int id) {
-    this.topic = topic;
+  public SubscribeLostMessage(NodeHandle source, Collection<Topic> topics, int id, ScribeMultiClient client) {
+    this.topics = new HashSet<Topic>(topics);
     this.id = id;
+    this.client = client;
   }
   
-  public Topic getTopic() {
-    return topic; 
+  public ScribeMultiClient getClient() {
+    return client;
+  }
+  
+  public Collection<Topic> getTopics() {
+    return topics; 
   }
   
   public int getId() {
@@ -81,6 +91,24 @@ public class SubscribeLostMessage implements Message {
 
   public int getPriority() {
     return DEFAULT_PRIORITY;
+  }
+
+  public void putTask(CancellableTask task) {
+    this.task = task;
+  }
+  
+  public void cancel() {
+    task.cancel(); 
+  }
+  
+  /**
+   * @return true if we have successfully subscribed to 
+   * all topics, in which case, you should cancel the 
+   * message and remove it from the table
+   */
+  public boolean topicsAcked(Collection<Topic> topic) {
+    topics.removeAll(topic);
+    return topics.isEmpty();
   }
 }
 

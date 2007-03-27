@@ -40,6 +40,7 @@ import java.util.*;
 
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
+import rice.p2p.scribe.ScribePolicy.DefaultScribePolicy;
 import rice.p2p.scribe.messaging.*;
 
 import rice.pastry.routing.RoutingTable;
@@ -54,7 +55,7 @@ import rice.pastry.routing.RoutingTable;
  * @author Alan Mislove
  * @author Atul Singh
  */
-public class SplitStreamScribePolicy implements ScribePolicy {
+public class SplitStreamScribePolicy extends DefaultScribePolicy /*implements ScribePolicy*/ {
 
   /**
    * The default maximum number of children per channel
@@ -82,6 +83,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @param splitStream The local splitstream
    */
   public SplitStreamScribePolicy(Scribe scribe, SplitStream splitStream) {
+    super(splitStream.getEnvironment());
     DEFAULT_MAXIMUM_CHILDREN = scribe.getEnvironment().getParameters().getInt("p2p_splitStream_policy_default_maximum_children");
     this.scribe = scribe;
     this.splitStream = splitStream;
@@ -146,6 +148,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @param clients The list of clients are are currently subscribed to this topic
    * @return Whether or not this child should be allowed add.
    */
+//  public boolean allowSubscribe(Scribe scribe, NodeHandle subscriber, Collection<ScribeClient> clients, Collection<NodeHandle> children) {
   public boolean allowSubscribe(SubscribeMessage message, ScribeClient[] clients, NodeHandle[] children) {
 
     Channel channel = getChannel(message.getTopic());
@@ -222,7 +225,7 @@ public class SplitStreamScribePolicy implements ScribePolicy {
    * @param parent Our current parent for this message's topic
    * @param children Our current children for this message's topic
    */
-  public void directAnycast(AnycastMessage message, NodeHandle parent, NodeHandle[] children) {
+  public void directAnycast(AnycastMessage message, NodeHandle parent, Collection<NodeHandle> children) {
     /* we add parent first if it shares prefix match */
     if (parent != null) {
       if (SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), parent.getId(), splitStream.getStripeBaseBitLength()) > 0)
@@ -239,11 +242,11 @@ public class SplitStreamScribePolicy implements ScribePolicy {
       Vector good = new Vector();
       Vector bad = new Vector();
 
-      for (int i=0; i<children.length; i++) {
-        if (SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), children[i].getId(), splitStream.getStripeBaseBitLength()) > 0)
-          good.add(children[i]);
+      for (NodeHandle child : children) {
+        if (SplitStreamScribePolicy.getPrefixMatch(message.getTopic().getId(), child.getId(), splitStream.getStripeBaseBitLength()) > 0)
+          good.add(child);
         else
-          bad.add(children[i]);
+          bad.add(child);
       }
 
       int index;

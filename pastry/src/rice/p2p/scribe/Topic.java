@@ -51,7 +51,7 @@ import rice.p2p.commonapi.rawserialization.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class Topic implements Serializable {
+public class Topic implements Serializable, Comparable<Topic> {
 
   /**
    * The Id to which this topic is mapped
@@ -136,6 +136,10 @@ public class Topic implements Serializable {
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeShort(id.getType());
     id.serialize(buf); 
+  }
+
+  public int compareTo(Topic that) {
+    return this.id.compareTo(that.id);
   }
 }
 

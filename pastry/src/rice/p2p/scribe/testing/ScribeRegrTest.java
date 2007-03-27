@@ -283,8 +283,8 @@ public class ScribeRegrTest extends CommonAPITest {
     stepStart(name + " Tree Completely Demolished");
     failed = false;
     for (int i=0; i < NUM_NODES; i++) {
-      if (scribes[i].getClients(topic).length > 0) {
-        stepDone(FAILURE, "Expected scribe " + scribes[i] + " to have no clients, had " + scribes[i].getClients(topic).length);
+      if (scribes[i].getClients(topic).size() > 0) {
+        stepDone(FAILURE, "Expected scribe " + scribes[i] + " to have no clients, had " + scribes[i].getClients(topic).size());
         failed = true;
       }
 

@@ -105,6 +105,10 @@ public class AnycastMessage extends ScribeMessage {
     if (content.getType() == 0) return ((JavaSerializedScribeContent)content).getContent();
     return content;
   }
+  
+  public RawScribeContent getRawContent() {
+    return content; 
+  }
 
   /**
    * Sets the content

@@ -38,6 +38,9 @@ advised of the possibility of such damage.
 package rice.p2p.scribe.messaging;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -49,6 +52,12 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
  * @(#) SubscribeAckMessage.java
  *
  * The ack for a subscribe message.
+ * 
+ * This message is sent on 2 occaisions.  
+ * a) An ack to a subscribe.
+ * b) When your pat to the root changes.  
+ * 
+ * TODO: Consider breaking up these functions.
  *
  * @version $Id$
  *
@@ -57,10 +66,11 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
 public class SubscribeAckMessage extends AbstractSubscribeMessage {
 
   public static final short TYPE = 3;
+  
   /**
    * The contained path to the root
    */
-  protected Id[] pathToRoot;
+  protected List<List<Id>> pathsToRoot;
 
   /**
    * Constructor which takes a unique integer Id
@@ -69,10 +79,15 @@ public class SubscribeAckMessage extends AbstractSubscribeMessage {
    * @param source The source address
    * @param dest The destination address
    */
-  public SubscribeAckMessage(NodeHandle source, Topic topic, Id[] pathToRoot, int id) {
-    super(source, topic, id);
+  public SubscribeAckMessage(NodeHandle source, List<Topic> topics, List<List<Id>> pathsToRoot, int id) {
+    super(source, topics, id);
 
-    this.pathToRoot = pathToRoot;
+    if (topics.size() != pathsToRoot.size()) 
+      throw new IllegalArgumentException(
+          "Must be a path for each topic.  Topics: "+topics.size()+" Paths:"+pathsToRoot.size());    
+    
+    this.topics = topics;
+    this.pathsToRoot = pathsToRoot;
   }
 
   /**
@@ -82,8 +97,8 @@ public class SubscribeAckMessage extends AbstractSubscribeMessage {
    * @return The new path to the root for the node receiving this
    * message
    */
-  public Id[] getPathToRoot() {
-    return pathToRoot;
+  public List<List<Id>> getPathsToRoot() {
+    return pathsToRoot;
   }
   
   /**
@@ -92,7 +107,7 @@ public class SubscribeAckMessage extends AbstractSubscribeMessage {
    * @return A String
    */
   public String toString() {
-    return "SubscribeAckMessage " + topic + " ID: " + id; 
+    return "SubscribeAckMessage " + topics.size() + " ID: " + id; 
   }
 
   /***************** Raw Serialization ***************************************/
@@ -101,20 +116,35 @@ public class SubscribeAckMessage extends AbstractSubscribeMessage {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeByte((byte)0); // version
+    buf.writeByte((byte)1); // version
     super.serialize(buf);
+
+    int numTopics = topics.size(); 
+    buf.writeInt(numTopics);
+
     
-    buf.writeInt(pathToRoot.length);
-    for (int i = 0; i < pathToRoot.length; i++) {
-      buf.writeShort(pathToRoot[i].getType());
-      pathToRoot[i].serialize(buf);
-    }    
+    Iterator<Topic> j = topics.iterator();
+    Iterator<List<Id>> i = pathsToRoot.iterator();
+      
+    while (j.hasNext()) {
+      j.next().serialize(buf); 
+      List<Id> pathToRoot = i.next();
+      buf.writeInt(pathToRoot.size());
+      for (Id id : pathToRoot) {
+        buf.writeShort(id.getType());
+        id.serialize(buf);
+      }        
+    }
   }
   
   public static SubscribeAckMessage build(InputBuffer buf, Endpoint endpoint) throws IOException { 
     byte version = buf.readByte();
     switch(version) {
       case 0:
+        // TODO: Handle this
+      
+        return null;        
+      case 1:        
         return new SubscribeAckMessage(buf, endpoint);
       default:
         throw new IOException("Unknown Version: "+version);
@@ -128,9 +158,21 @@ public class SubscribeAckMessage extends AbstractSubscribeMessage {
    */
   private SubscribeAckMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
     super(buf, endpoint);
-    pathToRoot = new Id[buf.readInt()];
-    for (int i = 0; i < pathToRoot.length; i++) {
-      pathToRoot[i] = endpoint.readId(buf, buf.readShort());
+    
+    int numTopics = buf.readInt();
+    topics = new ArrayList<Topic>(numTopics);
+    pathsToRoot = new ArrayList<List<Id>>(numTopics);
+    
+    // note: make sure to start at 1 so we don't overflow
+    for (int i = 0; i < numTopics; i++) {
+      topics.add(new Topic(buf, endpoint));
+      
+      int length = buf.readInt();
+      List<Id> pathToRoot = new ArrayList<Id>(length);
+      for (int j = 0; j < length; j++) {
+        pathToRoot.add(endpoint.readId(buf, buf.readShort()));
+      }      
+      pathsToRoot.add(pathToRoot);
     }
   }
 

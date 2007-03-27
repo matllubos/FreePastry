@@ -37,6 +37,8 @@ advised of the possibility of such damage.
 
 package rice.p2p.scribe;
 
+import java.util.Collection;
+
 import rice.*;
 import rice.p2p.commonapi.*;
 
@@ -45,6 +47,7 @@ import rice.p2p.commonapi.*;
  *
  * This interface represents a client using the Scribe system.
  *
+ * @deprecated use ScribeMultiClient
  * @version $Id$
  * @author Alan Mislove
  */
@@ -87,7 +90,7 @@ public interface ScribeClient {
    * @param child The child that was removed
    */
   public void childRemoved(Topic topic, NodeHandle child);
-
+  
   /**
    * Informs the client that a subscribe on the given topic failed
    * - the client should retry the subscribe or take appropriate
@@ -96,6 +99,5 @@ public interface ScribeClient {
    * @param topic The topic which the subscribe failed on
    */
   public void subscribeFailed(Topic topic);
-
 }
 

@@ -37,13 +37,14 @@ advised of the possibility of such damage.
 /*
  * Created on Mar 21, 2006
  */
-package rice.p2p.scribe.rawserialization;
+package rice.p2p.scribe.javaserialized;
 
 import java.io.*;
 
 import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.scribe.ScribeContent;
+import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
 import rice.p2p.util.rawserialization.JavaDeserializer;
 
 /**

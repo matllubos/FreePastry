@@ -38,6 +38,10 @@ advised of the possibility of such damage.
 package rice.p2p.scribe.messaging;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -56,7 +60,7 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
  */
 public class SubscribeFailedMessage extends AbstractSubscribeMessage {
   public static final short TYPE = 4;
-
+  
   /**
    * Constructor which takes a unique integer Id
    *
@@ -64,8 +68,8 @@ public class SubscribeFailedMessage extends AbstractSubscribeMessage {
    * @param source The source address
    * @param dest The destination address
    */
-  public SubscribeFailedMessage(NodeHandle source, Topic topic, int id) {
-    super(source, topic, id);
+  public SubscribeFailedMessage(NodeHandle source, List<Topic> topics, int id) {
+    super(source, topics, id);
   }
 
   /***************** Raw Serialization ***************************************/
@@ -74,15 +78,27 @@ public class SubscribeFailedMessage extends AbstractSubscribeMessage {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeByte((byte)0); // version
+    buf.writeByte((byte)1); // version
     
     super.serialize(buf);
+    
+    int numTopics = topics.size(); 
+    buf.writeInt(numTopics);
+    Iterator<Topic> i = topics.iterator();
+    
+    while (i.hasNext()) {
+      i.next().serialize(buf); 
+    }
   }
   
   public static SubscribeFailedMessage build(InputBuffer buf, Endpoint endpoint) throws IOException { 
     byte version = buf.readByte();
     switch(version) {
       case 0:
+        // TODO: Handle this
+    
+        return null;        
+      case 1:
         return new SubscribeFailedMessage(buf, endpoint);
       default:
         throw new IOException("Unknown Version: "+version);
@@ -96,7 +112,14 @@ public class SubscribeFailedMessage extends AbstractSubscribeMessage {
    */
   private SubscribeFailedMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
     super(buf, endpoint); 
+    
+    int numTopics = buf.readInt();
+    topics = new ArrayList<Topic>(numTopics);
+    
+    // note: make sure to start at 1 so we don't overflow
+    for (int i = 0; i < numTopics; i++) {
+      topics.add(new Topic(buf, endpoint));      
+    }
   }
-  
 }
 

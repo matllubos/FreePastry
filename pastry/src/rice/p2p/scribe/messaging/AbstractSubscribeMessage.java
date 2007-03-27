@@ -38,6 +38,7 @@ advised of the possibility of such damage.
 package rice.p2p.scribe.messaging;
 
 import java.io.IOException;
+import java.util.List;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -54,12 +55,25 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
  *
  * @author Alan Mislove
  */
-public abstract class AbstractSubscribeMessage extends ScribeMessage {
+public abstract class AbstractSubscribeMessage implements RawMessage /*extends ScribeMessage*/ {
 
   /**
   * The id of this subscribe message
    */
   protected int id;
+  
+  // the source of this message
+  protected NodeHandle source;
+  
+  /**
+   * You can now subscribe to a bunch of Topics at the same time.
+   * 
+   * This list must be sorted.
+   * 
+   * note: NOT AUTOMATICALLY SERIALIZED!!!
+   */
+  protected List<Topic> topics;
+  
 
   /**
   * Constructor which takes a unique integer Id
@@ -68,10 +82,10 @@ public abstract class AbstractSubscribeMessage extends ScribeMessage {
    * @param source The source address
    * @param dest The destination address
    */
-  public AbstractSubscribeMessage(NodeHandle source, Topic topic, int id) {
-    super(source, topic);
-
+  public AbstractSubscribeMessage(NodeHandle source, List<Topic> topics, int id) {
+    this.source = source;
     this.id = id;
+    this.topics = topics;
   }
 
   /**
@@ -83,17 +97,36 @@ public abstract class AbstractSubscribeMessage extends ScribeMessage {
     return id;
   }
   
+  public int getPriority() {
+    return MEDIUM_HIGH_PRIORITY;
+  }
+
+  /**
+   * Method which returns this messages' source address
+   *
+   * @return The source of this message
+   */
+  public NodeHandle getSource() {
+    return source;
+  }
+  
+
+  public List<Topic> getTopics() {
+    return topics;
+  }
+  
+
   /**
    * Protected because it should only be called from an extending class, to get version
    * numbers correct.
    */
   protected AbstractSubscribeMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
-    super(buf, endpoint);
+    source = endpoint.readNodeHandle(buf);
     id = buf.readInt();    
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
-    super.serialize(buf);
+    source.serialize(buf);
     buf.writeInt(id);
   }  
 }
