@@ -40,10 +40,10 @@ package rice.p2p.scribe.javaserialized;
 import java.util.Collection;
 
 import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.scribe.BaseScribe;
 import rice.p2p.scribe.ScribeClient;
 import rice.p2p.scribe.ScribeContent;
 import rice.p2p.scribe.Topic;
-import rice.p2p.scribe.Scribe.BaseScribe;
 
 /**
  * Scribe that uses JavaSerialization for the ScribeContent

@@ -42,9 +42,9 @@ import java.util.List;
 
 import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.scribe.BaseScribe;
 import rice.p2p.scribe.Scribe;
 import rice.p2p.scribe.Topic;
-import rice.p2p.scribe.Scribe.BaseScribe;
 
 /**
  * This is an interface to scribe so that the MaintenacePolicy 
