@@ -103,11 +103,6 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
   protected NodeHandle handle;
 
   /**
-   * the hashtable of outstanding messages
-   */
-//  private HashMap<Integer, ScribeClient> outstanding;
-  
-  /**
    * The hashtable of outstanding lost messags keyed by the UID of the SubscribeMessage
    */
   private HashMap<Integer, SubscribeLostMessage> subscribeLostMessages;
@@ -431,21 +426,36 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
   }
   
   /**
-   * Internal method for sending a subscribe message
-   *
-   * @param Topic topics must be sorted
+   * Internal methods for sending a subscribe message
    */
+  private void sendSubscribe(Topic topic, ScribeMultiClient client, RawScribeContent content, NodeHandle hint) {
+    sendSubscribe(buildListOf1(topic), client, content, hint);
+  }
+  
   private void sendSubscribe(List<Topic> topics, ScribeMultiClient client, RawScribeContent content, NodeHandle hint) {
+
+    // choose the UID
     int theId;
     synchronized(this) {
       theId = ++id;
     }
+    
+    // sort the topics
+    Collections.sort(topics);
+
     if (logger.level <= Logger.FINEST) logger.log("sendSubscribe("+(topics.size() == 1 ? topics.iterator().next() : topics.size())+","+client+","+content+","+hint+") theId:"+theId);
     
     SubscribeLostMessage slm = new SubscribeLostMessage(handle, topics, theId, client);
     CancellableTask task = endpoint.scheduleMessage(slm, MESSAGE_TIMEOUT);    
     slm.putTask(task);
     subscribeLostMessages.put(theId, slm);
+
+    // break them into groups based on the routing base    
+    // a) break them up based on the number of common digits
+    // b) break them up based on the most significant uncommon digit
+    // TODO: specify RoutingBase number of bits
+    // TODO: make this reusable so it can be called in the forward() method
+    
 
     SubscribeMessage msg = new SubscribeMessage(handle, topics, theId, content);
     endpoint.route(msg.getTopic().getId(), msg, hint);
@@ -617,7 +627,6 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
     }
     if (toSubscribe.isEmpty()) return;
       
-    Collections.sort(toSubscribe);  
     sendSubscribe(toSubscribe, client, content, hint);
   }
 
@@ -776,7 +785,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
       manager.addChild(child);
 
       if (logger.level <= Logger.FINER) logger.log("Implicitly subscribing to topic " + topic);
-      sendSubscribe(buildListOf1(topic), null, null, null);
+      sendSubscribe(topic, null, null, null);
     } else {
       manager.addChild(child);
     }
@@ -1561,7 +1570,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
           manager.setParent(null);
           Collection<ScribeMultiClient> clients = manager.getClients();
 
-          sendSubscribe(buildListOf1(dMessage.getTopic()), null, null, null);
+          sendSubscribe(dMessage.getTopic(), null, null, null);
         } else {
           if (logger.level <= Logger.WARNING) logger.log("Received unexpected drop message from non-parent " +
                       dMessage.getSource() + " for topic " + dMessage.getTopic() + " - ignoring");
@@ -1608,7 +1617,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
         // check if new guy is root, we were old root, then subscribe
         if (!isRoot(topic) && manager.getParent() == null){
           // send subscribe message
-          sendSubscribe(buildListOf1(topic), null, null, null);
+          sendSubscribe(topic, null, null, null);
         }
 //      } else {
 //        // if you should be the root, but you are only a member
@@ -1846,7 +1855,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
           
           setParent(null);
 
-          sendSubscribe(buildListOf1(topic), null, null, null);
+          sendSubscribe(topic, null, null, null);
         }
         
         if (!expected) {
