@@ -131,7 +131,7 @@ run_commonapi_tests();
 
 if ($fail_count) {
 	# compute date, today
-	my $recipient = "jeffh\@cs.rice.edu,jstewart\@mpi-sws.mpg.de"; # "Pastry Team <freepastry\@cs.rice.edu>";
+	my $recipient = "jeffh\@mpi-sws.mpg.de,jstewart\@mpi-sws.mpg.de"; # "Pastry Team <freepastry\@cs.rice.edu>";
 	my $whole_msg = <<EOM;
 From: Automatic Build Server <no-reply\@mpi-sws.mpg.de>
 To: $recipient

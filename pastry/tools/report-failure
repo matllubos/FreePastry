@@ -15,7 +15,7 @@ if [ "$DEBUG" = "1" ]; then
 fi
 
 $MAIL $RECIPIENTS <<__EOM__
-From: Automatic Build Server <jeffh@cs.rice.edu>
+From: Automatic Build Server <jeffh@mpi-sws.mpg.de>
 To: Pastry Team <freepastry@cs.rice.edu>
 Subject: [pastry-build] Nightly build $TODAY failed
 Date: `date`
