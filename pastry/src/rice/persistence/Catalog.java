@@ -76,7 +76,7 @@ public interface Catalog {
 
   /**
    * Returns the object identified by the given id, or <code>null</code> if
-   * there is no cooresponding object (through receiveResult on c).
+   * there is no corresponding object (through receiveResult on c).
    *
    * @param id The id of the object in question.
    * @param c The command to run once the operation is complete
@@ -130,7 +130,7 @@ public interface Catalog {
    * no longer stored in memory, this method may be deprecated.
    *
    * @param range The range to query  
-   * @return The idset containg the keys 
+   * @return The idset containing the keys 
    */
   public IdSet scan(IdRange range);
   
@@ -140,7 +140,7 @@ public interface Catalog {
    * NOTE: This method blocks so if the behavior of this method changes and
    * no longer stored in memory, this method may be deprecated.
    *
-   * @return The idset containg the keys 
+   * @return The idset containing the keys 
    */
   public IdSet scan();
 
@@ -149,7 +149,7 @@ public interface Catalog {
    * metadata.  
    *
    * @param range The range to query  
-   * @return The map containg the keys 
+   * @return The map containing the keys 
    */
   public SortedMap scanMetadata(IdRange range);
   

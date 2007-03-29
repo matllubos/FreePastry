@@ -48,7 +48,7 @@ import rice.p2p.commonapi.rawserialization.*;
  * @(#) IdBloomFilter.java
  *
  * Class which is an implementation of a bloom filter which takes Ids as elements.  
- * This class simply wraps a normal BloomFilter, but provides convienent methods
+ * This class simply wraps a normal BloomFilter, but provides convenient methods
  * for constructing and checking for the existence of Ids.
  *
  * @version $Id$
@@ -104,7 +104,7 @@ public class IdBloomFilter implements Serializable {
   
   /**
    * Internal method for checking to see if the array exists, and if not,
-   * instanciating it.  It also places the given Id into the array.
+   * instantiating it.  It also places the given Id into the array.
    * 
    * See the documentation of the member variable array for more info.
    *
@@ -129,7 +129,7 @@ public class IdBloomFilter implements Serializable {
   
   /**
    * Method which returns whether or not an Id *may* be in the set.  Specifically, 
-   * if this method returns false, the element is definately not in the set.  Otherwise, 
+   * if this method returns false, the element is definitely not in the set.  Otherwise, 
    * if true is returned, the element may be in the set, but it is not guaranteed.
    *
    * @param id The id to check for

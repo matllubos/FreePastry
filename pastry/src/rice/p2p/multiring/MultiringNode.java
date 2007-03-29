@@ -51,8 +51,8 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
 /**
  * @(#) MultiringNode.java
  *
- * This class wraps a Node, enabling it to support multiple hierarchitcal
- * scoped rings.  In order to use the mulitring functionality, only one change
+ * This class wraps a Node, enabling it to support multiple hierarchical
+ * scoped rings.  In order to use the multiring functionality, only one change
  * is necessary:  when one constructs a Node, one should change
  *
  * Node test = factory.newNode(...);
@@ -68,7 +68,7 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
 public class MultiringNode implements Node, ScribeClient {
   
   /**
-   * The node which this mulitring node is wrapping
+   * The node which this multiring node is wrapping
    */
   protected Node node;
   

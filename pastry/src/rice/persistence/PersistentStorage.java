@@ -60,14 +60,14 @@ import rice.p2p.util.rawserialization.JavaSerializationException;
 
 /**
  * This class is an implementation of Storage which provides
- * persistent storage to disk.  This class also guarentees that
+ * persistent storage to disk.  This class also guarantees that
  * the data will be consistent, even after a crash.  This class
  * also provides these services is a non-blocking fashion by
- * launching a seperate thread which is tasked with actaully
+ * launching a separate thread which is tasked with actually
  * writing the data to disk.
  *
  * This class was initially designed to support only Ids whose toString()
- * method returns a String of constant length.  It has been exteneded to
+ * method returns a String of constant length.  It has been extended to
  * support variable-length toString()s, but we have the caveat that
  * not toString() can be a substring of another toString() - this 
  * will cause undefined behavior.  <b>Additionally, the toString() method on the key Ids
@@ -91,7 +91,7 @@ import rice.p2p.util.rawserialization.JavaSerializationException;
  * key.  
  *
  * Persistence also supports the metadata interface specified in the
- * Catalog interface.  All metadata is guaranteeded to be stored
+ * Catalog interface.  All metadata is guaranteed to be stored
  * in memory, so fetching the metadata of a given key is an efficient
  * operation.  
  */
@@ -181,7 +181,7 @@ public class PersistentStorage implements Storage {
    
  /**
   * Builds a PersistentStorage given and an instance name
-  *  and a root directoy in which to persist the data. 
+  *  and a root directory in which to persist the data. 
   *
   * @param factory The factory to use for creating Ids.
   * @param name the name of this instance
@@ -194,7 +194,7 @@ public class PersistentStorage implements Storage {
   
   /**
    * Builds a PersistentStorage given and an instance name
-   *  and a root directoy in which to persist the data. 
+   *  and a root directory in which to persist the data. 
    *
    * @param factory The factory to use for creating Ids.
    * @param name the name of this instance
@@ -238,7 +238,7 @@ public class PersistentStorage implements Storage {
   }
   
   /**
-   * Method which allows the persistence root to schedle an event which will tell it to 
+   * Method which allows the persistence root to schedule an event which will tell it to 
    * sync the metadata cached. Should be called exactly once after the persistence root is 
    * created.
    *
@@ -511,7 +511,7 @@ public class PersistentStorage implements Storage {
    *
    * @param id The id of the object in question.
    * @param c The command to run once the operation is complete
-   * @return The object, or <code>null</code> if there is no cooresponding
+   * @return The object, or <code>null</code> if there is no corresponding
    * object (through receiveResult on c).
    */
   public void getObject(final Id id, Continuation c) {
@@ -565,7 +565,7 @@ public class PersistentStorage implements Storage {
    * uses the disk, this method may be deprecated.
    *
    * @param range The range to query  
-   * @return The idset containg the keys 
+   * @return The idset containing the keys 
    */
   public IdSet scan(IdRange range){
     if (index) {
@@ -591,7 +591,7 @@ public class PersistentStorage implements Storage {
    * NOTE: This method blocks so if the behavior of this method changes and
    * uses the disk, this method may be deprecated.
    *
-   * @return The idset containg the keys 
+   * @return The idset containing the keys 
    */
   public IdSet scan() {
     if (index) {
@@ -608,7 +608,7 @@ public class PersistentStorage implements Storage {
    * metadata.  
    *
    * @param range The range to query  
-   * @return The map containg the keys 
+   * @return The map containing the keys 
    */
   public SortedMap scanMetadata(IdRange range) {
     if (index) {
@@ -1326,7 +1326,7 @@ public class PersistentStorage implements Storage {
    * unless there is a collision, in which case it will return a random number
    * Since this mapping is only needed once it does not matter what number
    * is used to generate the filename, the hashcode is the first try for
-   * effeciency.
+   * efficiency.
    */
   private File makeTemporaryFile(Id id) throws IOException {    
     File directory = getDirectoryForId(id);
@@ -1427,7 +1427,7 @@ public class PersistentStorage implements Storage {
           return newDir;
         }
       } else {
-        /* here, we have to handle a wierd case where the filename is less than that of
+        /* here, we have to handle a weird case where the filename is less than that of
         an existing directory.  To handle this, we pretend like we're doing a directory
         split, and create new subdirs so we can accomidate everything. */
         String[] dirs = new String[subDirs.length + 1];
@@ -1934,7 +1934,7 @@ public class PersistentStorage implements Storage {
    * Sets the root directory that the persistence Manager uses
    *
    * @param dir the String representing the directory to use
-   * @return boolean, true if the operation suceeds false if it doesn't
+   * @return boolean, true if the operation succeeds false if it doesn't
    */
   public boolean setRoot(String dir) {
     /* We should do something logical here to the existing files */
@@ -1967,7 +1967,7 @@ public class PersistentStorage implements Storage {
    * Sets the amount of storage that the persistence Manager uses
    *
    * @param size the amount of storage available to use in bytes
-   * @return boolean, true if the operation suceeds false if it doesn't
+   * @return boolean, true if the operation succeeds false if it doesn't
    */
   public boolean setStorageSize(long size) {
     if(storageSize <= size){
@@ -2005,7 +2005,7 @@ public class PersistentStorage implements Storage {
 
   /**
    * 
-   * Gets the amound of space currently being used on disk
+   * Gets the amount of space currently being used on disk
    *
    * @return long the amount of space being used
    *
@@ -2039,7 +2039,7 @@ public class PersistentStorage implements Storage {
   }
   
   /**
-   * A classs that filters out the files in a directory to return
+   * A class that filters out the files in a directory to return
    * only files ( no directories )
    */
   private class FileFilter implements FilenameFilter {
