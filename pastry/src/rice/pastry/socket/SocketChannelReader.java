@@ -222,7 +222,7 @@ public class SocketChannelReader {
     // in case we are asked to deserialize something too big, produce a proper error
     if (objectSize > MAX_MESSAGE_SIZE) {
       if (logger.level <= Logger.SEVERE) {
-        buffer = ByteBuffer.allocateDirect(100);
+        buffer = ByteBuffer.allocate(100);  // have to use allocate, because direct buffers may not support array()
         int bytesRead = sc.read(buffer);
         
         String s = "";
