@@ -228,9 +228,12 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     boolean finished = false;
     int count = 0;
 
+    
+    // this loop starts on the next hop's key, and moves out left and right until finished
     for (int i = 0; !finished; i++) {
-      for (int j = 0; j < 2; j++) {
-        int digit = (j == 0) ? (keyDigit + i) & (cols - 1)
+      for (int j = 0; j < 2; j++) { // alternate left/right
+        int digit = (j == 0) ? 
+              (keyDigit + i) & (cols - 1) // & (cols-1) effects the overflow, making cols => 0, so it makes the algorithm wrap around
             : (keyDigit + cols - i) & (cols - 1);
 
         RouteSet rs = getRouteSet(diffDigit, digit);
@@ -240,9 +243,13 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
           if (n.isAlive()) {
             Id.Distance nDist = n.getNodeId().distance(key);
 
-            if (set != null && count < max && myDistance.compareTo(nDist) > 0) {
+            if (myDistance.compareTo(nDist) > 0) {
               set.put(n);
               count++;
+            }
+            
+            if (count >= max) {
+              return set; 
             }
           }
         }
