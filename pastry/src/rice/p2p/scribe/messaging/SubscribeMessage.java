@@ -224,6 +224,20 @@ public class SubscribeMessage extends AnycastMessage {
 
   public boolean isEmpty() {
     return topics.isEmpty();
-  }  
+  } 
+  
+  /**
+   * Copies everything except changes the topics to the new list
+   * 
+   * @param newTopics
+   * @return
+   */
+  public SubscribeMessage copy(List<Topic> newTopics) {
+    SubscribeMessage ret = new SubscribeMessage(getSource(), newTopics, getId(), getRawContent());
+    ret.visited = visited;
+    ret.toVisit = toVisit;
+    ret.subscriber = subscriber;
+    return ret;
+  }
 }
 
