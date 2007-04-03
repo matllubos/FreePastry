@@ -39,6 +39,7 @@ package rice.p2p.scribe.maintenance;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 import rice.environment.Environment;
@@ -109,18 +110,24 @@ public interface ScribeMaintenancePolicy {
     }
 
     public void doMaintenance(MaintainableScribe scribe) {
-      // for each topic, make sure our parent is still alive
+      HashMap<NodeHandle, List<Topic>> manifest = new HashMap<NodeHandle, List<Topic>>();
+      
+      // for each topic, make sure our parent is still alive      
       for (Topic topic : scribe.getTopics()) {
         NodeHandle parent = scribe.getParent(topic);
         
         // also send an upward heartbeat message, which should make sure we are still subscribed
         if (parent != null) {
-          scribe.getEndpoint().route(topic.getId(), new SubscribeMessage(scribe.getEndpoint().getLocalNodeHandle(), topic, MaintainableScribe.MAINTENANCE_ID, null), parent);
-//          scribe.subscribe(topic, null, null, parent);
-          parent.checkLiveness();
+          List<Topic> topics = manifest.get(parent);
+          if (topics == null) {
+            topics = new ArrayList<Topic>();
+            manifest.put(parent,topics);
+          }
+          topics.add(topic);
+          
         } else {
           // If the parent is null, then we have either very recently sent out a
-          // Subscribe message in which case we are fine. The way the tree
+          // SubscribeMessage in which case we are fine. The way the tree
           // recovery works when my parent is null is that in the
           // sendSubscribe() method, a local mesage SubscribeLost message is
           // sceduled after message_timeout which in turn triggers the
@@ -137,8 +144,14 @@ public interface ScribeMaintenancePolicy {
 //          }        
         }
       }
-    }
-
+      
+      for (NodeHandle parent : manifest.keySet()) {
+        List<Topic> topics = manifest.get(parent);
+        scribe.getEndpoint().route(topics.get(0).getId(), new SubscribeMessage(scribe.getEndpoint().getLocalNodeHandle(), topics, MaintainableScribe.MAINTENANCE_ID, null), parent);
+        parent.checkLiveness();
+      }      
+    }    
+    
     public void noLongerRoot(MaintainableScribe scribe, List<Topic> topics) {
       // TODO Auto-generated method stub
 

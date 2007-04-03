@@ -85,6 +85,9 @@ public class ScribeRegrTest extends CommonAPITest {
     policies = new TestScribePolicy[NUM_NODES];
   }
 
+  public TestScribeContent buildTestScribeContent(Topic topic, int numMessages) {
+    return new TestScribeContent(topic, numMessages);
+  }
 
   public void setupParams(Environment env) {
     super.setupParams(env);
@@ -181,7 +184,7 @@ public class ScribeRegrTest extends CommonAPITest {
     ScribeImpl local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
 
     for (int i = 0; i < NUM_MESSAGES; i++) {
-      local.publish(topic, new TestScribeContent(topic, i));
+      local.publish(topic, buildTestScribeContent(topic, i));
       simulate();
     }
 
@@ -199,7 +202,7 @@ public class ScribeRegrTest extends CommonAPITest {
     stepStart(name + " Anycast - No Accept");
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
-    local.anycast(topic, new TestScribeContent(topic, 59));
+    local.anycast(topic, buildTestScribeContent(topic, 59));
     simulate();
 
     failed = false;
@@ -218,7 +221,7 @@ public class ScribeRegrTest extends CommonAPITest {
     client.acceptAnycast(true);
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
-    local.anycast(topic, new TestScribeContent(topic, 59));
+    local.anycast(topic, buildTestScribeContent(topic, 59));
     simulate();
 
     failed = false;
@@ -246,7 +249,7 @@ public class ScribeRegrTest extends CommonAPITest {
 
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
 
-    local.anycast(topic, new TestScribeContent(topic, 59));
+    local.anycast(topic, buildTestScribeContent(topic, 59));
     simulate();
 
     int total = 0;
@@ -266,7 +269,7 @@ public class ScribeRegrTest extends CommonAPITest {
     }
 
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
-    local.publish(topic, new TestScribeContent(topic, 100));
+    local.publish(topic, buildTestScribeContent(topic, 100));
     simulate();
 
     failed = false;
@@ -367,7 +370,7 @@ public class ScribeRegrTest extends CommonAPITest {
       ScribeImpl local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
       for (int i = 0; i < NUM_MESSAGES; i++) {
-        local.publish(topic, new TestScribeContent(topic, i));
+        local.publish(topic, buildTestScribeContent(topic, i));
         simulate();
       }
 
@@ -414,6 +417,16 @@ public class ScribeRegrTest extends CommonAPITest {
     }
 
     stepDone(SUCCESS);
+    
+    stepStart("Force Root To Accept");
+    client = new TestScribeClient(scribes[NUM_NODES-1], topic, NUM_NODES-1);
+    // join 1 node first to force the Topic to be created
+    scribes[NUM_NODES-1].subscribe(topic, client);
+    simulate();
+    if (client.getSubscribeFailed())
+      stepDone(FAILURE, "Expected subscribe to succeed because we force the root to accept 1 child.");
+    else
+      stepDone(SUCCESS);
     
     stepStart("Subscribe Attempt");
     int i = environment.getRandomSource().nextInt(NUM_NODES);
@@ -528,7 +541,7 @@ public class ScribeRegrTest extends CommonAPITest {
 //    System.out.println("Local:"+nodes[localIndex]);
     
     for (int i = 0; i < NUM_MESSAGES; i++) {
-      local.publish(topic, new TestScribeContent(topic, i));
+      local.publish(topic, buildTestScribeContent(topic, i));
       simulate();
     }
 
@@ -714,7 +727,7 @@ public class ScribeRegrTest extends CommonAPITest {
     /**
      * DESCRIBE THE FIELD
      */
-    protected ScribeImpl scribe;
+    protected Scribe scribe;
 
     /**
      * DESCRIBE THE FIELD
@@ -752,7 +765,7 @@ public class ScribeRegrTest extends CommonAPITest {
      * @param scribe DESCRIBE THE PARAMETER
      * @param i DESCRIBE THE PARAMETER
      */
-    public TestScribeClient(ScribeImpl scribe, Topic topic, int i) {
+    public TestScribeClient(Scribe scribe, Topic topic, int i) {
       this.scribe = scribe;
       this.i = i;
       this.topic = topic;
