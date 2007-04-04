@@ -789,6 +789,11 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     endpoint.route(null, new SubscribeAckMessage(localHandle, buildListOf1(topic), buildListOf1(manager.getPathToRoot()), MAINTENANCE_ID), child);
   }
    
+  public void setParent(Topic topic, NodeHandle parent, List<Id> pathToRoot) {
+    TopicManager manager = getTopicManager(topic);
+    manager.setParent(parent, pathToRoot);
+  }
+  
   /**
    * Lazy constructor.  
    * @param topic
@@ -1626,22 +1631,31 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
           // subscribe ack, or our path to the root has changed.
           if (manager != null) {
             if (manager.getParent() == null) {
-              manager.setParent(saMessage.getSource());
+              setParent(topic, saMessage.getSource(), pathToRoot);
             }
   
-            if (manager.getParent().equals(saMessage.getSource())) {
-              manager.setPathToRoot(pathToRoot);
-            } else {
+            if (!manager.getParent().equals(saMessage.getSource())) {
               if (logger.level <= Logger.WARNING) logger.log("Received somewhat unexpected subscribe ack message (already have parent " + manager.getParent() +
                           ") from " + saMessage.getSource() + " for topic " + topic + " - the new policy is now to accept the message");
     
               
               NodeHandle parent = manager.getParent();
-              manager.setParent(saMessage.getSource());
-              manager.setPathToRoot(pathToRoot);
+              setParent(topic, saMessage.getSource(), pathToRoot);
   
               endpoint.route(null, new UnsubscribeMessage(localHandle, topic), parent);
             }
+//
+//          if (manager != null) {            
+//            if (manager.getParent() != null && !manager.getParent().equals(saMessage.getSource())) {
+//              // parent changed for some reason
+//              if (logger.level <= Logger.WARNING) logger.log("Received somewhat unexpected subscribe ack message (already have parent " + manager.getParent() +
+//                  ") from " + saMessage.getSource() + " for topic " + topic + " - the new policy is now to accept the message");
+//      
+//              NodeHandle parent = manager.getParent();
+//              endpoint.route(null, new UnsubscribeMessage(localHandle, topic), parent);
+//            }
+//            setParent(topic, saMessage.getSource(), pathToRoot);
+//           
           } else {
             if (logger.level <= Logger.WARNING) logger.log("Received unexpected subscribe ack message from " +
                         saMessage.getSource() + " for unknown topic " + topic);
@@ -1725,7 +1739,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       if (manager != null) {
         if ((manager.getParent() != null) && manager.getParent().equals(dMessage.getSource())) {
           // we set the parent to be null, and then send out another subscribe message
-          manager.setParent(null);
+          setParent(dMessage.getTopic(), null, null);
           Collection<ScribeMultiClient> clients = manager.getClients();
 
           sendSubscribe(dMessage.getTopic(), null, null, null);
@@ -1757,24 +1771,26 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   public void update(Observable o, Object arg) {
     if (arg.equals(NodeHandle.DECLARED_DEAD)) {
       NodeHandle handle = (NodeHandle)o;      
+      maintenancePolicy.nodeFaulty(this, handle, 
+          new ArrayList<Topic>(getTopicsByParent(handle)), 
+          new ArrayList<Topic>(getTopicsByChild(handle)));
       
-      ArrayList<Topic> wasChildOfTopics = new ArrayList<Topic>(getTopicsByChild(handle));
-      for (Topic topic : wasChildOfTopics) {
-        removeChild(topic,handle); // TODO: see what messages this dispatches
-        if (logger.level <= Logger.FINE) logger.log("Child " + o + " for topic " + topic + " has died - removing.");
-      }
-      ArrayList<Topic> wasParentOfTopics = new ArrayList<Topic>(getTopicsByParent(handle));
-      for (Topic topic : wasParentOfTopics) {
-        if (logger.level <= Logger.FINE) logger.log("Parent " + handle + " for topic " + topic + " has died - resubscribing.");
-        TopicManager manager = getTopicManager(topic);
-        manager.setParent(null);
-      }
-      
-//      new DropMessage(handle,wasChildOfTopics); // node is dead, don't bother sending
-//      if (wasParentOfTopics.size() > 1) logger.log(o+" declared dead "+wasParentOfTopics.size());
-      subscribe(wasParentOfTopics);
-      // what about all the pathToRootMessages
-      o.deleteObserver(this);
+//      ArrayList<Topic> wasChildOfTopics = new ArrayList<Topic>(getTopicsByChild(handle));
+//      for (Topic topic : wasChildOfTopics) {
+//        removeChild(topic,handle); // TODO: see what messages this dispatches
+//        if (logger.level <= Logger.FINE) logger.log("Child " + o + " for topic " + topic + " has died - removing.");
+//      }
+//      ArrayList<Topic> wasParentOfTopics = new ArrayList<Topic>(getTopicsByParent(handle));
+//      for (Topic topic : wasParentOfTopics) {
+//        if (logger.level <= Logger.FINE) logger.log("Parent " + handle + " for topic " + topic + " has died - resubscribing.");
+//        setParent(topic, null, null);
+//      }
+//      
+////      new DropMessage(handle,wasChildOfTopics); // node is dead, don't bother sending
+////      if (wasParentOfTopics.size() > 1) logger.log(o+" declared dead "+wasParentOfTopics.size());
+//      subscribe(wasParentOfTopics);
+//      // what about all the pathToRootMessages
+//      o.deleteObserver(this); // this should be done automatically when the maintenance policy gets rid of the parents/children
     }
   }
 
@@ -1886,7 +1902,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       this.clients = new ArrayList<ScribeMultiClient>();
       this.children = new ArrayList<NodeHandle>();
 
-      setPathToRoot(new ArrayList<Id>());
+      setPathToRoot(null);
 //      if(logger.level <= Logger.INFO) logger.log("Creating TopicManager for topic: " + topic);
     }
     
@@ -1961,7 +1977,11 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
      */
     public void setPathToRoot(List<Id> pathToRoot) {
       // build the path to the root for the new node
-      this.pathToRoot = new ArrayList<Id>(pathToRoot);
+      if (pathToRoot == null) {
+        this.pathToRoot = new ArrayList<Id>();
+      } else {
+        this.pathToRoot = new ArrayList<Id>(pathToRoot);
+      }
       this.pathToRoot.add(endpoint.getId());
       
       // now send the information out to our children
@@ -1981,15 +2001,20 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
      *
      * @param handle The new Parent value
      */
-    public void setParent(NodeHandle handle) {
-      if (logger.level <= Logger.INFO) logger.log(this+"setParent("+handle+") prev:"+parent);        
+    public void setParent(NodeHandle handle, List<Id> pathToRoot) {
+      if (logger.level <= Logger.INFO) logger.log(this+"setParent("+handle+","+pathToRoot+") prev:"+parent);        
       
       if ((handle != null) && !handle.isAlive()) {
         if (logger.level <= Logger.WARNING) logger.log("Setting dead parent "+handle+" for " + topic);        
       }
       
       if ((handle != null) && (parent != null)) {
-        if (logger.level <= Logger.WARNING) logger.log("Unexpectedly changing parents for topic " + topic);
+        if (handle.equals(parent)) {
+          // not a real change
+          setPathToRoot(pathToRoot);
+          return;
+        }
+        if (logger.level <= Logger.FINE) logger.log("Unexpectedly changing parents for topic " + topic+":"+parent+"=>"+handle);
       }
       
       NodeHandle prevParent = parent;
@@ -1999,7 +2024,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 //      }
       
       parent = handle;
-      setPathToRoot(new ArrayList<Id>());
+      setPathToRoot(pathToRoot);
       
 //      if ((parent != null) && parent.isAlive()) {
 //        parent.addObserver(this);
@@ -2203,5 +2228,11 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   public Collection<Topic> getTopics() {
     // it would be safer to return a copy, but faster to do it this way
     return topics.keySet();
+  }
+
+  public List<Id> getPathToRoot(Topic topic) {
+    TopicManager manager = (TopicManager) topics.get(topic);
+    if (manager == null) return null;
+    return manager.getPathToRoot();
   }
 }

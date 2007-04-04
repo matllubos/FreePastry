@@ -157,9 +157,19 @@ public interface ScribeMaintenancePolicy {
 
     }
 
-    public void nodeFaulty(MaintainableScribe scribe, NodeHandle node,
+    public void nodeFaulty(MaintainableScribe scribe, NodeHandle handle,
         List<Topic> nodeWasParent, List<Topic> nodeWasChild) {
-      // TODO Auto-generated method stub
+      for (Topic topic : nodeWasChild) {
+        if (logger.level <= Logger.FINE) logger.log("Child " + handle + " for topic " + topic + " has died - removing.");
+        scribe.removeChild(topic,handle); // TODO: see what messages this dispatches
+      }
+      for (Topic topic : nodeWasParent) {
+        if (logger.level <= Logger.FINE) logger.log("Parent " + handle + " for topic " + topic + " has died - resubscribing.");
+        scribe.setParent(topic, null, null);
+      }
+      
+//      if (wasParentOfTopics.size() > 1) logger.log(o+" declared dead "+wasParentOfTopics.size());
+      scribe.subscribe(nodeWasParent);
 
     }
 

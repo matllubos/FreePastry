@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.List;
 
 import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.scribe.BaseScribe;
 import rice.p2p.scribe.Scribe;
@@ -75,5 +76,8 @@ public interface MaintainableScribe extends BaseScribe {
   
   public void subscribe(Collection<Topic> failedTopics);  
 
+  public void setParent(Topic topic, NodeHandle parent, List<Id> pathToRoot);
+  
+  public List<Id> getPathToRoot(Topic topic);
 
 }
