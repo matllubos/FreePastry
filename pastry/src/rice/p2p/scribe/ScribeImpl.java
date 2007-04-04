@@ -58,7 +58,7 @@ import rice.p2p.scribe.rawserialization.*;
  * @version $Id$
  * @author Alan Mislove
  */
-public class ScribeImpl implements Scribe, MaintainableScribe, Application {
+public class ScribeImpl implements Scribe, MaintainableScribe, Application, Observer {
   // Special Log Levels
   public static final int INFO_2 = 850;
   
@@ -947,6 +947,11 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
     Collection<Topic> topics = allChildren.get(child);
     
     if (topics == null) {
+      if (child.isAlive()) {
+        if (!allParents.containsKey(child)) child.addObserver(this);
+      } else {    
+        if (logger.level <= Logger.WARNING) logger.logException("addToAllChildren("+t+","+child+") child.isAlive() == false", new Exception("Stack Trace"));         
+      }
       topics = new ArrayList<Topic>();
       allChildren.put(child, topics);
     }
@@ -966,8 +971,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
     }
     topics.remove(t);
     
-    if (topics.size() == 0) {
+    if (topics.isEmpty()) {
       allChildren.remove(child); 
+      if (!allParents.containsKey(child)) child.deleteObserver(this);
+
     }
   }
 
@@ -1046,6 +1053,11 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
     // Parent added
     Collection<Topic> topics = allParents.get(parent);
     if (topics == null) {
+      if (parent.isAlive()) {
+        if (!allChildren.containsKey(parent)) parent.addObserver(this);
+      } else {
+        if (logger.level <= Logger.WARNING) logger.logException("addToAllParents("+t+","+parent+") parent.isAlive() == false", new Exception("Stack Trace"));         
+      }
       topics = new ArrayList<Topic>();
       allParents.put(parent, topics);
     }
@@ -1074,6 +1086,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
     
     if (topics.isEmpty()) {
       allParents.remove(parent); 
+      if (!allChildren.containsKey(parent)) parent.deleteObserver(this);
     }
   }
 
@@ -1736,6 +1749,34 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
       if (logger.level <= Logger.WARNING) logger.log("Received unknown message " + message + " - dropping on floor.");
     }
   }
+  
+  /**
+   * Called when a Node's liveness changes
+   *
+   */
+  public void update(Observable o, Object arg) {
+    if (arg.equals(NodeHandle.DECLARED_DEAD)) {
+      NodeHandle handle = (NodeHandle)o;      
+      
+      ArrayList<Topic> wasChildOfTopics = new ArrayList<Topic>(getTopicsByChild(handle));
+      for (Topic topic : wasChildOfTopics) {
+        removeChild(topic,handle); // TODO: see what messages this dispatches
+        if (logger.level <= Logger.FINE) logger.log("Child " + o + " for topic " + topic + " has died - removing.");
+      }
+      ArrayList<Topic> wasParentOfTopics = new ArrayList<Topic>(getTopicsByParent(handle));
+      for (Topic topic : wasParentOfTopics) {
+        if (logger.level <= Logger.FINE) logger.log("Parent " + handle + " for topic " + topic + " has died - resubscribing.");
+        TopicManager manager = getTopicManager(topic);
+        manager.setParent(null);
+      }
+      
+//      new DropMessage(handle,wasChildOfTopics); // node is dead, don't bother sending
+//      if (wasParentOfTopics.size() > 1) logger.log(o+" declared dead "+wasParentOfTopics.size());
+      subscribe(wasParentOfTopics);
+      // what about all the pathToRootMessages
+      o.deleteObserver(this);
+    }
+  }
 
   /**
    * This method is invoked to inform the application that the given node has either joined or left
@@ -1782,7 +1823,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
    * @version $Id$
    * @author amislove
    */
-  public class TopicManager implements Observer, Destructable {
+  public class TopicManager implements /*Observer,*/ Destructable {
 
     /**
      * DESCRIBE THE FIELD
@@ -1953,16 +1994,16 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
       
       NodeHandle prevParent = parent;
       
-      if (parent != null) {
-        parent.deleteObserver(this);
-      }
+//      if (parent != null) {
+//        parent.deleteObserver(this);
+//      }
       
       parent = handle;
       setPathToRoot(new ArrayList<Id>());
       
-      if ((parent != null) && parent.isAlive()) {
-        parent.addObserver(this);
-      }
+//      if ((parent != null) && parent.isAlive()) {
+//        parent.addObserver(this);
+//      }
       
       // We remove the stale parent from global data structure of parent ->
       // topics
@@ -1981,6 +2022,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
      * Called when a Node's liveness changes
      *
      */
+    /*
     public void update(Observable o, Object arg) {
       if (arg.equals(NodeHandle.DECLARED_DEAD)) {
 //        logger.log("update("+o+","+arg+")");
@@ -2010,6 +2052,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
         o.deleteObserver(this);
       }
     }
+      */
 
     /**
      * Adds a feature to the Client attribute of the TopicManager object
@@ -2040,9 +2083,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
       // as observer to keep from having memory problems
       // TODO: make this part of the destructable pattern
       // and get rid of all observers and remove from topics list too
-      if (unsub && (parent != null)) {
-        parent.deleteObserver(this);
-      }
+//      if (unsub && (parent != null)) {
+//        parent.deleteObserver(this);
+//      }
 
       return unsub;
     }
@@ -2067,7 +2110,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
       if (!children.contains(child)) {
         if (child.isAlive()) {
           children.add(child);
-          child.addObserver(this);
+//          child.addObserver(this);
           // We update this information to the global data structure of children
           // -> topics
           addToAllChildren(topic, child);
@@ -2090,7 +2133,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
       
       children.remove(child);
       
-      child.deleteObserver(this);
+//      child.deleteObserver(this);
 
       boolean unsub = ((clients.size() == 0) && (children.size() == 0));
 
@@ -2098,9 +2141,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
       // as observer to keep from having memory problems
       // TODO: make this part of the destructable pattern
       // and get rid of all observers and remove from topics list too
-      if (unsub && (parent != null)) {
-        parent.deleteObserver(this);
-      }
+//      if (unsub && (parent != null)) {
+//        parent.deleteObserver(this);
+//      }
 
       // We update this information to the global data structure of children ->
       // topics
@@ -2111,16 +2154,16 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
 
     public void destroy() {
       if (logger.level <= Logger.FINE) logger.log("Destroying "+this);
-      if (parent!=null) {
-        if (logger.level <= Logger.FINER) logger.log(parent+".deleteObserver()p");
-        parent.deleteObserver(this);
-      }
-      Iterator i = children.iterator();
-      while(i.hasNext()) {
-        NodeHandle child = (NodeHandle)i.next();
-        if (logger.level <= Logger.FINER) logger.log(child+".deleteObserver()c");
-        child.deleteObserver(this);
-      }
+//      if (parent!=null) {
+//        if (logger.level <= Logger.FINER) logger.log(parent+".deleteObserver()p");
+//        parent.deleteObserver(this);
+//      }
+//      Iterator i = children.iterator();
+//      while(i.hasNext()) {
+//        NodeHandle child = (NodeHandle)i.next();
+//        if (logger.level <= Logger.FINER) logger.log(child+".deleteObserver()c");
+//        child.deleteObserver(this);
+//      }
       topics.remove(topic);
     }
   }
@@ -2135,6 +2178,13 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application {
     ArrayList<TopicManager> managers = new ArrayList<TopicManager>(topics.values());
     for (TopicManager topicManager: managers) {
       topicManager.destroy();
+    }
+    
+    for (NodeHandle handle : allChildren.keySet()) {
+      handle.deleteObserver(this); 
+    }
+    for (NodeHandle handle : allParents.keySet()) {
+      handle.deleteObserver(this); 
     }
   }
 
