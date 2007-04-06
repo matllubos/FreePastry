@@ -141,6 +141,7 @@ public class ScribeRegrTest extends CommonAPITest {
     testBasic(1, "Basic");
     testBasic(2, "Partial (1)");
     testBasic(4, "Partial (2)");
+    testMultiSubscribe(1, "Basic");
     testSingleRoot("Single rooted Trees");
     testAPI();
     testFailureNotification();
@@ -190,8 +191,8 @@ public class ScribeRegrTest extends CommonAPITest {
 
     boolean failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
-      if (clients[i].getPublishMessages().length != NUM_MESSAGES) {
-        stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().length);
+      if (clients[i].getPublishMessages().size() != NUM_MESSAGES) {
+        stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().size());
         failed = true;
       }
     }
@@ -207,7 +208,7 @@ public class ScribeRegrTest extends CommonAPITest {
 
     failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
-      if (clients[i].getAnycastMessages().length != 0) {
+      if (clients[i].getAnycastMessages().size() != 0) {
         stepDone(FAILURE, "Expected no accepters for anycast, found one at " + scribes[i]);
         failed = true;
       }
@@ -227,12 +228,12 @@ public class ScribeRegrTest extends CommonAPITest {
     failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       if (clients[i].equals(client)) {
-        if (clients[i].getAnycastMessages().length != 1) {
-          stepDone(FAILURE, "Expected node to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().length+" local "+local);
+        if (clients[i].getAnycastMessages().size() != 1) {
+          stepDone(FAILURE, "Expected node to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local);
           failed = true;
         }
       } else {
-        if (clients[i].getAnycastMessages().length != 0) {
+        if (clients[i].getAnycastMessages().size() != 0) {
           stepDone(FAILURE, "Expected no accepters for anycast, found one at " + scribes[i]);
           failed = true;
         }
@@ -254,7 +255,7 @@ public class ScribeRegrTest extends CommonAPITest {
 
     int total = 0;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
-      total += clients[i].getAnycastMessages().length;
+      total += clients[i].getAnycastMessages().size();
     }
 
     if (total != 2)
@@ -274,8 +275,8 @@ public class ScribeRegrTest extends CommonAPITest {
 
     failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
-      if (clients[i].getPublishMessages().length != NUM_MESSAGES) {
-        stepDone(FAILURE, "Expected client " + clients[i] + " to receive no additional messages, received " + clients[i].getPublishMessages().length);
+      if (clients[i].getPublishMessages().size() != NUM_MESSAGES) {
+        stepDone(FAILURE, "Expected client " + clients[i] + " to receive no additional messages, received " + clients[i].getPublishMessages().size());
         failed = true;
       }
     }
@@ -308,6 +309,179 @@ public class ScribeRegrTest extends CommonAPITest {
     sectionDone();
   }
 
+  /**
+   * Makes sure that if you subscribe to multiple topics at once that they end up on different nodes.
+   *
+   */
+  protected void testMultiSubscribe(int skip, String name) {
+      sectionStart(name + " MultiSubscription Scribe Network");
+      int NUM_MESSAGES = 5;
+      int SKIP = skip;
+      int NUM_TOPICS = 2;
+      
+      // build antipodal topics so they are guaranteed to have different parents   
+      // TODO: Randomize this
+      TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+      List<Topic> topics = new ArrayList<Topic>(2);
+      int[] id1 = {0, 0, 0, 0, 0x80000000};
+      int[] id2 = {0, 0, 0, 0, 0};
+      topics.add(new Topic(FACTORY.buildId(id1)));
+      topics.add(new Topic(FACTORY.buildId(id2)));
+//      System.out.println(topics.get(0).toString()+" "+topics.get(1).toString());
+      
+      stepStart(name + " Tree Construction (Parent Independence)");
+      for (int i = 0; i < NUM_NODES; i++) {
+        clients[i] = new TestScribeClient(scribes[i], topics, i);
+        scribes[i].subscribe(topics, clients[i],null, null);
+        simulate();
+      }
+
+      int numWithParent = 0;
+      for (int i=0; i < NUM_NODES; i++) {
+        if (scribes[i].getParent(topics.get(0)) == scribes[i].getParent(topics.get(1))) {
+          stepDone(FAILURE, "Topics "+topics.get(0)+" and "+topics.get(1)+" had same parent "+scribes[i].getParent(topics.get(0))+" on node "+scribes[i].getEndpoint().getLocalNodeHandle());         
+        }
+      }
+      stepDone(SUCCESS);
+      
+      stepStart(name + " Publish");
+      ScribeImpl local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
+
+      for (int i = 0; i < NUM_MESSAGES; i++) {
+        for (Topic topic : topics) {
+          local.publish(topic, buildTestScribeContent(topic, i));
+        }
+        simulate();
+      }
+
+      boolean failed = false;
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        if (clients[i].getPublishMessages().size() != NUM_MESSAGES*NUM_TOPICS) {
+          stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().size());
+          failed = true;
+        }
+      }
+
+      if (! failed)
+        stepDone(SUCCESS);
+
+      stepStart(name + " Anycast - No Accept");
+      local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
+
+      for (Topic topic : topics) 
+        local.anycast(topic, buildTestScribeContent(topic, 59));
+      simulate();
+
+      failed = false;
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        if (clients[i].getAnycastMessages().size() != 0) {
+          stepDone(FAILURE, "Expected no accepters for anycast, found one at " + scribes[i]);
+          failed = true;
+        }
+      }
+
+      if (! failed)
+        stepDone(SUCCESS);
+
+      stepStart(name + " Anycast - 1 Accept");
+      TestScribeClient client = clients[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
+      client.acceptAnycast(true);
+      local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
+
+      for (Topic topic : topics) 
+        local.anycast(topic, buildTestScribeContent(topic, 59));
+      simulate();
+
+      failed = false;
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        if (clients[i].equals(client)) {
+          if (clients[i].getAnycastMessages().size() != NUM_TOPICS) {
+            stepDone(FAILURE, "Expected node to accept "+NUM_TOPICS+" anycasts at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local);
+            failed = true;
+          }
+        } else {
+          if (clients[i].getAnycastMessages().size() != 0) {
+            stepDone(FAILURE, "Expected no accepters for anycast, found one at " + scribes[i]);
+            failed = true;
+          }
+        }
+      }
+
+      if (! failed)
+        stepDone(SUCCESS);
+
+      stepStart(name + " Anycast - All Accept");
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        clients[i].acceptAnycast(true);
+      }
+
+      local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
+
+      for (Topic topic : topics) 
+        local.anycast(topic, buildTestScribeContent(topic, 59));
+      simulate();
+
+      int total = 0;
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        total += clients[i].getAnycastMessages().size();
+      }
+
+      if (total != NUM_TOPICS*2)
+        stepDone(FAILURE, "Expected "+(NUM_TOPICS*2)+" anycast messages to be found, found " + total);
+      else
+        stepDone(SUCCESS);
+
+      stepStart(name + " Unsubscribe");
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        for (Topic topic : topics)
+          scribes[i].unsubscribe(topic, clients[i]);
+        simulate();
+      }
+
+      local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
+      for (Topic topic : topics) 
+        local.publish(topic, buildTestScribeContent(topic, 100));
+      simulate();
+
+      failed = false;
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        if (clients[i].getPublishMessages().size() != NUM_MESSAGES*NUM_TOPICS) {
+          stepDone(FAILURE, "Expected client " + clients[i] + " to receive no additional messages, received " + clients[i].getPublishMessages().size());
+          failed = true;
+        }
+      }
+
+      if (! failed)
+        stepDone(SUCCESS);
+
+      stepStart(name + " Tree Completely Demolished");
+      failed = false;
+      for (int i=0; i < NUM_NODES; i++) {
+        for (Topic topic : topics) {
+          if (scribes[i].getClients(topic).size() > 0) {
+            stepDone(FAILURE, "Expected scribe " + scribes[i] + " to have no clients, had " + scribes[i].getClients(topic).size());
+            failed = true;
+          }
+  
+          if (scribes[i].getChildren(topic).length > 0) {
+            stepDone(FAILURE, "Expected scribe " + scribes[i] + " to have no children, had " + scribes[i].getChildren(topic).length);
+            failed = true;
+          }
+  
+          if (scribes[i].getParent(topic) != null) {
+            stepDone(FAILURE, "Expected scribe " + scribes[i] + " to have no parent, had " + scribes[i].getParent(topic));
+            failed = true;
+          }
+        }
+      }
+
+      if (! failed)
+        stepDone(SUCCESS);    
+
+      sectionDone();
+    }
+
+  
   /**
     * Tests basic publish functionality
    */
@@ -376,8 +550,8 @@ public class ScribeRegrTest extends CommonAPITest {
 
       boolean failed = false;
       for (int i=0; i < NUM_NODES/2; i++) {
-        if (clients[i].getPublishMessages().length != NUM_MESSAGES) {
-          stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().length);
+        if (clients[i].getPublishMessages().size() != NUM_MESSAGES) {
+          stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().size());
           failed = true;
         }
       }
@@ -429,10 +603,10 @@ public class ScribeRegrTest extends CommonAPITest {
       stepDone(SUCCESS);
     
     stepStart("Subscribe Attempt");
-    int i = environment.getRandomSource().nextInt(NUM_NODES);
+    int i = environment.getRandomSource().nextInt(NUM_NODES-1);
 
     while (scribes[i].isRoot(topic))
-      i = environment.getRandomSource().nextInt(NUM_NODES);
+      i = environment.getRandomSource().nextInt(NUM_NODES-1);
     
     client = new TestScribeClient(scribes[i], topic, i);
     scribes[i].subscribe(topic, client);
@@ -547,8 +721,8 @@ public class ScribeRegrTest extends CommonAPITest {
 
     boolean failed = false;
     for (int i=NUM_NODES/2; i < NUM_NODES; i++) {
-      if (clients[i].getPublishMessages().length != NUM_MESSAGES) {
-        stepDone(FAILURE, "Expected client " + nodes[i] +":"+clients[i]+ " to receive all messages, received " + clients[i].getPublishMessages().length);
+      if (clients[i].getPublishMessages().size() != NUM_MESSAGES) {
+        stepDone(FAILURE, "Expected client " + nodes[i] +":"+clients[i]+ " to receive all messages, received " + clients[i].getPublishMessages().size());
         failed = true;
       }
     }
@@ -570,6 +744,12 @@ public class ScribeRegrTest extends CommonAPITest {
     environment.getRandomSource().nextBytes(data);
     return FACTORY.buildId(data);
   }
+
+  public static List<Topic> buildListOf1(Topic topic) {
+    List<Topic> ret = new ArrayList<Topic>(1);
+    ret.add(topic);
+    return ret;
+  }    
 
   /**
    * Utility class for past content objects
@@ -714,6 +894,7 @@ public class ScribeRegrTest extends CommonAPITest {
     public void setMessage(RawMessage message) {
       this.message = message;
     }
+    
   }
 
   /**
@@ -747,7 +928,7 @@ public class ScribeRegrTest extends CommonAPITest {
     /**
      * The topic this client is listening for
      */
-    protected Topic topic;
+    protected List<Topic> topics;
 
     /**
      * Whether or not this client should accept anycasts
@@ -766,21 +947,25 @@ public class ScribeRegrTest extends CommonAPITest {
      * @param i DESCRIBE THE PARAMETER
      */
     public TestScribeClient(Scribe scribe, Topic topic, int i) {
+      this(scribe, buildListOf1(topic), i);   
+    }
+    
+    public TestScribeClient(Scribe scribe, List<Topic> topics, int i) {
       this.scribe = scribe;
       this.i = i;
-      this.topic = topic;
+      this.topics = topics;
       this.publishMessages = new Vector();
       this.anycastMessages = new Vector();
       this.acceptAnycast = false;
       this.subscribeFailed = false;
     }
 
-    public ScribeContent[] getPublishMessages() {
-      return (ScribeContent[]) publishMessages.toArray(new ScribeContent[0]);
+    public List<ScribeContent> getPublishMessages() {
+      return publishMessages;
     }
 
-    public ScribeContent[] getAnycastMessages() {
-      return (ScribeContent[]) anycastMessages.toArray(new ScribeContent[0]);
+    public List<ScribeContent> getAnycastMessages() {
+      return anycastMessages;
     }
 
     public void acceptAnycast(boolean value) {
@@ -841,8 +1026,15 @@ public class ScribeRegrTest extends CommonAPITest {
       return subscribeFailed;
     }
     
-    public String toString() {
-      return topic.toString(); 
+    public String toString() {      
+      if (topics.size() == 1) {
+        return topics.get(0).toString(); 
+      }
+      String s = "";
+      for (Topic topic : topics) {
+        s+=topics.toString()+" "; 
+      }
+      return s;
     }
   }
 
