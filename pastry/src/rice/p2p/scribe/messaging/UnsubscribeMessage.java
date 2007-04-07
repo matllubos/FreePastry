@@ -38,6 +38,8 @@ advised of the possibility of such damage.
 package rice.p2p.scribe.messaging;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import rice.*;
 import rice.p2p.commonapi.*;
@@ -54,9 +56,12 @@ import rice.p2p.scribe.rawserialization.ScribeContentDeserializer;
  *
  * @author Alan Mislove
  */
-public class UnsubscribeMessage extends ScribeMessage {
+public class UnsubscribeMessage implements RawMessage {
   public static final short TYPE = 10;
 
+  NodeHandle source;
+  List<Topic> topics;
+  
   /**
    * Constructor which takes a unique integer Id
    *
@@ -64,10 +69,43 @@ public class UnsubscribeMessage extends ScribeMessage {
    * @param source The source address
    * @param dest The destination address
    */
-  public UnsubscribeMessage(NodeHandle source, Topic topic) {
-    super(source, topic);
+  public UnsubscribeMessage(NodeHandle source, List<Topic> topics) {
+    this.source = source;
+    this.topics = topics;
   }
 
+  /**
+   * Method which should return the priority level of this message.  The messages
+   * can range in priority from 0 (highest priority) to Integer.MAX_VALUE (lowest) -
+   * when sending messages across the wire, the queue is sorted by message priority.
+   * If the queue reaches its limit, the lowest priority messages are discarded.  Thus,
+   * applications which are very verbose should have LOW_PRIORITY or lower, and
+   * applications which are somewhat quiet are allowed to have MEDIUM_PRIORITY or
+   * possibly even HIGH_PRIORITY.
+   *
+   * @return This message's priority
+   */
+  public int getPriority() {
+    return MEDIUM_HIGH_PRIORITY;
+  }
+
+  /**
+   * Method which returns this messages' source address
+   *
+   * @return The source of this message
+   */
+  public NodeHandle getSource() {
+    return source;
+  }
+  
+  /**
+   * Method which returns this messages' topic
+   *
+   * @return The topic of this message
+   */
+  public List<Topic> getTopics() {
+    return topics;
+  }
   
   /***************** Raw Serialization ***************************************/
   public short getType() {
@@ -75,14 +113,25 @@ public class UnsubscribeMessage extends ScribeMessage {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeByte((byte)0); // version
-    super.serialize(buf);    
+    buf.writeByte((byte)1); // version
+    boolean hasSource = (source != null);
+    buf.writeBoolean(hasSource);
+    if (hasSource)
+      source.serialize(buf);
+    buf.writeInt(topics.size());
+    for (Topic topic : topics) {
+      topic.serialize(buf);      
+    }
   }  
 
   public static UnsubscribeMessage build(InputBuffer buf, Endpoint endpoint) throws IOException {
     byte version = buf.readByte();
     switch(version) {
-      case 0:
+    case 0:
+      // TODO: Handle this
+      
+      return null;
+    case 1:
         return new UnsubscribeMessage(buf, endpoint);
       default:
         throw new IOException("Unknown Version: "+version);
@@ -95,7 +144,13 @@ public class UnsubscribeMessage extends ScribeMessage {
    * version number.
    */
   private UnsubscribeMessage(InputBuffer buf, Endpoint endpoint) throws IOException {
-    super(buf, endpoint);
+    if (buf.readBoolean())
+      source = endpoint.readNodeHandle(buf);
+    int numTopics = buf.readInt();
+    topics = new ArrayList<Topic>(numTopics);
+    for (int i = 0; i < numTopics; i++) {
+      topics.add(new Topic(buf, endpoint));
+    }    
   }
 }
 
