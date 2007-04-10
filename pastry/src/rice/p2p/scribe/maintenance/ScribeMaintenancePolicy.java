@@ -50,6 +50,7 @@ import rice.p2p.scribe.Scribe;
 import rice.p2p.scribe.ScribeContent;
 import rice.p2p.scribe.Topic;
 import rice.p2p.scribe.messaging.SubscribeMessage;
+import rice.p2p.scribe.rawserialization.RawScribeContent;
 
 public interface ScribeMaintenancePolicy {
   /**
@@ -106,10 +107,12 @@ public interface ScribeMaintenancePolicy {
    * 
    * This gives the MaintenancePolicy a chance to set the ScribeContent in these messages.
    * 
+   * To convert a ScribeContent (java serialized) to a RawScribeContent use new JavaSerializedScribeContent(content)
+   * 
    * @param topics the topics we are implicitly subscribing to
    * @return the ScribeContent to put into the SubscribeMessage (null is ok)
    */
-  public ScribeContent implicitSubscribe(List<Topic> topics);
+  public RawScribeContent implicitSubscribe(List<Topic> topics);
     
   public class DefaultScribeMaintenancePolicy implements
       ScribeMaintenancePolicy {
@@ -158,13 +161,13 @@ public interface ScribeMaintenancePolicy {
       
       for (NodeHandle parent : manifest.keySet()) {
         List<Topic> topics = manifest.get(parent);
-        scribe.getEndpoint().route(topics.get(0).getId(), new SubscribeMessage(scribe.getEndpoint().getLocalNodeHandle(), topics, MaintainableScribe.MAINTENANCE_ID, scribe.convert(implicitSubscribe(topics))), parent);
+        scribe.getEndpoint().route(topics.get(0).getId(), new SubscribeMessage(scribe.getEndpoint().getLocalNodeHandle(), topics, MaintainableScribe.MAINTENANCE_ID, implicitSubscribe(topics)), parent);
         parent.checkLiveness();
       }      
     }    
     
     public void noLongerRoot(MaintainableScribe scribe, List<Topic> topics) {
-      scribe.subscribe(topics,null,scribe.convert(implicitSubscribe(topics)),null);
+      scribe.subscribe(topics,null,implicitSubscribe(topics),null);
     }
 
     public void nodeFaulty(MaintainableScribe scribe, NodeHandle handle,
@@ -179,13 +182,13 @@ public interface ScribeMaintenancePolicy {
       }
       
 //      if (wasParentOfTopics.size() > 1) logger.log(o+" declared dead "+wasParentOfTopics.size());
-      scribe.subscribe(nodeWasParent,null,scribe.convert(implicitSubscribe(nodeWasParent)),null);
+      scribe.subscribe(nodeWasParent,null,implicitSubscribe(nodeWasParent),null);
 
     }
 
     public void subscribeFailed(MaintainableScribe scribe, List<Topic> failedTopics) {
 //      logger.log("subscribeFailed("+failedTopics.iterator().next()+")");          
-      scribe.subscribe(failedTopics, null, scribe.convert(implicitSubscribe(failedTopics)), null);
+      scribe.subscribe(failedTopics, null, implicitSubscribe(failedTopics), null);
     }
     
     /**
@@ -196,7 +199,7 @@ public interface ScribeMaintenancePolicy {
      * @param topics the topics we are implicitly subscribing to
      * @return the ScribeContent to put into the SubscribeMessage (null is ok)
      */
-    public ScribeContent implicitSubscribe(List<Topic> topics) {
+    public RawScribeContent implicitSubscribe(List<Topic> topics) {
       return null;
     }
   }

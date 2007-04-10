@@ -232,8 +232,8 @@ public class SubscribeMessage extends AnycastMessage {
    * @param newTopics
    * @return
    */
-  public SubscribeMessage copy(List<Topic> newTopics) {
-    SubscribeMessage ret = new SubscribeMessage(getSource(), newTopics, getId(), getRawContent());
+  public SubscribeMessage copy(List<Topic> newTopics, RawScribeContent content) {
+    SubscribeMessage ret = new SubscribeMessage(getSource(), newTopics, getId(), content);
     ret.visited = visited;
     ret.toVisit = toVisit;
     ret.subscriber = subscriber;

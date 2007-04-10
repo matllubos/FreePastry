@@ -451,7 +451,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       
       for (NodeHandle nextHop : manifest.keySet()) {
         List<Topic> theTopics = manifest.get(nextHop);
-        SubscribeMessage msg = new SubscribeMessage(localHandle, theTopics, theId, content);
+        SubscribeMessage msg = new SubscribeMessage(localHandle, theTopics, theId, convert(policy.divideContent(theTopics, content)));
         endpoint.route(msg.getTopic().getId(), msg, nextHop);      
       }    
     } else {
@@ -795,7 +795,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     synchronized(topicManagers) {
       if (addChildHelper(topic, child)) {
         // a new TopicManager was created
-        subscribe(buildListOf1(topic), null, convert(maintenancePolicy.implicitSubscribe(buildListOf1(topic))), null); 
+        subscribe(buildListOf1(topic), null, maintenancePolicy.implicitSubscribe(buildListOf1(topic)), null); 
       }
     }
     
@@ -1430,7 +1430,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
         }
       }
   
-      subscribe(newTopics, null, convert(maintenancePolicy.implicitSubscribe(newTopics)), null); 
+      subscribe(newTopics, null, maintenancePolicy.implicitSubscribe(newTopics), null); 
       
     } else {
       accepted = askPolicy;
@@ -1490,7 +1490,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
         noManager.add(topic);
       } else {
         topicIterator.remove(); // in case we just forward the message
-        AnycastMessage aMessage = sMessage.copy(buildListOf1(topic));// clone but with just the 1 topic, make sure to copy toVisit/visited/content
+        AnycastMessage aMessage = sMessage.copy(buildListOf1(topic), sMessage.getRawContent());// clone but with just the 1 topic, make sure to copy toVisit/visited/content
             
         // allow the policy to select the order in which the nodes are visited
         policy.directAnycast(aMessage, manager.getParent(), manager.getChildren());
@@ -1551,7 +1551,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     for (NodeHandle nextHop : manifest.keySet()) {
       List<Topic> theTopics = manifest.get(localHandle);
       for (Topic topic : theTopics) {
-        AnycastMessage aMessage = sMessage.copy(theTopics); // use the copy constructor again
+        AnycastMessage aMessage = sMessage.copy(theTopics, convert(policy.divideContent(theTopics, sMessage.getContent()))); // use the copy constructor again
         endpoint.route(null, aMessage, nextHop);
       }
     }
@@ -1785,7 +1785,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
           Collection<ScribeMultiClient> clients = manager.getClients();
 
           sendSubscribe(dMessage.getTopic(), null, 
-              convert(maintenancePolicy.implicitSubscribe(buildListOf1(dMessage.getTopic()))), 
+              maintenancePolicy.implicitSubscribe(buildListOf1(dMessage.getTopic())), 
               null);
         } else {
           if (logger.level <= Logger.WARNING) logger.log("Received unexpected drop message from non-parent " +
@@ -1808,7 +1808,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
   }
   
-  public RawScribeContent convert(ScribeContent content) {
+  protected RawScribeContent convert(ScribeContent content) {
     if (content == null) return null;
     if (content instanceof RawScribeContent) return (RawScribeContent)content;
     return new JavaSerializedScribeContent(content);
@@ -1860,7 +1860,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 //      TopicManager manager = (TopicManager) topics.get(topic);
         Topic topic = manager.topic;      
         // check if new guy is root, we were old root, then subscribe
-        if (!isRoot(topic) && manager.getParent() == null){
+        if (!isRoot(topic) && manager.getParent() == null){ // maybe we are already subscribing?
           // send subscribe message
 //          sendSubscribe(topic, null, null, null);
           notRoot.add(topic);

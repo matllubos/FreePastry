@@ -83,6 +83,5 @@ public interface MaintainableScribe extends BaseScribe {
   public void setParent(Topic topic, NodeHandle parent, List<Id> pathToRoot);
   
   public List<Id> getPathToRoot(Topic topic);
-  public RawScribeContent convert(ScribeContent content);
 
 }

@@ -64,9 +64,19 @@ public interface ScribePolicy {
    * Here is some example code:
    * 
    * <pre>
-   * for (Topic topic : new ArrayList<Topic>(message.getTopics())) {
-   *   message.accept(topic);
+   * Iterator<Topic> i = topics.iterator();
+   * while (i.hasNext()) {
+   *   Topic topic = i.next();
+   *   if (!accept(topic)) { // your decision on what to do for the topic
+   *     i.remove();
+   *   }
    * }
+   * return topics;
+   * </pre>
+   * 
+   * Or, to accept all:
+   * <pre>
+   * return topics;
    * </pre>
    *
    * Some calls that are likely useful are: 
@@ -75,9 +85,14 @@ public interface ScribePolicy {
    *   <li>scribe.getClients(topic)</li>
    * </ul>
    *
-   * @param message The subscribe message in question
-   * @param children The list of children who are currently subscribed to this topic
-   * @param clients The list of clients are are currently subscribed to this topic
+   * If only some of the topics are accepted, the content may need to be modified.  
+   * This method <i>is</i> allowed to modify the content.
+   *
+   * @param scribe the Scribe that is making the request
+   * @param source the subscriber
+   * @param topics the topics that are requested
+   * @param content the content that came with the message
+   * @param return the list that is accepted
    */
   public List<Topic> allowSubscribe(Scribe scribe, NodeHandle source, List<Topic> topics, ScribeContent content);
 
@@ -121,6 +136,19 @@ public interface ScribePolicy {
    * to tap into some datastructures they might wanna edit
    */
   public void intermediateNode(ScribeMessage message);
+
+  /**
+   * This method is called when the ScribeImpl splits a SubscribeMessage into multiple parts.  
+   * 
+   * If you modify the content, you must make a copy, as the same content will be passed in for the other
+   * divisions of the SubscribeMessage.  ScribeContent's are not naturally copyable, so Scribe cannot 
+   * make a copy apriori.
+   * 
+   * @param theTopics topics going to a particular location
+   * @param content the content that may need to be divided
+   * @return the content if not changed, a new ScribeContent if changed
+   */
+  public ScribeContent divideContent(List<Topic> theTopics, ScribeContent content);
 
   /**
    * The default policy for Scribe, which always allows new children to join and adds children in
@@ -232,6 +260,9 @@ public interface ScribePolicy {
     public void intermediateNode(ScribeMessage message) {
     }
     public void recvAnycastFail(Topic topic, NodeHandle failedAtNode, ScribeContent content) {
+    }
+    public ScribeContent divideContent(List<Topic> theTopics, ScribeContent content) {
+      return content;
     }
   }
 
