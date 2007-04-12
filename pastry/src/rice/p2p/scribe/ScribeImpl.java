@@ -463,7 +463,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     // choose the UID
     int theId;
     synchronized(this) {
-      theId = ++id;
+      id++;
+      if (id == MAINTENANCE_ID) id++;
+      theId = id;
     }
     
     // sort the topics
@@ -681,6 +683,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
         +".");
 
     List<Topic> toSubscribe = new ArrayList<Topic>();
+    List<Topic> alreadySubscribed = new ArrayList<Topic>();
     
     for (Topic topic : theTopics) {
       TopicManager manager = topicManagers.get(topic);
@@ -694,10 +697,17 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       } else {
         if ((manager.getParent() == null) && (! isRoot(topic))) {
           toSubscribe.add(topic);
-        } // else, no need to subscribe
+        } else {
+          // else, no need to subscribe
+          alreadySubscribed.add(topic);
+        }
       }
       manager.addClient(client);
     }
+    
+    // we may need to make this call on the Selector thread for better consistency
+    if (!alreadySubscribed.isEmpty()) client.subscribeSuccess(alreadySubscribed);
+    
     if (toSubscribe.isEmpty()) return;
       
     sendSubscribe(toSubscribe, client, content, hint);
@@ -1629,7 +1639,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       // this message in the forward() method.
       // Otherwise, we received our own subscribe message, which means that we are
       // the root
-      if (aMessage.getSource().getId().equals(endpoint.getId())) {
+      if (aMessage.getSource().equals(localHandle)) {
         if (aMessage instanceof SubscribeMessage) {
           SubscribeMessage sMessage = (SubscribeMessage) message;
 
