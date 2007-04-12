@@ -115,6 +115,17 @@ public abstract class AbstractSubscribeMessage implements RawMessage /*extends S
     return topics;
   }
   
+  public String toString() {
+    String s = source + ","+id;
+    if (topics.size() <= 3) {
+      for (Topic topic : topics) {
+        s+=" "+topic; 
+      }
+    } else {
+      s+=" numTopics:"+topics.size(); 
+    }
+    return s;
+  }
 
   /**
    * Protected because it should only be called from an extending class, to get version
