@@ -38,6 +38,7 @@ advised of the possibility of such damage.
 package rice.p2p.scribe;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.*;
 
 import rice.*;
@@ -124,7 +125,18 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
    * has this node(hashtable key) as a parent
    */
   public HashMap<NodeHandle, Collection<Topic>> allParents;
-
+  
+  /**
+   * Topics that we are the root.
+   */
+  public Set<Topic> roots = new HashSet<Topic>();
+  
+  /**
+   * Topics that (should) have an outsanding subscription.
+   * Topics that are in this set have no parent, and we are not the root.
+   */
+  public Set<Topic> pending = new HashSet<Topic>();
+  
   ScribeContentDeserializer contentDeserializer;
 
   /**
@@ -286,17 +298,21 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 
   /**
    * Adapts an old ScribeClient to a new ScribeMultiClient
+   * 
+   * This is for reverse compatibility.
    */
   public static class ScribeClientConverter implements ScribeMultiClient {
-    ScribeClient client;
+    WeakReference<ScribeClient> client;
     
     public ScribeClientConverter(ScribeClient client) {
-      this.client = client;
+      this.client = new WeakReference<ScribeClient>(client);
     }
 
     public void subscribeFailed(Collection<Topic> topics) {
+      ScribeClient theClient = client.get();
+      if (theClient == null) return;
       for (Topic topic : topics) {
-        client.subscribeFailed(topic); 
+        theClient.subscribeFailed(topic); 
       }
     }
 
@@ -305,23 +321,33 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
 
     public boolean anycast(Topic topic, ScribeContent content) {
-      return client.anycast(topic, content);
+      ScribeClient theClient = client.get();
+      if (theClient == null) return false;      
+      return theClient.anycast(topic, content);
     }
 
     public void childAdded(Topic topic, NodeHandle child) {
-      client.childAdded(topic, child);
+      ScribeClient theClient = client.get();
+      if (theClient == null) return;      
+      theClient.childAdded(topic, child);
     }
 
     public void childRemoved(Topic topic, NodeHandle child) {
-      client.childRemoved(topic, child);
+      ScribeClient theClient = client.get();
+      if (theClient == null) return;      
+      theClient.childRemoved(topic, child);
     }
 
     public void deliver(Topic topic, ScribeContent content) {
-      client.deliver(topic, content);
+      ScribeClient theClient = client.get();
+      if (theClient == null) return;      
+      theClient.deliver(topic, content);
     }
 
     public void subscribeFailed(Topic topic) {
-      client.subscribeFailed(topic);
+      ScribeClient theClient = client.get();
+      if (theClient == null) return;      
+      theClient.subscribeFailed(topic);
     }    
   }  
   
@@ -329,7 +355,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     ArrayList<ScribeClient> ret = new ArrayList<ScribeClient>(multi.size());
     for(ScribeMultiClient client : multi) {
       if (client instanceof ScribeClientConverter) {
-        ret.add(((ScribeClientConverter)client).client); 
+        ScribeClient theClient = ((ScribeClientConverter)client).client.get();
+        if (theClient != null) {              
+          ret.add(theClient); 
+        }
       } else {
         ret.add(client); 
       }
@@ -338,7 +367,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   }
   
   
-  private HashMap<ScribeClient,ScribeClientConverter> clientConverters = new HashMap<ScribeClient,ScribeClientConverter>();
+  private Map<ScribeClient,ScribeClientConverter> clientConverters = new WeakHashMap<ScribeClient,ScribeClientConverter>();
   
   protected ScribeMultiClient getMultiClient(ScribeClient client) {
     if (client instanceof ScribeMultiClient) {
@@ -347,7 +376,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       // it's a simple client
       synchronized(clientConverters) {
         ScribeClientConverter scc = clientConverters.get(client);
-        if (scc == null) {
+        if (scc == null || scc.client.get() == null) {
           scc = new ScribeClientConverter(client);
           clientConverters.put(client, scc);
         }
@@ -428,6 +457,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   }
   
   private void sendSubscribe(List<Topic> topics, ScribeMultiClient client, RawScribeContent content, NodeHandle hint) {
+    pending.addAll(topics);
 
     // choose the UID
     int theId;
@@ -536,7 +566,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   private void failedMessageReceived(SubscribeFailedMessage message) {
     //ScribeClient client = (ScribeClient) outstanding.remove(new Integer(message.getId()));
     SubscribeLostMessage slm = subscribeLostMessages.get(message.getId());
-    
+    if (slm == null) {
+      if (logger.level <= Logger.WARNING) logger.log("received unexpected subscribe failed message, ignoring:"+message);
+      return;
+    }
     // only remove it if this message covers everything
     if (slm.topicsAcked(message.getTopics())) {      
       subscribeLostMessages.remove(message.getId()).cancel();      
@@ -1064,12 +1097,14 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   protected void addToAllParents(Topic t, NodeHandle parent) {
     if (logger.level <= Logger.INFO) logger.log("addToAllParents("+t+","+parent+")");
     
-    if (parent == null) {
+    if (parent == null || parent.equals(localHandle)) {
+      if (isRoot(t)) {
+        roots.add(t);
+      }
       // This could very well be the case, but in such instances we need not do
       // anything
       return;
     }
-
 
     // Parent added
     Collection<Topic> topics = allParents.get(parent);
@@ -1091,9 +1126,12 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   protected void removeFromAllParents(Topic t, NodeHandle parent) {
     if (logger.level <= Logger.INFO) logger.log("removeFromAllParents("+t+","+parent+")");
     
-    if (parent == null) {
+    if (parent == null || parent.equals(localHandle)) {
       // This could very well be the case, but in such instances we need not do
       // anything
+      roots.remove(t);
+      pending.remove(t);
+
       return;
     }
 
@@ -1164,10 +1202,15 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 
   // This returns the topics for which the parameter 'parent' is a Scribe tree parent of the local node
   public Collection<Topic> getTopicsByParent(NodeHandle parent) {
+    // handle local node as null or the localHandle
+    if (parent == null) parent = localHandle;
+    if (parent.equals(localHandle)) return roots;
+    
     Collection<Topic> topic = allParents.get(parent);
     if (topic == null) {
       return Collections.emptyList(); 
     }
+   
     return topic;
   }
 
