@@ -317,6 +317,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
 
     public void subscribeSuccess(Collection<Topic> topics) {
+//      System.out.println("ScribeClientConverter.subscribeSuccess("+topics+")");
       // do nothing, this is a new interface
     }
 
@@ -540,6 +541,8 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     if (slm == null) {
       if (logger.level <= Logger.FINE) logger.log("ackMessageReceived("+message+") for unknown id");
     } else {
+      ScribeMultiClient multiClient = slm.getClient();
+      if (multiClient != null) multiClient.subscribeSuccess(message.getTopics());
       if (slm.topicsAcked(message.getTopics())) {      
         if (logger.level <= Logger.FINER) {
             logger.log("Removing client " + slm.getClient() + " from list of outstanding for ack " + message.getId());
@@ -1216,6 +1219,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 
   // This returns the topics for which the parameter 'child' is a Scribe tree child of the local node
   public Collection<Topic> getTopicsByChild(NodeHandle child) {
+    if (child.equals(localHandle)) {
+      if (logger.level <= Logger.WARNING) logger.log("ScribeImpl.getTopicsByChild() called with localHandle! Why would you do that?");
+    }
+    
     Collection<Topic> topic = allChildren.get(child);
     if (topic == null) {
       return Collections.emptyList();
@@ -1628,8 +1635,24 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 
           if (sMessage.isEmpty()) return; // we already handled the subscribe message
           
-          SubscribeLostMessage slm = subscribeLostMessages.remove(sMessage.getId());
-          if (slm != null) slm.cancel();
+          SubscribeLostMessage slm = subscribeLostMessages.get(sMessage.getId());
+          if (slm != null) {
+            ScribeMultiClient multiClient = slm.getClient();
+            if (multiClient != null) multiClient.subscribeSuccess(sMessage.getTopics());
+            // I'm not sure what to do here, because we should be the root, but if we aren't?  I suspect it is a bug.
+            if (slm.topicsAcked(sMessage.getTopics())) {      
+              if (logger.level <= Logger.FINER) {
+                  logger.log("Removing client " + slm.getClient() + " from list of outstanding for ack " + sMessage.getId());
+              }
+              subscribeLostMessages.remove(sMessage.getId()).cancel();
+            }
+          }
+          for (Topic topic : sMessage.getTopics()) {
+            if (!isRoot(topic)) {
+              if (logger.level <= Logger.WARNING) 
+                logger.log("Received our own subscribe message " + aMessage + " for topic " + aMessage.getTopic() + " - we are not the root.");               
+            }
+          }
           if (logger.level <= Logger.FINE) 
             logger.log("Received our own subscribe message " + aMessage + " for topic " + aMessage.getTopic() + " - we are the root.");
         } else {
