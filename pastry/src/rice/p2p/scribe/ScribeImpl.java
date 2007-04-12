@@ -706,7 +706,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
     
     // we may need to make this call on the Selector thread for better consistency
-    if (!alreadySubscribed.isEmpty()) client.subscribeSuccess(alreadySubscribed);
+    if (client != null) {
+      if (!alreadySubscribed.isEmpty()) client.subscribeSuccess(alreadySubscribed);
+    }
     
     if (toSubscribe.isEmpty()) return;
       
@@ -819,6 +821,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
           + " to topic " + topic + " with hint " + hint);
 
     AnycastMessage aMsg = new AnycastMessage(localHandle, topic, content);
+    
+    policy.directAnycast(aMsg, getParent(topic), getChildrenOfTopic(topic));
+    
     if (hint == null || localHandle.equals(hint)) {
       // There is a bug in Freepastry where if a message is routed with a hint
       // equal to itself then even if the node is not the destimation for the id
