@@ -160,6 +160,7 @@ public class AnycastMessage extends ScribeMessage {
    * @param handle The node to add
    */
   public void addVisited(NodeHandle handle) {
+//    if (!(this instanceof SubscribeMessage)) System.out.println(this+".addVisited("+handle+")");
     if (handle == null) {
       return;
     }
@@ -179,6 +180,8 @@ public class AnycastMessage extends ScribeMessage {
    * @param handle The handle to add
    */
   public void addFirst(NodeHandle handle) {
+//    if (!(this instanceof SubscribeMessage)) System.out.println(this+".addFirst("+handle+")");
+
     if (handle == null) {
       return;
     }
@@ -194,6 +197,8 @@ public class AnycastMessage extends ScribeMessage {
    * @param handle The handle to add
    */
   public void addLast(NodeHandle handle) {
+//    if (!(this instanceof SubscribeMessage)) System.out.println(this+".addLast("+handle+")");
+    
     if (handle == null) {
       return;
     }
@@ -203,6 +208,10 @@ public class AnycastMessage extends ScribeMessage {
     }
   }
 
+  public String toString() {
+    return "Anycast["+getTopic()+"]";
+  }
+  
   public NodeHandle getInitialRequestor() {
     return initialRequestor;
   }
