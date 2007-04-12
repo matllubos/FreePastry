@@ -229,7 +229,7 @@ public class ScribeRegrTest extends CommonAPITest {
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       if (clients[i].equals(client)) {
         if (clients[i].getAnycastMessages().size() != 1) {
-          stepDone(FAILURE, "Expected node to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local);
+          stepDone(FAILURE, "Expected node "+client.scribe+" to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local);
           failed = true;
         }
       } else {
@@ -980,6 +980,7 @@ public class ScribeRegrTest extends CommonAPITest {
      * @return DESCRIBE THE RETURN VALUE
      */
     public boolean anycast(Topic topic, ScribeContent content) {
+//      System.out.println(scribe+" "+this+".anycast():"+acceptAnycast);
       if (acceptAnycast)
         anycastMessages.add(content);
 
