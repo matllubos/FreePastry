@@ -60,7 +60,7 @@ public interface ScribeClient {
    *
    * @param topic The topic the message was anycasted to
    * @param content The content which was anycasted
-   * @return Whether or not the anycast should continue
+   * @return Whether or not the anycast should continue, true if we will accept the anycast
    */
   public boolean anycast(Topic topic, ScribeContent content);
 
