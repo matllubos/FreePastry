@@ -42,6 +42,7 @@ import java.util.Collection;
 import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.scribe.BaseScribe;
 import rice.p2p.scribe.ScribeClient;
+import rice.p2p.scribe.ScribeMultiClient;
 import rice.p2p.scribe.Topic;
 
 /**
@@ -59,6 +60,7 @@ public interface RawScribe extends BaseScribe {
    * @param topic The topic to subscribe to
    * @param client The client to give messages to
    * @param content The content to include in the subscribe
+   * @deprecated use subscribe(Topic, ScribeMultiClient, RawScribeContent, NodeHandle)
    */
   public void subscribe(Topic topic, ScribeClient client, RawScribeContent content);
 
@@ -70,8 +72,10 @@ public interface RawScribe extends BaseScribe {
    * @param client The client to give messages to
    * @param content The content to include in the subscribe
    * @param hint The first hop of the message ( Helpful to implement a centralized solution)
+   * @deprecated use the version with the MultiClient
    */
   public void subscribe(Topic topic, ScribeClient client, RawScribeContent content, NodeHandle hint);
+  public void subscribe(Topic topic, ScribeMultiClient client, RawScribeContent content, NodeHandle hint);
 
   /**
    * Subscribe to multiple topics.
@@ -79,9 +83,11 @@ public interface RawScribe extends BaseScribe {
    * @param topics
    * @param client
    * @param content
-   * @param hint
+   * @param hint the first hop
+   * @deprecated use the version with the MultiClient
    */
   public void subscribe(Collection<Topic> topics, ScribeClient client, RawScribeContent content, NodeHandle hint);
+  public void subscribe(Collection<Topic> topics, ScribeMultiClient client, RawScribeContent content, NodeHandle hint);
 
   // ***************** Messaging functions ****************
   /**

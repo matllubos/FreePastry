@@ -55,6 +55,7 @@ public interface BaseScribe extends Destructable {
    * Subscribes the given client to the provided topic.  Any message published
    * to the topic will be delivered to the Client via the deliver() method.
    *
+   * @deprecated use subscribe(Topic, ScribeMultiClient, ScribeContent, NodeHandle hint)
    * @param topic The topic to subscribe to
    * @param client The client to give messages to
    */
@@ -63,10 +64,12 @@ public interface BaseScribe extends Destructable {
   /**
    * Unsubscribes the given client from the provided topic. 
    *
+   * @deprecated use unsubscribe(Topic, ScribeMultiClient)
    * @param topic The topic to unsubscribe from
    * @param client The client to unsubscribe
    */
   public void unsubscribe(Topic topic, ScribeClient client);
+  public void unsubscribe(Topic topic, ScribeMultiClient client);
 
   /**
    * Adds a child to the given topic
@@ -129,11 +132,13 @@ public interface BaseScribe extends Destructable {
    */
   public Topic[] getTopics(ScribeClient client);
   public Collection<Topic> getTopicsByClient(ScribeClient client);
+  public Collection<Topic> getTopicsByClient(ScribeMultiClient client);
 
   public int numChildren(Topic topic);
 
 
   Collection<ScribeClient> getClients(Topic topic);
+  Collection<ScribeMultiClient> getClientsByTopic(Topic topic);
 
   /**
    *  Returns true if there is a TopicManager object corresponding to this topic

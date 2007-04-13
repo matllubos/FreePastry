@@ -39,6 +39,7 @@ package rice.p2p.scribe.maintenance;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -167,28 +168,19 @@ public interface ScribeMaintenancePolicy {
     }    
     
     public void noLongerRoot(MaintainableScribe scribe, List<Topic> topics) {
-      scribe.subscribe(topics,null,implicitSubscribe(topics),null);
+      scribe.subscribe(topics,null,implicitSubscribe(Collections.unmodifiableList(topics)),null);
     }
 
     public void nodeFaulty(MaintainableScribe scribe, NodeHandle handle,
-        List<Topic> nodeWasParent, List<Topic> nodeWasChild) {
-      for (Topic topic : nodeWasChild) {
-        if (logger.level <= Logger.FINE) logger.log("Child " + handle + " for topic " + topic + " has died - removing.");
-        scribe.removeChild(topic,handle); // TODO: see what messages this dispatches
-      }
-      for (Topic topic : nodeWasParent) {
-        if (logger.level <= Logger.FINE) logger.log("Parent " + handle + " for topic " + topic + " has died - resubscribing.");
-        scribe.setParent(topic, null, null);
-      }
-      
+        List<Topic> nodeWasParent, List<Topic> nodeWasChild) {      
 //      if (wasParentOfTopics.size() > 1) logger.log(o+" declared dead "+wasParentOfTopics.size());
-      scribe.subscribe(nodeWasParent,null,implicitSubscribe(nodeWasParent),null);
+      scribe.subscribe(nodeWasParent,null,implicitSubscribe(Collections.unmodifiableList(nodeWasParent)),null);
 
     }
 
     public void subscribeFailed(MaintainableScribe scribe, List<Topic> failedTopics) {
 //      logger.log("subscribeFailed("+failedTopics.iterator().next()+")");          
-      scribe.subscribe(failedTopics, null, implicitSubscribe(failedTopics), null);
+      scribe.subscribe(failedTopics, null, implicitSubscribe(Collections.unmodifiableList(failedTopics)), null);
     }
     
     /**
