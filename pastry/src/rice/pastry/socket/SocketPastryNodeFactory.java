@@ -514,11 +514,11 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   }
 
   /**
-   * Method which creates a Pastry node from the next port with a randomly
-   * generated NodeId.
+   * Method which creates a Pastry node from the next port with the specified nodeId 
+   * (or one generated from the NodeIdFactory if not specified)
    * 
    * @param bootstrap Node handle to bootstrap from.
-   * @param nodeId DESCRIBE THE PARAMETER
+   * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(final NodeHandle bootstrap, Id nodeId) {
@@ -526,8 +526,8 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   }
 
   /**
-   * Method which creates a Pastry node from the next port with a randomly
-   * generated NodeId.
+   * Method which creates a Pastry node from the next port with the specified nodeId 
+   * (or one generated from the NodeIdFactory if not specified)
    * 
    * @param bootstrap Node handle to bootstrap from.
    * @return A node with a random ID and next port number.
@@ -537,11 +537,11 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   }
 
   /**
-   * Method which creates a Pastry node from the next port with a randomly
-   * generated NodeId.
+   * Method which creates a Pastry node from the next port with the specified nodeId 
+   * (or one generated from the NodeIdFactory if not specified)
    * 
    * @param bootstrap Node handle to bootstrap from.
-   * @param nodeId DESCRIBE THE PARAMETER
+   * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
    * @param pAddress The address to claim that this node is at - used for proxies
    *          behind NATs
    * @return A node with a random ID and next port number.
@@ -590,6 +590,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
+  /**
+   * Method which creates a Pastry node from the next port with the specified nodeId 
+   * (or one generated from the NodeIdFactory if not specified)
+   * 
+   * @param bootstrap Node handle to bootstrap from.
+   * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
+   * @param pAddress The address to claim that this node is at - used for proxies
+   *          behind NATs
+   * @param throwException if true, the method will throw an exception if it can't fill the request, if false, it will try another port/address than specified 
+   * @return A node with a random ID and next port number.
+   */
   public synchronized PastryNode newNode(NodeHandle bootstrap, Id nodeId,
       InetSocketAddress pAddress, boolean throwException) throws IOException {
     if (!throwException)
