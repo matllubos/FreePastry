@@ -8,7 +8,7 @@ Services (What the TL provides):
   SocketChannels not "messagized" data.  (IE, no max message size)
 
   NodeHandles (need mechanism to define Overlay specific details, such as Id)
-    Liveness
+    Liveness (strategy)
     Epochs
     HairPinning (strategy)
 
@@ -44,20 +44,43 @@ Services (What the TL provides):
 
   
 
-Uses of SocketLayer:
+Benefits of Multiple TCP connections (sockets):
   end-to-end flow control per object/application/node-paring (object = file, application = past, node-paring = Alice -> Bob)
   use tcp to handle congestion between such competing flows (including the one for messaging)
     Don't want to use 1 single TCP socket, because if the bottle neck is disk in Past, we don't want to congest Scribe or FreePastry's maintenance.  Could be done with multiple queues, but then we'll have to provide our own backoff messages or acks for each "pseudo-channel".  Much simpler to use actual TCP.
 
   
 
-
-Wire Layer (bottom):
+Layer:
+  callbacks: 
+    incomingSocket(<identifier>, Socket s);
+    livenessChanged(<identifier>, state);
+    <identifier> readIdentifier(ByteBuffer bb) // have to figure out exactly how I want to do this
+  methods:
+    openSocket(<identifier>, Continuation deliverSocketToMe);
+    sendMessage(<identifier>, Message m, <options>, Continuation acknowledgeSent);
+      // options:
+        datagram
+        redelivery options
+     // acknowledgeSent
+  Socket:
+    callbacks:
+     notify(bool read, bool write, Socket this);
+    methods:
+     register(bool read, bool write, Listener toNotify)
+     write(ByteBuffer bb);
+     read(ByteBuffer bb);
+    
   
 
-Identity Layer:
+PeerReview? // optional
+SecurityLayer <NodeHandle> (needs a CertificateFactory, which can use the lower layers to acquire Certificates for a NodeHandle) // implements IdentityLayer, required to have a cache mapping NH->Cert for any recent NodeHandle exchanges
+IdentityLayer <NodeHandle> // this is a null SecurityLayer
+SSL? // think about where this goes
+SourceRoute Layer <EpochInetSocketAddress> (needs a SourceRouteGenerationStrategy)
+NAT Layer <EpochInetSocketAddress> // handles hairpinning etc
+Wire Layer <InetSocketAddress>
 
-Wire Layer (bottom):
-  send(bytes, socketId)
-  send(Message, SourceRoute);
-  receive(
+SecurityLayer is only required to locally have Certs for messages received.  Other requested Certs can be waiting.
+
+Make Continuations Generic

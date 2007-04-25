@@ -1,3 +1,126 @@
+SplitStream:
+  Make function on ChannelId to return the first digit.
+  Make tutorial explain how to subscribe to more/less than 16 stripes.
+  Make stripe report subscribeSuccess.
+
+make the lookup table come from the protocol version at the beginning of the socket
+
+Regression tests:
+  make test that RouteMessage is not received when not ready
+  but that it is received when it is sent directly, test for all 3 routing conditions
+    do this by grabbing the node's leafset, and killing a neighbor then immeadiately routing,
+    do this via continuations, or whatever, so that it is single threaded
+optimization on isReady(): make it accept the messages for the side that is ready?
+  test old versions of the route message
+  test logging of endpoint
+
+look at NodeHandle.isLocal() and make sure it takes into account the epoch.
+PastryEndpoint.enrouteMessage() is probably never called, if it isn't, maybe make it called in receiveMessage() or better yet, make it called in PastryAppl.forward() (?? what is this method called)
+
+Scribe:
+  Make subscribe() go to the specific parent when the node Joins, to aviod consistency problem.  See "Re: [FreePastry] scribe tutorial for pastry 1.4.4", April 25th
+    add regression test
+  "Received our own subscribe message ... not the root."  Make sure that a subscribeFailed() is called, not sure if it should just wait for the timeout or not, because maybe the node is going to fail, or ... why is this getting called?
+
+  If we just want it to use a SubscribeMessage for every topic what do we do?
+    This could help with reverse compatibility too...
+      flag for protocol version 0?
+
+  Regr Test:
+    test that TopicManagers get collected when everyone unsubscribes
+    test that pending/roots is correct
+    test that clientConverters are collected
+    test subscribeSuccess(), set a boolean and check it in all the clients
+    test that deleteObserver is called when the node goes faulty
+    
+  HammerTest:
+    use Random(55) to generate a list of the same random topics of size M on each node
+      have nodes subscribe to N of the M topics randomly
+        in bulk at first 
+        used biased selection process to make a diversity of group sizes
+      nodes have churn within the scribe groups:
+        record how fast subscribe/unsubscribe happens
+        subscriptions change in batches, not just 1 at a time
+    root publishes periodically on all of its topics, and accelerates over the course of the experiment.  Places the rate/seq in the PublishMessage
+      nodes keep track of when they subscribed.  If the seq is not zero, then they should have gotten a message
+      also make a timer on the minimum publish rate, so we no if someone isn't publishing
+    come up with some other way to determine publish success rate other than just the root, so that other nodes can publish
+    record the join time/exit time
+    select a churn rate
+    use the consistency test, and break it up into an AbstrstPlanetLabStressTest
+      make it an option to record consistency information 
+
+  look at splitscream's policy and see if it does the right thing, make sure it handles multi-subscribe messages, esp the call to addChild()
+  aggregate setPathToRoot() if possible
+    make sure it doesn't get called unless there is a real change
+    make SubscribeAckMessage => PathUpdateMessage
+  make ScribeImpl not use java serialization at all
+    make JavaScribeImpl that extends ScribeImpl and uses Java Serialization
+  Is SubscribeMessag really an AnycastMessage?  Investigate how it is treated as an AnycastMessage
+  security: use Random number, rather than sequence in the SubscribeMessage
+  wrap the collections with unmodifiableFoo() everywhere
+  look at synchronization of allParents/allChildren
+  make pathToRoot() be NodeHandles, not Ids (does this buy us anything? is it better for security?)
+    change SubscribeAckMessage serialization.  Make array of NodeHandles, then index them in the path.
+  make getAllTopicsByParent() handle null, and this.  If you are the parent, replace with null.  For performance, make a separate hashtable for the topics you are the root of.
+  split SubscribeAckMessage +=> PathToRootChangeMessage
+  tons of parallel data structures that are updated all over the place:
+    topicmanager.destroy() rather than deleteObserver(),topics.remove(), can also Drop all children if there are any and deleteObserver() from all of them.  Though, this is usually an error to destroy() the topicmanager if there are children.
+  do we want this to drop the message for consistency?  I suppose the tree could get built with 2 roots, prolly should
+  ScribeImpl.deliver():MaintenanceMessage:}else{:Make this call sendSubscribe() not route(ScribeMessage)
+    maybe should make sendSubscribe() smart, to not issue multiple outstanding subscribes before a failure occurs, esp if we have the request to the same parent already pending
+  See what the deal with "inspite of NOT being root" is, and why it happens.  Did it use to happen?
+  Clean up forward()/deliver()
+  Who should get the AnycastFailureMessage?  The client?
+    Should SubscribeFailedMessage extend AnycastFailureMessage to make code simpler?
+    Why is the anycast failed sent in so many different places?
+    Consider moving this to SAAR.  
+      Can this happen inside the ScribePolicy.directAnycast() if there are no more nodes to try to go to?
+  Look into implicit joining of the root, see if there is a way to shrink this.     How does path to root get updated?
+
+Integrate Animesh's scribe:
+  find way to merge the old maintenance mechanism (route subscribe up) with new one (heartbeats)
+
+  examine imports:
+    take out any replay junk
+    take out references to PastryNode
+  ScribeImpl:
+    check serialization
+    make Maintenance work for big groups (SubscribeMessage contains a group of messages)
+    Find those other issues/notes with scribe, about the potential for a long head on the tree in a time of growth.  (look for the word implicitly)
+    Should the intervals be topic-specific?  This could give more fexibility, perhaps ScribeImpl still holds defaults.
+      maybe they should be topic-specific, but for now, put them in the policy, so they are only ScribeImpl specific, not global
+ 
+    I don't understand why we took out the SubscribeLostMessage on line ~402 in sendSubscribe()
+      as well as removing the addition to "lost"
+      // There is a bug in Freepastry where if a message is routed with a hint
+      // equal to itself then even if the node is not the destimation for the id
+      // field, the deliver() method will be called
+
+     Forward/Reverse = think about naming upwardUpdate downwardHeartbeat
+       these are just used for tracking purposes
+      
+    look carefully at forward() to see what animesh is doing here
+
+    update():
+      there is a return in the first block, that is not in animesh's code, // removed the return
+
+  AnycastMessage:
+    why remove addVisited() in constructor?  Can just have initialRequestor be first...
+      I'm worried about changing the semantics of Scribe will break existing applications
+    addFirstForced() ? not called anywhere, do we need this? yes, one of the policies uses it
+    deliver():
+      what to do about that SaarContent thing? (line 1503 in animesh's code)
+      ExplicitDepartNotificationMessage
+        .markDeadForever()  ... how to handle this?
+      addFirst()
+
+Integrate Tobias's log4jmanager
+Make Readme point to the ProtocolSpec.txt
+
+Why does that regression test keep failing?
+  prolly not waiting long enough.
+
 look at emails for most popular applications
   Past: 208 40 fabio.varesano@gmail.com freepastry@googlemail.com jstewart@mpi-sws.mpg.de dav176fr@yahoo.fr pintux@crs4.it milane@di.unito.it jmnisha@gmail.com reim@informatik.hu-berlin.de derDoc@gmx.de philipp.stockhammer@tu-clausthal.de enigmatic2002@gmail.com francesquini@gmail.com c.sergio@gmail.com jstewart@rice.epostmail.org mail.wli@gmail.com jstewart@cs.rice.edu svk@quantumleap.us jstewart@mpi-sb.mpg.de Gabriel.Vasile@inria.fr ntarmos@ceid.upatras.gr papagdim@ceid.upatras.gr jeffh@cs.rice.edu michel.oey@gmail.com maragkod@ceid.upatras.gr babis85@freemail.gr npoirot.ext@rd.francetelecom.com loupasak@ceid.upatras.gr liangsteve@gmail.com daniel.weber@in.tum.de rahohe@gmail.com johannou@ifi.uio.no amislove@mpi-sws.mpg.de pleng_c@hotmail.com iamnoah@gmail.com luigi@diacronic.org jane.summerxie@gmail.com jeffh@mpi-sws.mpg.de andrehoe@uni-paderborn.de kathayat_lai@yahoo.com almamou@mi.fu-berlin.de
   Scribe: 130 33 fabio.varesano@gmail.com freepastry@googlemail.com jstewart@mpi-sws.mpg.de uchikubi@gmail.com dav176fr@yahoo.fr prithula@yahoo.com enigmatic2002@gmail.com francesquini@gmail.com animesh@cs.rice.edu jstewart@rice.epostmail.org jeffh@rice.edu jstewart@cs.rice.edu svk@quantumleap.us michal.ejdys@gmail.com jstewart@mpi-sb.mpg.de thomas.darcet@mines.inpl-nancy.fr jeffh@cs.rice.edu ss47314029@hotmail.com brinksmeier@upb.de npoirot.ext@rd.francetelecom.com SuryaBahadur.Kathayat@ait.ac.th mac.ibook@gmail.com firefly8003@gmail.com luigi@diacronic.org ss47314029@163.com jane.summerxie@gmail.com jeffh@mpi-sws.mpg.de emg@quantumleap.us kathayat_lai@yahoo.com kav@it.edu dsandler@cs.rice.edu bzahler@students.unibe.ch jean.f.cloutier@gmail.com
@@ -16,40 +139,12 @@ update version numbers, tag
 
 
 documentation:
-  wireshark (document that this is gpl, not freebsd-based)
   Tutorials:
-    rawserialization tutorials
-    SplitStream
     Scribe Policies
-    Environment
     update all simulation tutorials to use the new maxSpeed mechanism
-    build a tutorial to use new features: appsockets, raw serialization, forwarding, direct
     update tutorial 7 to include xmlpp...
-    switch preview tutorials to official tutorials
     Document NetworkListener/SimulatorListener in simulator/socket. (tutorial?)
     
-  diagrams:
-    make visio diagrams available
-		PeriodicLeafSetProtocol:
-		  This protocol allows reception of messages in FreePastry only when it can ensure that the 2 nearest neighbors know of our existence.	  
-		  Definitions:
-		    Ready: we authorize the receipt of messages in FreePastry.
-		    NOW: the current time
-		    TAO: the lease period	    
-		  Assumptions:
-		    Consistent local clock: the clock doesn't irratically change time, but maintains a consistent (but unknown) offset to some global clock.
-		  Non-assumptions:
-		    Synchronized Clocks	    
-		  The mechanism:
-		    For each nearest neighbor (the left and right):
-		       We keep a minimum bound on their knowledge of our existence:
-		         Periodically send LeafSetRequest(LSR) with a timestamp.
-		         Reception of a BroadcastLeafSet(BLS) (the response to the LeafSetRequest) will contain the timestamp from the LSR.
-		         To be "ready" we must have received the BLS such that NOW-timestamp that is less than TAO	      
-		  Invariant:
-		    To receive messages, I must: have a response from my neighbor who's timestamp is less than 30s old.  The timestamp is the echo of the request.  
-		    To receive messages, you need to know that your neighbors know of you, and that they agreed that you were the direct neighbor    	    
-        
   pseudocode: for all the FP alogorithms (request by ahae)
   
   bandwidth analysis spreadsheet
@@ -57,32 +152,10 @@ documentation:
     Update/review Bandwidth Estimator    
   leafSet is more reliable near you, less reliable away from you
   New Features
-		PeriodicLeafSetProtocol:
-		  This protocol allows reception of messages in FreePastry only when it can ensure that the 2 nearest neighbors know of our existence.	  
-		  Definitions:
-		    Ready: we authorize the receipt of messages in FreePastry.
-		    NOW: the current time
-		    TAO: the lease period	    
-		  Assumptions:
-		    Consistent local clock: the clock doesn't irratically change time, but maintains a consistent (but unknown) offset to some global clock.
-		  Non-assumptions:
-		    Synchronized Clocks	    
-		  The mechanism:
-		    For each nearest neighbor (the left and right):
-		       We keep a minimum bound on their knowledge of our existence:
-		         Periodically send LeafSetRequest(LSR) with a timestamp.
-		         Reception of a BroadcastLeafSet(BLS) (the response to the LeafSetRequest) will contain the timestamp from the LSR.
-		         To be "ready" we must have received the BLS such that NOW-timestamp that is less than TAO	      
-		  Invariant:
-		    To receive messages, I must: have a response from my neighbor who's timestamp is less than 30s old.  The timestamp is the echo of the request.  
-		    To receive messages, you need to know that your neighbors know of you, and that they agreed that you were the direct neighbor    	    
-    Explain what exactly is the algorithm for the Consistent Join Protocol 
-	  other:      
-	    go through bug database
-	    review/update wikipedia entry on Pastry/FreePastry
-  
-  
 
+  go through bug database
+  review/update wikipedia entry on Pastry/FreePastry
+  
 small projects:
   play with findbugs more
   consider replacing RedBlackMap as Kasper suggests 11/17/06
@@ -151,6 +224,7 @@ major project outlines
 	      examine Scribe/Past for sources of Attack...	      
  		Pastry Layer (protocol additions):	   
       Secure Routing Primitive
+        make sure to add it to the endpoint.localLookup()
       PeerReview
       Eclipse Resistance    
     State machine/protocol compliance: PeerReview 
@@ -219,4 +293,7 @@ major project outlines
     make consistency algorithm adaptive
 
     
-    
+Secure Lookup:
+  Can we design a version w/o the single key problem?  Maybe, w/ a hierarchy?
+  What is evaluation with Secure Routing.
+
