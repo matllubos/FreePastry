@@ -1,7 +1,7 @@
-FreePastry 2.0 Serialized Message description version 0:
+FreePastry 2.0 Serialized Message description version 0.01:
 
 Table of contents:
-
+0 : Changelog
 1 : FreePastry 2.0 Core Serialization
   1.1: Overview of the features of the protocol
   1.2: Data Types
@@ -117,6 +117,9 @@ Table of contents:
 2.7: Splitstream 
   SplitStreamContent
   SplitStreamSubscribeContent
+  
+0: Chagelog (changes to this document)
+Version 0.01, 4/25/07: Added support for RouteMessage version 1 which optionally supports a DestinationHandle instead of a Target (compatible with FP 2.0_01+)
   
 1.1: Overview of some of the features of the protocol. ************************
   FreePastry provides a structured peer to peer routing overlay, but is not necessarily useful in of itself.  Application layers must be written on top of FreePastry.  We will call the layer above FreePastry an Application.  This application may implement a DHT (such as Past) or a Multicast Network (such as Scribe) which higher level applications may further be written on.
@@ -398,12 +401,29 @@ BloomFilter:
   // note this will trail zeros to 1 byte if !(numBits % 8 == 0)
         
 1.7: Core Messages ************************************************************   
-1.7.1: RoueMessage ************************************************************
+1.7.1: RouteMessage ************************************************************
   address: 0xACBDFE17 (Router)
   type: -23525
   use: To route messages using prefix-based-routing.
   package: rice.pastry.routing
 
+  format:
+    byte version(1)  
+    int subMessageAddress
+    boolean hasDestinationHandle
+      NodeHandle destination // if hasDestionationHandle is true
+      Id target // if hasDestinationHandle is false
+    NodeHandle prevHop
+    
+    // the internal message:
+    boolean hasSender
+    byte priority
+    short type
+    // if hasSender 
+      NodeHandle internalSender
+    Message internalMsg
+
+// Version 0:
   format:
     byte version(0)  
     int subMessageAddress

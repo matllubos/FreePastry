@@ -39,6 +39,7 @@ static int proto_freepastry_core_v0 = -1;
 
 static int hf_freepastry_router_sub_address = -1;
 static int hf_freepastry_router_target = -1;
+static int hf_freepastry_router_has_destination_handle  = -1;
 static int hf_freepastry_direct_nodeid_resp_id_value = -1;
 static int hf_freepastry_direct_nodeid_resp_epoch = -1;
 static int hf_freepastry_direct_routerow_row = -1;
@@ -482,8 +483,11 @@ decode_msg_route_row(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree) {
 
 static void
 decode_msg_route(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree){
-  gint offset = 0;
+  gint offset = 0;  
+  guint8 version_num;
+  gboolean has_destination = FALSE;
   guint32 address = tvb_get_ntohl(tvb, offset+1);
+  version_num = tvb_get_guint8(tvb, offset);
   if (tree){
     offset = decode_message_version(tvb,tree, offset, ROUTER);
     proto_tree_add_item(tree, hf_freepastry_router_sub_address, tvb, offset, 4, FALSE);
@@ -492,11 +496,49 @@ decode_msg_route(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree){
       proto_tree_add_text(tree, tvb, offset, -1, "Malformed message!");
       return;
     }
-    proto_tree_add_string(tree, hf_freepastry_router_target, tvb, offset, 20, get_id_full(tvb, offset));
-    offset = decode_nodehandle(tvb, tree, offset + 20, "Previous Hop");
-  } else {
-    offset += 25;
-    offset += get_node_handle_len(tvb, offset);
+    switch(version_num) {
+    case 0:
+      proto_tree_add_string(tree, hf_freepastry_router_target, tvb, offset, 20, get_id_full(tvb, offset));
+      offset += 20;
+      break;
+    case 1:
+      if (tvb_get_guint8(tvb, offset) != 0){
+        has_destination = TRUE;
+      }
+      proto_tree_add_boolean(tree, hf_freepastry_router_has_destination_handle, tvb, offset, 1, has_destination);
+      offset++;
+      if (has_destination) {
+        offset = decode_nodehandle(tvb, tree, offset, "Destination Handle");
+      } else {
+	proto_tree_add_string(tree, hf_freepastry_router_target, tvb, offset, 20, get_id_full(tvb, offset));
+	offset += 20;
+      }
+      if (offset == -1) {
+        return;
+      }
+      break;
+    }
+
+    offset = decode_nodehandle(tvb, tree, offset, "Previous Hop");
+  } else {    
+    offset += 5; // version+auxAddress
+    switch(version_num) {
+    case 0:
+      offset += 20;
+      break;
+    case 1:
+      if (tvb_get_guint8(tvb, offset) != 0){
+        has_destination = TRUE;
+      }
+      offset++; // hasDestHandle
+      if (has_destination) {
+        offset += get_node_handle_len(tvb, offset); // the destHandle
+      } else {
+	offset += 20;
+      } 
+    }    
+    if (offset == -1) return; // error
+    offset += get_node_handle_len(tvb, offset); // the previous Hop
   }
 
   if (offset != -1){
@@ -760,6 +802,10 @@ proto_register_freepastry_core_v0(void)
     { "Target", "freepastry.router.route.v0.target",
     FT_STRING, BASE_NONE, NULL, 0x0,
     "target for a route message", HFILL }},
+    { &hf_freepastry_router_has_destination_handle,
+    { "Has destination handle",	"freepastry.router.route.v0.has_destination_handle",
+    FT_BOOLEAN, 8, NULL, 0x0,
+    "True if Route message has a destination handle", HFILL }},
     { &hf_freepastry_direct_nodeid_resp_id_value,
     { "ID value", "freepastry.direct.nodeid_resp.v0.id",
     FT_STRING, BASE_NONE, NULL, 0x0,

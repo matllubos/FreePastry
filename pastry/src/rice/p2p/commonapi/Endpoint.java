@@ -264,6 +264,35 @@ public interface Endpoint extends NodeHandleReader {
   public MessageDeserializer getDeserializer();
   
   /**
+   * default value is true
+   * 
+   * Consistent routing causes RouteMessages to be dropped if we are not sure that we are 
+   * responsible for our current id range.  If you set this to false, you will be delivered 
+   * messages to forward() and deliver() even if there is possible inconsistent routing.  
+   * 
+   * (The overlay still does it's best to deliver the RouteMessage to the proper key,
+   * but some protocols can guarantee consistency, for example by using leases between
+   * nodes)
+   * 
+   * Note that when true, the overlay never purposely drops messages routed with a null
+   * key:
+   * endpoint.deliver(null, msg, targetNodeHandle) // will be delivered regardless of consistency
+   * 
+   * @param val
+   */
+  public void setConsistentRouting(boolean val);
+  
+  /**
+   * Can we guarantee that this id is currently ours, and routing will be consistent?  
+   * Note that this has some real timing implications, so don't cache the returned value.  
+   * Note that it will always return always returns false if you are not the root of the id.  
+   *  
+   * @param the id to verify
+   * @return true if routing consistency can currently be guaranteed for this
+   */
+  public boolean routingConsistentFor(Id id);
+  
+  /**
    * To use a more efficient serialization format than Java Serialization
    * 
    * @param md

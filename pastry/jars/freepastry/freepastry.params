@@ -185,6 +185,11 @@ partition_handler_bootstrap_check_rate=0.05
 # 5 minutes
 partition_handler_check_interval=300000
 
+# the version number of the RouteMessage to transmit (it can receive anything that it knows how to)
+# this is useful if you need to migrate an older ring
+# you can change this value in realtime, so, you can start at 0 and issue a command to update it to 1
+pastry_protocol_router_routeMsgVersion = 1
+
 # should usually be equal to the pastry_rtBaseBitLength
 p2p_splitStream_stripeBaseBitLength = 4
 p2p_splitStream_policy_default_maximum_children = 24
@@ -325,6 +330,9 @@ p2p_glacier_maxActiveRestores = 3
 # logging
 #default log level
 loglevel = WARNING
+
+#example of enabling logging on the endpoint:
+#rice.p2p.scribe@ScribeRegrTest-endpoint_loglevel = INFO
 
 logging_packageOnly = true
 

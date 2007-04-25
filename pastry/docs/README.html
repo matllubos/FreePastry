@@ -7,7 +7,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 2.0,&nbsp; 08 March 2007.
+Release 2.0_01,&nbsp; 25 April 2007.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://freepastry.org/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -117,6 +117,13 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.5.0+. The software was
 developed using Sun's SDK, version 1.5.0+
+<h3>Changes since release 2.0</h3>
+<p/><b>Bug fix for consistency</b> -- When you called <code>endpoint.route(null,msg,target);</code> this message would still be dropped for possible consistency violations.  There is no violation for such a request because it is for a specific node.  This required an update to the Binary Format for the RouteMessage (version 1).  See the <a href="ProtocolSpec.txt">Protocol Specification</a> for the specific change.
+<p/>To gracefully upgrade a ring you can specify:
+<pre>
+pastry_protocol_router_routeMsgVersion = 0
+</pre>
+to force the routing protocol to send version 0 messags until the majority of your ring is properly upgraded.  Note that both versions 0 and 1 can still be received, but only version 0 will be sent, even if it receives a version 1 message.  Note that you will still be subject to the bug while using version 0.
 
 <h3>Changes since release 2.0beta2</h3>
 <ul>

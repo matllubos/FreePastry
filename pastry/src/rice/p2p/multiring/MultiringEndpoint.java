@@ -414,6 +414,13 @@ public class MultiringEndpoint implements Endpoint {
     return endpoint.proximity(nh);    
   }
 
+  public void setConsistentRouting(boolean val) {
+    endpoint.setConsistentRouting(val);
+  }
+
+  public boolean routingConsistentFor(Id id) {
+    return endpoint.routingConsistentFor(id);
+  }
 }
 
 

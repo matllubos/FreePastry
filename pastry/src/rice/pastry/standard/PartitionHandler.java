@@ -199,7 +199,9 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
               .getRoutingTable().baseBitLength());
   
           RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), 
-              jr);
+              jr,
+              (byte)env.getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
+
           rm.setPrevNode(pastryNode.getLocalHandle());
           rm.getOptions().setRerouteIfSuspected(false);
           NodeHandle nh = pastryNode.coalesce((NodeHandle)result);

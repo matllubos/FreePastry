@@ -197,11 +197,15 @@ public abstract class PastryAppl /*implements Observer*/
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] recv " + msg);
     if (msg instanceof RouteMessage) {
+      RouteMessage rm = (RouteMessage) msg;
+      
       // NOTE: the idea is to synchronize on undeliveredMessages while making the check as to whether or not to add to the queue
       // the other part of the synchronization is just below, in update()
       // we don't want to hold the lock to undeliveredMessages when calling receiveMessage()
 //      synchronized(undeliveredMessages) {
-        if (deliverWhenNotReady() || thePastryNode.isReady()) {
+        // if the message has a destinationHandle, it should be for me, and it should always be delivered
+        NodeHandle destinationHandle = rm.getDestinationHandle();
+        if (deliverWhenNotReady() || thePastryNode.isReady() || (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
           // continue to receiveMessage()
         } else {
           if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
@@ -213,7 +217,6 @@ public abstract class PastryAppl /*implements Observer*/
           return;
         }
 //      } // synchronized    
-      RouteMessage rm = (RouteMessage) msg;
 
       try {
         if (enrouteMessage(rm.unwrap(deserializer), rm.getTarget(), rm.nextHop, rm.getOptions()))
@@ -307,7 +310,8 @@ public abstract class PastryAppl /*implements Observer*/
   public void routeMsg(Id key, Message msg, SendOptions opt) {
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] routemsg " + msg + " to " + key);
-    RouteMessage rm = new RouteMessage(key, msg, opt);
+    RouteMessage rm = new RouteMessage(key, msg, opt,
+        (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
     thePastryNode.receiveMessage(rm);
   }
 

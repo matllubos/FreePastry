@@ -70,11 +70,6 @@ public class SocketBuffer implements RawMessageDelivery {
   private MessageDeserializer defaultDeserializer;
   
   /**
-   * Needed to deserialize the NodeHandle -- sender
-   */
-  private NodeHandleFactory nhf;
-  
-  /**
    * This is really ugly, and also for reverse compatibility.  It is needed
    * for a JavaDeserializer ... ugh...
    */
@@ -159,9 +154,9 @@ public class SocketBuffer implements RawMessageDelivery {
    * 
    * @param defaultDeserializer
    */
-  public SocketBuffer(MessageDeserializer defaultDeserializer, NodeHandleFactory nhf) {
+  public SocketBuffer(MessageDeserializer defaultDeserializer, SocketPastryNode spn) {
     this.defaultDeserializer = defaultDeserializer;
-    this.nhf = nhf;
+    this.spn = spn;
     initialize(DEFAULT_BUFFER_SIZE);
   }
   
@@ -172,7 +167,6 @@ public class SocketBuffer implements RawMessageDelivery {
   public SocketBuffer(byte[] input, SocketPastryNode spn) throws IOException {
     this.bytes = input;
     str = new SocketDataInputStream(new ByteArrayInputStream(input));
-    nhf = spn;
     this.spn = spn;
 //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //  +            Appl   Address    (0 is the router)                +
@@ -457,7 +451,9 @@ public class SocketBuffer implements RawMessageDelivery {
 //    try {
 //      str.mark(100000000);
       if (isRouteMessage()) {
-        RouteMessage rm = RouteMessage.build(str, nhf, spn);
+        RouteMessage rm;
+          rm = RouteMessage.build(str, spn,
+              (byte)spn.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
         rmSubAddress = rm.getAuxAddress();
         rmSubType = rm.getInternalType();
         return rm;

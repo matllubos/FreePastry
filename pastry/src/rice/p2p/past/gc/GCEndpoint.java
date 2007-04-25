@@ -316,6 +316,14 @@ public class GCEndpoint implements Endpoint {
   public int proximity(NodeHandle nh) {
     return endpoint.proximity(nh);
   }
+
+  public void setConsistentRouting(boolean val) {
+    endpoint.setConsistentRouting(val);
+  }
+
+  public boolean routingConsistentFor(Id id) {
+    return endpoint.routingConsistentFor(id);
+  }
 }
 
 

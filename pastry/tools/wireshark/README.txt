@@ -29,7 +29,7 @@ Windows: http://www.wireshark.org/docs/wsdg_html/#ChSetupWin32 (follow the steps
     copy <freepastry-src-folder>/tools/wireshark/ <wireshark-src-folder>/plugins/freepastry/
   option b) from the freepastry svn server
     cd <wireshark-src-folder>/plugins/
-    svn co --user anonymous --password anonymous https://svn.mpi-sws.mpg.de/svn/freepastry/trunk/pastry/tools/wireshark freepastry
+    svn co --username anonymous --password anonymous https://svn.mpi-sws.mpg.de/svn/freepastry/trunk/pastry/tools/wireshark freepastry
     
 3. Add FreePastry to wireshark's make files:
 You must apply the following changes:
@@ -54,34 +54,34 @@ plugins/Makefile.in  (~line 333)
 
 /Makefile.nmake
   copy the plugin dll to the distribution
-  xcopy ".\plugins\freepastry\freepastry.dll" $(INSTALL_DIR)\plugins\$(VERSION) /d (~line 852)
+  xcopy ".\plugins\freepastry\freepastry.dll" $(INSTALL_DIR)\plugins\$(VERSION) /d (~line 873)
 
 
 plugins/Makefile.nmake
-	add "freepastry \" to the list of "all" directive (~line 18)
+	add "freepastry \" to the list of "all" directive (~line 17)
 	
-	add the freepastry directive (~line 75)
+	add the freepastry directive (~line 69)
 freepastry::
 	cd freepastry
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
 	cd ..
 
-	add the following text for the clean directive (~line 175)
+	add the following text for the clean directive (~line 173)
 	cd freepastry
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
 	cd ..
 
-	add the following text for the distclean directive (~line 227)
+	add the following text for the distclean directive (~line 245)
 	cd freepastry
 	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
 	cd ..
 
-	add the following text for the maintainer-clean directive (~line 279)
+	add the following text for the maintainer-clean directive (~line 317)
 	cd freepastry
-  $(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
 	cd ..
 
-	add "xcopy freepastry\*.dll $(VERSION) /d" to the install-plugins directive (~line 330)
+	add "xcopy freepastry\*.dll $(VERSION) /d" to the install-plugins directive (~line 382)
 
 	
 4. Build

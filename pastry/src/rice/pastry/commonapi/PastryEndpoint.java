@@ -101,6 +101,9 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
         address == 0 ? StandardAddress.getAddress(application.getClass(),instance,pn.getEnvironment()): address, 
         null, 
         pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance == null ? "-endpoint" : instance+"-endpoint"));
+//    logger.log("foo:"+logger.level);
+    
+//        pn.getEnvironment().getLogManager().getLogger(application.getClass(),instance == null ? "-endpoint" : instance+"-endpoint"));
 //    super(pn, application.getClass().getName() + instance, address, null);
     appDeserializer = deserializer; // use this as the apps default deserializer
     deserializer = new PEDeserializer();
@@ -157,10 +160,12 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     }
     rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
                                                                                pm,
-                                                                               (rice.pastry.NodeHandle) hint);
+                                                                               (rice.pastry.NodeHandle) hint,
+                                                                               (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
     rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
     if (noKey) {
-      rm.getOptions().setMultipleHopsAllowed(false);                                                                               
+      rm.getOptions().setMultipleHopsAllowed(false);  
+      rm.setDestinationHandle((rice.pastry.NodeHandle)hint);
     }
     thePastryNode.receiveMessage(rm);
   }
@@ -184,10 +189,12 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     }
     rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
                                                                                pm,
-                                                                               (rice.pastry.NodeHandle) hint);
+                                                                               (rice.pastry.NodeHandle) hint,
+                                                                               (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
                                                                               
     if (noKey) {
-      rm.getOptions().setMultipleHopsAllowed(false);                                                                               
+      rm.getOptions().setMultipleHopsAllowed(false); 
+      rm.setDestinationHandle((rice.pastry.NodeHandle)hint);
     }
     thePastryNode.receiveMessage(rm);
   }
@@ -435,8 +442,10 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     if (msg instanceof rice.pastry.routing.RouteMessage) {
       try {
       rice.pastry.routing.RouteMessage rm = (rice.pastry.routing.RouteMessage) msg;
-
-      if (deliverWhenNotReady() || thePastryNode.isReady()) {
+      
+      // if the message has a destinationHandle, it should be for me, and it should always be delivered
+      NodeHandle destinationHandle = rm.getDestinationHandle();
+      if (deliverWhenNotReady() || thePastryNode.isReady() || (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
         // continue to receiveMessage()
       } else {
         if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
@@ -601,6 +610,23 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     return getAddress(); 
   } 
   
+  boolean consistentRouting = true;
+  public void setConsistentRouting(boolean val) {
+    consistentRouting = val;
+  }
+
+  @Override
+  public boolean deliverWhenNotReady() {
+//    logger.log("deliverWhenNotReady():"+!consistentRouting);
+    return !consistentRouting;
+  }
+
+  public boolean routingConsistentFor(Id id) {
+    if (!thePastryNode.isReady()) return false;
+    NodeHandleSet set = replicaSet(id, 0);
+    if (set.size() == 0) return false;
+    return set.getHandle(0).equals(thePastryNode.getLocalHandle());
+  }
 }
 
 

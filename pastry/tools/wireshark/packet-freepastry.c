@@ -1091,7 +1091,8 @@ decode_freepastry_tcp_msg_invariant(tvbuff_t *tvb, packet_info *pinfo, proto_tre
     pinfo->private_data = sub_message_info;
 
     next_tvb = tvb_new_subset(tvb, offset, -1, -1);
-    dissector_try_port(subdissector_message_version_table, tvb_get_guint8(tvb, offset), next_tvb, pinfo, tree);
+    //    dissector_try_port(subdissector_message_version_table, tvb_get_guint8(tvb, offset), next_tvb, pinfo, tree);
+    dissector_try_port(subdissector_message_version_table, 0, next_tvb, pinfo, tree);
   }
 }
 
