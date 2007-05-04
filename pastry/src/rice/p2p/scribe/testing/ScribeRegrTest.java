@@ -48,6 +48,7 @@ import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.messaging.SubscribeMessage;
+import rice.pastry.PastryNode;
 
 /**
  * @(#) DistScribeRegrTest.java Provides regression testing for the Scribe service using distributed
@@ -81,8 +82,8 @@ public class ScribeRegrTest extends CommonAPITest {
    */
   public ScribeRegrTest(Environment env) throws IOException {
     super(env);
-    scribes = new ScribeImpl[NUM_NODES];
-    policies = new TestScribePolicy[NUM_NODES];
+    scribes = new ScribeImpl[NUM_NODES+1];
+    policies = new TestScribePolicy[NUM_NODES+1];
   }
 
   public TestScribeContent buildTestScribeContent(Topic topic, int numMessages) {
@@ -145,6 +146,7 @@ public class ScribeRegrTest extends CommonAPITest {
     testSingleRoot("Single rooted Trees");
     testAPI();
     testFailureNotification();
+    testAddNode();    
     testMaintenance();
 
   }
@@ -152,6 +154,40 @@ public class ScribeRegrTest extends CommonAPITest {
   /*
    *  ---------- Test methods and classes ----------
    */
+  
+  protected void testAddNode() {
+    String name = "TestAddNode";
+    Topic topic = new Topic(generateId());
+    Id id = topic.getId();
+    TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+    
+    sectionStart("Test Add Node");
+    stepStart("Tree Construction id "+id);
+    for (int i = 0; i < NUM_NODES; i++) {
+      clients[i] = new TestScribeClient(scribes[i], topic, i);
+      scribes[i].subscribe(topic, clients[i]);
+      simulate();
+    }
+    stepDone(SUCCESS);
+    
+    stepStart("Add New Root");
+    PastryNode pn = factory.newNode(getBootstrap(),(rice.pastry.Id)id);
+    nodes[NUM_NODES] = pn;
+    processNode(NUM_NODES, pn);    
+    System.out.println(pn.getLocalNodeHandle().getId());
+    synchronized(nodes[NUM_NODES]) {
+      while(!pn.isReady()) {
+        try { pn.wait(1000); } catch (InterruptedException ie) {return;}
+      }
+    }
+    Collection<NodeHandle> children = scribes[NUM_NODES].getChildrenOfTopic(topic);
+    if (children.size() >= 1) {
+      stepDone(SUCCESS);
+    } else {
+      stepDone(FAILURE, "Node should be the root, has "+children.size()+" children for topic "+topic+"."); 
+    }
+    sectionDone();
+  }
   
   /**
     * Tests basic functionality

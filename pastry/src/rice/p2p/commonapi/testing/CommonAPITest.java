@@ -177,7 +177,7 @@ public abstract class CommonAPITest {
                                                  env);
     }
 
-    nodes = new Node[NUM_NODES];
+    nodes = new Node[NUM_NODES+1];
   }
 
   public static final int LEASE_PERIOD = 10000; // 10 seconds

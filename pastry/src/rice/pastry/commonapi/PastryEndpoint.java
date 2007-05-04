@@ -146,39 +146,23 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param hint the hint
    */
   public void route(Id key, Message msg, NodeHandle hint) {
-    if (logger.level <= Logger.FINER) logger.log(
-      "[" + thePastryNode + "] route " + msg + " to " + key);
-
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
-    if ((key == null) && (hint == null)) {
-      throw new InvalidParameterException("key and hint are null!");
-    }
-    boolean noKey = false;
-    if (key == null) {
-      noKey = true;
-      key = hint.getId();
-    }
-    rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
-                                                                               pm,
-                                                                               (rice.pastry.NodeHandle) hint,
-                                                                               (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
-    rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
-    if (noKey) {
-      rm.getOptions().setMultipleHopsAllowed(false);  
-      rm.setDestinationHandle((rice.pastry.NodeHandle)hint);
-    }
-    thePastryNode.receiveMessage(rm);
+    routeHelper(key, pm, hint);    
+  }
+  
+  public void route(Id key, RawMessage msg, NodeHandle hint) {
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
+    routeHelper(key, pm, hint);
   }
   
   /**
    * This duplication of the above code is to make a fast path for the RawMessage.  Though the codeblock
    * looks identical, it is acually calling a different PEM constructor.
    */
-  public void route(Id key, RawMessage msg, NodeHandle hint) {
+  private void routeHelper(Id key, PastryEndpointMessage pm, NodeHandle hint) {
     if (logger.level <= Logger.FINER) logger.log(
-        "[" + thePastryNode + "] route " + msg + " to " + key);
+      "[" + thePastryNode + "] route " + pm.getMessage() + " to " + key);
 
-    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
     if ((key == null) && (hint == null)) {
       throw new InvalidParameterException("key and hint are null!");
     }
@@ -192,6 +176,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
                                                                                (rice.pastry.NodeHandle) hint,
                                                                                (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
                                                                               
+    rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
     if (noKey) {
       rm.getOptions().setMultipleHopsAllowed(false); 
       rm.setDestinationHandle((rice.pastry.NodeHandle)hint);
@@ -445,7 +430,10 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       
       // if the message has a destinationHandle, it should be for me, and it should always be delivered
       NodeHandle destinationHandle = rm.getDestinationHandle();
-      if (deliverWhenNotReady() || thePastryNode.isReady() || (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
+      if (deliverWhenNotReady() || 
+          thePastryNode.isReady() || 
+          rm.getPrevNode() == thePastryNode.getLocalHandle() ||
+          (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
         // continue to receiveMessage()
       } else {
         if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
@@ -472,6 +460,14 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
           }
           else {
             // route the message
+            // if getDestHandle() == me, rm destHandle()
+            // this message was directed just to me, but now we've decided to forward it, so, 
+            // make it generally routable now
+            if (rm.getDestinationHandle() == thePastryNode.getLocalHandle()) {
+              if (logger.level <= Logger.WARNING) logger.log("Warning, removing destNodeHandle: "+rm.getDestinationHandle()+" from "+rm);
+              rm.setDestinationHandle(null);
+            }
+            
             rm.routeMessage((rice.pastry.NodeHandle)getLocalNodeHandle());
           }
         }

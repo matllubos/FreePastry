@@ -205,7 +205,10 @@ public abstract class PastryAppl /*implements Observer*/
 //      synchronized(undeliveredMessages) {
         // if the message has a destinationHandle, it should be for me, and it should always be delivered
         NodeHandle destinationHandle = rm.getDestinationHandle();
-        if (deliverWhenNotReady() || thePastryNode.isReady() || (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
+        if (deliverWhenNotReady() || 
+            thePastryNode.isReady() || 
+            rm.getPrevNode() == thePastryNode.getLocalHandle() ||
+            (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
           // continue to receiveMessage()
         } else {
           if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
@@ -219,8 +222,17 @@ public abstract class PastryAppl /*implements Observer*/
 //      } // synchronized    
 
       try {
-        if (enrouteMessage(rm.unwrap(deserializer), rm.getTarget(), rm.nextHop, rm.getOptions()))
+        if (enrouteMessage(rm.unwrap(deserializer), rm.getTarget(), rm.nextHop, rm.getOptions())) {
+          // if getDestHandle() == me, rm destHandle()
+          // this message was directed just to me, but now we've decided to forward it, so, 
+          // make it generally routable now
+          if (rm.getDestinationHandle() == thePastryNode.getLocalHandle()) {
+            if (logger.level <= Logger.WARNING) logger.log("Warning, removing destNodeHandle: "+rm.getDestinationHandle()+" from "+rm);
+            rm.setDestinationHandle(null);
+          }
+
           rm.routeMessage(thePastryNode.getLocalHandle());
+        }
       } catch (IOException ioe) {
         throw new RuntimeException("Error deserializing message "+rm,ioe); 
       }

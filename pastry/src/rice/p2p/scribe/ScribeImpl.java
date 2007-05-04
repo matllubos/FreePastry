@@ -480,7 +480,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     // sort the topics
     Collections.sort(topics);
 
-    if (logger.level <= Logger.FINEST) logger.log("sendSubscribe("+(topics.size() == 1 ? topics.iterator().next().toString() : ""+topics.size())+","+client+","+content+","+hint+") theId:"+theId);
+    if (logger.level <= Logger.FINEST) logger.log("sendSubscribe("+topics+","+client+","+content+","+hint+") theId:"+theId);
     
     SubscribeLostMessage slm = new SubscribeLostMessage(localHandle, topics, theId, client);
     CancellableTask task = endpoint.scheduleMessage(slm, MESSAGE_TIMEOUT);    
@@ -494,12 +494,31 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       for (NodeHandle nextHop : manifest.keySet()) {
         List<Topic> theTopics = manifest.get(nextHop);
         SubscribeMessage msg = new SubscribeMessage(localHandle, theTopics, theId, convert(policy.divideContent(theTopics, content)));
-        endpoint.route(msg.getTopic().getId(), msg, nextHop);      
+        
+        // if I'm the 1st Replica, then route direct (to prevent problem with consistency)  IE, I know he 
+        // is the root for this message, even if he doesn't.  Make sure that if it is re-routed,
+        // then the RM actually gets forwarded (in the first hop: NodeHandle is the target; in the second hop: nodeId is the next hop)
+        
+        // NOTE: this may have to be further thought throught and subdivided
+        NodeHandleSet set = endpoint.replicaSet(msg.getTopic().getId(), 2);
+        if (set.getHandle(1) == localHandle) {
+          endpoint.route(null, msg, nextHop);      
+        } else {
+          endpoint.route(msg.getTopic().getId(), msg, nextHop);                
+        }
       }    
     } else {
       // use the hint 
       SubscribeMessage msg = new SubscribeMessage(localHandle, topics, theId, content);
-      endpoint.route(msg.getTopic().getId(), msg, hint);            
+      
+      // see if hint is my direct neighbor, if so, route only directly, so that he will accept the connection even
+      // though he may still be joining
+      NodeHandleSet set = endpoint.replicaSet(msg.getTopic().getId(), 2);
+      if (set.getHandle(1) == localHandle) {
+        endpoint.route(null, msg, hint);            
+      } else {
+        endpoint.route(msg.getTopic().getId(), msg, hint);                    
+      }
     }
   }
 
@@ -701,11 +720,18 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     return content instanceof RawScribeContent ? (RawScribeContent)content : new JavaSerializedScribeContent(content);
   }
   
+  /**
+   * This method prevents re-subscription to topics you are already a part of.
+   * However it allows subscription if you were the root, but there is now a root.
+   * 
+   * @param theTopics
+   * @param client
+   * @param content
+   * @param hint
+   */
   protected void doSubscribe(Collection<Topic> theTopics, ScribeMultiClient client, RawScribeContent content, NodeHandle hint) {
     if (logger.level <= Logger.FINER) logger.log(
-        "Subscribing client " + client + " to " + 
-        (theTopics.size() == 1 ? theTopics.iterator().next() : theTopics.size()+ "topics")
-        +".");
+        "Subscribing client " + client + " to " + theTopics +".");
 
     List<Topic> toSubscribe = new ArrayList<Topic>();
     List<Topic> alreadySubscribed = new ArrayList<Topic>();
@@ -1975,7 +2001,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 //          manager.setParent(null);
 //        }
       }
-      maintenancePolicy.noLongerRoot(this, notRoot);
+      if (!notRoot.isEmpty()) {
+        maintenancePolicy.noLongerRoot(this, notRoot);
+      }
     }    
   }
 
