@@ -628,15 +628,15 @@ public class ScribeRegrTest extends CommonAPITest {
 
     stepDone(SUCCESS);
     
-    stepStart("Force Root To Accept");
-    client = new TestScribeClient(scribes[NUM_NODES-1], topic, NUM_NODES-1);
-    // join 1 node first to force the Topic to be created
-    scribes[NUM_NODES-1].subscribe(topic, client);
-    simulate();
-    if (client.getSubscribeFailed())
-      stepDone(FAILURE, "Expected subscribe to succeed because we force the root to accept 1 child.");
-    else
-      stepDone(SUCCESS);
+//    stepStart("Force Root To Accept");
+//    client = new TestScribeClient(scribes[NUM_NODES-1], topic, NUM_NODES-1);
+//    // join 1 node first to force the Topic to be created
+//    scribes[NUM_NODES-1].subscribe(topic, client);
+//    simulate();
+//    if (client.getSubscribeFailed())
+//      stepDone(FAILURE, "Expected subscribe to succeed because we force the root to accept 1 child.");
+//    else
+//      stepDone(SUCCESS);
     
     stepStart("Subscribe Attempt");
     int i = environment.getRandomSource().nextInt(NUM_NODES-1);

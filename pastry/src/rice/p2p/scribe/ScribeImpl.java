@@ -1455,20 +1455,20 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     // this is the list of topics that aren't a loop or already a child
     ArrayList<Topic> forward = new ArrayList<Topic>(); // leave these in the message
     ArrayList<Topic> dontForward = new ArrayList<Topic>(); // take these out, and maybe send a response message for these, the old policy just drops these, We should probably send a response as long as sMessage.getId() != NO_ACK_REQUIRED
-    ArrayList<Topic> isRoot = new ArrayList<Topic>(); // we are the root of a new topic, we must accept the child, and create the new topic
+//    ArrayList<Topic> isRoot = new ArrayList<Topic>(); // we are the root of a new topic, we must accept the child, and create the new topic
     ArrayList<Topic> askPolicy = new ArrayList<Topic>(); // ask the policy, and take these out if the policy accepts them
     
     for (Topic topic : sMessage.getTopics()) {
       TopicManager tmanager = topicManagers.get(topic);
       
-      if (isRoot(topic)) {
-        if (tmanager == null || tmanager.getChildren().isEmpty()) {
-          // we are the root of a new topic, or an empty topic
-          dontForward.add(topic);
-          isRoot.add(topic); 
-          continue;
-        }
-      }
+//      if (isRoot(topic)) {
+//        if (tmanager == null || tmanager.getChildren().isEmpty()) {
+//          // we are the root of a new topic, or an empty topic
+//          dontForward.add(topic);
+////          isRoot.add(topic); 
+////          continue;
+//        }
+//      }
         
       if (tmanager != null) {
         List<Id> path = tmanager.getPathToRoot();
@@ -1497,10 +1497,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       askPolicy.add(topic);
     }
     
-    for (Topic topic : isRoot) {
-      // don't need to subscribe, we are the root
-      addChildHelper(topic, sMessage.getSubscriber());
-    }
+//    for (Topic topic : isRoot) {
+//      // don't need to subscribe, we are the root
+//      addChildHelper(topic, sMessage.getSubscriber());
+//    }
 
     
     List<Topic> accepted;
@@ -1562,7 +1562,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       toReturn = dontForward; // because the subscriber doesn't know he's already joined
     }
     
-    toReturn.addAll(isRoot);
+//    toReturn.addAll(isRoot);
             
     // we send a confirmation back to the child
     List<List<Id>> paths = new ArrayList<List<Id>>(toReturn.size());
@@ -1645,12 +1645,12 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     // handle the multi-subscription
     HashMap<NodeHandle, List<Topic>> manifest = buildManifests(noManager);
     if (manifest.containsKey(localHandle)) {
-      // this is bad, because we should have accepted them because we are the root
+      // we are the root, but the policy would let us accept him
       List<Topic> theTopics = manifest.remove(localHandle);
       sMessage.removeTopics(theTopics);
       for (Topic topic : theTopics) {
         failed.add(topic); 
-        if (logger.level <= Logger.WARNING) logger.log("No next hop for topic "+topic+" isRoot = "+isRoot(topic));
+//        if (logger.level <= Logger.WARNING) logger.log("No next hop for topic "+topic+" isRoot = "+isRoot(topic));
       }
     }
 
