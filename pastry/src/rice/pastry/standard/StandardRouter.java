@@ -300,11 +300,11 @@ public class StandardRouter extends PastryAppl {
     Id prevId = prevNode.getNodeId();
     Id key = msg.getTarget();
 
-    int diffDigit;
+    int diffDigit = prevId.indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength());
 
     // if we both have the same prefix (in other words the previous node didn't make a prefix of progress)
-    if ((diffDigit = prevId.indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength())) == 
-      thePastryNode.getNodeId().indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength())) {
+    if (diffDigit >= 0 && 
+        diffDigit == thePastryNode.getNodeId().indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength())) {
 
       // the previous node is missing a RT entry, send the row
       // for now, we send the entire row for simplicity
