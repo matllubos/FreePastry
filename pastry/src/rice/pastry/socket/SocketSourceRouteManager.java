@@ -119,6 +119,7 @@ public class SocketSourceRouteManager {
    */
   HashSet hardLinks = new HashSet();
 
+  // of SocketNodeHandle
   TimerWeakHashSet nodeHandles; 
   
   /**

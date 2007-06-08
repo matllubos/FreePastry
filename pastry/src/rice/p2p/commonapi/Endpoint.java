@@ -103,6 +103,9 @@ public interface Endpoint extends NodeHandleReader {
   /**
    * This methods returns an unordered set of nodehandles on which are neighbors of the local
    * node in the id space.  Up to num handles are returned.
+   * 
+   * NOTE: This is not the same thing as the neighborhood set as described in some early papers.  
+   * The if you are looking for the neighborhood set, see localLookup()
    *
    * @param num The number of desired handle to return.
    */

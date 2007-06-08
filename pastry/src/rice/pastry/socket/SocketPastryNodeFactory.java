@@ -734,7 +734,13 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
             proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);
           }
         } else {
-          proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);          
+          // this is a bug fix in case there isn't a different external address
+          if (pAddress.equals(localAddress.getInnermostAddress())) {
+            proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{localAddress.getInnermostAddress()}, epoch);          
+          } else {
+            proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);          
+          }
+//          proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);          
         }
         
         updateAddressList(proxyAddress);
