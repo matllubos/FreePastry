@@ -490,14 +490,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     int rightIndex = leafSet.ccwSize();
     if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
     if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
-    if (leafSet.isComplete() || ((leftIndex == MAX_NUM_TO_HEAR_FROM/2) && (leftIndex == MAX_NUM_TO_HEAR_FROM/2))) {
+    if (leafSet.isComplete() || ((leftIndex == MAX_NUM_TO_HEAR_FROM/2) && (rightIndex == MAX_NUM_TO_HEAR_FROM/2))) {
       // here is where we see if we can go active
       ArrayList toHearFrom = new ArrayList();
       HashSet seen = new HashSet();
-//      int leftIndex = leafSet.ccwSize();
-      if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
-//      int rightIndex = leafSet.ccwSize();
-      if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
+
       for (int i=-leftIndex; i<=rightIndex; i++) {
 //      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
         if (i != 0) {
