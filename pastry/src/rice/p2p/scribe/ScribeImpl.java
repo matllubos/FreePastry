@@ -2385,15 +2385,23 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   }
 
   public void destroy() {
-    if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
-    ArrayList<TopicManager> managers = new ArrayList<TopicManager>(topicManagers.values());
-    topicManagers.clear();
-    
-    for (NodeHandle handle : allChildren.keySet()) {
-      handle.deleteObserver(this); 
-    }
-    for (NodeHandle handle : allParents.keySet()) {
-      handle.deleteObserver(this); 
+    if (environment.getSelectorManager().isSelectorThread()) {
+      if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
+      ArrayList<TopicManager> managers = new ArrayList<TopicManager>(topicManagers.values());
+      topicManagers.clear();
+      
+      for (NodeHandle handle : allChildren.keySet()) {
+        handle.deleteObserver(this); 
+      }
+      for (NodeHandle handle : allParents.keySet()) {
+        handle.deleteObserver(this); 
+      }
+    } else {
+      environment.getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          destroy();
+        }     
+      });
     }
   }
 
