@@ -1250,7 +1250,7 @@ public class PersistentStorage implements Storage {
    * @return Whether the directory is successfully created.
    */
   private static void createDirectory(File directory) throws IOException {
-    if ((directory == null) || (directory.exists() && directory.isFile()) || (! (directory.exists()) && (! directory.mkdir())))
+    if ((directory == null) || (directory.exists() && directory.isFile()) || (! (directory.exists()) && (! directory.mkdirs())))
       throw new IOException("Creation of directory " + directory + " failed!");
   }
   
