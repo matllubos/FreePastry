@@ -137,7 +137,11 @@ public class CompatibilityCheck {
   }
   
   public static boolean testJavaVersion(String version) {
-    if (version.startsWith("1.5"))
+    if (version.startsWith("1.5") || version.startsWith("1.6"))
+      return true;
+    
+    // a little bit of future-proofing
+    if (version.startsWith("1.7") || version.startsWith("2"))
       return true;
     
     if ((! version.startsWith("1.4")) || version.startsWith("1.4.0") || version.startsWith("1.4.1"))
