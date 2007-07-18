@@ -1,3 +1,68 @@
+FP Bugz:
+  Add payload to JoinRequest
+  Try to remove the BroadcastLeafSet in sendBLS() the idea being that you will send one as the response to the neighbor's request.
+  Make BindException have better error when you bind to a NIC that isn't there.
+  Look at AppSocket.close() to make sure it closes properly.
+
+
+
+FreePastry 2.1 "alpha"
+I'm shooting for an Alpha release of FreePastry that uses this new system, as well as the new and improved Scribe in the next 2 weeks.  Here are the planned release notes:
+
+FreePastry 2.1 alpha release:
+  Features:
+
+    New modular transport layer:
+      superior sender side notification of pending messages
+      breaks up implementation in to more manageable/maintainable components
+        more hackable
+      allows for easier implementation of new features:
+        security:
+          SSL
+          PeerReview
+	flexibility:
+ 	  STUN
+          support for udp messages 
+        simulation:
+          more control of how much of the transport layer is simulated
+
+    New implementation of Scribe:
+      allows user code to implement a tree maintenance policy
+      more efficient for large number of topics
+
+  Limitations:
+    API may change
+    memory leaks in new transport layer
+    may be buggy
+    not compatible with FP2.0 (will be working on a reverse compatibility layer for the full release)
+
+Layers:
+
+FreePastry needs <NodeHandle, Message> // Defines structure of P2P overlay
+PeerReview<NodeHandle, Message> needs Certificate<NodeHandle, Message> // adds accountability 
+Certificate<Anything, Message> needs <Anything, Message> // maintains a dictionary of Certificates
+CommonAPI<NoeHandle, Message>  needs <EpochInetSocketAddress, ByteBuffer> // adapts to Id based overlay
+Priority<Anything, ByteBuffer> needs <Anything, ByteBuffer> // a) Sends messages on a Socket (depending on the options), b) Prioritizes messages into queues c) calls sendFailed if there is a liveness change
+SSL<Anything, ByteBuffer> needs <Anything, ByteBuffer> // adds ability for crypto/authentication (need to think about how to do this for the UDP messages as well)
+SourceRouteManager<EpochInetSocketAddress, ByteBuffer> needs <SourceRoute, ByteBuffer>, node generation strategy // finds best sourceroute for an entity
+Liveness<Anything, ByteBuffer> needs <Anything, ByteBuffer> Expands the api to include liveness/proximity.  However the impls of these components are specified as a strategy interface.  // this puts a header on its own pings/normal messages to disambiguate higher layer's traffic
+SourceRoute<SourceRoute, ByteBuffer> needs <EpochInetSocketAddress(note, may make this more generic>, ByteBuffer> // can specify a source route for a datagram/socket, also handles the forwarding of socket/datagram
+Epoch<EpochInetSocketAddress, ByteBuffer> needs <InetSocketAddress, ByteBuffer> // ensures reboots of nodes are presented as different entities
+MagicNumber<InetSocketAddress, ByteBuffer> needs <InetSocketAddress, ByteBuffer> // ensures that nonsense/other application sockets/udp messages are ignored
+BandwidthLimiting<Anything, ByteBuffer> needs <Anything, ByteBuffer> // can specify a policy for dropping/queuing messages
+Wire<InetSocketAddress, ByteBuffer> needs <nothing> // responsible for opening/accepting tcp sockets, sending/receiving udp/tcp messages (does not open its own socket for tcp messages), also sets up the thead model
+
+
+Make test not allow direct connection from alice to bob.
+Make SourceRoute/EpochInetSocketAddress only made from a factory
+  Make a singleton() Factory
+Make test do a query/response. Alice -> Bob -> Alice
+
+TL:
+  could add rnd number to all wire messages used to specify proximity/time
+    
+  build unit test for each layer
+
 SplitStream:
   Make function on ChannelId to return the first digit.
   Make tutorial explain how to subscribe to more/less than 16 stripes.
@@ -6,6 +71,7 @@ SplitStream:
 make the lookup table come from the protocol version at the beginning of the socket
 
 Regression tests:
+  make test that routes to key which is the same as a node
   make test that RouteMessage is not received when not ready
   but that it is received when it is sent directly, test for all 3 routing conditions
     do this by grabbing the node's leafset, and killing a neighbor then immeadiately routing,
