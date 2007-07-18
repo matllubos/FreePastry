@@ -55,6 +55,7 @@ import rice.pastry.direct.*;
 import rice.pastry.dist.*;
 import rice.pastry.socket.*;
 import rice.pastry.standard.RandomNodeIdFactory;
+import rice.pastry.transport.TLPastryNode;
 
 /**
  * Provides regression testing setup for applications written on top of the
@@ -279,7 +280,7 @@ public class MultiringRegrTest {
     MultiringNode mn;
     
     if (bootstrap == null) {
-      mn = new MultiringNode(ringId, factory.newNode(null));
+      mn = new MultiringNode(ringId, factory.newNode((rice.pastry.NodeHandle)null));
     } else {
       mn = new MultiringNode(ringId, factory.newNode(getBootstrap(bootstrap.getNode())));
     }
@@ -325,11 +326,11 @@ public class MultiringRegrTest {
    */
   protected rice.pastry.NodeHandle getBootstrap(Node bootstrap) {
     if (PROTOCOL == PROTOCOL_DIRECT) {
-      return ((DirectPastryNode) bootstrap).getLocalHandle();
+      return ((PastryNode) bootstrap).getLocalHandle();
     } else {
 //      InetSocketAddress address = new InetSocketAddress(BOOTSTRAP_HOST, BOOTSTRAP_PORT);
 //      return ((DistPastryNodeFactory) factory).getNodeHandle(((DistNodeHandle) ((DistPastryNode) bootstrap).getLocalHandle()).getAddress());
-      return ((SocketPastryNodeFactory) factory).getNodeHandle(((SocketNodeHandle) ((SocketPastryNode) bootstrap).getLocalHandle()).getEpochAddress().getInnermostAddress());
+      return ((SocketPastryNodeFactory) factory).getNodeHandle(((SocketNodeHandle) ((TLPastryNode) bootstrap).getLocalHandle()).eaddress.getInnermostAddress());
     }
   }
 

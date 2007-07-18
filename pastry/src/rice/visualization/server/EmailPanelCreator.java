@@ -44,7 +44,6 @@ import rice.persistence.*;
 import rice.persistence.PersistentStorage.*;
 import rice.Continuation.*;
 import rice.selector.*;
-import rice.pastry.dist.DistPastryNode.*;
 import rice.email.proxy.smtp.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;

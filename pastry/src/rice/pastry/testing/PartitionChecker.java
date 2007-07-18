@@ -139,7 +139,7 @@ public class PartitionChecker {
     }
   }
   
-  protected Ring buildRing(final DistPastryNodeFactory factory, InetSocketAddress bootstrap) throws Exception {
+  protected Ring buildRing(final SocketPastryNodeFactory factory, InetSocketAddress bootstrap) throws Exception {
 //    System.out.println("buildRing("+bootstrap+")");
     unmatchedBootstraps.remove(bootstrap);
     numThreads = 0;
@@ -173,7 +173,8 @@ public class PartitionChecker {
                   LeafSet ls = factory.getLeafSet(handle);
 //                  System.out.println("Response:"+handle+" "+ring.getName()+" "+ls);
                   
-                  ps.println(handle.getAddress().getAddress().getHostAddress()+":"+handle.getAddress().getPort());
+                  ps.println(handle.getInetSocketAddress().getAddress().getHostAddress()+":"+
+                      handle.getInetSocketAddress().getPort());
           //        SourceRoute[] routes = factory.getRoutes(handle);
                   
           //        for (int i=0; i<routes.length; i++) 
@@ -270,7 +271,7 @@ public class PartitionChecker {
 
     public synchronized void addNode(SocketNodeHandle snh) {
       
-      InetSocketAddress newAddr = snh.getAddress();
+      InetSocketAddress newAddr = snh.getInetSocketAddress();
       synchronized(unmatchedBootstraps) {
         if (unmatchedBootstraps.contains(newAddr)) {
           unmatchedBootstraps.remove(newAddr);

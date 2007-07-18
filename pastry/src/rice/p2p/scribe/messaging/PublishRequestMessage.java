@@ -88,6 +88,10 @@ public class PublishRequestMessage extends ScribeMessage {
     return content;
   }
 
+  public String toString() {
+    return "PRM:["+content+"]";
+  }
+  
   /***************** Raw Serialization ***************************************/
   public short getType() {
     return TYPE;

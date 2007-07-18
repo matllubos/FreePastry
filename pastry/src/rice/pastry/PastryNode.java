@@ -38,14 +38,21 @@ package rice.pastry;
 
 import java.util.*;
 
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
+
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.pastry.boot.Bootstrapper;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
+import rice.pastry.transport.PMessageNotification;
+import rice.pastry.transport.PMessageReceipt;
 
 /**
  * A Pastry node is single entity in the pastry network.
@@ -55,7 +62,7 @@ import rice.pastry.routing.*;
  * @author Andrew Ladd
  */
 
-public abstract class PastryNode extends Observable implements rice.p2p.commonapi.Node, Destructable, NodeHandleFactory {
+public abstract class PastryNode extends Observable implements rice.p2p.commonapi.Node, Destructable, NodeHandleFactory, LivenessProvider<NodeHandle> {
 
   protected Id myNodeId;
 
@@ -78,6 +85,10 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   ReadyStrategy readyStrategy;
   
   protected boolean joinFailed = false;
+  
+  protected boolean isDestroyed = false;
+  
+  protected Router router;
   
   /**
    * Constructor, with NodeId. Need to set the node's ID before this node is
@@ -145,11 +156,12 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param rt
    *          Routing table.
    */
-  public void setElements(NodeHandle lh, MessageDispatch md, LeafSet ls, RoutingTable rt) {
+  public void setElements(NodeHandle lh, MessageDispatch md, LeafSet ls, RoutingTable rt, Router router) {
     localhandle = lh;
     setMessageDispatch(md);
     leafSet = ls;
     routeSet = rt;
+    this.router = router;
   }
 
   public rice.p2p.commonapi.NodeHandle getLocalNodeHandle() {
@@ -363,6 +375,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * with application messages.
    */
   public synchronized void receiveMessage(Message msg) {
+    if (isDestroyed) return;
+    if (logger.level <= Logger.FINE) logger.log("receiveMessage("+msg+")");
     myMessageDispatch.dispatchMessage(msg);
   }
   
@@ -380,7 +394,6 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param receiver
    *          the message receiver.
    */
-
   public void registerReceiver(int address,
       PastryAppl receiver) {
     myMessageDispatch.registerReceiver(address, receiver);
@@ -549,7 +562,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * Make sure to call super.destroy() !!!
    */
   public void destroy() {
+    if (isDestroyed) return;
     if (logger.level <= Logger.INFO) logger.log("Destroying "+this);
+    isDestroyed = true;
     Iterator<Destructable> i = destructables.iterator();
     while(i.hasNext()) {
       Destructable d = i.next();
@@ -567,7 +582,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param m
    * @return
    */
-  abstract public void send(NodeHandle handle, Message message);
+  abstract public PMessageReceipt send(NodeHandle handle, Message message, 
+      PMessageNotification deliverAckToMe, Map<String, Integer> options);
   
   /**
    * Called by PastryAppl to ask the transport layer to open a Socket to its counterpart on another node.
@@ -576,7 +592,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param receiver
    * @param appl
    */
-  abstract public void connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout);
+  abstract public SocketRequestHandle connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout);
 
   /**
    * The proximity of the node handle.
@@ -609,6 +625,16 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   
   public JoinFailedException joinFailedReason() {
     return joinFailedReason; 
+  }
+
+  abstract public Bootstrapper getBootstrapper();
+
+  public Router getRouter() {
+    return router;
+  }
+  
+  public void addNetworkListener(NetworkListener nl) {
+    // TODO: implement 
   }
   
 }

@@ -42,12 +42,12 @@ package rice.pastry.direct;
 import rice.pastry.ScheduledMessage;
 import rice.selector.TimerTask;
 
-public class DirectTimerTask extends ScheduledMessage {
+public class DirectTimerTask extends TimerTask {
 
   MessageDelivery md;
   
   DirectTimerTask(MessageDelivery md, long nextExecutionTime, int period, boolean fixed) {
-    super(md.node,md.msg);
+//    super(md.node,md.msg);
     this.md = md; 
     this.nextExecutionTime = nextExecutionTime;
     this.period = period;
@@ -67,7 +67,7 @@ public class DirectTimerTask extends ScheduledMessage {
   }
   
   public String toString() {
-    return "DirectTT for " + msg + " to "+md.node;
+    return "DirectTT for " + md.msg + " to "+md.node;
   }
   
 }

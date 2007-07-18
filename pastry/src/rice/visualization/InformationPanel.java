@@ -148,7 +148,8 @@ public class InformationPanel extends JPanel {
       
       Arrays.sort(handles, new Comparator() {
         public int compare(Object a, Object b) {
-          return ((Node) a).handle.getAddress().toString().compareTo(((Node) b).handle.getAddress().toString());
+          return ((Node) a).handle.getInetSocketAddress().toString().compareTo(
+              ((Node) b).handle.getInetSocketAddress().toString());
         }
         
         public boolean equals() {
@@ -161,9 +162,9 @@ public class InformationPanel extends JPanel {
       
       for (int i=0; i<handles.length; i++) 
         if (handles[i].ring == node.ring)
-          addrModel.addElement(handles[i].handle.getAddress());
+          addrModel.addElement(handles[i].handle.getInetSocketAddress());
       
-      addrModel.setSelectedItem(node.handle.getAddress());
+      addrModel.setSelectedItem(node.handle.getInetSocketAddress());
       
       text.setText(getText());
       

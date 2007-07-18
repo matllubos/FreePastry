@@ -36,11 +36,21 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.standard;
 
+import java.io.IOException;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
+
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.exception.AppNotRegisteredException;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
+import rice.pastry.transport.PMessageNotification;
+import rice.pastry.transport.PMessageReceipt;
 import rice.pastry.client.PastryAppl;
 
 /**
@@ -52,8 +62,10 @@ import rice.pastry.client.PastryAppl;
  * @author Rongmei Zhang/Y.Charlie Hu
  */
 
-public class StandardRouter extends PastryAppl {
+public class StandardRouter extends PastryAppl implements Router {
 
+  MessageDispatch dispatch;
+  
   /**
    * Constructor.
    * 
@@ -61,8 +73,18 @@ public class StandardRouter extends PastryAppl {
    * @param ls the leaf set.
    */
 
-  public StandardRouter(PastryNode thePastryNode) {
-    super(thePastryNode, RouterAddress.getCode());
+  public StandardRouter(final PastryNode thePastryNode, MessageDispatch dispatch) {
+    super(thePastryNode, null, RouterAddress.getCode(), new MessageDeserializer() {
+    
+      public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, int priority,
+          rice.p2p.commonapi.NodeHandle sender) throws IOException {
+        RouteMessage rm;
+        rm = RouteMessage.build(buf, thePastryNode,
+            (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
+        return rm;
+      }    
+    });
+    this.dispatch = dispatch;
   }
 
   /**
@@ -72,31 +94,71 @@ public class StandardRouter extends PastryAppl {
    */
 
   public void receiveMessage(Message msg) {
+    if (logger.level <= Logger.FINER) logger.log("receiveMessage("+msg+")");
     if (msg instanceof RouteMessage) {
+      // should only happen for messages coming off the wire
       route((RouteMessage) msg);
     } else {
       throw new Error("message " + msg + " bounced at StandardRouter");
     }
   }
 
-  private void route(RouteMessage rm) {
-    if (rm.routeMessage(thePastryNode.getLocalHandle()) == false)
+//  public void route(RouteMessage rm) {
+//    route(rm, null);
+//  }
+
+  public void route(RouteMessage rm) {
+    if (logger.level <= Logger.FINE) logger.log("route("+rm+")");
+    if (routeMessage(rm) == false)
       receiveRouteMessage(rm);    
   }
   
+  /**
+   * Routes the messages if the next hop has been set up.
+   * 
+   * Note, this once lived in the RouteMessaage
+   * 
+   * @param localId the node id of the local node.
+   * 
+   * @return true if the message got routed, false otherwise.
+   */
+  public boolean routeMessage(RouteMessage rm) {
+    if (logger.level <= Logger.FINER) logger.log("routeMessage("+rm+")");
+    if (rm.getNextHop() == null)
+      return false;
+    rm.setSender(thePastryNode.getLocalHandle());
+
+    NodeHandle handle = rm.getNextHop();
+    rm.setNextHop(null);
+    rm.setPrevNode(thePastryNode.getLocalHandle());
+    
+    if (thePastryNode.getLocalHandle().equals(handle)) {
+      thePastryNode.receiveMessage(rm.internalMsg);
+      rm.sendSuccess();
+    } else {
+      sendTheMessage(rm, handle);
+    }
+    return true;
+  }
+
+  protected void sendTheMessage(final RouteMessage rm, NodeHandle handle) {    
+    if (logger.level <= Logger.FINER) logger.log("sendThemessage("+rm+","+handle+")");
+    rm.setTLCancellable(thePastryNode.send(handle, rm, new PMessageNotification(){    
+      public void sent(PMessageReceipt msg) {
+        rm.sendSuccess();
+      }    
+      public void sendFailed(PMessageReceipt msg, Exception reason) {
+        rm.sendFailed(reason);
+      }    
+    }, rm.getTLOptions())); 
+  }
+
   
   /**
-   * Receive and process a route message.
+   * Receive and process a route message.  Sets a nextHop.
    * 
    * @param msg the message.
    */
-
-  /**
-   * Receive and process a route message.
-   * 
-   * @param msg the message.
-   */
-
   private void receiveRouteMessage(RouteMessage msg) {
     if (logger.level <= Logger.FINER) logger.log("receiveRouteMessage("+msg+")");  
     Id target = msg.getTarget();
@@ -111,7 +173,7 @@ public class StandardRouter extends PastryAppl {
 
     if (lsPos == 0) {
       // message is for the local node so deliver it
-      msg.nextHop = thePastryNode.getLocalHandle();
+      msg.setNextHop(thePastryNode.getLocalHandle());
       
       // don't return, we want to check for routing table hole
     } else if ((lsPos > 0 &&  (lsPos < cwSize || !thePastryNode.getLeafSet().get(lsPos).getNodeId().clockwise(target)))
@@ -119,9 +181,9 @@ public class StandardRouter extends PastryAppl {
       if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):1"); 
       
       // the target is within range of the leafset, deliver it directly          
-      msg.nextHop = getBestHandleFromLeafset(msg, lsPos);
-      if (msg.nextHop == null) return; // we are dropping this message to maintain consistency
-      thePastryNode.getRoutingTable().put(msg.nextHop);        
+      msg.setNextHop(getBestHandleFromLeafset(msg, lsPos));
+      if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
+      thePastryNode.getRoutingTable().put(msg.getNextHop());        
     } else {
       // use the routing table     
       
@@ -161,30 +223,46 @@ public class StandardRouter extends PastryAppl {
 
           if (lsDist.compareTo(altDist) < 0) {
             // the leaf set member on the edge of the leafset is closer
-            msg.nextHop = handle = getBestHandleFromLeafset(msg, lsPos);
-            if (msg.nextHop == null) return; // we are dropping this message to maintain consistency
-            thePastryNode.getRoutingTable().put(msg.nextHop);        
+            handle = getBestHandleFromLeafset(msg, lsPos);
+            msg.setNextHop(handle);
+            if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
+            thePastryNode.getRoutingTable().put(msg.getNextHop());        
           } 
         } else {
           // no alternate in RT, take node at the edge of the leafset
-          msg.nextHop = handle = getBestHandleFromLeafset(msg, lsPos);
-          if (msg.nextHop == null) return; // we are dropping this message to maintain consistency
-          thePastryNode.getRoutingTable().put(msg.nextHop);        
+          handle = getBestHandleFromLeafset(msg, lsPos);
+          msg.setNextHop(handle);
+          if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
+          thePastryNode.getRoutingTable().put(msg.getNextHop());        
         }
       } //else {
         // we found an appropriate RT entry, check for RT holes at previous node
 //      checkForRouteTableHole(msg, handle);
 //      }
 
-      msg.nextHop = handle;
+      msg.setNextHop(handle);
     }
     
     // this wasn't being called often enough in its previous location, moved here Aug 11, 2006
-    checkForRouteTableHole(msg, msg.nextHop);
+    checkForRouteTableHole(msg, msg.getNextHop());
     msg.setPrevNode(thePastryNode.getLocalHandle());
-    thePastryNode.receiveMessage(msg);
+
+    // here, we need to deliver the msg to the proper app
+    deliverToApplication(msg);
   }
 
+  public void deliverToApplication(RouteMessage msg) {
+    PastryAppl appl = dispatch.getDestinationByAddress(msg.getAuxAddress());
+    if (appl == null) {
+      if (logger.level <= Logger.WARNING) logger.log(
+          "Dropping message " + msg + " because the application address " + msg.getAuxAddress() + " is unknown.");
+      msg.sendFailed(new AppNotRegisteredException(msg.getAuxAddress()));
+      return;      
+    }
+    appl.receiveMessage(msg);
+//    thePastryNode.receiveMessage(msg);    
+  }
+  
   /**
    * This is a helper function to get the rapid-rerouting correct.  
    * 
@@ -257,6 +335,7 @@ public class StandardRouter extends PastryAppl {
           logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
 //          logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
         }
+        msg.sendFailed(new NodeIsFaultyException(handle));
         return null;
     }
     return handle;
@@ -316,7 +395,7 @@ public class StandardRouter extends PastryAppl {
         if (logger.level <= Logger.FINE) {
           logger.log("Found hole in "+prevNode+"'s routing table. Sending "+brr.toStringFull());  
         }
-        thePastryNode.send(prevNode,brr);
+        thePastryNode.send(prevNode,brr,null,options);
       }
     }
 

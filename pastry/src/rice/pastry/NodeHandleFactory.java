@@ -45,4 +45,12 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public interface NodeHandleFactory {
   public NodeHandle readNodeHandle(InputBuffer buf) throws IOException;
+  /**
+   * Needed for legacy java deserialization of NodeHanlde because we aren't given any 
+   * other way to do this properly such as a protected constructor.
+   * 
+   * @param handle
+   * @return
+   */
+  public NodeHandle coalesce(NodeHandle handle);
 }

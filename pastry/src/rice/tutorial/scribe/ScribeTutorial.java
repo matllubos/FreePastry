@@ -45,6 +45,7 @@ import rice.p2p.commonapi.NodeHandle;
 import rice.pastry.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
+import rice.pastry.transport.TransportPastryNodeFactory;
 
 /**
  * This tutorial shows how to use Scribe.
@@ -77,19 +78,23 @@ public class ScribeTutorial {
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
 
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory,
-        bindport, env);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+//    PastryNodeFactory factory = new TransportPastryNodeFactory(nidFactory, bindport, env);
 
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
       // This will return null if we there is no node at that location
-      rice.pastry.NodeHandle bootHandle = ((SocketPastryNodeFactory) factory)
+      NodeHandle bootHandle = ((SocketPastryNodeFactory) factory)
           .getNodeHandle(bootaddress);
-
+      
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
-      PastryNode node = factory.newNode(bootHandle);
-
+      PastryNode node = factory.newNode((rice.pastry.NodeHandle) bootHandle);
+      
+      // this is an example of th enew way
+//      PastryNode node = factory.newNode(nidFactory.generateNodeId());
+//      node.getBootstrapper().boot(Collections.singleton(bootaddress));
+      
       // the node may require sending several messages to fully boot into the ring
       synchronized(node) {
         while(!node.isReady() && !node.joinFailed()) {

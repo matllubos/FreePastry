@@ -41,6 +41,10 @@ package rice.pastry.direct;
 
 import java.util.*;
 
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.proximity.ProximityListener;
+
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
@@ -48,18 +52,34 @@ import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.messaging.Message;
+import rice.pastry.transport.NodeHandleAdapter;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
-public abstract class BasicNetworkSimulator implements NetworkSimulator {
-
-  Vector nodes = new Vector();
-
-  // these messages should be delivered when the timer expires
-//  protected TreeSet taskQueue = new TreeSet();
+public class BasicNetworkSimulator<Identifier, MessageType> implements 
+    GenericNetworkSimulator<Identifier, MessageType> {
+  class Tupel {
+    Identifier i;
+    TransportLayer<Identifier, MessageType> tl;
+    NodeRecord record;
+    
+    public Tupel(Identifier i, TransportLayer<Identifier, MessageType> tl, NodeRecord record) {
+      super();
+      this.i = i;
+      this.tl = tl;
+      this.record = record;
+    }
+  }
+  
+  /**
+   * This maps to the next highest transport layer
+   */
+  Map<Identifier, Tupel> nodes = 
+    new HashMap<Identifier, Tupel>();
 
   Environment environment;
 
@@ -68,7 +88,6 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   // true if we are responsible for incrementing the time
   private boolean isDirectTimeSource = false;
   
-  private TestRecord testRecord;
 
   protected Logger logger;
 
@@ -81,28 +100,14 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   protected final int maxDiameter;
   protected final int minDelay;
   
-  public BasicNetworkSimulator(Environment env) {
+  public BasicNetworkSimulator(Environment env, RandomSource random) {
     this.environment = env;
     manager = environment.getSelectorManager();
     manager.useLoopListeners(false);
     Parameters params = env.getParameters();
     maxDiameter = params.getInt("pastry_direct_max_diameter");
     minDelay = params.getInt("pastry_direct_min_delay");
-    if (params.contains("pastry_direct_use_own_random")
-        && params.getBoolean("pastry_direct_use_own_random")) {
-
-      if (params.contains("pastry_direct_random_seed")
-          && !params.getString("pastry_direct_random_seed").equalsIgnoreCase(
-              "clock")) {
-        this.random = new SimpleRandomSource(params
-            .getLong("pastry_direct_random_seed"), env.getLogManager(),
-            "direct");
-      } else {
-        this.random = new SimpleRandomSource(env.getLogManager(), "direct");
-      }
-    } else {
-      this.random = env.getRandomSource();
-    }
+    this.random = random;
     this.logger = env.getLogManager().getLogger(getClass(), null);
 //    try {
     timeSource = env.getTimeSource();
@@ -114,7 +119,6 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     if (timeSource instanceof DirectTimeSource)
       isDirectTimeSource = true;
     manager.setSelect(false);
-    testRecord = null;    
     start();
   }
 
@@ -159,24 +163,6 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
     });
   }
   
-  /**
-   * get TestRecord
-   * 
-   * @return the returned TestRecord
-   */
-  public TestRecord getTestRecord() {
-    return testRecord;
-  }
-
-  /**
-   * set TestRecord
-   * 
-   * @param tr input TestRecord
-   */
-  public void setTestRecord(TestRecord tr) {
-    testRecord = tr;
-  }
-
   private void addTask(TimerTask dtt) {
     if (logger.level <= Logger.FINE) logger.log("addTask("+dtt+")");
 //    System.out.println("addTask("+dtt+")");
@@ -201,79 +187,34 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   /**
    * node should always be a local node, because this will be delivered instantly
    */
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node) {
+  public Cancellable deliverMessage(MessageType msg, Identifier node, Identifier from) {
+    return deliverMessage(msg, node, from, 0);
+  }
+
+  public Cancellable deliverMessage(MessageType msg, Identifier node, Identifier from,
+      int delay) {
+    return deliverMessage(msg, node, from, delay, 0);
+  }
+
+  public Cancellable deliverMessageFixedRate(MessageType msg,
+      Identifier node, Identifier from, int delay, int period) {
+    return deliverMessage(msg, node, from, delay, period);
+  }
+  
+  public Cancellable deliverMessage(MessageType msg, Identifier node, Identifier from, int delay, int period) {
     if (logger.level <= Logger.FINE)
       logger.log("BNS: deliver " + msg + " to " + node);
     DirectTimerTask dtt = null;
     
-    DirectNodeHandle sender = null;
-    sender = (DirectNodeHandle)msg.getSender();
-//    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
-//    if (senderNode != null)
-//      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
-    if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node,(DirectNodeHandle)node.getLocalHandle(),this);
-      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis());
+    if (from == null || isAlive(from)) {
+      MessageDelivery<Identifier, MessageType> md = new MessageDelivery<Identifier, MessageType>(msg, node, from, null, this);
+      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis()+ delay,period);
       addTask(dtt);
     }
     return dtt;
   }
 
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from,
-      int delay) {
-    if (logger.level <= Logger.FINE)
-      logger.log("BNS: deliver("+delay+") " + msg + " to " + node);
-    DirectTimerTask dtt = null;
-    
-    DirectNodeHandle sender = null;
-    sender = (DirectNodeHandle)msg.getSender();
-//    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
-//    if (senderNode != null)
-//      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
-    if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node, from, this);
-      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay);
-      addTask(dtt);
-    }
-    return dtt;
-  }
-
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from,
-      int delay, int period) {
-    DirectTimerTask dtt = null;
-    
-    DirectNodeHandle sender = null;
-    sender = (DirectNodeHandle)msg.getSender();
-//    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
-//    if (senderNode != null)
-//      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
-    if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node, from, this);
-      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
-          period);
-      addTask(dtt);
-    }
-    return dtt;
-  }
-
-  public ScheduledMessage deliverMessageFixedRate(Message msg,
-      DirectPastryNode node, DirectNodeHandle from, int delay, int period) {
-    DirectTimerTask dtt = null;
-
-    DirectNodeHandle sender = null;
-    sender = (DirectNodeHandle)msg.getSender();
-//    DirectPastryNode senderNode = DirectPastryNode.getCurrentNode();
-//    if (senderNode != null)
-//      sender = (DirectNodeHandle)senderNode.getLocalNodeHandle();
-    if (sender == null || sender.isAlive()) {
-      MessageDelivery md = new MessageDelivery(msg, node, from, this);
-      dtt = new DirectTimerTask(md, timeSource.currentTimeMillis() + delay,
-          period, true);
-      addTask(dtt);
-    }
-    return dtt;
-  }
-
+  
   // System Time is the system clock
   // Sim Time is the simulated clock
   long maxSpeedRequestSystemTime = 0;
@@ -371,16 +312,6 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
       
       return true;
   }
-  
-  /**
-   * testing if a NodeId is alive
-   * 
-   * @param nid the NodeId being tested
-   * @return true if nid is alive false otherwise
-   */
-  public boolean isAlive(DirectNodeHandle nh) {
-    return nh.getRemote().isAlive();
-  }
 
   /**
    * set the liveliness of a NodeId
@@ -388,97 +319,38 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
    * @param nid the NodeId being set
    * @param alive the value being set
    */
-  public void destroy(DirectPastryNode node) {
-    node.destroy();
-    // NodeRecord nr = (NodeRecord) nodeMap.get(nid);
-    //
-    // if (nr == null) {
-    // throw new Error("setting node alive for unknown node");
-    // }
-    //
-    // if (nr.alive != alive) {
-    // nr.alive = alive;
-    //
-    // DirectNodeHandle[] handles = (DirectNodeHandle[]) nr.handles.toArray(new
-    // DirectNodeHandle[0]);
-    //
-    // for (int i = 0; i < handles.length; i++) {
-    // if (alive) {
-    // handles[i].notifyObservers(NodeHandle.DECLARED_LIVE);
-    // } else {
-    // handles[i].notifyObservers(NodeHandle.DECLARED_DEAD);
-    // }
-    // }
-    // }
+//  public void destroy(TLPastryNode node) {
+//    node.destroy();
+//    // NodeRecord nr = (NodeRecord) nodeMap.get(nid);
+//    //
+//    // if (nr == null) {
+//    // throw new Error("setting node alive for unknown node");
+//    // }
+//    //
+//    // if (nr.alive != alive) {
+//    // nr.alive = alive;
+//    //
+//    // DirectNodeHandle[] handles = (DirectNodeHandle[]) nr.handles.toArray(new
+//    // DirectNodeHandle[0]);
+//    //
+//    // for (int i = 0; i < handles.length; i++) {
+//    // if (alive) {
+//    // handles[i].notifyObservers(NodeHandle.DECLARED_LIVE);
+//    // } else {
+//    // handles[i].notifyObservers(NodeHandle.DECLARED_DEAD);
+//    // }
+//    // }
+//    // }
+//  }
+
+
+  public void registerIdentifier(Identifier i, TransportLayer<Identifier, MessageType> dtl, NodeRecord record) {
+    nodes.put(i, new Tupel(i, dtl, record));
   }
 
-  /**
-   * computes the proximity between two NodeIds
-   * 
-   * @param a the first NodeId
-   * @param b the second NodeId
-   * @return the proximity between the two input NodeIds
-   */
-  public float networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
-    NodeRecord nra = a.getRemote().record;
-    NodeRecord nrb = b.getRemote().record;
-
-    if (nra == null || nrb == null) {
-      throw new Error("asking about node proximity for unknown node(s)");
-    }
-
-    return nra.networkDelay(nrb);
-  }
-
-  public float proximity(DirectNodeHandle a, DirectNodeHandle b) {
-    NodeRecord nra = a.getRemote().record;
-    NodeRecord nrb = b.getRemote().record;
-
-    if (nra == null || nrb == null) {
-      throw new Error("asking about node proximity for unknown node(s)");
-    }
-
-    return nra.proximity(nrb);
-  }
-
-  
-  
-  /**
-   * find the closest NodeId to an input NodeId out of all NodeIds in the
-   * network
-   * 
-   * @param nid the input NodeId
-   * @return the NodeId closest to the input NodeId in the network
-   */
-  public DirectNodeHandle getClosest(DirectNodeHandle nh) {
-    Iterator it = nodes.iterator();
-    DirectNodeHandle bestHandle = null;
-    float bestProx = Float.MAX_VALUE;
-    Id theId;
-
-    while (it.hasNext()) {
-      DirectPastryNode theNode = (DirectPastryNode) it.next();
-      float theProx = theNode.record.proximity(nh.getRemote().record);
-      theId = theNode.getNodeId();
-      if (!theNode.isAlive() || !theNode.isReady()
-          || theId.equals(nh.getNodeId())) {
-        continue;
-      }
-
-      if (theProx < bestProx) {
-        bestProx = theProx;
-        bestHandle = (DirectNodeHandle) theNode.getLocalHandle();
-      }
-    }
-    return bestHandle;
-  }
-
-  public void registerNode(DirectPastryNode dpn) {
-    nodes.add(dpn);
-  }
-
-  public void removeNode(DirectPastryNode node) {
-    nodes.remove(node);
+  public void remove(Identifier i) {
+    nodes.remove(i);
+    notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD);
   }
 
   public Environment getEnvironment() {
@@ -486,46 +358,108 @@ public abstract class BasicNetworkSimulator implements NetworkSimulator {
   }
 
   
-  /************** SimulatorListeners handling *******************/
-  List<SimulatorListener> listeners = new ArrayList<SimulatorListener>();  
-  public boolean addSimulatorListener(SimulatorListener sl) {
-    synchronized(listeners) {
-      if (listeners.contains(sl)) return false;
-      listeners.add(sl);
-      return true;
-    }
+  public RandomSource getRandomSource() {
+    return random;
   }
 
-  public boolean removeSimulatorListener(SimulatorListener sl) {
-    synchronized(listeners) {
-      return listeners.remove(sl);
-    }
+  public boolean isAlive(Identifier i) {
+    return nodes.containsKey(i);
   }
-
-  public void notifySimulatorListenersSent(Message m, NodeHandle from, NodeHandle to, int delay) {
-    List<SimulatorListener> temp;
-    
-    // so we aren't holding a lock while iterating/calling
-    synchronized(listeners) {
-       temp = new ArrayList<SimulatorListener>(listeners);
-    }
   
-    for(SimulatorListener listener : temp) {
-      listener.messageSent(m, from, to, delay);
-    }
+  public DirectTransportLayer<Identifier, MessageType> getTL(Identifier i) {
+    Tupel t = nodes.get(i);
+    if (t == null) return null;
+    NodeHandleAdapter nha = (NodeHandleAdapter)t.tl;
+    return (DirectTransportLayer<Identifier, MessageType>)nha.getTL();
+//    return (DirectTransportLayer<Identifier, MessageType>)nodes.get(i).tl;
   }
-
-  public void notifySimulatorListenersReceived(Message m, NodeHandle from, NodeHandle to) {
-    List<SimulatorListener> temp;
-    
-    // so we aren't holding a lock while iterating/calling
-    synchronized(listeners) {
-       temp = new ArrayList<SimulatorListener>(listeners);
-    }
   
-    for(SimulatorListener listener : temp) {
-      listener.messageReceived(m, from, to);
+  /**
+   * computes the one-way distance between two NodeIds
+   * 
+   * @param a the first NodeId
+   * @param b the second NodeId
+   * @return the proximity between the two input NodeIds
+   */
+  public float networkDelay(Identifier a, Identifier b) {
+    Tupel ta = nodes.get(a);
+    Tupel tb = nodes.get(b);
+    if (ta == null) {
+      throw new RuntimeException("asking about node proximity for unknown node "+a);
+    }
+      
+    if (tb == null) {
+      throw new RuntimeException("asking about node proximity for unknown node "+b);      
+    }
+    
+    NodeRecord nra = ta.record;
+    NodeRecord nrb = tb.record;
+    
+    return nra.networkDelay(nrb);
+  }
+
+  /**
+   * computes the rtt between two NodeIds
+   * 
+   * @param a the first NodeId
+   * @param b the second NodeId
+   * @return the proximity between the two input NodeIds
+   */
+  public float proximity(Identifier a, Identifier b) {
+    Tupel ta = nodes.get(a);
+    Tupel tb = nodes.get(b);
+    if (ta == null) {
+      throw new RuntimeException("asking about node proximity for unknown node "+a);
+    }
+      
+    if (tb == null) {
+      throw new RuntimeException("asking about node proximity for unknown node "+b);      
+    }
+    
+    NodeRecord nra = ta.record;
+    NodeRecord nrb = tb.record;
+    
+    return nra.proximity(nrb);
+  }
+
+  public NodeRecord getNodeRecord(DirectNodeHandle handle) {
+    Tupel t = nodes.get(handle);
+    if (t == null) return null;
+    return t.record;
+  }
+
+  List<LivenessListener<Identifier>> livenessListeners = new ArrayList<LivenessListener<Identifier>>();
+  public void addLivenessListener(LivenessListener<Identifier> name) {
+    synchronized(livenessListeners) {
+      livenessListeners.add(name);
     }
   }
 
+  public boolean removeLivenessListener(LivenessListener<Identifier> name) {
+    synchronized(livenessListeners) {
+      return livenessListeners.remove(name);
+    }
+  }
+  
+  private void notifyLivenessListeners(Identifier i, int liveness) {
+    if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+"):"+livenessListeners.get(0));
+    List<LivenessListener<Identifier>> temp;
+    synchronized(livenessListeners) {
+      temp = new ArrayList<LivenessListener<Identifier>>(livenessListeners);
+    }
+    for (LivenessListener<Identifier> listener : temp) {
+      listener.livenessChanged(i, liveness);
+    }
+  }
+
+  public boolean checkLiveness(Identifier i, Map<String, Integer> options) {
+    return false;
+  }
+
+  public int getLiveness(Identifier i, Map<String, Integer> options) {
+    if (nodes.containsKey(i)) {
+      return LivenessListener.LIVENESS_ALIVE;
+    }
+    return LivenessListener.LIVENESS_DEAD;
+  }
 }

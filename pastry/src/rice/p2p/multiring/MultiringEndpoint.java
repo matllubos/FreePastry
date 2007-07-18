@@ -42,11 +42,16 @@ import rice.*;
 import java.io.IOException;
 import java.util.*;
 
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.multiring.messaging.RingMessage;
+import rice.p2p.util.MCAdapter;
+import rice.p2p.util.MRHAdapter;
 import rice.p2p.util.rawserialization.JavaSerializedMessage;
 
 /**
@@ -122,34 +127,48 @@ public class MultiringEndpoint implements Endpoint {
    * @param id The destination Id of the message.
    * @param message The message to deliver
    * @param hint The first node to send this message to, optional
-   */
-  public void route(Id id, Message message, NodeHandle hint) {
+   */  
+  public MessageReceipt route(Id id, Message message, NodeHandle hint) {
+    return route(id, message, hint, null);
+  }
+  
+  public MessageReceipt route(Id id, Message message, NodeHandle hint, DeliveryNotification deliverAckToMe) {
     if (message instanceof RawMessage) {
-      route(id, (RawMessage)message, hint); 
+      return route(id, (RawMessage)message, hint, deliverAckToMe);
     } else {
-      route(id, new JavaSerializedMessage(message), hint); 
+      final MRHAdapter ret = new MRHAdapter();
+      return route(id, (RawMessage)new JavaSerializedMessage(message), hint, 
+          deliverAckToMe); 
     }
   }
   
-  public void route(Id id, RawMessage message, NodeHandle hint) {
+  public MessageReceipt route(Id id, RawMessage message, NodeHandle hint) {
+    return route(id, message, hint, null);
+  }
+  
+  public MessageReceipt route(
+      Id id, RawMessage message, 
+      NodeHandle hint, 
+      DeliveryNotification deliverAckToMe) {
+    
     RingId mId = (RingId) id;
     MultiringNodeHandle mHint = (MultiringNodeHandle) hint;
           
     if (mId == null) {
       if (mHint.getRingId().equals(node.getRingId())) {
-        endpoint.route(null, message, mHint.getHandle());
+        return endpoint.route(null, message, mHint.getHandle(), deliverAckToMe);
       } else {
-        route(mHint.getId(), message, null);
+        return route(mHint.getId(), message, null, deliverAckToMe);
       }
     } else {
       if (mId.getRingId().equals(node.getRingId())) {
         if ((mHint != null) && (mHint.getRingId().equals(node.getRingId()))) {
-          endpoint.route(mId.getId(), message, mHint.getHandle());
+          return endpoint.route(mId.getId(), message, mHint.getHandle(), deliverAckToMe);
         } else {
-          endpoint.route(mId.getId(), message, null);
+          return endpoint.route(mId.getId(), message, null, deliverAckToMe);
         }
       } else {
-        node.getCollection().route(mId, message, getInstance());
+        return node.getCollection().route(mId, message, getInstance(), deliverAckToMe);
       }
     } 
   }
@@ -421,6 +440,12 @@ public class MultiringEndpoint implements Endpoint {
   public boolean routingConsistentFor(Id id) {
     return endpoint.routingConsistentFor(id);
   }
+  
+  public void setSendOptions(Map<String, Integer> options) {
+    endpoint.setSendOptions(options);
+  }
+
+
 }
 
 

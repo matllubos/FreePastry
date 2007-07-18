@@ -85,7 +85,7 @@ public class PastryNetworkTest {
     
     final PrintStream ps = new PrintStream(new FileOutputStream("response.txt"));
     
-    unseen.add(((DistPastryNodeFactory) factory).getNodeHandle(bootstrap));
+    unseen.add(factory.getNodeHandle(bootstrap));
 
     synchronized (unseen) {
       while (true) {
@@ -107,7 +107,8 @@ public class PastryNetworkTest {
                 LeafSet ls = factory.getLeafSet(handle);
                 System.out.println("Response:"+handle+" "+ls);
                 gotResponse = true;
-                ps.println(handle.getAddress().getAddress().getHostAddress()+":"+handle.getAddress().getPort());
+                ps.println(handle.getInetSocketAddress().getAddress().getHostAddress()+":"+
+                    handle.getInetSocketAddress().getPort());
         //        SourceRoute[] routes = factory.getRoutes(handle);
                 
         //        for (int i=0; i<routes.length; i++) 

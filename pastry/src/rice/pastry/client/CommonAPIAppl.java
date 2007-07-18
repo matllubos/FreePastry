@@ -97,9 +97,10 @@ public abstract class CommonAPIAppl extends PastryAppl {
     if (logger.level <= Logger.FINER) logger.log( 
         "[" + thePastryNode + "] route " + msg + " to " + key);
 
-    RouteMessage rm = new RouteMessage(key, msg, hint,
+    RouteMessage rm = new RouteMessage(key, msg, hint, 
         (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
-    thePastryNode.receiveMessage(rm);
+    rm.setTLOptions(options);
+    thePastryNode.getRouter().route(rm);
   }
 
   /**
@@ -306,8 +307,8 @@ public abstract class CommonAPIAppl extends PastryAppl {
       // call application
       forward(rm);
 
-      if (rm.nextHop != null) {
-        NodeHandle nextHop = rm.nextHop;
+      if (rm.getNextHop() != null) {
+        NodeHandle nextHop = rm.getNextHop();
 
         // if the message is for the local node, deliver it here
         if (getNodeId().equals(nextHop.getNodeId())) {
@@ -318,7 +319,7 @@ public abstract class CommonAPIAppl extends PastryAppl {
           }
         } else {
           // route the message
-          rm.routeMessage(getNodeHandle());
+          thePastryNode.getRouter().route(rm);
         }
 
       }

@@ -36,8 +36,12 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.direct;
 
+import java.io.IOException;
+import java.util.Map;
+
 import rice.environment.logging.Logger;
 import rice.pastry.PastryNode;
+import rice.pastry.commonapi.PastryEndpointMessage;
 import rice.pastry.messaging.Message;
 
 /**
@@ -45,34 +49,63 @@ import rice.pastry.messaging.Message;
    * @version $Id: EuclideanNetwork.java 2561 2005-06-09 16:22:02Z jeffh $
    * @author amislove
    */
-  class MessageDelivery implements Delivery {
-    protected Message msg;
-    protected DirectPastryNode node;    
+  class MessageDelivery<Identifier, MessageType> implements Delivery {
+    protected MessageType msg;
+    protected Identifier node;    
     protected Logger logger;
     protected int seq;
-    NetworkSimulator networkSimulator;
-    DirectNodeHandle from;
+    GenericNetworkSimulator<Identifier, MessageType> networkSimulator;
+    Identifier from;
+    protected Map<String, Integer> options;
     
     /**
      * Constructor for MessageDelivery.
      */
-    public MessageDelivery(Message m, DirectPastryNode pn, DirectNodeHandle from, NetworkSimulator sim) {
+    public MessageDelivery(MessageType m, Identifier to, Identifier from, Map<String, Integer> options, GenericNetworkSimulator<Identifier, MessageType> sim) {
+      logger = ((DirectTransportLayer)sim.getTL(to)).getLogger();
+//      if (m instanceof rice.pastry.routing.RouteMessage) {
+//        rice.pastry.routing.RouteMessage m1 = (rice.pastry.routing.RouteMessage)m;
+//        rice.p2p.commonapi.Message m2 = m1.unwrap();
+//        if (m2 instanceof PastryEndpointMessage) {
+//          PastryEndpointMessage m3 = (PastryEndpointMessage)m2;
+//          rice.p2p.commonapi.Message m4 = m3.getMessage();
+//          if (m4 instanceof rice.p2p.scribe.messaging.SubscribeMessage) {
+//            rice.p2p.scribe.messaging.SubscribeMessage m5 = (rice.p2p.scribe.messaging.SubscribeMessage)m4;
+//            if (m5.getTopic() == null) {
+//              logger.logException("MD.ctor("+m+" to "+to+" from:"+from+")",m5.ctor);
+//              throw new RuntimeException("bad");
+//            }
+//          }
+//        }
+//      }
       msg = m;
-      node = pn;
+      node = to;
+      this.options = options;
       this.from = from;
       this.networkSimulator = sim;
-      this.seq = pn.seq++;
+      this.seq = ((DirectTransportLayer)sim.getTL(to)).getNextSeq();
       
       // Note: this is done to reduce memory thrashing.  There are a ton of strings created
       // in getLogger(), and this is a really temporary object.
-      logger = pn.getLogger();
+      logger = ((DirectTransportLayer)sim.getTL(to)).getLogger();
 //      logger = pn.getEnvironment().getLogManager().getLogger(MessageDelivery.class, null);
     }
 
     public void deliver() {
       if (logger.level <= Logger.FINE) logger.log("MD: deliver "+msg+" to "+node);
-      node.receiveMessage(msg);
-      networkSimulator.notifySimulatorListenersReceived(msg, from, node.getLocalHandle());
+      try {
+        DirectTransportLayer<Identifier, MessageType> tl = networkSimulator.getTL(node);
+        if (tl != null) {
+          tl.incomingMessage(from, msg, options);
+        } else {
+          if (logger.level <= Logger.WARNING) logger.log("Message "+msg+" dropped because destination "+node+" is dead.");
+          // Notify sender? tough decision, this would be lost in the network, but over tcp, this would be noticed
+          // maybe notify sender if tcp?
+        }
+      } catch (IOException ioe) {
+        if (logger.level <= Logger.WARNING) logger.logException("Error delivering message "+this, ioe);
+      }
+//      networkSimulator.notifySimulatorListenersReceived(msg, from, node);
       
 //      if (isAlive(msg.getSenderId())) {
 //        environment.getLogManager().getLogger(EuclideanNetwork.class, null).log(Logger.FINER, 
@@ -86,5 +119,9 @@ import rice.pastry.messaging.Message;
     
     public int getSeq() {
       return seq; 
+    }
+    
+    public String toString() {
+      return "MD["+msg+":"+from+"=>"+node+":"+seq+"]";
     }
   }

@@ -7,7 +7,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 2.0_02,&nbsp; 17 May 2007.
+Release 2.1alpha,&nbsp; 13 July 2007.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://freepastry.org/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -117,6 +117,148 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.5.0+. The software was
 developed using Sun's SDK, version 1.5.0+
+<h3>Changes since release 2.0_02</h3>
+<h4>Features:</h4>
+  <ul>
+    <li><b>New modular transport layer:</b>
+    <ul>
+      <li>superior sender side notification of pending messages</li>
+      <li>breaks up implementation in to more manageable/maintainable components
+      <ul>
+        <li>more hackable</li>
+      </ul></li>
+      <li>allows for easier implementation of new features:
+      <ul>
+      
+        <li>security:
+		<ul>        
+          <li>SSL
+          <li>PeerReview
+	    </ul></li>
+	    
+        <li>flexibility:
+	    <ul>
+          <li>STUN
+          <ul>
+            <li>support for udp messages</li>          
+	       </ul></li>
+          <li>simulation:
+          <ul>
+            <li>more control of how much of the transport layer is simulated</li>
+	      </ul></li>
+	    </ul></li>	 
+	    
+	  </ul></li>	 
+	</ul></li>	 
+	  
+    <li><b>New implementation of Scribe:</b>
+    <ul>
+      <li>allows user code to implement a tree maintenance policy</li>
+      <li>more efficient for large number of topics</li>
+	</ul></li>
+  </ul></li>
+	
+<h4>Limitations:</h4>
+<ul>
+    <li>API may change</li>
+    <li>memory leaks in new transport layer</li>
+    <li>may be buggy</li>
+    <li>not protocol-compatible with FP2.0 (will be working on a reverse compatibility layer for the full release)</li>
+    <li>Simulator does not support new features</li>
+    <li>No support for ProximityNeighborSelection during booting.</li>
+    <li>Existing NAT support may be broken</li>
+</ul>
+
+<h4>Upcoming changes:</h4>
+<ul>
+  <li>Simulator will become a layer.  This will allow simulation of the other layers in the protocol and ability to do bandwidth testing, see the effect of source routing.  (For example, a Firewall or NAT layer can be added to simulate the effects of assymetric connectivity in the simulator.)
+  <li>Socket will go away.  Currently all the old "socket" code is still in the codebase, but it is unused.
+  <li>PastryNode will be "final"  Currently, PastryNode is extended to SocketPastryNode, DirectPastryNode (for the simulator), TLPastryNode (for the new features).  The plan is to move the features of TLPastryNode into PastryNode and the DirectPastryNode into a layer, then delete all the remaining code.
+  <li>Factory interface may be deprecated:  
+  <ul>
+    <li>Currently the mechanism to boot a new node is <code>factory.newNode(factory.getNodeHandle(<InetSocketAddress>))</code>.  
+    This has to go away because in the new system, you may need credentials as a PastryNode to communicate with other members of a ring.  
+    The factory wouldn't have such credentials, becuase an Id will usually be associated with the credentials.  
+    For reverse compatibility, the existing PastryNodeFactories will return a stub NodeHandle that mearly contains the InetSocketAddress.</li>  
+    <li>The new way: <code>factory.newNode()</code> will return a new node, but does not cause any network traffic.  
+    At this point, you can register applications with FreePastry.  <code>pastryNode.boot(<InetSocketAddress>)</code> will cause 
+    the actual bootstrapping process.</li>
+  </ul></li>  
+  <li>Proximity Neighbor Selection during boot process.</li>
+  <li>Wireshark adapter</li>
+  <li>... more to come ...</li>
+</ul>
+
+<h4>Future features:</h4>
+<ul>
+  <li>Crypto layer</li>
+  <li>Bandwidth-limiting layer</li>
+</ul>
+
+<h4>new calls in CommonAPI:</h4>
+<ul>
+  <li><code>endpoint.route()</code>: returns a <code>rice.p2p.commonapi.MessageReceipt</code>, and can take a 
+    <code>rice.p2p.commonapi.DeliveryNotification</code>.</li>
+  <li><code>deliveryNotificaiton.sent()</code>/<code>sendFailed()</code> is called when the message is successful/unsuccessful</li>
+  <li><code>MessageReceipt.cancel()</code> can be called if it takes to long to send.  The combination of these objects can be 
+    used to gain fine grained control of bandwidth usage.   You can now determine how many messages are queued up, and cancel 
+    messages when needed.</li>
+    <br/>    
+
+  <li><code>endpoint.setSendOptions(Map)</code>: Used to specify transport-layer specific delivery options, 
+    such as <i>UDP</i>, <i>encrypted</i>, <i>"don't source-route"</i> etc.  Will only be respected if the transport layer chain 
+    supports the feature.  The only one currently available is UDP support.  Use this call to cause your endpoint to only send udp 
+    messages (I plan to make this simpler in the future):
+    <pre>
+    endpoint.setSendOptions(Collections.singletonMap(WireTransportLayer.OPTION_TRANSPORT_TYPE, WireTransportLayer.TRANSPORT_TYPE_DATAGRAM));
+    </pre></li>
+</ul>
+Note that if you want to send some messages UDP and some TCP then you should use two endponts for your application.  For example:
+<pre>
+    this.tcpendpoint = node.buildEndpoint(this, "myinstance-tcp");
+    this.udpendpoint = node.buildEndpoint(this, "myinstance-udp");
+    this.udpendpoint.setSendOptions(...);
+</pre>
+
+<h4>Overview of new TransportLayer interfaces:</h4>
+
+<br/>
+<b>org.mpisws.p2p.transport.TransportLayer(and Callback):</b>
+<ul>
+  <li>send/receive messages</li>
+  <li>open/accept sockets</li>
+    The socket is very similar to FreePastry's AppSocket interface.
+  <li>Has notification of messages sent, and socket's opened like the commonAPI.</li>
+</ul>
+
+<br/>
+<b>org.mpisws.p2p.transport.liveness.LivenessProvider:</b>
+  can return the known liveness of an entity, can check liveness, and can notify about changes in liveness
+
+<br/>
+<b>org.mpisws.p2p.transport.proximity.ProximityProvider:</b>
+  can return the known proximity of an entity, can notify about changes in proximity
+
+<h4>Overview of Layers used in TranportLayerPastryNodeFactory (which SocketPastryNodeFactory now extends):</h4>
+<ul>
+<li>.. <b>CommonAPI</b> ..
+<li>.. <b>FreePastry</b> ..
+<li><b>UpperIdentity</b> used keep track of the identity of a node at an address (this is complicated, 
+  and will have to be explained further in the future)</li>
+<li><b>CommonAPITransprotLayer</b> serializes/deserializes messages</li>
+<li><b>PriorityTransportlayer</b> sends messages over TCP, and utilizes MessagePriority for ordering</li>
+<li><b>SourceRouteManager</b> selects a source-route to use based on liveness/proximity</li>
+<li><b>LivenessLayer</b> probes a node, produces liveness/proximity</li>
+<li><b>LowerIdentity</b> used keep track of the identity of a node at an address (this is complicated, 
+  and will have to be explained further in the future)</li>
+<li><b>SourceRouteTransportLayer</b> can specify a route to a host along multiple overlay nodes</li>
+<li><b>MultiInetAddressTransportLayer</b> Used to support computers behind a NAT who may have multiple 
+  IPaddresses due to lack of hairpinning support  (similar to the EpochInetSocketAddress from 2.0, but doesn't have the epoch)</li>
+<li><b>MagicNumber</b> verifies that the messages are for FreePastry (not secure, just throws out trash)</li>
+<li><b>Wire</b> sends udp/tcp messages</li>
+<li>.. <b>Network</b> ..</li>
+</ul>
+
 <h3>Changes since release 2.0_01</h3>
 <p/><b>Bug fix in routing</b> -- When you routed to a key that fully matched the id of a node in the network, the routing table repair mechanism would throw a NPE.
 

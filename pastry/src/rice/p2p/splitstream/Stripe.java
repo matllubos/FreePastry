@@ -43,7 +43,6 @@ import java.util.*;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.*;
-import rice.pastry.dist.DistPastryNode;
 import rice.selector.TimerTask;
 
 /**

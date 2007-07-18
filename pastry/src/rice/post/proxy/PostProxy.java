@@ -129,7 +129,7 @@ public class PostProxy {
   /**
    * The factory used to create the normal Pastry node
    */
-  protected DistPastryNodeFactory factory;
+  protected SocketPastryNodeFactory factory;
   
   /**
     * The node the services should use
@@ -1054,7 +1054,7 @@ public class PostProxy {
       nlut.start();
     }
 
-    factory = DistPastryNodeFactory.getFactory(new CertifiedNodeIdFactory(getLocalHost(), port, environment), cert.getProtocol(), port, environment);
+    factory = new SocketPastryNodeFactory(new CertifiedNodeIdFactory(getLocalHost(), port, environment), port, environment);
     InetSocketAddress proxyAddress = null;
         
     if (natAddress != null)
@@ -1080,7 +1080,7 @@ public class PostProxy {
 
     node = factory.newNode(bootHandle, proxyAddress);
     pastryNode = (PastryNode) node;
-    timer = ((DistPastryNode) node).getTimer();
+    timer = node.getEnvironment().getSelectorManager().getTimer();
 
     PartitionHandler ph = new PartitionHandler(pastryNode, factory, bootsNotMe);
     ph.start(timer);
@@ -1182,7 +1182,7 @@ public class PostProxy {
     stepStart("Creating Global Pastry node");
     String prefix = generateRingId(null).toStringFull();
         
-    DistPastryNodeFactory factory = DistPastryNodeFactory.getFactory(
+    SocketPastryNodeFactory factory = DistPastryNodeFactory.getFactory(
         new CertifiedNodeIdFactory(getLocalHost(), port, environment), globalCert.getProtocol(), globalPort, environment);
     InetSocketAddress proxyAddress = null;
     

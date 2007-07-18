@@ -41,6 +41,7 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.Node;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 
@@ -367,4 +368,11 @@ public abstract class PastryNodeFactory {
     
     return closestNode;
   }
+
+//  abstract public PastryNode newNode(Id id) throws IOException;
+//
+//  public Node newNode() throws IOException {
+//    // TODO Auto-generated method stub
+//    return null;
+//  }
 }

@@ -71,6 +71,7 @@ public class StandardJoinProtocol extends PastryAppl {
       super(pn);
     }
 
+    @Override
     public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       switch(type) {
         case JoinRequest.TYPE:
@@ -125,7 +126,7 @@ public class StandardJoinProtocol extends PastryAppl {
         // leafSet.put(nh);
         if (thePastryNode.isReady()) {
           jr.acceptJoin(localHandle, leafSet);
-          thePastryNode.send(nh,jr);
+          thePastryNode.send(nh,jr,null, options);
         } else {
           if (logger.level <= Logger.INFO) logger.log(
               "NOTE: Dropping incoming JoinRequest " + jr
@@ -177,7 +178,7 @@ public class StandardJoinProtocol extends PastryAppl {
             jr.pushRow(row);
           }
     
-          rm.routeMessage(localHandle);
+          thePastryNode.getRouter().route(rm);
         }      
       } catch (IOException ioe) {
         if (logger.level <= Logger.SEVERE) logger.logException("StandardJoinProtocol.receiveMessage()",ioe); 
@@ -198,16 +199,17 @@ public class StandardJoinProtocol extends PastryAppl {
           JoinRequest jr = new JoinRequest(localHandle, thePastryNode
               .getRoutingTable().baseBitLength());
   
-          RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr,
+          RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, null, null,
               (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
 
           rm.getOptions().setRerouteIfSuspected(false);
           rm.setPrevNode(localHandle);
-          try {
-            nh.bootstrap(rm);
-          } catch (IOException ioe) {
-            if (logger.level <= Logger.SEVERE) logger.logException("Error bootstrapping.",ioe); 
-          }
+          thePastryNode.send(nh, rm, null, options);
+//          try {
+//            nh.bootstrap(rm);
+//          } catch (IOException ioe) {
+//            if (logger.level <= Logger.SEVERE) logger.logException("Error bootstrapping.",ioe); 
+//          }
         }
       }
     }
@@ -259,7 +261,7 @@ public class StandardJoinProtocol extends PastryAppl {
 
         NodeHandle nh = rs.closestNode();
         if (nh != null)
-          thePastryNode.send(nh,brr);
+          thePastryNode.send(nh,brr, null, options);
 
         /*
          * int m = rs.size(); for (int k=0; k<m; k++) { NodeHandle nh =

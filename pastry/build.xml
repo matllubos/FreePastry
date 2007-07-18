@@ -104,6 +104,7 @@
              windowtitle="Rice Pastry - API Specifications"
              use="true">
       <fileset dir="${src.dir}">
+        <include name="org/mpisws/p2p/**/*.java"/>
         <include name="rice/*.java"/>
         <include name="rice/environment/**/*.java"/>
         <include name="rice/p2p/commonapi/**/*.java"/>
@@ -116,20 +117,8 @@
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
         <include name="rice/p2p/util/**/*.java"/> 
-        <include name="rice/pastry/*.java"/>
-        <include name="rice/pastry/client/**/*.java"/>
-        <include name="rice/pastry/commonapi/**/*.java"/>
-        <include name="rice/pastry/direct/**/*.java"/>
-        <include name="rice/pastry/dist/**/*.java"/>
-        <include name="rice/pastry/join/**/*.java"/>
-        <include name="rice/pastry/leafset/**/*.java"/>
-        <include name="rice/pastry/messaging/**/*.java"/>
-        <include name="rice/pastry/routing/**/*.java"/>
-        <include name="rice/pastry/security/**/*.java"/>
-        <include name="rice/pastry/socket/**/*.java"/>
+        <include name="rice/pastry/**/*.java"/>
         <exclude name="rice/pastry/socket/testing/*.java"/>
-        <include name="rice/pastry/standard/**/*.java"/>
-        <include name="rice/pastry/testing/**/*.java"/>
         <include name="rice/persistence/**/*.java"/>
         <include name="rice/selector/**/*.java"/>
         <include name="rice/tutorial/**/*.java"/>
@@ -147,6 +136,7 @@
 	             windowtitle="ePOST - API Specifications"
 	             use="true">
 	      <fileset dir="${src.dir}">
+	        <include name="org/mpisws/p2p/**/*.java"/>
 	        <include name="rice/*.java"/>
 	        <include name="rice/environment/**/*.java"/>
 	        <include name="rice/p2p/commonapi/**/*.java"/>
@@ -159,20 +149,8 @@
 	        <include name="rice/p2p/scribe/**/*.java"/>
 	        <include name="rice/p2p/splitstream/**/*.java"/>
 	        <include name="rice/p2p/util/**/*.java"/> 
-	        <include name="rice/pastry/*.java"/>
-	        <include name="rice/pastry/client/**/*.java"/>
-	        <include name="rice/pastry/commonapi/**/*.java"/>
-	        <include name="rice/pastry/direct/**/*.java"/>
-	        <include name="rice/pastry/dist/**/*.java"/>
-	        <include name="rice/pastry/join/**/*.java"/>
-	        <include name="rice/pastry/leafset/**/*.java"/>
-	        <include name="rice/pastry/messaging/**/*.java"/>
-	        <include name="rice/pastry/routing/**/*.java"/>
-	        <include name="rice/pastry/security/**/*.java"/>
-	        <include name="rice/pastry/socket/**/*.java"/>
+	        <include name="rice/pastry/**/*.java"/>
 	        <exclude name="rice/pastry/socket/testing/*.java"/>
-	        <include name="rice/pastry/standard/**/*.java"/>
-	        <include name="rice/pastry/testing/**/*.java"/>
 	        <include name="rice/persistence/**/*.java"/>
 	        <include name="rice/selector/**/*.java"/>
 	        <include name="rice/tutorial/**/*.java"/>
@@ -201,6 +179,7 @@
   <target name="freepastry-jar" depends="compile-epost">
     <jar destfile="pastry.jar" compress="true">
       <fileset dir="${build.dir}">
+        <include name="org/mpisws/p2p/**/*.class"/>
         <include name="rice/*.class"/>
         <include name="rice/environment/**/*.class"/>
         <include name="rice/p2p/commonapi/**/*.class"/>
@@ -213,20 +192,8 @@
         <include name="rice/p2p/scribe/**/*.class"/>
         <include name="rice/p2p/splitstream/**/*.class"/>
         <include name="rice/p2p/util/**/*.class"/> 
-        <include name="rice/pastry/*.class"/>
-        <include name="rice/pastry/client/**/*.class"/>
-        <include name="rice/pastry/commonapi/**/*.class"/>
-        <include name="rice/pastry/direct/**/*.class"/>
-        <include name="rice/pastry/dist/**/*.class"/>
-        <include name="rice/pastry/join/**/*.class"/>
-        <include name="rice/pastry/leafset/**/*.class"/>
-        <include name="rice/pastry/messaging/**/*.class"/>
-        <include name="rice/pastry/routing/**/*.class"/>
-        <include name="rice/pastry/security/**/*.class"/>
-        <include name="rice/pastry/socket/**/*.class"/>
+        <include name="rice/pastry/**/*.class"/>
         <exclude name="rice/pastry/socket/testing/*.class"/>
-        <include name="rice/pastry/standard/**/*.class"/>
-        <include name="rice/pastry/testing/**/*.class"/>
         <include name="rice/persistence/**/*.class"/>
         <include name="rice/selector/**/*.class"/>
         <include name="rice/tutorial/**/*.class"/>
@@ -240,6 +207,7 @@
   <target name="freepastry-core-jar" depends="compile">
     <jar destfile="pastry-core.jar" compress="true">
       <fileset dir="${build.dir}">
+        <include name="org/mpisws/p2p/**/*.class"/>
         <include name="rice/*.class"/>
         <include name="rice/environment/**/*.class"/>
         <include name="rice/p2p/commonapi/**/*.class"/>
@@ -248,19 +216,8 @@
         <include name="rice/p2p/replication/**/*.class"/>
         <include name="rice/p2p/scribe/**/*.class"/>
         <include name="rice/p2p/util/**/*.class"/> 
-        <include name="rice/pastry/*.class"/>
-        <include name="rice/pastry/client/**/*.class"/>
-        <include name="rice/pastry/commonapi/**/*.class"/>
-        <include name="rice/pastry/direct/**/*.class"/>
-        <include name="rice/pastry/dist/**/*.class"/>
-        <include name="rice/pastry/join/**/*.class"/>
-        <include name="rice/pastry/leafset/**/*.class"/>
-        <include name="rice/pastry/messaging/**/*.class"/>
-        <include name="rice/pastry/routing/**/*.class"/>
-        <include name="rice/pastry/security/**/*.class"/>
-        <include name="rice/pastry/socket/**/*.class"/>
-        <include name="rice/pastry/standard/**/*.class"/>
-        <include name="rice/persistence/**/*.class"/>
+        <include name="rice/pastry/**/*.class"/>
+        <exclude name="rice/pastry/socket/testing/*.class"/>
         <include name="rice/selector/**/*.class"/>
         <exclude name="**/testing/*.class"/>
       </fileset>
@@ -281,6 +238,7 @@
     
     <tar destfile="FreePastry-${freepastry-version}-source.tgz" compression="gzip">
       <tarfileset dir="${src.dir}" prefix="pastry-${freepastry-version}/src">
+        <include name="org/mpisws/p2p/**/*.java"/>
         <include name="rice/*.java"/>
         <include name="rice/environment/**/*.java"/>
         <include name="rice/p2p/commonapi/**/*.java"/>
@@ -293,20 +251,8 @@
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
         <include name="rice/p2p/util/**/*.java"/>
-        <include name="rice/pastry/*.java"/>
-        <include name="rice/pastry/client/**/*.java"/>
-        <include name="rice/pastry/commonapi/**/*.java"/>
-        <include name="rice/pastry/direct/**/*.java"/>
-        <include name="rice/pastry/dist/**/*.java"/>
-        <include name="rice/pastry/join/**/*.java"/>
-        <include name="rice/pastry/leafset/**/*.java"/>
-        <include name="rice/pastry/messaging/**/*.java"/>
-        <include name="rice/pastry/routing/**/*.java"/>
-        <include name="rice/pastry/security/**/*.java"/>
-        <include name="rice/pastry/socket/**/*.java"/>
+        <include name="rice/pastry/**/*.java"/>
         <exclude name="rice/pastry/socket/testing/*.java"/>
-        <include name="rice/pastry/standard/**/*.java"/>
-        <include name="rice/pastry/testing/**/*.java"/>
         <include name="rice/persistence/**/*.java"/>
         <include name="rice/selector/**/*.java"/>
         <include name="rice/tutorial/**/*.java"/>
@@ -329,6 +275,7 @@
     </tar>
     <zip destfile="FreePastry-${freepastry-version}-source.zip">
       <zipfileset dir="${src.dir}" prefix="pastry-${freepastry-version}/src">
+        <include name="org/mpisws/p2p/**/*.java"/>
         <include name="rice/*.java"/>
         <include name="rice/environment/**/*.java"/>
         <include name="rice/p2p/commonapi/**/*.java"/>
@@ -341,20 +288,8 @@
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
         <include name="rice/p2p/util/**/*.java"/>
-        <include name="rice/pastry/*.java"/>
-        <include name="rice/pastry/client/**/*.java"/>
-        <include name="rice/pastry/commonapi/**/*.java"/>
-        <include name="rice/pastry/direct/**/*.java"/>
-        <include name="rice/pastry/dist/**/*.java"/>
-        <include name="rice/pastry/join/**/*.java"/>
-        <include name="rice/pastry/leafset/**/*.java"/>
-        <include name="rice/pastry/messaging/**/*.java"/>
-        <include name="rice/pastry/routing/**/*.java"/>
-        <include name="rice/pastry/security/**/*.java"/>
-        <include name="rice/pastry/socket/**/*.java"/>
+        <include name="rice/pastry/**/*.java"/>
         <exclude name="rice/pastry/socket/testing/*.java"/>
-        <include name="rice/pastry/standard/**/*.java"/>
-        <include name="rice/pastry/testing/**/*.java"/>
         <include name="rice/persistence/**/*.java"/>
         <include name="rice/selector/**/*.java"/>
         <include name="rice/tutorial/**/*.java"/>

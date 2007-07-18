@@ -126,7 +126,7 @@ public class DirectPastryRegrTest extends PastryRegrTest {
   }
 
   protected void checkRoutingTable(final RegrTestApp rta) {
-    DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)rta.getPastryNode());
+    PastryNode temp = DirectPastryNode.setCurrentNode(rta.getPastryNode());
     try {
       super.checkRoutingTable(rta);
     } finally {

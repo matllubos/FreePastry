@@ -127,7 +127,7 @@ public class MemoryTest {
       System.out.println(curNode+"/"+numNodes+" Memory:"+memUsed+" leafset size:"+node.getLeafSet().size()+" "+node+" after "+waitedFor);      
 
       // always boot off of the previous node
-      bootaddress = ((SocketNodeHandle)node.getLocalHandle()).getAddress();
+      bootaddress = ((SocketNodeHandle)node.getLocalHandle()).getInetSocketAddress();
       
       // store the node
       nodes.addLast(node);

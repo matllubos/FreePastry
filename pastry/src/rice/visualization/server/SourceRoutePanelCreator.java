@@ -41,6 +41,7 @@ import rice.pastry.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
 import rice.pastry.socket.*;
+import rice.pastry.transport.TLPastryNode;
 
 import java.util.*;
 
@@ -48,15 +49,16 @@ public class SourceRoutePanelCreator implements PanelCreator {
   
   public DataPanel createPanel(Object[] objects) {
     for (int i=0; i<objects.length; i++) 
-      if (objects[i] instanceof SocketPastryNode)
-        return createPanel((SocketPastryNode) objects[i]);
+      if (objects[i] instanceof TLPastryNode)
+        return createPanel((TLPastryNode) objects[i]);
     
     return null;
   }
   
-  protected DataPanel createPanel(SocketPastryNode node) {
+  protected DataPanel createPanel(TLPastryNode node) {
     DataPanel pastryPanel = new DataPanel("Routes");
-    HashMap routes = node.getSocketSourceRouteManager().getBest();
+    // NOTE: this is broken with the new transport layer
+    HashMap routes = null; //node.getSocketSourceRouteManager().getBest();
 
     Constraints cons1 = new Constraints();
     cons1.gridx = 1;
@@ -72,19 +74,19 @@ public class SourceRoutePanelCreator implements PanelCreator {
     while (keys.hasNext()) {
       String[] row = new String[] {"", "", ""};
     
-      while (keys.hasNext()) {
-        SourceRoute route = (SourceRoute) routes.get(keys.next());
-        if ((route != null) && (! route.isDirect())) {
-          indirect++;
-
-          if (row[0].equals("")) row[0] = route + "";
-          else if (row[1].equals("")) row[1] = route + "";
-          else { 
-            row[2] = route.toString();
-            break;
-          }
-        }
-      }
+//      while (keys.hasNext()) {
+//        SourceRoute route = (SourceRoute) routes.get(keys.next());
+//        if ((route != null) && (! route.isDirect())) {
+//          indirect++;
+//
+//          if (row[0].equals("")) row[0] = route + "";
+//          else if (row[1].equals("")) row[1] = route + "";
+//          else { 
+//            row[2] = route.toString();
+//            break;
+//          }
+//        }
+//      }
       
       endpointView.addRow(row);
     }
@@ -96,8 +98,8 @@ public class SourceRoutePanelCreator implements PanelCreator {
     KeyValueListView overView = new KeyValueListView("Route Overview", 310, 200, cons2);
     overView.add("Total", "" + routes.size());
     overView.add("Indirect", "" + indirect);
-    overView.add("Intermediate", node.getSocketSourceRouteManager().getManager().getNumSourceRoutes() + " / " + node.getSocketSourceRouteManager().getManager().MAX_OPEN_SOURCE_ROUTES);
-    overView.add("Sockets", node.getSocketSourceRouteManager().getManager().getNumSockets() + " / " + node.getSocketSourceRouteManager().getManager().MAX_OPEN_SOCKETS);
+//    overView.add("Intermediate", node.getSocketSourceRouteManager().getManager().getNumSourceRoutes() + " / " + node.getSocketSourceRouteManager().getManager().MAX_OPEN_SOURCE_ROUTES);
+//    overView.add("Sockets", node.getSocketSourceRouteManager().getManager().getNumSockets() + " / " + node.getSocketSourceRouteManager().getManager().MAX_OPEN_SOCKETS);
     
     pastryPanel.addDataView(overView);
     pastryPanel.addDataView(endpointView);

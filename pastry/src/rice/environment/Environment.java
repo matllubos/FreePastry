@@ -148,7 +148,7 @@ public class Environment implements Destructable {
     dts.setSelectorManager(selector);
     Processor proc = new SimProcessor(selector);
     Environment ret = new Environment(selector,proc,rs,dts,lm,
-        params, new SimpleExceptionStrategy());
+        params, generateDefaultExceptionStrategy(lm));
     return ret;
   }
   
@@ -193,12 +193,12 @@ public class Environment implements Destructable {
     }
     
     if (exceptionStrategy == null) {
-      exceptionStrategy = generateDefaultExceptionStrategy(); 
+      exceptionStrategy = generateDefaultExceptionStrategy(logManager); 
     }
   }
 
-  public static ExceptionStrategy generateDefaultExceptionStrategy() {
-    return new SimpleExceptionStrategy();
+  public static ExceptionStrategy generateDefaultExceptionStrategy(LogManager manager) {
+    return new SimpleExceptionStrategy(manager);
   }
   
   public static RandomSource generateDefaultRandomSource(Parameters params, LogManager logging) {

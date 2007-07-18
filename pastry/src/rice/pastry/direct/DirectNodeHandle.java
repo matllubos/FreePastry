@@ -40,10 +40,13 @@ package rice.pastry.direct;
 import java.io.IOException;
 import java.util.*;
 
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
+import rice.pastry.transport.TLPastryNode;
 
 /**
  * the node handle used with the direct network
@@ -53,8 +56,8 @@ import rice.pastry.messaging.*;
  * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-public class DirectNodeHandle extends NodeHandle implements Observer {
-  private transient DirectPastryNode remoteNode;
+public class DirectNodeHandle extends NodeHandle implements Observer, TransportLayerNodeHandle<NodeRecord> {
+  private transient TLPastryNode remoteNode;
   public transient NetworkSimulator simulator;
 
   /**
@@ -64,7 +67,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    * @param rn The remote pastry node
    * @param sim The current network simulator
    */
-  DirectNodeHandle(DirectPastryNode ln, DirectPastryNode rn, NetworkSimulator sim) {
+  DirectNodeHandle(TLPastryNode ln, TLPastryNode rn, NetworkSimulator sim) {
     localnode = ln;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
     if (rn == null) throw new IllegalArgumentException("rn must be non-null");
@@ -79,7 +82,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    *
    * @return The Remote value
    */
-  public DirectPastryNode getRemote() {
+  public TLPastryNode getRemote() {
     return remoteNode;
   }
 
@@ -98,7 +101,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    * @return The Alive value
    */
   public int getLiveness() {
-    if (remoteNode.isAlive()) {
+    if (simulator.isAlive(this)) {
       return LIVENESS_ALIVE;
     }
     return LIVENESS_DEAD; 
@@ -157,7 +160,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    * @param msg DESCRIBE THE PARAMETER
    */
   public void receiveMessage(Message msg) {
-    DirectPastryNode.getCurrentNode().send(this, msg);
+    DirectPastryNode.getCurrentNode().send(this, msg,null, null);
   }
 
   /**
@@ -208,7 +211,7 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
    * way too often.
    */
   public void update(Observable arg0, Object arg1) {
-    if (remoteNode.isAlive()) {
+    if (simulator.isAlive(this)) {
 //      notifyObservers(NodeHandle.DECLARED_LIVE);      
     } else {
 //      System.out.println(this+"Notifying dead");
@@ -218,5 +221,13 @@ public class DirectNodeHandle extends NodeHandle implements Observer {
 
   public void serialize(OutputBuffer buf) throws IOException {
     throw new RuntimeException("Should not be called.");
+  }
+
+  public NodeRecord getAddress() {
+    return simulator.getNodeRecord(this);
+  }
+
+  public long getEpoch() {
+    return 0;
   }
 }

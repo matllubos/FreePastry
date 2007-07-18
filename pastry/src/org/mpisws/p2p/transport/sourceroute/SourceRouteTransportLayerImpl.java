@@ -1,0 +1,378 @@
+/**
+ * 
+ */
+package org.mpisws.p2p.transport.sourceroute;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.ErrorHandler;
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.P2PSocketReceiver;
+import org.mpisws.p2p.transport.SocketCallback;
+import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
+import org.mpisws.p2p.transport.util.DefaultCallback;
+import org.mpisws.p2p.transport.util.DefaultErrorHandler;
+import org.mpisws.p2p.transport.util.InsufficientBytesException;
+import org.mpisws.p2p.transport.util.SocketInputBuffer;
+import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
+import org.mpisws.p2p.transport.util.SocketWrapperSocket;
+
+import rice.Continuation;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+import rice.p2p.commonapi.Cancellable;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+
+/**
+ * This layer can only send/receive messages from a SourceRoute and determine liveness.  
+ * It does not manage current routes to nodes.
+ * 
+ * @author Jeff Hoye
+ *
+ */
+public class SourceRouteTransportLayerImpl<Identifier> implements 
+    SourceRouteTransportLayer<Identifier>, 
+    TransportLayerCallback<Identifier, ByteBuffer> {
+  /**
+   * The max hops in a source route
+   */
+  int MAX_NUM_HOPS;
+  
+  TransportLayerCallback<SourceRoute<Identifier>, ByteBuffer> callback;
+  ErrorHandler<SourceRoute<Identifier>> errorHandler;
+  TransportLayer<Identifier, ByteBuffer> etl;
+  Environment environment;
+  Logger logger;
+  SourceRoute localIdentifier;
+  Collection<SourceRouteTap> taps;
+  SourceRouteFactory<Identifier> srFactory;
+  
+  public SourceRouteTransportLayerImpl(
+      SourceRouteFactory<Identifier> srFactory,
+      TransportLayer<Identifier, ByteBuffer> etl, 
+      Environment env,
+      ErrorHandler<SourceRoute<Identifier>> errorHandler) {
+    this.etl = etl;
+    this.environment = env;
+    this.logger = env.getLogManager().getLogger(SourceRouteTransportLayerImpl.class, null);
+    this.srFactory = srFactory;
+    this.errorHandler = errorHandler;
+    localIdentifier = this.srFactory.getSourceRoute(etl.getLocalIdentifier());
+    taps = new ArrayList<SourceRouteTap>();    
+    MAX_NUM_HOPS = env.getParameters().getInt("transport_sr_max_num_hops");
+    
+    this.callback = new DefaultCallback<SourceRoute<Identifier>, ByteBuffer>(env);
+
+    if (this.errorHandler == null) {
+      this.errorHandler = new DefaultErrorHandler<SourceRoute<Identifier>>(logger); 
+    }
+
+    etl.setCallback(this);
+  }
+  
+  public SocketRequestHandle<SourceRoute<Identifier>> openSocket(
+      final SourceRoute<Identifier> i,
+      final SocketCallback<SourceRoute<Identifier>> deliverSocketToMe,
+      Map<String, Integer> options) {
+    if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
+    
+    // invariants
+    if (i.getNumHops() <= 1) {
+      throw new IllegalArgumentException("SourceRoute must have more than 1 hop! sr:"+i);
+    }
+    
+    if (i.getFirstHop() != etl.getLocalIdentifier()) {
+      throw new IllegalArgumentException("SourceRoute must start with self! sr:"+i+" self:"+etl.getLocalIdentifier());
+    }
+        
+    if (logger.level <= Logger.FINE) logger.log("openSocket("+i+")");    
+    
+    final SocketRequestHandleImpl<SourceRoute<Identifier>> handle = new SocketRequestHandleImpl<SourceRoute<Identifier>>(i, options);
+    
+    SimpleOutputBuffer sob = new SimpleOutputBuffer(i.getSerializedLength());
+    try {
+      i.serialize(sob);
+    } catch (IOException ioe) {
+      deliverSocketToMe.receiveException(handle, ioe);
+      return handle;
+    }
+    final ByteBuffer b = ByteBuffer.wrap(sob.getBytes());
+    
+    handle.setSubCancellable(etl.openSocket(i.getHop(1), new SocketCallback<Identifier>(){    
+      public void receiveResult(
+          SocketRequestHandle<Identifier> c, 
+          P2PSocket<Identifier> result) {
+        if (c != handle.getSubCancellable()) throw new RuntimeException("c != handle.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
+        
+        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+"):receiveResult("+result+")");
+        result.register(false, true, new P2PSocketReceiver<Identifier>() {        
+          public void receiveSelectResult(P2PSocket<Identifier> socket,
+              boolean canRead, boolean canWrite) throws IOException {
+            if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
+            
+            // do the work
+            socket.write(b);
+            
+            // keep working or pass up the new socket
+            if (b.hasRemaining()) {
+              socket.register(false, true, this); 
+            } else {
+              deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(i, socket, logger, socket.getOptions())); 
+            }
+          }
+        
+          public void receiveException(P2PSocket<Identifier> socket,
+              IOException e) {
+            deliverSocketToMe.receiveException(handle, e);
+          }        
+        }); 
+      }    
+      public void receiveException(SocketRequestHandle<Identifier> c, IOException exception) {
+        deliverSocketToMe.receiveException(handle, exception);
+      }    
+    }, options));      
+    
+    return handle;
+  }
+
+  public void incomingSocket(final P2PSocket<Identifier> socka) throws IOException {
+    // read the header
+    if (logger.level <= Logger.FINE) logger.log("incomingSocket("+socka+")");
+
+    final SocketInputBuffer sib = new SocketInputBuffer(socka,1024);
+    socka.register(true, false, new P2PSocketReceiver<Identifier>() {
+    
+      public void receiveSelectResult(P2PSocket<Identifier> socket,
+          boolean canRead, boolean canWrite) throws IOException {
+        if (logger.level <= Logger.FINER) logger.log("incomingSocket("+socket+"):receiveSelectResult()");
+        if (canWrite || !canRead) throw new IOException("Expected to read! "+canRead+","+canWrite);
+        try {
+          final SourceRoute<Identifier> sr = srFactory.build(sib);
+          
+          if (logger.level <= Logger.FINEST) logger.log("Read socket "+sr);
+          if (sr.getLastHop().equals(etl.getLocalIdentifier())) {    
+            // last hop
+            callback.incomingSocket(new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(srFactory.reverse(sr), socket, logger, socket.getOptions()));
+          } else {
+            // sr hop
+            int hopNum = sr.getHop(etl.getLocalIdentifier());
+            
+            if (hopNum < 1) {
+              // error, this is back to me!
+              byte[] dump = new byte[sib.size()];
+              sib.read(dump);
+              errorHandler.receivedUnexpectedData(sr, dump, 0, null);
+              socka.close();
+              return;
+            }
+            
+            sib.reset();
+            byte[] srbytes = new byte[sib.size()];
+            sib.read(srbytes);
+            final ByteBuffer b = ByteBuffer.wrap(srbytes);
+                
+            if (logger.level <= Logger.FINER) logger.log("I'm hop "+hopNum+" in "+sr);
+            // open next socket
+            etl.openSocket(sr.getHop(hopNum+1), new SocketCallback<Identifier>(){
+            
+              public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sockb) {
+                sockb.register(false, true, new P2PSocketReceiver<Identifier>() {
+                
+                  public void receiveSelectResult(P2PSocket<Identifier> socket,
+                      boolean canRead, boolean canWrite) throws IOException {
+                    if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
+                    
+                    // do the work
+                    socket.write(b);
+                    
+                    // keep working or pass up the new socket
+                    if (b.hasRemaining()) {
+                      socket.register(false, true, this); 
+                    } else {
+                      for (SourceRouteTap tap : taps) {
+                        tap.socketOpened(sr, socka, sockb);
+                      }
+                      new Forwarder(sr, socka, sockb, logger);
+                    }
+                  }
+                
+                  public void receiveException(P2PSocket<Identifier> socket,
+                      IOException e) {
+                    errorHandler.receivedException(sr, e);
+                    socka.close();
+                    sockb.close();
+                  }                
+                });
+                
+              }
+            
+              public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+                errorHandler.receivedException(sr, ex);
+                socka.close();
+              }
+            }, null);
+          }
+
+//          if (sr.
+//          callback.incomingSocket(new SourceRouteP2PSocket(eisa, socket));
+        } catch (InsufficientBytesException ibe) {
+          socket.register(true, false, this); 
+        } catch (IOException e) {
+          errorHandler.receivedException(srFactory.getSourceRoute(etl.getLocalIdentifier(), socket.getIdentifier()), e);
+          socka.close();
+        }
+      }
+    
+      public void receiveException(P2PSocket<Identifier> socket,IOException e) {
+        errorHandler.receivedException(srFactory.getSourceRoute(etl.getLocalIdentifier(), socket.getIdentifier()), e);
+      }          
+    });
+
+  }
+  
+
+  public MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> sendMessage(final SourceRoute<Identifier> i, final ByteBuffer m,
+      final MessageCallback<SourceRoute<Identifier>, ByteBuffer> deliverAckToMe,
+      Map<String, Integer> options) {
+    if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");    
+    
+    // invariants
+    if (i.getNumHops() <= 1) {
+      throw new IllegalArgumentException("SourceRoute must have more than 1 hop! sr:"+i);
+    }
+    
+    if (!i.getFirstHop().equals(etl.getLocalIdentifier())) {
+      throw new IllegalArgumentException("SourceRoute must start with self! sr:"+i+" self:"+etl.getLocalIdentifier());
+    }
+    
+    final ByteBuffer buf;
+    
+    final MessageRequestHandleImpl<SourceRoute<Identifier>, ByteBuffer> handle 
+      = new MessageRequestHandleImpl<SourceRoute<Identifier>, ByteBuffer>(i, m, options);
+
+    
+    SimpleOutputBuffer sob = new SimpleOutputBuffer(m.remaining() + i.getSerializedLength());
+    try {
+      i.serialize(sob);
+      sob.write(m.array(), m.position(), m.remaining());
+    } catch (IOException ioe) {
+      if (deliverAckToMe == null) {
+        errorHandler.receivedException(i, ioe);
+      } else {
+        deliverAckToMe.sendFailed(handle, ioe);
+      }
+      return null;
+    }
+    buf = ByteBuffer.wrap(sob.getBytes());
+    
+    handle.setSubCancellable(etl.sendMessage(
+        i.getHop(1), 
+        buf, 
+        new MessageCallback<Identifier, ByteBuffer>() {
+          public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
+            if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != handle.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
+            if (deliverAckToMe != null) deliverAckToMe.ack(handle);
+          }
+          public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException ex) {
+            if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != handle.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
+            if (deliverAckToMe == null) {
+              errorHandler.receivedException(i, ex);
+            } else {
+              deliverAckToMe.sendFailed(handle, ex);            
+            }
+          }
+        }, 
+        options));
+    return handle;
+  }
+
+  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+    if (!m.hasRemaining()) {
+      errorHandler.receivedUnexpectedData(srFactory.getSourceRoute(etl.getLocalIdentifier(), i), m.array(), m.position(), null);
+    }
+    
+    int pos = m.position(); // need to reset to this spot if we forward the message
+    SimpleInputBuffer sib = new SimpleInputBuffer(m.array(), pos);
+    final SourceRoute<Identifier> sr = srFactory.build(sib);
+    
+    // advance m properly
+    m.position(m.array().length - sib.bytesRemaining());
+        
+    if (sr.getLastHop().equals(etl.getLocalIdentifier())) {    
+      // last hop
+      callback.messageReceived(srFactory.reverse(sr), m, options);
+    } else {
+      // sr hop
+      int hopNum = sr.getHop(etl.getLocalIdentifier());
+      if (hopNum < 1) {
+        errorHandler.receivedUnexpectedData(sr, m.array(), pos, null);
+        return;
+      }
+      if (logger.level <= Logger.FINER) logger.log("I'm hop "+hopNum+" in "+sr);
+      // notify taps
+      for (SourceRouteTap tap : taps) {
+        byte[] retArr = new byte[m.array().length];
+        System.arraycopy(m.array(), 0, retArr, 0, retArr.length);
+        ByteBuffer ret = ByteBuffer.wrap(retArr);
+        ret.position(m.position());
+        tap.receivedMessage(ret, sr);
+      }
+      
+      // forward
+      m.position(pos);
+      etl.sendMessage(
+          sr.getHop(hopNum+1), 
+          m, 
+          null, // think about this 
+          null);
+    }
+  }
+
+  // ************************** Getters/Setters *****************
+  public void setCallback(
+      TransportLayerCallback<SourceRoute<Identifier>, ByteBuffer> callback) {
+    this.callback = callback;
+  }
+
+  public void setErrorHandler(ErrorHandler<SourceRoute<Identifier>> errorHandler) {
+    this.errorHandler = errorHandler;
+  }
+
+  public void acceptMessages(boolean b) {
+    etl.acceptMessages(b);
+  }
+
+  public void acceptSockets(boolean b) {
+    etl.acceptSockets(b);
+  }
+
+  public SourceRoute getLocalIdentifier() {
+    return localIdentifier;
+  }
+  
+  public void destroy() {
+    etl.destroy();
+  }
+
+  public void addSourceRouteTap(SourceRouteTap tap) {
+    taps.add(tap);
+  }
+
+  public boolean removeSourceRouteTap(SourceRouteTap tap) {
+    return taps.remove(tap);
+  }
+
+}

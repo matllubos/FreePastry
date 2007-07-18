@@ -201,6 +201,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       super(pn);
     }
 
+    @Override
     public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       switch(type) {
         case ConsistentJoinMsg.TYPE:
@@ -591,7 +592,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         toSend.add(tf.handle); 
       }
     }
-    thePastryNode.send(nh,new ConsistentJoinMsg(leafSet,toSend,!reply));      
+    thePastryNode.send(nh,new ConsistentJoinMsg(leafSet,toSend,!reply),null,options);      
   }
   
   public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {

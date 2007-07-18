@@ -41,14 +41,27 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.standard.*;
+import rice.pastry.transport.NodeHandleAdapter;
+import rice.pastry.transport.TLDeserializer;
+import rice.pastry.transport.TLPastryNode;
+import rice.pastry.transport.TransportPastryNodeFactory;
 import rice.pastry.routing.*;
+import rice.pastry.boot.Bootstrapper;
 import rice.pastry.leafset.*;
 
 import java.io.*;
 import java.util.*;
+
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
+import org.mpisws.p2p.transport.proximity.ProximityListener;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 /**
  * Pastry node factory for direct connections between nodes (local instances).
@@ -59,10 +72,11 @@ import java.util.*;
  * @author Sitaram Iyer
  * @author Rongmei Zhang/Y. Charlie Hu
  */
-public class DirectPastryNodeFactory extends PastryNodeFactory {
+public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
+  protected NodeIdFactory nidFactory;
+//  protected RandomSource random;
 
-  private NodeIdFactory nidFactory;
-  private NetworkSimulator simulator;
+  protected NetworkSimulator simulator;
 
   boolean guaranteeConsistency;
   
@@ -107,70 +121,80 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
    * @return a new PastryNode
    */
   public PastryNode newNode(NodeHandle bootstrap, Id nodeId) {
-    if (bootstrap == null)
-      if (logger.level <= Logger.WARNING) logger.log(
-          "No bootstrap node provided, starting a new ring...");
-    
-    // this code builds a different environment for each PastryNode
-    Environment environment = this.environment;
-    if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
-      if (this.environment.getLogManager() instanceof CloneableLogManager) {
-        environment = new Environment(
-            this.environment.getSelectorManager(),
-            this.environment.getProcessor(),
-          this.environment.getRandomSource(),
-          this.environment.getTimeSource(),
-          ((CloneableLogManager)this.environment.getLogManager()).clone("0x"+nodeId.toStringBare()),
-          this.environment.getParameters(), 
-          this.environment.getExceptionStrategy());
-      }
-    }    
-
-    NodeRecord nr = (NodeRecord)recordTable.get(nodeId);
-    if (nr == null) {
-      nr = simulator.generateNodeRecord();
-      recordTable.put(nodeId,nr);
-    }
-    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment, nr);
-
-    DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
-    simulator.registerNode(pn);
-
-    MessageDispatch msgDisp = new MessageDispatch(pn);
- 
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, pn);
-    LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
-
-    StandardRouter router =
-      new StandardRouter(pn);
-    StandardRouteSetProtocol rsProtocol =
-      new StandardRouteSetProtocol(pn, routeTable, environment);
-
-    pn.setElements(localhandle, msgDisp, leafSet, routeTable);
-    router.register();
-    rsProtocol.register();
-
-    if (guaranteeConsistency) {    
-        PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-            localhandle, leafSet, routeTable);
-        lsProtocol.register();
-        ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-            localhandle, routeTable, leafSet, lsProtocol);
-        jProtocol.register();
-    } else {
-      StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn,
-          localhandle, leafSet, routeTable);
-      lsProtocol.register();
-      StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn,
-          localhandle, routeTable, leafSet);
-      jProtocol.register();      
-    }
-    
-    // pn.doneNode(bootstrap);
-    //pn.doneNode( simulator.getClosest(localhandle) );    
-    pn.doneNode(getNearest(localhandle, bootstrap));
+    try {
+      if (bootstrap == null)
+        if (logger.level <= Logger.WARNING) logger.log(
+            "No bootstrap node provided, starting a new ring...");
       
-    return pn;
+      // this code builds a different environment for each PastryNode
+      Environment environment = this.environment;
+      if (this.environment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
+        if (this.environment.getLogManager() instanceof CloneableLogManager) {
+          environment = new Environment(
+              this.environment.getSelectorManager(),
+              this.environment.getProcessor(),
+            this.environment.getRandomSource(),
+            this.environment.getTimeSource(),
+            ((CloneableLogManager)this.environment.getLogManager()).clone("0x"+nodeId.toStringBare()),
+            this.environment.getParameters(), 
+            this.environment.getExceptionStrategy());
+        }
+      }    
+  
+      NodeRecord nr = (NodeRecord)recordTable.get(nodeId);
+      if (nr == null) {
+        nr = simulator.generateNodeRecord();
+        recordTable.put(nodeId,nr);
+      }
+      
+      TLPastryNode pn = nodeHandleHelper(nodeId, environment, nr);
+  //    
+  //    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment, nr);
+  //
+  //    DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+  //    simulator.registerNode(pn);
+  //
+  //    MessageDispatch msgDisp = new MessageDispatch(pn);
+  // 
+  //    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, pn);
+  //    LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
+  //
+  //    StandardRouter router =
+  //      new StandardRouter(pn, msgDisp);
+  //    StandardRouteSetProtocol rsProtocol =
+  //      new StandardRouteSetProtocol(pn, routeTable, environment);
+  //
+  //    pn.setElements(localhandle, msgDisp, leafSet, routeTable, router);
+  //    router.register();
+  //    rsProtocol.register();
+  //
+  //    if (guaranteeConsistency) {    
+  //        PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
+  //            localhandle, leafSet, routeTable);
+  //        lsProtocol.register();
+  //        ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
+  //            localhandle, routeTable, leafSet, lsProtocol);
+  //        jProtocol.register();
+  //    } else {
+  //      StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn,
+  //          localhandle, leafSet, routeTable);
+  //      lsProtocol.register();
+  //      StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn,
+  //          localhandle, routeTable, leafSet);
+  //      jProtocol.register();      
+  //    }
+      
+      ((NetworkSimulatorImpl)simulator).registerNode(pn, nr);
+      // pn.doneNode(bootstrap);
+      //pn.doneNode( simulator.getClosest(localhandle) );    
+      pn.getBootstrapper().boot(Collections.singleton(bootstrap));
+//      ((DirectPastryNode)pn).doneNode(getNearest(pn.getLocalHandle(), bootstrap));
+        
+      return pn;
+    } catch (IOException ioe) {
+      logger.logException("Couldn't construct node.", ioe);
+      return null;
+    }
   }
 
   /**
@@ -245,8 +269,51 @@ public class DirectPastryNodeFactory extends PastryNodeFactory {
     return (int)simulator.proximity((DirectNodeHandle)local, (DirectNodeHandle)remote);
   }
 
-//  protected int proximity(NodeHandle local, NodeHandle handle) {
-//    return getProximity(local, handle);
-//  }
+  @Override
+  protected NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory handleFactory, Object localNodeData) throws IOException {
+    DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+    return localhandle;
+  }
 
+  @Override
+  protected NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) throws IOException {
+    // TODO: Make this work
+    return new NodeHandleFactory(){
+    
+      public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
+        // TODO Auto-generated method stub
+        return null;
+      }
+    
+      public NodeHandle coalesce(NodeHandle handle) {
+        // TODO Auto-generated method stub
+        return null;
+      }    
+    };
+  }
+
+  @Override
+  protected NodeHandleAdapter getNodeHanldeAdapter(final TLPastryNode pn, NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException {
+    TransportLayer<NodeHandle, RawMessage> tl = new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator.getGenericSimulator(), simulator.getLivenessProvider(), pn.getEnvironment());
+    
+    return new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<NodeHandle>(){    
+      public int proximity(NodeHandle i) {
+        return (int)simulator.proximity((DirectNodeHandle)pn.getLocalHandle(), (DirectNodeHandle)i);
+      }
+    
+      List<ProximityListener<NodeHandle>> proxListeners = new ArrayList<ProximityListener<NodeHandle>>();
+      public void addProximityListener(ProximityListener<NodeHandle> name) {
+        proxListeners.add(name);
+      }
+
+      public boolean removeProximityListener(ProximityListener<NodeHandle> name) {
+        return proxListeners.remove(name);
+      }
+    
+    },new Bootstrapper<NodeHandle>() {    
+      public void boot(Collection<NodeHandle> bootaddresses) {
+        pn.doneNode(bootaddresses);
+      }    
+    });
+  }
 }

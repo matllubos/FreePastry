@@ -102,7 +102,7 @@ public abstract class DistNodeHandle extends NodeHandle implements Observer {
      */
     public abstract int hashCode();
 
-    public abstract InetSocketAddress getAddress();
+    public abstract InetSocketAddress getInetSocketAddress();
 }
 
 

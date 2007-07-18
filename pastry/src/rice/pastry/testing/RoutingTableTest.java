@@ -538,7 +538,7 @@ public class RoutingTableTest {
     while(nodeIterator.hasNext()) {      
       PastryNode node = (PastryNode)nodeIterator.next();
       if (!node.isReady()) continue;
-      DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);
+      PastryNode temp = DirectPastryNode.setCurrentNode(node);
       RoutingTable rt = node.getRoutingTable();
       Iterator i2 = nodes.iterator();
       while(i2.hasNext()) {
@@ -570,7 +570,7 @@ public class RoutingTableTest {
     for (int i = 0; i < 1000000; i++) {
       PastryNode node = (PastryNode)nodes.get(rand.nextInt(nodes.size()));
       if (!node.isReady()) continue;
-      DirectPastryNode temp = DirectPastryNode.setCurrentNode((DirectPastryNode)node);
+      PastryNode temp = DirectPastryNode.setCurrentNode(node);
       RoutingTable rt = node.getRoutingTable();
       Iterator i2 = nodes.iterator();
       PastryNode that = (PastryNode)nodes.get(rand.nextInt(nodes.size()));

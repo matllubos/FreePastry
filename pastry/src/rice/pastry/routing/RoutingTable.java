@@ -113,8 +113,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     for (int i = 0; i < rows; i++) {
       int myCol = myNodeId.getDigit(i, idBaseBitLength);
       // insert this node at the appropriate column
-      routingTable[i][myCol] = new RouteSet(maxEntries,i,myCol, pn);
-      routingTable[i][myCol].put(myNodeHandle);
+      routingTable[i][myCol] = new RouteSet(maxEntries,i,myCol, pn, myNodeHandle);
       routingTable[i][myCol].setRoutingTable(this);
     }
   }

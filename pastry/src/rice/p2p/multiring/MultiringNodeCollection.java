@@ -38,6 +38,10 @@ advised of the possibility of such damage.
 package rice.p2p.multiring;
 
 import java.util.*;
+
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 
@@ -117,7 +121,8 @@ public class MultiringNodeCollection {
    * @param message The message to be sent
    * @param hint A suggested hint
    */
-  protected void route(RingId id, RawMessage message, String application) {
+  protected MessageReceipt route(RingId id, RawMessage message, String application,
+      DeliveryNotification deliverAckToMe) {
     MultiringNode best = (MultiringNode) nodes.elementAt(0);
     
     for (int i=1; i<nodes.size(); i++) {
@@ -133,7 +138,7 @@ public class MultiringNodeCollection {
     
     //System.out.println("ROUTING MESSAGE TO TARGET " + id + " VIA NODE " + best.getId());
         
-    best.route(id, message, application);
+    return best.route(id, message, application, deliverAckToMe);
   }
   
   /**

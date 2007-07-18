@@ -36,10 +36,16 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.direct;
 
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
+
 import rice.environment.Environment;
 import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
+import rice.pastry.transport.TLPastryNode;
 
 /**
  * Interface to an object which is simulating the network.
@@ -53,12 +59,6 @@ public interface NetworkSimulator {
 
   public Environment getEnvironment();
   
-  /**
-   * Registers a node handle with the simulator.
-   * 
-   * @param nh the node handle to register.
-   */
-  public void registerNode(DirectPastryNode dpn);
 
   /**
    * Checks to see if a node id is alive.
@@ -90,42 +90,42 @@ public interface NetworkSimulator {
    */
   public float networkDelay(DirectNodeHandle a, DirectNodeHandle b);
   
-  /**
-   * Deliver message.
-   * 
-   * @param msg message to deliver.
-   * @param node the Pastry node to deliver it to.
-   * @param how long to delay to deliver the message
-   */
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay);
-
-  /**
-   * Deliver message.
-   * 
-   * @param msg message to deliver.
-   * @param node the Pastry node to deliver it to.
-   * @param how long to delay to deliver the message
-   * @param period to deliver the message after the delay
-   */
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay, int period);
-
-  /**
-   * Deliver message.
-   * 
-   * @param msg message to deliver.
-   * @param node the Pastry node to deliver it to.
-   * @param how long to delay to deliver the message
-   * @param period to deliver the message after the delay
-   */
-  public ScheduledMessage deliverMessageFixedRate(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay, int period);
-
-  /**
-   * Deliver message ASAP.
-   * 
-   * @param msg message to deliver.
-   * @param node the Pastry node to deliver it to.
-   */
-  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node);
+//  /**
+//   * Deliver message.
+//   * 
+//   * @param msg message to deliver.
+//   * @param node the Pastry node to deliver it to.
+//   * @param how long to delay to deliver the message
+//   */
+//  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay);
+//
+//  /**
+//   * Deliver message.
+//   * 
+//   * @param msg message to deliver.
+//   * @param node the Pastry node to deliver it to.
+//   * @param how long to delay to deliver the message
+//   * @param period to deliver the message after the delay
+//   */
+//  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay, int period);
+//
+//  /**
+//   * Deliver message.
+//   * 
+//   * @param msg message to deliver.
+//   * @param node the Pastry node to deliver it to.
+//   * @param how long to delay to deliver the message
+//   * @param period to deliver the message after the delay
+//   */
+//  public ScheduledMessage deliverMessageFixedRate(Message msg, DirectPastryNode node, DirectNodeHandle from, int delay, int period);
+//
+//  /**
+//   * Deliver message ASAP.
+//   * 
+//   * @param msg message to deliver.
+//   * @param node the Pastry node to deliver it to.
+//   */
+//  public ScheduledMessage deliverMessage(Message msg, DirectPastryNode node);
 
   public void setTestRecord(TestRecord tr);
 
@@ -147,8 +147,15 @@ public interface NetworkSimulator {
    * @return
    */
   public NodeRecord generateNodeRecord();
+  
+  /**
+   * Registers a node handle with the simulator.
+   * 
+   * @param nh the node handle to register.
+   */
+//  public void registerNode(TLPastryNode dpn, TransportLayer<DirectNodeHandle, RawMessage> tl, NodeRecord nr);
 
-  public void removeNode(DirectPastryNode node);
+  public void removeNode(TLPastryNode node);
 
   public void start();
   
@@ -225,5 +232,13 @@ public interface NetworkSimulator {
    * @return true if removed, false if not already a listener
    */
   public boolean removeSimulatorListener(SimulatorListener sl);
+
+  public NodeRecord getNodeRecord(DirectNodeHandle handle);
+  
+  public LivenessProvider<NodeHandle> getLivenessProvider();
+
+//  public ProximityProvider<NodeHandle> getProximityProvider();
+
+  public GenericNetworkSimulator<NodeHandle, RawMessage> getGenericSimulator();
   
 }

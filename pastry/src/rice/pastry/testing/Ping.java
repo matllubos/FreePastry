@@ -77,7 +77,7 @@ public class Ping extends PastryAppl {
     double fDistance = pMsg.getDistance();
     double rDistance;
 
-    NetworkSimulator sim = ((DirectNodeHandle) ((DirectPastryNode) thePastryNode)
+    NetworkSimulator sim = ((DirectNodeHandle) (thePastryNode)
         .getLocalHandle()).getSimulator();
     PingTestRecord tr = (PingTestRecord) (sim.getTestRecord());
 
@@ -98,7 +98,7 @@ public class Ping extends PastryAppl {
 
     PingMessageNew pMsg = (PingMessageNew) msg;
     pMsg.incrHops();
-    pMsg.incrDistance(((DirectNodeHandle) ((DirectPastryNode) thePastryNode)
+    pMsg.incrDistance(((DirectNodeHandle) (thePastryNode)
         .getLocalHandle()).getSimulator().networkDelay(
             (DirectNodeHandle)thePastryNode.getLocalHandle(),
             (DirectNodeHandle)nextHop));

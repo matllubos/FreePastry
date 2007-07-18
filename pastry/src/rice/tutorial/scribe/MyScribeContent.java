@@ -66,6 +66,7 @@ public class MyScribeContent implements ScribeContent {
   public MyScribeContent(NodeHandle from, int seq) {
     this.from = from;
     this.seq = seq;
+//    System.out.println(this+".ctor");
   }
 
   /**

@@ -75,6 +75,12 @@ public class RouteSet implements NodeSetI, Serializable,
    * @param maxSize the maximum number of nodes that fit in this set.
    */
 
+  public RouteSet(int maxSize, int row, int col, PastryNode local, NodeHandle initialVal) {
+    this(maxSize, row, col, local);
+    nodes[theSize++] = initialVal;    
+    closest = 0;
+  }
+  
   public RouteSet(int maxSize, int row, int col, PastryNode local) {
     this.localNode = local;
     nodes = new NodeHandle[maxSize];

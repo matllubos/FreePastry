@@ -243,7 +243,9 @@ public class PastryRingPanel extends JPanel implements MouseListener, MouseMotio
       }
       
       Dimension text = getTextLocation(nodes[i].handle.getId());
-      String string = nodes[i].handle.getNodeId().toString() + " " + nodes[i].handle.getAddress().getAddress().getHostAddress() + ":" + nodes[i].handle.getAddress().getPort();
+      String string = nodes[i].handle.getNodeId().toString() + " " + 
+        nodes[i].handle.getInetSocketAddress().getAddress().getHostAddress() + 
+        ":" + nodes[i].handle.getInetSocketAddress().getPort();
       FontMetrics metrics = g.getFontMetrics();
       int fontHeight = metrics.getMaxAscent();
       Rectangle2D rect = metrics.getStringBounds(string, g);

@@ -1,92 +1,48 @@
-/*******************************************************************************
-
-"FreePastry" Peer-to-Peer Application Development Substrate
-
-Copyright 2002-2007, Rice University. Copyright 2006-2007, Max Planck Institute 
-for Software Systems.  All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-- Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-- Neither the name of Rice  University (RICE), Max Planck Institute for Software 
-Systems (MPI-SWS) nor the names of its contributors may be used to endorse or 
-promote products derived from this software without specific prior written 
-permission.
-
-This software is provided by RICE, MPI-SWS and the contributors on an "as is" 
-basis, without any representations or warranties of any kind, express or implied 
-including, but not limited to, representations or warranties of 
-non-infringement, merchantability or fitness for a particular purpose. In no 
-event shall RICE, MPI-SWS or contributors be liable for any direct, indirect, 
-incidental, special, exemplary, or consequential damages (including, but not 
-limited to, procurement of substitute goods or services; loss of use, data, or 
-profits; or business interruption) however caused and on any theory of 
-liability, whether in contract, strict liability, or tort (including negligence
-or otherwise) arising in any way out of the use of this software, even if 
-advised of the possibility of such damage.
-
-*******************************************************************************/ 
-
 package rice.pastry.socket;
 
 import java.io.IOException;
-import java.net.*;
-import java.util.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Observable;
+
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
-import rice.pastry.PastryNode;
+import rice.pastry.NodeHandle;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
-import rice.pastry.socket.SocketSourceRouteManager.AddressManager;
+import rice.pastry.transport.TLPastryNode;
 
-/**
- * Class which represents the address and nodeId of a remote node.  In
- * the socket protocol, it simply represents this information - all 
- * other details are managed by the local nodes.
- *
- * SocketNodeHandle can now internally exist without a NodeId.  This is to get
- * the memory management correct
- *
- * @version $Id$
- * @author Alan Mislove
- */
-public class SocketNodeHandle extends DistNodeHandle {
-  
-  static final long serialVersionUID = -5452528188786429274L;
-  
-  // a special liveness value that indicates that this node will never come alive again
-  public static final int LIVENESS_DEAD_FOREVER = 4;
+public class SocketNodeHandle extends DistNodeHandle implements TransportLayerNodeHandle<MultiInetSocketAddress> {
 
-  // the default distance, which is used before a ping
-  public static final int DEFAULT_PROXIMITY = 60*60*1000;
-
-  protected EpochInetSocketAddress eaddress;
+  public MultiInetSocketAddress eaddress;
+  long epoch;
   
-  transient AddressManager addressManager;
-  
-  /**
-   * Constructor
-   *
-   * @param nodeId This node handle's node Id.
-   * @param address DESCRIBE THE PARAMETER
-   */
-  public SocketNodeHandle(EpochInetSocketAddress address, Id nodeId) {
-    super(nodeId);
-    
-    this.eaddress = address;    
+  SocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node) {
+    super(id);
+    this.eaddress = eisa;
+    this.epoch = epoch;    
+    setLocalNode(node);
   }
-  
-  public EpochInetSocketAddress getEpochAddress() {
+
+
+  public long getEpoch() {
+    return epoch;
+  }
+
+  public void setLocalNode(TLPastryNode pn) {
+    localnode = pn;
+    this.logger = localnode.getEnvironment().getLogManager().getLogger(getClass(),null);
+  }  
+
+  public MultiInetSocketAddress getIdentifier() {
     return eaddress;
   }
 
@@ -98,32 +54,26 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return true if the node is alive, false otherwise.
    */
   public int getLiveness() {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-
-    if (spn == null || getLocalNode().getLocalHandle() == null) {
+    if (isLocal()) {
       return LIVENESS_ALIVE;
     } else {
-      if (isLocal()) 
-        return LIVENESS_ALIVE;
-      else {
-        // make sure this isn't an old existance of ourself:       
-        EpochInetSocketAddress localEaddr = ((SocketNodeHandle)getLocalNode().getLocalHandle()).eaddress;
-        if (localEaddr.addressEquals(eaddress) && (eaddress.epoch != localEaddr.epoch))
-          return LIVENESS_DEAD_FOREVER;
-        
-        return spn.getSocketSourceRouteManager().getLiveness(eaddress);
-      }
+//      // make sure this isn't an old existance of ourself:       
+//      MultiInetSocketAddress localEaddr = ((TLNodeHandle)localnode.getLocalHandle()).eaddress;
+//      if (localEaddr.addressEquals(eaddress)) {
+//        return LIVENESS_ALIVE;        
+//      }
+      return ((TLPastryNode)localnode).getLivenessProvider().getLiveness(this, null);
     }
   }
   
-  /**
-   * You can call this method if the node shuts down nicely.  This will cause it to be removed
-   * from the leafset.  Improves the performance of consistency.
-   */
-  public void markDeadForever() {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    spn.getSocketSourceRouteManager().getAddressManager(eaddress, false).markDeadForever();
-  }
+//  /**
+//   * You can call this method if the node shuts down nicely.  This will cause it to be removed
+//   * from the leafset.  Improves the performance of consistency.
+//   */
+//  public void markDeadForever() {
+//    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+//    spn.getSocketSourceRouteManager().getAddressManager(eaddress, false).markDeadForever();
+//  }
   
   /**
    * Returns the InetSocketAddress that should be used to contact the node
@@ -131,14 +81,18 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @param addressList The sorted list of address alieses.  From Internet to LAN
    * @return
    */
-  public InetSocketAddress getAddress(InetAddress[] addressList) {
-    return eaddress.getAddress(addressList);
-  }
+//  public InetSocketAddress getAddress(InetAddress[] addressList) {
+//    return eaddress.getAddress(addressList);
+//  }
   
-  public InetSocketAddress getAddress() {
-    return eaddress.address[0];
+  public MultiInetSocketAddress getAddress() {
+    return eaddress;
   }
-  
+    
+  public InetSocketAddress getInetSocketAddress() {
+    return eaddress.getAddress(0);
+  }
+    
   /**
    * Method which FORCES a check of liveness of the remote node.  Note that
    * this method should ONLY be called by internal Pastry maintenance algorithms - 
@@ -148,11 +102,13 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return true if node is currently alive.
    */
   public boolean checkLiveness() {
-    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    
-    if (spn != null)
-      spn.getSocketSourceRouteManager().checkLiveness(eaddress);
-    
+    if (logger.level <= Logger.FINE) logger.log(this+".checkLiveness()");
+    ((TLPastryNode)localnode).getLivenessProvider().checkLiveness(this, null);
+//    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
+//    
+//    if (spn != null)
+//      spn.getSocketSourceRouteManager().checkLiveness(eaddress);
+//    
     return isAlive();
   }
 
@@ -175,8 +131,9 @@ public class SocketNodeHandle extends DistNodeHandle {
    */
   public void receiveMessage(Message msg) {
     assertLocalNode();
-
-    getLocalNode().send(this, msg);
+    Map<String, Integer> options = new HashMap<String, Integer>(1);
+    options.put(PriorityTransportLayer.OPTION_PRIORITY, msg.getPriority());
+    getLocalNode().send(this, msg,null, options);
   }
   
   /**
@@ -188,9 +145,9 @@ public class SocketNodeHandle extends DistNodeHandle {
    *
    * @param msg the bootstrap message.
    */
-  public void bootstrap(Message msg) throws IOException {
-    ((SocketPastryNode) getLocalNode()).getSocketSourceRouteManager().bootstrap(eaddress, msg);
-  }
+//  public void bootstrap(Message msg) throws IOException {
+//    ((SocketPastryNode) getLocalNode()).getSocketSourceRouteManager().bootstrap(eaddress, msg);
+//  }
     
   /**
    * Returns a String representation of this DistNodeHandle. This method is
@@ -221,7 +178,9 @@ public class SocketNodeHandle extends DistNodeHandle {
 
     SocketNodeHandle other = (SocketNodeHandle) obj;
     
-    return (other.getNodeId().equals(getNodeId()) && other.eaddress.equals(eaddress));
+    
+    
+    return (epoch == other.epoch && other.getNodeId().equals(getNodeId()) && other.eaddress.equals(eaddress));
   }
 
   /**
@@ -231,7 +190,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return a hash code.
    */
   public int hashCode() {
-    return getNodeId().hashCode() ^ eaddress.hashCode();
+    return ((int)epoch) ^ getNodeId().hashCode() ^ eaddress.hashCode();
   }
 
   /**
@@ -244,10 +203,7 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return the proximity metric value
    */
   public int proximity() {
-    PastryNode spn = getLocalNode();
-    if (spn == null)
-      return DEFAULT_PROXIMITY;
-    return spn.proximity(this);
+    return ((TLPastryNode)localnode).getProxProvider().proximity(this);
   }
 
   /**
@@ -258,22 +214,24 @@ public class SocketNodeHandle extends DistNodeHandle {
    * @return true if node is currently alive.
    */
   public boolean ping() {
-    final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
-    
-//    Runnable runnable = new Runnable() {    
-//      public void run() {
-        if ((spn != null) && spn.srManager != null) 
-          spn.srManager.ping(eaddress);
-//      }
-//    };
+    if (localnode.getLocalHandle().equals(this)) return false;
+    ((TLPastryNode)localnode).getLivenessProvider().checkLiveness(this, null);
+//    final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 //    
-//    SelectorManager sm = spn.getEnvironment().getSelectorManager();
-//    if (sm.isSelectorThread()) {
-//      runnable.run();      
-//    } else {
-//      sm.invoke(runnable);
-//    }
-    
+////    Runnable runnable = new Runnable() {    
+////      public void run() {
+//        if ((spn != null) && spn.srManager != null) 
+//          spn.srManager.ping(eaddress);
+////      }
+////    };
+////    
+////    SelectorManager sm = spn.getEnvironment().getSelectorManager();
+////    if (sm.isSelectorThread()) {
+////      runnable.run();      
+////    } else {
+////      sm.invoke(runnable);
+////    }
+//    
     return isAlive();
   }  
 
@@ -288,21 +246,21 @@ public class SocketNodeHandle extends DistNodeHandle {
 
 
 /*********************** Serialization ***********************/  
-  public void setNodeId(Id nodeId) {
-    this.nodeId = nodeId;    
-  }
+//  public void setNodeId(Id nodeId) {
+//    this.nodeId = nodeId;    
+//  }
   
-  public void setLocalNode(SocketPastryNode spn) {
-    localnode = spn; 
-    this.logger = spn.getEnvironment().getLogManager().getLogger(getClass(),null);
-  }
+//  public void setLocalNode(SocketPastryNode spn) {
+//    localnode = spn; 
+//    this.logger = spn.getEnvironment().getLogManager().getLogger(getClass(),null);
+//  }
   
   /**
    * Note, this SNH needs to be coalesced!!!
    * @param buf
    * @return
    */
-  static SocketNodeHandle build(InputBuffer buf) throws IOException {
+  static SocketNodeHandle build(InputBuffer buf, TLPastryNode local) throws IOException {
 //    NodeHandle (Version 0)
 //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //    + Epoch InetSocketAddress                                       +
@@ -316,15 +274,15 @@ public class SocketNodeHandle extends DistNodeHandle {
 //    +                                                               +
 //    +                                                               +
 //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    EpochInetSocketAddress eaddr = EpochInetSocketAddress.build(buf);
+    MultiInetSocketAddress eaddr = MultiInetSocketAddress.build(buf);
+    long epoch = buf.readLong();
     Id nid = Id.build(buf);
-    return new SocketNodeHandle(eaddr, nid);
+    return new SocketNodeHandle(eaddr, epoch, nid, local);
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
     eaddress.serialize(buf);
+    buf.writeLong(epoch);
     nodeId.serialize(buf);
-  }  
+  }
 }
-
-

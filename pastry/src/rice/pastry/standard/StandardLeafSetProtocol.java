@@ -139,7 +139,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements Observer {
         BroadcastLeafSet bls = new BroadcastLeafSet(thePastryNode.getLocalHandle(), leafSet,
             BroadcastLeafSet.Update, rls.getTimeStamp());
 
-        thePastryNode.send(returnHandle,bls);
+        thePastryNode.send(returnHandle,bls,null,options);
       }
     } else if (msg instanceof InitiateLeafSetMaintenance) {
       // request for leafset maintenance
@@ -191,7 +191,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements Observer {
 
     if (changed) {
       // nodes where missing, send update to "from"
-      thePastryNode.send(from,bl);
+      thePastryNode.send(from,bl, null, options);
 
       if (notifyMissing) {
         // send leafset to nodes that where missing from remotels
@@ -203,7 +203,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements Observer {
         while (it.hasNext()) {
           // send leafset to missing node
           NodeHandle nh = (NodeHandle) it.next();
-          thePastryNode.send(nh,bl);
+          thePastryNode.send(nh,bl,null, options);
         }
       }
     }
@@ -253,7 +253,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements Observer {
         continue;
 
       if (!sent.isMember(nh.getNodeId())) {
-        thePastryNode.send(nh,bls);
+        thePastryNode.send(nh,bls,null, options);
         sent.addMember(nh.getNodeId());
       }
     }
@@ -285,7 +285,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements Observer {
       if (nh == null || nh.isAlive() == false)
         continue;
 
-      thePastryNode.send(nh,bls);
+      thePastryNode.send(nh,bls,null, options);
 
     }
   }
@@ -349,7 +349,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements Observer {
     for (int i = -ccwSize; i < 0; i++) {
       NodeHandle handle = leafSet.get(i);
       if (handle != null && handle.isAlive()) {
-        thePastryNode.send(handle,rls);
+        thePastryNode.send(handle,rls,null, options);
         allDead = false;
         break;
       }
@@ -365,7 +365,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements Observer {
     for (int i = cwSize; i > 0; i--) {
       NodeHandle handle = leafSet.get(i);
       if (handle != null && handle.isAlive()) {
-        thePastryNode.send(handle,rls);
+        thePastryNode.send(handle,rls,null, options);
         allDead = false;
         break;
       }

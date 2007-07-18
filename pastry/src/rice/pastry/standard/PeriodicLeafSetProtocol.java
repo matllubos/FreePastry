@@ -247,7 +247,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       // because the other node will stop receiving 30 seconds after he requested the lease, and we
       // wont receive until 30 seconds after the lastTimeRenewedLease.put() above
       thePastryNode.send(rls.returnHandle(),
-          new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, rls.getTimeStamp()));
+          new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, rls.getTimeStamp()),null, options);
       
     } else if (msg instanceof InitiateLeafSetMaintenance) {
       // perform leafset maintenance
@@ -256,9 +256,9 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       if (set.size() > 1) {
         NodeHandle handle = set.get(random.nextInt(set.size() - 1) + 1);
         thePastryNode.send(handle,
-            new RequestLeafSet(localHandle, localNode.getEnvironment().getTimeSource().currentTimeMillis()));
+            new RequestLeafSet(localHandle, localNode.getEnvironment().getTimeSource().currentTimeMillis()),null, options);
         thePastryNode.send(handle,
-            new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
+            new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0),null, options);
 
         NodeHandle check = set.get(random
             .nextInt(set.size() - 1) + 1);
@@ -291,7 +291,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
 
     for (int i = 1; i < set.size(); i++)
-      thePastryNode.send(set.get(i), bls);
+      thePastryNode.send(set.get(i), bls,null, options);
   }
 
   // Ready Strategy
@@ -453,8 +453,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
               + sendTo+" "+time);
       lastTimeSentBLS.put(sendTo, new Long(currentTime));
 
-      thePastryNode.send(sendTo, new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0));
-      thePastryNode.send(sendTo, new RequestLeafSet(localHandle, currentTime));
+      thePastryNode.send(sendTo, new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0), null, options);
+      thePastryNode.send(sendTo, new RequestLeafSet(localHandle, currentTime), null, options);
       if (checkLiveness) {
         sendTo.checkLiveness();
       }
@@ -507,9 +507,11 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     return true;
   }
 
+  boolean destroyed = false;
   public void destroy() {
     if (logger.level <= Logger.INFO)
       logger.log("PLSP: destroy() called");
+    destroyed = true;
     if (pingNeighborMessage != null)
       pingNeighborMessage.cancel();
     pingNeighborMessage = null;
@@ -541,6 +543,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * Only remove the item if you did not give a lease.
    */
   public void update(final Observable o, final Object arg) {
+    if (destroyed) return;
 //    logger.log("update("+o+","+arg+")");
 //  if (o instanceof NodeHandle) {      
     if (arg == NodeHandle.DECLARED_DEAD) {

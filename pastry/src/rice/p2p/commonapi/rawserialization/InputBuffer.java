@@ -42,6 +42,8 @@ package rice.p2p.commonapi.rawserialization;
 import java.io.IOException;
 
 public interface InputBuffer {
+  public static final int UNKNOWN = -2;
+  
   int read(byte[] b, int off, int len) throws IOException;
   int read(byte[] b) throws IOException;
   boolean readBoolean() throws IOException;
@@ -54,5 +56,8 @@ public interface InputBuffer {
   short readShort() throws IOException;
   String readUTF() throws IOException; // based on java's modified UTF format
   
+  /**
+   * May be UNKNOWN
+   */
   int bytesRemaining(); // how much space is left in the buffer
 }

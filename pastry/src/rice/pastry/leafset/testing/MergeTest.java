@@ -42,14 +42,21 @@ package rice.pastry.leafset.testing;
 import java.io.IOException;
 import java.util.*;
 
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.liveness.LivenessListener;
+
 import rice.environment.Environment;
 import rice.pastry.*;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.rawserialization.*;
+import rice.pastry.boot.Bootstrapper;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RoutingTable;
+import rice.pastry.transport.PMessageReceipt;
+import rice.pastry.transport.PMessageNotification;
 
 public class MergeTest {
 
@@ -139,9 +146,9 @@ public class MergeTest {
       }
     
       @Override
-      public void send(NodeHandle handle, Message message) {
+      public PMessageReceipt send(NodeHandle handle, Message message, PMessageNotification deliverAckToMe, Map<String, Integer> options) {
         // TODO Auto-generated method stub
-        
+        return null;
       }
     
       @Override
@@ -181,15 +188,41 @@ public class MergeTest {
       }
     
       @Override
-      public void connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
+      public SocketRequestHandle connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
         // TODO Auto-generated method stub
-        
+        return null;        
       }
     
       @Override
       public NodeHandle coalesce(NodeHandle newHandle) {
         // TODO Auto-generated method stub
         return null;
+      }
+
+      @Override
+      public Bootstrapper getBootstrapper() {
+        // TODO Auto-generated method stub
+        return null;
+      }
+
+      public void addLivenessListener(LivenessListener<NodeHandle> name) {
+        // TODO Auto-generated method stub
+        
+      }
+
+      public boolean checkLiveness(NodeHandle i, Map<String, Integer> options) {
+        // TODO Auto-generated method stub
+        return false;
+      }
+
+      public int getLiveness(NodeHandle i, Map<String, Integer> options) {
+        // TODO Auto-generated method stub
+        return 0;
+      }
+
+      public boolean removeLivenessListener(LivenessListener<NodeHandle> name) {
+        // TODO Auto-generated method stub
+        return false;
       }
     
     };

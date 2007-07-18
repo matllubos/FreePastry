@@ -110,7 +110,7 @@ public class VisualizationServer implements Runnable {
     this.FDSchecker = new FreeDiskSpaceChecker();
     this.running = false;
     
-    ((DistPastryNode) node).addNetworkListener(NAchecker);
+    node.addNetworkListener(NAchecker);
     this.debugCommandHandlers = new Vector();
     addDebugCommandHandler(new FileCommandHandler(environment));  
     
@@ -264,7 +264,7 @@ public class VisualizationServer implements Runnable {
     oos.writeObject(ujr);
 
     // kill the node
-    ((DistPastryNode)node).destroy();
+    node.destroy();
   
     // sleep for a while
     try {

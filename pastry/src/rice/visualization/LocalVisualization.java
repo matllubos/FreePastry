@@ -107,7 +107,9 @@ public class LocalVisualization implements DataProvider {
   
   protected void updateData() throws IOException {
     if (client == null) {
-      InetSocketAddress address = new InetSocketAddress(handle.getAddress().getAddress(), handle.getAddress().getPort() + PORT_OFFSET);
+      InetSocketAddress address = new InetSocketAddress(
+          handle.getInetSocketAddress().getAddress(), 
+          handle.getInetSocketAddress().getPort() + PORT_OFFSET);
       client = new VisualizationClient(null, address, environment);
       client.connect();
       frame.nodeSelected(new Node(null, null), client.getData());

@@ -40,16 +40,24 @@ advised of the possibility of such damage.
 package rice.pastry.direct;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.*;
+
+import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.P2PSocketReceiver;
+import org.mpisws.p2p.transport.SocketCallback;
+import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.*;
 import rice.p2p.commonapi.exception.*;
 import rice.pastry.client.PastryAppl;
 
-public class DirectAppSocket {
+public class DirectAppSocket<Identifier, MessageType> {
   public static final byte[] EOF = new byte[0];
   
   /**
@@ -57,42 +65,43 @@ public class DirectAppSocket {
    */
   private static final int MAX_BYTES_IN_FLIGHT = 10000;
   
-  DirectNodeHandle acceptorNodeHandle;
+  Identifier acceptor, connector;
   
-  PastryAppl acceptorAppl;
+  SocketCallback<Identifier> connectorReceiver;
   
-  AppSocketReceiver connectorReceiver;
-  PastryAppl connectorAppl;
-  
-  NetworkSimulator simulator;
+  GenericNetworkSimulator<Identifier, MessageType> simulator;
   
   DirectAppSocketEndpoint acceptorEndpoint;
   DirectAppSocketEndpoint connectorEndpoint;
   
-  Logger logger;
+  SocketRequestHandle<Identifier> connectorHandle;
   
-  DirectAppSocket(DirectNodeHandle acceptor, AppSocketReceiver connector, PastryAppl connectorAppl, NetworkSimulator simulator) {
-    this.acceptorNodeHandle = acceptor;
-    DirectPastryNode acceptorNode = acceptor.getRemote();    
-    this.connectorReceiver = connector;
-    this.connectorAppl = connectorAppl;
+  Logger logger;
+
+  Map<String, Integer> options;
+  
+  public DirectAppSocket(Identifier acceptor, Identifier connector, SocketCallback<Identifier> connectorCallback, 
+      GenericNetworkSimulator<Identifier, MessageType> simulator, SocketRequestHandle<Identifier> handle, Map<String, Integer>options) {
+    this.options = options;
+    this.acceptor = acceptor;
+    this.connector = connector;
+    this.connectorReceiver = connectorCallback;
     this.simulator = simulator;
-    acceptorAppl = acceptorNode.getMessageDispatch().getDestinationByAddress(connectorAppl.getAddress());
     logger = simulator.getEnvironment().getLogManager().getLogger(DirectAppSocket.class,"");
     
     
     acceptorEndpoint = new DirectAppSocketEndpoint(acceptor);
-    connectorEndpoint = new DirectAppSocketEndpoint((DirectNodeHandle)connectorAppl.getNodeHandle());
+    connectorEndpoint = new DirectAppSocketEndpoint(connector);
     acceptorEndpoint.setCounterpart(connectorEndpoint);
     connectorEndpoint.setCounterpart(acceptorEndpoint);
   }
   
-  class DirectAppSocketEndpoint implements AppSocket {
+  class DirectAppSocketEndpoint implements P2PSocket<Identifier> {
     DirectAppSocketEndpoint counterpart;
     
-    AppSocketReceiver reader;
-    AppSocketReceiver writer;
-    DirectNodeHandle localNodeHandle;
+    P2PSocketReceiver<Identifier> reader;
+    P2PSocketReceiver<Identifier> writer;
+    Identifier localNodeHandle;
     int seq = 0;
     
 //    boolean inputClosed;
@@ -111,7 +120,7 @@ public class DirectAppSocket {
     int firstOffset = 0;
  
     
-    public DirectAppSocketEndpoint(DirectNodeHandle localNodeHandle) {
+    public DirectAppSocketEndpoint(Identifier localNodeHandle) {
       this.localNodeHandle = localNodeHandle;
     }
     
@@ -119,10 +128,16 @@ public class DirectAppSocket {
       this.counterpart = counterpart;
     }
 
-    public DirectNodeHandle getRemoteNodeHandle() {
+    public Identifier getRemoteNodeHandle() {
       return counterpart.localNodeHandle;
     }
   
+    public long read(ByteBuffer dsts) throws IOException {
+      ByteBuffer[] foo = new ByteBuffer[1];
+      foo[0] = dsts;
+      return read(foo, 0, 1);
+    }
+
     public long read(ByteBuffer[] dsts, int offset, int length) {
       int lengthRead = 0;
       
@@ -177,7 +192,13 @@ public class DirectAppSocket {
       }, 0);            
       return lengthRead;
     }
-  
+
+    public long write(ByteBuffer srcs) throws IOException {
+      ByteBuffer[] foo = new ByteBuffer[1];
+      foo[0] = srcs;
+      return write(foo, 0, 1);
+    }
+
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
       if (outputClosed) throw new ClosedChannelException();
       int availableToWrite = 0;
@@ -240,9 +261,13 @@ public class DirectAppSocket {
     protected void notifyCanWrite() {
       if (writer == null) return;
       if (counterpart.bytesInFlight < MAX_BYTES_IN_FLIGHT) {
-        AppSocketReceiver temp = writer;
+        P2PSocketReceiver<Identifier> temp = writer;
         writer = null;
-        temp.receiveSelectResult(this, false, true);
+        try {
+          temp.receiveSelectResult(this, false, true);
+        } catch (IOException ioe) {
+          logger.logException("Error in "+temp, ioe);
+        }
       }
     }
 
@@ -252,17 +277,21 @@ public class DirectAppSocket {
     protected void notifyCanRead() {
       if (byteDeliveries.isEmpty()) return;
       if (reader != null) {
-        AppSocketReceiver temp = reader;
+        P2PSocketReceiver<Identifier> temp = reader;
         reader = null;
-        temp.receiveSelectResult(this, true, false);
+        try {
+          temp.receiveSelectResult(this, true, false);
+        } catch (IOException ioe) {
+          logger.logException("Error in "+temp, ioe);
+        }
       }
     }    
 
     /**
      * Can be called on any thread
      */
-    public void register(boolean wantToRead, boolean wantToWrite, int timeout,
-        AppSocketReceiver receiver) {
+    public void register(boolean wantToRead, boolean wantToWrite, 
+        P2PSocketReceiver<Identifier> receiver) {
       if (wantToWrite) {
         writer = receiver; 
         
@@ -318,6 +347,14 @@ public class DirectAppSocket {
     public String toString() {
       return "DAS{"+localNodeHandle+":"+writer+"->"+counterpart.localNodeHandle+":"+reader+"}"; 
     }
+
+    public Identifier getIdentifier() {
+      return getRemoteNodeHandle();
+    }
+
+    public Map<String, Integer> getOptions() {
+      return options;
+    }
   }  
 
   
@@ -330,22 +367,19 @@ public class DirectAppSocket {
    */
   class AcceptorDelivery implements Delivery {
     public void deliver() {
-      if (acceptorNodeHandle.isAlive()) {
-        if (acceptorAppl == null) {
-          simulator.enqueueDelivery(new ConnectorExceptionDelivery(new AppNotRegisteredException(connectorAppl.getAddress())),
-              (int)Math.round(simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle()))); 
+      if (simulator.isAlive(acceptor)) {
+        DirectTransportLayer<Identifier, MessageType> acceptorTL = simulator.getTL(acceptor);
+        if (acceptorTL.canReceiveSocket()) {
+          acceptorTL.finishReceiveSocket(acceptorEndpoint);
+          simulator.enqueueDelivery(new ConnectorDelivery(),
+              (int)Math.round(simulator.networkDelay(acceptor, connector))); 
         } else {
-          if (acceptorAppl.receiveSocket(acceptorEndpoint)) {
-            simulator.enqueueDelivery(new ConnectorDelivery(),
-                (int)Math.round(simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle()))); 
-          } else {
-            simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NoReceiverAvailableException()),
-                (int)Math.round(simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle()))); 
-          }
+          simulator.enqueueDelivery(new ConnectorExceptionDelivery(new SocketTimeoutException()),
+              (int)Math.round(simulator.networkDelay(acceptor, connector))); 
         }
       } else {
-        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsDeadException()),
-            (int)Math.round(simulator.networkDelay(acceptorNodeHandle, (DirectNodeHandle)connectorAppl.getNodeHandle()))); 
+        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsFaultyException(acceptor)),
+            (int)Math.round(simulator.networkDelay(acceptor, connector))); 
       }
     }
     public int getSeq() {
@@ -355,8 +389,8 @@ public class DirectAppSocket {
   
   class ConnectorDelivery implements Delivery {
     public void deliver() {      
-      if (connectorAppl.getNodeHandle().isAlive()) {
-        connectorReceiver.receiveSocket(connectorEndpoint);
+      if (simulator.isAlive(connector)) {
+        connectorReceiver.receiveResult(connectorHandle, connectorEndpoint);
       } else {
         System.out.println("NOT IMPLEMENTED: Connector died during application socket initiation.");
 //        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsDeadException(acceptorNodeHandle))); 
@@ -369,12 +403,12 @@ public class DirectAppSocket {
   }
   
   class ConnectorExceptionDelivery implements Delivery {
-    Exception e;
-    public ConnectorExceptionDelivery(Exception e) {
+    IOException e;
+    public ConnectorExceptionDelivery(IOException e) {
       this.e = e; 
     }
     public void deliver() {
-      connectorReceiver.receiveException(null, e);      
+      connectorReceiver.receiveException(connectorHandle, e);      
     }
     // out of band, needs to get in front of any other message
     public int getSeq() {
@@ -387,6 +421,6 @@ public class DirectAppSocket {
   }
   
   public String toString() {
-    return "DAS{"+connectorAppl+"->"+acceptorAppl+"}"; 
+    return "DAS{"+connector+"["+connectorReceiver+"]->"+acceptor+"}"; 
   }
 }

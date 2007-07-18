@@ -80,7 +80,7 @@ public class FileLogManager extends SimpleLogManager {
    * @param minPriority the minimum priority to print.
    */  
   public FileLogManager(Parameters params) {
-    this(System.out, new SimpleTimeSource(), params);
+    this(getDefaultPrintStream(params), new SimpleTimeSource(), params);
   }
   
   /**
@@ -104,20 +104,38 @@ public class FileLogManager extends SimpleLogManager {
    * @param minPriority the minimum priority to print
    */
   public FileLogManager(TimeSource timeSource, Parameters params) {
-    this(System.out, timeSource, params);
+    this(getDefaultPrintStream(params), timeSource, params);
+  }
+  
+  private static PrintStream getDefaultPrintStream(Parameters params) {
+    // TODO Auto-generated method stub
+    return getPrintStream(
+        params.getString("fileLogManager_filePrefix"),
+        params.getString("fileLogManager_defaultFileName"),
+        params.getString("fileLogManager_fileSuffix"));
+  }
+  
+  private static PrintStream getPrintStream(String filePrefix, String detail, String fileSuffix) {
+    PrintStream newPS = System.out;
+    try {
+      String fname = filePrefix+detail+fileSuffix;
+      newPS = new PrintStream(new FileOutputStream(fname,true));
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe); 
+//      ioe.printStackTrace(newPS);
+    }
+    return newPS;
   }
   
   public LogManager clone(String detail) {
-    try {
-      String fname = filePrefix+detail+fileSuffix;
-      PrintStream newPS = new PrintStream(new FileOutputStream(fname,true));
-      String linePrefix = "";
-      if (params.getBoolean("fileLogManager_keepLinePrefix")) {
-        linePrefix = detail; 
-      }
-      return new FileLogManager(newPS, time, params, linePrefix, filePrefix, fileSuffix, dateFormat);
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe); 
+    PrintStream newPS = this.ps;
+    if (params.getBoolean("fileLogManager_multipleFiles")) {
+      newPS = getPrintStream(filePrefix, detail, fileSuffix);
     }
+    String linePrefix = "";
+    if (params.getBoolean("fileLogManager_keepLinePrefix")) {
+      linePrefix = detail; 
+    }
+    return new FileLogManager(newPS, time, params, linePrefix, filePrefix, fileSuffix, dateFormat);
   }  
 }

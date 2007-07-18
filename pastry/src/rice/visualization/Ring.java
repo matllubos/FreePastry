@@ -373,7 +373,9 @@ public class Ring {
       }   
       
       Point text = getTextLocation(node.location);
-      String string = node.handle.getNodeId().toString() + " " + node.handle.getAddress().getAddress().getHostAddress() + ":" + node.handle.getAddress().getPort();
+      String string = node.handle.getNodeId().toString() + " " + 
+        node.handle.getInetSocketAddress().getAddress().getHostAddress() + ":" + 
+        node.handle.getInetSocketAddress().getPort();
       
       FontMetrics metrics = g.getFontMetrics();
       int fontHeight = metrics.getMaxAscent();

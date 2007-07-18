@@ -46,6 +46,11 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 public class SimpleOutputBuffer extends DataOutputStream implements OutputBuffer {
   ByteArrayOutputStream baos;
 
+  public SimpleOutputBuffer(int size) {
+    super(new ByteArrayOutputStream(size));    
+    baos = (ByteArrayOutputStream)out;
+  }
+
   public SimpleOutputBuffer() {
     super(new ByteArrayOutputStream());    
     baos = (ByteArrayOutputStream)out;
@@ -70,6 +75,10 @@ public class SimpleOutputBuffer extends DataOutputStream implements OutputBuffer
     return baos.toByteArray();    
   }
   
+  /**
+   * The amount of bytes written so far... the size (not the capacity).
+   * @return
+   */
   public int getWritten() {
     return written; 
   }  

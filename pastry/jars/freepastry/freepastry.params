@@ -23,6 +23,12 @@ pastry_messageDispatch_bufferIfNotReady = false
 # number of messages to buffer while an app hasn't yet been registered
 pastry_messageDispatch_bufferSize = 32
 
+# FP 2.1 uses the new transport layer
+transport_wire_datagram_receive_buffer_size = 131072
+transport_wire_datagram_send_buffer_size = 65536
+transport_epoch_max_num_addresses = 2
+transport_sr_max_num_hops = 5
+
 # number of rows in the routing table to consider during PNS
 # valid values are ALL, or a number
 pns_num_rows_to_use = 10
@@ -107,6 +113,9 @@ pastry_socket_allow_loopback = false
 pastry_socket_known_network_address = yahoo.com
 pastry_socket_known_network_address_port = 80
 
+# FP 2.1 uses the new transport layer
+transport_wire_datagram_receive_buffer_size = 131072
+transport_wire_datagram_send_buffer_size = 65536
 
 # NAT/UPnP settings
 nat_network_prefixes = 127.0.0.1;10.;192.168.
@@ -354,6 +363,8 @@ fileLogManager_filePrefix =
 fileLogManager_fileSuffix = .log
 # wether to keep the line prefix (declaring the node id) for each line of the log
 fileLogManager_keepLinePrefix = false
+fileLogManager_multipleFiles = true
+fileLogManager_defaultFileName = main
 
 
 

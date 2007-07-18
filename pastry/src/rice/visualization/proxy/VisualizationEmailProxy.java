@@ -46,15 +46,14 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.p2p.multiring.MultiringNode;
+import rice.pastry.PastryNode;
 import rice.pastry.dist.DistNodeHandle;
-import rice.pastry.dist.DistPastryNode;
 import rice.p2p.glacier.v2.GlacierImpl;
 import rice.p2p.past.*;
 import rice.p2p.util.DebugCommandHandler;
 import rice.p2p.aggregation.AggregationImpl;
 import rice.persistence.*;
 import rice.visualization.*;
-import rice.visualization.Visualization;
 import rice.visualization.server.*;
 
 public class VisualizationEmailProxy extends EmailProxy {
@@ -71,8 +70,9 @@ public class VisualizationEmailProxy extends EmailProxy {
     MessageNamingService mns = new MessageNamingService();
     Parameters parameters = environment.getParameters();
     if (parameters.getBoolean("visualization_enable")) {
-      DistPastryNode pastry = (DistPastryNode) ((MultiringNode) node).getNode();
-      int visualizationPort = ((DistNodeHandle) pastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
+      PastryNode pastry = (PastryNode) ((MultiringNode) node).getNode();
+      int visualizationPort = ((DistNodeHandle) 
+          pastry.getLocalHandle()).getInetSocketAddress().getPort() + Visualization.PORT_OFFSET;
       
       sectionStart("Starting Visualization services");
       stepStart("Creating Visualization Server");
@@ -151,8 +151,9 @@ public class VisualizationEmailProxy extends EmailProxy {
       
       
       if (globalNode != null) {
-        DistPastryNode gpastry = (DistPastryNode) ((MultiringNode) globalNode).getNode();
-        int globalVisualizationPort = ((DistNodeHandle) gpastry.getLocalHandle()).getAddress().getPort() + Visualization.PORT_OFFSET;
+        PastryNode gpastry = (PastryNode) ((MultiringNode) globalNode).getNode();
+        int globalVisualizationPort = 
+          ((DistNodeHandle) gpastry.getLocalHandle()).getInetSocketAddress().getPort() + Visualization.PORT_OFFSET;
 
         stepStart("Creating Global Visualization Server");
         try {

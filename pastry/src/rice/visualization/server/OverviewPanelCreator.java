@@ -91,7 +91,7 @@ public class OverviewPanelCreator implements PanelCreator {
     KeyValueListView nodeView = new KeyValueListView("Node Information", 380, 200, nodeCons);
     nodeView.add("NodeId", node.getId().toStringFull());
     
-    InetSocketAddress address = ((DistNodeHandle) node.getLocalHandle()).getAddress();
+    InetSocketAddress address = ((DistNodeHandle) node.getLocalHandle()).getInetSocketAddress();
     
     nodeView.add("IP Address", address.getAddress().getHostAddress());
     nodeView.add("TCP/IP Port", address.getPort() + "");

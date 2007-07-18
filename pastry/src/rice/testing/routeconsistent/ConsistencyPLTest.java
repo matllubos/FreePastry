@@ -56,6 +56,7 @@ import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
 import rice.pastry.standard.*;
+import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
 
 /**
@@ -396,7 +397,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
       final PastryNode node = factory.newNode(bootHandle);
-      ((DistPastryNode) node).addNetworkListener(networkActivity);
+      node.addNetworkListener(networkActivity);
       
       InetSocketAddress[] boots = new InetSocketAddress[6];
       boots[0] = new InetSocketAddress(InetAddress.getByName("ricepl-1.cs.rice.edu"), startPort);
@@ -406,7 +407,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       boots[4] = new InetSocketAddress(InetAddress.getByName("planet1.scs.cs.nyu.edu"), startPort);
       boots[5] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.cornell.edu"), startPort);
       
-      PartitionHandler ph = new PartitionHandler(node, (DistPastryNodeFactory)factory, boots);
+      PartitionHandler ph = new PartitionHandler(node, (SocketPastryNodeFactory)factory, boots);
       ph.start(node.getEnvironment().getSelectorManager().getTimer());
       
       final String nodeString = node.toString();
@@ -426,7 +427,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         new NodeSetListener() {
           public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
             System.out.println("LEAFSET4:"+environment.getTimeSource().currentTimeMillis()+":"+ls);
-            bootAddresses.add(((SocketNodeHandle)handle).getAddress());
+            bootAddresses.add(((SocketNodeHandle)handle).getInetSocketAddress());
           }
         };
       ls.addNodeSetListener(preObserver);  
@@ -449,7 +450,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
           int num = 1;
           if (!node.isReady()) num = 4;
           System.out.println("LEAFSET"+num+":"+environment.getTimeSource().currentTimeMillis()+":"+ls);
-          bootAddresses.add(((SocketNodeHandle)handle).getAddress());
+          bootAddresses.add(((SocketNodeHandle)handle).getInetSocketAddress());
         }
       });
   

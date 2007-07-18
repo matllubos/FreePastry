@@ -47,6 +47,7 @@ import rice.pastry.*;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.join.JoinRequest;
 import rice.pastry.routing.*;
+import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.selector.Timer;
 import rice.selector.TimerTask;
 
@@ -57,7 +58,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   // maybe move this to a subclass
   InetSocketAddress[] bootstraps;
   
-  DistPastryNodeFactory factory;
+  SocketPastryNodeFactory factory;
   
   Logger logger;
   
@@ -73,7 +74,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   /**
    * You must call start after construction!!!
    */
-  public PartitionHandler(PastryNode pn, DistPastryNodeFactory factory, InetSocketAddress[] bootstraps) {
+  public PartitionHandler(PastryNode pn, SocketPastryNodeFactory factory, InetSocketAddress[] bootstraps) {
     pastryNode = pn;
     this.factory = factory;
     this.bootstraps = bootstraps;
@@ -199,7 +200,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
               .getRoutingTable().baseBitLength());
   
           RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), 
-              jr,
+              jr, null, null,
               (byte)env.getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
 
           rm.setPrevNode(pastryNode.getLocalHandle());

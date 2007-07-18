@@ -42,7 +42,6 @@ package rice.environment.processing.simple;
 import rice.*;
 import rice.environment.logging.*;
 import rice.environment.time.TimeSource;
-import rice.pastry.dist.DistPastryNode;
 import rice.selector.SelectorManager;
 
 /**

@@ -38,33 +38,76 @@ package rice.pastry.socket;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.net.*;
-import java.nio.channels.*;
+import java.net.BindException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
+import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
+import org.mpisws.p2p.transport.commonapi.IdFactory;
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.identity.IdentityImpl;
+import org.mpisws.p2p.transport.identity.IdentitySerializer;
+import org.mpisws.p2p.transport.identity.LowerIdentity;
+import org.mpisws.p2p.transport.identity.NodeChangeStrategy;
+import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl;
+import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
+import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
+import org.mpisws.p2p.transport.proximity.MinRTTProximityProvider;
+import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayer;
+import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayerImpl;
+import org.mpisws.p2p.transport.sourceroute.factory.MultiAddressSourceRouteFactory;
+import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteManager;
+import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteManagerImpl;
+import org.mpisws.p2p.transport.sourceroute.manager.simple.SimpleSourceRouteStrategy;
+import org.mpisws.p2p.transport.wire.WireTransportLayer;
+import org.mpisws.p2p.transport.wire.WireTransportLayerImpl;
+import org.mpisws.p2p.transport.wire.magicnumber.MagicNumberTransportLayer;
 
 import rice.Continuation;
-import rice.Continuation.ExternalContinuation;
 import rice.environment.Environment;
-import rice.environment.logging.*;
+import rice.environment.logging.CloneableLogManager;
+import rice.environment.logging.LogManager;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.simulated.DirectTimeSource;
-import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.rawserialization.*;
-import rice.pastry.*;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.RawMessage;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.Id;
-import rice.pastry.dist.DistPastryNodeFactory;
-import rice.pastry.leafset.LeafSet;
-import rice.pastry.messaging.*;
-import rice.pastry.routing.*;
-import rice.pastry.socket.messaging.*;
-import rice.pastry.socket.nat.*;
-import rice.pastry.standard.*;
-import rice.selector.*;
 import rice.pastry.NodeHandle;
-import rice.pastry.messaging.Message;
+import rice.pastry.NodeHandleFactory;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
+import rice.pastry.boot.Bootstrapper;
+import rice.pastry.socket.nat.NATHandler;
+import rice.pastry.socket.nat.StubNATHandler;
+import rice.pastry.transport.BogusNodeHandle;
+import rice.pastry.transport.LeafSetNHStrategy;
+import rice.pastry.transport.NodeHandleAdapter;
+import rice.pastry.transport.TLDeserializer;
+import rice.pastry.transport.TLPastryNode;
+import rice.pastry.transport.TransportPastryNodeFactory;
+import rice.selector.SelectorManager;
 
 /**
  * Pastry node factory for Socket-linked nodes.
@@ -73,31 +116,12 @@ import rice.pastry.messaging.Message;
  *          Exp $
  * @author Alan Mislove
  */
-public class SocketPastryNodeFactory extends DistPastryNodeFactory {
-  public static final int ALWAYS = 1;
-
-  public static final int PREFIX_MATCH = 2;
-
-  public static final int NEVER = 3;
-
-  public static final int OVERWRITE = 1;
-
-  public static final int USE_DIFFERENT_PORT = 2;
-
-  public static final int FAIL = 3;
-
-  private NodeIdFactory nidFactory;
-
+public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
+  public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   private int port;
+  protected NodeIdFactory nidFactory;
+  protected RandomSource random;
 
-  /**
-   * Large period (in seconds) means infrequent, 0 means never.
-   */
-  private int leafSetMaintFreq;
-
-  private int routeSetMaintFreq;
-
-  private RandomSource random;
 
   private InetAddress localAddress;
 
@@ -112,20 +136,12 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   String firewallAppName;
   int firewallSearchTries;
 
-  /**
-   * Constructor.
-   * 
-   * Here is order for bind address 1) bindAddress parameter 2) if bindAddress
-   * is null, then parameter: socket_bindAddress (if it exists) 3) if
-   * socket_bindAddress doesn't exist, then InetAddress.getLocalHost()
-   * 
-   * @param nf The factory for building node ids
-   * @param bindAddress which address to bind to
-   * @param startPort The port to start creating nodes on
-   * @param env The environment.
-   */
-  public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress,
-      int startPort, Environment env, NATHandler handler) throws IOException {
+
+  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env) throws IOException {
+    this(nf, null, startPort, env, null);
+  }
+
+  public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler) throws IOException {
     super(env);
     if (env.getTimeSource() instanceof DirectTimeSource) {
       throw new IllegalArgumentException("SocketPastryNodeFactory is not compatible with the DirectTimeSource in the environment.  Please use the SimpleTimeSource or an equivalent.");
@@ -226,9 +242,6 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
       }
     }
     
-    leafSetMaintFreq = params.getInt("pastry_leafSetMaintFreq");
-    routeSetMaintFreq = params.getInt("pastry_routeSetMaintFreq");
-
     if (params.contains("pastry_socket_use_own_random")
         && params.getBoolean("pastry_socket_use_own_random")) {
       if (params.contains("pastry_socket_random_seed")
@@ -245,259 +258,244 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
-  public SocketPastryNodeFactory(NodeIdFactory nf, int startPort,
-      Environment env) throws IOException {
-    this(nf, null, startPort, env, null);
+  // ********************** abstract methods **********************
+  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
+    SocketNodeHandleFactory pnhf = (SocketNodeHandleFactory)nhf;
+    MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)localNodeInfo;
+    return pnhf.getNodeHandle(proxyAddress, environment.getTimeSource().currentTimeMillis(), pn.getNodeId());
   }
-
-  /**
-   * This method returns the routes a remote node is using
-   * 
-   * @param handle The node to connect to
-   * @return The leafset of the remote node
-   */
-  public SourceRoute[] getRoutes(NodeHandle handle, NodeHandle local)
-      throws IOException {
-    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
-
-    RoutesResponseMessage lm = (RoutesResponseMessage) getResponse(wHandle
-        .getAddress(addressList), new RoutesRequestMessage());
-
-    return lm.getRoutes();
+  
+  public NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) {
+    return new SocketNodeHandleFactory(pn);
   }
+  
+  public NodeHandleAdapter getNodeHanldeAdapter(
+      TLPastryNode pn, 
+      NodeHandleFactory handleFactory2, 
+      TLDeserializer deserializer) throws IOException {
 
-  /**
-   * This method returns the remote leafset of the provided handle to the
-   * caller, in a protocol-dependent fashion. Note that this method may block
-   * while sending the message across the wire.
-   * 
-   * @param handle The node to connect to
-   * @return The leafset of the remote node
-   */
-  public LeafSet getLeafSet(NodeHandle handle) throws IOException {
-    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
-
-    LeafSetResponseMessage lm = (LeafSetResponseMessage) getResponse(wHandle
-        .getAddress(addressList), new LeafSetRequestMessage());
-
-    return lm.getLeafSet();
-  }
-
-  public CancellableTask getLeafSet(NodeHandle handle, final Continuation c) {
-    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
-
-    return getResponse(wHandle.getAddress(addressList), new LeafSetRequestMessage(),
-        new Continuation() {
-          public void receiveResult(Object result) {
-            LeafSetResponseMessage lm = (LeafSetResponseMessage) result;
-            c.receiveResult(lm.getLeafSet());
-          }
-
-          public void receiveException(Exception result) {
-            c.receiveException(result);
-          }
-        });
-  }
-
-  /**
-   * This method returns the remote route row of the provided handle to the
-   * caller, in a protocol-dependent fashion. Note that this method may block
-   * while sending the message across the wire.
-   * 
-   * @param handle The node to connect to
-   * @param row The row number to retrieve
-   * @return The route row of the remote node
-   */
-  public RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException {
-    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
-
-    RouteRowResponseMessage rm = (RouteRowResponseMessage) getResponse(wHandle
-        .getAddress(addressList), new RouteRowRequestMessage(row));
-
-    return rm.getRouteRow();
-  }
-
-  public CancellableTask getRouteRow(NodeHandle handle, int row,
-      final Continuation c) {
-    SocketNodeHandle wHandle = (SocketNodeHandle) handle;
-
-    return getResponse(wHandle.getAddress(addressList), new RouteRowRequestMessage(row),
-        new Continuation() {
-          public void receiveResult(Object result) {
-            RouteRowResponseMessage rm = (RouteRowResponseMessage) result;
-            c.receiveResult(rm.getRouteRow());
-          }
-
-          public void receiveException(Exception result) {
-            c.receiveException(result);
-          }
-        });
-  }
-
-  /**
-   * This method determines and returns the proximity of the current local node
-   * to the provided NodeHandle. This will need to be done in a protocol-
-   * dependent fashion and may need to be done in a special way.
-   * 
-   * @param handle The handle to determine the proximity of
-   * @param local DESCRIBE THE PARAMETER
-   * @return The proximity of the provided handle
-   */
-  public int getProximity(NodeHandle local, NodeHandle handle) {
-    EpochInetSocketAddress lAddress = ((SocketNodeHandle) local)
-        .getEpochAddress();
-    EpochInetSocketAddress rAddress = ((SocketNodeHandle) handle)
-        .getEpochAddress();
-
-    // lAddress = new EpochInetSocketAddress(new InetSocketAddress(lAddress
-    // .getAddress().getAddress(), lAddress.getAddress().getPort() + 1));
-
-    // if this is a request for an old version of us, then we return
-    // infinity as an answer
-    if (lAddress.getAddress(addressList).equals(rAddress.getAddress(addressList))) {
-      return SocketNodeHandle.DEFAULT_PROXIMITY;
-    }
-
-    DatagramSocket socket = null;
-    SourceRoute route = SourceRoute
-        .build(new EpochInetSocketAddress[] { rAddress });
-
-    try {
-      socket = new DatagramSocket(lAddress.getAddress(addressList).getPort());
-      socket.setSoTimeout(5000);
-
-      // byte[] data = PingManager.addHeader(route, new PingMessage(route, route
-      // .reverse(lAddress), environment.getTimeSource().currentTimeMillis()),
-      // lAddress, environment, logger);
-
-      SocketBuffer sb = new SocketBuffer(lAddress, route, new PingMessage(/*
-                                                                           * route,
-                                                                           * route
-                                                                           * .reverse(lAddress),
-                                                                           */environment.getTimeSource().currentTimeMillis()));
-
-      if (logger.level <= Logger.FINE)
-        logger.log("Sending Ping to " + rAddress + " from " + lAddress);
-      socket.send(new DatagramPacket(sb.getBuffer().array(), sb.getBuffer()
-          .limit(), rAddress.getAddress(addressList)));
-
-      long start = environment.getTimeSource().currentTimeMillis();
-      socket.receive(new DatagramPacket(new byte[10000], 10000));
-      return (int) (environment.getTimeSource().currentTimeMillis() - start);
-    } catch (IOException e) {
-      if (logger.level <= Logger.FINE) logger.logException("Error in getProximity("+local+","+handle+") ",e);
-      return SocketNodeHandle.DEFAULT_PROXIMITY;
-    } finally {
-      if (socket != null)
-        socket.close();
-    }
-  }
-
-  /**
-   * Way to generate a NodeHandle with a maximum timeout to receive the result.
-   * Helper funciton for using the non-blocking version. However this method
-   * behaves as a blocking call.
-   * 
-   * @param address
-   * @param timeout maximum time in millis to return the result. <= 0 will use
-   *          the blocking version.
-   * @return
-   */
-  public NodeHandle generateNodeHandle(InetSocketAddress address, int timeout) {
-    if (timeout <= 0)
-      return generateNodeHandle(address);
-
-    TimerContinuation c = new TimerContinuation();
-
-    CancellableTask task = generateNodeHandle(address, c);
-
-    if (task == null)
-      return null;
-
-    synchronized (c) {
-      try {
-        c.wait(timeout);
-      } catch (InterruptedException ie) {
-        return null;
-      }
-    }
-    task.cancel();
-
-    if (logger.level <= Logger.FINER)
-      logger.log("SPNF.generateNodeHandle() returning " + c.ret
-          + " after trying to contact " + address);
-
-    return (NodeHandle) c.ret;
-  }
-
-  static class TimerContinuation implements Continuation {
-    public Object ret = null;
-    public Exception exception = null;
+    SocketNodeHandle localhandle = (SocketNodeHandle)pn.getLocalHandle();
+    final SocketNodeHandleFactory handleFactory = (SocketNodeHandleFactory)handleFactory2;
     
-    public void receiveResult(Object result) {
-      synchronized (this) {
-        ret = result;
-        this.notify();
+    MultiInetSocketAddress localAddress = localhandle.eaddress;
+    MultiInetSocketAddress proxyAddress = localAddress;
+    
+    WireTransportLayer wtl = new WireTransportLayerImpl(localAddress.getInnermostAddress(),environment, null);    
+
+    MagicNumberTransportLayer<InetSocketAddress> mntl = 
+      new MagicNumberTransportLayer<InetSocketAddress>(wtl,environment,null,PASTRY_MAGIC_NUMBER, 5000);
+
+    MultiInetAddressTransportLayer etl = new MultiInetAddressTransportLayerImpl(localAddress, wtl, environment, null, null);
+    
+    MultiAddressSourceRouteFactory esrFactory = new MultiAddressSourceRouteFactory();
+    SourceRouteTransportLayer<MultiInetSocketAddress> srl = 
+      new SourceRouteTransportLayerImpl<MultiInetSocketAddress>(esrFactory,etl,environment, null);
+
+    SimpleOutputBuffer buf = new SimpleOutputBuffer();
+    localhandle.serialize(buf);
+    byte[] localHandleBytes = new byte[buf.getWritten()];
+    System.arraycopy(buf.getBytes(), 0, localHandleBytes, 0, localHandleBytes.length);
+    
+    IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>> serializer = new IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
+      public byte[] serialize(TransportLayerNodeHandle<MultiInetSocketAddress> i) throws IOException {
+        SimpleOutputBuffer buf = new SimpleOutputBuffer();
+        i.serialize(buf);
+        byte[] ret = new byte[buf.getWritten()];
+        System.arraycopy(buf.getBytes(), 0, ret, 0, ret.length);
+
+        return ret;
       }
+
+      public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(ByteBuffer m) throws IOException {
+        SimpleInputBuffer buf = new SimpleInputBuffer(m.array(), m.position());
+        return handleFactory.getTLInterface().readNodeHandle(buf);
+      }    
+    };
+    
+    IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage, SourceRoute<MultiInetSocketAddress>> identity = 
+      new IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage, SourceRoute<MultiInetSocketAddress>>(
+          localHandleBytes, serializer, 
+          new NodeChangeStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>, SourceRoute<MultiInetSocketAddress>>(){
+            public boolean canChange(
+                TransportLayerNodeHandle<MultiInetSocketAddress> oldDest, 
+                TransportLayerNodeHandle<MultiInetSocketAddress> newDest, 
+                SourceRoute<MultiInetSocketAddress> i) {
+//              if (false) logger.log("");
+//              if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+")");
+              if (newDest.getAddress().equals(i.getLastHop())) {
+//              if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+") 1");
+                if (newDest.getEpoch() > oldDest.getEpoch()) {
+//                  if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+") 2");
+                  return true;                  
+                }
+              }
+              return false;
+              
+//            if (false) logger.log("");
+//            if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+")");
+//            return ((newDest.getAddress().equals(i.getLastHop()) && (newDest.getEpoch() > oldDest.getEpoch());
+            }          
+          }, environment);
+    
+    identity.initLowerLayer(srl);
+    LowerIdentity<SourceRoute<MultiInetSocketAddress>, ByteBuffer> lowerIdentityLayer = identity.getLowerIdentity();
+    
+    int checkDeadThrottle = environment.getParameters().getInt("pastry_socket_srm_check_dead_throttle"); // 300000
+    LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>> ltl = 
+      new LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>>(lowerIdentityLayer,environment, null, checkDeadThrottle);
+    
+    
+    LeafSetNHStrategy nhStrategy = new LeafSetNHStrategy();
+    nhStrategy.setLeafSet(pn.getLeafSet());
+
+    SimpleSourceRouteStrategy<MultiInetSocketAddress> srStrategy = 
+      new SimpleSourceRouteStrategy<MultiInetSocketAddress>(proxyAddress,esrFactory,nhStrategy,environment);
+//    TransportLayer<EpochInetSocketAddress, ByteBuffer> srm = 
+    MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>> prox = 
+      new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(ltl);
+    SourceRouteManager<MultiInetSocketAddress> srm = 
+      new SourceRouteManagerImpl<MultiInetSocketAddress>(esrFactory,ltl,ltl,ltl,prox,environment,srStrategy);
+    
+    IdFactory idFactory = new IdFactory(){    
+      public rice.p2p.commonapi.Id build(InputBuffer buf) throws IOException {
+        return Id.build(buf);
+      }    
+    };
+    
+    PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 
+      new PriorityTransportLayerImpl<MultiInetSocketAddress>(srm,srm,environment,2048,null);
+    
+    CommonAPITransportLayer<MultiInetSocketAddress> commonAPItl = 
+      new CommonAPITransportLayerImpl<MultiInetSocketAddress>(
+          localhandle, 
+//          srm,
+          priorityTL, 
+          srm,
+          srm, 
+          idFactory, 
+          handleFactory.getTLInterface(),
+          deserializer,
+          environment); 
+    
+    identity.initUpperLayer(commonAPItl, commonAPItl, commonAPItl);    
+    
+    NodeHandleAdapter nha = new NodeHandleAdapter(
+        identity.getUpperIdentity(), 
+        identity.getUpperIdentity(), 
+        identity.getUpperIdentity(), 
+        new TLBootstrapper(pn, identity.getUpperIdentity(), handleFactory));
+
+    return nha;
+  }
+  
+  class TLBootstrapper implements Bootstrapper<InetSocketAddress>
+  //, LivenessListener<TransportLayerNodeHandle<EpochInetSocketAddress>> 
+  {
+    TLPastryNode pn;
+    TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl;
+    SocketNodeHandleFactory handleFactory;
+//    InetSocketAddress first;
+    
+    public TLBootstrapper(TLPastryNode pn, 
+        TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl, 
+        SocketNodeHandleFactory handleFactory) {
+      this.pn = pn;
+      this.tl = tl;
+      this.handleFactory = handleFactory;
     }
 
-    public void receiveException(Exception result) {
-      synchronized (this) {
-        this.exception = result;
-        this.notify();
+    public void boot(Collection<InetSocketAddress> bootaddresses) {
+      if (bootaddresses == null) bootaddresses = Collections.EMPTY_LIST;
+      final Collection<SocketNodeHandle> tempBootHandles = new ArrayList<SocketNodeHandle>(bootaddresses.size());
+      final Collection<rice.pastry.NodeHandle> bootHandles = 
+        new HashSet<rice.pastry.NodeHandle>();
+//      final Collection<TransportLayerNodeHandle<MultiInetSocketAddress>> bootHandles = 
+//        new HashSet<TransportLayerNodeHandle<MultiInetSocketAddress>>();
+      
+      TransportLayerNodeHandle<MultiInetSocketAddress> local = tl.getLocalIdentifier();
+      InetSocketAddress localAddr = local.getAddress().getInnermostAddress();
+      
+      LivenessListener<NodeHandle> listener = 
+        new LivenessListener<NodeHandle>() {
+          public void livenessChanged(NodeHandle i2, int val) {
+            SocketNodeHandle i = (SocketNodeHandle)i2;
+            if (logger.level <= Logger.FINE) logger.log("livenessChanged("+i+","+val+")");
+//            System.out.println("here");
+            if (val <= LIVENESS_SUSPECTED && i.getEpoch() != 0L) {
+              synchronized(bootHandles) {
+                bootHandles.add((SocketNodeHandle)i);
+                if (bootHandles.size() == tempBootHandles.size()) {
+                  bootHandles.notify();
+                }
+              }
+            }
+          }        
+        };
+      
+      pn.getLivenessProvider().addLivenessListener(listener);
+
+      for (InetSocketAddress addr : bootaddresses) { 
+        if (logger.level <= Logger.FINER) logger.log("addr:"+addr+" local:"+localAddr);
+        if (!addr.equals(localAddr)) {
+          tempBootHandles.add(handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), 0, Id.build()));
+        }
       }
+            
+      for (SocketNodeHandle h : tempBootHandles) {
+        pn.getLivenessProvider().checkLiveness(h, null);
+      }
+
+      synchronized(bootHandles) {
+        try {
+          if (bootHandles.size() < tempBootHandles.size()) {          
+            bootHandles.wait(10000);
+          }
+        } catch (InterruptedException ie) {
+          return;
+        }
+      }
+      
+      pn.getLivenessProvider().removeLivenessListener(listener);
+      
+      pn.doneNode(bootHandles);
+//      // use the WrongEpochMessage to fetch the identity
+//      logger.log("boot");
+//      first = bootaddresses.iterator().next();
+//      tl.addLivenessListener(this);
+//      logger.log("boot:"+first);
+//      tl.checkLiveness((TLNodeHandle)handleFactory.getNodeHandle(new EpochInetSocketAddress(first), Id.build()));
     }
+
+//    public void livenessChanged(TransportLayerNodeHandle<EpochInetSocketAddress> i, int val) {
+//      if (i.getAddress().equals(first)) {
+//        if (val != LivenessTransportLayer.LIVENESS_DEAD_FOREVER) {
+//          logger.log("Should not happen: livenessChanged("+i+","+val+")");
+//          return;
+//        }
+//        // now we have the NodeHandle
+//        
+//        
+//        tl.removeLivenessListener(this);
+//      }
+//    }    
+  }
+  
+  public NodeHandle getNodeHandle(InetSocketAddress bootstrap, int i) {
+    return getNodeHandle(bootstrap);
   }
 
-  /**
-   * Method which contructs a node handle (using the socket protocol) for the
-   * node at address NodeHandle.
-   * 
-   * @param address The address of the remote node.
-   * @return A NodeHandle cooresponding to that address
-   */
-  public NodeHandle generateNodeHandle(InetSocketAddress address) {
-    // send nodeId request to remote node, wait for response
-    // allocate enought bytes to read a node handle
-    if (logger.level <= Logger.FINE)
-      logger.log("Socket: Contacting bootstrap node " + address);
-
-    try {
-      NodeIdResponseMessage rm = (NodeIdResponseMessage) getResponse(address,
-          new NodeIdRequestMessage());
-
-      return new SocketNodeHandle(new EpochInetSocketAddress(address, rm
-          .getEpoch()), rm.getNodeId());
-    } catch (IOException e) {
-      if (logger.level <= Logger.FINE) {
-        logger.logException("Error connecting to address " + address + ": ", e);
-      } else {
-        if (logger.level <= Logger.WARNING)
-          logger.log("Error connecting to address " + address + ": " + e);
-      }
-      return null;
-    }
+  public NodeHandle getNodeHandle(InetSocketAddress bootstrap) {
+    return new BogusNodeHandle(bootstrap);
   }
 
-  public CancellableTask generateNodeHandle(final InetSocketAddress address,
-      final Continuation c) {
-    if (logger.level <= Logger.FINE)
-      logger.log("Socket: Contacting bootstrap node " + address);
-
-    return getResponse(address, new NodeIdRequestMessage(), new Continuation() {
-      public void receiveResult(Object result) {
-        NodeIdResponseMessage rm = (NodeIdResponseMessage) result;
-        c.receiveResult(new SocketNodeHandle(new EpochInetSocketAddress(
-            address, rm.getEpoch()), rm.getNodeId()));
-      }
-
-      public void receiveException(Exception result) {
-        if (logger.level <= Logger.WARNING)
-          logger.log("Error connecting to address " + address + ": " + result);
-        c.receiveException(result);
-      }
-    });
+  public void getNodeHandle(InetSocketAddress[] bootstraps, Continuation c) {
+    c.receiveResult(getNodeHandle(bootstraps, 0));
   }
+
+  public NodeHandle getNodeHandle(InetSocketAddress[] bootstraps, int int1) {
+    return new BogusNodeHandle(bootstraps);
+  }
+
 
   /**
    * Method which creates a Pastry node from the next port with a randomly
@@ -507,12 +505,26 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(NodeHandle bootstrap) {
-    // if (bootstrap == null) {
-    // return newNode(bootstrap, NodeId.buildNodeId());
-    // }
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
 
+//  @Override
+//  public PastryNode newNode(Id id) throws IOException {
+//    return newNode(id, null, true);
+//  }
+
+
+  /**
+   * Method which creates a Pastry node from the next port with the specified nodeId 
+   * (or one generated from the NodeIdFactory if not specified)
+   * 
+   * @param bootstrap Node handle to bootstrap from.
+   * @return A node with a random ID and next port number.
+   */
+  public PastryNode newNode(NodeHandle bootstrap, InetSocketAddress proxy) {
+    return newNode(bootstrap, nidFactory.generateNodeId(), proxy);
+  }
+  
   /**
    * Method which creates a Pastry node from the next port with the specified nodeId 
    * (or one generated from the NodeIdFactory if not specified)
@@ -524,16 +536,24 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
   public PastryNode newNode(final NodeHandle bootstrap, Id nodeId) {
     return newNode(bootstrap, nodeId, null);
   }
-
+  
   /**
    * Method which creates a Pastry node from the next port with the specified nodeId 
    * (or one generated from the NodeIdFactory if not specified)
    * 
    * @param bootstrap Node handle to bootstrap from.
+   * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
    * @return A node with a random ID and next port number.
    */
-  public PastryNode newNode(NodeHandle bootstrap, InetSocketAddress proxy) {
-    return newNode(bootstrap, nidFactory.generateNodeId(), proxy);
+  public PastryNode newNode(NodeHandle nodeHandle, Id id, InetSocketAddress proxyAddress) {
+    PastryNode n = newNode(id, proxyAddress);
+    if (nodeHandle == null) {
+      n.getBootstrapper().boot(null); 
+    } else {
+      BogusNodeHandle bnh = (BogusNodeHandle)nodeHandle;
+      n.getBootstrapper().boot(bnh.addresses);
+    }
+    return n;
   }
 
   /**
@@ -546,10 +566,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    *          behind NATs
    * @return A node with a random ID and next port number.
    */
-  public synchronized PastryNode newNode(NodeHandle bootstrap, Id nodeId,
+  public synchronized PastryNode newNode(Id nodeId,
       InetSocketAddress pAddress) {
     try {
-      return newNode(bootstrap, nodeId, pAddress, true); // fix the method just
+      return newNode(nodeId, pAddress, true); // fix the method just
                                                           // below if you change
                                                           // this
     } catch (BindException e) {
@@ -561,7 +581,7 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
           "pastry_socket_increment_port_after_construction")) {
         port++;
         try {
-          return newNode(bootstrap, nodeId, pAddress); // recursion, this will
+          return newNode(nodeId, pAddress); // recursion, this will
                                                         // prevent from things
                                                         // getting too out of
                                                         // hand in
@@ -590,21 +610,10 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     }
   }
 
-  /**
-   * Method which creates a Pastry node from the next port with the specified nodeId 
-   * (or one generated from the NodeIdFactory if not specified)
-   * 
-   * @param bootstrap Node handle to bootstrap from.
-   * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
-   * @param pAddress The address to claim that this node is at - used for proxies
-   *          behind NATs
-   * @param throwException if true, the method will throw an exception if it can't fill the request, if false, it will try another port/address than specified 
-   * @return A node with a random ID and next port number.
-   */
-  public synchronized PastryNode newNode(NodeHandle bootstrap, Id nodeId,
+  protected synchronized PastryNode newNode(Id nodeId,
       InetSocketAddress pAddress, boolean throwException) throws IOException {
     if (!throwException)
-      return newNode(bootstrap, nodeId, pAddress); // yes, this is sort of
+      return newNode(nodeId, pAddress); // yes, this is sort of
                                                     // bizarre
     // the idea is that we can't throw an exception by default because it will
     // break reverse compatibility
@@ -613,11 +622,11 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     // it will be called with true, but will be
     // wrapped with the above function which will catch the exception.
     // -Jeff May 12, 2006
-    if (bootstrap == null)
-      if (logger.level <= Logger.WARNING)
-        logger
-            .log("No bootstrap node provided, starting a new ring binding to address "
-                + localAddress + ":" + port + "...");
+//    if (bootstrap == null)
+//      if (logger.level <= Logger.WARNING)
+//        logger
+//            .log("No bootstrap node provided, starting a new ring binding to address "
+//                + localAddress + ":" + port + "...");
 
     // this code builds a different environment for each PastryNode
     Environment environment = this.environment;
@@ -653,487 +662,21 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
     // be different every time.
     long epoch = random.nextLong();
 
-    EpochInetSocketAddress localAddress = null;
-    EpochInetSocketAddress proxyAddress = null;
-
-    // getNearest uses the port inside the SNH, so this needs to be the local
-    // address
-    NodeHandle[] nearest; // = getNearest(temp, bootstrap);
-
-    final SocketPastryNode pn = new SocketPastryNode(nodeId, environment);
-
-    environment.addDestructable(pn);
+    MultiInetSocketAddress localAddress = null;
+    MultiInetSocketAddress proxyAddress = null;
+    localAddress = getEpochAddress(port);
+    proxyAddress = localAddress;
     
-    SocketSourceRouteManager srManager = null;
+    if (environment.getParameters().getBoolean(
+        "pastry_socket_increment_port_after_construction"))
+      port++; // this statement must go after the construction of srManager
+              // because the
 
-    try {
-        localAddress = getEpochAddress(port, epoch);
-                
-        boolean probeForExternalAddress = environment.getParameters().getBoolean("probe_for_external_address");
-        if (pAddress == null) {
-          if (environment.getParameters().contains("external_address")) {
-            pAddress = environment.getParameters().getInetSocketAddress("external_address");
-          } else {
-            if (probeForExternalAddress) {
-              int timeout = environment.getParameters().getInt("pastry_proxy_connectivity_timeout");
-              int tries = environment.getParameters().getInt("pastry_proxy_connectivity_tries");
-              if (bootstrap == null) {
-                throw new IOException("Cannot probe for external address without a bootstrap node to use as a probe target");
-              }
-              
-              InetSocketAddress[] verifyAddresses = new InetSocketAddress[1];
-              verifyAddresses[0] = ((SocketNodeHandle)bootstrap).eaddress.address[0]; // if the bootstrap is going to be used to detect the external address, we have to use its internet address
-              pAddress = verifyConnection(timeout, tries, localAddress.getInnermostAddress(), verifyAddresses, environment, logger);
-            }
-          }
-        }
+    TLPastryNode pn = nodeHandleHelper(nodeId, environment, proxyAddress);
         
-        // pAddress is null only if !probeForExternalAddress, but may not be null
-        // proxyAddress is null
-        if (!probeForExternalAddress) {
-          findFireWallIfNecessary();
-          if (pAddress == null) {
-            // may need to find and set the firewall
-            if (natHandler.getFireWallExternalAddress() == null) {
-              proxyAddress = localAddress;
-            } else {
-              // configure the firewall if necessary, can be any port, start with
-              // the freepastry port
-              int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port, firewallSearchTries, firewallAppName);
-              natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-              proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{new InetSocketAddress(
-                  natHandler.getFireWallExternalAddress(), availableFireWallPort), localAddress.getInnermostAddress()}, epoch);
-            }
-          } else {
-            // configure the firewall if necessary, but to the specified port
-            if (natHandler.getFireWallExternalAddress() != null) {
-              int availableFireWallPort = natHandler.findAvailableFireWallPort(port,
-                  pAddress.getPort(), firewallSearchTries, firewallAppName);
-              if (availableFireWallPort == pAddress.getPort()) {
-                natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-              } else {
-                // decide how to handle this
-                switch (getFireWallPolicyVariable("nat_state_policy")) {
-                  case OVERWRITE:
-                    natHandler.openFireWallPort(port, pAddress.getPort(), firewallAppName);
-                    break;
-                  case FAIL:
-                    // todo: would be useful to pass the app that is bound to that
-                    // port
-                    throw new BindException(
-                        "Firewall is already bound to the requested port:"
-                            + pAddress);
-                  case USE_DIFFERENT_PORT:
-                    natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-                    pAddress = new InetSocketAddress(pAddress.getAddress(),
-                        availableFireWallPort);
-                    break;
-                }
-              }
-            }
-            proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);
-          }
-        } else {
-          // this is a bug fix in case there isn't a different external address
-          if (pAddress.equals(localAddress.getInnermostAddress())) {
-            proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{localAddress.getInnermostAddress()}, epoch);          
-          } else {
-            proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);          
-          }
-//          proxyAddress = new EpochInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()}, epoch);          
-        }
-        
-        updateAddressList(proxyAddress);
-        
-        SocketNodeHandle temp = new SocketNodeHandle(proxyAddress,
-            nodeId);
-        nearest = getNearest(temp, bootstrap);
-
-        srManager = new SocketSourceRouteManager(pn, localAddress,
-            proxyAddress, random); // throws an exception if cant bind
-        if (environment.getParameters().getBoolean(
-            "pastry_socket_increment_port_after_construction"))
-          port++; // this statement must go after the construction of srManager
-                  // because the
-    } catch (IOException ioe) {
-      // this will usually be a bind exception
-
-      throw ioe;
-//    } catch (UPNPResponseException ure) {
-//      throw new RuntimeException(ure);
-    }
-
-    // calling method can decide what to do with port incrementation if can't
-    // bind
-
-    pn.setSocketSourceRouteManager(srManager);
-    SocketNodeHandle localhandle = new SocketNodeHandle(proxyAddress, nodeId);
-    localhandle = (SocketNodeHandle) pn.coalesce(localhandle);
-    MessageDispatch msgDisp = new MessageDispatch(pn);
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
-        pn);
-    LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
-
-    StandardRouter router = new StandardRouter(pn);
-
-    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn,
-        routeTable, environment);
-
-    pn.setElements(localhandle, msgDisp, leafSet, routeTable);
-    router.register();
-    rsProtocol.register();
-    pn.setSocketElements(proxyAddress, leafSetMaintFreq, routeSetMaintFreq);
-
-    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-        localhandle, leafSet, routeTable);
-    lsProtocol.register();
-    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-        localhandle, routeTable, leafSet, lsProtocol);
-    jProtocol.register();
-
-    if (bootstrap != null) {
-      bootstrap = (SocketNodeHandle) pn.coalesce(bootstrap);
-
-      switch (getFireWallPolicyVariable("firewall_test_policy")) {
-        case NEVER:
-          break;
-        case PREFIX_MATCH:
-          if (!localAddressIsProbablyNatted())
-            break;
-        case ALWAYS:
-        default:
-          ExternalContinuation ec = new ExternalContinuation();
-          pn.testFireWall(bootstrap, ec, 5000, 3);
-          ec.sleep();
-          Boolean resultB = (Boolean) ec.getResult();
-          boolean result = resultB.booleanValue();
-          if (result) {
-            // continue
-          } else { // should change to IOException in FP 2.0
-            throw new RuntimeException("Firewall test failed for local:"
-                + proxyAddress.getInnermostAddress() + " external:"
-                + proxyAddress.address[0]);
-          }
-      } // switch
-    }
-
-    // asdf // why is this here?
-//    try {
-//      Thread.sleep(1000);
-//    } catch (InterruptedException e) {
-//    }
-
-//    NodeHandle nearest = getNearest(temp, bootstrap);
-    if (nearest != null)
-      if (nearest.length > 0) {
-        for(int i = 0; i < nearest.length; i++) {
-          nearest[i] = pn.coalesce(nearest[i]);
-        }
-      }
-    
-    pn.doneNode(nearest);
-    // pn.doneNode(bootstrap);
-
     return pn;
   }
-
-  /**
-   * This list is the list of addresses of the local computer.  This is needed
-   * to get correct routing if you are on the same LAN, and your router doesn't
-   * support hairpinning.
-   * 
-   * @param proxyAddress
-   */
-  private void updateAddressList(EpochInetSocketAddress proxyAddress) {
-    addressList = new InetAddress[proxyAddress.address.length];
-    for (int i = 0; i < addressList.length; i++) {
-      addressList[i] = proxyAddress.address[i].getAddress(); 
-    }
-  }
-
-  MessageDeserializer deserializer = new SPNFDeserializer();
-
-  // this one doesn't properly coalsece NodeHandles, but when this is used,
-  // there is no PastryNode yet!
-  NodeHandleFactory nhf = new NodeHandleFactory() {
-    public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
-      return SocketNodeHandle.build(buf);
-    }
-  };
-
-  class SPNFDeserializer implements MessageDeserializer {
-    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type,
-        int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
-      switch (type) {
-        case NodeIdResponseMessage.TYPE:
-          return new NodeIdResponseMessage(buf);
-        case LeafSetResponseMessage.TYPE:
-          return new LeafSetResponseMessage(buf, nhf);
-        case RoutesResponseMessage.TYPE:
-          return new RoutesResponseMessage(buf);
-        case RouteRowResponseMessage.TYPE:
-          return new RouteRowResponseMessage(buf, nhf, null);
-        default:
-          if (logger.level <= Logger.SEVERE)
-            logger.log("SERIOUS ERROR: Received unknown message address: " + 0
-                + "type:" + type);
-          return null;
-      }
-    }
-  }
-
-  protected void findFireWallIfNecessary() throws IOException {
-    switch (getFireWallPolicyVariable("nat_search_policy")) {
-      case NEVER:
-        return;
-      case PREFIX_MATCH:
-        if (!localAddressIsProbablyNatted())
-          return;
-      case ALWAYS:
-      default:
-        natHandler.findFireWall(localAddress);
-    }
-  }
-
-  protected int getFireWallPolicyVariable(String key) {
-    String val = environment.getParameters().getString(key);
-    if (val.equalsIgnoreCase("prefix"))
-      return PREFIX_MATCH;
-    if (val.equalsIgnoreCase("change"))
-      return USE_DIFFERENT_PORT;
-    if (val.equalsIgnoreCase("never"))
-      return NEVER;
-    if (val.equalsIgnoreCase("overwrite"))
-      return OVERWRITE;
-    if (val.equalsIgnoreCase("always"))
-      return ALWAYS;
-    if (val.equalsIgnoreCase("fail"))
-      return FAIL;
-    throw new RuntimeException("Unknown value " + val + " for " + key);
-  }
-
-  /**
-   * @return true if ip address matches firewall prefix
-   */
-  protected boolean localAddressIsProbablyNatted() {
-    String ip = localAddress.getHostAddress();
-    String nattedNetworkPrefixes = environment.getParameters().getString(
-        "nat_network_prefixes");
-
-    String[] nattedNetworkPrefix = nattedNetworkPrefixes.split(";");
-    for (int i = 0; i < nattedNetworkPrefix.length; i++) {
-      if (ip.startsWith(nattedNetworkPrefix[i])) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * This method anonymously sends the given message to the remote address,
-   * blocks until a response is received, and then closes the socket and returns
-   * the response.
-   * 
-   * @param address The address to send to
-   * @param message The message to send
-   * @return The response
-   * @exception IOException DESCRIBE THE EXCEPTION
-   */
-  protected Message getResponse(InetSocketAddress address, Message message)
-      throws IOException {
-    // create reader and writer
-    SocketChannelWriter writer;
-    SocketChannelReader reader;
-    writer = new SocketChannelWriter(environment, SourceRoute
-        .build(new EpochInetSocketAddress(address,
-            EpochInetSocketAddress.EPOCH_UNKNOWN)));
-    reader = new SocketChannelReader(environment, SourceRoute
-        .build(new EpochInetSocketAddress(address,
-            EpochInetSocketAddress.EPOCH_UNKNOWN)));
-
-    // bind to the appropriate port
-    SocketChannel channel = SocketChannel.open();
-    channel.configureBlocking(true);
-    channel.socket().connect(address, 20000);
-    channel.socket().setSoTimeout(20000);
-
-    writer.enqueue(TOTAL_HEADER);
-    writer.enqueue(message);
-    writer.write(channel);
-    SocketBuffer o = null;
-
-    while (o == null) {
-      o = reader.read(channel);
-    }
-
-    if (logger.level <= Logger.FINER)
-      logger.log("SPNF.getResponse(): Closing " + channel);
-    channel.socket().shutdownOutput();
-    channel.socket().close();
-    channel.close();
-    if (logger.level <= Logger.FINER)
-      logger.log("SPNF.getResponse(): Closed " + channel);
-
-    return o.deserialize(deserializer);
-  }
-
-  static final byte[] TOTAL_HEADER;
-  static {
-    TOTAL_HEADER = new byte[SocketCollectionManager.TOTAL_HEADER_SIZE + 4]; // plus
-                                                                            // the
-                                                                            // appId
-    System.arraycopy(SocketCollectionManager.PASTRY_MAGIC_NUMBER, 0,
-        TOTAL_HEADER, 0, SocketCollectionManager.PASTRY_MAGIC_NUMBER.length);
-    // System.arraycopy(new byte[4],0,TOTAL_HEADER,4,4); // version 0 // can
-    // just leave blank zero, cause java zeros everything automatically
-    System.arraycopy(SocketCollectionManager.HEADER_DIRECT, 0, TOTAL_HEADER, 8,
-        SocketCollectionManager.HEADER_SIZE);
-    // System.arraycopy(new byte[4],0,TOTAL_HEADER,12,4); // appId 0 // can just
-    // leave blank zero, cause java zeros everything automatically
-  }
-
-  protected CancellableTask getResponse(final InetSocketAddress address,
-      final Message message, final Continuation c) {
-    // create reader and writer
-    final SocketChannelWriter writer;
-    final SocketChannelReader reader;
-    writer = new SocketChannelWriter(environment, SourceRoute
-        .build(new EpochInetSocketAddress(address,
-            EpochInetSocketAddress.EPOCH_UNKNOWN)));
-    reader = new SocketChannelReader(environment, SourceRoute
-        .build(new EpochInetSocketAddress(address,
-            EpochInetSocketAddress.EPOCH_UNKNOWN)));
-    writer.enqueue(TOTAL_HEADER);
-    try {
-      writer.enqueue(message);
-    } catch (IOException ioe) {
-      c.receiveException(ioe);
-      return null;
-    }
-
-    // bind to the appropriate port
-    try {
-      final SocketChannel channel = SocketChannel.open();
-      channel.configureBlocking(false);
-      final SelectionKey key = environment.getSelectorManager().register(
-          channel, new SelectionKeyHandler() {
-            public void connect(SelectionKey key) {
-              if (logger.level <= Logger.FINE)
-                logger.log("SPNF.getResponse(" + address + "," + message
-                    + ").connect()");
-              try {
-                if (channel.finishConnect())
-                  key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
-
-                if (logger.level <= Logger.FINE)
-                  logger
-                      .log("(SPNF) Found connectable channel - completed connection");
-                // channel.socket().connect(address, 20000);
-                // channel.socket().setSoTimeout(20000);
-              } catch (IOException ioe) {
-                handleException(ioe);
-              }
-            }
-
-            public void read(SelectionKey key) {
-              if (logger.level <= Logger.FINE)
-                logger.log("SPNF.getResponse(" + address + "," + message
-                    + ").read()");
-              try {
-                SocketBuffer o = null;
-
-                while (o == null) {
-                  o = reader.read(channel);
-                }
-                channel.socket().close();
-                channel.close();
-                key.cancel();
-                c.receiveResult(o.deserialize(deserializer));
-              } catch (IOException ioe) {
-                handleException(ioe);
-              }
-            }
-
-            public void write(SelectionKey key) {
-              if (logger.level <= Logger.FINE)
-                logger.log("SPNF.getResponse(" + address + "," + message
-                    + ").write()");
-              try {
-                if (writer.write(channel)) {
-                  key.interestOps(SelectionKey.OP_READ);
-                }
-              } catch (IOException ioe) {
-                handleException(ioe);
-              }
-            }
-
-            public void handleException(Exception e) {
-              try {
-                channel.socket().close();
-                channel.close();
-                channel.keyFor(environment.getSelectorManager().getSelector())
-                    .cancel();
-              } catch (IOException ioe) {
-
-                if (logger.level <= Logger.WARNING)
-                  logger.logException("Error while trying requesting "
-                      + message + " from " + address, e);
-              } finally {
-                c.receiveException(e);
-              }
-            }
-          }, 0);
-
-      if (logger.level <= Logger.FINE)
-        logger.log("(SPNF) Initiating socket connection to address " + address);
-
-      if (channel.connect(address))
-        key.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
-      else
-        key.interestOps(SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE
-            | SelectionKey.OP_READ);
-
-      return new CancellableTask() {
-        public void run() {
-        }
-
-        public boolean cancel() {
-          environment.getSelectorManager().invoke(new Runnable() {
-            public void run() {
-
-              try {
-                synchronized (key) {
-                  channel.socket().close();
-                  channel.close();
-                  // if (logger.level <= Logger.WARNING) {
-                  // if (!environment.getSelectorManager().isSelectorThread()) {
-                  // logger.logException("WARNING: cancelling key:"+key+" on the
-                  // wrong thread.", new Exception("Stack Trace"));
-                  // }
-                  // }
-                  key.cancel();
-                }
-                // return true;
-              } catch (Exception ioe) {
-                if (logger.level <= Logger.WARNING)
-                  logger.logException("Error cancelling task.", ioe);
-                // return false;
-              }
-            }
-          });
-          return true;
-        }
-
-        public long scheduledExecutionTime() {
-          return 0;
-        }
-      };
-    } catch (IOException ioe) {
-      c.receiveException(ioe);
-      return null;
-    }
-  }
-
+  
   /**
    * Method which constructs an InetSocketAddres for the local host with the
    * specifed port number.
@@ -1141,126 +684,17 @@ public class SocketPastryNodeFactory extends DistPastryNodeFactory {
    * @param portNumber The port number to create the address at.
    * @return An InetSocketAddress at the localhost with port portNumber.
    */
-  private EpochInetSocketAddress getEpochAddress(int portNumber, long epoch) {
-    EpochInetSocketAddress result = null;
+  private MultiInetSocketAddress getEpochAddress(int portNumber) {
+    MultiInetSocketAddress result = null;
 
-    result = new EpochInetSocketAddress(new InetSocketAddress(localAddress,
-        portNumber), epoch);
+    result = new MultiInetSocketAddress(new InetSocketAddress(localAddress,
+        portNumber));
     return result;
   }
 
-  /**
-   * Method which can be used to test the connectivity contstrains of the local
-   * node. This (optional) method is designed to be called by applications to
-   * ensure that the local node is able to connect through the network - checks
-   * can be done to check TCP/UDP connectivity, firewall setup, etc...
-   * 
-   * If the method works, then nothing should be done and the method should
-   * return. If an error condition is detected, an exception should be thrown.
-   */
-  public static InetSocketAddress verifyConnection(int timeout,
-      InetSocketAddress local, InetSocketAddress[] existing, Environment env,
-      Logger logger) throws IOException {
-    
-    return verifyConnection(timeout, 1, local, existing, env, logger);
-  }
-  
-  public static InetSocketAddress verifyConnection(int timeout, int tries,
-      InetSocketAddress local, InetSocketAddress[] existingInput, Environment env,
-      Logger logger) throws IOException {
-    
-    // You can't use yourself as the existing node to verify off of, this 
-    // code removes yourself from existingInput, and builds the array "existing"
-    int existingLength = 0;
-    for (int i = 0; i < existingInput.length; i++) {
-      if (existingInput[i].equals(local)) {
-        // don't increment 
-      } else {
-        existingLength++; 
-      }
-    }
-    
-    if (existingLength == 0) {
-      // there is a problem
-      if (existingInput.length == 0) {
-        throw new IllegalArgumentException("verifyConnection("+local+") called without any addresses to connect to.");
-      } else {
-        throw new IllegalArgumentException("verifyConnection("+local+","+existingInput[0]+") called with only self as address to connect to, this is not allowed.");        
-      }
-    }
-      
-    InetSocketAddress[] existing = new InetSocketAddress[existingLength];
-    int index = 0;
-    for (int i = 0; i < existingInput.length; i++) {
-      if (existingInput[i].equals(local)) {
-        // don't add
-      } else {
-        existing[index] = existingInput[i];
-        index++; 
-      }
-    }
-    
-    
-    if (logger.level <= Logger.INFO)
-      logger.log("Verifying connection of local node " + local + " using "
-          + existing[0] + " and " + existing.length + " more");
-    DatagramSocket socket = null;
 
-    try {
-      socket = new DatagramSocket(local);
-//      socket.setSoTimeout(timeout);
-
-      IOException toThrow = null;
-      // retry loop
-      // TODO: need socket to be non-blocking to do this correctly, but do this later, in the meantime, the looping will be outside
-      int subTimeout = timeout/(int)(Math.pow(2,tries)-1); // a function of timeout and tries
-      if (subTimeout < 1) subTimeout = 1;  
-      for (int curTry = 0; curTry < tries; curTry++) {
-        
-        socket.setSoTimeout(subTimeout);
-      // probe each node
-        for (int i = 0; i < existing.length; i++) {
-          // byte[] buf = PingManager
-          // .addHeader(SourceRoute
-          // .build(new EpochInetSocketAddress(existing[i])),
-          // new IPAddressRequestMessage(env.getTimeSource()
-          // .currentTimeMillis()), new EpochInetSocketAddress(local),
-          // env, logger);
-          SocketBuffer sb = new SocketBuffer(
-              new EpochInetSocketAddress(local),
-              SourceRoute.build(new EpochInetSocketAddress(existing[i])),
-              new IPAddressRequestMessage(env.getTimeSource().currentTimeMillis()));
-          DatagramPacket send = new DatagramPacket(sb.getBuffer().array(), sb
-              .getBuffer().limit(), existing[i]);
-          socket.send(send);
-        }
-  
-        DatagramPacket receive = new DatagramPacket(new byte[10000], 10000);
-        try {
-          socket.receive(receive);
-        } catch (SocketTimeoutException e) {
-          toThrow = e;
-        }
-        subTimeout*=2;
-
-//        [39, 64, 117, 58, 0, 0, 0, 0,  1, 2   , 0, 30, 1, -64, -88, 1, 65, 35, 47, -1, -1, -1, -1, -1, -1, -1, -1, 1, -64, -88, 1, 65, 35, 47, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0,  0,  0, 0, 2, 0, 0, 1, 15, -96, 16, 47, 100, ]
-//        | Magic Number  | version   |hop|nhops|length|len| inetaddr      | port  | epoch                         |len| inetaddr      | port  | epoch                         | app addr  |sdr|pri| type|  long timestamp              | 
-//                                                     | EISA  (local)                                             |  SR EISA[]                                                | 
-        int headerLength = 42;
-        if (receive.getLength() > headerLength) {
-          byte[] data = new byte[receive.getLength() - headerLength];
-          System.arraycopy(receive.getData(), headerLength, data, 0, data.length);
-    
-          return ((IPAddressResponseMessage) new SocketBuffer(data, null)
-              .deserialize(new PingManager.PMDeserializer(logger))).getAddress();
-        }
-      } // retry loop
-      throw toThrow;
-      // return ((IPAddressResponseMessage) PingManager.deserialize(data, env,
-      // null, logger)).getAddress();
-    } finally {
-      if (socket != null)
-        socket.close();
-    }
-  }
+  // *************** Delme **************
+  public static InetSocketAddress verifyConnection(int i, InetSocketAddress addr, InetSocketAddress[] addr2, Environment env, Logger l) {
+    return null;
+  }  
 }

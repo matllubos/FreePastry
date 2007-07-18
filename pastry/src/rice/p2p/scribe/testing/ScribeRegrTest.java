@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package rice.p2p.scribe.testing;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.*;
 
 import rice.environment.Environment;
@@ -107,6 +108,9 @@ public class ScribeRegrTest extends CommonAPITest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
+//    System.setOut(new PrintStream("srt.log"));
+//    System.setErr(System.out);
+    
     Environment env = parseArgs(args);
     
     ScribeRegrTest scribeTest = new ScribeRegrTest(env);
@@ -174,7 +178,7 @@ public class ScribeRegrTest extends CommonAPITest {
     PastryNode pn = factory.newNode(getBootstrap(),(rice.pastry.Id)id);
     nodes[NUM_NODES] = pn;
     processNode(NUM_NODES, pn);    
-    System.out.println(pn.getLocalNodeHandle().getId());
+    if (logger.level <= Logger.INFO) logger.log("Adding new root: "+ pn);
     synchronized(nodes[NUM_NODES]) {
       while(!pn.isReady()) {
         try { pn.wait(1000); } catch (InterruptedException ie) {return;}
@@ -731,10 +735,13 @@ public class ScribeRegrTest extends CommonAPITest {
       stepDone(FAILURE, "Expected at least " + (NUM_NODES - 1) + " nodes with parents, found " + numWithParent);
     else
       stepDone(SUCCESS);
-
+    
+//    environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
+    
     stepStart("Killing Nodes");
     for (int i=0; i<NUM_NODES/2; i++) {
-      System.out.println("Killing " + scribes[i].getId());
+//      System.out.println("Killing " + scribes[i].getId());
+      if (logger.level <= Logger.INFO) logger.log("Killing " + nodes[i]);
       scribes[i].destroy();
       kill(i);
       simulate();

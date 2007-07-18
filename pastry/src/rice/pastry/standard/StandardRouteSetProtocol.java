@@ -140,7 +140,7 @@ public class StandardRouteSetProtocol extends PastryAppl {
       RouteSet row[] = routeTable.getRow(reqRow);
       BroadcastRouteRow brr = new BroadcastRouteRow(thePastryNode.getLocalHandle(), row);
       if (logger.level <= Logger.FINER+5) logger.log("Responding to "+rrr+" with "+brr.toStringFull());
-      thePastryNode.send(nh,brr);
+      thePastryNode.send(nh,brr,null,options);
     }
 
     else if (msg instanceof InitiateRouteSetMaintenance) { // request for
@@ -206,8 +206,8 @@ public class StandardRouteSetProtocol extends PastryAppl {
           }
 
           if (logger.level <= Logger.FINE) logger.log("swapping with "+(i+1)+"/"+routeTable.numRows()+" "+(j+1)+"/"+maxTrials+":"+nh);
-          thePastryNode.send(nh,brr);
-          thePastryNode.send(nh,rrr);
+          thePastryNode.send(nh,brr,null,options);
+          thePastryNode.send(nh,rrr,null,options);
           break;
         }
       }

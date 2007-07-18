@@ -41,6 +41,8 @@ import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.*;
 
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -50,9 +52,12 @@ import rice.pastry.NodeSet;
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.routing.RouteMessageNotification;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.SendOptions;
 import rice.pastry.standard.StandardAddress;
+import rice.pastry.transport.PMessageNotification;
+import rice.pastry.transport.PMessageReceipt;
 
 /**
  * This class serves as gluecode, which allows applications written for the common
@@ -145,24 +150,36 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param msg the message to deliver.
    * @param hint the hint
    */
-  public void route(Id key, Message msg, NodeHandle hint) {
-    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
-    routeHelper(key, pm, hint);    
+  public MessageReceipt route(Id key, Message msg, NodeHandle hint) {
+    return route(key, msg, hint, null);
   }
   
-  public void route(Id key, RawMessage msg, NodeHandle hint) {
+  public MessageReceipt route(Id key, Message msg, NodeHandle hint, DeliveryNotification deliverAckToMe) {
+    if (logger.level <= Logger.FINER) logger.log(
+      "[" + thePastryNode + "] route " + msg + " to " + key);
+
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
-    routeHelper(key, pm, hint);
+    return routeHelper(key, pm, hint, deliverAckToMe);
   }
+  
   
   /**
    * This duplication of the above code is to make a fast path for the RawMessage.  Though the codeblock
    * looks identical, it is acually calling a different PEM constructor.
    */
-  private void routeHelper(Id key, PastryEndpointMessage pm, NodeHandle hint) {
+  public MessageReceipt route(Id key, RawMessage msg, NodeHandle hint) {
+    return route(key, msg, hint, null);
+  }
+  public MessageReceipt route(Id key, RawMessage msg, NodeHandle hint, DeliveryNotification deliverAckToMe) {
     if (logger.level <= Logger.FINER) logger.log(
-      "[" + thePastryNode + "] route " + pm.getMessage() + " to " + key);
+        "[" + thePastryNode + "] route " + msg + " to " + key);
 
+    PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
+    return routeHelper(key, pm, hint, deliverAckToMe);
+  }
+  
+  private MessageReceipt routeHelper(Id key, final PastryEndpointMessage pm, final NodeHandle hint, final DeliveryNotification deliverAckToMe) { 
+    if (logger.level <= Logger.FINE) logger.log("routeHelper("+key+","+pm+","+hint+","+deliverAckToMe+").init()");
     if ((key == null) && (hint == null)) {
       throw new InvalidParameterException("key and hint are null!");
     }
@@ -171,17 +188,73 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       noKey = true;
       key = hint.getId();
     }
-    rice.pastry.routing.RouteMessage rm = new rice.pastry.routing.RouteMessage((rice.pastry.Id) key,
-                                                                               pm,
-                                                                               (rice.pastry.NodeHandle) hint,
-                                                                               (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
-                                                                              
+    
+    final rice.pastry.routing.RouteMessage rm = 
+      new rice.pastry.routing.RouteMessage(
+          (rice.pastry.Id) key,
+          pm,
+          (rice.pastry.NodeHandle) hint,
+        (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
+    
+    rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
     rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
     if (noKey) {
-      rm.getOptions().setMultipleHopsAllowed(false); 
+      rm.getOptions().setMultipleHopsAllowed(false);  
       rm.setDestinationHandle((rice.pastry.NodeHandle)hint);
     }
-    thePastryNode.receiveMessage(rm);
+    
+    
+    
+    final Id final_key = key;
+    // TODO: make PastryNode have a router that does this properly, rather than receiveMessage
+    final MessageReceipt ret = new MessageReceipt(){
+      
+      public boolean cancel() {
+        if (logger.level <= Logger.FINE) logger.log("routeHelper("+final_key+","+pm+","+hint+","+deliverAckToMe+").cancel()");
+        return rm.cancel();
+      }
+    
+      public Message getMessage() {
+        return pm.getMessage();
+      }
+    
+      public Id getId() {
+        return final_key;
+      }
+    
+      public NodeHandle getHint() {
+        return hint;
+      }    
+    };
+    
+    // NOTE: Installing this anyway if the LogLevel is high enough is kind of wild, but really useful for debugging
+    if ((deliverAckToMe != null) || (logger.level <= Logger.FINE)) {
+      rm.setRouteMessageNotification(new RouteMessageNotification() {
+        public void sendFailed(rice.pastry.routing.RouteMessage message, Exception e) {
+          if (logger.level <= Logger.FINE) logger.log("routeHelper("+final_key+","+pm+","+hint+","+deliverAckToMe+").sendFailed("+e+")");
+          if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, e);
+        }
+        public void sendSuccess(rice.pastry.routing.RouteMessage message) {
+          if (logger.level <= Logger.FINE) logger.log("routeHelper("+final_key+","+pm+","+hint+","+deliverAckToMe+").sendSuccess()");
+          if (deliverAckToMe != null) deliverAckToMe.sent(ret);
+        }    
+      });
+    }
+    
+    Map<String, Integer> rOptions;
+    if (options == null) {
+      rOptions = new HashMap<String, Integer>(); 
+    } else {
+      rOptions = new HashMap<String, Integer>(options);
+    }
+    rOptions.put(PriorityTransportLayer.OPTION_PRIORITY, pm.getPriority());
+//    logger.log("NumOptions = "+rOptions.size());
+
+    rm.setTLOptions(rOptions);
+        
+    thePastryNode.getRouter().route(rm);
+
+    return ret;
   }
   
 
@@ -404,7 +477,10 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     if (msg instanceof RouteMessage) {
       if (logger.level <= Logger.FINER) logger.log(
           "[" + thePastryNode + "] forward " + msg);
-      return application.forward((RouteMessage) msg);
+      boolean ret = application.forward((RouteMessage) msg);
+      if (logger.level <= Logger.FINEST) logger.log(
+          "[" + thePastryNode + "] forward " + msg + " forwarding?:"+ret);
+      return ret;
     } else {
       return true;
     }
@@ -448,17 +524,17 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       if (logger.level <= Logger.FINER) logger.log(
           "[" + thePastryNode + "] forward " + msg);
       if (application.forward(rm)) {
-        if (rm.nextHop != null) {
-          rice.pastry.NodeHandle nextHop = rm.nextHop;
+        if (rm.getNextHop() != null) {
+          rice.pastry.NodeHandle nextHop = rm.getNextHop();
 
           // if the message is for the local node, deliver it here
           if (getNodeId().equals(nextHop.getNodeId())) {
             PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap(deserializer);
             if (logger.level <= Logger.FINER) logger.log(
                 "[" + thePastryNode + "] deliver " + pMsg + " from " + pMsg.getSenderId());
+            rm.sendSuccess();
             application.deliver(rm.getTarget(), pMsg.getMessage());
-          }
-          else {
+          } else {
             // route the message
             // if getDestHandle() == me, rm destHandle()
             // this message was directed just to me, but now we've decided to forward it, so, 
@@ -467,10 +543,12 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
               if (logger.level <= Logger.WARNING) logger.log("Warning, removing destNodeHandle: "+rm.getDestinationHandle()+" from "+rm);
               rm.setDestinationHandle(null);
             }
-            
-            rm.routeMessage((rice.pastry.NodeHandle)getLocalNodeHandle());
+            thePastryNode.getRouter().route(rm);
           }
         }
+      } else {
+        // forward consumed the message
+        rm.sendSuccess();
       }
       } catch (IOException ioe) {
         if (logger.level <= Logger.SEVERE) logger.logException(this.toString(),ioe); 
@@ -560,8 +638,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 
   public List networkNeighbors(int num) {
     HashSet<NodeHandle> handles = new HashSet<NodeHandle>();    
-    List<NodeHandle> l = (List<NodeHandle>)thePastryNode.getRoutingTable().asList();    
-    Iterator<NodeHandle> i = l.iterator();
+    List<rice.pastry.NodeHandle> l = (List<rice.pastry.NodeHandle>)thePastryNode.getRoutingTable().asList();    
+    Iterator<rice.pastry.NodeHandle> i = l.iterator();
     while(i.hasNext()) {
       handles.add(i.next());
     }
@@ -623,6 +701,12 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     if (set.size() == 0) return false;
     return set.getHandle(0).equals(thePastryNode.getLocalHandle());
   }
+  
+  public void setSendOptions(Map<String, Integer> options) {
+    this.options = options;
+  }
+
+
 }
 
 

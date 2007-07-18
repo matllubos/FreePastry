@@ -57,6 +57,7 @@ import rice.pastry.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.direct.*;
 import rice.pastry.dist.*;
+import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.*;
 import rice.selector.SelectorManager;
 
@@ -309,11 +310,11 @@ public abstract class CommonAPITest {
    */
   protected rice.pastry.NodeHandle getBootstrap() {
     if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
-      return ((DirectPastryNode) nodes[0]).getLocalHandle();
+      return ((PastryNode)nodes[0]).getLocalHandle();
     } else {
       try {
         InetSocketAddress address = params.getInetSocketAddress("commonapi_testing_bootstrap");
-        return ((DistPastryNodeFactory) factory).getNodeHandle(address);
+        return ((SocketPastryNodeFactory) factory).getNodeHandle(address);
       } catch (UnknownHostException uhe) {
         throw new RuntimeException(uhe); 
       }

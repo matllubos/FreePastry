@@ -46,14 +46,14 @@ import rice.p2p.multiring.*;
 
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.dist.DistPastryNodeFactory;
+import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.visualization.*;
-import rice.visualization.Visualization;
 
 public class VisualizationProxy {
     
   protected Ring[] handles;
   
-  protected DistPastryNodeFactory factory;
+  protected SocketPastryNodeFactory factory;
   
   protected Visualization visualization;
     

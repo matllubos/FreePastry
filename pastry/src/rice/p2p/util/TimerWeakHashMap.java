@@ -48,7 +48,7 @@ import rice.selector.*;
  * 
  * @author Jeff Hoye
  */
-public class TimerWeakHashMap extends WeakHashMap {
+public class TimerWeakHashMap<K,V> extends WeakHashMap<K, V> {
 
   int defaultDelay;
   Timer timer;
@@ -69,7 +69,7 @@ public class TimerWeakHashMap extends WeakHashMap {
   }
 
   
-  public Object put(Object key, Object val) {
+  public V put(K key, V val) {
     refresh(key);
     return super.put(key, val);
   }

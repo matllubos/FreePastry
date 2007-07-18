@@ -43,10 +43,12 @@ import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.standard.*;
+import rice.pastry.transport.PMessageReceipt;
 import rice.pastry.routing.*;
 import rice.pastry.leafset.*;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * A PastryAppl is an abstract class that every Pastry application
@@ -68,6 +70,8 @@ public abstract class PastryAppl /*implements Observer*/
   protected int address;
 
   protected Logger logger;
+  
+  protected Map<String, Integer> options;
   
   /**
    * Buffered while node is not ready to prevent inconsistent routing.
@@ -187,6 +191,10 @@ public abstract class PastryAppl /*implements Observer*/
     this.deserializer = deserializer; 
   }
   
+  public MessageDeserializer getDeserializer() {
+    return this.deserializer;
+  }
+  
   /**
    * Called by pastry to deliver a message to this client.
    *
@@ -212,6 +220,7 @@ public abstract class PastryAppl /*implements Observer*/
           // continue to receiveMessage()
         } else {
           if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
+          rm.sendFailed(new NodeIsNotReadyException(thePastryNode.getLocalHandle()));
           // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
 //          RouteMessage rm = (RouteMessage)msg;
 //          rm.routeMessage(this.localNode.getLocalHandle());
@@ -222,7 +231,7 @@ public abstract class PastryAppl /*implements Observer*/
 //      } // synchronized    
 
       try {
-        if (enrouteMessage(rm.unwrap(deserializer), rm.getTarget(), rm.nextHop, rm.getOptions())) {
+        if (enrouteMessage(rm.unwrap(deserializer), rm.getTarget(), rm.getNextHop(), rm.getOptions())) {
           // if getDestHandle() == me, rm destHandle()
           // this message was directed just to me, but now we've decided to forward it, so, 
           // make it generally routable now
@@ -231,7 +240,7 @@ public abstract class PastryAppl /*implements Observer*/
             rm.setDestinationHandle(null);
           }
 
-          rm.routeMessage(thePastryNode.getLocalHandle());
+          thePastryNode.getRouter().route(rm);
         }
       } catch (IOException ioe) {
         throw new RuntimeException("Error deserializing message "+rm,ioe); 
@@ -304,7 +313,7 @@ public abstract class PastryAppl /*implements Observer*/
     // But routeMsgDirect messages *do* need credentials. So do we
     // go back to using options to differentiate from routeMsg?
 
-    thePastryNode.send(dest,msg);
+    thePastryNode.send(dest,msg,null, options);
     return dest.isAlive();
   }
 
@@ -318,13 +327,15 @@ public abstract class PastryAppl /*implements Observer*/
    * @param msg the message to deliver.
    * @param cred credentials that verify the authenticity of the message.
    * @param opt send options that describe how the message is to be routed.
+   * @return 
    */
   public void routeMsg(Id key, Message msg, SendOptions opt) {
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] routemsg " + msg + " to " + key);
     RouteMessage rm = new RouteMessage(key, msg, opt,
         (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
-    thePastryNode.receiveMessage(rm);
+    rm.setTLOptions(options);
+    thePastryNode.getRouter().route(rm);
   }
 
   /**
@@ -468,15 +479,14 @@ public abstract class PastryAppl /*implements Observer*/
    * @param socket the new socket from the network
    * @return false if receiver was null, true receiveSocket() was called
    */
-  public boolean receiveSocket(AppSocket socket) {
+  public boolean canReceiveSocket() {
+    return receiver != null;
+  }
+  
+  public void finishReceiveSocket(AppSocket socket) {
     AppSocketReceiver theReceiver = receiver;
     receiver = null;
-    if (theReceiver == null) {
-      return false;
-    } else {
-      theReceiver.receiveSocket(socket);
-      return true;
-    }
+    theReceiver.receiveSocket(socket);    
   }
   
 }

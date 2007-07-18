@@ -44,15 +44,9 @@ package rice.p2p.commonapi;
  * @author Alan Mislove
  * @author Jeff Hoye
  */
-public interface CancellableTask {
+public interface CancellableTask extends Cancellable {
   
   public void run();
-  
-  /**
-   * 
-   * @return true if it was cancelled, false if it was already complete, or cancelled.
-   */
-  public boolean cancel();
   
   public long scheduledExecutionTime();
   

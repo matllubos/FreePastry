@@ -40,6 +40,9 @@ package rice.p2p.multiring;
 import java.io.IOException;
 import java.util.*;
 
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
@@ -277,13 +280,37 @@ public class MultiringNode implements Node, ScribeClient {
    * @param message The message to deliver
    * @param hint The first node to send this message to, optional
    */
-  void route(RingId id, RawMessage message, String application) {    
+  MessageReceipt route(final RingId id, final RawMessage message, String application, 
+      DeliveryNotification deliverAckToMe) {
+    
     if (id.getRingId().equals(ringId)) {
       MultiringEndpoint endpoint = (MultiringEndpoint) endpoints.get(application);
-      endpoint.route(id, message, null);
+      return endpoint.route(id, message, null, deliverAckToMe);
     } else {
       //System.outt.println("ANYCASTING TO SCRIBE GROUP " + getTarget(id) + " AT NODE " + getId() + " FOR APPLICATION " + application);
       scribe.anycast(new Topic(RingId.build(ringId, getTarget(id))), new RingMessage(id, message, application));
+      MessageReceipt ret = new MessageReceipt(){
+      
+        public boolean cancel() {
+          return false;
+        }
+      
+        public Message getMessage() {
+          return message;
+        }
+      
+        public Id getId() {
+          return id;
+        }
+        
+        public NodeHandle getHint() {
+          return null;
+        }      
+      };
+      if (deliverAckToMe != null) {
+        deliverAckToMe.sent(ret);
+      }
+      return ret;
     }
   }
   
@@ -337,7 +364,7 @@ public class MultiringNode implements Node, ScribeClient {
     if (content instanceof RingMessage) {
       RingMessage rm = (RingMessage) content;
       //System.outt.println("RECEIVED ANYCAST TO " + rm.getId() + " AT NODE " + getId());
-      collection.route(rm.getId(), rm.getRawMessage(), rm.getApplication());
+      collection.route(rm.getId(), rm.getRawMessage(), rm.getApplication(), null);
     } else {
       if (logger.level <= Logger.WARNING) logger.log(
           "Received unrecognized message " + content);

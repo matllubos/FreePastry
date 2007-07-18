@@ -197,7 +197,7 @@ public class Visualization implements DataProvider {
     Node[] handles = r.getNodes();
     
     for (int i=0; i<handles.length; i++) {
-      if (handles[i].handle.getAddress().equals(addr)) {
+      if (handles[i].handle.getInetSocketAddress().equals(addr)) {
         setSelected(handles[i]);
         return;
       }
@@ -335,7 +335,9 @@ public class Visualization implements DataProvider {
       VisualizationClient client = (VisualizationClient) r.clients.get(handle.handle.getNodeId());
       
       if (client == null) {
-        InetSocketAddress address = new InetSocketAddress(handle.handle.getAddress().getAddress(), handle.handle.getAddress().getPort() + PORT_OFFSET);
+        InetSocketAddress address = new InetSocketAddress(
+            handle.handle.getInetSocketAddress().getAddress(), 
+            handle.handle.getInetSocketAddress().getPort() + PORT_OFFSET);
         client = new VisualizationClient(r.getKeyPair().getPrivate(), address, environment);
         r.clients.put(handle.handle.getId(), client);
         client.connect();

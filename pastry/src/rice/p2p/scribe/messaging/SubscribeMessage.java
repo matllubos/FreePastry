@@ -40,6 +40,7 @@ package rice.p2p.scribe.messaging;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -86,10 +87,9 @@ public class SubscribeMessage extends AnycastMessage {
    */
   public SubscribeMessage(NodeHandle source, List<Topic> topics, int id, RawScribeContent content) {
     super(source, topics.iterator().next(), content);
-
     this.id = id;
     this.subscriber = source;
-    this.topics = topics;
+    this.topics = new ArrayList<Topic>(topics);
   }
 
   /**
@@ -100,13 +100,7 @@ public class SubscribeMessage extends AnycastMessage {
    * @param content
    */
   public SubscribeMessage(NodeHandle source, Topic topic, int id, RawScribeContent content) {
-    this(source, buildListOf1(topic), id, content);
-  }
-  
-  private static List<Topic> buildListOf1(Topic topic) {
-    List<Topic> ret = new ArrayList<Topic>(1);
-    ret.add(topic);
-    return ret;
+    this(source, Collections.singletonList(topic), id, content);
   }
   
   /**
@@ -142,6 +136,7 @@ public class SubscribeMessage extends AnycastMessage {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
+//    System.out.println("SubscribeMessage.serialize()");
     buf.writeByte((byte)1); // version
     super.serializeHelper(buf);
     
@@ -205,8 +200,10 @@ public class SubscribeMessage extends AnycastMessage {
    * Call this when you accept topics in the list.
    * 
    * @param topic
+   * @return the remaining topics
    */
   public void removeTopics(Collection<Topic> accepted) {
+//    ArrayList<Topic> ret = new ArrayList<Topic>();
     topics.removeAll(accepted);
        
     if (topics.isEmpty()) {
@@ -214,6 +211,7 @@ public class SubscribeMessage extends AnycastMessage {
     } else {
       topic = topics.get(0);
     }
+//    System.out.println(this+".removeTopics("+accepted+")");
   }
 
   

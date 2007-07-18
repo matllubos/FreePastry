@@ -39,6 +39,10 @@ package rice.p2p.commonapi;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
 
 import rice.*;
 import rice.environment.Environment;
@@ -78,7 +82,9 @@ public interface Endpoint extends NodeHandleReader {
    * @param message The message to deliver
    * @param hint The first node to send this message to, optional
    */
-  void route(Id id, Message message, NodeHandle hint);
+  MessageReceipt route(Id id, Message message, NodeHandle hint);
+  MessageReceipt route(Id id, Message message, NodeHandle hint,  
+      DeliveryNotification deliverAckToMe);
 
   /**
    * Same as the other call, but uses the Raw serialization rather than java serialization.
@@ -86,8 +92,12 @@ public interface Endpoint extends NodeHandleReader {
    * @param message
    * @param hint
    */
-  void route(Id id, RawMessage message, NodeHandle hint);
+  MessageReceipt route(Id id, RawMessage message, NodeHandle hint);
+  MessageReceipt route(Id id, RawMessage message, NodeHandle hint,  
+      DeliveryNotification deliverAckToMe);
 
+  
+  
   /**
    * This call produces a list of nodes that can be used as next hops on a route towards
    * the given id, such that the resulting route satisfies the overlay protocol's bounds
@@ -139,8 +149,8 @@ public interface Endpoint extends NodeHandleReader {
 
   /**
    * This operation provides information about ranges of keys for which the node is currently
-   * a rank-root. The operations returns null if the range could not be determined, the range
-   * otherwise. It is an error to query the range of a node not present in the neighbor set as
+   * a rank-root. The operations throws an exception if the range could not be determined.
+   * It is an error to query the range of a node not present in the neighbor set as
    * returned bythe update upcall or the neighborSet call. Certain implementations may return
    * an error if rank is greater than zero. Some protocols may have multiple, disjoint ranges
    * of keys for which a given node is responsible. The parameter lkey allows the caller to
@@ -335,6 +345,13 @@ public interface Endpoint extends NodeHandleReader {
    * @return
    */
   public int proximity(NodeHandle nh);
+  
+  /**
+   * Uses these options as defaults.
+   * 
+   * @param options
+   */
+  public void setSendOptions(Map<String, Integer> options);
 }
 
 

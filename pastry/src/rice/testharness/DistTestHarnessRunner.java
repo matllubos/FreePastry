@@ -38,10 +38,6 @@ advised of the possibility of such damage.
 package rice.testharness;
 
 import java.io.*;
-import java.io.BufferedReader;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.NoSuchElementException;
@@ -54,9 +50,9 @@ import rice.p2p.scribe.ScribeContent;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
-import rice.pastry.dist.DistPastryNode;
 import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.routing.RoutingTable;
+import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.testharness.messaging.CollectResultsMessage;
 import rice.testharness.messaging.InitTestMessage;
@@ -98,7 +94,7 @@ public class DistTestHarnessRunner {
   protected Vector pastryNodes;
   protected Vector testNodes;
 
-  protected DistPastryNodeFactory factory;
+  protected SocketPastryNodeFactory factory;
 
   protected Environment environment;
   

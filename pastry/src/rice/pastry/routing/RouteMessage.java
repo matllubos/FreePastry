@@ -36,13 +36,17 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.routing;
 
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.*;
 
 import rice.pastry.*;
 import rice.pastry.commonapi.PastryEndpointMessage;
 import rice.pastry.messaging.*;
+import rice.pastry.transport.PMessageNotification;
+import rice.pastry.transport.PMessageReceipt;
 
 import java.io.*;
+import java.util.Map;
 
 /**
  * A route message contains a pastry message that has been wrapped to be sent to
@@ -69,9 +73,9 @@ public class RouteMessage extends PRawMessage implements Serializable,
 
   private int auxAddress;
 
-  public transient NodeHandle nextHop;
+  private transient NodeHandle nextHop;
 
-  private Message internalMsg;
+  public Message internalMsg;
   // optimization to not use instanceof in the normal new case
   private transient PRawMessage rawInternalMsg = null;
   private transient InputBuffer serializedMsg;
@@ -171,35 +175,9 @@ public class RouteMessage extends PRawMessage implements Serializable,
       auxAddress = msg.getDestination();
   }
   
-
   
 
   
-  /**
-   * Routes the messages if the next hop has been set up.
-   * 
-   * @param localId the node id of the local node.
-   * 
-   * @return true if the message got routed, false otherwise.
-   */
-
-  public boolean routeMessage(NodeHandle localHandle) {
-    if (nextHop == null)
-      return false;
-    setSender(localHandle);
-
-    NodeHandle handle = nextHop;
-    nextHop = null;
-    prevNode = localHandle;
-    
-    if (localHandle.equals(handle)) {
-      localHandle.getLocalNode().send(handle, internalMsg);
-    } else
-      localHandle.getLocalNode().send(handle, this);
-
-    return true;
-  }
-
   /**
    * Gets the target node id of this message.
    * 
@@ -244,12 +222,12 @@ public class RouteMessage extends PRawMessage implements Serializable,
    * @return the address.
    */
 
-  public int getDestination() {
-    if (nextHop == null || auxAddress == 0)
-      return super.getDestination();
-
-    return auxAddress;
-  }
+//  public int getDestination() {
+//    if (nextHop == null || auxAddress == 0)
+//      return super.getDestination();
+//
+//    return auxAddress;
+//  }
 
   /**
    * The wrapped message.
@@ -397,7 +375,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
         int auxAddress = buf.readInt();
         NodeHandle destHandle = null;
         Id target = null;
-        if (buf.readBoolean()) {
+        if (buf.readBoolean()) { // destHandle exists
           destHandle = pn.readNodeHandle(buf);
           target = (rice.pastry.Id)destHandle.getId();
         } else {
@@ -421,6 +399,8 @@ public class RouteMessage extends PRawMessage implements Serializable,
     this.destinationHandle = destinationHandle;
     this.pn = pn;
     this.auxAddress = auxAddress;
+//    System.out.println("RouteMessage.build(): v:"+version+" addr:"+auxAddress+" dest:"+destinationHandle+" target:"+target+" prev:"+prevNode+" pri:"+internalPriority+" type:"+internalType+" hasSender:"+hasSender);
+
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
@@ -474,14 +454,17 @@ public class RouteMessage extends PRawMessage implements Serializable,
       } else {
         buf.writeBoolean(false);
       }
-      
+
       // range check priority
       int priority = rawInternalMsg.getPriority();
       if (priority > Byte.MAX_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+rawInternalMsg+" was "+priority+".");
       if (priority < Byte.MIN_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+rawInternalMsg+" was "+priority+".");
       buf.writeByte((byte)priority);
 
-      buf.writeShort(rawInternalMsg.getType());
+      short type = rawInternalMsg.getType();
+      buf.writeShort(type);
+      
+//      System.out.println("RouteMessage.serialize(): v:"+version+" addr:"+auxAddress+" dest:"+destinationHandle+" target:"+target+" prev:"+prevNode+" pri:"+priority+" type:"+type+" sender:"+sender);
 
       if (hasSender) {
         sender.serialize(buf);
@@ -586,5 +569,37 @@ public class RouteMessage extends PRawMessage implements Serializable,
   public NodeHandle getDestinationHandle() {
     return destinationHandle;
   }
+
+  private transient Map<String, Integer> options;
+  public Map<String, Integer> getTLOptions() {
+    return options;
+  }
   
+  public void setTLOptions(Map<String, Integer> options) {
+    this.options = options;
+  }
+  
+  // synchronization problem...
+  Cancellable tlCancellable;
+  public void setTLCancellable(Cancellable c) {
+    tlCancellable = c;
+  }
+  
+  public boolean cancel() {
+    return tlCancellable.cancel();
+  }
+
+  RouteMessageNotification notifyMe;
+  
+  public void setRouteMessageNotification(RouteMessageNotification notification) {
+    notifyMe = notification;
+  }
+  
+  public void sendSuccess() {
+    if (notifyMe != null) notifyMe.sendSuccess(this);
+  }
+  
+  public void sendFailed(Exception e) {
+    if (notifyMe != null) notifyMe.sendFailed(this, e);
+  }
 }

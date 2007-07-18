@@ -999,8 +999,8 @@ public class LeafSet extends Observable implements Serializable {
    * 
    * @return list of NodeHandle
    */
-  public synchronized List asList() {
-    List l = new ArrayList();
+  public synchronized List<NodeHandle> asList() {
+    List<NodeHandle> l = new ArrayList<NodeHandle>();
     for (int i=-ccwSize(); i<=cwSize(); i++) {
       if (i != 0) {
         l.add(get(i));

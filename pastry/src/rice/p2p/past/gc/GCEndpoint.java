@@ -42,6 +42,9 @@ import rice.*;
 import java.io.IOException;
 import java.util.*;
 
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
@@ -94,13 +97,24 @@ public class GCEndpoint implements Endpoint {
    * @param message The message to deliver
    * @param hint The first node to send this message to, optional
    */
-  public void route(Id id, Message message, NodeHandle hint) {
-    endpoint.route(id, message, hint);
+  public MessageReceipt route(Id id, Message message, NodeHandle hint) {
+    return endpoint.route(id, message, hint);
   }
   
-  public void route(Id id, RawMessage message, NodeHandle hint) {
-    endpoint.route(id, message, hint);
+  public MessageReceipt route(Id id, RawMessage message, NodeHandle hint) {
+    return endpoint.route(id, message, hint);
   }
+  
+
+  public MessageReceipt route(Id id, Message message, NodeHandle hint, DeliveryNotification deliverAckToMe) {
+    return endpoint.route(id, message, hint, deliverAckToMe);
+  }
+
+  public MessageReceipt route(Id id, RawMessage message, NodeHandle hint, DeliveryNotification deliverAckToMe) {
+    return endpoint.route(id, message, hint, deliverAckToMe);
+  }
+
+
   
   /**
    * This call produces a list of nodes that can be used as next hops on a route towards
@@ -323,6 +337,9 @@ public class GCEndpoint implements Endpoint {
 
   public boolean routingConsistentFor(Id id) {
     return endpoint.routingConsistentFor(id);
+  }
+  public void setSendOptions(Map<String, Integer> options) {
+    endpoint.setSendOptions(options);    
   }
 }
 

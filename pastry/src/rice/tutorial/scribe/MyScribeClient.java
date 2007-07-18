@@ -150,6 +150,9 @@ public class MyScribeClient implements ScribeClient, Application {
    */
   public void deliver(Topic topic, ScribeContent content) {
     System.out.println("MyScribeClient.deliver("+topic+","+content+")");
+    if (((MyScribeContent)content).from == null) {
+      new Exception("Stack Trace").printStackTrace();
+    }
   }
 
   /**
