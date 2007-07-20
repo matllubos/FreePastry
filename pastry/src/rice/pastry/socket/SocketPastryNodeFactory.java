@@ -60,6 +60,7 @@ import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.identity.LowerIdentity;
 import org.mpisws.p2p.transport.identity.NodeChangeStrategy;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
@@ -340,10 +341,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     identity.initLowerLayer(srl);
     LowerIdentity<SourceRoute<MultiInetSocketAddress>, ByteBuffer> lowerIdentityLayer = identity.getLowerIdentity();
     
-    int checkDeadThrottle = environment.getParameters().getInt("pastry_socket_srm_check_dead_throttle"); // 300000
-    LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>> ltl = 
-      new LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>>(lowerIdentityLayer,environment, null, checkDeadThrottle);
-    
+    LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = getLivenessTransportLayer(lowerIdentityLayer, environment);
+
     
     LeafSetNHStrategy nhStrategy = new LeafSetNHStrategy();
     nhStrategy.setLeafSet(pn.getLeafSet());
@@ -386,6 +385,24 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         new TLBootstrapper(pn, identity.getUpperIdentity(), handleFactory));
 
     return nha;
+  }
+  
+  protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
+      TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+      Environment environment) {
+    int checkDeadThrottle = environment.getParameters().getInt("pastry_socket_srm_check_dead_throttle"); // 300000
+
+    LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+      new LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>>(tl,environment, null, checkDeadThrottle);
+    
+    
+//    ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
+//      public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
+//        logger.log("SR.livenessChanged("+i+","+val+")");
+//      }
+//    });
+
+    return ltl;
   }
   
   class TLBootstrapper implements Bootstrapper<InetSocketAddress>

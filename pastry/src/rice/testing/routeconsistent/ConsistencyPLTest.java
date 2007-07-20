@@ -41,10 +41,15 @@ package rice.testing.routeconsistent;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.*;
 
+import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -296,6 +301,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       Environment env = new Environment();
       
       environment = env;
+      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINEST);
       environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINE);
       environment.getParameters().setBoolean("logging_packageOnly",true);
 //      environment.getParameters().setBoolean("logging_packageOnly",false);
@@ -383,7 +389,21 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
       
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-      PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+      PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
+        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
+            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+            Environment environment) {
+          LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+            super.getLivenessTransportLayer(tl, environment);
+          
+          ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
+            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
+              logger.log("SR.livenessChanged("+i+","+val+")");
+            }
+          });
+          return ltl;
+        } 
+      };
   
       InetSocketAddress[] bootAddressCandidates = (InetSocketAddress[])bootAddresses.toArray(new InetSocketAddress[0]);
       // This will return null if we there is no node at that location
