@@ -144,6 +144,10 @@ public class SourceRouteManagerImpl<Identifier> implements
     }
   }
 
+  public void clearState(Identifier i) {
+    getAddressManager(i).clearLivenessState();
+  }
+
   public void addHardLink(AddressManager am) {
     synchronized(hardLinks) {
       hardLinks.add(am); 
@@ -284,9 +288,6 @@ public class SourceRouteManagerImpl<Identifier> implements
     // the queue of appSockets waiting for a connection
     protected LinkedList<PendingSocket> pendingSockets;
     
-    // the list of known route -> managers for this manager
-    protected HashMap routes;
-    
     // the current liveness of this address
     protected int liveness;
     
@@ -294,6 +295,8 @@ public class SourceRouteManagerImpl<Identifier> implements
     protected long updated;
     
     public static final int LIVENESS_UNKNOWN = -1;
+    
+    HashSet<SourceRoute<Identifier>> routes = new HashSet<SourceRoute<Identifier>>();
     
     /**
      * Constructor, given an address and whether or not it should attempt to
@@ -306,7 +309,6 @@ public class SourceRouteManagerImpl<Identifier> implements
       this.address = address;
       this.pendingMessages = new LinkedList<PendingMessage>();
       this.pendingSockets = new LinkedList<PendingSocket>();
-      this.routes = new HashMap();
       this.liveness = LIVENESS_UNKNOWN;
       this.updated = 0L;
       
@@ -316,12 +318,23 @@ public class SourceRouteManagerImpl<Identifier> implements
 //        best = srFactory.getSourceRoute(address);
 //      } else {
         best = srFactory.getSourceRoute(localAddress, address);
+        routes.add(best);
 //        best = null; 
 //        tl.checkLiveness(direct, options);
 //        this.updated = environment.getTimeSource().currentTimeMillis();
 //      }        
     }
     
+    public void clearLivenessState() {
+//      synchronized(routes) {
+      ArrayList<SourceRoute<Identifier>> temp = new ArrayList<SourceRoute<Identifier>>(routes);
+      routes.clear();
+//      }
+      for (SourceRoute<Identifier> sr : temp) {
+        livenessProvider.clearState(sr);
+      }
+    }
+
     class PendingSocket implements SocketRequestHandle<Identifier>, SocketCallback<SourceRoute<Identifier>> {
       private SocketCallback<Identifier> deliverSocketToMe;
       private Map<String, Integer> options;
@@ -353,7 +366,7 @@ public class SourceRouteManagerImpl<Identifier> implements
 
       public Map<String, Integer> getOptions() {
         return options;
-      }
+      }      
     }
     
     class PendingMessage implements MessageRequestHandle<Identifier, ByteBuffer>, MessageCallback<SourceRoute<Identifier>, ByteBuffer> {
@@ -584,6 +597,7 @@ public class SourceRouteManagerImpl<Identifier> implements
     }
 
     public void livenessChanged(SourceRoute i, int val) {
+      routes.add(i);
       if (!i.getLastHop().equals(address)) throw new IllegalArgumentException(i+"!="+address+" val:"+val);
       switch(val) {
       case LIVENESS_ALIVE:
@@ -665,7 +679,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         best = null;
 
         Collection<SourceRoute<Identifier>> routes = strategy.getSourceRoutes(address);
-        
+        this.routes.addAll(routes);
         // if we found a route, or are probing one, this goes true, otherwise we go dead
         boolean found = false;
 
@@ -869,6 +883,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       }
 
       purgeQueue();
+      clearLivenessState();
     }
 
     /**
@@ -891,6 +906,7 @@ public class SourceRouteManagerImpl<Identifier> implements
           break;
       }
       purgeQueue();
+      clearLivenessState();
     }
     
     protected void purgeQueue() {
@@ -1001,5 +1017,4 @@ public class SourceRouteManagerImpl<Identifier> implements
       p.proximityChanged(i, prox, options);
     }
   }
-
 }

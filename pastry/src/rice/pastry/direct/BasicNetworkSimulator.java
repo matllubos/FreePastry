@@ -462,4 +462,8 @@ public class BasicNetworkSimulator<Identifier, MessageType> implements
     }
     return LivenessListener.LIVENESS_DEAD;
   }
+
+  public void clearState(Identifier i) {
+    throw new IllegalStateException("not implemented");
+  }
 }

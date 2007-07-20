@@ -33,4 +33,12 @@ public interface LivenessProvider<Identifier> {
   
   public void addLivenessListener(LivenessListener<Identifier> name);
   public boolean removeLivenessListener(LivenessListener<Identifier> name);
+  
+  /**
+   * Force layer to clear the existing state related to the Identifier.  Usually 
+   * if there is reason to believe a node has returned.
+   * 
+   * @param i
+   */
+  public void clearState(Identifier i);
 }

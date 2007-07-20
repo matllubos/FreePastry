@@ -108,6 +108,10 @@ public class CommonAPITransportLayerImpl<Identifier> implements
     return localAddress;
   }
 
+  public void clearState(TransportLayerNodeHandle<Identifier> i) {
+    livenessProvider.clearState(i.getAddress());
+  }
+
   public MessageRequestHandle<TransportLayerNodeHandle<Identifier>, RawMessage> sendMessage(
       final TransportLayerNodeHandle<Identifier> i,
       RawMessage m, 
@@ -398,6 +402,4 @@ public class CommonAPITransportLayerImpl<Identifier> implements
       }          
     });
   }
-
-
 }

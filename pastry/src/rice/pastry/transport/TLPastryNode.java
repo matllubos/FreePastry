@@ -610,4 +610,8 @@ public class TLPastryNode extends PastryNode implements
   public TransportLayer<NodeHandle, RawMessage> getTL() {
     return tl;
   }
+
+  public void clearState(NodeHandle i) {
+    livenessProvider.clearState(i);
+  }
 }

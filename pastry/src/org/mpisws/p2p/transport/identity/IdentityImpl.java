@@ -131,6 +131,7 @@ public class IdentityImpl<UpperIdentifier, UpperMsgType, LowerIdentifier> {
         msg.deadForever(); 
       }
     }
+    upper.livenessProvider.clearState(i);
   }
   
   /**
@@ -596,6 +597,10 @@ public class IdentityImpl<UpperIdentifier, UpperMsgType, LowerIdentifier> {
 //      pinger.addPingListener(this);
     }
     
+    public void clearState(UpperIdentifier i) {
+      livenessProvider.clearState(i);
+    }
+
     public SocketRequestHandle<UpperIdentifier> openSocket(
         UpperIdentifier i, 
         SocketCallback<UpperIdentifier> deliverSocketToMe, 

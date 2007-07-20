@@ -138,4 +138,8 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
   public void incomingMessage(Identifier i, MessageType m, Map<String, Integer> options) throws IOException {
     callback.messageReceived(i, m, options);
   }
+
+  public void clearState(Identifier i) {
+    // do nothing
+  }
 }

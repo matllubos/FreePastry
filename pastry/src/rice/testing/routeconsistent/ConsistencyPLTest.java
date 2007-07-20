@@ -44,6 +44,8 @@ import java.net.*;
 import java.nio.channels.*;
 import java.util.*;
 
+import org.mpisws.p2p.transport.liveness.LivenessListener;
+
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.logging.simple.SimpleLogManager;
@@ -190,10 +192,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
   }  
   // killRingTime(mins) artificialChurnTime(mins) split/scribe/none sendInterval msgSize
   public static void main(String[] args) throws Exception {
-    
     PrintStream ps = new PrintStream(new FileOutputStream("log4.txt", true));
     System.setErr(ps);
     System.setOut(ps);
+    
+    System.out.println("pastry.jar date: "+new Date(new File("pastry.jar").lastModified()));
 
     long bootTime = System.currentTimeMillis();
     System.out.println("start of log");
@@ -293,7 +296,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       Environment env = new Environment();
       
       environment = env;
-      
+      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINE);
+      environment.getParameters().setBoolean("logging_packageOnly",true);
 //      environment.getParameters().setBoolean("logging_packageOnly",false);
       // turn on consistent join protocol's logger to make sure this is correct for consistency
 //      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
@@ -397,6 +401,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
       final PastryNode node = factory.newNode(bootHandle);
+      node.addLivenessListener(new LivenessListener<NodeHandle>() {      
+        Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
+        public void livenessChanged(NodeHandle i, int val) {
+          logger.log("livenessChanged("+i+","+val+")");
+        }      
+      });
       node.addNetworkListener(networkActivity);
       
       InetSocketAddress[] boots = new InetSocketAddress[6];
@@ -407,8 +417,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       boots[4] = new InetSocketAddress(InetAddress.getByName("planet1.scs.cs.nyu.edu"), startPort);
       boots[5] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.cornell.edu"), startPort);
       
-      PartitionHandler ph = new PartitionHandler(node, (SocketPastryNodeFactory)factory, boots);
-      ph.start(node.getEnvironment().getSelectorManager().getTimer());
+//      PartitionHandler ph = new PartitionHandler(node, (SocketPastryNodeFactory)factory, boots);
+//      ph.start(node.getEnvironment().getSelectorManager().getTimer());
       
       final String nodeString = node.toString();
       Thread shutdownHook = new Thread() {

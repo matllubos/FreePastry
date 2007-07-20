@@ -239,6 +239,15 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
   }
   
+  protected EntityManager deleteEntityManager(Identifier i) {
+    synchronized(entityManagers) {
+      EntityManager ret = entityManagers.get(i); 
+      if (ret != null) {
+        ret.clearState();
+      }
+      return ret;
+    }
+  }
 
   public void livenessChanged(Identifier i, int val) {
     if (val >= LivenessListener.LIVENESS_DEAD) {
@@ -272,6 +281,20 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       this.identifier = identifier;
       queue = new PriorityQueue<MessageWrapper>();
       sockets = new HashSet<P2PSocket<Identifier>>();
+    }
+
+    public void clearState() {
+      for (P2PSocket socket : sockets) {
+//        try {
+          socket.close();
+//        } catch (IOException ioe) {
+//          errorHandler.receivedException(i, error)
+//        }
+      }
+      queue.clear();
+      pending = null;
+      if (pendingSocket != null) pendingSocket.cancel();
+      pendingSocket = null;
     }
 
     public String toString() {
@@ -426,7 +449,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     public void markDead() {
       synchronized(queue) {
         for (MessageWrapper msg : queue) {
-          msg.deliverAckToMe.sendFailed(msg, new NodeIsFaultyException(identifier)); 
+          if (msg.deliverAckToMe != null) msg.deliverAckToMe.sendFailed(msg, new NodeIsFaultyException(identifier)); 
         }
       }      
     }
@@ -712,8 +735,13 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
         if (canWrite || !canRead) throw new IllegalStateException(EntityManager.this+" Expected only to read. canRead:"+canRead+" canWrite:"+canWrite+" socket:"+socket);
         
-        if (socket.read(buf) == -1) {
-          closeMe(socket);
+        try {
+          if (socket.read(buf) == -1) {
+            closeMe(socket);
+            return;
+          }
+        } catch (IOException ioe) {
+          receiveException(socket, ioe);
           return;
         }
         
@@ -727,6 +755,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
       public void receiveException(P2PSocket<Identifier> socket, IOException e) {
         errorHandler.receivedException(socket.getIdentifier(), e);
+        closeMe(socket);
       }                    
       
       public void done(P2PSocket<Identifier> socket) throws IOException {

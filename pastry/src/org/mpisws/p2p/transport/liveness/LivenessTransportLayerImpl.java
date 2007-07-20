@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -147,6 +149,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
   
+  public void clearState(Identifier i) {
+    deleteManager(i);
+  }
+
   public boolean checkLiveness(Identifier i, Map<String, Integer> options) {
     return getManager(i).checkLiveness(options);
   }
@@ -158,6 +164,14 @@ public class LivenessTransportLayerImpl<Identifier> implements
         manager = new EntityManager(i);
         managers.put(i,manager);
       }
+      return manager;
+    }
+  }
+  
+  public EntityManager deleteManager(Identifier i) {
+    synchronized(managers) {
+      EntityManager manager = managers.remove(i);
+      if (manager.pending != null) manager.pending.cancel();
       return manager;
     }
   }
@@ -183,8 +197,35 @@ public class LivenessTransportLayerImpl<Identifier> implements
     return tl.getLocalIdentifier();
   }
 
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
-    return tl.openSocket(i, deliverSocketToMe, options);
+  /**
+   * TODO: make this a number of failures?  Say 3?  Use 1 if using SourceRoutes
+   */
+  boolean connectionExceptionMeansFaulty = true;
+  /**
+   * Set this to true if you want a ConnectionException to mark the 
+   * connection as faulty.  Default = true;
+   *
+   */
+  public void connectionExceptionMeansFaulty(boolean b) {
+    connectionExceptionMeansFaulty = b;
+  }
+  
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+    // this code marks the Identifier faulty if there is an error connecting the socket.  It's possible that this
+    // should be moved to the source route manager, but there needs to be a way to cancel the liveness
+    // checks, or maybe the higher layer can ignore them.
+    return tl.openSocket(i, new SocketCallback<Identifier>(){
+      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+        // the upper layer is probably going to retry, so mark this dead first
+        if (connectionExceptionMeansFaulty) {
+          getManager(i).markDead();
+        }
+        deliverSocketToMe.receiveException(s, ex);
+      }
+      public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
+        deliverSocketToMe.receiveResult(cancellable, sock);
+      }    
+    }, options);
   }
 
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(
@@ -613,6 +654,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (notify) {
         notifyLivenessListeners(identifier, liveness);
       }
+      if (pending != null) {
+        pending.cancel(); // sets to null too
+      }
     }
     
     /**
@@ -707,5 +751,4 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (pending != null) pending.cancel();
     }
   }
-
 }

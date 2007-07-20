@@ -224,6 +224,11 @@ public class MergeTest {
         // TODO Auto-generated method stub
         return false;
       }
+
+      public void clearState(NodeHandle i) {
+        // TODO Auto-generated method stub
+        
+      }
     
     };
     

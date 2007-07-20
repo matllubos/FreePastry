@@ -93,4 +93,8 @@ public class NodeHandleAdapter implements
   public TransportLayer getTL() {
     return tl;
   }
+
+  public void clearState(NodeHandle i) {
+    livenessProvider.clearState(i);
+  }
 }

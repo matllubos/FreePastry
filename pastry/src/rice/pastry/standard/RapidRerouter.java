@@ -69,6 +69,49 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     route(rm);
   }
   
+  private void addToPending(RouterNotification notifyMe, NodeHandle handle) {
+    if (logger.level <= Logger.FINE) logger.log("addToPending("+notifyMe+" to:"+handle+")");
+    synchronized(pending) {
+      Collection<RouterNotification> c = pending.get(handle);
+      if (c == null) {
+        c = new HashSet<RouterNotification>();
+        pending.put(handle, c);
+      }
+      c.add(notifyMe);
+    }
+  }
+
+  private void removeFromPending(RouterNotification notifyMe, NodeHandle handle) {
+    synchronized(pending) {
+      Collection<RouterNotification> c = pending.get(handle);
+      c.remove(notifyMe);
+      if (c.isEmpty()) {
+        pending.remove(handle);
+      }
+    }    
+  }
+  
+  public void livenessChanged(NodeHandle i, int val) {
+    if (val >= LIVENESS_SUSPECTED) {
+      Collection<RouterNotification> rerouteMe;
+      synchronized(pending) {
+        rerouteMe = pending.remove(i);        
+      }
+      if (rerouteMe != null) {
+        if (logger.level <= Logger.FINE) logger.log("removing all messages to:"+i);
+        for (RouterNotification rn : rerouteMe) {
+          rerouteMe(rn.rm, rn.dest);
+        }
+      }
+    }
+  }
+  
+  @Override
+  public void destroy() {
+    super.destroy();
+    thePastryNode.removeLivenessListener(this);
+  }
+
   class RouterNotification implements Cancellable, PMessageNotification {
     RouteMessage rm;
     NodeHandle dest;
@@ -103,47 +146,6 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     public boolean cancel() {
       return cancellable.cancel();
     }    
-  }
-
-  private void addToPending(RouterNotification notifyMe, NodeHandle handle) {
-    synchronized(pending) {
-      Collection<RouterNotification> c = pending.get(handle);
-      if (c == null) {
-        c = new HashSet<RouterNotification>();
-        pending.put(handle, c);
-      }
-      c.add(notifyMe);
-    }
-  }
-
-  private void removeFromPending(RouterNotification notifyMe, NodeHandle handle) {
-    synchronized(pending) {
-      Collection<RouterNotification> c = pending.get(handle);
-      c.remove(notifyMe);
-      if (c.isEmpty()) {
-        pending.remove(handle);
-      }
-    }    
-  }
-  
-  public void livenessChanged(NodeHandle i, int val) {
-    if (val >= LIVENESS_SUSPECTED) {
-      Collection<RouterNotification> rerouteMe;
-      synchronized(pending) {
-        rerouteMe = pending.remove(i);        
-      }
-      if (rerouteMe != null) {
-        for (RouterNotification rn : rerouteMe) {
-          rerouteMe(rn.rm, rn.dest);
-        }
-      }
-    }
-  }
-  
-  @Override
-  public void destroy() {
-    super.destroy();
-    thePastryNode.removeLivenessListener(this);
   }
 
 
