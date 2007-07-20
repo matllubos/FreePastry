@@ -89,7 +89,11 @@ public class TCPLayer extends SelectionKeyHandler {
       InetSocketAddress destination, 
       SocketCallback<InetSocketAddress> deliverSocketToMe,
       Map<String, Integer> options) {
-    
+    if (logger.level <= Logger.FINEST) {
+      logger.logException("openSocket("+destination+")", new Exception("Stack Trace"));
+    } else {
+      if (logger.level <= Logger.FINE) logger.log("openSocket("+destination+")");
+    }
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
     try {
       synchronized (sockets) {

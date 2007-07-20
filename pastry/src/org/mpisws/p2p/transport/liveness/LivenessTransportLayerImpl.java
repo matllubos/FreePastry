@@ -32,9 +32,7 @@ import rice.selector.Timer;
 import rice.selector.TimerTask;
 
 public class LivenessTransportLayerImpl<Identifier> implements 
-    TransportLayer<Identifier, ByteBuffer>, 
-    LivenessProvider<Identifier>,
-    Pinger<Identifier>,
+    LivenessTransportLayer<Identifier, ByteBuffer>, 
     TransportLayerCallback<Identifier, ByteBuffer> {
   // how long to wait for a ping response to come back before declaring lost
   public final int PING_DELAY;

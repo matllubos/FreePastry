@@ -328,7 +328,7 @@ public class IdentityImpl<UpperIdentifier, UpperMsgType, LowerIdentifier> {
                   return;                  
                 }
                 
-                if (buf.hasRemaining()) {
+                if (writeMe.hasRemaining()) {
                   // need to read more
                   socket.register(false, true, this);
                   return;
