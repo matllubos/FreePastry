@@ -615,7 +615,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             boolean emptyQueue = queue.isEmpty();
             if (!emptyQueue) {
               if (pendingSocket == null) {
-                pendingSocket = openPrimarySocket(identifier, socket.getOptions());
+                pendingSocket = openPrimarySocket(identifier, queue.peek().getOptions());
                 return;
               } 
             }

@@ -363,7 +363,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     
     PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 
       new PriorityTransportLayerImpl<MultiInetSocketAddress>(srm,srm,environment,2048,null);
-    
+
+    identity.initUpperLayer(priorityTL, priorityTL, priorityTL);    
+
     CommonAPITransportLayer<MultiInetSocketAddress> commonAPItl = 
       new CommonAPITransportLayerImpl<MultiInetSocketAddress>(
           localhandle, 
@@ -375,9 +377,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           handleFactory.getTLInterface(),
           deserializer,
           environment); 
-    
-    identity.initUpperLayer(commonAPItl, commonAPItl, commonAPItl);    
-    
+        
     NodeHandleAdapter nha = new NodeHandleAdapter(
         identity.getUpperIdentity(), 
         identity.getUpperIdentity(), 
@@ -394,13 +394,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 
     LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
       new LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>>(tl,environment, null, checkDeadThrottle);
-    
-    
-//    ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
-//      public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
-//        logger.log("SR.livenessChanged("+i+","+val+")");
-//      }
-//    });
 
     return ltl;
   }

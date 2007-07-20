@@ -18,8 +18,5 @@ import rice.p2p.commonapi.rawserialization.RawMessage;
  *
  */
 public interface CommonAPITransportLayer<Identifier> extends 
-  TransportLayer<TransportLayerNodeHandle<Identifier>, RawMessage>, 
-  LivenessProvider<TransportLayerNodeHandle<Identifier>>, 
-  ProximityProvider<TransportLayerNodeHandle<Identifier>> {
-
+  TransportLayer<Identifier, RawMessage> {
 }

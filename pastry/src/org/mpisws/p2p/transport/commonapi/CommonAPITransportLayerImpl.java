@@ -46,7 +46,7 @@ public class CommonAPITransportLayerImpl<Identifier> implements
   TransportLayer<Identifier, ByteBuffer> tl;
   LivenessProvider<Identifier> livenessProvider;
   ProximityProvider<Identifier> proximityProvider;
-  TransportLayerCallback<TransportLayerNodeHandle<Identifier>, RawMessage> callback;
+  TransportLayerCallback<Identifier, RawMessage> callback;
   ErrorHandler<TransportLayerNodeHandle<Identifier>> errorHandler;
   RawMessageDeserializer deserializer;
   IdFactory idFactory;
@@ -183,11 +183,11 @@ public class CommonAPITransportLayerImpl<Identifier> implements
   }
 
   public void setCallback(
-      TransportLayerCallback<TransportLayerNodeHandle<Identifier>, RawMessage> callback) {
+      TransportLayerCallback<Identifier, RawMessage> callback) {
     this.callback = callback;
   }
 
-  public void setErrorHandler(ErrorHandler<TransportLayerNodeHandle<Identifier>> handler) {
+  public void setErrorHandler(ErrorHandler<Identifier> handler) {
     this.errorHandler = handler;
   }
 
@@ -195,70 +195,6 @@ public class CommonAPITransportLayerImpl<Identifier> implements
     tl.destroy();
   }
 
-  List<LivenessListener<TransportLayerNodeHandle<Identifier>>> livenessListeners;
-  public void addLivenessListener(LivenessListener<TransportLayerNodeHandle<Identifier>> name) {
-    synchronized(livenessListeners) {
-      livenessListeners.add(name);
-    }
-  }
-
-  public boolean removeLivenessListener(LivenessListener<TransportLayerNodeHandle<Identifier>> name) {
-    synchronized(livenessListeners) {
-      return livenessListeners.remove(name);
-    }
-  }
-  
-  public int getLiveness(TransportLayerNodeHandle<Identifier> i, Map<String, Integer> options) {
-    return livenessProvider.getLiveness(i.getAddress(), options);
-  }
-
-  public void livenessChanged(Identifier i, int val) {
-    notifyLivenessListeners(nodeHandleFactory.lookupNodeHandle(i), val);    
-  }
-  
-  private void notifyLivenessListeners(TransportLayerNodeHandle<Identifier> i, int liveness) {
-    if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
-    List<LivenessListener<TransportLayerNodeHandle<Identifier>>> temp;
-    synchronized(livenessListeners) {
-      temp = new ArrayList<LivenessListener<TransportLayerNodeHandle<Identifier>>>(livenessListeners);
-    }
-    for (LivenessListener<TransportLayerNodeHandle<Identifier>> listener : temp) {
-      listener.livenessChanged(i, liveness);
-    }
-  }
-  
-  Collection<ProximityListener<TransportLayerNodeHandle<Identifier>>> proxListeners = 
-    new ArrayList<ProximityListener<TransportLayerNodeHandle<Identifier>>>();
-  public void addProximityListener(ProximityListener<TransportLayerNodeHandle<Identifier>> name) {
-    synchronized(proxListeners) {
-      proxListeners.add(name);
-    }
-  }
-
-  public boolean removeProximityListener(ProximityListener<TransportLayerNodeHandle<Identifier>> name) {
-    synchronized(proxListeners) {
-      return proxListeners.remove(name);
-    }
-  }
-  
-  public int proximity(TransportLayerNodeHandle<Identifier> i) {    
-    return proximityProvider.proximity(i.getAddress());
-  }
-
-  public void proximityChanged(Identifier i, int newProx, Map<String, Integer> options) {
-    notifyProximityListeners(nodeHandleFactory.lookupNodeHandle(i), newProx, options);    
-  }
-  
-  private void notifyProximityListeners(TransportLayerNodeHandle<Identifier> i, int newProx, Map<String, Integer> options) {
-    if (logger.level <= Logger.FINER) logger.log("notifyProximityListeners("+i+","+newProx+")");
-    List<ProximityListener<TransportLayerNodeHandle<Identifier>>> temp;
-    synchronized(proxListeners) {
-      temp = new ArrayList<ProximityListener<TransportLayerNodeHandle<Identifier>>>(proxListeners);
-    }
-    for (ProximityListener<TransportLayerNodeHandle<Identifier>> listener : temp) {
-      listener.proximityChanged(i, newProx, options);
-    }
-  }
   
 
 
@@ -317,61 +253,62 @@ public class CommonAPITransportLayerImpl<Identifier> implements
       Map<String, Integer> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
-    final SocketRequestHandleImpl<TransportLayerNodeHandle<Identifier>> handle = 
-      new SocketRequestHandleImpl<TransportLayerNodeHandle<Identifier>>(i, options);
+//    final SocketRequestHandleImpl<TransportLayerNodeHandle<Identifier>> handle = 
+//      new SocketRequestHandleImpl<TransportLayerNodeHandle<Identifier>>(i, options);
     
     if (logger.level <= Logger.FINE) logger.log("openSocket("+i+")");
+    return tl.openSocket(i, deliverSocketToMe, options);
     
     // we only serialize the Id, we assume the underlieing layer got the address of the NodeHandle correct
-    SimpleOutputBuffer sob = new SimpleOutputBuffer(8+localAddress.getId().getByteArrayLength());
-    try {
-      sob.writeLong(localAddress.getEpoch());
-      localAddress.getId().serialize(sob);
-    } catch (IOException ioe) {
-      deliverSocketToMe.receiveException(handle, ioe);
-      return null;
-    }
-    final ByteBuffer b = ByteBuffer.wrap(sob.getBytes());
-    
-    Identifier addr = i.getAddress();
-        
-    handle.setSubCancellable(tl.openSocket(addr, 
-        new SocketCallback<Identifier>(){    
-      
-      public void receiveResult(SocketRequestHandle<Identifier> c, P2PSocket<Identifier> result) {
-        if (c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
-        
-        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+"):receiveResult("+result+")");
-        result.register(false, true, new P2PSocketReceiver<Identifier>() {        
-          public void receiveSelectResult(P2PSocket<Identifier> socket,
-              boolean canRead, boolean canWrite) throws IOException {
-            if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
-            
-            // do the work
-            socket.write(b);
-            
-            // keep working or pass up the new socket
-            if (b.hasRemaining()) {
-              socket.register(false, true, this); 
-            } else {
-              deliverSocketToMe.receiveResult(handle, 
-                  new SocketWrapperSocket<TransportLayerNodeHandle<Identifier>, Identifier>(
-                      i, socket, logger, socket.getOptions()));                 
-            }
-          }
-        
-          public void receiveException(P2PSocket<Identifier> socket,
-              IOException e) {
-            deliverSocketToMe.receiveException(handle, e);
-          }        
-        });         
-      }    
-      public void receiveException(SocketRequestHandle<Identifier> c, IOException exception) {
-        if (c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
-        deliverSocketToMe.receiveException(handle, exception);
-      }
-    }, options));
-    return handle;
+//    SimpleOutputBuffer sob = new SimpleOutputBuffer(8+localAddress.getId().getByteArrayLength());
+//    try {
+//      sob.writeLong(localAddress.getEpoch());
+//      localAddress.getId().serialize(sob);
+//    } catch (IOException ioe) {
+//      deliverSocketToMe.receiveException(handle, ioe);
+//      return null;
+//    }
+//    final ByteBuffer b = ByteBuffer.wrap(sob.getBytes());
+//    
+//    Identifier addr = i.getAddress();
+//        
+//    handle.setSubCancellable(tl.openSocket(addr, 
+//        new SocketCallback<Identifier>(){    
+//      
+//      public void receiveResult(SocketRequestHandle<Identifier> c, P2PSocket<Identifier> result) {
+//        if (c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
+//        
+//        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+"):receiveResult("+result+")");
+//        result.register(false, true, new P2PSocketReceiver<Identifier>() {        
+//          public void receiveSelectResult(P2PSocket<Identifier> socket,
+//              boolean canRead, boolean canWrite) throws IOException {
+//            if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
+//            
+//            // do the work
+//            socket.write(b);
+//            
+//            // keep working or pass up the new socket
+//            if (b.hasRemaining()) {
+//              socket.register(false, true, this); 
+//            } else {
+//              deliverSocketToMe.receiveResult(handle, 
+//                  new SocketWrapperSocket<TransportLayerNodeHandle<Identifier>, Identifier>(
+//                      i, socket, logger, socket.getOptions()));                 
+//            }
+//          }
+//        
+//          public void receiveException(P2PSocket<Identifier> socket,
+//              IOException e) {
+//            deliverSocketToMe.receiveException(handle, e);
+//          }        
+//        });         
+//      }    
+//      public void receiveException(SocketRequestHandle<Identifier> c, IOException exception) {
+//        if (c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
+//        deliverSocketToMe.receiveException(handle, exception);
+//      }
+//    }, options));
+//    return handle;
   }
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
