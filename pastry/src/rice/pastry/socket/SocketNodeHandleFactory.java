@@ -16,7 +16,6 @@ import rice.pastry.NodeHandleFactory;
 import rice.pastry.transport.TLPastryNode;
 
 public class SocketNodeHandleFactory implements NodeHandleFactory {
-  org.mpisws.p2p.transport.commonapi.NodeHandleFactory<MultiInetSocketAddress> tlInterface;
   TLPastryNode pn;
   Map<MultiInetSocketAddress, SocketNodeHandle> handles;
   Map<SocketNodeHandle, SocketNodeHandle> handleSet;
@@ -29,21 +28,6 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
     
     handles = new HashMap<MultiInetSocketAddress, SocketNodeHandle>();
     handleSet = new HashMap<SocketNodeHandle, SocketNodeHandle>();
-    
-    tlInterface = new org.mpisws.p2p.transport.commonapi.NodeHandleFactory<MultiInetSocketAddress>(){
-    
-      public TransportLayerNodeHandle<MultiInetSocketAddress> readNodeHandle(InputBuffer buf) throws IOException {
-        return (SocketNodeHandle)SocketNodeHandleFactory.this.readNodeHandle(buf);
-      }
-    
-      public TransportLayerNodeHandle<MultiInetSocketAddress> getNodeHandle(MultiInetSocketAddress i, long epoch, rice.p2p.commonapi.Id id) {
-        return (SocketNodeHandle)SocketNodeHandleFactory.this.getNodeHandle(i, epoch, (Id)id);
-      }
-
-      public TransportLayerNodeHandle<MultiInetSocketAddress> lookupNodeHandle(MultiInetSocketAddress i) {
-        return handles.get(i);
-      }
-    }; 
   }
   
   
@@ -90,10 +74,9 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
     return coalesce(SocketNodeHandle.build(buf, pn));
   }
   
-  public org.mpisws.p2p.transport.commonapi.NodeHandleFactory<MultiInetSocketAddress> getTLInterface() {
-    return tlInterface;
-  }
-
+//  public org.mpisws.p2p.transport.commonapi.NodeHandleFactory<MultiInetSocketAddress> getTLInterface() {
+//    return tlInterface;
+//  }
 
   public NodeHandle coalesce(NodeHandle h) {
     SocketNodeHandle handle = (SocketNodeHandle)h;
@@ -106,6 +89,11 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
     handles.put(handle.eaddress, handle);
     handleSet.put(handle, handle);
     return handle;
+  }
+
+
+  public TransportLayerNodeHandle<MultiInetSocketAddress> lookupNodeHandle(MultiInetSocketAddress i) {
+    return handles.get(i);
   }
 
 }

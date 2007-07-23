@@ -92,14 +92,19 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   public static final byte INCORRECT_IDENTITY = 0;
   
   public static final String NODE_HANDLE_TO_INDEX = "identity.node_handle_to_index";
-  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_from_index";
+  public static final String NODE_HANDLE_FROM_INDEX = NODE_HANDLE_TO_INDEX;
+//  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_from_index";
   
   public IdentityImpl(
       byte[] localIdentifier, 
       IdentitySerializer<UpperIdentifier, MiddleIdentifier, LowerIdentifier> serializer, 
       NodeChangeStrategy<UpperIdentifier, LowerIdentifier> nodeChangeStrategy,
+      SanityChecker<UpperIdentifier, MiddleIdentifier> sanityChecker,
       Environment environment) {
     this.logger = environment.getLogManager().getLogger(IdentityImpl.class, null);
+//    logger.log("IdentityImpl.ctor");
+    this.sanityChecker = sanityChecker;
+    if (sanityChecker == null) throw new IllegalArgumentException("SanityChecker is null");
     this.localIdentifier = localIdentifier;    
     this.serializer = serializer;
     this.nodeChangeStrategy = nodeChangeStrategy;
@@ -217,24 +222,24 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     public SocketRequestHandle<LowerIdentifier> openSocket(
         final LowerIdentifier i, 
         final SocketCallback<LowerIdentifier> deliverSocketToMe, 
-        Map<String, Integer> options) {
-      
+        Map<String, Integer> options) {      
       // what happens if they cancel after the socket has been received by a lower layer, but is still reading the header?  
       // May need to re-think this SRHI at all the layers
       final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options);
       int index = options.get(NODE_HANDLE_TO_INDEX);
       final UpperIdentifier dest = intendedDest.get(index);
+      if (logger.level <= Logger.FINE) logger.log("openSocket("+i+") dest:"+dest);
       
       final ByteBuffer buf;
       try {
         SimpleOutputBuffer sob = new SimpleOutputBuffer((int)(localIdentifier.length*2.5)); // good estimate
         serializer.serialize(sob, dest);
+//        logger.log("writing:"+Arrays.toString(sob.getBytes()));
         buf = ByteBuffer.wrap(sob.getBytes());
       } catch (IOException ioe) {
         deliverSocketToMe.receiveException(ret, ioe);
         return ret;
       }
-      
       ret.setSubCancellable(tl.openSocket(i, 
           new SocketCallback<LowerIdentifier>(){
 
@@ -296,6 +301,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
 
     public void incomingSocket(P2PSocket<LowerIdentifier> s) throws IOException {
+      if (logger.level <= Logger.FINE) logger.log("incomingSocket("+s+")");
       s.register(true, false, new P2PSocketReceiver<LowerIdentifier>() {
         ByteBuffer buf = ByteBuffer.allocate(localIdentifier.length);
 
@@ -332,7 +338,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 if (canWrite) throw new IOException("Never asked to write!");
                 if (!canRead) throw new IOException("Can't read!");
                 
-                final Map<String, Integer> newOptions = new HashMap<String, Integer>(socket.getOptions());
+                final Map<String, Integer> newOptions = OptionsFactory.copyOptions(socket.getOptions());
                 try {
                   // add to intendedDest, add option index                  
                   UpperIdentifier from = serializer.deserialize(sib, socket.getIdentifier());                  
@@ -426,7 +432,9 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         System.arraycopy(m.array(), m.position(), b, 0, b.length);
         logger.log("sendMessage("+i+","+m+")"+Arrays.toString(b));
       } else {
-        if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");        
+        if (logger.level <= Logger.FINE) {
+          logger.log("sendMessage("+i+","+m+")");        
+        }
       }
 
       // what happens if they cancel after the socket has been received by a lower layer, but is still reading the header?  
@@ -569,8 +577,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   //              if (logger.level <= Logger.FINE) logger.log("4");
                 if (nodeChangeStrategy.canChange(oldDest, newDest, i)) {
   //                if (logger.level <= Logger.FINE) logger.log("5");
-                  upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE);
                   setDeadForever(oldDest);
+                  upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE);
                 }
               }
             }
@@ -739,7 +747,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       return livenessProvider.checkLiveness(serializer.translateDown(i), options);
     }
 
-    List<LivenessListener<UpperIdentifier>> livenessListeners;
+    List<LivenessListener<UpperIdentifier>> livenessListeners = new ArrayList<LivenessListener<UpperIdentifier>>();
     public void addLivenessListener(LivenessListener<UpperIdentifier> name) {
       synchronized(livenessListeners) {
         livenessListeners.add(name);

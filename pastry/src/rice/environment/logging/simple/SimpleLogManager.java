@@ -130,4 +130,8 @@ public class SimpleLogManager extends AbstractLogManager implements CloneableLog
     return new SimpleLogManager(ps, time, params, detail, dateFormat);
   }
   
+  @Override
+  public String toString() {
+    return "SimpleLogManager("+prefix+")";
+  }
 }

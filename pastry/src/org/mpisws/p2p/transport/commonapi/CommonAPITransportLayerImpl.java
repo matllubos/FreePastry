@@ -16,6 +16,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.PingListener;
@@ -38,62 +39,60 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 public class CommonAPITransportLayerImpl<Identifier> implements 
     CommonAPITransportLayer<Identifier>, 
-    TransportLayerCallback<Identifier, ByteBuffer>,
+    TransportLayerCallback<Identifier, ByteBuffer> /*,
     LivenessListener<Identifier>,
-    ProximityListener<Identifier> {
+    ProximityListener<Identifier> */{
   
-  TransportLayerNodeHandle<Identifier> localAddress; 
+//  TransportLayerNodeHandle<Identifier> localAddress; 
   TransportLayer<Identifier, ByteBuffer> tl;
-  LivenessProvider<Identifier> livenessProvider;
-  ProximityProvider<Identifier> proximityProvider;
+//  LivenessProvider<Identifier> livenessProvider;
+//  ProximityProvider<Identifier> proximityProvider;
   TransportLayerCallback<Identifier, RawMessage> callback;
-  ErrorHandler<TransportLayerNodeHandle<Identifier>> errorHandler;
+  ErrorHandler<Identifier> errorHandler;
   RawMessageDeserializer deserializer;
   IdFactory idFactory;
-  NodeHandleFactory<Identifier> nodeHandleFactory;
+//  NodeHandleFactory<Identifier> nodeHandleFactory;
   Logger logger;
 
   public CommonAPITransportLayerImpl(
-      TransportLayerNodeHandle localAddress, 
       TransportLayer<Identifier, ByteBuffer> tl, 
-      LivenessProvider<Identifier> livenessProvider,
-      ProximityProvider<Identifier> proximityProvider,
       IdFactory idFactory,
-      NodeHandleFactory<Identifier> nodeHandleFactory,
       RawMessageDeserializer deserializer,
+      ErrorHandler errorHandler,
       Environment env) {
     
     this.logger = env.getLogManager().getLogger(CommonAPITransportLayerImpl.class, null);
     this.tl = tl;
-    this.localAddress = localAddress;
+//    this.localAddress = localAddress;
     this.deserializer = deserializer; 
     
     if (tl == null) throw new IllegalArgumentException("tl must be non-null");
-    if (localAddress == null) throw new IllegalArgumentException("localAddress must be non-null");
-    if (proximityProvider == null) throw new IllegalArgumentException("proximityProvider must be non-null");
-    if (livenessProvider == null) throw new IllegalArgumentException("livenessProvider must be non-null");
+//    if (localAddress == null) throw new IllegalArgumentException("localAddress must be non-null");
+//    if (proximityProvider == null) throw new IllegalArgumentException("proximityProvider must be non-null");
+//    if (livenessProvider == null) throw new IllegalArgumentException("livenessProvider must be non-null");
     if (idFactory == null) throw new IllegalArgumentException("idFactroy must be non-null");
-    if (nodeHandleFactory == null) throw new IllegalArgumentException("idFactroy must be non-null");
+//    if (nodeHandleFactory == null) throw new IllegalArgumentException("idFactroy must be non-null");
     if (deserializer == null) throw new IllegalArgumentException("deserializer must be non-null");
     
-    this.nodeHandleFactory = nodeHandleFactory;
-    this.livenessProvider = livenessProvider;
-    this.proximityProvider = proximityProvider;
-    proximityProvider.addProximityListener(this);
+//    this.nodeHandleFactory = nodeHandleFactory;
+//    this.livenessProvider = livenessProvider;
+//    this.proximityProvider = proximityProvider;
+//    proximityProvider.addProximityListener(this);
     this.idFactory = idFactory;
+    this.errorHandler = errorHandler;
     
     if (this.callback == null) {
-      this.callback = new DefaultCallback<TransportLayerNodeHandle<Identifier>, RawMessage>(env);
+      this.callback = new DefaultCallback<Identifier, RawMessage>(env);
     }
     if (this.errorHandler == null) {
-      this.errorHandler = new DefaultErrorHandler<TransportLayerNodeHandle<Identifier>>(logger); 
+      this.errorHandler = new DefaultErrorHandler<Identifier>(logger); 
     }
       
     
     tl.setCallback(this);
-    livenessProvider.addLivenessListener(this);
+//    livenessProvider.addLivenessListener(this);
     
-    this.livenessListeners = new ArrayList<LivenessListener<TransportLayerNodeHandle<Identifier>>>();
+//    this.livenessListeners = new ArrayList<LivenessListener<TransportLayerNodeHandle<Identifier>>>();
   }
   
   public void acceptMessages(boolean b) {
@@ -104,24 +103,24 @@ public class CommonAPITransportLayerImpl<Identifier> implements
     tl.acceptSockets(b);
   }
 
-  public TransportLayerNodeHandle getLocalIdentifier() {
-    return localAddress;
+  public Identifier getLocalIdentifier() {
+    return tl.getLocalIdentifier();
   }
 
-  public void clearState(TransportLayerNodeHandle<Identifier> i) {
-    livenessProvider.clearState(i.getAddress());
-  }
+//  public void clearState(TransportLayerNodeHandle<Identifier> i) {
+//    livenessProvider.clearState(i.getAddress());
+//  }
 
-  public MessageRequestHandle<TransportLayerNodeHandle<Identifier>, RawMessage> sendMessage(
-      final TransportLayerNodeHandle<Identifier> i,
-      RawMessage m, 
-      final MessageCallback<TransportLayerNodeHandle<Identifier>, RawMessage> deliverAckToMe,
+  public MessageRequestHandle<Identifier, RawMessage> sendMessage(
+      final Identifier i,
+      final RawMessage m, 
+      final MessageCallback<Identifier, RawMessage> deliverAckToMe,
       Map<String, Integer> options) {
     // TODO Auto-generated method stub
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");
 
-    final MessageRequestHandleImpl<TransportLayerNodeHandle<Identifier>, RawMessage> handle 
-      = new MessageRequestHandleImpl<TransportLayerNodeHandle<Identifier>, RawMessage>(i, m, options);
+    final MessageRequestHandleImpl<Identifier, RawMessage> handle 
+      = new MessageRequestHandleImpl<Identifier, RawMessage>(i, m, options);
     final ByteBuffer buf;
     
     // we only serialize the Id, we assume the underlieing layer got the address of the NodeHandle correct
@@ -134,12 +133,15 @@ public class CommonAPITransportLayerImpl<Identifier> implements
       // Perhaps this is wasteful.
       // cant put the PriorityTL above this because this is where we serialize
       
-      sob.writeLong(localAddress.getEpoch());
-      localAddress.getId().serialize(sob);
-      if (logger.level <= Logger.FINER) logger.log("sendMessage(): epoch:"+localAddress.getEpoch()+" id:"+localAddress.getId()+" hand:"+localAddress);
+//      sob.writeLong(localAddress.getEpoch());
+//      localAddress.getId().serialize(sob);
+//      if (logger.level <= Logger.FINER) logger.log("sendMessage(): epoch:"+localAddress.getEpoch()+" id:"+localAddress.getId()+" hand:"+localAddress);
       deserializer.serialize(m, sob);
 //      m.serialize(sob);
     } catch (IOException ioe) {
+      if (ioe instanceof NodeIsFaultyException) {
+        ioe = new NodeIsFaultyException(i,m, ioe); 
+      }
       if (deliverAckToMe == null) {
         errorHandler.receivedException(i, ioe);
       } else {
@@ -150,7 +152,7 @@ public class CommonAPITransportLayerImpl<Identifier> implements
     buf = ByteBuffer.wrap(sob.getBytes());
 
     handle.setSubCancellable(tl.sendMessage(
-        i.getAddress(), 
+        i, 
         buf, 
         new MessageCallback<Identifier, ByteBuffer>() {
     
@@ -160,6 +162,10 @@ public class CommonAPITransportLayerImpl<Identifier> implements
           }
         
           public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException ex) {
+            if (ex instanceof NodeIsFaultyException) {
+              ex = new NodeIsFaultyException(i,m, ex); 
+            }
+
             if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
             if (deliverAckToMe == null) {
               errorHandler.receivedException(i, ex);
@@ -173,13 +179,13 @@ public class CommonAPITransportLayerImpl<Identifier> implements
   }
 
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
-    if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+")");
+//    if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+")");
     SimpleInputBuffer buf = new SimpleInputBuffer(m.array(), m.position());
-    long epoch = buf.readLong();
-    Id id = idFactory.build(buf);
-    TransportLayerNodeHandle<Identifier> handle = nodeHandleFactory.getNodeHandle(i, epoch, id); 
-    if (logger.level <= Logger.FINER) logger.log("messageReceived(): epoch:"+epoch+" id:"+id+" hand:"+handle);
-    callback.messageReceived(handle, deserializer.deserialize(buf), options);
+//    long epoch = buf.readLong();
+//    Id id = idFactory.build(buf);
+//    TransportLayerNodeHandle<Identifier> handle = nodeHandleFactory.getNodeHandle(i, epoch, id); 
+//    if (logger.level <= Logger.FINER) logger.log("messageReceived(): epoch:"+epoch+" id:"+id+" hand:"+handle);
+    callback.messageReceived(i, deserializer.deserialize(buf), options);
   }
 
   public void setCallback(
@@ -239,17 +245,17 @@ public class CommonAPITransportLayerImpl<Identifier> implements
 //    notifyPingListenersResponse(nodeHandleFactory.lookupNodeHandle(i), rtt, options);    
 //  }
 
-  public boolean checkLiveness(TransportLayerNodeHandle<Identifier> i, Map<String, Integer> options) {
-    return livenessProvider.checkLiveness(i.getAddress(), options);
-  }
+//  public boolean checkLiveness(TransportLayerNodeHandle<Identifier> i, Map<String, Integer> options) {
+//    return livenessProvider.checkLiveness(i.getAddress(), options);
+//  }
 
 //  public boolean ping(TransportLayerNodeHandle<Identifier> i, Map<String, Integer> options) {
 //    return tl.ping(i.getAddress(), options);
 //  }
 
-  public SocketRequestHandle<TransportLayerNodeHandle<Identifier>> openSocket(
-      final TransportLayerNodeHandle<Identifier> i,
-      final SocketCallback<TransportLayerNodeHandle<Identifier>> deliverSocketToMe, 
+  public SocketRequestHandle<Identifier> openSocket(
+      final Identifier i,
+      final SocketCallback<Identifier> deliverSocketToMe, 
       Map<String, Integer> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
@@ -313,30 +319,30 @@ public class CommonAPITransportLayerImpl<Identifier> implements
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
     if (logger.level <= Logger.FINE) logger.log("incomingSocket("+s+")");
-
-    final SocketInputBuffer sib = new SocketInputBuffer(s,1024);
-    s.register(true, false, new P2PSocketReceiver<Identifier>() {
-    
-      public void receiveSelectResult(P2PSocket<Identifier> socket,
-          boolean canRead, boolean canWrite) throws IOException {
-        if (logger.level <= Logger.FINER) logger.log("incomingSocket("+socket+"):receiveSelectResult()");
-        if (canWrite || !canRead) throw new IOException("Expected to read! "+canRead+","+canWrite);
-        try {
-          long epoch = sib.readLong();
-          Id id = idFactory.build(sib);
-          if (logger.level <= Logger.FINEST) logger.log("Read epoch:"+epoch+" id:"+id+" from:"+socket.getIdentifier());
-          callback.incomingSocket(new SocketWrapperSocket<TransportLayerNodeHandle<Identifier>, Identifier>(
-              nodeHandleFactory.getNodeHandle(socket.getIdentifier(), epoch, id), socket, logger, socket.getOptions()));
-        } catch (InsufficientBytesException ibe) {
-          socket.register(true, false, this); 
-        } catch (IOException e) {
-          errorHandler.receivedException(nodeHandleFactory.getNodeHandle(socket.getIdentifier(), 0, null), e);
-        }
-      }
-    
-      public void receiveException(P2PSocket<Identifier> socket,IOException e) {
-        errorHandler.receivedException(nodeHandleFactory.getNodeHandle(socket.getIdentifier(), 0, null), e);
-      }          
-    });
+    callback.incomingSocket(s);
+//    final SocketInputBuffer sib = new SocketInputBuffer(s,1024);
+//    s.register(true, false, new P2PSocketReceiver<Identifier>() {
+//    
+//      public void receiveSelectResult(P2PSocket<Identifier> socket,
+//          boolean canRead, boolean canWrite) throws IOException {
+//        if (logger.level <= Logger.FINER) logger.log("incomingSocket("+socket+"):receiveSelectResult()");
+//        if (canWrite || !canRead) throw new IOException("Expected to read! "+canRead+","+canWrite);
+//        try {
+//          long epoch = sib.readLong();
+//          Id id = idFactory.build(sib);
+//          if (logger.level <= Logger.FINEST) logger.log("Read epoch:"+epoch+" id:"+id+" from:"+socket.getIdentifier());
+//          callback.incomingSocket(new SocketWrapperSocket<TransportLayerNodeHandle<Identifier>, Identifier>(
+//              nodeHandleFactory.getNodeHandle(socket.getIdentifier(), epoch, id), socket, logger, socket.getOptions()));
+//        } catch (InsufficientBytesException ibe) {
+//          socket.register(true, false, this); 
+//        } catch (IOException e) {
+//          errorHandler.receivedException(nodeHandleFactory.getNodeHandle(socket.getIdentifier(), 0, null), e);
+//        }
+//      }
+//    
+//      public void receiveException(P2PSocket<Identifier> socket,IOException e) {
+//        errorHandler.receivedException(nodeHandleFactory.getNodeHandle(socket.getIdentifier(), 0, null), e);
+//      }          
+//    });
   }
 }

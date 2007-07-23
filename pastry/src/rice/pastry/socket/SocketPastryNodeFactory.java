@@ -49,16 +49,20 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 
+import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.commonapi.IdFactory;
 import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.identity.LowerIdentity;
 import org.mpisws.p2p.transport.identity.NodeChangeStrategy;
+import org.mpisws.p2p.transport.identity.SanityChecker;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl;
@@ -91,8 +95,8 @@ import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
-import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
@@ -271,10 +275,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   }
   
   public NodeHandleAdapter getNodeHanldeAdapter(
-      TLPastryNode pn, 
+      final TLPastryNode pn, 
       NodeHandleFactory handleFactory2, 
       TLDeserializer deserializer) throws IOException {
 
+    Environment environment = pn.getEnvironment();
     SocketNodeHandle localhandle = (SocketNodeHandle)pn.getLocalHandle();
     final SocketNodeHandleFactory handleFactory = (SocketNodeHandleFactory)handleFactory2;
     
@@ -291,30 +296,54 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     MultiAddressSourceRouteFactory esrFactory = new MultiAddressSourceRouteFactory();
     SourceRouteTransportLayer<MultiInetSocketAddress> srl = 
       new SourceRouteTransportLayerImpl<MultiInetSocketAddress>(esrFactory,etl,environment, null);
-
-    SimpleOutputBuffer buf = new SimpleOutputBuffer();
-    localhandle.serialize(buf);
-    byte[] localHandleBytes = new byte[buf.getWritten()];
-    System.arraycopy(buf.getBytes(), 0, localHandleBytes, 0, localHandleBytes.length);
     
-    IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>> serializer = new IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
-      public byte[] serialize(TransportLayerNodeHandle<MultiInetSocketAddress> i) throws IOException {
-        SimpleOutputBuffer buf = new SimpleOutputBuffer();
-        i.serialize(buf);
-        byte[] ret = new byte[buf.getWritten()];
-        System.arraycopy(buf.getBytes(), 0, ret, 0, ret.length);
+    IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, 
+                       MultiInetSocketAddress, 
+                       SourceRoute<MultiInetSocketAddress>> serializer = 
+      new IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, 
+                             MultiInetSocketAddress,
+                             SourceRoute<MultiInetSocketAddress>>() {    
 
-        return ret;
+      public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(InputBuffer buf, SourceRoute<MultiInetSocketAddress> i) throws IOException {
+            long epoch = buf.readLong();
+            Id nid = Id.build(buf);
+//            logger.log("deserialize("+i+") epoch:"+epoch+" nid:"+nid);
+            return (TransportLayerNodeHandle<MultiInetSocketAddress>)handleFactory.coalesce(
+                new SocketNodeHandle(i.getLastHop(), epoch, nid, pn));
+//          }
+//        return (SocketNodeHandle)SocketNodeHandleFactory.this.readNodeHandle(buf);
+      }
+    
+      public void serialize(OutputBuffer buf, TransportLayerNodeHandle<MultiInetSocketAddress> i) throws IOException {
+//        SocketNodeHandle handle = (SocketNodeHandle)i;
+//        i.getAddress()
+        long epoch = i.getEpoch();
+        Id nid = (rice.pastry.Id)i.getId();
+//        logger.log("serialize("+i+") epoch:"+i.getEpoch()+" nid:"+nid);
+        buf.writeLong(epoch);
+        nid.serialize(buf);
+        
+//        handleFactory.getTLInterface().serialize(buf, i);
       }
 
-      public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(ByteBuffer m) throws IOException {
-        SimpleInputBuffer buf = new SimpleInputBuffer(m.array(), m.position());
-        return handleFactory.getTLInterface().readNodeHandle(buf);
+      public MultiInetSocketAddress translateDown(TransportLayerNodeHandle<MultiInetSocketAddress> i) {
+        return i.getAddress();
+      }
+
+      public TransportLayerNodeHandle<MultiInetSocketAddress> translateUp(MultiInetSocketAddress i) {
+        return handleFactory.lookupNodeHandle(i);
       }    
     };
     
-    IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage, SourceRoute<MultiInetSocketAddress>> identity = 
-      new IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage, SourceRoute<MultiInetSocketAddress>>(
+    SimpleOutputBuffer buf = new SimpleOutputBuffer();
+    serializer.serialize(buf, localhandle);
+    byte[] localHandleBytes = new byte[buf.getWritten()];
+    System.arraycopy(buf.getBytes(), 0, localHandleBytes, 0, localHandleBytes.length);
+    
+    IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, 
+        ByteBuffer, SourceRoute<MultiInetSocketAddress>> identity = 
+      new IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, 
+            ByteBuffer, SourceRoute<MultiInetSocketAddress>>(
           localHandleBytes, serializer, 
           new NodeChangeStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>, SourceRoute<MultiInetSocketAddress>>(){
             public boolean canChange(
@@ -336,7 +365,15 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 //            if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+")");
 //            return ((newDest.getAddress().equals(i.getLastHop()) && (newDest.getEpoch() > oldDest.getEpoch());
             }          
-          }, environment);
+          }, 
+          new SanityChecker<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress>() {
+          
+            public boolean isSane(TransportLayerNodeHandle<MultiInetSocketAddress> upper,
+                MultiInetSocketAddress middle) {
+              return upper.getAddress().equals(middle);
+            }
+          
+          },environment);
     
     identity.initLowerLayer(srl);
     LowerIdentity<SourceRoute<MultiInetSocketAddress>, ByteBuffer> lowerIdentityLayer = identity.getLowerIdentity();
@@ -364,25 +401,49 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 
       new PriorityTransportLayerImpl<MultiInetSocketAddress>(srm,srm,environment,2048,null);
 
-    identity.initUpperLayer(priorityTL, priorityTL, priorityTL);    
+    identity.initUpperLayer(localhandle, priorityTL, srm, srm);    
 
-    CommonAPITransportLayer<MultiInetSocketAddress> commonAPItl = 
-      new CommonAPITransportLayerImpl<MultiInetSocketAddress>(
-          localhandle, 
-//          srm,
-          priorityTL, 
-          srm,
-          srm, 
+    CommonAPITransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>> commonAPItl = 
+      new CommonAPITransportLayerImpl<TransportLayerNodeHandle<MultiInetSocketAddress>>(
+
+          identity.getUpperIdentity(), 
           idFactory, 
-          handleFactory.getTLInterface(),
+//          handleFactory.getTLInterface(),
           deserializer,
+          new ErrorHandler<TransportLayerNodeHandle<MultiInetSocketAddress>>() {          
+            Logger logger = pn.getEnvironment().getLogManager().getLogger(SocketPastryNodeFactory.class, null);
+            public void receivedUnexpectedData(
+                TransportLayerNodeHandle<MultiInetSocketAddress> id, byte[] bytes,
+                int location, Map<String, Integer> options) {
+              if (logger.level <= Logger.WARNING) {
+                // make this pretty
+                String s = "";
+                int numBytes = 8;
+                if (bytes.length < numBytes) numBytes = bytes.length;
+                for (int i = 0; i < numBytes; i++) {
+                  s+=bytes[i]+","; 
+                }
+                logger.log("Unexpected data from "+id+" "+s);
+              }
+            }
+          
+            public void receivedException(
+                TransportLayerNodeHandle<MultiInetSocketAddress> i, Throwable error) {
+              if (logger.level <= Logger.INFO) {
+                if (error instanceof NodeIsFaultyException) {                  
+                  NodeIsFaultyException nife = (NodeIsFaultyException)error;
+                  logger.log("Dropping message "+nife.getAttemptedMessage()+" to "+nife.getIdentifier()+" because it is faulty.");
+                }
+              }
+            }          
+          },
           environment); 
         
     NodeHandleAdapter nha = new NodeHandleAdapter(
+        commonAPItl, 
         identity.getUpperIdentity(), 
         identity.getUpperIdentity(), 
-        identity.getUpperIdentity(), 
-        new TLBootstrapper(pn, identity.getUpperIdentity(), handleFactory));
+        new TLBootstrapper(pn, commonAPItl, handleFactory));
 
     return nha;
   }
@@ -427,8 +488,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       
       LivenessListener<NodeHandle> listener = 
         new LivenessListener<NodeHandle>() {
+          Logger logger = pn.getEnvironment().getLogManager().getLogger(SocketPastryNodeFactory.class, null);
           public void livenessChanged(NodeHandle i2, int val) {
             SocketNodeHandle i = (SocketNodeHandle)i2;
+//            logger.log("livenessChanged("+i+","+val+")");
             if (logger.level <= Logger.FINE) logger.log("livenessChanged("+i+","+val+")");
 //            System.out.println("here");
             if (val <= LIVENESS_SUSPECTED && i.getEpoch() != 0L) {
@@ -664,6 +727,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         this.environment.addDestructable(environment);
       }
     }
+    
+//    System.out.println(environment.getLogManager());
 
     // NOTE: We _don't_ want to use the environment RandomSource because this
     // will cause

@@ -403,7 +403,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       if (livenessProvider.getLiveness(identifier, options) >= LIVENESS_DEAD) {
         ret = new MessageWrapper(message, deliverAckToMe, options, priority, 0);
         if (deliverAckToMe != null) 
-          deliverAckToMe.sendFailed(ret, new NodeIsFaultyException(identifier));
+          deliverAckToMe.sendFailed(ret, new NodeIsFaultyException(identifier, message));
         return ret;
       }
       
@@ -759,8 +759,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }                    
       
       public void done(P2PSocket<Identifier> socket) throws IOException {
-        if (logger.level <= Logger.FINER) logger.log(EntityManager.this+" read message of size "+buf.capacity());        
-        callback.messageReceived(identifier, buf, null); // TODO: Set the right option
+        if (logger.level <= Logger.FINER) logger.log(EntityManager.this+" read message of size "+buf.capacity()+" from "+socket);        
+        callback.messageReceived(identifier, buf, socket.getOptions()); 
         new SizeReader(socket);
       }
     }

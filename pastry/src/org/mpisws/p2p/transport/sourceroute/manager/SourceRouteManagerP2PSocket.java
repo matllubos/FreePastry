@@ -20,6 +20,7 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
   public SourceRouteManagerP2PSocket(P2PSocket<SourceRoute<Identifier>> socket, Environment env) {
     this.socket = socket; 
     this.logger = env.getLogManager().getLogger(SourceRouteManagerP2PSocket.class,null);
+//    logger.log("ctor("+socket.getOptions()+")");
   }
   
   public void close() {
@@ -69,5 +70,10 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
 
   public Map<String, Integer> getOptions() {
     return socket.getOptions();
+  }
+
+  @Override
+  public String toString() {
+    return "SRMSocket("+getOptions()+")";
   }
 }
