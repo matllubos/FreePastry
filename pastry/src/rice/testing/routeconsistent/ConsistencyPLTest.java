@@ -77,8 +77,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
   public static boolean useSplitStream = false;
   public static String INSTANCE = "ConsPLSplitStreamTest";
 
-//  public static String BOOTPREFIX = "ricepl-1";
-//  public static String BOOTNODE = "ricepl-1.cs.rice.edu";
+//  public static String BOOTNODE = "janus";
   public static String BOOTNODE = "planetlab01.mpi-sws.mpg.de";
   public static String ALT_BOOTNODE = "planetlab02.mpi-sws.mpg.de";
   public static final int BASE_DELAY = 30000;
@@ -301,8 +300,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       Environment env = new Environment();
       
       environment = env;
-      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINEST);
-      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINE);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINEST);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.ALL);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
+//      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINE);
       environment.getParameters().setBoolean("logging_packageOnly",true);
 //      environment.getParameters().setBoolean("logging_packageOnly",false);
       // turn on consistent join protocol's logger to make sure this is correct for consistency
@@ -389,21 +391,22 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
       
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-      PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
-        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
-            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
-            Environment environment) {
-          LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
-            super.getLivenessTransportLayer(tl, environment);
-          
-          ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
-            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
-              logger.log("SR.livenessChanged("+i+","+val+")");
-            }
-          });
-          return ltl;
-        } 
-      };
+      PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+//      {
+//        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
+//            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+//            Environment environment) {
+//          LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+//            super.getLivenessTransportLayer(tl, environment);
+//          
+//          ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
+//            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
+//              logger.log("SR.livenessChanged("+i+","+val+")");
+//            }
+//          });
+//          return ltl;
+//        } 
+//      };
   
       InetSocketAddress[] bootAddressCandidates = (InetSocketAddress[])bootAddresses.toArray(new InetSocketAddress[0]);
       // This will return null if we there is no node at that location
@@ -424,7 +427,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       node.addLivenessListener(new LivenessListener<NodeHandle>() {      
         Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
         public void livenessChanged(NodeHandle i, int val) {
-          logger.log("livenessChanged("+i+","+val+")");
+          if (i.getId().toString().startsWith("<0x000")) {
+            logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
+          } else {
+            logger.log("livenessChanged1("+i+","+val+")"+i.getId().toString());
+          }
+//          logger.log("livenessChanged("+i+","+val+")");
         }      
       });
       node.addNetworkListener(networkActivity);

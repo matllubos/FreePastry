@@ -492,7 +492,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           public void livenessChanged(NodeHandle i2, int val) {
             SocketNodeHandle i = (SocketNodeHandle)i2;
 //            logger.log("livenessChanged("+i+","+val+")");
-            if (logger.level <= Logger.FINE) logger.log("livenessChanged("+i+","+val+")");
+            if (logger.level <= Logger.FINE) {
+              logger.log("livenessChanged("+i+","+val+")");
+            }
 //            System.out.println("here");
             if (val <= LIVENESS_SUSPECTED && i.getEpoch() != 0L) {
               synchronized(bootHandles) {

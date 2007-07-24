@@ -179,8 +179,14 @@ public class SocketNodeHandle extends DistNodeHandle implements TransportLayerNo
     SocketNodeHandle other = (SocketNodeHandle) obj;
     
     
-    
-    return (epoch == other.epoch && other.getNodeId().equals(getNodeId()) && other.eaddress.equals(eaddress));
+    boolean ret = (epoch == other.epoch && other.getNodeId().equals(getNodeId()) && other.eaddress.equals(eaddress));
+
+    // delme:
+//    if (epoch == other.epoch && !ret) {
+//      System.out.println(this+".equals("+other+") == false! nid:"+(other.getNodeId().equals(getNodeId()))+" eaddr:"+(other.eaddress.equals(eaddress)));
+//    }
+//    System.out.println(this+".equals("+other+"):"+ret);    
+    return ret;
   }
 
   /**
@@ -190,7 +196,9 @@ public class SocketNodeHandle extends DistNodeHandle implements TransportLayerNo
    * @return a hash code.
    */
   public int hashCode() {
-    return ((int)epoch) ^ getNodeId().hashCode() ^ eaddress.hashCode();
+    int hash = ((int)epoch) ^ getNodeId().hashCode() ^ eaddress.hashCode();
+//    System.out.println(this+" hash:"+hash);
+    return hash;
   }
 
   /**

@@ -42,6 +42,7 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+import rice.pastry.socket.SocketNodeHandle;
 
 public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, LowerIdentifier> {
   protected byte[] localIdentifier;
@@ -136,6 +137,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     if (deadForever.contains(i)) return;
     if (logger.level <= Logger.INFO) logger.log("setDeadForever("+i+")");
     deadForever.add(i);
+    upper.notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD_FOREVER);
     deleteBindings(i);
     Set<IdentityMessageHandle> cancelMe = pendingMessages.remove(i);
     if (cancelMe != null) {
@@ -154,10 +156,19 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    */
   protected int addIntendedDest(UpperIdentifier i) {
     synchronized(intendedDest) {
-      if (intendedDest.containsKey(i)) return reverseIntendedDest.get(i);
+      if (reverseIntendedDest.containsKey(i)) return reverseIntendedDest.get(i);
       intendedDest.put(intendedDestCtr, i);
       reverseIntendedDest.put(i, intendedDestCtr);
       intendedDestCtr++;
+      if (logger.level <= Logger.FINER) {
+        logger.log("addIntendedDest("+i+" hash:"+i.hashCode()+"):"+(intendedDestCtr-1));
+        if (i instanceof SocketNodeHandle) {
+          SocketNodeHandle snh = (SocketNodeHandle)i;
+          if (snh.getId().toString().startsWith("<0x000")) {
+            logger.logException("StackTrace snh:"+i+" epoch:"+snh.getEpoch(), new Exception("foo"));
+          }
+        }
+      }
       return intendedDestCtr-1;
     }
   }
@@ -234,6 +245,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       try {
         SimpleOutputBuffer sob = new SimpleOutputBuffer((int)(localIdentifier.length*2.5)); // good estimate
         serializer.serialize(sob, dest);
+        sob.write(localIdentifier);
 //        logger.log("writing:"+Arrays.toString(sob.getBytes()));
         buf = ByteBuffer.wrap(sob.getBytes());
       } catch (IOException ioe) {
@@ -450,9 +462,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       byte[] msgWithHeader;
       if (index == null) {
         // don't include an id
-        msgWithHeader = new byte[1+m.remaining()];    
+        msgWithHeader = new byte[1+localIdentifier.length+m.remaining()];    
         msgWithHeader[0] = NO_ID;        
-        m.get(msgWithHeader, 1, m.remaining());
+        
+        System.arraycopy(localIdentifier, 0, msgWithHeader, 1, localIdentifier.length); // write the FROM
+        m.get(msgWithHeader, 1+localIdentifier.length, m.remaining()); // write the message
+
+//        m.get(msgWithHeader, 1, m.remaining());
       } else {
         // don't include an id
         UpperIdentifier dest = intendedDest.get(index.intValue());
@@ -530,6 +546,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
             return;
           }          
           
+        case NO_ID:
           SimpleInputBuffer sib = new SimpleInputBuffer(m.array(),m.position());
           UpperIdentifier from = serializer.deserialize(sib, i);
           m.position(m.array().length - sib.bytesRemaining());
@@ -537,17 +554,15 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           newOptions.put(NODE_HANDLE_FROM_INDEX, addIntendedDest(from));          
           // continue to read the rest of the message
           
-        case NO_ID:
           // it's for me, no problem
-          // send back an error 
           if (logger.level <= Logger.FINEST) {
             byte[] b = new byte[m.remaining()];
             System.arraycopy(m.array(), m.position(), b, 0, b.length);
             logger.log(
-              "received message for me from:"+i+" "+Arrays.toString(b));
+              "received message for me from:"+from+"("+from+"("+i+")) "+Arrays.toString(b));
           } else {
             if (logger.level <= Logger.FINER) 
-              logger.log("received message for me from:"+i+" "+m);            
+              logger.log("received message for me from:"+from+"("+i+") "+m);            
           }
           callback.messageReceived(i, m, newOptions);
           break;
@@ -776,7 +791,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         }
         return;
       }
-      notifyLivenessListeners(serializer.translateUp(i), val);          
+      UpperIdentifier upper = serializer.translateUp(i);
+      notifyLivenessListeners(upper, val);          
     }
 
 

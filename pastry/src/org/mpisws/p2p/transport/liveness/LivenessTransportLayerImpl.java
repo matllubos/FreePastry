@@ -148,6 +148,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   }
   
   public void clearState(Identifier i) {
+    if (logger.level <= Logger.FINE) logger.log("clearState("+i+")");
     deleteManager(i);
   }
 
@@ -288,7 +289,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (manager != null) {
         synchronized(manager) {
           if (manager.pending != null) {
-            manager.pending.pingResponse(sendTime);  
+            manager.pending.pingResponse(sendTime);
           }
         }
       } else {
@@ -459,8 +460,14 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * @param mgr DESCRIBE THE PARAMETER
      */
     public DeadChecker(EntityManager manager, int numTries, int initialDelay, Map<String, Integer> options) {
-      if (logger.level <= Logger.FINE) logger.log("CHECKING DEATH OF PATH " + manager.identifier+" rto:"+initialDelay);
-
+      if (logger.level <= Logger.FINE) {
+//        String s = 
+//        if (options.containsKey("identity.node_handle_to_index")) {
+//          
+//        }
+        logger.log("CHECKING DEATH OF PATH " + manager.identifier+" rto:"+initialDelay+" options:"+options);
+      }
+      
       this.manager = manager;
       this.numTries = numTries;
       this.options = options;

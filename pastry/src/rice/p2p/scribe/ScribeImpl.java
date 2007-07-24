@@ -902,7 +902,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     TopicManager manager = getTopicManager(topic);
     
     // we send a confirmation back to the child
-    endpoint.route(null, new SubscribeAckMessage(localHandle, Collections.singletonList(topic), Collections.singletonList(manager.getPathToRoot()), MAINTENANCE_ID), child);
+    endpoint.route(null, new SubscribeAckMessage(localHandle, 
+        Collections.singletonList(topic), 
+        Collections.singletonList(manager.getPathToRoot()), MAINTENANCE_ID), child);
   }
    
   public void setParent(Topic topic, NodeHandle parent, List<Id> pathToRoot) {
