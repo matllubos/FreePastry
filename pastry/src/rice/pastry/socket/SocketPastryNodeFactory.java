@@ -388,7 +388,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       new SimpleSourceRouteStrategy<MultiInetSocketAddress>(proxyAddress,esrFactory,nhStrategy,environment);
 //    TransportLayer<EpochInetSocketAddress, ByteBuffer> srm = 
     MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>> prox = 
-      new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(ltl);
+      new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(ltl, environment);
     SourceRouteManager<MultiInetSocketAddress> srm = 
       new SourceRouteManagerImpl<MultiInetSocketAddress>(esrFactory,ltl,ltl,ltl,prox,environment,srStrategy);
     

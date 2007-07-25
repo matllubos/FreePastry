@@ -42,7 +42,7 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
 
   public void register(boolean wantToRead, boolean wantToWrite,
       final P2PSocketReceiver<Identifier> receiver) {
-    if (logger.level <= Logger.FINEST) logger.log("register("+wantToRead+","+wantToWrite+","+receiver+")");
+    if (logger.level <= Logger.FINEST) logger.log(this+"register("+wantToRead+","+wantToWrite+","+receiver+")");
     socket.register(wantToRead, wantToWrite, new P2PSocketReceiver<SourceRoute<Identifier>>(){    
       public void receiveSelectResult(P2PSocket<SourceRoute<Identifier>> socket, boolean canRead, boolean canWrite) throws IOException {
         if (socket != SourceRouteManagerP2PSocket.this.socket) throw new IllegalStateException("socket != this.socket"+socket+","+SourceRouteManagerP2PSocket.this.socket); // it is a bug if this gets tripped
@@ -74,6 +74,6 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
 
   @Override
   public String toString() {
-    return "SRMSocket("+getOptions()+")";
+    return "SRMSocket("+socket.getIdentifier()+":"+getOptions()+")";
   }
 }

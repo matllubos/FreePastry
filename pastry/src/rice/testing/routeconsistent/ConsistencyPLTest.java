@@ -300,13 +300,14 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       Environment env = new Environment();
       
       environment = env;
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINEST);
+      environment.getParameters().setBoolean("logging_packageOnly",false);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.ALL);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
+      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
 //      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINE);
-      environment.getParameters().setBoolean("logging_packageOnly",true);
-//      environment.getParameters().setBoolean("logging_packageOnly",false);
       // turn on consistent join protocol's logger to make sure this is correct for consistency
 //      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
 //      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
@@ -391,22 +392,22 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
       
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-      PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
-//      {
-//        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
-//            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
-//            Environment environment) {
-//          LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
-//            super.getLivenessTransportLayer(tl, environment);
-//          
-//          ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
-//            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
-//              logger.log("SR.livenessChanged("+i+","+val+")");
-//            }
-//          });
-//          return ltl;
-//        } 
-//      };
+      PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
+      {
+        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
+            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+            Environment environment) {
+          LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+            super.getLivenessTransportLayer(tl, environment);
+          
+          ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
+            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
+              logger.log("SR.livenessChanged("+i+","+val+")");
+            }
+          });
+          return ltl;
+        } 
+      };
   
       InetSocketAddress[] bootAddressCandidates = (InetSocketAddress[])bootAddresses.toArray(new InetSocketAddress[0]);
       // This will return null if we there is no node at that location

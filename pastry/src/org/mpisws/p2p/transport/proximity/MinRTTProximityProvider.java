@@ -10,6 +10,10 @@ import java.util.Map;
 import org.mpisws.p2p.transport.liveness.PingListener;
 import org.mpisws.p2p.transport.liveness.Pinger;
 
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+import rice.environment.time.TimeSource;
+
 public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Identifier>, PingListener<Identifier> {
   // the default distance, which is used before a ping
   public static final int DEFAULT_PROXIMITY = 60*60*1000; // 1 hour
@@ -30,16 +34,25 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
 
    Pinger<Identifier> tl;
    
-  public MinRTTProximityProvider(Pinger<Identifier> tl) {
+   Logger logger;
+   
+   TimeSource time;
+   
+   int pingThrottle = 5000; // TODO: Make configurable
+   
+  public MinRTTProximityProvider(Pinger<Identifier> tl, Environment env) {
     this.tl = tl;
+    this.logger = env.getLogManager().getLogger(MinRTTProximityProvider.class, null);
+    this.time = env.getTimeSource();
     tl.addPingListener(this);
     this.managers = new HashMap<Identifier, EntityManager>();
   }
   
   public int proximity(Identifier i) {
-    int ret = getManager(i).proximity;
+    EntityManager manager = getManager(i);
+    int ret = manager.proximity;
     if (ret == DEFAULT_PROXIMITY) {
-      tl.ping(i, null);
+      manager.ping();
     }
     return ret;
   }
@@ -76,6 +89,7 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
     // the current best-known proximity of this route
     protected int proximity;
     
+    protected long lastPingTime = 0;
     /**
      * Constructor - builds a route manager given the route
      *
@@ -87,6 +101,15 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
       proximity = DEFAULT_PROXIMITY;
     }
     
+    public void ping() {
+      long now = time.currentTimeMillis();
+      if ((now - lastPingTime) < pingThrottle) {
+        return;
+      }          
+      lastPingTime = now;
+      tl.ping(identifier, null);
+    }
+
     /**
      * Method which returns the last cached proximity value for the given address.
      * If there is no cached value, then DEFAULT_PROXIMITY is returned.
@@ -105,14 +128,16 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
      */
     protected void markProximity(int proximity, Map<String, Integer> options) {
       if (proximity < 0) throw new IllegalArgumentException("proximity must be >= 0, was:"+proximity);
+      if (logger.level <= Logger.FINER) logger.log(this+".markProximity("+proximity+")");
       if (this.proximity > proximity) {
+        if (logger.level <= Logger.FINE) logger.log(this+" updating proximity to "+proximity);
         this.proximity = proximity;
         notifyProximityListeners(identifier, proximity, options);
       }
     }
 
     public String toString() {
-      return "SRM"+identifier;
+      return identifier.toString();
     }
   }
 

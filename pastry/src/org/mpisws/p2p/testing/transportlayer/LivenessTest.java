@@ -99,7 +99,7 @@ public class LivenessTest extends SRTest {
     bob = buildTL("bob", addr, startPort+1, env);
     carol = buildTL("carol", addr, startPort+2, env);
     dave = buildTL("dave", addr, startPort+3, env);
-    bob_prox = new MinRTTProximityProvider<SourceRoute>((LivenessTransportLayerImpl<SourceRoute>)bob);
+    bob_prox = new MinRTTProximityProvider<SourceRoute>((LivenessTransportLayerImpl<SourceRoute>)bob, env);
   }
 
   private static TransportLayer buildTL(String name, InetAddress addr, int port, Environment env) throws IOException {

@@ -135,7 +135,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
 
     TestLivenessTransportLayerImpl temp = new TestLivenessTransportLayerImpl(srtl,env_a, null);
     MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>> prox = 
-      new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(temp);
+      new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(temp, env_a);
     if (name.equals("bob")) bob_prox = prox;
     
     return new SourceRouteManagerImpl<MultiInetSocketAddress>(srFactory, temp, temp, temp, prox, env_a, 

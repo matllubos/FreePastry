@@ -217,6 +217,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
         // the upper layer is probably going to retry, so mark this dead first
         if (connectionExceptionMeansFaulty) {
+          if (logger.level <= Logger.FINE) logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
           getManager(i).markDead();
         }
         deliverSocketToMe.receiveException(s, ex);
@@ -386,7 +387,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   }
   
   private void notifyLivenessListeners(Identifier i, int liveness) {
-    if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+"):"+livenessListeners.get(0));
+    if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
     List<LivenessListener<Identifier>> temp;
     synchronized(livenessListeners) {
       temp = new ArrayList<LivenessListener<Identifier>>(livenessListeners);
@@ -524,7 +525,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         timer.schedule(this,scheduledTime);
       } else {
         if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + manager.identifier + ") expired - marking as dead.");
-        cancel();
+//        cancel(); // done in markDead()
         manager.markDead();
       }
     }
@@ -643,6 +644,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (liveness != LivenessListener.LIVENESS_SUSPECTED) notify = true;
       this.liveness = LivenessListener.LIVENESS_SUSPECTED;
       if (notify) {
+        if (logger.level <= Logger.FINE) logger.log(this+".markSuspected() notify = true");
         notifyLivenessListeners(identifier, liveness);
       }
     }    
@@ -654,13 +656,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
     protected void markDead() {
       boolean notify = false;
       if (liveness != LivenessListener.LIVENESS_DEAD) notify = true;
-      if (logger.level <= Logger.FINER) logger.log(this+".markDead()");
+      if (logger.level <= Logger.FINER) logger.log(this+".markDead() notify:"+notify);
       this.liveness = LivenessListener.LIVENESS_DEAD;
-      if (notify) {
-        notifyLivenessListeners(identifier, liveness);
-      }
       if (pending != null) {
         pending.cancel(); // sets to null too
+      }
+      if (notify) {
+        notifyLivenessListeners(identifier, liveness);
       }
     }
     
@@ -748,7 +750,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
     
     public String toString() {
-      return "SRM"+identifier;
+      return identifier.toString();
 //      return "SRM{"+System.identityHashCode(this)+"}"+identifier;
     }
     

@@ -22,16 +22,28 @@ public class LeafSetNHStrategy implements NextHopStrategy<MultiInetSocketAddress
   public Collection<MultiInetSocketAddress> getNextHops(MultiInetSocketAddress destination) {
     if (ls == null) return null;
     
-    Set<MultiInetSocketAddress> ret = new HashSet<MultiInetSocketAddress>();
+    Collection<MultiInetSocketAddress> ret = walkLeafSet(destination, 8);
     
-    List<NodeHandle> handles = ls.asList();
-    for (NodeHandle handle : handles) {
-      ret.add(((SocketNodeHandle)handle).eaddress); 
-    }
-
     // don't include the direct route
-    ret.remove(destination);
+//    ret.remove(destination);
     return ret;
   }
-
+  
+  private Collection<MultiInetSocketAddress> walkLeafSet(MultiInetSocketAddress destination, int numRequested) {
+    Collection result = new HashSet<MultiInetSocketAddress>();
+    LeafSet leafset = ls;
+    for (int i = 1; i < leafset.maxSize()/2; i++) {      
+      SocketNodeHandle snh = (SocketNodeHandle)leafset.get(-i);
+      if (!snh.eaddress.equals(destination)) {
+        result.add(snh);
+        if (result.size() >= numRequested) return result;
+      }
+      snh = (SocketNodeHandle)leafset.get(i);
+      if (!snh.eaddress.equals(destination)) {
+        result.add(snh);
+        if (result.size() >= numRequested) return result;
+      }
+    }
+    return result;
+  }
 }

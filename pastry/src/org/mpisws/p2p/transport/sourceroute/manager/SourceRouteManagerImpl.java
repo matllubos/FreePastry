@@ -577,7 +577,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         case LIVENESS_DEAD_FOREVER:
           return false;
         case LIVENESS_DEAD:
-          if (logger.level <= Logger.FINE) logger.log( "(SSRM) CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
+          if (logger.level <= Logger.FINE) logger.logException( "(SSRM) CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY", new Exception("Stack Trace"));
           return livenessProvider.checkLiveness(srFactory.getSourceRoute(getLocalIdentifier(), address), options);
         default:
           if (best != null) {
@@ -678,21 +678,21 @@ public class SourceRouteManagerImpl<Identifier> implements
       if ((best == null) || (deadRoute.equals(best))) {
         best = null;
 
-        Collection<SourceRoute<Identifier>> routes = strategy.getSourceRoutes(address);
-        this.routes.addAll(routes);
+        Collection<SourceRoute<Identifier>> newroutes = strategy.getSourceRoutes(address);
+        this.routes.addAll(newroutes);
         // if we found a route, or are probing one, this goes true, otherwise we go dead
         boolean found = false;
 
         SourceRoute<Identifier> newBest = null;
         
-        for (SourceRoute<Identifier> route : routes) {
+        for (SourceRoute<Identifier> route : this.routes) {
           // assert the strategy did the right thing
           if (!route.getLastHop().equals(address)) {
             if (logger.level <= Logger.SEVERE) logger.log("SRStrategy "+strategy+" is broken.  It returned "+route+" as a route to "+address);
           } else {
             //TODO: need to keep track of when we checked these routes, so that we can go to markDead
             if (livenessProvider.checkLiveness(route, null)) {
-              if (logger.level <= Logger.FINEST) logger.log(this+" Found "+route);
+              if (logger.level <= Logger.FINEST) logger.log(this+" Checking "+route);
               found = true;
             }
             
@@ -705,6 +705,7 @@ public class SourceRouteManagerImpl<Identifier> implements
                    (proxProvider.proximity(newBest) > proxProvider.proximity(route)))) {                    
                 newBest = route;
               }
+              if (logger.level <= Logger.FINEST) logger.log(this+" Found "+route);
               found = true;
             }
           }
@@ -714,16 +715,21 @@ public class SourceRouteManagerImpl<Identifier> implements
           if (logger.level <= Logger.FINE) logger.log("Found existing known route " + newBest + " to replace old dead route " + deadRoute + " - replacing");
           best = newBest;
           // finally, mark this address as alive
-          if (livenessProvider.getLiveness(newBest, null) == LIVENESS_ALIVE) {
+          int tempLiveness = livenessProvider.getLiveness(newBest, null);
+          if (tempLiveness == LIVENESS_ALIVE) {
             setAlive();
-          } else if (livenessProvider.getLiveness(newBest, null) == LIVENESS_SUSPECTED) {
+          } else if (tempLiveness == LIVENESS_SUSPECTED) {
             setSuspected();
           }
           return;
         }
         
-        if (! found) 
+        if (found) {
+          // newBest == null
+          setSuspected();
+        } else {
           setDead();
+        }
       } 
     }    
     
