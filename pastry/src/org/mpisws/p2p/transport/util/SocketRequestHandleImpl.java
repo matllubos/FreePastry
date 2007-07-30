@@ -36,4 +36,9 @@ public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<
     return subCancellable;
   }
 
+  @Override
+  public String toString() {
+    return "SRHi{"+identifier+","+options+"}";
+  }
+
 }

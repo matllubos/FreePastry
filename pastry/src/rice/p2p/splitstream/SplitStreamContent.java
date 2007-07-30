@@ -99,6 +99,11 @@ public class SplitStreamContent implements RawScribeContent {
   }
   
   */
+  
+//  public String toString() {
+//    return "SSContent{"+data.length+"}";
+//  }
+  
   /***************** Raw Serialization ***************************************/
   public short getType() {
     return TYPE;

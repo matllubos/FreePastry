@@ -36,7 +36,7 @@ public class SimpleSourceRouteStrategy<Identifier> implements SourceRouteStrateg
    * The local node is implied and is not included.  Direct routes are also stored here.
    */
   TimerWeakHashMap<Identifier, SourceRoute>routes;
-  NextHopStrategy strategy;
+  NextHopStrategy<Identifier> strategy;
   Environment environment;
   Logger logger;
   LivenessProvider<SourceRoute> livenessManager;
@@ -46,7 +46,7 @@ public class SimpleSourceRouteStrategy<Identifier> implements SourceRouteStrateg
   public SimpleSourceRouteStrategy(
       Identifier localAddress,
       SourceRouteFactory<Identifier> srFactory, 
-      NextHopStrategy strategy, 
+      NextHopStrategy<Identifier> strategy, 
       Environment env) {
     this.localAddress = localAddress;
     this.srFactory = srFactory;

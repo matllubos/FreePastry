@@ -196,6 +196,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
         // first check for missing entries in their leafset
         NodeSet set = leafSet.neighborSet(Integer.MAX_VALUE);
 
+        // don't need to remove any nodes that we already found faulty, because leafset.merge does not accept them
+        
         // if we find any missing entries, check their liveness
         for (int i = 0; i < set.size(); i++)
           if (bls.leafSet().test(set.get(i)))

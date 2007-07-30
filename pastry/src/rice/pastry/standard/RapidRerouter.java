@@ -26,17 +26,18 @@ import rice.pastry.transport.PMessageReceipt;
  */
 public class RapidRerouter extends StandardRouter implements LivenessListener<NodeHandle> {
 
-
+  /**
+   * The max times to try to reroute a message.
+   */
+  public static final int MAX_RETRIES = 10;
+    
   /**
    * These messages should be rapidly rerouted if the node goes suspected.
    */
   Map<NodeHandle, Collection<RouterNotification>> pending;
   
-  Logger logger;
-  
   public RapidRerouter(PastryNode thePastryNode, MessageDispatch dispatch) {
     super(thePastryNode, dispatch);
-    logger = thePastryNode.getEnvironment().getLogManager().getLogger(RapidRerouter.class,null);
     pending = new HashMap<NodeHandle, Collection<RouterNotification>>();
     
     thePastryNode.addLivenessListener(this);
@@ -64,6 +65,15 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
   }
   
   protected void rerouteMe(RouteMessage rm, NodeHandle oldDest) {        
+    if (logger.level <= Logger.FINE) logger.log("rerouteMe("+rm+" oldDest:"+oldDest+")");
+
+    if (rm.numRetries > MAX_RETRIES) {
+      // TODO: Notify some kind of Error Handler
+      if (logger.level <= Logger.WARNING) logger.log("rerouteMe() dropping "+rm+" after "+rm.numRetries+" attempts to (re)route.");
+      return;
+    }
+    rm.numRetries++;
+
     // this is going to make forward() be called again, can prevent this with a check in getPrevNode().equals(localNode)
     rm.getOptions().setRerouteIfSuspected(SendOptions.defaultRerouteIfSuspected);
     route(rm);
@@ -81,13 +91,28 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     }
   }
 
-  private void removeFromPending(RouterNotification notifyMe, NodeHandle handle) {
+  /**
+   * Return true if it was still pending.
+   * 
+   * @param notifyMe
+   * @param handle
+   * @return
+   */
+  private boolean removeFromPending(RouterNotification notifyMe, NodeHandle handle) {
     synchronized(pending) {
       Collection<RouterNotification> c = pending.get(handle);
-      c.remove(notifyMe);
+      if (c == null) {
+        if (logger.level <= Logger.FINE) logger.log("removeFromPending("+notifyMe+","+handle+") had no pending messages for handle.");
+        return false;
+      }
+      boolean ret = c.remove(notifyMe);
       if (c.isEmpty()) {
         pending.remove(handle);
       }
+      if (!ret) {
+        if (logger.level <= Logger.FINE) logger.log("removeFromPending("+notifyMe+","+handle+") msg was not there."); 
+      }
+      return ret;
     }    
   }
   
@@ -100,6 +125,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
       if (rerouteMe != null) {
         if (logger.level <= Logger.FINE) logger.log("removing all messages to:"+i);
         for (RouterNotification rn : rerouteMe) {
+          rn.cancel();
           rerouteMe(rn.rm, rn.dest);
         }
       }
@@ -120,6 +146,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     public RouterNotification(RouteMessage rm, NodeHandle handle) {
       this.rm = rm;
       this.dest = handle;
+      if (logger.level <= Logger.FINE) logger.log("RN.ctor() "+rm+" to:"+dest);
     }
 
     public void setCancellable(PMessageReceipt receipt) {
@@ -128,15 +155,16 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
 
     public void sendFailed(PMessageReceipt msg, Exception reason) {
       // what to do..., rapidly reroute? 
-      if (logger.level <= Logger.WARNING) logger.logException("Send failed on message "+rm+" to "+dest+" rerouting.", reason);
+      if (logger.level <= Logger.WARNING) logger.logException("Send failed on message "+rm+" to "+dest+" rerouting."+msg, reason);
       cancellable = null;
       rm.setTLCancellable(null);
-      removeFromPending(this, dest);
-      rerouteMe(rm, dest);
+      if (removeFromPending(this, dest)) {
+        rerouteMe(rm, dest);
+      }
     }
 
     public void sent(PMessageReceipt msg) {
-      if (logger.level <= Logger.FINE) logger.log("Send success "+rm+" to:"+dest+" rerouting.");
+      if (logger.level <= Logger.FINE) logger.log("Send success "+rm+" to:"+dest+" "+msg);
       cancellable = null;
       rm.setTLCancellable(null);
       removeFromPending(this, dest);      
@@ -144,8 +172,13 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     }
 
     public boolean cancel() {
+      if (logger.level <= Logger.FINE) logger.log("cancelling "+this);
       return cancellable.cancel();
     }    
+    
+    public String toString() {
+      return "RN{"+rm+"->"+dest+"}";
+    }
   }
 
 

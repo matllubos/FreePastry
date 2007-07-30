@@ -406,7 +406,7 @@ public class NodeSet implements NodeSetI, Serializable {
     return getIndex((Id)id);
   }
   
-  public Iterator iterator() {
+  public Iterator<NodeHandle> iterator() {
     return set.iterator(); 
   }
 

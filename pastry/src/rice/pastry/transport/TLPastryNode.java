@@ -413,7 +413,10 @@ public class TLPastryNode extends PastryNode implements
 
         public Message getMessage() {
           return msg;
-        }        
+        }
+        public String toString() {
+          return "TLPN$PMsgRecpt{"+msg+","+localhandle+"}";
+        }
       }; 
       if (deliverAckToMe != null) deliverAckToMe.sent(ret);
       return ret;

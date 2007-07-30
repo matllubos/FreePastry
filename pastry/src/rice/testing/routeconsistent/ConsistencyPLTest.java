@@ -307,7 +307,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
       environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
       environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
-//      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINE);
+      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINER);
       // turn on consistent join protocol's logger to make sure this is correct for consistency
 //      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
 //      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
@@ -428,11 +428,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       node.addLivenessListener(new LivenessListener<NodeHandle>() {      
         Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
         public void livenessChanged(NodeHandle i, int val) {
-          if (i.getId().toString().startsWith("<0x000")) {
-            logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
-          } else {
+//          if (i.getId().toString().startsWith("<0x000")) {
+//            logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
+//          } else {
             logger.log("livenessChanged1("+i+","+val+")"+i.getId().toString());
-          }
+//          }
 //          logger.log("livenessChanged("+i+","+val+")");
         }      
       });

@@ -85,6 +85,11 @@ public class RouteMessage extends PRawMessage implements Serializable,
   byte internalPriority;
   short internalType;
   
+  /**
+   * This is used by the Rerouter to keep track of how many attempted reroutes of the message.
+   */
+  public transient int numRetries = 0;
+  
   private RMDeserializer endpointDeserializer = new RMDeserializer();
   
   /**
@@ -262,9 +267,9 @@ public class RouteMessage extends PRawMessage implements Serializable,
 
   public String toString() {
     if (internalMsg == null) {
-      return "[ serialized{"+auxAddress+","+internalType+"} ]";
+      return "R[serialized{"+auxAddress+","+internalType+"}]";
     }
-    String str = "[ " + internalMsg + " ]";
+    String str = "R[" + internalMsg + "]";
 
     return str;
   }
@@ -580,6 +585,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
   
   // synchronization problem...
+  // This is so the RouteMessage can be cancelled
   Cancellable tlCancellable;
   public void setTLCancellable(Cancellable c) {
     tlCancellable = c;

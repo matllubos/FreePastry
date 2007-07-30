@@ -391,11 +391,12 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 
       MessageWrapper ret;
 
-      if (message.remaining() > MAX_MSG_SIZE) {
+      int remaining = message.remaining();
+      if (remaining > MAX_MSG_SIZE) {
         ret = new MessageWrapper(message, deliverAckToMe, options, priority, 0);
         if (deliverAckToMe != null) 
           deliverAckToMe.sendFailed(ret, 
-            new SocketException("Message too large. size:"+message.remaining()+" max:"+MAX_MSG_SIZE));
+            new SocketException("Message too large. msg:"+message+" size:"+remaining+" max:"+MAX_MSG_SIZE));
 
         return ret; 
       }

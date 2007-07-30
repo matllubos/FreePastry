@@ -31,11 +31,15 @@ public class PMessageReceiptImpl implements PMessageReceipt {
   }
 
   public boolean cancel() {
-    return internal.cancel();
+    if (internal != null) return internal.cancel();
+    return false;
   }
 
   public void setInternal(MessageRequestHandle<NodeHandle, RawMessage> name) {
     this.internal = internal;
   }
-
+  
+  public String toString() {
+    return "PMsgRecptI{"+message+","+(internal==null?null:getIdentifier())+"}";
+  }
 }
