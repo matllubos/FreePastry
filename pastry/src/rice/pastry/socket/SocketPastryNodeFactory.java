@@ -356,7 +356,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 //              if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+") 1");
                 if (newDest.getEpoch() > oldDest.getEpoch()) {
 //                  if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+") 2");
-                  return true;                  
+                  return true;
                 }
               }
               return false;
