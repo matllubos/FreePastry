@@ -399,7 +399,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     };
     
     PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 
-      new PriorityTransportLayerImpl<MultiInetSocketAddress>(srm,srm,environment,2048,null);
+      new PriorityTransportLayerImpl<MultiInetSocketAddress>(srm,srm,environment,20480,null);
 
     identity.initUpperLayer(localhandle, priorityTL, srm, srm);    
 

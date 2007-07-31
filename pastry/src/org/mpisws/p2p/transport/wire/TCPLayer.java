@@ -199,7 +199,6 @@ public class TCPLayer extends SelectionKeyHandler {
       }
       wire.incomingSocket(sm);
       
-//      if (logger.level <= Logger.FINE) logger.log("(SA) " + "Accepted incoming connection from " + addr);
 //      pastryNode.broadcastChannelOpened((InetSocketAddress)channel.socket().getRemoteSocketAddress(), NetworkListener.REASON_ACC_NORMAL);
 
 //      key = wire.environment.getSelectorManager().register(channel, this, SelectionKey.OP_READ);

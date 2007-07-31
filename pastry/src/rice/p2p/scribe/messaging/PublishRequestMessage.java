@@ -89,7 +89,7 @@ public class PublishRequestMessage extends ScribeMessage {
   }
 
   public String toString() {
-    return "PRM:["+content+"]";
+    return "PRM{"+topic+"}:["+content+"]";
   }
   
   /***************** Raw Serialization ***************************************/

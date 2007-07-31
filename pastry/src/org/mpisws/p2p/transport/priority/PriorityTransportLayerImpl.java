@@ -718,6 +718,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         
         new BufferReader(msgSize, socket);
       }
+      
+      public String toString() {
+        return "SizeReader";
+      }
     }
     
     /**
@@ -764,6 +768,11 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         callback.messageReceived(identifier, buf, socket.getOptions()); 
         new SizeReader(socket);
       }
+      
+      public String toString() {
+        return "BufferReader{"+buf+"}";
+      }
+
     }
   } // EntityManager
 }

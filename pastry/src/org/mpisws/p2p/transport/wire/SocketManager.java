@@ -82,7 +82,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     this.options = options;
     logger = tcp.logger;
     this.addr = addr;
-    if (tcp.logger.level <= Logger.FINE) tcp.logger.log("Opening connection to " + addr);
+//    if (tcp.logger.level <= Logger.FINE) tcp.logger.log("Opening connection to " + addr);
     
     channel = SocketChannel.open();
     channel.socket().setSendBufferSize(tcp.SOCKET_BUFFER_SIZE);
@@ -145,28 +145,28 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * shutdownOutput().  This has the effect of removing the manager from
    * the open list.
    */
-  public void shutdown() {
-    try {
-      if (tcp.logger.level <= Logger.FINE) tcp.logger.log("Shutting down output on to " + addr);
-      
-      if (channel != null)
-        channel.socket().shutdownOutput();
-      else
-        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
-
-      tcp.wire.environment.getSelectorManager().modifyKey(key);
-    } catch (IOException e) {
-      if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Received exception " + e + " while shutting down output.");
-      close();
-    }
-  }
+//  public void shutdown() {
+//    try {
+//      if (tcp.logger.level <= Logger.FINE) tcp.logger.log("Shutting down output on to " + addr);
+//      
+//      if (channel != null)
+//        channel.socket().shutdownOutput();
+//      else
+//        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
+//
+//      tcp.wire.environment.getSelectorManager().modifyKey(key);
+//    } catch (IOException e) {
+//      if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Received exception " + e + " while shutting down output.");
+//      close();
+//    }
+//  }
 
   /**
    * Method which closes down this socket manager, by closing the socket,
    * cancelling the key and setting the key to be interested in nothing
    */
   public void close() {
-    if (logger.level <= Logger.FINE) logger.log("close()");
+//    if (logger.level <= Logger.FINE) logger.log("close()");
     try {
       if (logger.level <= Logger.FINE) {
         logger.log("Closing connection to " + addr);
