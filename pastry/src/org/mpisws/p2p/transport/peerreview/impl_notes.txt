@@ -1,0 +1,11 @@
+
+
+Differences between CPP/Java:
+  
+SecureHistory:
+  create()/open() come from a factory  
+  open() takes a boolean readOnly rather than char[] {"r","w"}
+  open() throws an exception if the file doesn't exist on readOnly, rather than retun null
+  fwrite(&entry) => SecureHistory.writeEntry()
+
+
