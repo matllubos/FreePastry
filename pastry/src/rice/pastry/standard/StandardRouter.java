@@ -142,7 +142,7 @@ public class StandardRouter extends PastryAppl implements Router {
   }
 
   protected void sendTheMessage(final RouteMessage rm, NodeHandle handle) {    
-    if (logger.level <= Logger.FINER) logger.log("sendThemessage("+rm+","+handle+")");
+    if (logger.level <= Logger.FINER) logger.log("sendTheMessage("+rm+","+handle+")");
     rm.setTLCancellable(thePastryNode.send(handle, rm, new PMessageNotification(){    
       public void sent(PMessageReceipt msg) {
         rm.sendSuccess();

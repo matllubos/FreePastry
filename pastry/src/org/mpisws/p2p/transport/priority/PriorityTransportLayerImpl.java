@@ -29,7 +29,6 @@ import org.mpisws.p2p.transport.wire.WireTransportLayer;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.Cancellable;
 import rice.selector.SelectorManager;
 
 /**
@@ -40,7 +39,7 @@ import rice.selector.SelectorManager;
 public class PriorityTransportLayerImpl<Identifier> implements PriorityTransportLayer<Identifier>, LivenessListener<Identifier>, TransportLayerCallback<Identifier, ByteBuffer> {
 
   TransportLayer<Identifier, ByteBuffer> tl;
-  LivenessProvider livenessProvider;
+  LivenessProvider<Identifier> livenessProvider;
   
   public static final byte PASSTHROUGH_SOCKET_B = 0;
   public static final byte PRIMARY_SOCKET_B = 1;

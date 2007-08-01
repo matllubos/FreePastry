@@ -889,7 +889,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       }
 
       purgeQueue();
-      clearLivenessState();
+//      clearLivenessState();
     }
 
     /**

@@ -19,10 +19,10 @@ import rice.environment.logging.Logger;
  */
 public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket<Identifier> {
 
-  private Identifier identifier;
-  private P2PSocket<SubIdentifier> socket;
-  private Logger logger;
-  private Map<String, Integer> options;
+  protected Identifier identifier;
+  protected P2PSocket<SubIdentifier> socket;
+  protected Logger logger;
+  protected Map<String, Integer> options;
   
   public SocketWrapperSocket(Identifier identifier, P2PSocket<SubIdentifier> socket, Logger logger, Map<String, Integer> options) {
     this.identifier = identifier;

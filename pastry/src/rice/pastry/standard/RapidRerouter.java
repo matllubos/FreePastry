@@ -47,7 +47,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
   @Override
   protected void sendTheMessage(RouteMessage rm, NodeHandle handle) {
 //    logger.log("sendTheMessage("+rm+","+handle+") reroute:"+rm.getOptions().rerouteIfSuspected());
-    if (rm.getOptions().rerouteIfSuspected()) {
+    if (rm.getOptions().multipleHopsAllowed() && rm.getOptions().rerouteIfSuspected()) {
       // can be rapidly rerouted
       if (handle.getLiveness() >= LIVENESS_SUSPECTED) {
 //        if (logger.level <= Logger.WARNING) logger.log("Reroutable message "+rm+" sending to non-alive node:"+handle+" liveness:"+handle.getLiveness());

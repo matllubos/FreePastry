@@ -106,6 +106,7 @@ import rice.pastry.PastryNode;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.socket.nat.StubNATHandler;
+import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.transport.BogusNodeHandle;
 import rice.pastry.transport.LeafSetNHStrategy;
 import rice.pastry.transport.NodeHandleAdapter;
@@ -442,10 +443,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     NodeHandleAdapter nha = new NodeHandleAdapter(
         commonAPItl, 
         identity.getUpperIdentity(), 
-        identity.getUpperIdentity(), 
-        new TLBootstrapper(pn, commonAPItl, handleFactory));
+        identity.getUpperIdentity());
 
     return nha;
+  }
+  
+  protected Bootstrapper getBootstrapper(TLPastryNode pn, 
+      NodeHandleAdapter tl, 
+      NodeHandleFactory handleFactory,
+      ProximityNeighborSelector pns) {
+    TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns);
+    return bootstrapper;
   }
   
   protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
@@ -466,13 +474,16 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl;
     SocketNodeHandleFactory handleFactory;
 //    InetSocketAddress first;
+    ProximityNeighborSelector pns;
     
     public TLBootstrapper(TLPastryNode pn, 
         TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl, 
-        SocketNodeHandleFactory handleFactory) {
+        SocketNodeHandleFactory handleFactory,
+        ProximityNeighborSelector pns) {
       this.pn = pn;
       this.tl = tl;
       this.handleFactory = handleFactory;
+      this.pns = pns;
     }
 
     public void boot(Collection<InetSocketAddress> bootaddresses) {
@@ -523,7 +534,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       synchronized(bootHandles) {
         try {
           if (bootHandles.size() < tempBootHandles.size()) {          
-            bootHandles.wait(10000);
+            bootHandles.wait(10000); // only wait 10 seconds for the nodes
           }
         } catch (InterruptedException ie) {
           return;
@@ -532,7 +543,19 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       
       pn.getLivenessProvider().removeLivenessListener(listener);
       
-      pn.doneNode(bootHandles);
+      pns.getNearHandles(bootHandles, new Continuation<Collection<NodeHandle>, Exception>(){
+      
+        public void receiveResult(Collection<NodeHandle> result) {
+          pn.doneNode(bootHandles);
+        }
+      
+        public void receiveException(Exception exception) {
+          // TODO Auto-generated method stub          
+        }
+      
+      });
+      
+      
 //      // use the WrongEpochMessage to fetch the identity
 //      logger.log("boot");
 //      first = bootaddresses.iterator().next();

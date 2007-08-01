@@ -107,7 +107,8 @@ public class SubscribeAckMessage extends AbstractSubscribeMessage {
    * @return A String
    */
   public String toString() {
-    return "SubscribeAckMessage " + topics.size() + " ID: " + id; 
+    if (topics.size() == 1) return "SubscribeAckMessage{"+topics.get(0)+" ID:"+id+"}";
+    return "SubscribeAckMessage{"+topics.size()+" ID:"+id+"}"; 
   }
 
   /***************** Raw Serialization ***************************************/

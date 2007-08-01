@@ -15,6 +15,7 @@ import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
@@ -22,6 +23,7 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
+import org.mpisws.p2p.transport.util.SocketWrapperSocket;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -55,8 +57,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
   // the minimum amount of time between check dead checks on dead routes
   public long CHECK_DEAD_THROTTLE;
   
-  // the minimum amount of time between pings
-  public long PING_THROTTLE;
+  // the minimum amount of time between liveness checks
+//  public long LIVENESS_CHECK_THROTTLE;
   
 //  public int NUM_SOURCE_ROUTE_ATTEMPTS;
   
@@ -223,7 +225,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         deliverSocketToMe.receiveException(s, ex);
       }
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
-        deliverSocketToMe.receiveResult(cancellable, sock);
+        deliverSocketToMe.receiveResult(cancellable, new LSocket(getManager(i), sock));
       }    
     }, options);
   }
@@ -370,7 +372,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   }
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
-    callback.incomingSocket(s);    
+    callback.incomingSocket(new LSocket(getManager(s.getIdentifier()), s));    
   }
 
   List<LivenessListener<Identifier>> livenessListeners;
@@ -732,12 +734,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
           this.pending = new DeadChecker(this, NUM_PING_TRIES, rto, options);
           ret = true;
         } else {
-          if (logger.level <= Logger.FINE) { 
-            if (liveness >= LivenessListener.LIVENESS_DEAD) {
-              logger.log(this+".checkLiveness() not checking "+identifier+" because liveness = "+liveness);
-            } else {
-              logger.log(this+".checkLiveness() not checking "+identifier+" checked to recently, can't check for "+((updated+CHECK_DEAD_THROTTLE)-now)+" millis.");
-            }
+          if (logger.level <= Logger.FINE) {
+            logger.log(this+".checkLiveness() not checking "+identifier+" checked to recently, can't check for "+((updated+CHECK_DEAD_THROTTLE)-now)+" millis.");
           }
         }
       }
@@ -756,6 +754,60 @@ public class LivenessTransportLayerImpl<Identifier> implements
     
     public void destroy() {      
       if (pending != null) pending.cancel();
+    }
+  }
+
+  /**
+   * The purpose of this class is to checkliveness on a stalled socket that we are waiting to write on.
+   * 
+   * the livenessCheckerTimer is set every time we want to write, and killed every time we do write
+   * 
+   * TODO: think about exactly what we want to use for the delay on the timer, currently using rto*4
+   * 
+   * @author Jeff Hoye
+   *
+   */
+  class LSocket extends SocketWrapperSocket<Identifier, Identifier> {
+    EntityManager manager;
+    /**
+     * set every time we want to write, and killed every time we do write
+     */
+    TimerTask livenessCheckerTimer;
+    
+    public LSocket(EntityManager manager, P2PSocket<Identifier> socket) {
+      super(socket.getIdentifier(), socket, LivenessTransportLayerImpl.this.logger, socket.getOptions());
+      this.manager = manager;
+    }      
+
+    @Override
+    public void register(boolean wantToRead, boolean wantToWrite, final P2PSocketReceiver<Identifier> receiver) {     
+      if (wantToWrite) startLivenessCheckerTimer();
+      super.register(wantToRead, wantToWrite, new P2PSocketReceiver<Identifier>() {
+
+        public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
+          receiver.receiveException(socket, ioe);
+        }
+
+        public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
+          if (canWrite) stopLivenessCheckerTimer();
+          receiver.receiveSelectResult(socket, canRead, canWrite);
+        }});
+    }
+
+    public void startLivenessCheckerTimer() {      
+      stopLivenessCheckerTimer();
+      livenessCheckerTimer = new TimerTask(){      
+        @Override
+        public void run() {
+          manager.checkLiveness(options);
+        }      
+      };
+      timer.schedule(livenessCheckerTimer, manager.rto()*4);
+    }
+
+    public void stopLivenessCheckerTimer() {
+      if (livenessCheckerTimer != null) livenessCheckerTimer.cancel();
+      livenessCheckerTimer = null;
     }
   }
 }

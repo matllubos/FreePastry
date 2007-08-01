@@ -23,19 +23,17 @@ import rice.pastry.direct.DirectTransportLayer;
 public class NodeHandleAdapter implements 
     TransportLayer<NodeHandle, RawMessage>, 
     LivenessProvider<NodeHandle>, 
-    ProximityProvider<NodeHandle>,
-    Bootstrapper {
+    ProximityProvider<NodeHandle> {
   
   TransportLayer tl;
   LivenessProvider livenessProvider;
   ProximityProvider proxProvider;
   Bootstrapper boot;
   
-  public NodeHandleAdapter(TransportLayer tl, LivenessProvider livenessProvider, ProximityProvider proxProvider, Bootstrapper boot) {
+  public NodeHandleAdapter(TransportLayer tl, LivenessProvider livenessProvider, ProximityProvider proxProvider) {
     this.tl = tl;
     this.livenessProvider = livenessProvider;
     this.proxProvider = proxProvider;
-    this.boot = boot;
   }
 
   public void acceptMessages(boolean b) {
@@ -84,10 +82,6 @@ public class NodeHandleAdapter implements
   }
   public boolean removeProximityListener(ProximityListener<NodeHandle> listener) {
     return proxProvider.removeProximityListener(listener);
-  }
-
-  public void boot(Collection bootaddresses) {
-    boot.boot(bootaddresses);    
   }
 
   public TransportLayer getTL() {

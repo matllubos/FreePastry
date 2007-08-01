@@ -139,6 +139,12 @@ public class PartitionChecker {
     }
   }
   
+  protected LeafSet getLeafSet(NodeHandle nh) throws IOException {
+    // TODO: implement, need to make this an application and have a message to fetch this info
+    
+    return null;
+  }
+  
   protected Ring buildRing(final SocketPastryNodeFactory factory, InetSocketAddress bootstrap) throws Exception {
 //    System.out.println("buildRing("+bootstrap+")");
     unmatchedBootstraps.remove(bootstrap);
@@ -170,7 +176,7 @@ public class PartitionChecker {
             Thread t = new Thread() {
               public void run() {  
                 try {
-                  LeafSet ls = factory.getLeafSet(handle);
+                  LeafSet ls = getLeafSet(handle);
 //                  System.out.println("Response:"+handle+" "+ring.getName()+" "+ls);
                   
                   ps.println(handle.getInetSocketAddress().getAddress().getHostAddress()+":"+

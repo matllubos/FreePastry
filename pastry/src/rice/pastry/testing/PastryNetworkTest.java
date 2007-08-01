@@ -104,7 +104,9 @@ public class PastryNetworkTest {
             public void run() {  
               boolean gotResponse = false;
               try {
-                LeafSet ls = factory.getLeafSet(handle);
+                LeafSet ls = null; // TODO: fix this, old code: factory.getLeafSet(handle);
+                if (false) throw new IOException(); // just to fool the catches later on
+                
                 System.out.println("Response:"+handle+" "+ls);
                 gotResponse = true;
                 ps.println(handle.getInetSocketAddress().getAddress().getHostAddress()+":"+
@@ -197,7 +199,7 @@ public class PastryNetworkTest {
       
       System.out.println("Fetching route row " + row + " of " + handle);
       
-      RouteSet[] set = factory.getRouteRow(handle, row);
+      RouteSet[] set = null; // TODO: fix this, old code: factory.getRouteRow(handle, row);
       
       if (set != null)
         routerows.put(handle, set);        

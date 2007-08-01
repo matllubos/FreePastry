@@ -11,12 +11,14 @@ import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.PastryNodeFactory;
+import rice.pastry.boot.Bootstrapper;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.MessageDispatch;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;
+import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.standard.RapidRerouter;
 import rice.pastry.standard.StandardRouteSetProtocol;
 import rice.pastry.standard.StandardRouter;
@@ -67,9 +69,13 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     
     NodeHandleAdapter nha = getNodeHanldeAdapter(pn, handleFactory, deserializer);
     
+    PNSApplication pns = new PNSApplication(pn);
+    
     pn.setSocketElements(localhandle, leafSetMaintFreq, routeSetMaintFreq, 
-        nha, nha, nha, deserializer, handleFactory, nha);
+        nha, nha, nha, deserializer, handleFactory, getBootstrapper(pn, nha, handleFactory, pns));
   
+    pns.register();
+    
   //  final Logger lLogger = pn.getEnvironment().getLogManager().getLogger(TransportPastryNodeFactory.class, null);
   //  identity.getUpperIdentity().addLivenessListener(new LivenessListener<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
   //    public void livenessChanged(
@@ -111,30 +117,9 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
   protected abstract NodeHandleAdapter getNodeHanldeAdapter(TLPastryNode pn, 
       NodeHandleFactory handleFactory, TLDeserializer deserializer)throws IOException;
   protected abstract NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) throws IOException;
-
-  @Override
-  public LeafSet getLeafSet(NodeHandle handle) throws IOException {
-    throw new IllegalStateException("Not implemented.");
-  }
-
-  @Override
-  public CancellableTask getLeafSet(NodeHandle handle, Continuation c) {
-    throw new IllegalStateException("Not implemented.");
-  }
-
-  @Override
-  public int getProximity(NodeHandle local, NodeHandle handle) {
-    throw new IllegalStateException("Not implemented.");
-  }
-
-  @Override
-  public RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException {
-    throw new IllegalStateException("Not implemented.");
-  }
-
-  @Override
-  public CancellableTask getRouteRow(NodeHandle handle, int row, Continuation c) {
-    throw new IllegalStateException("Not implemented.");
-  }
+  protected abstract Bootstrapper getBootstrapper(TLPastryNode pn, 
+      NodeHandleAdapter tl, 
+      NodeHandleFactory handleFactory,
+      ProximityNeighborSelector pns);
 
 }

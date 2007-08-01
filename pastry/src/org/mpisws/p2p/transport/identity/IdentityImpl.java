@@ -308,9 +308,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                       }
 
                       public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+                        if (!canRead) throw new IOException("Can't read!");
+                        if (canWrite) throw new IOException("Never asked to write!");
                         if (socket.read(responseBuffer) == -1) {
                           // socket unexpectedly closed
-                          deliverSocketToMe.receiveException(ret, new ClosedChannelException());                                                  
+                          socket.close();
+                          deliverSocketToMe.receiveException(ret, new ClosedChannelException());                           
+                          return;
                         }
                         
                         if (responseBuffer.remaining() > 0) {

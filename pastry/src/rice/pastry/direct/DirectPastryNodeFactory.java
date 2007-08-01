@@ -310,10 +310,23 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
         return proxListeners.remove(name);
       }
     
-    },new Bootstrapper<NodeHandle>() {    
-      public void boot(Collection<NodeHandle> bootaddresses) {
-        pn.doneNode(bootaddresses);
-      }    
     });
+  }
+
+  @Override
+  protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, final ProximityNeighborSelector pns) {
+    return new Bootstrapper<NodeHandle>() {
+    
+      public void boot(Collection<NodeHandle> bootaddresses) {
+        pns.getNearHandles(bootaddresses, new Continuation<Collection<NodeHandle>, Exception>() {        
+          public void receiveResult(Collection<NodeHandle> result) {
+            pn.doneNode(result);
+          }        
+          public void receiveException(Exception exception) {
+            // TODO Auto-generated method stub        
+          }        
+        });
+      }    
+    };
   }
 }
