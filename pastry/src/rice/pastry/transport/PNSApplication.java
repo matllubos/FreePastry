@@ -26,7 +26,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * Hashtable which keeps track of temporary ping values, which are
    * only used during the getNearest() method
    */
-  protected Hashtable<NodeHandle, Hashtable<NodeHandle,Integer>> pingCache = new Hashtable<NodeHandle, Hashtable<NodeHandle,Integer>>();
+  protected Hashtable<NodeHandle,Integer> pingCache = new Hashtable<NodeHandle,Integer>();
   
   protected final byte rtBase;
   
@@ -57,6 +57,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @return The leafset of the remote node
    */
   public LeafSet getLeafSet(NodeHandle handle) throws IOException {
+    // make this a 20 second timeout
     return null;
   }
   
@@ -83,6 +84,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @return The route row of the remote node
    */
   public RouteSet[] getRouteRow(NodeHandle handle, int row) throws IOException {
+    // make this a 20 second timeout
     return null;
   }
   
@@ -107,7 +109,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @param handle The handle to determine the proximity of
    * @return The proximity of the provided handle
    */
-  public int getProximity(NodeHandle local, NodeHandle handle) {
+  public int getProximity(NodeHandle handle) {
     return 10;
   }
 
@@ -119,38 +121,29 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @param handle The handle to ping
    * @return The proximity of the handle
    */
-  protected int proximity(NodeHandle local, NodeHandle handle) {
-    Hashtable<NodeHandle,Integer> localTable = pingCache.get(local);
+  protected int proximity(NodeHandle handle) {
+    Hashtable<NodeHandle,Integer> localTable = pingCache;
     
-    if (localTable == null) {
-      localTable = new Hashtable();
-      pingCache.put(local, localTable);
-    }
-    
-    if (localTable.get(handle) == null) {
-      int value = getProximity(local, handle);
-      localTable.put(handle, value);
+    if (pingCache.get(handle) == null) {
+      int value = getProximity(handle);
+      pingCache.put(handle, value);
 
       return value;
     } else {
-      return ((Integer) localTable.get(handle)).intValue();
+      return ((Integer) pingCache.get(handle)).intValue();
     }
   }
   
-  private void purgeProximityCache(NodeHandle local) {
-    pingCache.remove(local); 
+  private void purgeProximityCache() {
+    pingCache.clear(); 
   }
   
-  public NodeHandle[] sortedProximityCache(NodeHandle local) {
-    final Hashtable<NodeHandle,Integer> localTable = pingCache.get(local);
-    if (localTable == null) return null;
-    
-    localTable.remove(local); 
-    ArrayList<NodeHandle> handles = new ArrayList<NodeHandle>(localTable.keySet());
+  public NodeHandle[] sortedProximityCache() {
+    ArrayList<NodeHandle> handles = new ArrayList<NodeHandle>(pingCache.keySet());
     Collections.sort(handles,new Comparator<NodeHandle>() {
     
       public int compare(NodeHandle a, NodeHandle b) {
-        return localTable.get(a).intValue()-localTable.get(b).intValue();
+        return pingCache.get(a).intValue()-pingCache.get(b).intValue();
       }    
     });
     
@@ -174,7 +167,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @param seed Any member of the pastry ring
    * @return A node suitable to boot off of (which is close the this node)
    */
-  public NodeHandle[] getNearest(NodeHandle local, NodeHandle seed) {
+  public NodeHandle[] getNearest(NodeHandle seed) {
     try {
       // if the seed is null, we can't do anything
       if (seed == null)
@@ -185,7 +178,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
       NodeHandle nearNode = seed;
       
       // get closest node in leafset
-      nearNode = closestToMe(local, nearNode, getLeafSet(nearNode));
+      nearNode = closestToMe(nearNode, getLeafSet(nearNode));
       
       // get the number of rows in a routing table
       // -- Here, we're going to be a little inefficient now.  It doesn't
@@ -209,7 +202,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
       // now, iteratively walk up the routing table, picking the closest node
       // each time for the next request
       while (i < depth) {
-        nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, i));
+        nearNode = closestToMe(nearNode, getRouteRow(nearNode, i));
         i++;
       }
       
@@ -217,7 +210,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
       // until no more progress can be made
       do {
         currentClosest = nearNode;
-        nearNode = closestToMe(local, nearNode, getRouteRow(nearNode, depth-1));
+        nearNode = closestToMe(nearNode, getRouteRow(nearNode, depth-1));
       } while (! currentClosest.equals(nearNode));
       
       if (nearNode.getLocalNode() == null) {
@@ -229,19 +222,19 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
         // will work, otherwies, getNearest() used to have to bind to the next port
         // because the pastry node was already bound to its port, now, we do 
         // getNearest() first so we can keep the port the same
-        if (local.getLocalNode() != null)
-          nearNode = local.getLocalNode().coalesce(nearNode);
+        if (thePastryNode != null)
+          nearNode = thePastryNode.coalesce(nearNode);
       }
       
       // return the resulting closest node
 //      return nearNode;
-      return sortedProximityCache(local);
+      return sortedProximityCache();
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.logException(
         "ERROR occured while finding best bootstrap.", e);
       return new NodeHandle[]{seed};
     } finally {
-      purgeProximityCache(local); 
+      purgeProximityCache(); 
     }
   }
 
@@ -254,7 +247,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @param leafSet The leafset to include
    * @return The closest node out of handle union leafset
    */
-  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, LeafSet leafSet)  {
+  private NodeHandle closestToMe(NodeHandle handle, LeafSet leafSet)  {
     Vector handles = new Vector();
 
     for (int i = 1; i <= leafSet.cwSize() ; i++)
@@ -263,7 +256,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
     for (int i = -leafSet.ccwSize(); i < 0; i++)
       handles.add(leafSet.get(i));
 
-    return closestToMe(local, handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
+    return closestToMe(handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
   }
 
   /**
@@ -275,7 +268,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @param routeSet The routeset to include
    * @return The closest node out of handle union routeset
    */
-  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, RouteSet[] routeSets) {
+  private NodeHandle closestToMe(NodeHandle handle, RouteSet[] routeSets) {
     Vector handles = new Vector();
 
     for (int i=0 ; i<routeSets.length ; i++) {
@@ -287,7 +280,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
       }
     }
 
-    return closestToMe(local, handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
+    return closestToMe(handle, (NodeHandle[]) handles.toArray(new NodeHandle[0]));
   }
 
   /**
@@ -299,16 +292,16 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @param handles The array to include
    * @return The closest node out of handle union array
    */
-  private NodeHandle closestToMe(NodeHandle local, NodeHandle handle, NodeHandle[] handles) {
+  private NodeHandle closestToMe(NodeHandle handle, NodeHandle[] handles) {
     NodeHandle closestNode = handle;
 
     // shortest distance found till now    
-    int nearestdist = proximity(local, closestNode);  
+    int nearestdist = proximity(closestNode);  
 
     for (int i=0; i < handles.length; i++) {
       NodeHandle tempNode = handles[i];
 
-      int prox = proximity(local, tempNode);
+      int prox = proximity(tempNode);
       
       if ((prox > 0) && (prox < nearestdist) && tempNode.isAlive()) {
         nearestdist = prox;
