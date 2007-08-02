@@ -225,6 +225,28 @@
     </jar>
   </target>
 
+  <target name="freepastry-pl-test" depends="compile">
+    <jar destfile="pastry.jar" compress="true">
+      <fileset dir="${build.dir}">
+        <include name="org/mpisws/p2p/**/*.class"/>
+        <include name="rice/*.class"/>
+        <include name="rice/environment/**/*.class"/>
+        <include name="rice/p2p/commonapi/**/*.class"/>
+        <include name="rice/p2p/multiring/**/*.class"/>
+        <include name="rice/p2p/past/**/*.class"/>
+        <include name="rice/p2p/replication/**/*.class"/>
+        <include name="rice/p2p/scribe/**/*.class"/>
+        <include name="rice/p2p/splitstream/**/*.class"/>
+        <include name="rice/p2p/util/**/*.class"/> 
+        <include name="rice/pastry/**/*.class"/>
+        <exclude name="rice/pastry/socket/testing/*.class"/>
+        <include name="rice/selector/**/*.class"/>
+        <include name="rice/testing/routeconsistent/**/*.class"/>
+      </fileset>
+      <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
+    </jar>
+  </target>
+
   <target name="freepastry-release" depends="freepastry-jar,javadoc,freepastry-tutorial">
     <move file="pastry.jar" tofile="FreePastry-${freepastry-version}.jar"/>
  <!--
