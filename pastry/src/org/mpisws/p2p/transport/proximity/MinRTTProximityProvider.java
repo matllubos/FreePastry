@@ -15,9 +15,6 @@ import rice.environment.logging.Logger;
 import rice.environment.time.TimeSource;
 
 public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Identifier>, PingListener<Identifier> {
-  // the default distance, which is used before a ping
-  public static final int DEFAULT_PROXIMITY = 60*60*1000; // 1 hour
-
   /**
    * millis for the timeout
    * 

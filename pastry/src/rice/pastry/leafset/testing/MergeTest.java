@@ -45,6 +45,7 @@ import java.util.*;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.proximity.ProximityListener;
 
 import rice.environment.Environment;
 import rice.pastry.*;
@@ -228,6 +229,16 @@ public class MergeTest {
       public void clearState(NodeHandle i) {
         // TODO Auto-generated method stub
         
+      }
+
+      public void addProximityListener(ProximityListener<NodeHandle> listener) {
+        // TODO Auto-generated method stub
+        
+      }
+
+      public boolean removeProximityListener(ProximityListener<NodeHandle> listener) {
+        // TODO Auto-generated method stub
+        return false;
       }
     
     };

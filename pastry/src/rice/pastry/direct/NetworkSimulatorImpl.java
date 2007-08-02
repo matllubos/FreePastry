@@ -208,13 +208,11 @@ public class NetworkSimulatorImpl implements NetworkSimulator {
   }
 
   public float networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
-    // TODO Auto-generated method stub
-    return 0;
+    return simulator.networkDelay(a, b);
   }
 
   public float proximity(DirectNodeHandle a, DirectNodeHandle b) {
-    // TODO Auto-generated method stub
-    return 0;
+    return simulator.proximity(a, b);
   }
 
   public void removeNode(TLPastryNode node) {

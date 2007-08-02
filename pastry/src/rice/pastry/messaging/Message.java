@@ -70,6 +70,30 @@ public abstract class Message implements Serializable, rice.p2p.commonapi.Messag
   private transient Date theStamp;
 
   /**
+   * Constructor.
+   * 
+   * @param dest the destination.
+   */
+
+  public Message(int dest) {
+    this(dest, null);
+  }
+
+  /**
+   * Constructor.
+   * 
+   * @param dest the destination.
+   * @param timestamp the timestamp
+   */
+
+  public Message(int dest, Date timestamp) {
+    if (dest == 0) throw new IllegalArgumentException("dest must != 0");
+    destination = dest;
+    this.theStamp = timestamp;
+    sender = null;
+    priority = false;
+  }
+  /**
    * Gets the address of message receiver that the message is for.
    * 
    * @return the destination id.
@@ -151,27 +175,4 @@ public abstract class Message implements Serializable, rice.p2p.commonapi.Messag
       return false;
   }
 
-  /**
-   * Constructor.
-   * 
-   * @param dest the destination.
-   */
-
-  public Message(int dest) {
-    this(dest, null);
-  }
-
-  /**
-   * Constructor.
-   * 
-   * @param dest the destination.
-   * @param timestamp the timestamp
-   */
-
-  public Message(int dest, Date timestamp) {
-    destination = dest;
-    this.theStamp = timestamp;
-    sender = null;
-    priority = false;
-  }
 }

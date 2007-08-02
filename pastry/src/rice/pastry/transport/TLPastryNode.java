@@ -446,7 +446,11 @@ public class TLPastryNode extends PastryNode implements
   }
   
   public void messageReceived(NodeHandle i, RawMessage m, Map<String, Integer> options) throws IOException {
-    receiveMessage((Message)m);
+    if (m.getType() == 0 && (m instanceof PJavaSerializedMessage)) {
+      receiveMessage(((PJavaSerializedMessage)m).getMessage());
+    } else {
+      receiveMessage((Message)m);
+    }
   }
 
 
@@ -616,5 +620,13 @@ public class TLPastryNode extends PastryNode implements
 
   public void clearState(NodeHandle i) {
     livenessProvider.clearState(i);
+  }
+
+  public void addProximityListener(ProximityListener<NodeHandle> listener) {
+    proxProvider.addProximityListener(listener);
+  }
+
+  public boolean removeProximityListener(ProximityListener<NodeHandle> listener) {
+    return proxProvider.removeProximityListener(listener);
   }
 }

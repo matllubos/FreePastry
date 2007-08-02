@@ -41,6 +41,7 @@ import java.util.*;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.*;
 import rice.environment.Environment;
@@ -62,7 +63,7 @@ import rice.pastry.transport.PMessageReceipt;
  * @author Andrew Ladd
  */
 
-public abstract class PastryNode extends Observable implements rice.p2p.commonapi.Node, Destructable, NodeHandleFactory, LivenessProvider<NodeHandle> {
+public abstract class PastryNode extends Observable implements rice.p2p.commonapi.Node, Destructable, NodeHandleFactory, LivenessProvider<NodeHandle>, ProximityProvider<NodeHandle> {
 
   protected Id myNodeId;
 

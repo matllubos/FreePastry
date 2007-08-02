@@ -46,6 +46,8 @@ package rice.environment.time;
  * 
  * Usually acquired by calling environment.getTimeSource().
  * 
+ * TODO: add wait(lock, timeout) that is the same a s lock.wait(timeout)
+ * 
  * @author Jeff Hoye
  */
 public interface TimeSource {

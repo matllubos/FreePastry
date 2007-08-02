@@ -123,9 +123,9 @@ public abstract class PastryAppl /*implements Observer*/
     this.address = address;
     if (instance != null) {
       this.instance = instance;
-      if (address == 0)
-        this.address = StandardAddress.getAddress(this.getClass(), instance, pn.getEnvironment());
     }
+    if (address == 0)
+      this.address = StandardAddress.getAddress(this.getClass(), instance, pn.getEnvironment());
     
     thePastryNode = pn;
     this.logger = logger;

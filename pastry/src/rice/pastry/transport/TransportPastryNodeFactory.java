@@ -14,6 +14,7 @@ import rice.pastry.PastryNodeFactory;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.MessageDispatch;
+import rice.pastry.pns.PNSApplication;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.standard.ConsistentJoinProtocol;
