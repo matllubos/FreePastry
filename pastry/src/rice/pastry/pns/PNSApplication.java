@@ -20,6 +20,8 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.CancellableTask;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.PastryNode;
@@ -63,7 +65,8 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
 
   
   public PNSApplication(PastryNode pn) {
-    super(pn, null, 0, null /*new PNSDeserializer()*/, pn.getEnvironment().getLogManager().getLogger(PNSApplication.class, null));
+    super(pn, null, 0, null, pn.getEnvironment().getLogManager().getLogger(PNSApplication.class, null));
+    setDeserializer(new PNSDeserializer());
     this.environment = pn.getEnvironment();
     rtBase = (byte)environment.getParameters().getInt("pastry_rtBaseBitLength");
     depth = (short)(Id.IdBitLength / rtBase);
@@ -71,9 +74,12 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
 
   @Override
   public void messageForAppl(Message msg) {
+//    logger.log("messageForAppl("+msg+")");
+    if (logger.level <= Logger.FINER) logger.log("messageForAppl("+msg+")");
+
     if (msg instanceof LeafSetRequest) {
       LeafSetRequest req = (LeafSetRequest)msg;
-      thePastryNode.send(req.requestor, new LeafSetResponse(thePastryNode.getLeafSet(), getAddress()), null, null);
+      thePastryNode.send(req.getSender(), new LeafSetResponse(thePastryNode.getLeafSet(), getAddress()), null, null);
       return;
     }
     
@@ -93,7 +99,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
     
     if (msg instanceof RouteRowRequest) {
       RouteRowRequest req = (RouteRowRequest)msg;
-      thePastryNode.send(req.requestor, 
+      thePastryNode.send(req.getSender(), 
           new RouteRowResponse(
               thePastryNode.getLocalHandle(), 
               req.index, 
@@ -104,7 +110,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
     if (msg instanceof RouteRowResponse) {
       RouteRowResponse response = (RouteRowResponse)msg;
       synchronized (waitingForRouteRow) {
-        Collection<Continuation<RouteSet[], Exception>>[] waiters = waitingForRouteRow.get(response.responder);
+        Collection<Continuation<RouteSet[], Exception>>[] waiters = waitingForRouteRow.get(response.getSender());
         if (waiters != null) {
           if (waiters[response.index] != null) {
             for (Continuation<RouteSet[], Exception> w : waiters[response.index]) {
@@ -121,7 +127,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
               }
             }
           
-            if (deleteIt) waitingForRouteRow.remove(response.responder);
+            if (deleteIt) waitingForRouteRow.remove(response.getSender());
           }
         }
       }
@@ -155,6 +161,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @return The leafset of the remote node
    */
   public LeafSet getLeafSet(NodeHandle handle) throws IOException {
+    if (logger.level <= Logger.FINER) logger.log("getLeafSet("+handle+")");
     final LeafSet[] container = new LeafSet[1];
     // 20 second timeout
     synchronized(container) {
@@ -249,6 +256,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @return The route row of the remote node
    */
   public RouteSet[] getRouteRow(final NodeHandle handle, final short row) throws IOException {
+    if (logger.level <= Logger.FINER) logger.log("getRouteRow("+handle+")");
     final RouteSet[][] container = new RouteSet[1][0];
     // 20 second timeout
     synchronized(container) {
@@ -641,10 +649,21 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
 
 
   
-//  static class PNSDeserializer implements MessageDeserializer {
-//    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }    
-//  }
+  class PNSDeserializer implements MessageDeserializer {
+    public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
+      switch(type) {
+      case LeafSetRequest.TYPE:
+        return LeafSetRequest.build(buf, (NodeHandle)sender, getAddress());
+      case LeafSetResponse.TYPE:
+        return LeafSetResponse.build(buf, thePastryNode, getAddress());
+      case RouteRowRequest.TYPE:
+        return RouteRowRequest.build(buf, (NodeHandle)sender, getAddress());
+      case RouteRowResponse.TYPE:
+        return new RouteRowResponse(buf, thePastryNode, (NodeHandle)sender, getAddress());
+      }
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+  }
 }
