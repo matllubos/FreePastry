@@ -583,6 +583,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @return The closest node out of handle union leafset
    */
   private NodeHandle closestToMe(NodeHandle handle, LeafSet leafSet)  {
+    if (leafSet == null) return handle;
     Vector handles = new Vector();
 
     for (int i = 1; i <= leafSet.cwSize() ; i++)

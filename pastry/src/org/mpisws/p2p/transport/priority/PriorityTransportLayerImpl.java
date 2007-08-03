@@ -260,6 +260,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
    * Synchronization: all state is changed on the selector thread, except the queue, which must be carefully 
    * synchronized.
    * 
+   * If we have something to write that means !queue.isEmpty() || messageThatIsBeingWritten != null, 
+   *   we should have a writingSocket, or a pendingSocket
+   * 
+   * 
    * @author Jeff Hoye
    */
   class EntityManager {
@@ -273,7 +277,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     SocketRequestHandle<Identifier> pendingSocket; // the receipt that we are opening a socket
     P2PSocket<Identifier> writingSocket; // don't try to write to multiple socktes, it will confuse things
     P2PSocket<Identifier> closeWritingSocket; // could be a boolean, but we store the writingSocket here just for debugging, == writingSocket if should close it after the current write
-    MessageWrapper pending; // the current message we are sending, if this is null, we aren't in the middle of sending a message
+    MessageWrapper messageThatIsBeingWritten; // the current message we are sending, if this is null, we aren't in the middle of sending a message
     // Invariant: if (pending != null) then (writingSocket != null)
     
     EntityManager(Identifier identifier) {
@@ -291,7 +295,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //        }
       }
       queue.clear();
-      pending = null;
+      messageThatIsBeingWritten = null;
       if (pendingSocket != null) pendingSocket.cancel();
       pendingSocket = null;
     }
@@ -308,7 +312,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      */
     public boolean closeMe(P2PSocket<Identifier> socket) {
       if (socket == writingSocket) {
-        if (pending == null) {
+        if (messageThatIsBeingWritten == null) {
           sockets.remove(socket);
           socket.close();
           writingSocket = null;
@@ -337,8 +341,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
       sockets.add(s);
       if (writingSocket == null) {
-        if (pending != null) {
-          throw new IllegalStateException("This is a bug, if there is no writingSocket, there should be no pending. writingSocket:"+writingSocket+" pending:"+pending);
+        if (messageThatIsBeingWritten != null) {
+          throw new IllegalStateException("This is a bug, if there is no writingSocket, there should be no messageThatIsBeingWritten. writingSocket:"+writingSocket+" pending:"+messageThatIsBeingWritten);
         } 
         
         writingSocket = s;        
@@ -346,13 +350,13 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         // now that we have a socket, let's send the message
         synchronized(queue) {
           if (!queue.isEmpty()) {
-            pending = queue.poll();
+            messageThatIsBeingWritten = queue.poll();
           }
         }
         
         // don't forget to register the message
-        if (pending != null) {
-          pending.register(writingSocket);
+        if (messageThatIsBeingWritten != null) {
+          messageThatIsBeingWritten.register(writingSocket);
         }
       }
       
@@ -360,19 +364,38 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       new SizeReader(s);
     }
 
+    /**
+     * TODO: The synchronization here may need work.
+     * 
+     * @param handle
+     * @param ex
+     */
     public void receiveSocketException(SocketRequestHandleImpl<Identifier> handle, IOException ex) {      
       if (handle == pendingSocket) {
         pendingSocket = null; 
+        if (messageThatIsBeingWritten == null && queue.isEmpty()) { 
+          return;
+        }
         if (sockets.isEmpty()) {
-          // if we have a pending socket, we are expecting one to be opened
+          // if we have a pending socket, we are expecting one to be opened          
           if (pendingSocket == null) {
             pendingSocket = openPrimarySocket(identifier, handle.getOptions());
           } 
         } else {
           // use an existing socket
-          writingSocket = sockets.iterator().next();
-          if (pending.socket == null) {
-            pending.register(writingSocket);  
+          writingSocket = sockets.iterator().next();          
+          if (messageThatIsBeingWritten == null) {
+            synchronized(queue) {
+            // our pendingSocket failed, and we don't have a messagThatIsBeingWritten because
+            // it got cancelled or something... don't know 
+              messageThatIsBeingWritten = queue.poll();
+              if (messageThatIsBeingWritten != null)
+                messageThatIsBeingWritten.register(writingSocket);
+            }
+          } else {
+            if (messageThatIsBeingWritten.socket == null) {
+              messageThatIsBeingWritten.register(writingSocket);  
+            }
           }
         }
       }
@@ -416,7 +439,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       selectorManager.invoke(new Runnable(){      
         public void run() {
           // do we need to try to send messages?
-          if ((pending == null) && (queue.isEmpty())) {
+          if ((messageThatIsBeingWritten == null) && (queue.isEmpty())) {
             return;
           }
           // we know we need to send messages
@@ -434,10 +457,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             }
           }
           
-          if (writingSocket != null && pending == null) {
+          if (writingSocket != null && messageThatIsBeingWritten == null) {
             synchronized(queue) {
-              pending = queue.poll();
-              pending.register(writingSocket);
+              messageThatIsBeingWritten = queue.poll();
+              messageThatIsBeingWritten.register(writingSocket);
             }
           }
         }      
@@ -461,7 +484,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       int priority;
       int seq;
       
-      P2PSocket socket; // null if we aren't registered
+      P2PSocket socket; // null if we aren't registered, aka, we aren't pending/writing
       
       ByteBuffer originalMessage;
       ByteBuffer message;
@@ -517,7 +540,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             reset();
             writingSocket = null;
             socket = null;
-            pending = null;
+            messageThatIsBeingWritten = null;
             
             synchronized(queue) {
               queue.add(this);
@@ -532,7 +555,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
               // use an existing socket
               writingSocket = sockets.iterator().next();
               synchronized(queue) {
-                pending = queue.poll();
+                messageThatIsBeingWritten = queue.poll();
               }
             }
             return;
@@ -551,7 +574,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (!cancelled) {
           if (deliverAckToMe != null) deliverAckToMe.ack(this);
         }
-        pending = null;
+        messageThatIsBeingWritten = null;
         
         // close the socket if we need to 
         if (closeWritingSocket == writingSocket) {
@@ -577,10 +600,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (writingSocket != null) {
           synchronized(queue) {
             if (!queue.isEmpty()) {
-              pending = queue.poll();
+              messageThatIsBeingWritten = queue.poll();
             }
           }
-          if (pending != null) pending.receiveSelectResult(socket, canRead, canWrite); // using recursion
+          if (messageThatIsBeingWritten != null) messageThatIsBeingWritten.receiveSelectResult(socket, canRead, canWrite); // using recursion
         }
       }
             
@@ -592,8 +615,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (this.socket == socket) {
           this.socket = null;
           reset();
-          if (this == pending) {
-            pending = null;
+          if (this == messageThatIsBeingWritten) {
+            messageThatIsBeingWritten = null;
             synchronized(queue) {
               queue.add(this);
             }
@@ -605,7 +628,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           // should be true, because if I am getting this exception, then:
           //   a) this shouldn't be the writingSocket, or 
           //   b) I should have been pending, and set it to null above
-          if (pending != null) throw new IllegalStateException("Pending should be null! pending:"+pending+" this:"+this+" socket:"+socket);
+          if (messageThatIsBeingWritten != null) throw new IllegalStateException("Pending should be null! pending:"+messageThatIsBeingWritten+" this:"+this+" socket:"+socket);
           
           writingSocket = null; 
           closeWritingSocket = null;          
@@ -627,10 +650,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             // we already know pending is null
             synchronized(queue) {
               if (!queue.isEmpty()) {
-                pending = queue.poll();
+                messageThatIsBeingWritten = queue.poll();
               }
             }
-            pending.register(writingSocket); 
+            messageThatIsBeingWritten.register(writingSocket); 
           }          
         }        
       }
@@ -674,7 +697,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
       public boolean cancel() {
         cancelled = true;
-        if (this.equals(pending)) {
+        if (this.equals(messageThatIsBeingWritten)) {
           if (message.position() == 0) {
             // TODO: can still cancel the message, but have to have special behavior when the socket calls us back 
             return true;

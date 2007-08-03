@@ -717,9 +717,26 @@ public class LivenessTransportLayerImpl<Identifier> implements
      *
      * @return true if there will be an update (either a ping, or a change in liveness)
      */
+    long start = 0; // delme
+    int ctr = 0; // delme
     protected boolean checkLiveness(Map<String, Integer> options) {
 //      logger.log(this+".checkLiveness()");
       if (logger.level <= Logger.FINER) logger.log(this+".checkLiveness()");
+
+      // *************** delme ******************
+      // we're gonna exit if checkLilveness was called 100 times in 1 second
+      ctr++;
+      if (ctr%100 == 0) {
+        ctr = 0;
+        long time_now = time.currentTimeMillis();        
+        if ((time_now - start) < 1000) {
+          logger.logException("great scotts! "+start, new Exception("Stack Trace"));
+          System.exit(1);
+        }
+        start = time_now;
+      }      
+      // *************** end delme **********
+      
       boolean ret = false;
       int rto = DEFAULT_RTO;
       synchronized (this) {

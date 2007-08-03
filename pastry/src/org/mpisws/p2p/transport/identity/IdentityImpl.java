@@ -30,6 +30,7 @@ import org.mpisws.p2p.transport.liveness.PingListener;
 import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.proximity.ProximityListener;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
+import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.InsufficientBytesException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
@@ -229,8 +230,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   }
     
 
-  public void initLowerLayer(TransportLayer<LowerIdentifier, ByteBuffer> tl) {
-    lower = new LowerIdentityImpl(tl);
+  public void initLowerLayer(TransportLayer<LowerIdentifier, ByteBuffer> tl, ErrorHandler<LowerIdentifier> handler) {
+    lower = new LowerIdentityImpl(tl, handler);
   }
   
   public LowerIdentity<LowerIdentifier, ByteBuffer> getLowerIdentity() {
@@ -245,10 +246,16 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     Logger logger;
     
     public LowerIdentityImpl(
-        TransportLayer<LowerIdentifier, ByteBuffer> tl) {
+        TransportLayer<LowerIdentifier, ByteBuffer> tl,
+        ErrorHandler<LowerIdentifier> handler) {
       this.tl = tl;
       logger = environment.getLogManager().getLogger(IdentityImpl.class, "lower");
-      
+      if (handler != null) {
+        this.handler = handler;        
+      } else {
+        this.handler = new DefaultErrorHandler<LowerIdentifier>(logger);        
+      }
+            
       tl.setCallback(this);
     }
 

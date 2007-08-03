@@ -376,7 +376,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           
           },environment);
     
-    identity.initLowerLayer(srl);
+    identity.initLowerLayer(srl, null);
     LowerIdentity<SourceRoute<MultiInetSocketAddress>, ByteBuffer> lowerIdentityLayer = identity.getLowerIdentity();
     
     LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = getLivenessTransportLayer(lowerIdentityLayer, environment);
