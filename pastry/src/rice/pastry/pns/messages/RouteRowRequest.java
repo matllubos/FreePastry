@@ -17,6 +17,7 @@ public class RouteRowRequest extends PRawMessage {
     if (nodeHandle == null) throw new IllegalArgumentException("nodeHandle == null!");
     setSender(nodeHandle);    
     this.index = index;
+    setPriority(HIGH_PRIORITY);
   }
 
   public static rice.p2p.commonapi.Message build(InputBuffer buf, NodeHandle sender, int dest) throws IOException {

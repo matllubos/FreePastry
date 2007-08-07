@@ -605,7 +605,14 @@ public class RouteMessage extends PRawMessage implements Serializable,
     if (notifyMe != null) notifyMe.sendSuccess(this);
   }
   
-  public void sendFailed(Exception e) {
+  /**
+   * Return true if it notified a higher layer.
+   * 
+   * @param e
+   * @return
+   */
+  public boolean sendFailed(Exception e) {
     if (notifyMe != null) notifyMe.sendFailed(this, e);
+    return notifyMe != null;
   }
 }

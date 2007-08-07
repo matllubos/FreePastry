@@ -500,7 +500,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       LivenessListener<NodeHandle> listener = 
         new LivenessListener<NodeHandle>() {
           Logger logger = pn.getEnvironment().getLogManager().getLogger(SocketPastryNodeFactory.class, null);
-          public void livenessChanged(NodeHandle i2, int val) {
+          public void livenessChanged(NodeHandle i2, int val, Map<String, Integer> options) {
             SocketNodeHandle i = (SocketNodeHandle)i2;
 //            logger.log("livenessChanged("+i+","+val+")");
             if (logger.level <= Logger.FINE) {

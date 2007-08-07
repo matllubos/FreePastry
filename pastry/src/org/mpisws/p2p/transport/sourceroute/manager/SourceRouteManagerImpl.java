@@ -596,18 +596,18 @@ public class SourceRouteManagerImpl<Identifier> implements
       return "AM "+this.address; 
     }
 
-    public void livenessChanged(SourceRoute i, int val) {
+    public void livenessChanged(SourceRoute i, int val, Map<String, Integer> options) {
       routes.add(i);
       if (!i.getLastHop().equals(address)) throw new IllegalArgumentException(i+"!="+address+" val:"+val);
       switch(val) {
       case LIVENESS_ALIVE:
-        markAlive(i);
+        markAlive(i, options);
         return;
       case LIVENESS_SUSPECTED:
-        markSuspected(i);
+        markSuspected(i, options);
         return;
       case LIVENESS_DEAD:
-        markDead(i);
+        markDead(i, options);
         return;
 //      case LIVENESS_DEAD_FOREVER:
 //        markDeadForever(i);
@@ -623,7 +623,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-live route
      */
-    protected synchronized void markAlive(SourceRoute route) {
+    protected synchronized void markAlive(SourceRoute route, Map<String, Integer> options) {
       if (logger.level <= Logger.FINER) logger.log(this+" markAlive("+route+"):"+best);
       // first, we check and see if we have no best route (this can happen if the best just died)
       if (best == null) {
@@ -642,7 +642,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       }
       
       // finally, mark this address as alive
-      setAlive();
+      setAlive(options);
     }
     
     /**
@@ -651,12 +651,12 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-suspected route
      */
-    protected synchronized void markSuspected(SourceRoute route) {      
+    protected synchronized void markSuspected(SourceRoute route, Map<String, Integer> options) {      
       if (logger.level <= Logger.FINER) logger.log(this+" markSuspected("+route+"):"+best);
       // mark this address as suspected, if this is currently the best route
       if (((best == null) || (best.equals(route))) && // because we set the best == null when we didn't have a route
           (liveness < LIVENESS_DEAD)) // don't promote the node
-          setSuspected();
+          setSuspected(options);
     }
     
     /**
@@ -665,7 +665,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-dead route
      */
-    protected synchronized void markDead(SourceRoute deadRoute) {
+    protected synchronized void markDead(SourceRoute deadRoute, Map<String, Integer> options) {
       if (logger.level <= Logger.FINE) logger.log(this+" markDead("+deadRoute+"):"+best);
       
       // if we're already dead, who cares
@@ -691,14 +691,14 @@ public class SourceRouteManagerImpl<Identifier> implements
             if (logger.level <= Logger.SEVERE) logger.log("SRStrategy "+strategy+" is broken.  It returned "+route+" as a route to "+address);
           } else {
             //TODO: need to keep track of when we checked these routes, so that we can go to markDead
-            if (livenessProvider.checkLiveness(route, null)) {
+            if (livenessProvider.checkLiveness(route, options)) {
               if (logger.level <= Logger.FINEST) logger.log(this+" Checking "+route);
               found = true;
             }
             
             // now, we check if the route is (a) shorter, or (b) the same length but quicker
             // if se, we switch our best route to that one
-            if (livenessProvider.getLiveness(route, null) < LIVENESS_DEAD) {
+            if (livenessProvider.getLiveness(route, options) < LIVENESS_DEAD) {
               if (newBest == null ||
                  (newBest.getNumHops() > route.getNumHops()) || 
                  ((newBest.getNumHops() == route.getNumHops()) &&
@@ -715,20 +715,20 @@ public class SourceRouteManagerImpl<Identifier> implements
           if (logger.level <= Logger.FINE) logger.log("Found existing known route " + newBest + " to replace old dead route " + deadRoute + " - replacing");
           best = newBest;
           // finally, mark this address as alive
-          int tempLiveness = livenessProvider.getLiveness(newBest, null);
+          int tempLiveness = livenessProvider.getLiveness(newBest, options);
           if (tempLiveness == LIVENESS_ALIVE) {
-            setAlive();
+            setAlive(options);
           } else if (tempLiveness == LIVENESS_SUSPECTED) {
-            setSuspected();
+            setSuspected(options);
           }
           return;
         }
         
         if (found) {
           // newBest == null
-          setSuspected();
+          setSuspected(options);
         } else {
-          setDead();
+          setDead(options);
         }
       } 
     }    
@@ -740,9 +740,9 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param address The now-dead address
      */
-    protected synchronized void markDeadForever() {      
+    protected synchronized void markDeadForever(Map<String, Integer> options) {      
       this.best = null;            
-      setDeadForever();
+      setDeadForever(options);
     }
     
     /**
@@ -777,7 +777,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * 
      * @throws IllegalStateException if best is null.
      */
-    protected void setAlive() {
+    protected void setAlive(Map<String, Integer> options) {
       if (logger.level <= Logger.FINE) logger.log(this+"setAlive():"+best);
 
       if (best == null) throw new IllegalStateException("best is null in "+toString());
@@ -799,13 +799,13 @@ public class SourceRouteManagerImpl<Identifier> implements
       switch (liveness) {
         case LIVENESS_DEAD:
           liveness = LIVENESS_ALIVE;
-          notifyLivenessListeners(address, LIVENESS_ALIVE);
+          notifyLivenessListeners(address, LIVENESS_ALIVE, options);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be alive again.");
           break;
         case LIVENESS_UNKNOWN:
         case LIVENESS_SUSPECTED:
           liveness = LIVENESS_ALIVE;
-          notifyLivenessListeners(address, LIVENESS_ALIVE);
+          notifyLivenessListeners(address, LIVENESS_ALIVE, options);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be unsuspected.");
           break;
         case LIVENESS_DEAD_FOREVER:
@@ -817,19 +817,19 @@ public class SourceRouteManagerImpl<Identifier> implements
     /**
      * Internal method which marks this address as being suspected.
      */
-    protected void setSuspected() {
+    protected void setSuspected(Map<String, Integer> options) {
       switch (liveness) {
         case LIVENESS_UNKNOWN:
         case LIVENESS_ALIVE:
           liveness = LIVENESS_SUSPECTED;
-          notifyLivenessListeners(address, LIVENESS_SUSPECTED);
+          notifyLivenessListeners(address, LIVENESS_SUSPECTED, options);
           if (logger.level <= Logger.FINE) 
             logger.log("COUNT: " + environment.getTimeSource().currentTimeMillis() + 
                 " " + localAddress + " Found address " + address + " to be suspected.");
           break;
         case LIVENESS_DEAD:
           liveness = LIVENESS_SUSPECTED;
-          notifyLivenessListeners(address, LIVENESS_SUSPECTED);
+          notifyLivenessListeners(address, LIVENESS_SUSPECTED, options);
           if (logger.level <= Logger.WARNING) 
             logger.logException(
                 "ERROR: Found node handle " + address + 
@@ -865,7 +865,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * Internal method which marks this address as being dead.  If we were alive or suspected before, it
      * sends an update out to the observers.
      */
-    protected void setDead() {
+    protected void setDead(Map<String, Integer> options) {
 //      logger.log(this+" marking as dead.");
       switch (liveness) {
         case LIVENESS_DEAD:
@@ -879,7 +879,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         default:
           this.best = null;
           this.liveness = LIVENESS_DEAD;
-          notifyLivenessListeners(address, LIVENESS_DEAD);
+          notifyLivenessListeners(address, LIVENESS_DEAD, options);
 //          if (address != null) address.update(DECLARED_DEAD);   
 //          if (address != null) manager.declaredDead(address);
           if (logger.level <= Logger.FINE) 
@@ -896,7 +896,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * Internal method which marks this address as being dead.  If we were alive or suspected before, it
      * sends an update out to the observers.
      */
-    protected void setDeadForever() {
+    protected void setDeadForever(Map<String, Integer> options) {
       switch (liveness) {
         case LIVENESS_DEAD_FOREVER:
           return;
@@ -907,7 +907,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         default:
           this.best = null;
           this.liveness = LIVENESS_DEAD_FOREVER;
-          notifyLivenessListeners(address, LIVENESS_DEAD_FOREVER);
+          notifyLivenessListeners(address, LIVENESS_DEAD_FOREVER, options);
           if (logger.level <= Logger.FINE) logger.log("Found address " + address + " to be dead forever.");
           break;
       }
@@ -943,14 +943,14 @@ public class SourceRouteManagerImpl<Identifier> implements
     }
   }
   
-  private void notifyLivenessListeners(Identifier i, int liveness) {
+  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Integer> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
     List<LivenessListener<Identifier>> temp;
     synchronized(livenessListeners) {
       temp = new ArrayList<LivenessListener<Identifier>>(livenessListeners);
     }
     for (LivenessListener<Identifier> listener : temp) {
-      listener.livenessChanged(i, liveness);
+      listener.livenessChanged(i, liveness, options);
     }
   }
   
@@ -984,9 +984,9 @@ public class SourceRouteManagerImpl<Identifier> implements
     callback.messageReceived(i.getLastHop(), m, options);
   }
 
-  public void livenessChanged(SourceRoute<Identifier> i, int val) {
+  public void livenessChanged(SourceRoute<Identifier> i, int val, Map<String, Integer> options) {
     if (logger.level <= Logger.FINER) logger.log("livenessChanged("+i+","+val+")");
-    getAddressManager(i.getLastHop()).livenessChanged(i,val);
+    getAddressManager(i.getLastHop()).livenessChanged(i,val, options);
   }
 
 //  public void pingResponse(SourceRoute<Identifier> i, int rtt, Map<String, Integer> options) {

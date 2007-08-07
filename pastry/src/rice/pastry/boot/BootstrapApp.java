@@ -2,6 +2,7 @@ package rice.pastry.boot;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
@@ -38,7 +39,7 @@ public class BootstrapApp extends PastryAppl implements Bootstrapper, LivenessLi
     
   }
 
-  public void livenessChanged(NodeHandle i, int val) {
+  public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
     // TODO Auto-generated method stub
     
   }

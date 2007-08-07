@@ -1,11 +1,13 @@
 package rice.pastry.standard;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.priority.QueueOverflowException;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
@@ -64,15 +66,25 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     }
   }
   
-  protected void rerouteMe(RouteMessage rm, NodeHandle oldDest) {        
+  protected void rerouteMe(RouteMessage rm, NodeHandle oldDest, Exception ioe) {        
     if (logger.level <= Logger.FINE) logger.log("rerouteMe("+rm+" oldDest:"+oldDest+")");
 
+    rm.numRetries++;
     if (rm.numRetries > MAX_RETRIES) {
       // TODO: Notify some kind of Error Handler
-      if (logger.level <= Logger.WARNING) logger.log("rerouteMe() dropping "+rm+" after "+rm.numRetries+" attempts to (re)route.");
+      boolean dontPrint = false;
+      if (ioe == null) {
+        dontPrint = rm.sendFailed(new TooManyRouteAttempts(rm, MAX_RETRIES));
+      } else {
+        dontPrint = rm.sendFailed(ioe);
+      }
+      if (dontPrint) {
+        if (logger.level <= Logger.CONFIG) logger.log("rerouteMe() dropping "+rm+" after "+rm.numRetries+" attempts to (re)route.");
+      } else {
+        if (logger.level <= Logger.WARNING) logger.log("rerouteMe() dropping "+rm+" after "+rm.numRetries+" attempts to (re)route.");        
+      }
       return;
     }
-    rm.numRetries++;
 
     // this is going to make forward() be called again, can prevent this with a check in getPrevNode().equals(localNode)
     rm.getOptions().setRerouteIfSuspected(SendOptions.defaultRerouteIfSuspected);
@@ -96,7 +108,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
    * 
    * @param notifyMe
    * @param handle
-   * @return
+   * @return true if still pending
    */
   private boolean removeFromPending(RouterNotification notifyMe, NodeHandle handle) {
     synchronized(pending) {
@@ -116,7 +128,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     }    
   }
   
-  public void livenessChanged(NodeHandle i, int val) {
+  public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
     if (val >= LIVENESS_SUSPECTED) {
       Collection<RouterNotification> rerouteMe;
       synchronized(pending) {
@@ -126,7 +138,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
         if (logger.level <= Logger.FINE) logger.log("removing all messages to:"+i);
         for (RouterNotification rn : rerouteMe) {
           rn.cancel();
-          rerouteMe(rn.rm, rn.dest);
+          rerouteMe(rn.rm, rn.dest, null);
         }
       }
     }
@@ -155,11 +167,29 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
 
     public void sendFailed(PMessageReceipt msg, Exception reason) {
       // what to do..., rapidly reroute? 
-      if (logger.level <= Logger.WARNING) logger.logException("Send failed on message "+rm+" to "+dest+" rerouting."+msg, reason);
       cancellable = null;
       rm.setTLCancellable(null);
+      if (reason instanceof QueueOverflowException) {
+        if (rm.sendFailed(reason)) {
+          if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
+        } else {
+          if (logger.level <= Logger.FINE) {
+            logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier()+" "+reason);          
+          }
+        }
+        return; 
+      }
       if (removeFromPending(this, dest)) {
-        rerouteMe(rm, dest);
+        if (logger.level <= Logger.WARNING) logger.logException("Send failed on message "+rm+" to "+dest+" rerouting."+msg, reason);
+        rerouteMe(rm, dest, reason);
+      } else {        
+        if (rm.sendFailed(reason)) {
+          if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
+        } else {
+          if (logger.level <= Logger.WARNING) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);          
+        }
       }
     }
 

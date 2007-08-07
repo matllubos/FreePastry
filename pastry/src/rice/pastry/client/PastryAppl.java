@@ -219,8 +219,12 @@ public abstract class PastryAppl /*implements Observer*/
             (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
           // continue to receiveMessage()
         } else {
-          if (logger.level <= Logger.INFO) logger.log("Dropping "+msg+" because node is not ready.");
-          rm.sendFailed(new NodeIsNotReadyException(thePastryNode.getLocalHandle()));
+          if (rm.sendFailed(new NodeIsNotReadyException(thePastryNode.getLocalHandle()))) {
+            if (logger.level <= Logger.CONFIG) logger.log("Dropping "+msg+" because node is not ready.");            
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log("Dropping "+msg+" because node is not ready.");
+            
+          }
           // enable this if you want to forward RouteMessages when not ready, without calling the "forward()" method on the PastryAppl that sent the message
 //          RouteMessage rm = (RouteMessage)msg;
 //          rm.routeMessage(this.localNode.getLocalHandle());

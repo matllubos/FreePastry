@@ -434,10 +434,12 @@ public class TLPastryNode extends PastryNode implements
       new MessageCallback<NodeHandle, RawMessage>(){
     
       public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, IOException reason) {        
+        if (ret.internal == null) ret.setInternal(msg);
         deliverAckToMe.sendFailed(ret, reason);
       }
     
       public void ack(MessageRequestHandle<NodeHandle, RawMessage> msg) {
+        if (ret.internal == null) ret.setInternal(msg);
         deliverAckToMe.sent(ret);
       }
     
@@ -557,7 +559,7 @@ public class TLPastryNode extends PastryNode implements
     }    
   }
 
-  public void livenessChanged(NodeHandle i, int val) {
+  public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
     if (val == LIVENESS_ALIVE) {
       i.update(NodeHandle.DECLARED_LIVE);
     } else {
@@ -566,7 +568,7 @@ public class TLPastryNode extends PastryNode implements
       }
     }
     
-    notifyLivenessListeners((NodeHandle)i, val);
+    notifyLivenessListeners((NodeHandle)i, val, options);
   }
   
   Collection<LivenessListener<NodeHandle>> livenessListeners = new ArrayList<LivenessListener<NodeHandle>>();
@@ -582,13 +584,14 @@ public class TLPastryNode extends PastryNode implements
     }    
   }
   
-  protected void notifyLivenessListeners(NodeHandle i, int val) {
+  protected void notifyLivenessListeners(NodeHandle i, int val, Map<String, Integer> options) {
+    if (logger.level <= Logger.FINE) logger.log("notifyLivenessListeners("+i+","+val+")"); 
     ArrayList<LivenessListener<NodeHandle>> temp;
     synchronized(livenessListeners) {
       temp = new ArrayList<LivenessListener<NodeHandle>>(livenessListeners);
     }
     for (LivenessListener<NodeHandle> ll : temp) {
-      ll.livenessChanged(i, val);
+      ll.livenessChanged(i, val, options);
     }
   }
 

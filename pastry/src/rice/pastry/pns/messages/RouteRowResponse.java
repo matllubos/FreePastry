@@ -23,6 +23,7 @@ public class RouteRowResponse extends PRawMessage {
     setSender(sender);    
     this.index = index;
     this.row = row;
+    setPriority(HIGH_PRIORITY);
   }
 
   public void serialize(OutputBuffer buf) throws IOException {

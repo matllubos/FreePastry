@@ -346,9 +346,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     long ret = channel.read(dst);
     if (logger.level <= Logger.FINER) {
       if (logger.level <= Logger.FINEST) {
-        logger.log(this+"read("+(dst.array().length-dst.remaining())+"):"+Arrays.toString(dst.array()));
+        logger.log(this+"read("+ret+"):"+Arrays.toString(dst.array()));
       } else {
-        logger.log(this+"read("+(dst.array().length-dst.remaining())+")");
+        logger.log(this+"read("+ret+")");
       }
     }    
     return ret;
@@ -359,14 +359,15 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   }
 
   public long write(ByteBuffer src) throws IOException {
+    long ret = channel.write(src);
     if (logger.level <= Logger.FINER) {
       if (logger.level <= Logger.FINEST) {
-        logger.log(this+"write("+src.remaining()+"):"+Arrays.toString(src.array()));
+        logger.log(this+"write("+ret+"):"+Arrays.toString(src.array()));
       } else {
-        logger.log(this+"write("+src.remaining()+")");
+        logger.log(this+"write("+ret+")");
       }
     }
-    return channel.write(src);
+    return ret;
   }
   public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
     //System.out.println(this+"write("+srcs.length+","+offset+","+length+")");

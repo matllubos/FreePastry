@@ -350,7 +350,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> implements
 
   public void remove(Identifier i) {
     nodes.remove(i);
-    notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD);
+    notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD, null);
   }
 
   public Environment getEnvironment() {
@@ -441,14 +441,14 @@ public class BasicNetworkSimulator<Identifier, MessageType> implements
     }
   }
   
-  private void notifyLivenessListeners(Identifier i, int liveness) {
+  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Integer> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+"):"+livenessListeners.get(0));
     List<LivenessListener<Identifier>> temp;
     synchronized(livenessListeners) {
       temp = new ArrayList<LivenessListener<Identifier>>(livenessListeners);
     }
     for (LivenessListener<Identifier> listener : temp) {
-      listener.livenessChanged(i, liveness);
+      listener.livenessChanged(i, liveness, options);
     }
   }
 

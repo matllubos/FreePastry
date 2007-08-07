@@ -217,7 +217,7 @@ public class LivenessTest extends SRTest {
     final Object lock = new Object();
     
     alice.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>() {    
-      public void livenessChanged(SourceRoute i, int val) {
+      public void livenessChanged(SourceRoute i, int val, Map<String, Integer> options) {
         synchronized(lock) {
           tupels.add(new Tupel(i,val));        
           lock.notify();

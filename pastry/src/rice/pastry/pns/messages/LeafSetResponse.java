@@ -18,6 +18,7 @@ public class LeafSetResponse extends PRawMessage {
   public LeafSetResponse(LeafSet leafset, int dest) {
     super(dest);
     this.leafset = leafset;
+    setPriority(HIGH_PRIORITY);
   }
 
   public short getType() {

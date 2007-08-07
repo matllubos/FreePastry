@@ -20,6 +20,7 @@ import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.PingListener;
+import org.mpisws.p2p.transport.priority.QueueOverflowException;
 import org.mpisws.p2p.transport.proximity.ProximityListener;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.util.DefaultCallback;
@@ -161,11 +162,14 @@ public class CommonAPITransportLayerImpl<Identifier> implements
             if (deliverAckToMe != null) deliverAckToMe.ack(handle);
           }
         
-          public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException ex) {
+          public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException ex) {            
             if (ex instanceof NodeIsFaultyException) {
-              ex = new NodeIsFaultyException(i,m, ex); 
+              ex = new NodeIsFaultyException(i, m, ex); 
             }
-
+            if (ex instanceof QueueOverflowException) {
+              ex = new QueueOverflowException(i, m, ex); 
+            }
+            if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+i+","+m+")",ex);
             if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
             if (deliverAckToMe == null) {
               errorHandler.receivedException(i, ex);

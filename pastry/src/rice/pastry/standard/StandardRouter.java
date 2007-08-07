@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package rice.pastry.standard;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
@@ -141,14 +142,22 @@ public class StandardRouter extends PastryAppl implements Router {
     return true;
   }
 
-  protected void sendTheMessage(final RouteMessage rm, NodeHandle handle) {    
+  protected void sendTheMessage(final RouteMessage rm, final NodeHandle handle) {    
     if (logger.level <= Logger.FINER) logger.log("sendTheMessage("+rm+","+handle+")");
     rm.setTLCancellable(thePastryNode.send(handle, rm, new PMessageNotification(){    
       public void sent(PMessageReceipt msg) {
         rm.sendSuccess();
       }    
       public void sendFailed(PMessageReceipt msg, Exception reason) {
-        rm.sendFailed(reason);
+        if (rm.sendFailed(reason)) {
+          if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+rm+")=>"+handle, reason);
+        } else {
+          if (logger.level <= Logger.FINE) {
+            logger.logException("sendFailed("+rm+")=>"+handle, reason);                      
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log("sendFailed("+rm+")=>"+handle+" "+reason);          
+          }
+        }
       }    
     }, rm.getTLOptions())); 
   }
@@ -254,9 +263,13 @@ public class StandardRouter extends PastryAppl implements Router {
   public void deliverToApplication(RouteMessage msg) {
     PastryAppl appl = dispatch.getDestinationByAddress(msg.getAuxAddress());
     if (appl == null) {
-      if (logger.level <= Logger.WARNING) logger.log(
-          "Dropping message " + msg + " because the application address " + msg.getAuxAddress() + " is unknown.");
-      msg.sendFailed(new AppNotRegisteredException(msg.getAuxAddress()));
+      if (msg.sendFailed(new AppNotRegisteredException(msg.getAuxAddress()))) {
+        if (logger.level <= Logger.CONFIG) logger.log(
+            "Dropping message " + msg + " because the application address " + msg.getAuxAddress() + " is unknown.");        
+      } else {
+        if (logger.level <= Logger.WARNING) logger.log(
+            "Dropping message " + msg + " because the application address " + msg.getAuxAddress() + " is unknown.");                
+      }
       return;      
     }
     appl.receiveMessage(msg);
@@ -331,11 +344,17 @@ public class StandardRouter extends PastryAppl implements Router {
         
         // generally, there shouldn't be anyone between us (handle and localHandle) in the leafset, and if
         // there is, he is probably not ready, or if he is, he shouldn't be, so drop the message          
-        if (logger.level <= Logger.INFO) {
-          logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
-//          logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
+        if (msg.sendFailed(new NodeIsFaultyException(handle))) {
+          if (logger.level <= Logger.CONFIG) {
+            logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
+//            logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
+          }          
+        } else {
+          if (logger.level <= Logger.WARNING) {
+            logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
+//            logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
+          }                    
         }
-        msg.sendFailed(new NodeIsFaultyException(handle));
         return null;
     }
     return handle;
@@ -383,8 +402,18 @@ public class StandardRouter extends PastryAppl implements Router {
 
     // if we both have the same prefix (in other words the previous node didn't make a prefix of progress)
     if (diffDigit >= 0 && 
-        diffDigit == thePastryNode.getNodeId().indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength())) {
-
+        diffDigit == thePastryNode.getNodeId().indexOfMSDD(key, thePastryNode.getRoutingTable().baseBitLength())) {      
+      synchronized(lastTimeSentRouteTablePatch) {
+        if (lastTimeSentRouteTablePatch.containsKey(prevNode)) {
+          long lastTime = lastTimeSentRouteTablePatch.get(prevNode);
+          if (lastTime > (thePastryNode.getEnvironment().getTimeSource().currentTimeMillis() - ROUTE_TABLE_PATCH_THROTTLE)) {
+            if (logger.level <= Logger.INFO) logger.log("not sending route table patch to "+prevNode+" because throttled.  Last Time:"+lastTime);            
+            return;
+          }
+        }
+        lastTimeSentRouteTablePatch.put(prevNode, thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());
+      }
+      
       // the previous node is missing a RT entry, send the row
       // for now, we send the entire row for simplicity
 
@@ -398,9 +427,16 @@ public class StandardRouter extends PastryAppl implements Router {
         thePastryNode.send(prevNode,brr,null,options);
       }
     }
-
   }
 
+  protected int ROUTE_TABLE_PATCH_THROTTLE = 5000;
+  /**
+   * We can end up causing a nasty feeback if we blast too many BRRs, so we're 
+   * going to throttle.
+   */
+  protected Map<NodeHandle, Long> lastTimeSentRouteTablePatch = new HashMap<NodeHandle, Long>();
+  
+  
   public boolean deliverWhenNotReady() {
     return true;
   }

@@ -129,11 +129,11 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
   }
   
-  public void setDeadForever(UpperIdentifier i) {
+  public void setDeadForever(UpperIdentifier i, Map<String, Integer> options) {
     if (deadForever.contains(i)) return;
     if (logger.level <= Logger.INFO) logger.log("setDeadForever("+i+")");
     deadForever.add(i);
-    upper.notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD_FOREVER);
+    upper.notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD_FOREVER, options);
     Set<IdentityMessageHandle> cancelMe = pendingMessages.remove(i);
     if (cancelMe != null) {
       for (IdentityMessageHandle msg : cancelMe) {
@@ -168,7 +168,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
   }
   
-  protected boolean addBinding(UpperIdentifier u, LowerIdentifier l) {
+  protected boolean addBinding(UpperIdentifier u, LowerIdentifier l, Map<String, Integer> options) {
     synchronized(bindings) {
       if (deadForever.contains(u)) return false;
       
@@ -182,14 +182,14 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         }
         
         // they are different        
-        if (destinationChanged(old, u, l)) {
+        if (destinationChanged(old, u, l, options)) {
           bindings.put(l, u);          
           return true;
         } else {          
           // mark the new one as faulty
           if (logger.level <= Logger.WARNING) logger.log("The nodeChangeStrategy found identifier "+u+
               " to be stale.  Should be using "+old);
-          setDeadForever(u);  
+          setDeadForever(u, options);  
           return false;
         }
       }
@@ -206,7 +206,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * @param i
    * @return
    */
-  public boolean destinationChanged(UpperIdentifier oldDest, UpperIdentifier newDest, LowerIdentifier i) {
+  public boolean destinationChanged(UpperIdentifier oldDest, UpperIdentifier newDest, LowerIdentifier i, Map<String, Integer> options) {
     if (oldDest.equals(newDest)) {
 //            if (logger.level <= Logger.FINE) logger.log("1");
       // don't do anything 
@@ -220,7 +220,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //              if (logger.level <= Logger.FINE) logger.log("4");
         if (nodeChangeStrategy.canChange(oldDest, newDest, i)) {
 //                if (logger.level <= Logger.FINE) logger.log("5");
-          setDeadForever(oldDest);     
+          setDeadForever(oldDest, options);     
           return true;
         } else {
           return false;
@@ -262,14 +262,14 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     public SocketRequestHandle<LowerIdentifier> openSocket(
         final LowerIdentifier i, 
         final SocketCallback<LowerIdentifier> deliverSocketToMe, 
-        Map<String, Integer> options) {      
+        final Map<String, Integer> options) {      
       // what happens if they cancel after the socket has been received by a lower layer, but is still reading the header?  
       // May need to re-think this SRHI at all the layers
       final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options);
       int index = options.get(NODE_HANDLE_TO_INDEX);
       final UpperIdentifier dest = intendedDest.get(index);
       
-      if (addBinding(dest, i)) {
+      if (addBinding(dest, i, options)) {
         // no problem, sending message
       } else {
         deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
@@ -335,10 +335,10 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //                            setDeadForever(dest);
                             UpperIdentifier newDest = serializer.deserialize(new SocketInputBuffer(socket, localIdentifier.length), i);
                             
-                            addBinding(newDest, i);
+                            addBinding(newDest, i, options);
                             
                             // need to do this so the boostrapper knows the proper identity
-                            upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE);
+                            upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE, options);
                             deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
                           } else {
                             deliverSocketToMe.receiveResult(ret, socket);
@@ -410,7 +410,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 }
                 
                 // once we are here, we have succeeded in deserializing the NodeHanlde, and added it to the new options
-                if (addBinding(from, socket.getIdentifier())) {
+                if (addBinding(from, socket.getIdentifier(), socket.getOptions())) {
                   // no problem, sending message
                 } else {
                   // this is bad, a previous instance is trying to open a socket
@@ -500,7 +500,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         final LowerIdentifier i, 
         ByteBuffer m, 
         final MessageCallback<LowerIdentifier, ByteBuffer> deliverAckToMe, 
-        Map<String, Integer> options) {
+        final Map<String, Integer> options) {
 
       if (logger.level <= Logger.FINEST) {
         byte[] b = new byte[m.remaining()];
@@ -536,7 +536,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         // don't include an id
         UpperIdentifier dest = intendedDest.get(index.intValue());
       
-        if (addBinding(dest, i)) {
+        if (addBinding(dest, i, options)) {
           // no problem, sending message
         } else {
           deliverAckToMe.sendFailed(ret, new NodeIsFaultyException(i, m));
@@ -619,7 +619,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           UpperIdentifier from = serializer.deserialize(sib, i);
           m.position(m.array().length - sib.bytesRemaining());
 
-          if (addBinding(from, i)) {
+          if (addBinding(from, i, options)) {
             // no problem 
           } else {
             if (logger.level <= Logger.WARNING) logger.log("Warning.  Received message from stale identifier:"+
@@ -653,10 +653,10 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
               " old:"+oldDest+
               " new:"+newDest);
           
-          addBinding(newDest, i);
+          addBinding(newDest, i, options);
 
           // need to do this so the boostrapper knows the proper identity
-          upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE);
+          upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE, options);
       }
     }    
 
@@ -857,7 +857,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       return livenessProvider.getLiveness(serializer.translateDown(i), options);
     }
 
-    public void livenessChanged(MiddleIdentifier i, int val) {
+    public void livenessChanged(MiddleIdentifier i, int val, Map<String, Integer> options) {
       if (deadForever.contains(i)) {
         if (val < LIVENESS_DEAD) {
           if (logger.level <= Logger.SEVERE) logger.log("Node "+i+" came back from the dead!  It's a miracle! "+val+" Ignoring."); 
@@ -865,19 +865,19 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         return;
       }
       UpperIdentifier upper = serializer.translateUp(i);
-      notifyLivenessListeners(upper, val);          
+      notifyLivenessListeners(upper, val, options);          
     }
 
 
     
-    private void notifyLivenessListeners(UpperIdentifier i, int liveness) {
+    private void notifyLivenessListeners(UpperIdentifier i, int liveness, Map<String, Integer> options) {
       if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
       List<LivenessListener<UpperIdentifier>> temp;
       synchronized(livenessListeners) {
         temp = new ArrayList<LivenessListener<UpperIdentifier>>(livenessListeners);
       }
       for (LivenessListener<UpperIdentifier> listener : temp) {
-        listener.livenessChanged(i, liveness);
+        listener.livenessChanged(i, liveness, options);
       }
     }
     

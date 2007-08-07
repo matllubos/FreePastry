@@ -301,22 +301,24 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       environment = env;
       environment.getParameters().setBoolean("logging_packageOnly",false);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.ALL);
-      environment.getParameters().setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
-      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
-      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINER);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
+//      environment.getParameters().setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
+//      environment.getParameters().setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
+//      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINER);
+      
       // turn on consistent join protocol's logger to make sure this is correct for consistency
-//      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
-//      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
       
       // to see rapid rerouting and dropping from consistency if gave lease
-//      environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
-//      environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
       
 //      environment.getParameters().setInt("rice.pastry.socket.SocketNodeHandle_loglevel",Logger.ALL);
 //      if (args.length > 0) {
@@ -403,7 +405,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
             super.getLivenessTransportLayer(tl, environment);
           
           ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
-            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val) {
+            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Integer> options) {
               logger.log("SR.livenessChanged("+i+","+val+")");
             }
           });
@@ -429,7 +431,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       final PastryNode node = factory.newNode(bootHandle);
       node.addLivenessListener(new LivenessListener<NodeHandle>() {      
         Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
-        public void livenessChanged(NodeHandle i, int val) {
+        public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
 //          if (i.getId().toString().startsWith("<0x000")) {
 //            logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
 //          } else {

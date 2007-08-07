@@ -3,6 +3,8 @@
  */
 package org.mpisws.p2p.transport.liveness;
 
+import java.util.Map;
+
 /**
  * Notified of liveness changes.
  * 
@@ -21,5 +23,5 @@ public interface LivenessListener<Identifier> {
    * @param i
    * @param val
    */
-  public void livenessChanged(Identifier i, int val);
+  public void livenessChanged(Identifier i, int val, Map<String, Integer> options);
 }

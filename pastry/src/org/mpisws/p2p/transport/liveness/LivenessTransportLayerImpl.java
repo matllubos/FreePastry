@@ -211,7 +211,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     connectionExceptionMeansFaulty = b;
   }
   
-  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Integer> options) {
     // this code marks the Identifier faulty if there is an error connecting the socket.  It's possible that this
     // should be moved to the source route manager, but there needs to be a way to cancel the liveness
     // checks, or maybe the higher layer can ignore them.
@@ -220,7 +220,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         // the upper layer is probably going to retry, so mark this dead first
         if (connectionExceptionMeansFaulty) {
           if (logger.level <= Logger.FINE) logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
-          getManager(i).markDead();
+          getManager(i).markDead(options);
         }
         deliverSocketToMe.receiveException(s, ex);
       }
@@ -292,7 +292,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (manager != null) {
         synchronized(manager) {
           if (manager.pending != null) {
-            manager.pending.pingResponse(sendTime);
+            manager.pending.pingResponse(sendTime, options);
           }
         }
       } else {
@@ -388,14 +388,14 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
   
-  private void notifyLivenessListeners(Identifier i, int liveness) {
+  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Integer> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
     List<LivenessListener<Identifier>> temp;
     synchronized(livenessListeners) {
       temp = new ArrayList<LivenessListener<Identifier>>(livenessListeners);
     }
     for (LivenessListener<Identifier> listener : temp) {
-      listener.livenessChanged(i, liveness);
+      listener.livenessChanged(i, liveness, options);
     }
   }
   
@@ -486,7 +486,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * @param RTT DESCRIBE THE PARAMETER
      * @param timeHeardFrom DESCRIBE THE PARAMETER
      */
-    public void pingResponse(long RTT) {
+    public void pingResponse(long RTT, Map<String, Integer> options) {
       if (!cancelled) {
         if (tries > 1) {
           long delay = time.currentTimeMillis()-startTime;
@@ -496,7 +496,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         }
       }      
       if (logger.level <= Logger.FINE) logger.log("Terminated DeadChecker(" + manager.identifier + ") due to ping.");
-      manager.markAlive();
+      manager.markAlive(options);
       cancel();
     }
 
@@ -517,7 +517,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (tries < numTries) {
         tries++;
 //        if (manager.getLiveness(path.getLastHop()) == SocketNodeHandle.LIVENESS_ALIVE)
-        manager.markSuspected();        
+        manager.markSuspected(options);        
         
         ping(manager.identifier, options);
         int absPD = (int)(PING_DELAY*Math.pow(2,tries-1));
@@ -528,7 +528,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       } else {
         if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + manager.identifier + ") expired - marking as dead.");
 //        cancel(); // done in markDead()
-        manager.markDead();
+        manager.markDead(options);
       }
     }
 
@@ -628,12 +628,12 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * This method should be called when this route is declared
      * alive.
      */
-    protected void markAlive() {
+    protected void markAlive(Map<String, Integer> options) {
       boolean notify = false;
       if (liveness != LivenessListener.LIVENESS_ALIVE) notify = true;
       this.liveness = LivenessListener.LIVENESS_ALIVE;
       if (notify) {
-        notifyLivenessListeners(identifier, liveness);
+        notifyLivenessListeners(identifier, liveness, options);
       }
     }
     
@@ -641,13 +641,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * This method should be called when this route is declared
      * suspected.
      */
-    protected void markSuspected() {      
+    protected void markSuspected(Map<String, Integer> options) {      
       boolean notify = false;
       if (liveness != LivenessListener.LIVENESS_SUSPECTED) notify = true;
       this.liveness = LivenessListener.LIVENESS_SUSPECTED;
       if (notify) {
         if (logger.level <= Logger.FINE) logger.log(this+".markSuspected() notify = true");
-        notifyLivenessListeners(identifier, liveness);
+        notifyLivenessListeners(identifier, liveness, options);
       }
     }    
     
@@ -655,7 +655,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * This method should be called when this route is declared
      * dead.
      */
-    protected void markDead() {
+    protected void markDead(Map<String, Integer> options) {
       boolean notify = false;
       if (liveness != LivenessListener.LIVENESS_DEAD) notify = true;
       if (logger.level <= Logger.FINER) logger.log(this+".markDead() notify:"+notify);
@@ -664,7 +664,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         pending.cancel(); // sets to null too
       }
       if (notify) {
-        notifyLivenessListeners(identifier, liveness);
+        notifyLivenessListeners(identifier, liveness, options);
       }
     }
     

@@ -285,7 +285,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
     final Object lock = new Object();
     
     alice.addLivenessListener(new LivenessListener<MultiInetSocketAddress>() {    
-      public void livenessChanged(MultiInetSocketAddress i, int val) {
+      public void livenessChanged(MultiInetSocketAddress i, int val, Map<String, Integer> options) {
         synchronized(lock) {
 //          System.out.println("adding("+i+","+val+")");
           tupels.add(new Tupel(i,val));        

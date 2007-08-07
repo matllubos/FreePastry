@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -47,6 +48,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
   public static final byte[] PRIMARY_SOCKET = {PRIMARY_SOCKET_B};
   
   public int MAX_MSG_SIZE = 10000;
+  public int MAX_QUEUE_SIZE = 30;
   
   // maps a SelectionKey -> SocketConnector
   public Hashtable sockets;
@@ -248,7 +250,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
   }
 
-  public void livenessChanged(Identifier i, int val) {
+  public void livenessChanged(Identifier i, int val, Map<String, Integer> options) {
     if (val >= LivenessListener.LIVENESS_DEAD) {
       getEntityManager(i).markDead();
     }
@@ -278,7 +280,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     P2PSocket<Identifier> writingSocket; // don't try to write to multiple socktes, it will confuse things
     P2PSocket<Identifier> closeWritingSocket; // could be a boolean, but we store the writingSocket here just for debugging, == writingSocket if should close it after the current write
     MessageWrapper messageThatIsBeingWritten; // the current message we are sending, if this is null, we aren't in the middle of sending a message
-    // Invariant: if (pending != null) then (writingSocket != null)
+    // Invariant: if (messageThatIsBeingWritten != null) then (writingSocket != null)
     
     EntityManager(Identifier identifier) {
       this.identifier = identifier;
@@ -433,6 +435,19 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       synchronized(queue) {
         ret = new MessageWrapper(message, deliverAckToMe, options, priority, seq++);        
         queue.add(ret);        
+        if (queue.size() > MAX_MSG_SIZE) {          
+          Iterator<MessageWrapper> it = queue.iterator();
+          int ctr = 0;
+          while(it.hasNext()) {
+            MessageWrapper w = it.next();
+            if (ctr>=MAX_QUEUE_SIZE) {
+              it.remove();
+              if (logger.level <= Logger.CONFIG) logger.log("Dropping "+w+" because queue is full. MAX_QUEUE_SIZE:"+MAX_QUEUE_SIZE);
+              w.drop();
+            }
+            ctr++;
+          }
+        }
       }
 
       // schedule to start delivering on the selectorManager
@@ -606,6 +621,11 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           if (messageThatIsBeingWritten != null) messageThatIsBeingWritten.receiveSelectResult(socket, canRead, canWrite); // using recursion
         }
       }
+      
+      public void drop() {
+        // TODO: make sure we've done evrything necessary here to clean this up        
+        if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, new QueueOverflowException(identifier, originalMessage));
+      }
             
       public void receiveException(P2PSocket<Identifier> socket, IOException e) {
         sockets.remove(socket);
@@ -710,7 +730,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         }
       }
       public String toString() {
-        return "MessagWrapper{"+message+"} pri:"+priority+" seq:"+seq; 
+        return "MessagWrapper{"+message+"}->"+identifier+" pri:"+priority+" seq:"+seq; 
       }
     }
     

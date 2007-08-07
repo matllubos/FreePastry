@@ -19,6 +19,7 @@ public class PMessageReceiptImpl implements PMessageReceipt {
   }
 
   public NodeHandle getIdentifier() {
+    if (internal == null) return null;
     return (NodeHandle)internal.getIdentifier();
   }
 

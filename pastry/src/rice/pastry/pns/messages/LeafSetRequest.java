@@ -15,6 +15,7 @@ public class LeafSetRequest extends PRawMessage {
     super(dest);
     if (nodeHandle == null) throw new IllegalArgumentException("nodeHandle == null!");
     setSender(nodeHandle);    
+    setPriority(HIGH_PRIORITY);
   }
 
   public static LeafSetRequest build(InputBuffer buf, NodeHandle sender, int dest) throws IOException {
