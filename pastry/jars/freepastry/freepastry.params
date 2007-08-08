@@ -77,6 +77,7 @@ pastry_factory_bootsInParallel = 1
 pastry_socket_reader_selector_deserialization_max_size = 1000000
 # the maximum number of outgoing messages to queue when a socket is slower than the number of messages you are queuing
 pastry_socket_writer_max_queue_length = 30
+pastry_socket_writer_max_msg_size = 20480
 pastry_socket_repeater_buffer_size = 65536
 pastry_socket_pingmanager_smallPings=true
 pastry_socket_pingmanager_datagram_receive_buffer_size = 131072
