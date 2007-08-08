@@ -307,7 +307,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       environment.getParameters().setBoolean("logging_packageOnly",false);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
 //      environment.getParameters().setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
 //      environment.getParameters().setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
