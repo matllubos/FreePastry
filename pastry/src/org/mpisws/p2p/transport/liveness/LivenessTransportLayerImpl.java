@@ -766,7 +766,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         ctr = 0;
         long time_now = time.currentTimeMillis();        
         if ((time_now - start) < 1000) {
-          logger.logException("great scotts! "+start, new Exception("Stack Trace"));
+          logger.logException("great scotts! "+start+" "+this+" "+this.liveness, new Exception("Stack Trace"));
           System.exit(1);
         }
         start = time_now;

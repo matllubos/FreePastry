@@ -84,7 +84,7 @@ public class PriorityTest extends TLTest<InetSocketAddress> {
       env_a, null, 5000);
 
     return new PriorityTransportLayerImpl<MultiInetSocketAddress>(ltli, ltli,
-           env_a, 1024, null);
+           env_a, 1024, 30, null);
   }
 
   @Test

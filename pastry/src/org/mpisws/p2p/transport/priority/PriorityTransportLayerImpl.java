@@ -109,11 +109,13 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       LivenessProvider<Identifier> livenessProvider,
       Environment env, 
       int maxMsgSize,
+      int maxQueueSize,
       ErrorHandler<Identifier> handler) {
     entityManagers = new HashMap<Identifier, EntityManager>();
     this.logger = env.getLogManager().getLogger(PriorityTransportLayerImpl.class, null);
     this.selectorManager = env.getSelectorManager();
     this.MAX_MSG_SIZE = maxMsgSize;
+    this.MAX_QUEUE_SIZE = maxQueueSize;
     this.tl = tl;    
     this.livenessProvider = livenessProvider;
     tl.setCallback(this);
@@ -165,6 +167,9 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
   }
 
   protected SocketRequestHandle<Identifier> openPrimarySocket(Identifier i, Map<String, Integer> options) {
+    if (livenessProvider.getLiveness(i, options) >= LIVENESS_DEAD) {
+      if (logger.level <= Logger.WARNING) logger.log("Not opening primary socket to "+i+" because it is dead.");      
+    }     
     if (logger.level <= Logger.FINE) logger.log("Opening Primary Socket to "+i);
     final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options);
     handle.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>() {

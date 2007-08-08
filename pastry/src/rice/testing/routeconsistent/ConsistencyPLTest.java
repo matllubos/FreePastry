@@ -46,6 +46,9 @@ import java.nio.channels.*;
 import java.util.*;
 
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.identity.UpperIdentity;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
@@ -63,6 +66,7 @@ import rice.pastry.dist.*;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.*;
 import rice.pastry.standard.*;
+import rice.pastry.transport.TLDeserializer;
 import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
 
@@ -310,7 +314,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
-//      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.FINER);
+      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.CONFIG);
       
       // turn on consistent join protocol's logger to make sure this is correct for consistency
       environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
@@ -319,6 +323,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       // to see rapid rerouting and dropping from consistency if gave lease
       environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
       environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
+      environment.getParameters().setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
+      environment.getParameters().setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
       
 //      environment.getParameters().setInt("rice.pastry.socket.SocketNodeHandle_loglevel",Logger.ALL);
 //      if (args.length > 0) {
@@ -398,11 +404,20 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
       PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
       {
-        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
-            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
-            Environment environment) {
+        @Override
+        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
+          // TODO Auto-generated method stub
+          return super.getTLDeserializer(handleFactory, pn);
+        }
+
+        @Override
+        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> 
+            getLivenessTransportLayer(
+                TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+                TLPastryNode pn) {
+          
           LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
-            super.getLivenessTransportLayer(tl, environment);
+            super.getLivenessTransportLayer(tl, pn);
           
           ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
             public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Integer> options) {

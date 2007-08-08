@@ -102,7 +102,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     }
   }
   
-  protected void rerouteMe(RouteMessage rm, NodeHandle oldDest, Exception ioe) {        
+  protected void rerouteMe(final RouteMessage rm, NodeHandle oldDest, Exception ioe) {        
     if (logger.level <= Logger.FINE) logger.log("rerouteMe("+rm+" oldDest:"+oldDest+")");
 
     rm.numRetries++;
@@ -122,9 +122,14 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
       return;
     }
 
-    // this is going to make forward() be called again, can prevent this with a check in getPrevNode().equals(localNode)
-    rm.getOptions().setRerouteIfSuspected(SendOptions.defaultRerouteIfSuspected);
-    route(rm);
+    // give the selector a chance to do some IO before trying to schedule again
+    thePastryNode.getEnvironment().getSelectorManager().invoke(new Runnable() {
+      public void run() {
+        // this is going to make forward() be called again, can prevent this with a check in getPrevNode().equals(localNode)
+        rm.getOptions().setRerouteIfSuspected(SendOptions.defaultRerouteIfSuspected);
+        route(rm);
+      }    
+    });
   }
   
   private void addToPending(RouterNotification notifyMe, NodeHandle handle) {

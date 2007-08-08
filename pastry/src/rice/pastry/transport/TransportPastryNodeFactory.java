@@ -94,7 +94,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     final NodeHandleFactory handleFactory = getNodeHandleFactory(pn);
     final NodeHandle localhandle = getLocalHandle(pn, handleFactory, localNodeData);    
     
-    TLDeserializer deserializer = new TLDeserializer(handleFactory, environment);
+    TLDeserializer deserializer = getTLDeserializer(handleFactory,pn);
   
     MessageDispatch msgDisp = new MessageDispatch(pn);
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
@@ -149,6 +149,11 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
   }
 
   
+  protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
+    TLDeserializer deserializer = new TLDeserializer(handleFactory, pn.getEnvironment());
+    return deserializer;
+  }
+
   protected abstract NodeHandle getLocalHandle(TLPastryNode pn, 
       NodeHandleFactory handleFactory, Object localNodeData) throws IOException;
   protected abstract NodeHandleAdapter getNodeHanldeAdapter(TLPastryNode pn, 
