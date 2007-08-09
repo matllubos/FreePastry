@@ -66,6 +66,7 @@ import org.mpisws.p2p.transport.wire.WireTransportLayer;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.exception.NodeIsDeadException;
 import rice.selector.SelectorManager;
 
 /**
@@ -167,9 +168,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
   }
 
   protected SocketRequestHandle<Identifier> openPrimarySocket(Identifier i, Map<String, Integer> options) {
-    if (livenessProvider.getLiveness(i, options) >= LIVENESS_DEAD) {
-      if (logger.level <= Logger.WARNING) logger.log("Not opening primary socket to "+i+" because it is dead.");      
-    }     
+//    if (livenessProvider.getLiveness(i, options) >= LIVENESS_DEAD) {
+//      if (logger.level <= Logger.WARNING) logger.log("Not opening primary socket to "+i+" because it is dead.");  
+//      return null;
+//    }     
     if (logger.level <= Logger.FINE) logger.log("Opening Primary Socket to "+i);
     final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options);
     handle.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>() {
@@ -414,6 +416,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      * @param ex
      */
     public void receiveSocketException(SocketRequestHandleImpl<Identifier> handle, IOException ex) {      
+      if (ex instanceof NodeIsFaultyException) {
+        markDead();
+        return; 
+      }
       if (handle == pendingSocket) {
         pendingSocket = null; 
         if (messageThatIsBeingWritten == null && queue.isEmpty()) { 
@@ -527,10 +533,27 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     
     public void markDead() {
       synchronized(queue) {
+        if (messageThatIsBeingWritten != null) {
+          if (messageThatIsBeingWritten.deliverAckToMe != null) 
+            messageThatIsBeingWritten.deliverAckToMe.sendFailed(messageThatIsBeingWritten, new NodeIsFaultyException(identifier));           
+          messageThatIsBeingWritten = null;
+        }
         for (MessageWrapper msg : queue) {
           if (msg.deliverAckToMe != null) msg.deliverAckToMe.sendFailed(msg, new NodeIsFaultyException(identifier)); 
         }
-      }      
+        queue.clear();
+      }
+      
+      synchronized(sockets) {
+        for (P2PSocket<Identifier> sock : sockets) {
+//          try {
+            sock.close();
+//          } catch (IOException ioe) {
+//            if (logger.level <= Logger.WARNING) logger.logException("Error closing "+sock,ioe);
+//          }
+        }
+      }
+      if (pendingSocket != null) pendingSocket.cancel();
     }
     
     class MessageWrapper implements 

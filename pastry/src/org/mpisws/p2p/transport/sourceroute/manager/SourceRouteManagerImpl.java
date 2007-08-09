@@ -92,6 +92,7 @@ public class SourceRouteManagerImpl<Identifier> implements
   // the minimum amount of time between pings
   public long PING_THROTTLE;
   public int NUM_SOURCE_ROUTE_ATTEMPTS;
+  public int CHECK_LIVENESS_THROTTLE = 5000;
 
   Pinger<SourceRoute<Identifier>> pinger;
   TransportLayer<SourceRoute<Identifier>, ByteBuffer> tl;
@@ -234,9 +235,9 @@ public class SourceRouteManagerImpl<Identifier> implements
    * @param address DESCRIBE THE PARAMETER
    * @param prl DESCRIBE THE PARAMETER
    */
-  public boolean ping(Identifier address, Map<String, Integer> options) {
-    return getAddressManager(address).ping(options);
-  } 
+//  public boolean ping(Identifier address, Map<String, Integer> options) {
+//    return getAddressManager(address).ping(options);
+//  } 
   
   /**
    * Method which FORCES a check of liveness of the remote node.  Note that
@@ -475,7 +476,10 @@ public class SourceRouteManagerImpl<Identifier> implements
      */
     public int getLiveness(Map<String, Integer> options) {
       if (liveness == LIVENESS_UNKNOWN) {
-        checkLiveness(options);
+        // don't ping too often while we're already waiting for a response
+        if (environment.getTimeSource().currentTimeMillis() >= this.updated+CHECK_LIVENESS_THROTTLE) {
+          checkLiveness(options);
+        }
 //        SourceRoute direct = srFactory.getSourceRoute(localAddress, address);
 //        tl.checkLiveness(direct, options);
 //        this.updated = environment.getTimeSource().currentTimeMillis();
@@ -577,37 +581,42 @@ public class SourceRouteManagerImpl<Identifier> implements
     /**
      * Method which suggests a ping to the remote node.
      */
-    public boolean ping(Map<String, Integer> options) {
-      if (environment.getTimeSource().currentTimeMillis() - updated > PING_THROTTLE) {
-        this.updated = environment.getTimeSource().currentTimeMillis();
-        
-        switch (liveness) {
-          case LIVENESS_DEAD_FOREVER:
-            return false;
-          case LIVENESS_DEAD:
-            if (logger.level <= Logger.FINE) logger.log( "(SSRM) PING: PINGING DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
-            return pinger.ping(srFactory.getSourceRoute(getLocalIdentifier(), address), options);
-          default:
-            if (best != null) {
-              boolean ret = pinger.ping(best, options);
-              
-              // check to see if the direct route is available
-              if (! best.isDirect()) 
-                pinger.ping(srFactory.getSourceRoute(getLocalIdentifier(), address), options);
-              return ret;
-            }
-            return false;
-        }
-      } else {
-        return false;
-      }
-    }  
+//    public boolean ping(Map<String, Integer> options) {
+//      if (environment.getTimeSource().currentTimeMillis() - updated > PING_THROTTLE) {
+//        this.updated = environment.getTimeSource().currentTimeMillis();
+//        
+//        switch (liveness) {
+//          case LIVENESS_DEAD_FOREVER:
+//            return false;
+//          case LIVENESS_DEAD:
+//            if (logger.level <= Logger.FINE) logger.log( "(SSRM) PING: PINGING DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY");
+//            return pinger.ping(srFactory.getSourceRoute(getLocalIdentifier(), address), options);
+//          default:
+//            if (best != null) {
+//              boolean ret = pinger.ping(best, options);
+//              
+//              // check to see if the direct route is available
+//              if (! best.isDirect()) 
+//                pinger.ping(srFactory.getSourceRoute(getLocalIdentifier(), address), options);
+//              return ret;
+//            }
+//            return false;
+//        }
+//      } else {
+//        return false;
+//      }
+//    }  
     
     /**
      * Method which suggests a ping to the remote node.
      */
     public boolean checkLiveness(Map<String, Integer> options) {
-      this.updated = environment.getTimeSource().currentTimeMillis();
+      long now = environment.getTimeSource().currentTimeMillis();
+//      if (now < this.updated+CHECK_LIVENESS_THROTTLE) {
+//        return false;
+//      }
+        
+      this.updated = now;
       
       switch (liveness) {
         case LIVENESS_DEAD_FOREVER:
