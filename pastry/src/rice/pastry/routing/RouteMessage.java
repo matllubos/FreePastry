@@ -145,9 +145,13 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
   
   private static PRawMessage convert(Message msg) {
+//    if (msg instanceof PastryEndpointMessage) {
+//      msg = ((PastryEndpointMessage)msg).getMessage(); 
+//    }
     if (msg instanceof PRawMessage) {
       PRawMessage prm = (PRawMessage)msg;
-      if (prm.getType() == 0) throw new RuntimeException("Cannot route a PJavaSerializedMessage, this is used internally in RouteMessage.");
+      if (prm.getType() == 0) 
+        if (prm instanceof PJavaSerializedMessage) throw new RuntimeException("Cannot route a PJavaSerializedMessage, this is used internally in RouteMessage."+msg+" "+msg.getClass().getName());
       return prm;          
     }
     return new PJavaSerializedMessage(msg);
@@ -364,7 +368,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
    * @param buf
    * @return
    */
-  public static RouteMessage build(InputBuffer buf, PastryNode pn, byte outputVersion) throws IOException {
+  public static RouteMessage build(InputBuffer buf, byte priority, PastryNode pn, NodeHandle prev, byte outputVersion) throws IOException {
   
     byte version = buf.readByte();
     switch(version) {
@@ -372,8 +376,8 @@ public class RouteMessage extends PRawMessage implements Serializable,
       {
         int auxAddress = buf.readInt();
         Id target = Id.build(buf);
-        NodeHandle prev = pn.readNodeHandle(buf);
-        return new RouteMessage(target, auxAddress, prev, buf, pn, null, outputVersion);
+//        NodeHandle prev = pn.readNodeHandle(buf);
+        return new RouteMessage(target, auxAddress, prev, buf, priority, pn, null, outputVersion);
       }
     case 1:
       {
@@ -386,18 +390,18 @@ public class RouteMessage extends PRawMessage implements Serializable,
         } else {
           target = Id.build(buf);
         }
-        NodeHandle prev = pn.readNodeHandle(buf);
-        return new RouteMessage(target, auxAddress, prev, buf, pn, destHandle, outputVersion);
+//        NodeHandle prev = pn.readNodeHandle(buf);
+        return new RouteMessage(target, auxAddress, prev, buf, priority, pn, destHandle, outputVersion);
       }
       default:
         throw new IOException("Unknown Version: "+version);
     }
   }
   
-  public RouteMessage(Id target, int auxAddress, NodeHandle prev, InputBuffer buf, PastryNode pn, NodeHandle destinationHandle, byte serializeVersion) throws IOException {
+  public RouteMessage(Id target, int auxAddress, NodeHandle prev, InputBuffer buf, byte priority, PastryNode pn, NodeHandle destinationHandle, byte serializeVersion) throws IOException {
     this(target, null, null, null, serializeVersion);
     hasSender = buf.readBoolean();
-    internalPriority = buf.readByte();
+    internalPriority = priority; //buf.readByte();
     internalType = buf.readShort();
     prevNode = prev;
     serializedMsg = buf;
@@ -423,11 +427,11 @@ public class RouteMessage extends PRawMessage implements Serializable,
         target.serialize(buf); // (deserialized in build())        
       }            
     }
-    prevNode.serialize(buf); // (deserialized in build())
+//    prevNode.serialize(buf); // (deserialized in build())
     if (serializedMsg != null) { // pri, sdr
       // fixed Fabio's bug from Nov 2006 (these were deserialized in the constructer above, but not added back into the internal stream.)
       buf.writeBoolean(hasSender);
-      buf.writeByte(internalPriority);      
+//      buf.writeByte(internalPriority);      
       
       // optimize this, possibly by extending InternalBuffer interface to access the raw underlieing bytes
       byte[] raw = new byte[serializedMsg.bytesRemaining()]; 
@@ -464,7 +468,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
       int priority = rawInternalMsg.getPriority();
       if (priority > Byte.MAX_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+rawInternalMsg+" was "+priority+".");
       if (priority < Byte.MIN_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+rawInternalMsg+" was "+priority+".");
-      buf.writeByte((byte)priority);
+//      buf.writeByte((byte)priority);
 
       short type = rawInternalMsg.getType();
       buf.writeShort(type);
@@ -542,11 +546,11 @@ public class RouteMessage extends PRawMessage implements Serializable,
     public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
       // just in case we have to do java serialization
       pn = RouteMessage.this.pn;
-      switch(type) {
-        case PastryEndpointMessage.TYPE:
-          return new PastryEndpointMessage(auxAddress, buf, sub, sender);
-      }
-      return null;
+//      switch(type) {
+//        case PastryEndpointMessage.TYPE:
+          return new PastryEndpointMessage(auxAddress, buf, sub, type, priority, sender);
+//      }
+//      return null;
     }
      
   }

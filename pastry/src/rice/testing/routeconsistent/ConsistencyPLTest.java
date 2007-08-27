@@ -305,15 +305,15 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       environment = env;
       environment.getParameters().setBoolean("logging_packageOnly",false);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
       environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
-//      environment.getParameters().setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
-//      environment.getParameters().setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
+      environment.getParameters().setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
+      environment.getParameters().setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
+      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
       environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.CONFIG);
       
       // turn on consistent join protocol's logger to make sure this is correct for consistency
@@ -323,8 +323,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       // to see rapid rerouting and dropping from consistency if gave lease
       environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
       environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
-      environment.getParameters().setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
-      environment.getParameters().setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
+//      environment.getParameters().setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
+//      environment.getParameters().setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
       
 //      environment.getParameters().setInt("rice.pastry.socket.SocketNodeHandle_loglevel",Logger.ALL);
 //      if (args.length > 0) {
@@ -404,22 +404,26 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
       PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
       {
-        @Override
-        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
-          // TODO Auto-generated method stub
-          return super.getTLDeserializer(handleFactory, pn);
-        }
+//        @Override
+//        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
+//          // TODO Auto-generated method stub
+//          return super.getTLDeserializer(handleFactory, pn);
+//        }
 
         @Override
-        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> 
-            getLivenessTransportLayer(
-                TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
-                TLPastryNode pn) {
+        protected TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>
+          getLivenessTransportLayer(
+            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+            TLPastryNode pn) {
+//        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> 
+//            getLivenessTransportLayer(
+//                TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+//                TLPastryNode pn) {
           
-          LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+          TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
             super.getLivenessTransportLayer(tl, pn);
           
-          ltl.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
+          ltl.getLivenessProvider().addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
             public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Integer> options) {
               logger.log("SR.livenessChanged("+i+","+val+")");
             }

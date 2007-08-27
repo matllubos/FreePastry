@@ -34,25 +34,20 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.commonapi;
-
-import java.io.IOException;
-
-import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.NodeHandle;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
-
-/**
- * Parallel interface to the CommonAPI NodeHandle, because it is an abstract object to gain the 
- * observer pattern.
- * 
- * @author Jeff Hoye
- *
- * @param <Identifier> the underlieing layer
+/*
+ * Created on Jan 30, 2006
  */
-public abstract class TransportLayerNodeHandle<Identifier> extends NodeHandle {
-  public abstract Identifier getAddress();
-//  public Id getId();
-//  public void serialize(OutputBuffer sob) throws IOException;
-  public abstract long getEpoch();
+package org.mpisws.p2p.transport.direct;
+
+public interface Delivery {
+  /**
+   * What to do when time to deliver.
+   *
+   */
+  public void deliver();
+  /**
+   * Preserve order.
+   * @return
+   */
+  public int getSeq();
 }

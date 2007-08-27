@@ -75,10 +75,10 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   class PEDeserializer implements MessageDeserializer {
     public Message deserialize(InputBuffer buf, short type, int priority,
         NodeHandle sender) throws IOException {
-      if (type == PastryEndpointMessage.TYPE)
-        return new PastryEndpointMessage(getAddress(),buf,appDeserializer,(rice.pastry.NodeHandle)sender);
+//      if (type == PastryEndpointMessage.TYPE)
+        return new PastryEndpointMessage(getAddress(),buf,appDeserializer,type, priority,(rice.pastry.NodeHandle)sender);
 //    return null;
-      throw new IllegalArgumentException("Unknown type "+type+" (priority:"+priority+" sender:"+sender+" appDes:"+appDeserializer+")");
+//      throw new IllegalArgumentException("Unknown type "+type+" (priority:"+priority+" sender:"+sender+" appDes:"+appDeserializer+")");
     }    
   }
   
@@ -196,7 +196,6 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
           (rice.pastry.NodeHandle) hint,
         (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
     
-    rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
     rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
     if (noKey) {
       rm.getOptions().setMultipleHopsAllowed(false);  

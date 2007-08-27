@@ -39,6 +39,10 @@ package rice.pastry.direct;
 import java.io.IOException;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.direct.Delivery;
+import org.mpisws.p2p.transport.direct.DirectTransportLayer;
+import org.mpisws.p2p.transport.direct.GenericNetworkSimulator;
+
 import rice.environment.logging.Logger;
 import rice.pastry.PastryNode;
 import rice.pastry.commonapi.PastryEndpointMessage;

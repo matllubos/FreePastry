@@ -69,18 +69,18 @@ public class TLDeserializer implements RawMessageDeserializer, Deserializer {
     this.logger = environment.getLogManager().getLogger(TLDeserializer.class, null);
   }
   
-  public RawMessage deserialize(InputBuffer buf) throws IOException {
+  public RawMessage deserialize(InputBuffer buf, NodeHandle sender) throws IOException {
 //    InputBuffer buf = new SimpleInputBuffer(b.array(), b.position());    
     
     int address = buf.readInt();
-    boolean hasSender = buf.readBoolean();
+//    boolean hasSender = buf.readBoolean();
     byte priority = buf.readByte();
     short type = buf.readShort();
 //    logger.log("addr:"+address+" sndr:"+hasSender+" pri:"+priority+" type:"+type);
-    NodeHandle sender = null;
-    if (hasSender) {
-      sender = nodeHandleFactory.readNodeHandle(buf);
-    }
+//    NodeHandle sender = null;
+//    if (hasSender) {
+//      sender = nodeHandleFactory.readNodeHandle(buf);
+//    }
 
     // TODO: Think about how to make this work right.  Maybe change the default deserializer?
     MessageDeserializer deserializer = getDeserializer(address);
@@ -98,9 +98,9 @@ public class TLDeserializer implements RawMessageDeserializer, Deserializer {
     int address = msg.getDestination();
     o.writeInt(address);
     
-    NodeHandle sender = msg.getSender();
-    boolean hasSender = (sender != null);
-    o.writeBoolean(hasSender);
+//    NodeHandle sender = msg.getSender();
+//    boolean hasSender = (sender != null);
+//    o.writeBoolean(hasSender);
 
     
     // range check priority
@@ -125,9 +125,9 @@ public class TLDeserializer implements RawMessageDeserializer, Deserializer {
     // ... flexable size
     // + +
     // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    if (hasSender) {
-      msg.getSender().serialize(o);
-    }
+//    if (hasSender) {
+//      msg.getSender().serialize(o);
+//    }
         
     msg.serialize(o);
   }

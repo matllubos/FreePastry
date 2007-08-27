@@ -450,7 +450,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }
     }
 
-    public MessageRequestHandle<Identifier, ByteBuffer> send(ByteBuffer message, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, final Map<String, Integer> options) {      
+    public MessageRequestHandle<Identifier, ByteBuffer> send(
+        ByteBuffer message, 
+        MessageCallback<Identifier, ByteBuffer> deliverAckToMe, 
+        final Map<String, Integer> options) {      
       if (logger.level <= Logger.FINER) logger.log(this+"send("+message+")");
 
       int priority = DEFAULT_PRIORITY;

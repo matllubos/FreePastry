@@ -54,7 +54,6 @@ import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.boot.Bootstrapper;
-import rice.pastry.direct.DirectTransportLayer;
 
 public class NodeHandleAdapter implements 
     TransportLayer<NodeHandle, RawMessage>, 

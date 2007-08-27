@@ -56,7 +56,7 @@ import rice.pastry.transport.TLPastryNode;
  * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-public class DirectNodeHandle extends NodeHandle implements Observer, TransportLayerNodeHandle<NodeRecord> {
+public class DirectNodeHandle extends NodeHandle<NodeRecord> implements Observer {
   private transient TLPastryNode remoteNode;
   public transient NetworkSimulator simulator;
 

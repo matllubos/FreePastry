@@ -34,17 +34,14 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.direct;
+package org.mpisws.p2p.transport.direct;
 
-import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
-import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.CancellableTask;
-import rice.pastry.ScheduledMessage;
 
 public interface GenericNetworkSimulator<Identifier, MessageType> extends LivenessProvider<Identifier> {
 

@@ -174,7 +174,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
       new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(temp, env_a);
     if (name.equals("bob")) bob_prox = prox;
     
-    return new SourceRouteManagerImpl<MultiInetSocketAddress>(srFactory, temp, temp, temp, prox, env_a, 
+    return new SourceRouteManagerImpl<MultiInetSocketAddress>(srFactory, temp, temp, prox, env_a, 
         new TestSRS(temp.getLocalIdentifier().getLastHop()));
   }
   
@@ -235,11 +235,11 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
     }
     
     @Override
-    public void pong(final SourceRoute i, final long senderTime) {
+    public void pong(final SourceRoute i, final long senderTime, final Map<String, Integer> options) {
       timer.schedule(new TimerTask() {      
         @Override
         public void run() {
-          TestLivenessTransportLayerImpl.super.pong(i, senderTime);      
+          TestLivenessTransportLayerImpl.super.pong(i, senderTime, options);      
         }      
       }, getDelay(getLocalIdentifier(), i));
     }

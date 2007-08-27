@@ -37,25 +37,23 @@ advised of the possibility of such damage.
 /*
  * Created on Jan 30, 2006
  */
-package rice.pastry.direct;
+package org.mpisws.p2p.transport.direct;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
-import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.appsocket.*;
-import rice.p2p.commonapi.exception.*;
-import rice.pastry.client.PastryAppl;
 
 public class DirectAppSocket<Identifier, MessageType> {
   public static final byte[] EOF = new byte[0];

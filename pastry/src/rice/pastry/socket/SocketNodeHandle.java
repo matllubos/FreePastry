@@ -56,7 +56,8 @@ import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
 import rice.pastry.transport.TLPastryNode;
 
-public class SocketNodeHandle extends DistNodeHandle implements TransportLayerNodeHandle<MultiInetSocketAddress> {
+public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
+//  public class SocketNodeHandle extends DistNodeHandle implements TransportLayerNodeHandle<MultiInetSocketAddress> {
 
   public MultiInetSocketAddress eaddress;
   long epoch;

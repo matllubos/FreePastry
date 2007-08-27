@@ -44,6 +44,8 @@ import rice.pastry.messaging.*;
 import java.io.*;
 import java.util.*;
 
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+
 /**
  * Interface for handles to remote nodes.
  *
@@ -51,7 +53,7 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle 
+public abstract class NodeHandle<Identifier> extends TransportLayerNodeHandle<Identifier> 
 {
 
   public static final int LIVENESS_ALIVE = 1;

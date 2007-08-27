@@ -47,7 +47,7 @@ import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
 
-public class BogusNodeHandle extends NodeHandle {
+public class BogusNodeHandle extends NodeHandle<Collection<InetSocketAddress>> {
   public Collection<InetSocketAddress> addresses;
   
   public BogusNodeHandle(InetSocketAddress address) {
@@ -96,6 +96,16 @@ public class BogusNodeHandle extends NodeHandle {
   @Override
   public void serialize(OutputBuffer buf) throws IOException {
     throw new IllegalStateException("This NodeHandle is Bogus, don't use it.");
+  }
+
+  @Override
+  public Collection<InetSocketAddress> getAddress() {
+    return addresses;
+  }
+
+  @Override
+  public long getEpoch() {
+    return 0;
   }
 
 }

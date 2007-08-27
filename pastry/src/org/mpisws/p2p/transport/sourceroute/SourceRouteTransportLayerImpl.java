@@ -221,7 +221,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
             final ByteBuffer b = ByteBuffer.wrap(srbytes);
                 
             if (logger.level <= Logger.FINER) logger.log("I'm hop "+hopNum+" in "+sr);
-            // open next socket
+            // we're an intermediate node, open next socket
             etl.openSocket(sr.getHop(hopNum+1), new SocketCallback<Identifier>(){
             
               public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sockb) {
@@ -256,6 +256,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
               }
             
               public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+                // may be nice to send some kind of error message to the opener
                 errorHandler.receivedException(sr, ex);
                 socka.close();
               }

@@ -167,11 +167,11 @@ public class LivenessTest extends SRTest {
     }
     
     @Override
-    public void pong(final SourceRoute i, final long senderTime) {
+    public void pong(final SourceRoute i, final long senderTime, final Map<String, Integer> options) {
       timer.schedule(new TimerTask() {      
         @Override
         public void run() {
-          TestLivenessTransportLayerImpl.super.pong(i, senderTime);      
+          TestLivenessTransportLayerImpl.super.pong(i, senderTime, options);      
         }      
       }, getDelay(getLocalIdentifier(), i));
     }

@@ -168,7 +168,8 @@ public class MagicNumberTransportLayer<Identity> implements
       }    
       public void receiveException(SocketRequestHandle<Identity> c, IOException exception) {
         if (c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
-        errorHandler.receivedException(i, exception);
+        deliverSocketToMe.receiveException(cancellable, exception);
+//        errorHandler.receivedException(i, exception);
       }    
     }, options));
     
@@ -197,12 +198,12 @@ public class MagicNumberTransportLayer<Identity> implements
         new MessageCallback<Identity, ByteBuffer>() {
         
           public void ack(MessageRequestHandle<Identity, ByteBuffer> msg) {
-            if (msg != cancellable.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+cancellable.getSubCancellable());
+            if (cancellable.getSubCancellable() != null && msg != cancellable.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+cancellable.getSubCancellable());
             if (deliverAckToMe != null) deliverAckToMe.ack(cancellable);
           }
         
           public void sendFailed(MessageRequestHandle<Identity, ByteBuffer> msg, IOException ex) {
-            if (msg != cancellable.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+cancellable.getSubCancellable());
+            if (cancellable.getSubCancellable() != null && msg != cancellable.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+cancellable.getSubCancellable());
             if (deliverAckToMe == null) {
               errorHandler.receivedException(i, ex);
             } else {

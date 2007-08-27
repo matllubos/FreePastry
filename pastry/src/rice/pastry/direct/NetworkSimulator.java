@@ -37,6 +37,8 @@ advised of the possibility of such damage.
 package rice.pastry.direct;
 
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.direct.Delivery;
+import org.mpisws.p2p.transport.direct.GenericNetworkSimulator;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 

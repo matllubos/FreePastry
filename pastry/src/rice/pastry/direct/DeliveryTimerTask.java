@@ -39,6 +39,8 @@ advised of the possibility of such damage.
  */
 package rice.pastry.direct;
 
+import org.mpisws.p2p.transport.direct.Delivery;
+
 import rice.selector.TimerTask;
 
 public class DeliveryTimerTask extends TimerTask {

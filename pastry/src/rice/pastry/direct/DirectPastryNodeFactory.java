@@ -58,6 +58,7 @@ import java.io.*;
 import java.util.*;
 
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.direct.DirectTransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.proximity.ProximityListener;

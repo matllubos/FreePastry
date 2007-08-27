@@ -316,7 +316,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     case HDR_PING:
       if (logger.level <= Logger.FINEST) logger.log("messageReceived("+i+", PING)");
 //      logger.log("Got ping from "+i);
-      pong(i, m.getLong());      
+      pong(i, m.getLong(), options);      
       notifyPingListenersPing(i);
       return;
     case HDR_PONG:
@@ -346,14 +346,25 @@ public class LivenessTransportLayerImpl<Identifier> implements
    * 
    * @param i
    */
-  public boolean ping(Identifier i, Map<String, Integer> options) {
+  public boolean ping(final Identifier i, final Map<String, Integer> options) {
     if (logger.level <= Logger.FINER) logger.log("ping("+i+")");
     if (i.equals(tl.getLocalIdentifier())) return false;
     try {
       SimpleOutputBuffer sob = new SimpleOutputBuffer(1024);
       sob.writeByte(HDR_PING);
-      new PingMessage(time.currentTimeMillis()).serialize(sob);
-      tl.sendMessage(i, ByteBuffer.wrap(sob.getBytes()), null, options);
+      final long now = time.currentTimeMillis();
+      new PingMessage(now).serialize(sob);
+      tl.sendMessage(i, ByteBuffer.wrap(sob.getBytes()), new MessageCallback<Identifier, ByteBuffer>(){
+        public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
+        }
+        public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException reason) {
+          if (logger.level <= Logger.FINER) {
+            logger.logException("ping("+i+","+now+","+options+") failed", reason);
+          } else {
+            if (logger.level <= Logger.FINE) logger.log("ping("+i+","+now+","+options+") failed "+reason);
+          }
+        }       
+      }, options);
       return true;
     } catch (IOException ioe) {
       //Should not happen.  There must be a bug in our serialization code.
@@ -368,13 +379,23 @@ public class LivenessTransportLayerImpl<Identifier> implements
    * @param i
    * @param senderTime
    */
-  public void pong(Identifier i, long senderTime) {
+  public void pong(final Identifier i, final long senderTime, final Map<String, Integer> options) {
     if (logger.level <= Logger.FINEST) logger.log("pong("+i+","+senderTime+")");
     try {
       SimpleOutputBuffer sob = new SimpleOutputBuffer(1024);
       sob.writeByte(HDR_PONG);
       new PongMessage(senderTime).serialize(sob);
-      tl.sendMessage(i, ByteBuffer.wrap(sob.getBytes()), null, null);
+      tl.sendMessage(i, ByteBuffer.wrap(sob.getBytes()), new MessageCallback<Identifier, ByteBuffer>(){
+        public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
+        }
+        public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException reason) {
+          if (logger.level <= Logger.FINER) {
+            logger.logException("pong("+i+","+senderTime+","+options+") failed", reason);
+          } else {
+            if (logger.level <= Logger.FINE) logger.log("pong("+i+","+senderTime+","+options+") failed "+reason);
+          }
+        }       
+      }, options);
     } catch (IOException ioe) {
       //Should not happen.  There must be a bug in our serialization code.
       errorHandler.receivedException(i, ioe);

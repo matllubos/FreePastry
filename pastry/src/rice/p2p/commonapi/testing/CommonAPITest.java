@@ -428,7 +428,11 @@ public abstract class CommonAPITest {
     }
 
     if(status.equals(FAILURE)) {
-      System.exit(1);
+      if (environment.getParameters().getBoolean("commonapi_testing_exit_on_failure")) {
+        System.exit(1);
+      } else {
+        try { Thread.sleep(100000000); }catch(InterruptedException ie) {System.exit(1);}
+      }
     }
   }
 

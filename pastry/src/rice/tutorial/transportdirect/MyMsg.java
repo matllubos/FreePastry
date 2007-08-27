@@ -34,25 +34,45 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.commonapi;
-
-import java.io.IOException;
+/*
+ * Created on Feb 15, 2005
+ */
+package rice.tutorial.transportdirect;
 
 import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.NodeHandle;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.Message;
 
 /**
- * Parallel interface to the CommonAPI NodeHandle, because it is an abstract object to gain the 
- * observer pattern.
+ * An example message.
  * 
  * @author Jeff Hoye
- *
- * @param <Identifier> the underlieing layer
  */
-public abstract class TransportLayerNodeHandle<Identifier> extends NodeHandle {
-  public abstract Identifier getAddress();
-//  public Id getId();
-//  public void serialize(OutputBuffer sob) throws IOException;
-  public abstract long getEpoch();
+public class MyMsg implements Message {
+  /**
+   * Where the Message came from.
+   */
+  Id from;
+  /**
+   * Where the Message is going.
+   */
+  Id to;
+  
+  /**
+   * Constructor.
+   */
+  public MyMsg(Id from, Id to) {
+    this.from = from;
+    this.to = to;
+  }
+  
+  public String toString() {
+    return "MyMsg from "+from+" to "+to;
+  }
+
+  /**
+   * Use low priority to prevent interference with overlay maintenance traffic.
+   */
+  public int getPriority() {
+    return Message.LOW_PRIORITY;
+  }
 }

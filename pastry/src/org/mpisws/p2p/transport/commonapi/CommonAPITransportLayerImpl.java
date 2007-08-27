@@ -38,43 +38,30 @@ package org.mpisws.p2p.transport.commonapi;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
-import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
-import org.mpisws.p2p.transport.liveness.LivenessListener;
-import org.mpisws.p2p.transport.liveness.LivenessProvider;
-import org.mpisws.p2p.transport.liveness.PingListener;
 import org.mpisws.p2p.transport.priority.QueueOverflowException;
-import org.mpisws.p2p.transport.proximity.ProximityListener;
-import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.util.DefaultCallback;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
-import org.mpisws.p2p.transport.util.InsufficientBytesException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
-import org.mpisws.p2p.transport.util.SocketInputBuffer;
-import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
-import org.mpisws.p2p.transport.util.SocketWrapperSocket;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public class CommonAPITransportLayerImpl<Identifier> implements 
+public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implements 
     CommonAPITransportLayer<Identifier>, 
     TransportLayerCallback<Identifier, ByteBuffer> /*,
     LivenessListener<Identifier>,
@@ -173,6 +160,11 @@ public class CommonAPITransportLayerImpl<Identifier> implements
 //      sob.writeLong(localAddress.getEpoch());
 //      localAddress.getId().serialize(sob);
 //      if (logger.level <= Logger.FINER) logger.log("sendMessage(): epoch:"+localAddress.getEpoch()+" id:"+localAddress.getId()+" hand:"+localAddress);
+//      if (m.getType() == RouteMessage.TYPE) {
+////        if (((RouteMessage)m).getInternalType() == PublishMessage.TYPE) {
+//          logger.log(m.toString());
+////       }
+//      }
       deserializer.serialize(m, sob);
 //      m.serialize(sob);
     } catch (IOException ioe) {
@@ -187,6 +179,7 @@ public class CommonAPITransportLayerImpl<Identifier> implements
     }
     
     buf = ByteBuffer.wrap(sob.getBytes());
+    if (logger.level <= Logger.FINER) logger.log("sendMessage("+i+","+m+") serizlized:"+buf);
 
     handle.setSubCancellable(tl.sendMessage(
         i, 
@@ -225,7 +218,7 @@ public class CommonAPITransportLayerImpl<Identifier> implements
 //    Id id = idFactory.build(buf);
 //    TransportLayerNodeHandle<Identifier> handle = nodeHandleFactory.getNodeHandle(i, epoch, id); 
 //    if (logger.level <= Logger.FINER) logger.log("messageReceived(): epoch:"+epoch+" id:"+id+" hand:"+handle);
-    callback.messageReceived(i, deserializer.deserialize(buf), options);
+    callback.messageReceived(i, deserializer.deserialize(buf, i), options);
   }
 
   public void setCallback(

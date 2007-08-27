@@ -94,7 +94,6 @@ public class SourceRouteManagerImpl<Identifier> implements
   public int NUM_SOURCE_ROUTE_ATTEMPTS;
   public int CHECK_LIVENESS_THROTTLE = 5000;
 
-  Pinger<SourceRoute<Identifier>> pinger;
   TransportLayer<SourceRoute<Identifier>, ByteBuffer> tl;
   LivenessProvider<SourceRoute<Identifier>> livenessProvider; 
   ProximityProvider<SourceRoute<Identifier>> proxProvider;
@@ -116,7 +115,6 @@ public class SourceRouteManagerImpl<Identifier> implements
       SourceRouteFactory<Identifier> srFactory,
       TransportLayer<SourceRoute<Identifier>, ByteBuffer> tl, 
       LivenessProvider<SourceRoute<Identifier>> livenessProvider, 
-      Pinger<SourceRoute<Identifier>> pinger,
       ProximityProvider<SourceRoute<Identifier>> proxProvider, 
       Environment env, 
       SourceRouteStrategy<Identifier> strategy) {
@@ -124,11 +122,9 @@ public class SourceRouteManagerImpl<Identifier> implements
     if (tl == null) throw new IllegalArgumentException("tl == null");
     if (proxProvider == null) throw new IllegalArgumentException("proxProvider == null");
     if (strategy == null) throw new IllegalArgumentException("strategy == null");
-    if (pinger == null) throw new IllegalArgumentException("pinger == null");
     
     this.tl = tl;
     this.livenessProvider = livenessProvider;
-    this.pinger = pinger;
     this.proxProvider = proxProvider;
     this.proxProvider.addProximityListener(this);
     this.strategy = strategy;

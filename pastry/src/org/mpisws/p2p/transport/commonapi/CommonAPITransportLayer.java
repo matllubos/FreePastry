@@ -40,6 +40,7 @@ import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
+import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 
 /**
@@ -53,6 +54,6 @@ import rice.p2p.commonapi.rawserialization.RawMessage;
  * @author Jeff Hoye
  *
  */
-public interface CommonAPITransportLayer<Identifier> extends 
+public interface CommonAPITransportLayer<Identifier extends NodeHandle> extends 
   TransportLayer<Identifier, RawMessage> {
 }

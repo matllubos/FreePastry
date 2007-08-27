@@ -76,7 +76,7 @@ public class DefaultErrorHandler<Identifier> implements
 
   public void receivedException(Identifier i, Throwable error) {
     if (logger.level <= Logger.WARNING) {      
-      logger.logException(i == null ? null : i.toString(), new RuntimeException(error));
+      logger.logException(i == null ? null : i.toString(), error);
     }
   }
 

@@ -42,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.direct.Delivery;
+import org.mpisws.p2p.transport.direct.GenericNetworkSimulator;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;

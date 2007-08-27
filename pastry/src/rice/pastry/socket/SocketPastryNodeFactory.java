@@ -65,14 +65,17 @@ import org.mpisws.p2p.transport.identity.NodeChangeStrategy;
 import org.mpisws.p2p.transport.identity.SanityChecker;
 import org.mpisws.p2p.transport.identity.UpperIdentity;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl;
+import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
 import org.mpisws.p2p.transport.proximity.MinRTTProximityProvider;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayer;
 import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayerImpl;
@@ -288,57 +291,94 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     
     MultiInetSocketAddress localAddress = localhandle.eaddress;
     MultiInetSocketAddress proxyAddress = localAddress;
-    
-    WireTransportLayer wtl = getWireTransportLayer(localAddress.getInnermostAddress(), pn);
+    MultiAddressSourceRouteFactory esrFactory = getMultiAddressSourceRouteFactory(pn);
 
+    // wire layer
+    TransportLayer<InetSocketAddress, ByteBuffer> wtl = getWireTransportLayer(localAddress.getInnermostAddress(), pn);
+
+    // magic number layer
     TransportLayer<InetSocketAddress, ByteBuffer> mntl = getMagicNumberTransportLayer(wtl,pn);
 
-    MultiInetAddressTransportLayer etl = new MultiInetAddressTransportLayerImpl(localAddress, mntl, environment, null, null);
+    // MultiInet layer
+    TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteFactory(mntl, pn, localAddress);
+
+    // SourceRoute<MultiInet> layer
+    TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> srl = getSourceRouteTransportLayer(etl, pn, esrFactory);
     
-    MultiAddressSourceRouteFactory esrFactory = getMultiAddressSourceRouteFactory(pn);
-    SourceRouteTransportLayer<MultiInetSocketAddress> srl = getSourceRouteTransportLayer(etl, pn, esrFactory);
-    
+    // Identity (who knows how to simplify this one...)
     IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, 
         ByteBuffer, SourceRoute<MultiInetSocketAddress>> identity = getIdentityImpl(pn, handleFactory);
-    
-    LowerIdentity<SourceRoute<MultiInetSocketAddress>, ByteBuffer> lowerIdentityLayer = getLowerIdentityLayer(srl, pn, identity);
-    
-    LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = getLivenessTransportLayer(lowerIdentityLayer, pn);
 
-    SourceRouteManager<MultiInetSocketAddress> srm = getSourceRouteManagerLayer(ltl, pn, proxyAddress, esrFactory);
+    // LowerIdentity
+    TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> lowerIdentityLayer = getLowerIdentityLayer(srl, pn, identity);
     
-    PriorityTransportLayer<MultiInetSocketAddress> priorityTL = getPriorityTransportLayer(srm, pn);
+    // Liveness
+    TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = getLivenessTransportLayer(lowerIdentityLayer, pn);
 
-    UpperIdentity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentityLayer = getUpperIdentityLayer(priorityTL, pn, identity, srm);
+    // Source Route Manager
+    TransLivenessProximity<MultiInetSocketAddress, ByteBuffer> srm = getSourceRouteManagerLayer(
+        ltl.getTransportLayer(), ltl.getLivenessProvider(), ltl.getPinger(), pn, proxyAddress, esrFactory);
     
-    CommonAPITransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>> commonAPItl = getCommonAPITransportLayer(upperIdentityLayer, pn, deserializer);
+    // Priority
+    TransportLayer<MultiInetSocketAddress, ByteBuffer> priorityTL = getPriorityTransportLayer(
+        srm.getTransportLayer(), srm.getLivenessProvider(), pn);
+
+    // UpperIdentiy
+    TransLivenessProximity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentityLayer = getUpperIdentityLayer(
+        priorityTL, pn, identity, srm.getLivenessProvider(), srm.getProximityProvider());
+    
+    // CommonAPI
+    TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> commonAPItl = getCommonAPITransportLayer(
+        upperIdentityLayer.getTransportLayer(), pn, deserializer);
         
     NodeHandleAdapter nha = new NodeHandleAdapter(
         commonAPItl, 
-        upperIdentityLayer, 
-        upperIdentityLayer);
+        upperIdentityLayer.getLivenessProvider(), 
+        upperIdentityLayer.getProximityProvider());
 
     return nha;
   }
   
-  protected WireTransportLayer getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+  protected interface TransLiveness<Identifier, MessageType> {
+    TransportLayer<Identifier, MessageType> getTransportLayer();
+    LivenessProvider<Identifier> getLivenessProvider();
+    Pinger<Identifier> getPinger();
+  }
+
+  protected interface TransLivenessProximity<Identifier, MessageType> {
+    TransportLayer<Identifier, ByteBuffer> getTransportLayer(); 
+    LivenessProvider<Identifier> getLivenessProvider();
+    ProximityProvider<Identifier> getProximityProvider();
+  }
+  
+  protected MultiAddressSourceRouteFactory getMultiAddressSourceRouteFactory(TLPastryNode pn) {
+    return new MultiAddressSourceRouteFactory();
+  }
+  
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
     Environment environment = pn.getEnvironment();
     WireTransportLayer wtl = new WireTransportLayerImpl(innermostAddress,environment, null);    
     return wtl;
   }
 
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getMagicNumberTransportLayer(WireTransportLayer wtl, TLPastryNode pn) {
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getMagicNumberTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     MagicNumberTransportLayer<InetSocketAddress> mntl = 
       new MagicNumberTransportLayer<InetSocketAddress>(wtl,environment,null,PASTRY_MAGIC_NUMBER, 5000);
     return mntl;
   }
 
-  protected MultiAddressSourceRouteFactory getMultiAddressSourceRouteFactory(TLPastryNode pn) {
-    return new MultiAddressSourceRouteFactory();
+  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getMultiAddressSourceRouteFactory(
+      TransportLayer<InetSocketAddress, ByteBuffer> mntl, 
+      TLPastryNode pn, 
+      MultiInetSocketAddress localAddress) {
+    return new MultiInetAddressTransportLayerImpl(localAddress, mntl, pn.getEnvironment(), null, null);
   }
-  
-  protected SourceRouteTransportLayer<MultiInetSocketAddress> getSourceRouteTransportLayer(MultiInetAddressTransportLayer etl, TLPastryNode pn, MultiAddressSourceRouteFactory esrFactory) {
+
+  protected TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getSourceRouteTransportLayer(
+      TransportLayer<MultiInetSocketAddress, ByteBuffer> etl, 
+      TLPastryNode pn, 
+      MultiAddressSourceRouteFactory esrFactory) {
     Environment environment = pn.getEnvironment();
     SourceRouteTransportLayer<MultiInetSocketAddress> srl = 
       new SourceRouteTransportLayerImpl<MultiInetSocketAddress>(esrFactory,etl,environment, null);
@@ -364,9 +404,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         // logger.log("deserialize("+i+") epoch:"+epoch+" nid:"+nid);
         return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory
             .coalesce(new SocketNodeHandle(i.getLastHop(), epoch, nid, pn));
-        // }
-        // return
-        // (SocketNodeHandle)SocketNodeHandleFactory.this.readNodeHandle(buf);
       }
 
       public void serialize(OutputBuffer buf,
@@ -437,25 +474,48 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return identity;
   }
 
-  private LowerIdentity<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLowerIdentityLayer(SourceRouteTransportLayer<MultiInetSocketAddress> srl, TLPastryNode pn, IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> identity) {
+  protected TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLowerIdentityLayer(
+      TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> srl, 
+      TLPastryNode pn, 
+      IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, 
+                   MultiInetSocketAddress, 
+                   ByteBuffer, 
+                   SourceRoute<MultiInetSocketAddress>> identity) {
+    
     identity.initLowerLayer(srl, null);
     LowerIdentity<SourceRoute<MultiInetSocketAddress>, ByteBuffer> lowerIdentityLayer = identity.getLowerIdentity();
     return lowerIdentityLayer;
   }
 
-  protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
+  protected TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
       TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
       TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     int checkDeadThrottle = environment.getParameters().getInt("pastry_socket_srm_check_dead_throttle"); // 300000
 
-    LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+    final LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
       new LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>>(tl,environment, null, checkDeadThrottle);
 
-    return ltl;
+    return new TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>(){    
+        public TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getTransportLayer() {
+          return ltl;
+        }
+        public LivenessProvider<SourceRoute<MultiInetSocketAddress>> getLivenessProvider() {
+          return ltl;
+        }
+        public Pinger<SourceRoute<MultiInetSocketAddress>> getPinger() {
+          return ltl;
+        }    
+    };
   }
   
-  protected SourceRouteManager<MultiInetSocketAddress> getSourceRouteManagerLayer(LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl, TLPastryNode pn, MultiInetSocketAddress proxyAddress, MultiAddressSourceRouteFactory esrFactory) {
+  protected TransLivenessProximity<MultiInetSocketAddress, ByteBuffer> getSourceRouteManagerLayer(
+      TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl, 
+      LivenessProvider<SourceRoute<MultiInetSocketAddress>> livenessProvider, 
+      Pinger<SourceRoute<MultiInetSocketAddress>> pinger, 
+      TLPastryNode pn, 
+      MultiInetSocketAddress proxyAddress, 
+      MultiAddressSourceRouteFactory esrFactory) throws IOException {
     Environment environment = pn.getEnvironment();
     LeafSetNHStrategy nhStrategy = new LeafSetNHStrategy();
     nhStrategy.setLeafSet(pn.getLeafSet());
@@ -464,18 +524,28 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       new SimpleSourceRouteStrategy<MultiInetSocketAddress>(proxyAddress,esrFactory,nhStrategy,environment);
 //    TransportLayer<EpochInetSocketAddress, ByteBuffer> srm = 
     MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>> prox = 
-      new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(ltl, environment);
-    SourceRouteManager<MultiInetSocketAddress> srm = 
-      new SourceRouteManagerImpl<MultiInetSocketAddress>(esrFactory,ltl,ltl,ltl,prox,environment,srStrategy);
-    return srm;
+      new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(pinger, environment);
+    final SourceRouteManager<MultiInetSocketAddress> srm = 
+      new SourceRouteManagerImpl<MultiInetSocketAddress>(esrFactory,ltl,livenessProvider,prox,environment,srStrategy);
+    return new TransLivenessProximity<MultiInetSocketAddress, ByteBuffer>(){    
+        public TransportLayer<MultiInetSocketAddress, ByteBuffer> getTransportLayer() {
+          return srm;
+        }    
+        public ProximityProvider<MultiInetSocketAddress> getProximityProvider() {
+          return srm;
+        }    
+        public LivenessProvider<MultiInetSocketAddress> getLivenessProvider() {
+          return srm;
+        }    
+    };
   }
 
-  protected PriorityTransportLayer<MultiInetSocketAddress> getPriorityTransportLayer(SourceRouteManager<MultiInetSocketAddress> srm, TLPastryNode pn) {
+  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 
       new PriorityTransportLayerImpl<MultiInetSocketAddress>(
-          srm,
-          srm,
+          trans,
+          liveness,
           environment,
           environment.getParameters().getInt("pastry_socket_writer_max_msg_size"),
           environment.getParameters().getInt("pastry_socket_writer_max_queue_length"),
@@ -483,14 +553,36 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return priorityTL;
   }
 
-  protected UpperIdentity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> getUpperIdentityLayer(PriorityTransportLayer<MultiInetSocketAddress> priorityTL, TLPastryNode pn, IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> identity, SourceRouteManager<MultiInetSocketAddress> srm) {
+  protected TransLivenessProximity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> getUpperIdentityLayer(
+//  protected UpperIdentity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> getUpperIdentityLayer(
+      TransportLayer<MultiInetSocketAddress, ByteBuffer> priorityTL, 
+      TLPastryNode pn, 
+      IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, 
+                   MultiInetSocketAddress, 
+                   ByteBuffer, 
+                   SourceRoute<MultiInetSocketAddress>> identity, 
+      LivenessProvider<MultiInetSocketAddress> live,
+      ProximityProvider<MultiInetSocketAddress> prox) {
+    
     SocketNodeHandle localhandle = (SocketNodeHandle)pn.getLocalHandle();
-    identity.initUpperLayer(localhandle, priorityTL, srm, srm);    
-    UpperIdentity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentityLayer = identity.getUpperIdentity();
-    return upperIdentityLayer;
+    identity.initUpperLayer(localhandle, priorityTL, live, prox);    
+    final UpperIdentity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentityLayer = identity.getUpperIdentity();
+    return new TransLivenessProximity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer>(){    
+        public TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> getTransportLayer() {
+          return upperIdentityLayer;
+        }    
+        public ProximityProvider<TransportLayerNodeHandle<MultiInetSocketAddress>> getProximityProvider() {
+          return upperIdentityLayer;
+        }    
+        public LivenessProvider<TransportLayerNodeHandle<MultiInetSocketAddress>> getLivenessProvider() {
+          return upperIdentityLayer;
+        }    
+    };
   }
 
-  protected CommonAPITransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>> getCommonAPITransportLayer(UpperIdentity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, TLPastryNode pn, TLDeserializer deserializer) {
+  protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> getCommonAPITransportLayer(
+      TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, 
+      TLPastryNode pn, TLDeserializer deserializer) {
     final Environment environment = pn.getEnvironment();
     IdFactory idFactory = new IdFactory(){    
       public rice.p2p.commonapi.Id build(InputBuffer buf) throws IOException {
@@ -503,7 +595,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     new CommonAPITransportLayerImpl<TransportLayerNodeHandle<MultiInetSocketAddress>>(
         upperIdentity, 
         idFactory, 
-//        handleFactory.getTLInterface(),
         deserializer,
         new ErrorHandler<TransportLayerNodeHandle<MultiInetSocketAddress>>() {          
           Logger logger = environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null);
@@ -545,12 +636,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   }
   
   class TLBootstrapper implements Bootstrapper<InetSocketAddress>
-  //, LivenessListener<TransportLayerNodeHandle<EpochInetSocketAddress>> 
   {
     TLPastryNode pn;
     TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl;
     SocketNodeHandleFactory handleFactory;
-//    InetSocketAddress first;
     ProximityNeighborSelector pns;
     
     public TLBootstrapper(TLPastryNode pn, 
@@ -568,8 +657,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       final Collection<SocketNodeHandle> tempBootHandles = new ArrayList<SocketNodeHandle>(bootaddresses.size());
       final Collection<rice.pastry.NodeHandle> bootHandles = 
         new HashSet<rice.pastry.NodeHandle>();
-//      final Collection<TransportLayerNodeHandle<MultiInetSocketAddress>> bootHandles = 
-//        new HashSet<TransportLayerNodeHandle<MultiInetSocketAddress>>();
       
       TransportLayerNodeHandle<MultiInetSocketAddress> local = tl.getLocalIdentifier();
       InetSocketAddress localAddr = local.getAddress().getInnermostAddress();
@@ -682,12 +769,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   public PastryNode newNode(NodeHandle bootstrap) {
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
-
-//  @Override
-//  public PastryNode newNode(Id id) throws IOException {
-//    return newNode(id, null, true);
-//  }
-
 
   /**
    * Method which creates a Pastry node from the next port with the specified nodeId 

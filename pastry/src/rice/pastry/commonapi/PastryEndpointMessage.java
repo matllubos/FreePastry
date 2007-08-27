@@ -55,7 +55,7 @@ import rice.pastry.messaging.*;
  */
 public class PastryEndpointMessage extends PRawMessage {
 
-  public static final short TYPE = 2;
+//  public static final short TYPE = 2;
   
   private static final long serialVersionUID = 4499456388556140871L;
   
@@ -120,39 +120,40 @@ public class PastryEndpointMessage extends PRawMessage {
    * @return The string
    */
   public String toString() {
-    return "[PEM " + getMessage() + "]";
+//    return "[PEM " + getMessage() + "]";
+    return getMessage().toString();
   }
   
   /***************** Raw Serialization ***************************************/  
   public short getType() {
-    return TYPE;
+    return message.getType();
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
 //    buf.writeBoolean(isRaw); 
     
-    buf.writeByte((byte)0); // version
-    // range check priority
+//    buf.writeByte((byte)0); // version
+//    // range check priority
     int priority = message.getPriority();
     if (priority > Byte.MAX_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+message+" was "+priority+".");
     if (priority < Byte.MIN_VALUE) throw new IllegalStateException("Priority must be in the range of "+Byte.MIN_VALUE+" to "+Byte.MAX_VALUE+".  Lower values are higher priority. Priority of "+message+" was "+priority+".");
-    buf.writeByte((byte)priority);
-
-    buf.writeShort(message.getType());    
+//    buf.writeByte((byte)priority);
+//
+//    buf.writeShort(message.getType());    
     message.serialize(buf);
 //    System.out.println("PEM.serialize() message:"+message+" type:"+message.getType());
   }
   
-  public PastryEndpointMessage(int address, InputBuffer buf, MessageDeserializer md, NodeHandle sender) throws IOException {
+  public PastryEndpointMessage(int address, InputBuffer buf, MessageDeserializer md, short type, int priority, NodeHandle sender) throws IOException {
     super(address);
 
-    byte version = buf.readByte();
+    byte version = 0;//buf.readByte();
     switch(version) {
       case 0:
         setSender(sender);
     //    isRaw = buf.readBoolean();
-        byte priority = buf.readByte();
-        short type = buf.readShort();
+//        byte priority = buf.readByte();
+//        short type = buf.readShort();
         if (type == 0) {
           message = new JavaSerializedMessage(md.deserialize(buf, type, priority, sender));
         } else {

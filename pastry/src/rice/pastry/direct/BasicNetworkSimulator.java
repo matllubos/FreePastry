@@ -39,23 +39,25 @@ advised of the possibility of such damage.
  */
 package rice.pastry.direct;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.direct.Delivery;
+import org.mpisws.p2p.transport.direct.DirectTransportLayer;
+import org.mpisws.p2p.transport.direct.GenericNetworkSimulator;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
-import org.mpisws.p2p.transport.proximity.ProximityListener;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
-import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.CancellableTask;
-import rice.pastry.*;
-import rice.pastry.messaging.Message;
 import rice.pastry.transport.NodeHandleAdapter;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;

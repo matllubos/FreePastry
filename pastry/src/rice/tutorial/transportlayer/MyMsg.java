@@ -35,19 +35,44 @@ advised of the possibility of such damage.
 
 *******************************************************************************/ 
 /*
- * Created on Jan 30, 2006
+ * Created on Feb 15, 2005
  */
-package rice.pastry.direct;
+package rice.tutorial.transportlayer;
 
-public interface Delivery {
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.Message;
+
+/**
+ * An example message.
+ * 
+ * @author Jeff Hoye
+ */
+public class MyMsg implements Message {
   /**
-   * What to do when time to deliver.
-   *
+   * Where the Message came from.
    */
-  public void deliver();
+  Id from;
   /**
-   * Preserve order.
-   * @return
+   * Where the Message is going.
    */
-  public int getSeq();
+  Id to;
+  
+  /**
+   * Constructor.
+   */
+  public MyMsg(Id from, Id to) {
+    this.from = from;
+    this.to = to;
+  }
+  
+  public String toString() {
+    return "MyMsg from "+from+" to "+to;
+  }
+
+  /**
+   * Use low priority to prevent interference with overlay maintenance traffic.
+   */
+  public int getPriority() {
+    return Message.LOW_PRIORITY;
+  }
 }

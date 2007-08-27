@@ -80,7 +80,7 @@ public class StandardRouter extends PastryAppl implements Router {
       public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, int priority,
           rice.p2p.commonapi.NodeHandle sender) throws IOException {
         RouteMessage rm;
-        rm = RouteMessage.build(buf, thePastryNode,
+        rm = RouteMessage.build(buf, (byte)priority, thePastryNode, (NodeHandle)sender,
             (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
         return rm;
       }    
