@@ -876,6 +876,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
           manager.checkLiveness(options);
         }      
       };
+      if (logger.level <= Logger.FINER) logger.log("Checking liveness in "+manager.rto()+" millis if we don't write.");
       timer.schedule(livenessCheckerTimer, manager.rto()*4);
     }
 
