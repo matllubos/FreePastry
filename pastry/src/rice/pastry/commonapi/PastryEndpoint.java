@@ -38,7 +38,6 @@ advised of the possibility of such damage.
 package rice.pastry.commonapi;
 
 import java.io.IOException;
-import java.security.InvalidParameterException;
 import java.util.*;
 
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
@@ -56,8 +55,6 @@ import rice.pastry.routing.RouteMessageNotification;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.SendOptions;
 import rice.pastry.standard.StandardAddress;
-import rice.pastry.transport.PMessageNotification;
-import rice.pastry.transport.PMessageReceipt;
 
 /**
  * This class serves as gluecode, which allows applications written for the common
@@ -181,7 +178,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   private MessageReceipt routeHelper(Id key, final PastryEndpointMessage pm, final NodeHandle hint, final DeliveryNotification deliverAckToMe) { 
     if (logger.level <= Logger.FINE) logger.log("routeHelper("+key+","+pm+","+hint+","+deliverAckToMe+").init()");
     if ((key == null) && (hint == null)) {
-      throw new InvalidParameterException("key and hint are null!");
+      throw new IllegalArgumentException("key and hint are null!");
     }
     boolean noKey = false;
     if (key == null) {
