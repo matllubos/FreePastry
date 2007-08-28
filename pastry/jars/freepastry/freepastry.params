@@ -36,6 +36,7 @@ pns_num_rows_to_use = 10
 # commonapi testing parameters
 
 # direct or socket
+commonapi_testing_exit_on_failure = true
 commonapi_testing_protocol = direct
 commonapi_testing_startPort = 5009
 commonapi_testing_num_nodes = 10
