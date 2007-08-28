@@ -503,6 +503,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       // schedule to start delivering on the selectorManager
       selectorManager.invoke(new Runnable(){      
         public void run() {
+          if (livenessProvider.getLiveness(identifier, options) > LIVENESS_SUSPECTED) return;
+              
           // do we need to try to send messages?
           if ((messageThatIsBeingWritten == null) && (queue.isEmpty())) {
             return;
@@ -555,7 +557,9 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //            if (logger.level <= Logger.WARNING) logger.logException("Error closing "+sock,ioe);
 //          }
         }
+        sockets.clear();
       }
+      writingSocket = null;
       if (pendingSocket != null) pendingSocket.cancel();
     }
     
@@ -715,7 +719,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           // should be true, because if I am getting this exception, then:
           //   a) this shouldn't be the writingSocket, or 
           //   b) I should have been pending, and set it to null above
-          if (messageThatIsBeingWritten != null) throw new IllegalStateException("Pending should be null! pending:"+messageThatIsBeingWritten+" this:"+this+" socket:"+socket);
+          if (messageThatIsBeingWritten != null) {
+            logger.logException("the cause", e);
+            throw new IllegalStateException("messageThatIsBeingWritten should be null! "+messageThatIsBeingWritten+" this:"+this+" socket:"+socket+" this.socket:"+this.socket+" writingSocket:"+writingSocket);
+          }
           
           writingSocket = null; 
           closeWritingSocket = null;          
