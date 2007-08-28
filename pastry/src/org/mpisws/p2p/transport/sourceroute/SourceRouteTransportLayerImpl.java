@@ -130,7 +130,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
       throw new IllegalArgumentException("SourceRoute must have more than 1 hop! sr:"+i);
     }
     
-    if (i.getFirstHop() != etl.getLocalIdentifier()) {
+    if (!i.getFirstHop().equals(etl.getLocalIdentifier())) {
       throw new IllegalArgumentException("SourceRoute must start with self! sr:"+i+" self:"+etl.getLocalIdentifier());
     }
         
