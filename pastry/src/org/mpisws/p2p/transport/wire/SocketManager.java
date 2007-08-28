@@ -201,6 +201,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * Method which closes down this socket manager, by closing the socket,
    * cancelling the key and setting the key to be interested in nothing
    */
+  Exception closeEx;
   public void close() {
 //    if (logger.level <= Logger.FINE) logger.log("close()");
     try {
@@ -209,6 +210,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       
       if (key != null) {
+        closeEx = new Exception("Stack Trace");
         key.cancel();
         key.attach(null);
         key = null;
@@ -322,8 +324,15 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   }
 
   public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver receiver) {
-    if (key == null) throw new IllegalStateException("Socket "+this+" is already closed.");
-
+    if (key == null) {
+      if (closeEx == null) {
+        logger.log("No closeEx "+addr);
+      } else {
+        logger.logException("closeEx "+addr, closeEx);
+      }
+      throw new IllegalStateException("Socket "+addr+" "+this+" is already closed.");
+    }
+    
     // this check happens before setting the reader because we don't want to change any state if the exception is going ot be thrown
     // so don't put this check down below!
     if (wantToWrite) {
