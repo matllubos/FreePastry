@@ -46,6 +46,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -261,7 +262,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         deliverSocketToMe.receiveException(s, ex);
       }
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
-        deliverSocketToMe.receiveResult(cancellable, new LSocket(getManager(i), sock));
+        deliverSocketToMe.receiveResult(cancellable, getManager(i).getLSocket(sock));
       }    
     }, options);
   }
@@ -429,7 +430,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   }
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
-    callback.incomingSocket(new LSocket(getManager(s.getIdentifier()), s));    
+    callback.incomingSocket(getManager(s.getIdentifier()).getLSocket(s));    
   }
 
   List<LivenessListener<Identifier>> livenessListeners;
@@ -640,6 +641,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
     // whether or not a check dead is currently being carried out on this route
     protected DeadChecker pending;
     
+    protected Set<LSocket> sockets;
+    
     /**
      * Constructor - builds a route manager given the route
      *
@@ -655,8 +658,23 @@ public class LivenessTransportLayerImpl<Identifier> implements
       
       this.pending = null;
       this.updated = 0L;
+      sockets = new HashSet<LSocket>();
     }
     
+    public P2PSocket<Identifier> getLSocket(P2PSocket<Identifier> s) {
+      LSocket sock = new LSocket(this, s);
+      synchronized(sockets) {
+        sockets.add(sock);
+      }
+      return sock;
+    }
+
+    public void removeSocket(LSocket socket) {
+      synchronized(sockets) {
+        sockets.remove(socket);
+      }
+    }
+
     public int rto() {
       return (int)RTO; 
     }
@@ -720,6 +738,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (pending != null) {
         pending.cancel(); // sets to null too
       }
+      synchronized(sockets) {
+        for (LSocket sock : sockets) {
+          sock.closeButDontRemove(); 
+        }
+        sockets.clear();
+      }
+      
       if (notify) {
         notifyLivenessListeners(identifier, liveness, options);
       }
@@ -869,20 +894,39 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
 
     public void startLivenessCheckerTimer() {      
-      stopLivenessCheckerTimer();
-      livenessCheckerTimer = new TimerTask(){      
-        @Override
-        public void run() {
-          manager.checkLiveness(options);
-        }      
-      };
-      if (logger.level <= Logger.FINER) logger.log("Checking liveness in "+manager.rto()+" millis if we don't write.");
+      // it's already going to check
+//      stopLivenessCheckerTimer();
+      synchronized(LSocket.this) {
+        if (livenessCheckerTimer != null) return;
+        livenessCheckerTimer = new TimerTask(){      
+          @Override
+          public void run() {
+            synchronized(LSocket.this) {
+              if (livenessCheckerTimer == this) livenessCheckerTimer = null;
+            }
+            manager.checkLiveness(options);
+          }      
+        };
+      } // sync
+      if (logger.level <= Logger.FINER) logger.log("Checking liveness on "+manager.identifier+" in "+manager.rto()+" millis if we don't write.");
       timer.schedule(livenessCheckerTimer, manager.rto()*4);
     }
 
     public void stopLivenessCheckerTimer() {
-      if (livenessCheckerTimer != null) livenessCheckerTimer.cancel();
-      livenessCheckerTimer = null;
+      synchronized(LSocket.this) {  
+        if (livenessCheckerTimer != null) livenessCheckerTimer.cancel();
+        livenessCheckerTimer = null;
+      }
+    }
+    
+    @Override
+    public void close() {
+      manager.removeSocket(this);
+      super.close();
+    }
+    
+    public void closeButDontRemove() {
+      super.close();
     }
   }
 }
