@@ -961,7 +961,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
         if (logger.level <= Logger.FINER) logger.log("Implicitly subscribing to topic " + topic);
         ret = true;
       }
-      manager.addChild(child); // need to be holding topicManagers for the call to addToAllChildren
+      
+      // need to be holding topicManagers for the call to addToAllChildren
+      manager.addChild(child);
       clientList = new ArrayList<ScribeMultiClient>(manager.getClients());
     }
     
@@ -1424,6 +1426,11 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     return true;
   }
 
+  /**
+   * 
+   * @param sMessage
+   * @return true if it needs to be forward, false if we handled it
+   */
   protected boolean handleForwardSubscribeMessage(SubscribeMessage sMessage) {
     if (logger.level <= Logger.FINEST) logger.log("handleForwardScribeMessage("+sMessage+")");
     
@@ -1525,28 +1532,34 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       dontForward.addAll(accepted);
 
       List<Topic> newTopics = new ArrayList<Topic>();
-      for (Topic topic : accepted) {
-      
-      // the ones that are returned: 
-      //    a) call addChild()
-      //    b) put into the SubscribeAckMessage
-      // the rejected:
-      //   leave in the sMessage
-      
-        if (logger.level <= Logger.FINER) logger.log("Hijacking subscribe message from " +
-          sMessage.getSubscriber() + " for topic " + topic);
-  
-        // if so, add the child
-        if (addChildHelper(topic, sMessage.getSubscriber())) {
-          // the child implicitly created a topic, need to subscribe   
-          newTopics.add(topic);
+      if (sMessage.getSubscriber().isAlive()) {
+        for (Topic topic : accepted) {
+        
+        // the ones that are returned: 
+        //    a) call addChild()
+        //    b) put into the SubscribeAckMessage
+        // the rejected:
+        //   leave in the sMessage
+        
+          if (logger.level <= Logger.FINER) logger.log("Hijacking subscribe message from " +
+            sMessage.getSubscriber() + " for topic " + topic);
+    
+          // if so, add the child
+          if (addChildHelper(topic, sMessage.getSubscriber())) {
+            // the child implicitly created a topic, need to subscribe   
+            newTopics.add(topic);
+          }
         }
+    
+        subscribe(newTopics, null, maintenancePolicy.implicitSubscribe(newTopics), null); 
+      } else { // isAlive 
+        if (logger.level <= Logger.WARNING) {
+          logger.log("Dropping subscribe message for dead "+sMessage.getSubscriber()+" "+accepted);
+        }
+        accepted.clear(); 
       }
-  
-      subscribe(newTopics, null, maintenancePolicy.implicitSubscribe(newTopics), null); 
-      
     } else {
-      accepted = askPolicy;
+      accepted = askPolicy; // also empty
     }
     
     // just a nicer name for it
@@ -1564,15 +1577,17 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     
 //    toReturn.addAll(isRoot);
     if (logger.level <= Logger.FINEST) logger.log("handleForwardSubscribeMessage() here 3 "+sMessage);
-            
-    // we send a confirmation back to the child
-    List<List<Id>> paths = new ArrayList<List<Id>>(toReturn.size());
-    for (Topic topic : toReturn) {
-      TopicManager tmanager = topicManagers.get(topic);
-      paths.add(tmanager.getPathToRoot());
+
+    if (!toReturn.isEmpty()) {
+      // we send a confirmation back to the child
+      List<List<Id>> paths = new ArrayList<List<Id>>(toReturn.size());
+      for (Topic topic : toReturn) {
+        TopicManager tmanager = topicManagers.get(topic);
+        paths.add(tmanager.getPathToRoot());
+      }
+        
+      endpoint.route(null, new SubscribeAckMessage(localHandle, toReturn, paths, id), sMessage.getSubscriber());
     }
-      
-    endpoint.route(null, new SubscribeAckMessage(localHandle, toReturn, paths, id), sMessage.getSubscriber());
     
     // otherwise, we are effectively rejecting the child
     if (logger.level <= Logger.FINER) logger.log("Rejecting subscribe message from " +
@@ -1761,9 +1776,15 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
         }
       }
     } else if (message instanceof SubscribeAckMessage) { 
-      // store the topics that we should not subscribe to here
+      // store the former parents/topics here so we can send Unsubscribe messages
       HashMap<NodeHandle, List<Topic>> needToUnsubscribe = new HashMap<NodeHandle, List<Topic>>();
       SubscribeAckMessage saMessage = (SubscribeAckMessage) message;
+
+      if (! saMessage.getSource().isAlive()) {
+        if (logger.level <= Logger.WARNING) logger.log("Dropping subscribe ack message from dead node:" + saMessage.getSource() + " for topics " + saMessage.getTopics());
+        return;
+      }
+      
       Iterator<List<Id>> i = saMessage.getPathsToRoot().iterator();
       for (Topic topic : saMessage.getTopics()) {
         List<Id> pathToRoot = i.next();
@@ -1773,10 +1794,6 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   
         ackMessageReceived(saMessage);
   
-        if (! saMessage.getSource().isAlive()) {
-          if (logger.level <= Logger.WARNING) logger.log("Received subscribe ack message from dead node:" + saMessage.getSource() + " for topic " + topic);
-        }
-        
         // if we're the root, reject the ack message, except for the hack to implement a centralized solution with self overlays for each node (i.e everyone is a root)
         if (isRoot(topic)) {
           if (logger.level <= Logger.FINE) logger.log("Received unexpected subscribe ack message (we are the root) from " +
@@ -2210,7 +2227,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       if (logger.level <= Logger.INFO) logger.log(this+"setParent("+handle+","+pathToRoot+") prev:"+parent);        
       
       if ((handle != null) && !handle.isAlive()) {
-        if (logger.level <= Logger.WARNING) logger.log("Setting dead parent "+handle+" for " + topic);        
+        if (logger.level <= Logger.WARNING) logger.log("Setting dead parent "+handle+" for " + topic);
       }
       
       if ((handle != null) && (parent != null)) {

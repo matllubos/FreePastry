@@ -217,7 +217,13 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
           if (logger.level <= Logger.FINE) {
             logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
           } else {
-            if (logger.level <= Logger.WARNING) logger.log("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier()+" "+reason);          
+            if (logger.level <= Logger.WARNING) {
+              if (msg.getIdentifier() == null) {
+                logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier()+" "+reason+" identifier was null!!!", new Exception("Stack Trace"));
+              } else {
+                logger.log("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier()+" "+reason);          
+              }
+            }
           }
         }
         return; 

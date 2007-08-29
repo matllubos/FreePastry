@@ -280,7 +280,7 @@ public class MagicNumberTransportLayer<Identity> implements
     @Override
     public void run() {
       socket.close();
-      errorHandler.receivedException(socket.getIdentifier(), new StalledSocketException(socket.getIdentifier(), "Timeout expired."));
+      errorHandler.receivedException(socket.getIdentifier(), new StalledSocketException(socket.getIdentifier(), "Timeout on incoming socket expired."));
     }    
   }
 }

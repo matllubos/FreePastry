@@ -44,7 +44,7 @@ public class QueueOverflowException extends IOException {
   Throwable cause;
 
   public QueueOverflowException(Object identifier, Object message) {
-    super("Queue to "+identifier+" overflowed couldn't deliver message "+message);
+    super("Queue to "+identifier+" overflowed. Couldn't deliver message "+message);
     this.identifier = identifier;
     this.message = message;
   }
