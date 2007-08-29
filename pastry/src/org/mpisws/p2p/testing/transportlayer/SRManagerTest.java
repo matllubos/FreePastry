@@ -235,7 +235,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
     }
     
     @Override
-    public void pong(final SourceRoute i, final long senderTime, final Map<String, Integer> options) {
+    public void pong(final SourceRoute<MultiInetSocketAddress> i, final long senderTime, final Map<String, Integer> options) {
       timer.schedule(new TimerTask() {      
         @Override
         public void run() {
