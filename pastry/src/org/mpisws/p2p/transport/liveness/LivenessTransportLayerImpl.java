@@ -739,8 +739,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
         pending.cancel(); // sets to null too
       }
       synchronized(sockets) {
-        for (LSocket sock : sockets) {
-          sock.closeButDontRemove(); 
+        // the close() operation can cause a ConcurrentModificationException
+        for (LSocket sock : new ArrayList<LSocket>(sockets)) {
+          sock.close(); 
+          sock.notifyRecievers();          
         }
         sockets.clear();
       }
@@ -873,13 +875,26 @@ public class LivenessTransportLayerImpl<Identifier> implements
      */
     TimerTask livenessCheckerTimer;
     
+    boolean closed = false;
+    
     public LSocket(EntityManager manager, P2PSocket<Identifier> socket) {
       super(socket.getIdentifier(), socket, LivenessTransportLayerImpl.this.logger, socket.getOptions());
       this.manager = manager;
-    }      
+    }
+    
+    public void notifyRecievers() {
+      if (reader != null) reader.receiveException(this, new NodeIsFaultyException(manager.identifier));
+      if (writer != null && writer != reader) writer.receiveException(this, new NodeIsFaultyException(manager.identifier));      
+    }
+
+    P2PSocketReceiver<Identifier> reader, writer;
 
     @Override
     public void register(boolean wantToRead, boolean wantToWrite, final P2PSocketReceiver<Identifier> receiver) {     
+      if (closed) {
+        receiver.receiveException(this, new NodeIsFaultyException(manager.identifier));
+        return;
+      }
       if (wantToWrite) startLivenessCheckerTimer();
       super.register(wantToRead, wantToWrite, new P2PSocketReceiver<Identifier>() {
 
@@ -888,9 +903,15 @@ public class LivenessTransportLayerImpl<Identifier> implements
         }
 
         public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
-          if (canWrite) stopLivenessCheckerTimer();
+          if (canRead) reader = null;
+          if (canWrite) {
+            writer = null;          
+            stopLivenessCheckerTimer();
+          }
           receiver.receiveSelectResult(socket, canRead, canWrite);
         }});
+      if (wantToRead) reader = receiver;
+      if (wantToWrite) writer = receiver;
     }
 
     public void startLivenessCheckerTimer() {      
@@ -921,12 +942,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
     
     @Override
     public void close() {
+      closed = true;
       manager.removeSocket(this);
       super.close();
     }
     
-    public void closeButDontRemove() {
-      super.close();
-    }
+//    public void closeButDontRemove() {
+//      super.close();
+//    }
   }
 }

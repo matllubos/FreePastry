@@ -312,7 +312,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //      environment.getParameters().setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
+//      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
 //      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.CONFIG);
       

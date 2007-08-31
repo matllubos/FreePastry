@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.wire;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
@@ -369,13 +370,20 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         // do we need to do this?  or does this happen twice now?
 //        manager.appSocketClosed(this);
         
-        if (channel != null)
-          channel.socket().shutdownOutput();
-        else
+        if (channel != null) {
+          if (!channel.socket().isClosed()) {
+            channel.socket().shutdownOutput();
+          } else {
+            closeMe = true; 
+          }
+        } else
           if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
   
+//      } catch (SocketException e) {
+//        if (logger.level <= Logger.FINE) logger.log( "ERROR: Received exception " + e + " while shutting down output for socket "+this);
+//        closeMe = true;
       } catch (IOException e) {
-        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Received exception " + e + " while shutting down output.");
+        if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Received exception " + e + " while shutting down output for socket "+this);
         closeMe = true;
       }
     } // synchronized(this)

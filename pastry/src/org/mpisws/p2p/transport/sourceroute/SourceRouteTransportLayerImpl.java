@@ -255,9 +255,12 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
                 
               }
             
+              /**
+               * Couldn't open the socket, the next hop was dead.
+               */
               public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
                 // may be nice to send some kind of error message to the opener
-                errorHandler.receivedException(sr, ex);
+//                errorHandler.receivedException(sr, ex);
                 socka.close();
               }
             }, null);
