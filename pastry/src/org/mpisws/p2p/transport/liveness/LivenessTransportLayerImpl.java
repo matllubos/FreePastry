@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.liveness;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -892,7 +893,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     @Override
     public void register(boolean wantToRead, boolean wantToWrite, final P2PSocketReceiver<Identifier> receiver) {     
       if (closed) {
-        receiver.receiveException(this, new NodeIsFaultyException(manager.identifier));
+        receiver.receiveException(this, new ClosedChannelException());
         return;
       }
       if (wantToWrite) startLivenessCheckerTimer();

@@ -76,16 +76,25 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
     return socket.read(dsts, offset, length);
   }
 
+  private P2PSocketReceiver<Identifier> registeredToRead = null;
+  private P2PSocketReceiver<Identifier> registeredToWrite = null;
+  private boolean exception = false;
+  
   public void register(boolean wantToRead, boolean wantToWrite,
       final P2PSocketReceiver<Identifier> receiver) {
+    if (wantToRead) registeredToRead = receiver;
+    if (wantToWrite) registeredToWrite = receiver;
     if (logger.level <= Logger.FINEST) logger.log(this+"register("+wantToRead+","+wantToWrite+","+receiver+")");
     socket.register(wantToRead, wantToWrite, new P2PSocketReceiver<SourceRoute<Identifier>>(){    
       public void receiveSelectResult(P2PSocket<SourceRoute<Identifier>> socket, boolean canRead, boolean canWrite) throws IOException {
         if (socket != SourceRouteManagerP2PSocket.this.socket) throw new IllegalStateException("socket != this.socket"+socket+","+SourceRouteManagerP2PSocket.this.socket); // it is a bug if this gets tripped
+        if (canRead) registeredToRead = null;
+        if (canWrite) registeredToWrite = null;
         receiver.receiveSelectResult(SourceRouteManagerP2PSocket.this, canRead, canWrite);
       }
       public void receiveException(P2PSocket<SourceRoute<Identifier>> socket, IOException e) {
         if (socket != SourceRouteManagerP2PSocket.this.socket) throw new IllegalStateException("socket != this.socket"+socket+","+SourceRouteManagerP2PSocket.this.socket); // it is a bug if this gets tripped
+        exception = true;
         receiver.receiveException(SourceRouteManagerP2PSocket.this, e);
       }    
     });
@@ -110,6 +119,6 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
 
   @Override
   public String toString() {
-    return "SRMSocket("+socket.getIdentifier()+":"+getOptions()+")";
+    return "SRMSocket("+socket.getIdentifier()+":"+getOptions()+") r:"+registeredToRead+" w:"+registeredToWrite+" e:"+exception;
   }
 }

@@ -441,17 +441,17 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //          return super.getTLDeserializer(handleFactory, pn);
 //        }
 
-        @Override
-        protected IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> getIdentityImpl(TLPastryNode pn, SocketNodeHandleFactory handleFactory) throws IOException {          
-          final IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> ret = super.getIdentityImpl(pn, handleFactory);
-          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
-            @Override
-            public void run() {
-              ret.printMemStats(Logger.FINER);
-            }          
-          }, 60000, 60000);                    
-          return ret;
-        }
+//        @Override
+//        protected IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> getIdentityImpl(TLPastryNode pn, SocketNodeHandleFactory handleFactory) throws IOException {          
+//          final IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> ret = super.getIdentityImpl(pn, handleFactory);
+//          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
+//            @Override
+//            public void run() {
+//              ret.printMemStats(Logger.FINER);
+//            }          
+//          }, 60000, 60000);                    
+//          return ret;
+//        }
 
         @Override
         protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, TLPastryNode pn) {
