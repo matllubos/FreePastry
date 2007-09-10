@@ -184,8 +184,8 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
     NodeHandle f = bootHandles.iterator().next();
     List<NodeHandle> ret = Arrays.asList(getNearest(f));
     thePastryNode.removeProximityListener(this);
+    if (logger.level <= Logger.INFO) logger.log("getNearHandles("+bootHandles+"):"+ret.size()+ret);
     deliverResultToMe.receiveResult(ret);
-
   }
   
   /**
@@ -292,7 +292,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * @return The route row of the remote node
    */
   public RouteSet[] getRouteRow(final NodeHandle handle, final short row) throws IOException {
-    if (logger.level <= Logger.FINER) logger.log("getRouteRow("+handle+")");
+    if (logger.level <= Logger.FINER) logger.log("getRouteRow("+handle+","+row+")");
     final RouteSet[][] container = new RouteSet[1][0];
     // 20 second timeout
     synchronized(container) {
@@ -317,7 +317,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
       }
     }
     
-    if (logger.level <= Logger.FINE) logger.log("getRouteRow("+handle+") returning "+container[0]);
+    if (logger.level <= Logger.FINE) logger.log("getRouteRow("+handle+","+row+") returning "+container[0]);
     return container[0];
   }
   
@@ -436,7 +436,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
         }
       }
     }
-    if (logger.level <= Logger.FINE) logger.log("getProximity(handle) returning "+container[0]);
+    if (logger.level <= Logger.FINE) logger.log("getProximity("+handle+") returning "+container[0]);
     return container[0];
   }
 

@@ -165,6 +165,26 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
   }
   
+  public void printMemStats(int logLevel) {
+    if (logLevel <= Logger.FINE) {
+      synchronized(pendingMessages) {
+        int queueSum = 0;
+        for(UpperIdentifier i : pendingMessages.keySet()) {
+          Set<IdentityMessageHandle> theSet = pendingMessages.get(i);
+          int queueSize = 0;
+          if (theSet != null) {
+            queueSize = theSet.size();
+          }
+          queueSum+=queueSize;
+          if (logLevel <= Logger.FINER) {            
+            logger.log("PM{"+i+","+upper.getLiveness(i, null)+"} queue:"+queueSize);
+          }
+        }        
+        logger.log("NumUpperIds:"+pendingMessages.size()+" numPendingMsgs:"+queueSum);
+      } // synchronized
+    }
+  }
+  
   public void setDeadForever(UpperIdentifier i, Map<String, Integer> options) {
     if (deadForever.contains(i)) return;
     if (logger.level <= Logger.INFO) logger.log("setDeadForever("+i+")");

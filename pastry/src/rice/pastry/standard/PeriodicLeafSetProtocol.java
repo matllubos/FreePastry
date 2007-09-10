@@ -77,8 +77,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * NodeHandle -> Long remembers the TIME when we received a BLS from that
    * NodeHandle
    */
-  protected Map lastTimeReceivedBLS; // the leases you have
-  protected Map lastTimeSentBLS; // the leases you have issued
+  protected Map<NodeHandle, Long> lastTimeReceivedBLS; // the leases you have
+  protected Map<NodeHandle, Long> lastTimeSentBLS; // the leases you have issued
 
   /**
    * Related to rapidly determining direct neighbor liveness.
@@ -147,13 +147,13 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     }
 
     this.routeTable = rt;
-    this.lastTimeReceivedBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
-    this.lastTimeSentBLS = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
+    this.lastTimeReceivedBLS = new TimerWeakHashMap<NodeHandle, Long>(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
+    this.lastTimeSentBLS = new TimerWeakHashMap<NodeHandle, Long>(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
     Parameters p = ln.getEnvironment().getParameters();
     PING_NEIGHBOR_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"); // 20 seconds
     LEASE_PERIOD = p.getInt("pastry_protocol_periodicLeafSet_lease_period");  // 30 seconds
     BLS_THROTTLE = p.getInt("pastry_protocol_periodicLeafSet_request_lease_throttle");// 10 seconds
-    this.lastTimeRenewedLease = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), LEASE_PERIOD*2);
+    this.lastTimeRenewedLease = new TimerWeakHashMap<NodeHandle, Long>(ln.getEnvironment().getSelectorManager().getTimer(), LEASE_PERIOD*2);
 
     // Removed after meeting on 5/5/2005 Don't know if this is always the
     // appropriate policy.
@@ -472,7 +472,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * 
    * If this node is found faulty (and you took over the leafset), must go non-ready until lease expires
    */
-  Map lastTimeRenewedLease;
+  Map<NodeHandle, Long> lastTimeRenewedLease;
   
   /**
    * Used to kill self if leafset shrunk by too much. NOTE: PLSP is not

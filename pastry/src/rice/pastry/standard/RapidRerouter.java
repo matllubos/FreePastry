@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.priority.QueueOverflowException;
 
@@ -209,7 +210,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     public void sendFailed(PMessageReceipt msg, Exception reason) {
       // what to do..., rapidly reroute? 
       cancellable = null;
-      rm.setTLCancellable(null);
+      rm.setTLCancellable(null);      
       if (reason instanceof QueueOverflowException) {
         if (rm.sendFailed(reason)) {
           if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
@@ -228,6 +229,16 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
         }
         return; 
       }
+      
+      if (reason instanceof NodeIsFaultyException) {
+        if (msg.getIdentifier().isAlive()) {
+          if (logger.level <= Logger.WARNING) {
+            logger.logException("Threw NodeIsFaultyException, and node is alive.  Node:"+msg.getIdentifier()+" Liveness:"+msg.getIdentifier().getLiveness(), reason);
+            logger.logException("RRTrace", new Exception("Stack Trace"));
+          }
+        }
+      }
+      
       if (removeFromPending(this, dest)) {
         if (logger.level <= Logger.WARNING) logger.logException("Send failed on message "+rm+" to "+dest+" rerouting."+msg, reason);
         rerouteMe(rm, dest, reason);

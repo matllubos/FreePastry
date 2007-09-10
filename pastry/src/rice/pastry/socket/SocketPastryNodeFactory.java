@@ -619,6 +619,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
               if (error instanceof NodeIsFaultyException) {                  
                 NodeIsFaultyException nife = (NodeIsFaultyException)error;
                 logger.log("Dropping message "+nife.getAttemptedMessage()+" to "+nife.getIdentifier()+" because it is faulty.");
+                if (i.isAlive()) {
+                  NodeHandle<MultiInetSocketAddress> nh = (NodeHandle<MultiInetSocketAddress>)i;
+                  logger.logException("NodeIsFaultyException thrown for non-dead node. "+i+" "+nh.getLiveness(),nife);
+                }
               }
             }
           }          
@@ -791,6 +795,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    */
   public PastryNode newNode(final NodeHandle bootstrap, Id nodeId) {
     return newNode(bootstrap, nodeId, null);
+  }
+  
+  /**
+   * Need to boot manually.
+   * 
+   * n.getBootstrapper().boot(addresses);
+   * 
+   * @return
+   */
+  public PastryNode newNode() {
+    return newNode(nidFactory.generateNodeId(), null);
   }
   
   /**

@@ -39,14 +39,22 @@ package org.mpisws.p2p.testing.transportlayer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
+import org.mpisws.p2p.transport.priority.QueueOverflowException;
 import org.mpisws.p2p.transport.wire.WireTransportLayerImpl;
 
 import rice.environment.Environment;
@@ -89,6 +97,49 @@ public class PriorityTest extends TLTest<InetSocketAddress> {
 
   @Test
   public void bogus() {} 
+  
+  @Test
+  public void queueOverflow() throws IOException {
+    MultiInetSocketAddress bogus = new MultiInetSocketAddress(getBogusIdentifier(null));
+    
+    final ArrayList<MessageRequestHandle> dropped = new ArrayList<MessageRequestHandle>(10);
+    
+    for (int ctr = 0; ctr < 40; ctr++) {
+      HashMap<String, Integer> options = new HashMap<String, Integer>();
+      options.put(PriorityTransportLayer.OPTION_PRIORITY, -ctr); // keep adding higher priority messages, to verify 
+      // the early, low priority messages are dropped
+      
+      alice.sendMessage(bogus, ByteBuffer.wrap(new byte[ctr]), new MessageCallback<MultiInetSocketAddress, ByteBuffer>(){
+        public void sendFailed(MessageRequestHandle<MultiInetSocketAddress, ByteBuffer> msg, IOException reason) {
+//          System.out.println("sendFailed");
+          if (reason instanceof NodeIsFaultyException) {
+          } else {
+            if (reason instanceof QueueOverflowException) {
+              synchronized(dropped) {
+                System.out.println("Dropped "+msg);
+                dropped.add(msg);
+                if (dropped.size() >= 10) dropped.notify();
+              }            
+            } else {
+              reason.printStackTrace();              
+            }
+          }
+        }
+        public void ack(MessageRequestHandle<MultiInetSocketAddress, ByteBuffer> msg) {
+          System.out.println("ack");
+        }
+      }, options);
+    }
+    
+    System.out.println("sleeping");
+    synchronized(dropped) {
+      if (dropped.size() < 10) 
+        try { dropped.wait(10000); } catch (InterruptedException ie) {}
+    }
+    System.out.println("done sleeping"+dropped.size());
+    
+    
+  } 
   
   @Override
   public InetSocketAddress getBogusIdentifier(InetSocketAddress local) throws IOException {

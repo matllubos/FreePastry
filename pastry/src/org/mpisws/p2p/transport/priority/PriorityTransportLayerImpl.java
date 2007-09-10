@@ -68,6 +68,7 @@ import org.mpisws.p2p.transport.wire.WireTransportLayer;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.exception.NodeIsDeadException;
+import rice.p2p.util.SortedLinkedList;
 import rice.selector.SelectorManager;
 
 /**
@@ -121,6 +122,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     this.MAX_MSG_SIZE = maxMsgSize;
     this.MAX_QUEUE_SIZE = maxQueueSize;
     this.tl = tl;    
+    if (logger.level <= Logger.INFO) logger.log("MAX_QUEUE_SIZE:"+MAX_QUEUE_SIZE+" MAX_MSG_SIZE:"+MAX_MSG_SIZE);
     this.livenessProvider = livenessProvider;
     tl.setCallback(this);
     livenessProvider.addLivenessListener(this);
@@ -315,6 +317,22 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     return handle;
   }
   
+  public void printMemStats(int logLevel) {
+    if (logLevel <= Logger.FINE) {
+      synchronized(entityManagers) {
+        int queueSum = 0;
+        for(EntityManager em : entityManagers.values()) {
+          int queueSize = em.queue.size();
+          queueSum+=queueSize;
+          if (logLevel <= Logger.FINER) {            
+            logger.log("EM{"+em.identifier+","+livenessProvider.getLiveness(em.identifier, null)+","+em.writingSocket+","+em.pendingSocket+"} queue:"+queueSize);
+          }
+        }        
+        logger.log("NumEMs:"+entityManagers.size()+" numPendingMsgs:"+queueSum);
+      } // synchronized
+    }
+  }
+  
   /**
    * Responsible for writing messages to the socket.
    * 
@@ -333,7 +351,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
   class EntityManager implements P2PSocketReceiver<Identifier> {
     // TODO: think about the behavior of this when it wraps around...
     int seq = Integer.MIN_VALUE;
-    Queue<MessageWrapper> queue; 
+    SortedLinkedList<MessageWrapper> queue; 
     Collection<P2PSocket<Identifier>> sockets;
     
     Identifier identifier;
@@ -347,7 +365,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     
     EntityManager(Identifier identifier) {
       this.identifier = identifier;
-      queue = new PriorityQueue<MessageWrapper>();
+      queue = new SortedLinkedList<MessageWrapper>();
       sockets = new HashSet<P2PSocket<Identifier>>();
     }
 
@@ -544,22 +562,15 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      * @param ret
      */
     private void enqueue(MessageWrapper ret) {
+//      logger.log("enqueue("+ret+")");
       synchronized(queue) {
         queue.add(ret);       
         
-        // drop the lowest priority message if the queue is overflowing
-        if (queue.size() > MAX_MSG_SIZE) {          
-          Iterator<MessageWrapper> it = queue.iterator();
-          int ctr = 0;
-          while(it.hasNext()) {
-            MessageWrapper w = it.next();
-            if (ctr>=MAX_QUEUE_SIZE) {
-              it.remove();
-              if (logger.level <= Logger.CONFIG) logger.log("Dropping "+w+" because queue is full. MAX_QUEUE_SIZE:"+MAX_QUEUE_SIZE);
-              w.drop();
-            }
-            ctr++;
-          }
+        // drop the lowest priority message if the queue is overflowing        
+        while (queue.size() > MAX_QUEUE_SIZE) {
+          MessageWrapper w = queue.removeLast();
+          if (logger.level <= Logger.CONFIG) logger.log("Dropping "+w+" because queue is full. MAX_QUEUE_SIZE:"+MAX_QUEUE_SIZE);
+          w.drop();
         }
       }
     }
@@ -723,7 +734,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }
       
       public void complete() {
-        deliverAckToMe.ack(this);
+        if (deliverAckToMe != null) deliverAckToMe.ack(this);
       }
 
       /**

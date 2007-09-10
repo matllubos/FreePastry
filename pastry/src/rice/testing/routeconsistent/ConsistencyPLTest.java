@@ -39,36 +39,51 @@ advised of the possibility of such damage.
  */
 package rice.testing.routeconsistent;
 
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
-import java.util.*;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.ServerSocketChannel;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
+import java.util.Random;
 
 import org.mpisws.p2p.transport.TransportLayer;
-import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
-import org.mpisws.p2p.transport.identity.UpperIdentity;
+import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
-import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.environment.logging.simple.SimpleLogManager;
-import rice.environment.params.simple.SimpleParameters;
-import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.splitstream.ChannelId;
 import rice.p2p.splitstream.testing.MySplitStreamClient;
-import rice.pastry.*;
-import rice.pastry.dist.*;
+import rice.pastry.Id;
+import rice.pastry.NetworkListener;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.NodeSetEventSource;
+import rice.pastry.NodeSetListener;
+import rice.pastry.PastryNode;
 import rice.pastry.leafset.LeafSet;
-import rice.pastry.socket.*;
-import rice.pastry.standard.*;
-import rice.pastry.transport.TLDeserializer;
+import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.socket.SocketNodeHandleFactory;
+import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
+import rice.selector.TimerTask;
 
 /**
  * @author Jeff Hoye
@@ -81,7 +96,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
   public static boolean useSplitStream = false;
   public static String INSTANCE = "ConsPLSplitStreamTest";
 
-//  public static String BOOTNODE = "janus";
+//  public static String BOOTNODE = "139.19.64.189"; // wired
+//  public static String BOOTNODE = "139.19.135.114"; // wireless
   public static String BOOTNODE = "planetlab01.mpi-sws.mpg.de";
   public static String ALT_BOOTNODE = "planetlab02.mpi-sws.mpg.de";
   public static final int BASE_DELAY = 30000;
@@ -211,7 +227,9 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
     
     boolean isBootNode = false;
     InetAddress localAddress = InetAddress.getLocalHost();
-    if (localAddress.getHostName().startsWith(BOOTNODE)) {
+    System.out.println(localAddress.getHostName());
+    System.out.println(BOOTNODE);
+    if (localAddress.toString().contains(BOOTNODE)) {
       isBootNode = true;      
     }
     int killRingTime = 3*60; // minutes
@@ -305,6 +323,10 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       environment = env;
       environment.getParameters().setBoolean("logging_packageOnly",false);
+      
+      environment.getParameters().setInt("rice.pastry_loglevel", Logger.INFO);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO);
+     
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
@@ -314,11 +336,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
-//      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.CONFIG);
+      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);
+      
+      environment.getParameters().setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.FINE);
       
       // turn on consistent join protocol's logger to make sure this is correct for consistency
-//      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
-//      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
       
       // to see rapid rerouting and dropping from consistency if gave lease
 //      environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
@@ -343,19 +367,25 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", (int)now); 
 //        }
 //      }
-      
+            
       System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
 //      System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
 //      System.out.println("Ping Num Source Route attempts:"+env.getParameters().getInt("pastry_socket_srm_num_source_route_attempts"));
       
-      networkActivity = new MyNetworkListener();
 
+//    networkActivity = new MyNetworkListener();
       final BooleanHolder imaliveRunning = new BooleanHolder();
+      final Runtime r = Runtime.getRuntime();
       new Thread(new Runnable() {
         public void run() {
           while(imaliveRunning.running) {
-            String foo = networkActivity.clobber();
-            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" "+foo);
+//            String foo = networkActivity.clobber();
+//            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" "+foo);
+            long free = r.freeMemory();
+            long total = r.totalMemory();
+            long allocated = total-free;
+            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" a:"+allocated+" f:"+free+" t:"+total);
+                
             try {
               Thread.sleep(15000);
             } catch (Exception e) {}
@@ -403,13 +433,37 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
       
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-      PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
+      SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
       {
 //        @Override
 //        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
 //          // TODO Auto-generated method stub
 //          return super.getTLDeserializer(handleFactory, pn);
 //        }
+
+        @Override
+        protected IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> getIdentityImpl(TLPastryNode pn, SocketNodeHandleFactory handleFactory) throws IOException {          
+          final IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> ret = super.getIdentityImpl(pn, handleFactory);
+          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
+            @Override
+            public void run() {
+              ret.printMemStats(Logger.FINER);
+            }          
+          }, 60000, 60000);                    
+          return ret;
+        }
+
+        @Override
+        protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, TLPastryNode pn) {
+          final PriorityTransportLayerImpl<MultiInetSocketAddress> ret = (PriorityTransportLayerImpl<MultiInetSocketAddress>)super.getPriorityTransportLayer(trans, liveness, pn);          
+          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
+            @Override
+            public void run() {
+              ret.printMemStats(Logger.FINER);
+            }          
+          }, 60000, 60000);          
+          return ret;
+        }
 
         @Override
         protected TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>
@@ -435,20 +489,22 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
   
       InetSocketAddress[] bootAddressCandidates = (InetSocketAddress[])bootAddresses.toArray(new InetSocketAddress[0]);
       // This will return null if we there is no node at that location
-      NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootAddressCandidates, 30000);
+//      NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootAddressCandidates, 30000);
+      System.out.println("bootAddrCandidates "+bootAddressCandidates.length+":"+bootAddressCandidates[0]);
       
-      if (bootHandle == null) {
-        if (isBootNode) {
-          // go ahead and start a new ring
-        } else {
-          // don't boot your own ring unless you are ricepl-1
-          System.out.println("Couldn't find bootstrap... exiting.");        
-          break; // restart join process
-        }
-      }
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      final PastryNode node = factory.newNode(bootHandle);
+      final PastryNode node = factory.newNode();
+      
+//      if (isBootNode) {
+//        // go ahead and start a new ring
+//      } else {
+//        node.getBootstrapper().boot(Arrays.asList(bootAddressCandidates));
+//        // don't boot your own ring unless you are ricepl-1
+//        System.out.println("Couldn't find bootstrap... exiting.");        
+//        break; // restart join process
+//      }
+
       node.addLivenessListener(new LivenessListener<NodeHandle>() {      
         Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
         public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
@@ -493,21 +549,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
             bootAddresses.add(((SocketNodeHandle)handle).getInetSocketAddress());
           }
         };
-      ls.addNodeSetListener(preObserver);  
-      // the node may require sending several messages to fully boot into the ring
-      long lastTimePrinted = 0;
-      while(!node.isReady()) {
-        // delay so we don't busy-wait
-        long now = env.getTimeSource().currentTimeMillis();
-        if (now-lastTimePrinted > 3*60*1000) {
-          System.out.println("LEAFSET5:"+env.getTimeSource().currentTimeMillis()+":"+ls);
-          lastTimePrinted = now;
-        }
-        Thread.sleep(100);
-      }
-      System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
-      ls.deleteNodeSetListener(preObserver);
-  
+        
       ls.addNodeSetListener(new NodeSetListener() {
         public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
           int num = 1;
@@ -526,8 +568,9 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         }
       }
       
+      MySplitStreamClient app = null;
       if (useSplitStream) {
-        MySplitStreamClient app = new MySplitStreamClient(node, INSTANCE);      
+        app = new MySplitStreamClient(node, INSTANCE);      
         ChannelId CHANNEL_ID = new ChannelId(generateId());    
         app.attachChannel(CHANNEL_ID);
         
@@ -537,12 +580,35 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //          System.out.println("Done(2) sleeping at "+env.getTimeSource().currentTimeMillis());
 //        }   
         
-        app.subscribeToAllChannels();    
-        app.startPublishTask(); 
+//        app.subscribeToAllChannels();    
+//        app.startPublishTask(); 
       }  
       // this is to cause different connections to open
       // TODO: Implement
+
+      node.getBootstrapper().boot(Arrays.asList(bootAddressCandidates));
+
+      ls.addNodeSetListener(preObserver);  
+      // the node may require sending several messages to fully boot into the ring
+      long lastTimePrinted = 0;
+      while(!node.isReady()) {
+        // delay so we don't busy-wait
+        long now = env.getTimeSource().currentTimeMillis();
+        if (now-lastTimePrinted > 3*60*1000) {
+          System.out.println("LEAFSET5:"+env.getTimeSource().currentTimeMillis()+":"+ls);
+          lastTimePrinted = now;
+        }
+        Thread.sleep(100);
+      }
+      System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
       
+      if (useSplitStream) {
+        app.subscribeToAllChannels();    
+        app.startPublishTask(); 
+      }
+      
+      ls.deleteNodeSetListener(preObserver);
+  
       int maxLeafsetSize = ls.getUniqueCount();
       boolean running = true;
       while(running) {

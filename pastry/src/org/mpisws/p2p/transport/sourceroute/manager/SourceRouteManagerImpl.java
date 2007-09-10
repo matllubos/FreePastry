@@ -72,6 +72,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.Cancellable;
+import rice.p2p.util.TimerWeakHashMap;
 
 /**
  * This class adapts a SourceRoute transport layer back to an Identifier
@@ -134,6 +135,8 @@ public class SourceRouteManagerImpl<Identifier> implements
     this.localAddress = tl.getLocalIdentifier().getFirstHop();    
     tl.setCallback(this);
     livenessProvider.addLivenessListener(this);
+    //    addressManagers = new TimerWeakHashMap<Identifier, AddressManager>(environment.getSelectorManager().getTimer(),30000);
+    
     addressManagers = new HashMap<Identifier, AddressManager>();
     Parameters p = environment.getParameters();
     PING_THROTTLE = p.getLong("pastry_socket_srm_ping_throttle");
@@ -164,19 +167,27 @@ public class SourceRouteManagerImpl<Identifier> implements
    *
    * @param address The remote address
    */
+//  Map<Identifier, Identifier> delmeAddrManagers = new HashMap<Identifier, Identifier>();
   protected AddressManager getAddressManager(Identifier address) {
     synchronized(addressManagers) {
       AddressManager manager = addressManagers.get(address); 
       
       if (manager == null) {
+//        delmeAddrManagers.put(address, address);
         manager = new AddressManager(address);
         addressManagers.put(address, manager);
+      } else {
+//        Identifier key = delmeAddrManagers.get(address);
+//        if (key != address) {
+//          throw new IllegalArgumentException("key != address");
+//        }
       }
       
       return manager;
     }
   }
 
+  
   public void clearState(Identifier i) {
     getAddressManager(i).clearLivenessState();
   }

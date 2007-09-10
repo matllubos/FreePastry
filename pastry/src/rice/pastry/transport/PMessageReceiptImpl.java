@@ -73,7 +73,7 @@ public class PMessageReceiptImpl implements PMessageReceipt {
   }
 
   public void setInternal(MessageRequestHandle<NodeHandle, RawMessage> name) {
-    this.internal = internal;
+    this.internal = name;
   }
   
   public String toString() {
