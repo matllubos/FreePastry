@@ -100,6 +100,11 @@ public class PublishMessage extends ScribeMessage {
     return "PublishMessage"+topic+":"+content;
   }
 
+  @Override
+  public int getPriority() {
+    return super.getPriority()-10;
+  }
+
   /***************** Raw Serialization ***************************************/
   public short getType() {
     return TYPE;

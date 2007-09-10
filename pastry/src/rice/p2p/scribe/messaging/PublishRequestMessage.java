@@ -92,6 +92,11 @@ public class PublishRequestMessage extends ScribeMessage {
     return "PRM{"+topic+"}:["+content+"]";
   }
   
+  @Override
+  public int getPriority() {
+    return super.getPriority()-5;
+  }
+  
   /***************** Raw Serialization ***************************************/
   public short getType() {
     return TYPE;
