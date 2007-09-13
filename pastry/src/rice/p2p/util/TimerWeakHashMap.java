@@ -68,7 +68,6 @@ public class TimerWeakHashMap<K,V> extends WeakHashMap<K, V> {
     }
   }
 
-  
   public V put(K key, V val) {
     refresh(key);
     return super.put(key, val);
@@ -82,6 +81,4 @@ public class TimerWeakHashMap<K,V> extends WeakHashMap<K, V> {
     timer.schedule(
         new HardLinkTimerTask(key), delay);
   }
-  
-  
 }

@@ -88,14 +88,14 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   /**
    * Set of NodeHandles that know about us. -> Object
    */
-  Map gotResponse;
+  Map<NodeHandle, Object> gotResponse;
   
   /**
    * Nodes that we think are dead.
    * 
    * NodeHandle -> FailedTime
    */
-  Hashtable failed;
+  HashMap<NodeHandle, FailedTime> failed;
   TimerTask cleanupTask; // cleans up failed
   static class FailedTime implements Comparable {
     long time;
@@ -188,7 +188,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   /**
    * NodeHandles I'm observing
    */
-  HashSet observing;
+  HashSet<NodeHandle> observing;
   
   /**
    * Will retry sending ConsistentJoinMsg to all neighbors who have not responded 
@@ -230,9 +230,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       RoutingTable rt, LeafSet ls, ReadyStrategy nextReadyStrategy, 
       MessageDeserializer md) {
     super(ln, lh, rt, ls, md != null ? md : new CJPDeserializer(ln));    
-    gotResponse = new TimerWeakHashMap(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
-    failed = new Hashtable();
-    observing = new HashSet();
+    gotResponse = new TimerWeakHashMap<NodeHandle, Object>(ln.getEnvironment().getSelectorManager().getTimer(), 300000);
+    failed = new HashMap<NodeHandle, FailedTime>();
+    observing = new HashSet<NodeHandle>();
     this.nextReadyStrategy = nextReadyStrategy;
     ls.addNodeSetListener(this);
     ln.addObserver(this);
@@ -289,8 +289,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       NodeHandle nh = (NodeHandle)i.next();
       sendTheMessage(nh, false);      
     }
-    
-    retryTask = thePastryNode.scheduleMsg(new RequestFromEveryoneMsg(getAddress()), RETRY_INTERVAL, RETRY_INTERVAL);
+        
+    if (retryTask == null) 
+      retryTask = thePastryNode.scheduleMsg(new RequestFromEveryoneMsg(getAddress()), RETRY_INTERVAL, RETRY_INTERVAL);
   }  
   
   /**
@@ -321,6 +322,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
   public void requestFromEveryoneWeHaventHeardFrom() {
     if (thePastryNode.isReady()) {      
       retryTask.cancel();
+      retryTask = null;
       return; 
     }
     
@@ -366,7 +368,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * @return
    */
   public Collection whoDoWeNeedAResponseFrom() {
-    HashSet ret = new HashSet();
+    HashSet<NodeHandle> ret = new HashSet<NodeHandle>();
     int leftIndex = leafSet.ccwSize();
     if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
     int rightIndex = leafSet.ccwSize();
@@ -441,7 +443,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         }
       }
       
-      HashSet addThese = new HashSet(); 
+      HashSet<NodeHandle> addThese = new HashSet<NodeHandle>(); 
       for (int i=-lprime.ccwSize(); i<=lprime.cwSize(); i++) {
         if (i != 0) {
           NodeHandle nh = lprime.get(i);
@@ -493,8 +495,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
     if (leafSet.isComplete() || ((leftIndex == MAX_NUM_TO_HEAR_FROM/2) && (rightIndex == MAX_NUM_TO_HEAR_FROM/2))) {
       // here is where we see if we can go active
-      ArrayList toHearFrom = new ArrayList();
-      HashSet seen = new HashSet();
+      ArrayList<NodeHandle> toHearFrom = new ArrayList<NodeHandle>();
+      HashSet<NodeHandle> seen = new HashSet<NodeHandle>();
 
       for (int i=-leftIndex; i<=rightIndex; i++) {
 //      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
@@ -516,7 +518,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
             nextReadyStrategy.start(); 
           }
           if (retryTask != null) {
-            retryTask.cancel();            
+            retryTask.cancel();    
+            retryTask = null;
           }
           tryingToGoReady = false;
         }
@@ -580,13 +583,13 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
 //    if (thePastryNode.isReady()) {
     //failed.clear(); // done by cleanup task as of March 6th, 2006
 //    }    
-    HashSet toSend;
+    HashSet<NodeHandle> toSend;
     if (failed.size() < maxFailedEntries) {
-      toSend = new HashSet(failed.keySet());
+      toSend = new HashSet<NodeHandle>(failed.keySet());
     } else {
-      ArrayList l = new ArrayList(failed.values());
+      ArrayList<FailedTime> l = new ArrayList<FailedTime>(failed.values());
       Collections.sort(l);
-      toSend = new HashSet();
+      toSend = new HashSet<NodeHandle>();
       for (int i = 0; i < maxFailedEntries; i++) {
         FailedTime tf = (FailedTime)l.get(i);
         toSend.add(tf.handle); 

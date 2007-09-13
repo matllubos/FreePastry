@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.liveness;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
@@ -67,6 +68,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.time.TimeSource;
+import rice.p2p.util.TimerWeakHashMap;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.selector.Timer;
 import rice.selector.TimerTask;
@@ -166,7 +168,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
     random = new Random();
     this.livenessListeners = new ArrayList<LivenessListener<Identifier>>();
     this.pingListeners = new ArrayList<PingListener<Identifier>>();
-    this.managers = new HashMap<Identifier, EntityManager>();
+//    this.managers = new HashMap<Identifier, EntityManager>();
+    this.managers = new TimerWeakHashMap<Identifier, EntityManager>(env.getSelectorManager(), 300000);
     Parameters p = env.getParameters();
     PING_DELAY = p.getInt("pastry_socket_scm_ping_delay");
     PING_JITTER = p.getFloat("pastry_socket_scm_ping_jitter");
@@ -577,8 +580,11 @@ public class LivenessTransportLayerImpl<Identifier> implements
         tries++;
 //        if (manager.getLiveness(path.getLastHop()) == SocketNodeHandle.LIVENESS_ALIVE)
         manager.markSuspected(options);        
-        
-        ping(manager.identifier, options);
+
+        Identifier temp = manager.identifier.get();
+        if (temp != null) { // could happen during a garbage collection
+          ping(temp, options);
+        }
         int absPD = (int)(PING_DELAY*Math.pow(2,tries-1));
         int jitterAmt = (int)(((float)absPD)*PING_JITTER);
         int scheduledTime = absPD-jitterAmt+random.nextInt(jitterAmt*2);
@@ -627,7 +633,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     
     
     // the remote route of this manager
-    protected Identifier identifier;
+    protected WeakReference<Identifier> identifier;
     
     // the current liveness of this route
     protected int liveness;
@@ -651,7 +657,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      */
     public EntityManager(Identifier identifier) {
       if (identifier == null) throw new IllegalArgumentException("identifier is null");
-      this.identifier = identifier;
+      this.identifier = new WeakReference<Identifier>(identifier);
       this.liveness = LivenessListener.LIVENESS_SUSPECTED;
 
 //      proximity = DEFAULT_PROXIMITY;
@@ -709,7 +715,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (liveness != LivenessListener.LIVENESS_ALIVE) notify = true;
       this.liveness = LivenessListener.LIVENESS_ALIVE;
       if (notify) {
-        notifyLivenessListeners(identifier, liveness, options);
+        Identifier temp = identifier.get();
+        if (temp != null) {
+          notifyLivenessListeners(temp, liveness, options);
+        }
       }
     }
     
@@ -723,7 +732,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
       this.liveness = LivenessListener.LIVENESS_SUSPECTED;
       if (notify) {
         if (logger.level <= Logger.FINE) logger.log(this+".markSuspected() notify = true");
-        notifyLivenessListeners(identifier, liveness, options);
+        Identifier temp = identifier.get();
+        if (temp != null) {
+          notifyLivenessListeners(temp, liveness, options);
+        }
       }
     }    
     
@@ -749,7 +761,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
       }
       
       if (notify) {
-        notifyLivenessListeners(identifier, liveness, options);
+        Identifier temp = identifier.get();
+        if (temp != null) {
+          notifyLivenessListeners(temp, liveness, options);
+        }
       }
     }
     
@@ -843,7 +858,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
       }
       if (ret) {
         timer.schedule(pending, rto);
-        ping(identifier, options);
+        Identifier temp = identifier.get();
+        if (temp != null) {
+          ping(temp, options);
+        }
       }
       
       return ret;
@@ -931,7 +949,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         };
       } // sync
       if (logger.level <= Logger.FINER) logger.log("Checking liveness on "+manager.identifier+" in "+manager.rto()+" millis if we don't write.");
-      timer.schedule(livenessCheckerTimer, manager.rto()*4);
+      timer.schedule(livenessCheckerTimer, manager.rto()*4, 30000);
     }
 
     public void stopLivenessCheckerTimer() {

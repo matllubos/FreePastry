@@ -204,14 +204,19 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     }
 
     public void setCancellable(PMessageReceipt receipt) {
+      if (receipt == null) if (logger.level <= Logger.WARNING) logger.logException(this+".setCancellable(null)", new Exception("Stack Trace"));
+          
       this.cancellable = receipt;
     }
 
     public void sendFailed(PMessageReceipt msg, Exception reason) {
       // what to do..., rapidly reroute? 
+      failed = true;
       cancellable = null;
       rm.setTLCancellable(null);      
       if (reason instanceof QueueOverflowException) {
+        // todo, reroute this to a node w/o a full queue
+        removeFromPending(this, dest);
         if (rm.sendFailed(reason)) {
           if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
         } else {
@@ -251,8 +256,13 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
       }
     }
 
+    boolean failed = false;
+    boolean sent = false;
+    boolean cancelled = false;
+    
     public void sent(PMessageReceipt msg) {
       if (logger.level <= Logger.FINE) logger.log("Send success "+rm+" to:"+dest+" "+msg);
+      sent = true;
       cancellable = null;
       rm.setTLCancellable(null);
       removeFromPending(this, dest);      
@@ -261,7 +271,10 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
 
     public boolean cancel() {
       if (logger.level <= Logger.FINE) logger.log("cancelling "+this);
-      return cancellable.cancel();
+      if (cancellable == null && logger.level <= Logger.WARNING) logger.log("cancellable = null c:"+cancelled+" s:"+sent+" f:"+failed);
+      cancelled = true;
+      if (cancellable != null) return cancellable.cancel();
+      return true;
     }    
     
     public String toString() {

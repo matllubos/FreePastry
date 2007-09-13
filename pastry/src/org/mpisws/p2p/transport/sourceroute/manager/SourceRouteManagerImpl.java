@@ -109,8 +109,6 @@ public class SourceRouteManagerImpl<Identifier> implements
   List<LivenessListener<Identifier>> livenessListeners;
   List<PingListener<Identifier>> pingListeners;
   SourceRouteFactory<Identifier> srFactory;
-
-
   
   public SourceRouteManagerImpl(
       SourceRouteFactory<Identifier> srFactory,

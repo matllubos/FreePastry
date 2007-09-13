@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.identity;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
@@ -77,6 +78,7 @@ import org.mpisws.p2p.transport.util.SocketWrapperSocket;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
+import rice.p2p.util.TimerWeakHashMap;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.socket.SocketNodeHandle;
@@ -88,7 +90,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   protected UpperIdentityImpl upper;
   
   protected Map<UpperIdentifier, Set<IdentityMessageHandle>> pendingMessages;
-  protected Set<UpperIdentifier> deadForever;
+  protected Set<UpperIdentifier> deadForever;  // TODO: make TimerWeakHashSet
 
   protected Environment environment;
   protected Logger logger;
@@ -108,13 +110,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * Note, that it's possible to have the UpperIdentifier in multiple places if it
    * has multiple paths (such as source routing)
    */
-  protected Map<LowerIdentifier, UpperIdentifier> bindings;
+  protected Map<LowerIdentifier, UpperIdentifier> bindings;  // this one may be difficult as the Upper has a ref to the lower
   
   /**
    * Held in the options map of the message/socket.  This is a pointer from the upper 
    * level to the lower level.
    */
-  Map<Integer, UpperIdentifier> intendedDest;
+  Map<Integer, WeakReference<UpperIdentifier>> intendedDest; // currently a very small memory leak
   Map<UpperIdentifier, Integer> reverseIntendedDest;
   int intendedDestCtr = Integer.MIN_VALUE;
   
@@ -147,8 +149,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     this.pendingMessages = new HashMap<UpperIdentifier, Set<IdentityMessageHandle>>();
     this.deadForever = Collections.synchronizedSet(new HashSet<UpperIdentifier>());
     
-    this.intendedDest = new HashMap<Integer, UpperIdentifier>();
-    this.reverseIntendedDest = new HashMap<UpperIdentifier, Integer>();
+    this.intendedDest = new HashMap<Integer, WeakReference<UpperIdentifier>>(); // this is a memory leak, but very slow, maybe we should make a periodic iterator to clean this out...
+    this.reverseIntendedDest = new TimerWeakHashMap<UpperIdentifier, Integer>(environment.getSelectorManager(), 300000);
     
     this.bindings = new HashMap<LowerIdentifier, UpperIdentifier>();
   }
@@ -163,6 +165,19 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       }
       set.add(ret);
     }
+  }
+  
+  public void removePendingMessage(UpperIdentifier i, IdentityMessageHandle ret) {
+    synchronized(pendingMessages) {
+      Set<IdentityMessageHandle> set = pendingMessages.get(i);
+      if (set == null) {
+        return;
+      }
+      set.remove(ret);
+      if (set.isEmpty()) {
+        pendingMessages.remove(i); 
+      }
+    }     
   }
   
   public void printMemStats(int logLevel) {
@@ -208,7 +223,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   protected int addIntendedDest(UpperIdentifier i) {
     synchronized(intendedDest) {
       if (reverseIntendedDest.containsKey(i)) return reverseIntendedDest.get(i);
-      intendedDest.put(intendedDestCtr, i);
+      intendedDest.put(intendedDestCtr, new WeakReference<UpperIdentifier>(i));
       reverseIntendedDest.put(i, intendedDestCtr);
       intendedDestCtr++;
       if (logger.level <= Logger.FINER) {
@@ -323,7 +338,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       // May need to re-think this SRHI at all the layers
       final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options);
       int index = options.get(NODE_HANDLE_TO_INDEX);
-      final UpperIdentifier dest = intendedDest.get(index);
+      final UpperIdentifier dest = intendedDest.get(index).get();
+      
+      if (dest == null) {
+        deliverSocketToMe.receiveException(ret, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+index)); 
+        return ret;
+      }
       
       if (addBinding(dest, i, options)) {
         // no problem, sending message
@@ -590,8 +610,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //        m.get(msgWithHeader, 1, m.remaining());
       } else {
         // don't include an id
-        UpperIdentifier dest = intendedDest.get(index.intValue());
+        UpperIdentifier dest = intendedDest.get(index.intValue()).get();
       
+        if (dest == null) {
+          if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+index)); 
+          return ret;
+        }
+
         if (addBinding(dest, i, options)) {
           // no problem, sending message
         } else {
@@ -855,8 +880,15 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     public void incomingSocket(P2PSocket<MiddleIdentifier> s) throws IOException {
       if (logger.level <= Logger.FINE) logger.log("incomingSocket("+s+")");
       int index = s.getOptions().get(NODE_HANDLE_FROM_INDEX);
-      final UpperIdentifier from = intendedDest.get(index);
+      final UpperIdentifier from = intendedDest.get(index).get();
 
+      if (from == null) {
+        errorHandler.receivedException(null, new MemoryExpiredException("No record of the upper identifier for "+s.getIdentifier()+" index="+index)); 
+        s.close();
+        return;
+      }
+
+      
       if (sanityChecker.isSane(from, s.getIdentifier())) {
         callback.incomingSocket(new SocketWrapperSocket<UpperIdentifier, MiddleIdentifier>(from, s, logger, s.getOptions()));
       } else {
@@ -870,8 +902,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     public void messageReceived(MiddleIdentifier i, UpperMsgType m, Map<String, Integer> options) throws IOException {
       if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+","+options+")");
       int index = options.get(NODE_HANDLE_FROM_INDEX);
-      final UpperIdentifier from = intendedDest.get(index);
+      final UpperIdentifier from = intendedDest.get(index).get();
 
+      if (from == null) {
+        errorHandler.receivedException(null, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+index+" dropping message"+m)); 
+        return;
+      }
+      
       if (sanityChecker.isSane(from, i)) {
         callback.messageReceived(from, m, options);
       } else {
@@ -1084,12 +1121,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
 
     public void ack(MessageRequestHandle<MiddleIdentifier, UpperMsgType> msg) {
-      pendingMessages.get(identifier).remove(this);
+      removePendingMessage(identifier, this);
       if (deliverAckToMe != null) deliverAckToMe.ack(this);
     }
 
     public void sendFailed(MessageRequestHandle<MiddleIdentifier, UpperMsgType> msg, IOException reason) {
-      pendingMessages.get(identifier).remove(this);
+      removePendingMessage(identifier, this);
       if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, reason);
     }
   }

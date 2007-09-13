@@ -97,7 +97,7 @@ public class TCPLayer extends SelectionKeyHandler {
   /**
    * Which socket to collect.
    */
-  LinkedHashMap<SocketManager, SocketManager> sockets;
+//  LinkedHashMap<SocketManager, SocketManager> sockets;
 
   public TCPLayer(WireTransportLayerImpl wire) throws IOException {
     this.wire = wire;
@@ -108,7 +108,7 @@ public class TCPLayer extends SelectionKeyHandler {
     SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size"); // 32768
 
     ServerSocketChannel temp = null; // just to clean up after the exception
-    sockets = new LinkedHashMap<SocketManager, SocketManager>(10,0.75f,true);    
+//    sockets = new LinkedHashMap<SocketManager, SocketManager>(10,0.75f,true);    
 //    pending = new HashSet<SocketAcceptor>();
     
     // bind to port
@@ -132,11 +132,11 @@ public class TCPLayer extends SelectionKeyHandler {
     }
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
     try {
-      synchronized (sockets) {
+//      synchronized (sockets) {
         SocketManager sm = new SocketManager(this, destination, deliverSocketToMe, options); 
-        sockets.put(sm, sm);
+//        sockets.put(sm, sm);
         return sm;
-      }
+//      }
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.logException("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + destination + " AS DEAD!",e);
       SocketRequestHandle can = new SocketRequestHandleImpl<InetSocketAddress>(destination, options);
@@ -230,9 +230,9 @@ public class TCPLayer extends SelectionKeyHandler {
 //      channel.configureBlocking(false);
 //      InetSocketAddress addr = (InetSocketAddress)channel.socket().getRemoteSocketAddress();
       SocketManager sm = new SocketManager(this, key); 
-      synchronized (sockets) {
-        sockets.put(sm, sm);
-      }
+//      synchronized (sockets) {
+//        sockets.put(sm, sm);
+//      }
       wire.incomingSocket(sm);
       
 //      pastryNode.broadcastChannelOpened((InetSocketAddress)channel.socket().getRemoteSocketAddress(), NetworkListener.REASON_ACC_NORMAL);
@@ -245,14 +245,14 @@ public class TCPLayer extends SelectionKeyHandler {
     }
   }
 
-  private void putSM(SocketManager sm) {
-    sockets.put(sm, sm);
-  }
-  
-  private void killSM() {
-    Iterator<SocketManager> i = sockets.values().iterator();
-    SocketManager sm = i.next();
-    i.remove();    
-    sm.close();
-  }
+//  private void putSM(SocketManager sm) {
+//    sockets.put(sm, sm);
+//  }
+//  
+//  private void killSM() {
+//    Iterator<SocketManager> i = sockets.values().iterator();
+//    SocketManager sm = i.next();
+//    i.remove();    
+//    sm.close();
+//  }
 }

@@ -1427,6 +1427,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   }
 
   /**
+   * This is complicated because the SubscribeMessage may have many topics to subscribe to at once.
+   * Also, for every topic we don't accept, we must branch the SubscribeMessage based on the routing table.
+   * 
    * 
    * @param sMessage
    * @return true if it needs to be forward, false if we handled it
@@ -1442,7 +1445,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
     
     // Note: deliver only gets called on the root
-    // deliver() should only be called under the following 2 circumstances
+    // deliver() should only be called under the following circumstances
     // a) we are the root and the subscriber
     // b) nobody would take the node, so we return him a SubscribeFailedMessage
     // only return true if there are topics left in the SubscribeMessage that we aren't responsible for
@@ -1457,6 +1460,11 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     // 3) topics that we are the root and we don't have any children yet, NOTE: this was added in FP 2.1 as a safety net so you can't write a policy that won't accept on the root
     // 4) topics that we need to ask the policy
     if (logger.level <= Logger.FINEST) logger.log("handleForwardSubscribeMessage() here 1 "+sMessage);
+    
+    // The first step is to break up the topics into 3 groups.  
+    // forward: If we are in the subscriber's pathToRoot (to prevent loops)
+    // dontForward: If we are already the parent
+    // askPolicy: everyone else (after the policy is asked, these will be placed into forward/dontForward appropriately)
     
     // this is the list of topics that aren't a loop or already a child
     ArrayList<Topic> forward = new ArrayList<Topic>(); // leave these in the message
@@ -1508,8 +1516,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 //      addChildHelper(topic, sMessage.getSubscriber());
 //    }
 
-    
-    List<Topic> accepted;
+    List<Topic> accepted; // these are the messages that the policy accepted
     
 //    logger.log("handleForwardScribeMessage("+sMessage+")"+
 //        " forward:"+(forward.size() == 1 ? forward.iterator().next() : forward.size())+
@@ -1531,6 +1538,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       
       dontForward.addAll(accepted);
 
+      // we only acually add if the node is alive
+      // Why is this the right policy?  Maybe we are incorrect about the liveness of the node, but 
+      // we don't want anycasts to bounce all over the ring until they hit every node,
+      // thus, if we were going to accept the node, then we drop that topic here, and forward the rest
       List<Topic> newTopics = new ArrayList<Topic>();
       if (sMessage.getSubscriber().isAlive()) {
         for (Topic topic : accepted) {
@@ -1550,7 +1561,8 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
             newTopics.add(topic);
           }
         }
-    
+        
+        // the topic is new to us, so we need to subscribe
         subscribe(newTopics, null, maintenancePolicy.implicitSubscribe(newTopics), null); 
       } else { // isAlive 
         if (logger.level <= Logger.WARNING) {
@@ -1567,8 +1579,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     
     forward.addAll(rejected);
   
-    List<Topic> toReturn;
+    List<Topic> toReturn; // which topics to include in the subscribeAck
     
+    // this block chooses to set toReturn to only the new topics if this were due to maintenance,
+    // because we don't need to ack the topics the node was already part of
     if (sMessage.getId() == MAINTENANCE_ID) {
       toReturn = accepted; // to update the rootToPath
     } else {
@@ -1578,8 +1592,13 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
 //    toReturn.addAll(isRoot);
     if (logger.level <= Logger.FINEST) logger.log("handleForwardSubscribeMessage() here 3 "+sMessage);
 
-    if (!toReturn.isEmpty()) {
+ 
+    // NOTE: We need the isAlive() check, otherwise the tmanager (below) may be null, if we
+    // were to create teh tmanager just for this node.
+    if (!toReturn.isEmpty() && sMessage.getSubscriber().isAlive()) {
       // we send a confirmation back to the child
+      
+      // build all of the pathToRoot[]
       List<List<Id>> paths = new ArrayList<List<Id>>(toReturn.size());
       for (Topic topic : toReturn) {
         TopicManager tmanager = topicManagers.get(topic);
@@ -1590,12 +1609,13 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
     
     // otherwise, we are effectively rejecting the child
-    if (logger.level <= Logger.FINER) logger.log("Rejecting subscribe message from " +
-      sMessage.getSubscriber() + " for topic " + sMessage.getTopic());
-    
     sMessage.removeTopics(dontForward);
     
+    if (logger.level <= Logger.FINER) logger.log("Rejecting subscribe message from " +
+        sMessage.getSubscriber() + " for topic(s) " + sMessage.getTopics());
+
     if (sMessage.isEmpty()) {
+      // there are no more topics in the message, we handled them all
       if (logger.level <= Logger.FINEST) logger.log("handleForwardSubscribeMessage() returning false here 85");
       return false; // the buck stops here, cause all requests are filled
     }
@@ -1609,8 +1629,8 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     // a) for each that we have a manager, call directAnycast, this is the old way to have good management of trees
     // b) for topics that we don't have a manager, split them up based on the underlieing overlay's router and route them that way, this is the new version for multi-subscription
     
-    List<Topic> noManager = new ArrayList<Topic>();
-    List<Topic> failed = new ArrayList<Topic>();
+    List<Topic> noManager = new ArrayList<Topic>(); // these are the topics we don't have a manager for
+    List<Topic> failed = new ArrayList<Topic>(); // these are the topics that have exhausted the tree (they visited everyone and were rejected)
     
     Iterator<Topic> topicIterator = sMessage.getTopics().iterator();
     while (topicIterator.hasNext()) {
@@ -1659,7 +1679,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
             // XXX - return true;
         } else {
           if (logger.level <= Logger.FINEST) logger.log("handleForwardSubscribeMessage() routing "+aMessage+" to "+handle);
-          endpoint.route(null, aMessage, handle);
+          endpoint.route(aMessage.getTopic().getId(), aMessage, handle);
         }
       }
     }
@@ -1687,10 +1707,10 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       return true; // forward the message 
     }
     for (NodeHandle nextHop : manifest.keySet()) {
-      List<Topic> theTopics = manifest.get(localHandle);
-      for (Topic topic : theTopics) {
+      List<Topic> theTopics = manifest.get(nextHop);
+      if (theTopics != null) { // this should probably never happen
         AnycastMessage aMessage = sMessage.copy(theTopics, convert(policy.divideContent(theTopics, sMessage.getContent()))); // use the copy constructor again
-        endpoint.route(null, aMessage, nextHop);
+        endpoint.route(aMessage.getTopic().getId(), aMessage, nextHop);
       }
     }
     
@@ -2202,12 +2222,19 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
           for (NodeHandle child : children) {
             if (this.pathToRoot.contains(child.getId())) {
               sendDrop.add(child);
-              removeChild(child);
+              
+              // Can't call removeChild() here because you will get a ConcurrentModificationException
+//              removeChild(child);
             } else {
               sendUpdate.add(child);
             }
           }
+          
+          for (NodeHandle child : sendDrop) {
+            removeChild(child);
+          }
         }
+
         for (NodeHandle child : sendDrop) {
           endpoint.route(null, new DropMessage(localHandle, topic), child);        
         }

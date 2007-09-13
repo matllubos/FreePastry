@@ -341,7 +341,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       environment.getParameters().setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.FINE);
       
       // turn on consistent join protocol's logger to make sure this is correct for consistency
-      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
+      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE);
       environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
       
       // to see rapid rerouting and dropping from consistency if gave lease
@@ -616,6 +616,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         if (!node.isReady()) num = 5;
         System.out.println("LEAFSET"+num+":"+env.getTimeSource().currentTimeMillis()+":"+ls);
         Thread.sleep(1*60*1000);
+        maxLeafsetSize = Math.max(ls.getUniqueCount(), maxLeafsetSize);
         long testTime = env.getTimeSource().currentTimeMillis()-bootTime;
         if (artificialChurnTime == 0) {
           artificialChurn = false;
@@ -628,11 +629,15 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
           restartNode = false;
           artificialChurn = true;
         }
-        if (artificialChurn) {
-          if (!isBootNode) {            
-            
-            if (env.getRandomSource().nextInt(artificialChurnTime*2) == 0 || // kill self to cause churn
-                (maxLeafsetSize > 8 && ls.getUniqueCount() < 4)) { // kill self because of leafset collapse
+        
+        // the leafset shrunk too much
+        boolean leafsetTooSmall = (maxLeafsetSize > 12 && ls.getUniqueCount() < 4);
+        boolean killSelfToCauseChurn = artificialChurn && (env.getRandomSource().nextInt(artificialChurnTime*2) == 0);
+        
+        boolean killSelf = killSelfToCauseChurn || leafsetTooSmall;
+        
+        if (killSelf) {
+          if (!isBootNode) {                        
               imaliveRunning.running = false;
               Runtime.getRuntime().removeShutdownHook(shutdownHook);
               System.out.println("Killing self to cause churn. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
@@ -644,7 +649,6 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
               int waittime = env.getRandomSource().nextInt(30000)+30000;
               System.out.println("Waiting for "+waittime+" millis before restarting.");
               Thread.sleep(waittime); // wait up to 1 minute
-            }
           }
         }
       }    
