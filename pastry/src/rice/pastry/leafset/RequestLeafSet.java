@@ -93,7 +93,7 @@ public class RequestLeafSet extends PRawMessage implements Serializable {
   public String toString() {
     String s = "";
 
-    s += "RequestLeafSet(by " + getSender().getNodeId() + ")";
+    s += "RequestLeafSet("+getSender()+","+timeStamp+")";
 
     return s;
   }

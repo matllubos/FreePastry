@@ -147,7 +147,7 @@ public class MagicNumberTransportLayer<Identity> implements
 
     cancellable.setSubCancellable(wire.openSocket(i, new SocketCallback<Identity>(){    
       public void receiveResult(SocketRequestHandle<Identity> c, P2PSocket<Identity> result) {
-        if (c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
+        if (cancellable.getSubCancellable() != null && c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
         
         result.register(false, true, new P2PSocketReceiver<Identity>(){        
           ByteBuffer buf = ByteBuffer.wrap(HEADER);
@@ -167,7 +167,7 @@ public class MagicNumberTransportLayer<Identity> implements
         });
       }    
       public void receiveException(SocketRequestHandle<Identity> c, IOException exception) {
-        if (c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
+        if (cancellable.getSubCancellable() != null && c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
         deliverSocketToMe.receiveException(cancellable, exception);
 //        errorHandler.receivedException(i, exception);
       }    

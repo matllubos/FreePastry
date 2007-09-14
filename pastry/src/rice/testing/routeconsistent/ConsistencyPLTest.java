@@ -56,7 +56,14 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Random;
 
+import org.mpisws.p2p.transport.ErrorHandler;
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.SocketCallback;
+import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
@@ -67,6 +74,7 @@ import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.splitstream.ChannelId;
 import rice.p2p.splitstream.testing.MySplitStreamClient;
 import rice.pastry.Id;
@@ -77,10 +85,12 @@ import rice.pastry.NodeSetEventSource;
 import rice.pastry.NodeSetListener;
 import rice.pastry.PastryNode;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
+import rice.pastry.transport.TLDeserializer;
 import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
 import rice.selector.TimerTask;
@@ -452,6 +462,72 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //          }, 60000, 60000);                    
 //          return ret;
 //        }
+
+        @Override
+        protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> getCommonAPITransportLayer(TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, TLPastryNode pn, TLDeserializer deserializer) {
+          final TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl = 
+            super.getCommonAPITransportLayer(upperIdentity, pn, deserializer);
+
+          TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> ret = 
+            new TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage>(){          
+            
+            public boolean printMe(RawMessage m) {
+              if (m instanceof RouteMessage) return false;
+              //return m.getClass().getName().startsWith("rice.pastry");
+              return true;
+            }
+            
+            public void destroy() {
+              tl.destroy();
+            }
+          
+            public void setErrorHandler(ErrorHandler<TransportLayerNodeHandle<MultiInetSocketAddress>> handler) {
+              tl.setErrorHandler(handler);
+            }
+          
+            public void setCallback(final TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback) {
+
+              tl.setCallback(new TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage>() {              
+                public void messageReceived(
+                    TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m,
+                    Map<String, Integer> options) throws IOException {
+                  if (printMe(m)) logger.log("messageReceived("+i+","+m+")");
+                  callback.messageReceived(i, m, options);
+                }
+              
+                public void incomingSocket(
+                    P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> s)
+                    throws IOException {
+                  callback.incomingSocket(s);
+                }              
+              });
+              
+            }
+          
+            public MessageRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> sendMessage(TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m, MessageCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> deliverAckToMe, Map<String, Integer> options) {
+              if (printMe(m)) logger.log("sendMessage("+i+","+m+")");
+              return tl.sendMessage(i, m, deliverAckToMe, options);
+            }
+          
+            public SocketRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>> openSocket(TransportLayerNodeHandle<MultiInetSocketAddress> i, SocketCallback<TransportLayerNodeHandle<MultiInetSocketAddress>> deliverSocketToMe, Map<String, Integer> options) {
+              return tl.openSocket(i, deliverSocketToMe, options);
+            }
+          
+            public TransportLayerNodeHandle<MultiInetSocketAddress> getLocalIdentifier() {
+              return tl.getLocalIdentifier();
+            }
+          
+            public void acceptSockets(boolean b) {
+              tl.acceptSockets(b);
+            }
+          
+            public void acceptMessages(boolean b) {
+              tl.acceptMessages(b);
+            }          
+          };
+          
+          return ret;
+        }
 
         @Override
         protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, TLPastryNode pn) {

@@ -429,7 +429,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     /**
      * Read an error, or socket was closed.
      * 
-     * The purpose of this method is to let the currently written message to complete.
+     * The purpose of this method is to let the currently writing message to complete.
      * 
      * @param socket
      * @return true if we did it now
@@ -657,9 +657,11 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
     
     public void purge(IOException ioe) {
+      if (logger.level <= Logger.INFO) logger.logException(this+"purge("+ioe+"):"+messageThatIsBeingWritten,new IOException("StackTrace"));
       synchronized(queue) {
         // return NodeIsFaultyException to all of the message(s) deliverAckToMe(s)
         if (messageThatIsBeingWritten != null) {
+          messageThatIsBeingWritten.reset();
           if (messageThatIsBeingWritten.deliverAckToMe != null) 
             messageThatIsBeingWritten.deliverAckToMe.sendFailed(messageThatIsBeingWritten, ioe);           
           messageThatIsBeingWritten = null;
@@ -764,6 +766,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 
     public void clearAndEnqueue(MessageWrapper wrapper) {
       if (wrapper != messageThatIsBeingWritten) throw new IllegalArgumentException("Wrapper:"+wrapper+" messageThatIsBeingWritten:"+messageThatIsBeingWritten);
+      if (messageThatIsBeingWritten != null) messageThatIsBeingWritten.reset();
       messageThatIsBeingWritten = null;
       if (writingSocket != null) {
         writingSocket.close();

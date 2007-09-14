@@ -490,7 +490,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   void doneProbing() {
     int leftIndex = leafSet.ccwSize();
-    int rightIndex = leafSet.ccwSize();
+    int rightIndex = leafSet.cwSize();
     if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;
     if (rightIndex > MAX_NUM_TO_HEAR_FROM/2) rightIndex = MAX_NUM_TO_HEAR_FROM/2;
     if (leafSet.isComplete() || ((leftIndex == MAX_NUM_TO_HEAR_FROM/2) && (rightIndex == MAX_NUM_TO_HEAR_FROM/2))) {

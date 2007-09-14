@@ -127,7 +127,7 @@ public class BroadcastLeafSet extends PRawMessage {
   }
 
   public String toString() {
-    String s = "BroadcastLeafSet(of " + fromNode.getNodeId() + ":" + theLeafSet + ")";
+    String s = "BroadcastLeafSet("+theLeafSet+","+requestTimeStamp+")";
     return s;
   }
   
