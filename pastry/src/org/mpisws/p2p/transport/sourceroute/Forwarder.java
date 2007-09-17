@@ -54,6 +54,7 @@ public class Forwarder<Identifier> {
     P2PSocket from;
     P2PSocket to;
     ByteBuffer buf;
+    boolean shutdownTo = false;
     
     public HalfPipe(P2PSocket from, P2PSocket to) {
       this.from = from;
@@ -76,7 +77,7 @@ public class Forwarder<Identifier> {
         long result = from.read(buf);
         if (result == -1) {
           if (logger.level <= Logger.FINE) logger.log(from+" has shut down input, shutting down output on "+to);
-          to.shutdownOutput();
+          shutdownTo = true;
           return;
         }
         if (logger.level <= Logger.FINER) logger.log("Read "+result+" bytes from "+from);
@@ -98,6 +99,10 @@ public class Forwarder<Identifier> {
             // keep writing
             to.register(false, true, this);
           } else {
+            if (shutdownTo) {
+              to.shutdownOutput();
+              return;
+            }
             // read again
             buf.clear();
             from.register(true, false, this);

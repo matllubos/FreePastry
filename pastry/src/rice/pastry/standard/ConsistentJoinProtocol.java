@@ -42,6 +42,8 @@ package rice.pastry.standard;
 import java.io.IOException;
 import java.util.*;
 
+import org.mpisws.p2p.transport.liveness.LivenessListener;
+
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.rawserialization.*;
@@ -394,7 +396,12 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       ConsistentJoinMsg cjm = (ConsistentJoinMsg)msg;
       // identify node j, the sender of the message
       NodeHandle j = cjm.ls.get(0);
-
+      
+      if (j.getLiveness() > LivenessListener.LIVENESS_SUSPECTED) {
+        if (logger.level <= Logger.INFO) logger.log("got message from dead node:"+msg);
+        j.checkLiveness(); // we got a message from a dead node...
+      }
+      
       // failed_i := failed_i - {j}
       failed.remove(j);
       

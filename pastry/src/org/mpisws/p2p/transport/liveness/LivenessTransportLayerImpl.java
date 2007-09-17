@@ -328,18 +328,19 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (logger.level <= Logger.FINEST) logger.log("messageReceived("+i+", PONG)");
       EntityManager manager = getManager(i);
       long sendTime = m.getLong();
-      int rtt = (int)(time.currentTimeMillis()-sendTime);
-      manager.updateRTO(rtt);
-      if (manager != null) {
+      int rtt = (int)(time.currentTimeMillis()-sendTime);      
+      if (rtt >= 0) {
+        manager.updateRTO(rtt);
         synchronized(manager) {
           if (manager.pending != null) {
             manager.pending.pingResponse(sendTime, options);
           }
         }
+        notifyPingListenersPong(i,rtt);
       } else {
+        if (logger.level <= Logger.WARNING) logger.log("I think the clock is fishy, rtt must be >= 0, was:"+rtt);
         errorHandler.receivedUnexpectedData(i, m.array(), 0, null);      
       }
-      notifyPingListenersPong(i,rtt);
       return;            
     default:
       errorHandler.receivedUnexpectedData(i, m.array(), 0, null);      
@@ -430,10 +431,12 @@ public class LivenessTransportLayerImpl<Identifier> implements
       em.destroy();
     }
     managers.clear();    
-    managers = null;
+//    managers = null;
   }
 
-  public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
+  public void incomingSocket(P2PSocket<Identifier> s) throws IOException {    
+    EntityManager m = getManager(s.getIdentifier());
+    if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) m.checkLiveness(s.getOptions());
     callback.incomingSocket(getManager(s.getIdentifier()).getLSocket(s));    
   }
 
@@ -817,24 +820,24 @@ public class LivenessTransportLayerImpl<Identifier> implements
      *
      * @return true if there will be an update (either a ping, or a change in liveness)
      */
-    long start = 0; // delme
-    int ctr = 0; // delme
+//    long start = 0; // delme
+//    int ctr = 0; // delme
     protected boolean checkLiveness(Map<String, Integer> options) {
 //      logger.log(this+".checkLiveness()");
       if (logger.level <= Logger.FINER) logger.log(this+".checkLiveness()");
 
       // *************** delme ******************
       // we're gonna exit if checkLilveness was called 100 times in 1 second
-      ctr++;
-      if (ctr%100 == 0) {
-        ctr = 0;
-        long time_now = time.currentTimeMillis();        
-        if ((time_now - start) < 1000) {
-          logger.logException("great scotts! "+start+" "+this+" "+this.liveness, new Exception("Stack Trace"));
-          System.exit(1);
-        }
-        start = time_now;
-      }      
+//      ctr++;
+//      if (ctr%100 == 0) {
+//        ctr = 0;
+//        long time_now = time.currentTimeMillis();        
+//        if ((time_now - start) < 1000) {
+//          logger.logException("great scotts! "+start+" "+this+" "+this.liveness, new Exception("Stack Trace"));
+//          System.exit(1);
+//        }
+//        start = time_now;
+//      }      
       // *************** end delme **********
       
       boolean ret = false;
@@ -868,7 +871,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
     
     public String toString() {
-      return identifier.toString();
+      Identifier temp = identifier.get();
+      if (temp == null) return "null";
+      return temp.toString();
 //      return "SRM{"+System.identityHashCode(this)+"}"+identifier;
     }
     
@@ -922,6 +927,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
         }
 
         public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
+          EntityManager m = getManager(socket.getIdentifier());
+          if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) m.checkLiveness(socket.getOptions());
+          
           if (canRead) reader = null;
           if (canWrite) {
             writer = null;          

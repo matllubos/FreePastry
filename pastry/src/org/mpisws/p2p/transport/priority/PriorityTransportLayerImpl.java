@@ -400,7 +400,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
 
     public String toString() {
-      return "EM{"+identifier+"}";
+      return "EM{"+identifier.get()+"}";
     }
     
     public void clearState() {
@@ -475,6 +475,11 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       // also, be able to read incoming messages on every socket
       new SizeReader(s);
     }
+    
+    public void setWritingSocket(P2PSocket<Identifier> s, String loc) {
+      if (logger.level <= Logger.INFO) logger.log(this+".setWritingSocket("+s+") loc:"+loc);
+      writingSocket = s;
+    }
 
     /**
      * Must be called on selectorManager.
@@ -495,7 +500,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       if (writingSocket == null) {
         registered = false;
         if (!sockets.isEmpty()) {
-          writingSocket = sockets.iterator().next();
+          setWritingSocket(sockets.iterator().next(), "scheduleToWriteIfNeeded");
         } else {
           // we need to get a writingSocket
           if (pendingSocket == null) {
@@ -588,6 +593,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //        markDead();
 //        return; 
 //      }
+      
+      if (logger.level <= Logger.INFO) logger.logException(this+".receiveException("+socket+","+ioe+"):"+messageThatIsBeingWritten+" wrS:"+writingSocket, ioe);
       registered = false;
       sockets.remove(socket);
       socket.close();
@@ -653,7 +660,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      *
      */
     public void markDead() {
-      purge(new NodeIsFaultyException(identifier));
+      purge(new NodeIsFaultyException(identifier.get()));
     }
     
     public void purge(IOException ioe) {
@@ -682,7 +689,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         }
         sockets.clear();
       }
-      writingSocket = null;
+      setWritingSocket(null, "purge");
       if (pendingSocket != null) pendingSocket.cancel();
       pendingSocket = null;
       stopLivenessChecker();
@@ -757,7 +764,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       // close the socket if we need to 
       if (closeWritingSocket == writingSocket) {
         writingSocket.close();
-        writingSocket = null;
+        setWritingSocket(null, "complete("+wrapper+")");
         closeWritingSocket = null;          
         return false;
       }
@@ -771,7 +778,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       if (writingSocket != null) {
         writingSocket.close();
         sockets.remove(writingSocket);
-        writingSocket = null;
+        setWritingSocket(null, "CaE("+wrapper+")");
       }
       if (wrapper != null) {
         wrapper.reset();
@@ -794,6 +801,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       Map<String, Integer> options;      
       
       boolean cancelled = false; // true when cancel is called
+      boolean completed = false; // true when completed is called
       
       MessageWrapper(
           Identifier temp,
@@ -821,6 +829,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }
       
       public void complete() {
+        completed = true;
         if (deliverAckToMe != null) deliverAckToMe.ack(this);
       }
 
@@ -832,7 +841,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       public boolean receiveSelectResult(P2PSocket<Identifier> socket) throws IOException {
         if (this.socket != null && this.socket != socket) {
           // this shouldn't happen
-          logger.log(this+"Socket changed!!! socket:"+socket+"@"+System.identityHashCode(socket)+" writingSocket:"+writingSocket+"@"+System.identityHashCode(writingSocket)+" this.socket:"+this.socket+"@"+System.identityHashCode(this.socket));
+          logger.log(this+" Socket changed!!! can:"+cancelled+" comp:"+completed+" socket:"+socket+"@"+System.identityHashCode(socket)+" writingSocket:"+writingSocket+"@"+System.identityHashCode(writingSocket)+" this.socket:"+this.socket+"@"+System.identityHashCode(this.socket));
           socket.shutdownOutput();
           
           // do we need to reset?
@@ -866,7 +875,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
       public void drop() {
         // TODO: make sure we've done evrything necessary here to clean this up        
-        if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, new QueueOverflowException(identifier, originalMessage));
+        if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, new QueueOverflowException(identifier.get(), originalMessage));
       }
             
       /**
@@ -911,7 +920,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         }
       }
       public String toString() {
-        return "MessagWrapper{"+message+"}@"+System.identityHashCode(this)+"->"+identifier+" pri:"+priority+" seq:"+seq; 
+        return "MessagWrapper{"+message+"}@"+System.identityHashCode(this)+"->"+identifier.get()+" pri:"+priority+" seq:"+seq+" s:"+this.socket; 
       }
     }
     

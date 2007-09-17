@@ -144,7 +144,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
         new SocketCallback<InetSocketAddress>(){    
       
       public void receiveResult(SocketRequestHandle<InetSocketAddress> c, P2PSocket<InetSocketAddress> result) {
-        if (c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
+        if (handle.getSubCancellable() != null && c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
         
         if (logger.level <= Logger.FINER) logger.log("openSocket("+i+"):receiveResult("+result+")");
         if (sendIdentifier) {
@@ -175,7 +175,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
         }
       }    
       public void receiveException(SocketRequestHandle<InetSocketAddress> c, IOException exception) {
-        if (c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
+        if (handle.getSubCancellable() != null && c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
         deliverSocketToMe.receiveException(handle, exception);
       }
     }, options));

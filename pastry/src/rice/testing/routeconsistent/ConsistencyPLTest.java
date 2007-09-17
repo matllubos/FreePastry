@@ -464,18 +464,16 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //        }
 
         @Override
-        protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> getCommonAPITransportLayer(TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, TLPastryNode pn, TLDeserializer deserializer) {
+        protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> 
+          getCommonAPITransportLayer(
+              TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, 
+              TLPastryNode pn, TLDeserializer deserializer) {
+          
           final TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl = 
             super.getCommonAPITransportLayer(upperIdentity, pn, deserializer);
 
           TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> ret = 
             new TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage>(){          
-            
-            public boolean printMe(RawMessage m) {
-              if (m instanceof RouteMessage) return false;
-              //return m.getClass().getName().startsWith("rice.pastry");
-              return true;
-            }
             
             public void destroy() {
               tl.destroy();
@@ -486,22 +484,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
             }
           
             public void setCallback(final TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback) {
-
-              tl.setCallback(new TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage>() {              
-                public void messageReceived(
-                    TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m,
-                    Map<String, Integer> options) throws IOException {
-                  if (printMe(m)) logger.log("messageReceived("+i+","+m+")");
-                  callback.messageReceived(i, m, options);
-                }
-              
-                public void incomingSocket(
-                    P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> s)
-                    throws IOException {
-                  callback.incomingSocket(s);
-                }              
-              });
-              
+              tl.setCallback(new MyCallback(callback, logger));
             }
           
             public MessageRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> sendMessage(TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m, MessageCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> deliverAckToMe, Map<String, Integer> options) {
@@ -731,6 +714,37 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
     }
   }
 
+  public static boolean printMe(RawMessage m) {
+    if (m instanceof RouteMessage) return false;
+    //return m.getClass().getName().startsWith("rice.pastry");
+    return true;
+  }
+  
+
+  static class MyCallback implements TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> {              
+    TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback;
+    Logger logger;
+    
+    public MyCallback(TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback, Logger logger) {
+      this.callback = callback;
+      this.logger = logger;
+    }
+
+    public void messageReceived(
+        TransportLayerNodeHandle<MultiInetSocketAddress> i, 
+        RawMessage m,
+        Map<String, Integer> options) throws IOException {
+      
+      if (printMe(m)) logger.log("messageReceived("+i+","+m+")");
+      callback.messageReceived(i, m, options);
+    }
+  
+    public void incomingSocket(P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> s)
+        throws IOException {
+      callback.incomingSocket(s);
+    }              
+  }
+  
   public int delayInterest() {
     return 15000;
   }

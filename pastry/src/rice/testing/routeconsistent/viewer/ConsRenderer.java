@@ -726,7 +726,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
         container.setLayout(new GridLayout(3,1));
         
         String[] dirOptions = {
-            "n:/planetlab/cons",
+            "m:/unix-home/planetlab/cons",
             "c:/planetlab/cons",
         };
         final JComboBox dirChooser = new JComboBox(dirOptions);
