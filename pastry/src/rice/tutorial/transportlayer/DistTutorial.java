@@ -73,15 +73,15 @@ public class DistTutorial {
    * @param numNodes the number of nodes to create in this JVM
    * @param env the environment for these nodes
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env, int bandwidth) throws Exception {
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     env.getParameters().setInt("rice.tutorial.transportlayer.BandwidthLimitingTransportLayer_loglevel", Logger.FINE);
-    PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleA(bindport, env, nidFactory, 10000, 1000);
-//    PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleB(bindport, env, nidFactory, 10000, 1000);
+    PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleA(bindport, env, nidFactory, bandwidth, 1000);
+//    PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleB(bindport, env, nidFactory, bandwidth, 1000);
 //  PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
     // loop to construct the nodes/apps
@@ -187,13 +187,16 @@ public class DistTutorial {
   
       // the number of nodes to use
       int numNodes = Integer.parseInt(args[3]);    
+
+      // the number of nodes to use
+      int bandwidth = Integer.parseInt(args[4]);    
       
       // launch our node!
-      DistTutorial dt = new DistTutorial(bindport, bootaddress, numNodes, env);
+      DistTutorial dt = new DistTutorial(bindport, bootaddress, numNodes, env, bandwidth);
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 
-      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes");
+      System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.transportlayer.DistTutorial localbindport bootIP bootPort numNodes bandwidth");
       System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
       throw e; 
     }

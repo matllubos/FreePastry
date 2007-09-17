@@ -333,7 +333,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
   
   public static PastryNodeFactory exampleB(int bindport, Environment env, NodeIdFactory nidFactory, final int amt, final int time) throws IOException {    
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
-      // TODO: Make this call in SPNF return a special object holding all of the necessary sub-types that a SRM is.  It makes it much easier to extend this.
+
       @Override
       protected TransLivenessProximity<MultiInetSocketAddress, ByteBuffer> getSourceRouteManagerLayer(
           TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl, 
@@ -360,45 +360,5 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
       }
     };
     return factory;    
-  }
-  
-//  static class BandwidthLimitingSRM<Identifier> extends BandwidthLimitingTransportLayer<Identifier> implements SourceRouteManager<Identifier> {
-//    SourceRouteManager<Identifier> srm;
-//    
-//    public BandwidthLimitingSRM(SourceRouteManager<Identifier> tl, int bucketSize, int bucketTimelimit, Environment env) {
-//      super(tl, bucketSize, bucketTimelimit, env);
-//      this.srm = tl;
-//    }
-//
-//    public void addLivenessListener(LivenessListener<Identifier> name) {
-//      srm.addLivenessListener(name);
-//    }
-//
-//    public boolean removeLivenessListener(LivenessListener<Identifier> name) {
-//      return srm.removeLivenessListener(name);
-//    }
-//    
-//    public boolean checkLiveness(Identifier i, Map<String, Integer> options) {
-//      return srm.checkLiveness(i, options);
-//    }
-//
-//    public void clearState(Identifier i) {
-//      srm.clearState(i);
-//    }
-//
-//    public int getLiveness(Identifier i, Map<String, Integer> options) {
-//      return srm.getLiveness(i, options);
-//    }
-//
-//    public void addProximityListener(ProximityListener<Identifier> listener) {
-//      srm.addProximityListener(listener);
-//    }
-//
-//    public boolean removeProximityListener(ProximityListener<Identifier> listener) {
-//      return srm.removeProximityListener(listener);
-//    }    
-//    public int proximity(Identifier i) {
-//      return srm.proximity(i);
-//    }
-//  }
+  }  
 }
