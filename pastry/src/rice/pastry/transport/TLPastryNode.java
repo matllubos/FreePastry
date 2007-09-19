@@ -529,14 +529,12 @@ public class TLPastryNode extends PastryNode implements
       LivenessProvider<NodeHandle> livenessProvider,
       ProximityProvider<NodeHandle> proxProvider,
       Deserializer deserializer, 
-      NodeHandleFactory handleFactory,
-      Bootstrapper boot) {
+      NodeHandleFactory handleFactory) {
     this.localhandle = localhandle;
     this.leafSetMaintFreq = lsmf;
     this.routeSetMaintFreq = rsmf;
     this.handleFactory = handleFactory;
     this.proxProvider = proxProvider;
-    this.bootstrapper = boot;
     proxProvider.addProximityListener(this);
     
     this.tl = tl;
@@ -544,9 +542,12 @@ public class TLPastryNode extends PastryNode implements
     this.deserializer = deserializer;
     tl.setCallback(this);
     livenessProvider.addLivenessListener(this);
-
   }
 
+  public void setBootstrapper(Bootstrapper boot) {
+    this.bootstrapper = boot;
+  }
+  
   /**
    * Called after the node is initialized.
    * 

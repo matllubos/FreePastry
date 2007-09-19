@@ -71,6 +71,7 @@ import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -335,7 +336,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       environment.getParameters().setBoolean("logging_packageOnly",false);
       
       environment.getParameters().setInt("rice.pastry_loglevel", Logger.INFO);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINE);
      
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
@@ -344,11 +345,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //      environment.getParameters().setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINER);
+      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
 //      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
       environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);
       
-      environment.getParameters().setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.FINE);
+      environment.getParameters().setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
       
       // turn on consistent join protocol's logger to make sure this is correct for consistency
       environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE);
@@ -513,8 +514,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         }
 
         @Override
-        protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, TLPastryNode pn) {
-          final PriorityTransportLayerImpl<MultiInetSocketAddress> ret = (PriorityTransportLayerImpl<MultiInetSocketAddress>)super.getPriorityTransportLayer(trans, liveness, pn);          
+        protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(
+            TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, 
+            LivenessProvider<MultiInetSocketAddress> liveness, 
+            ProximityProvider<MultiInetSocketAddress> prox, 
+            TLPastryNode pn) {
+          final PriorityTransportLayerImpl<MultiInetSocketAddress> ret = 
+            (PriorityTransportLayerImpl<MultiInetSocketAddress>)super.getPriorityTransportLayer(trans, liveness, prox, pn);          
           environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
             @Override
             public void run() {
@@ -716,7 +722,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 
   public static boolean printMe(RawMessage m) {
     if (m instanceof RouteMessage) return false;
-    //return m.getClass().getName().startsWith("rice.pastry");
+    if (m.getClass().getName().startsWith("rice.pastry.pns")) return false;
     return true;
   }
   

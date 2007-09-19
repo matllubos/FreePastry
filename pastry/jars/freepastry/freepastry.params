@@ -29,6 +29,9 @@ transport_wire_datagram_send_buffer_size = 65536
 transport_epoch_max_num_addresses = 2
 transport_sr_max_num_hops = 5
 
+# proximity neighbor selection
+transport_use_pns = true
+
 # number of rows in the routing table to consider during PNS
 # valid values are ALL, or a number
 pns_num_rows_to_use = 10

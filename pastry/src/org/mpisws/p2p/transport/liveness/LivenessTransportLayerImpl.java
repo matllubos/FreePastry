@@ -219,7 +219,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   }
   
   public int getLiveness(Identifier i, Map<String, Integer> options) {
-    if (logger.level <= Logger.FINE) logger.log("getLiveness("+i+","+options+")");
+    if (logger.level <= Logger.FINEST) logger.log("getLiveness("+i+","+options+")");
     synchronized(managers) {
       if (managers.containsKey(i))
         return managers.get(i).liveness;
@@ -260,7 +260,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
         // the upper layer is probably going to retry, so mark this dead first
         if (connectionExceptionMeansFaulty) {
-          if (logger.level <= Logger.FINE) logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
+          if (logger.level <= Logger.FINER) logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
           getManager(i).markDead(options);
         }
         deliverSocketToMe.receiveException(s, ex);
@@ -436,7 +436,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {    
     EntityManager m = getManager(s.getIdentifier());
-    if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) m.checkLiveness(s.getOptions());
+    if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) {
+      m.updated = 0L;
+      m.checkLiveness(s.getOptions());
+    }
     callback.incomingSocket(getManager(s.getIdentifier()).getLSocket(s));    
   }
 
@@ -533,7 +536,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
 //        if (options.containsKey("identity.node_handle_to_index")) {
 //          
 //        }
-        logger.log("CHECKING DEATH OF PATH " + manager.identifier+" rto:"+initialDelay+" options:"+options);
+        logger.log("CHECKING DEATH OF PATH " + manager.identifier.get()+" rto:"+initialDelay+" options:"+options);
       }
       
       this.manager = manager;
@@ -556,11 +559,11 @@ public class LivenessTransportLayerImpl<Identifier> implements
         if (tries > 1) {
           long delay = time.currentTimeMillis()-startTime;
           if (logger.level <= Logger.INFO) logger.log(
-              "DeadChecker.pingResponse("+manager.identifier+") tries="+tries+
+              "DeadChecker.pingResponse("+manager.identifier.get()+") tries="+tries+
               " estimated="+initialDelay+" totalDelay="+delay);        
         }
       }      
-      if (logger.level <= Logger.FINE) logger.log("Terminated DeadChecker(" + manager.identifier + ") due to ping.");
+      if (logger.level <= Logger.FINE) logger.log("Terminated DeadChecker(" + manager.identifier.get() + ") due to ping.");
       manager.markAlive(options);
       cancel();
     }
@@ -594,7 +597,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
 //        logger.log(this+".run():scheduling for "+scheduledTime);
         timer.schedule(this,scheduledTime);
       } else {
-        if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + manager.identifier + ") expired - marking as dead.");
+        if (logger.level <= Logger.FINE) logger.log("DeadChecker(" + manager.identifier.get() + ") expired - marking as dead.");
 //        cancel(); // done in markDead()
         manager.markDead(options);
       }
@@ -608,7 +611,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
     
     public String toString() {
-      return "DeadChecker("+manager.identifier+" #"+System.identityHashCode(this)+"):"+tries+"/"+numTries; 
+      return "DeadChecker("+manager.identifier.get()+" #"+System.identityHashCode(this)+"):"+tries+"/"+numTries; 
     }    
   }
   
@@ -854,8 +857,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
           this.pending = new DeadChecker(this, NUM_PING_TRIES, rto, options);
           ret = true;
         } else {
-          if (logger.level <= Logger.FINE) {
-            logger.log(this+".checkLiveness() not checking "+identifier+" checked to recently, can't check for "+((updated+CHECK_DEAD_THROTTLE)-now)+" millis.");
+          if (logger.level <= Logger.FINER) {
+            logger.log(this+".checkLiveness() not checking "+identifier.get()+" checked to recently, can't check for "+((updated+CHECK_DEAD_THROTTLE)-now)+" millis.");
           }
         }
       }
@@ -907,8 +910,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
     
     public void notifyRecievers() {
-      if (reader != null) reader.receiveException(this, new NodeIsFaultyException(manager.identifier));
-      if (writer != null && writer != reader) writer.receiveException(this, new NodeIsFaultyException(manager.identifier));      
+      if (reader != null) reader.receiveException(this, new NodeIsFaultyException(manager.identifier.get()));
+      if (writer != null && writer != reader) writer.receiveException(this, new NodeIsFaultyException(manager.identifier.get()));      
     }
 
     P2PSocketReceiver<Identifier> reader, writer;
@@ -928,8 +931,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
 
         public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
           EntityManager m = getManager(socket.getIdentifier());
-          if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) m.checkLiveness(socket.getOptions());
-          
+          if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) {
+            m.updated = 0L;
+            m.checkLiveness(socket.getOptions());
+          }
           if (canRead) reader = null;
           if (canWrite) {
             writer = null;          
@@ -956,7 +961,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
           }      
         };
       } // sync
-      if (logger.level <= Logger.FINER) logger.log("Checking liveness on "+manager.identifier+" in "+manager.rto()+" millis if we don't write.");
+      if (logger.level <= Logger.FINER) logger.log("Checking liveness on "+manager.identifier.get()+" in "+manager.rto()+" millis if we don't write.");
       timer.schedule(livenessCheckerTimer, manager.rto()*4, 30000);
     }
 

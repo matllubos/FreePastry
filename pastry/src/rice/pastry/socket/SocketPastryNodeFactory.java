@@ -108,6 +108,7 @@ import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.boot.Bootstrapper;
+import rice.pastry.pns.PNSApplication;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.socket.nat.StubNATHandler;
 import rice.pastry.standard.ProximityNeighborSelector;
@@ -321,7 +322,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     
     // Priority
     TransportLayer<MultiInetSocketAddress, ByteBuffer> priorityTL = getPriorityTransportLayer(
-        srm.getTransportLayer(), srm.getLivenessProvider(), pn);
+        srm.getTransportLayer(), srm.getLivenessProvider(), srm.getProximityProvider(), pn);
 
     // UpperIdentiy
     TransLivenessProximity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentityLayer = getUpperIdentityLayer(
@@ -540,12 +541,13 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     };
   }
 
-  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, TLPastryNode pn) {
+  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 
       new PriorityTransportLayerImpl<MultiInetSocketAddress>(
           trans,
           liveness,
+          prox,
           environment,
           environment.getParameters().getInt("pastry_socket_writer_max_msg_size"),
           environment.getParameters().getInt("pastry_socket_writer_max_queue_length"),
@@ -635,10 +637,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
       ProximityNeighborSelector pns) {
+
     TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns);
     return bootstrapper;
   }
-  
+
   class TLBootstrapper implements Bootstrapper<InetSocketAddress>
   {
     TLPastryNode pn;

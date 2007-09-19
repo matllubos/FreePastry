@@ -627,8 +627,17 @@ public class SourceRouteManagerImpl<Identifier> implements
         case LIVENESS_DEAD_FOREVER:
           return false;
         case LIVENESS_DEAD:
+        {
           if (logger.level <= Logger.FINE) logger.logException( "(SSRM) CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY", new Exception("Stack Trace"));
-          return livenessProvider.checkLiveness(srFactory.getSourceRoute(getLocalIdentifier(), address), options);
+          boolean ret = false;
+          if (livenessProvider.checkLiveness(srFactory.getSourceRoute(getLocalIdentifier(), address), options)) ret = true; // only checks the direct route
+
+          Collection<SourceRoute<Identifier>> newroutes = strategy.getSourceRoutes(address);
+          for (SourceRoute<Identifier> route : newroutes) {
+            if (livenessProvider.checkLiveness(route, options)) ret = true;
+          }
+          return ret;
+        } 
         default:
           if (best != null) {
             boolean ret = livenessProvider.checkLiveness(best, options);

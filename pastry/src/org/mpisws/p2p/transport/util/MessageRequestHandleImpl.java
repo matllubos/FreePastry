@@ -67,6 +67,7 @@ public class MessageRequestHandleImpl<Identifier, MessageType> implements Messag
   }
 
   public boolean cancel() {
+    if (subCancellable == null) return false;
     return subCancellable.cancel();
   }
 

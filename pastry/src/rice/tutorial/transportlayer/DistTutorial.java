@@ -78,11 +78,16 @@ public class DistTutorial {
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
-    // construct the PastryNodeFactory, this is how we use rice.pastry.socket
+    // Disable PNS for our example
+    env.getParameters().setBoolean("transport_use_pns", false);
+    
+    // enable logging on our new layer
     env.getParameters().setInt("rice.tutorial.transportlayer.BandwidthLimitingTransportLayer_loglevel", Logger.FINE);
+    
+    // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleA(bindport, env, nidFactory, bandwidth, 1000);
-//    PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleB(bindport, env, nidFactory, bandwidth, 1000);
-//  PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+    //  PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleB(bindport, env, nidFactory, bandwidth, 1000);
+    //  PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
@@ -166,8 +171,8 @@ public class DistTutorial {
 
   /**
    * Usage: 
-   * java [-cp FreePastry-<version>.jar] rice.tutorial.lesson4.DistTutorial localbindport bootIP bootPort numNodes
-   * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10
+   * java [-cp FreePastry-<version>.jar] rice.tutorial.transportlayer.DistTutorial localbindport bootIP bootPort numNodes bandwidth;
+   * example java rice.tutorial.transportlayer.DistTutorial 9001 pokey.cs.almamater.edu 9001 10 1000
    */
   public static void main(String[] args) throws Exception {
     // Loads pastry settings
@@ -197,7 +202,7 @@ public class DistTutorial {
       // remind user how to use
       System.out.println("Usage:"); 
       System.out.println("java [-cp FreePastry-<version>.jar] rice.tutorial.transportlayer.DistTutorial localbindport bootIP bootPort numNodes bandwidth");
-      System.out.println("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001 10");
+      System.out.println("example java rice.tutorial.transportlayer.DistTutorial 9001 pokey.cs.almamater.edu 9001 10 1000");
       throw e; 
     }
   }

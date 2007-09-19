@@ -39,12 +39,15 @@ package rice.tutorial.transportlayer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
@@ -119,9 +122,12 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     environment.getSelectorManager().getTimer().schedule(new TimerTask(){    
       @Override
       public void run() {
-        // always synchronize on this before modifying the bucket
+        // always synchronize on "this" before modifying the bucket
         synchronized(this) {
           bucket = BUCKET_SIZE;
+          for (BandwidthLimitingSocket s : sockets) {
+            s.notifyBandwidthRefilled();
+          }
         }
       }    
     }, 0, BUCKET_TIME_LIMIT);
@@ -129,6 +135,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, 
       final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
+    
     final MessageRequestHandleImpl<Identifier, ByteBuffer> returnMe = 
       new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
     
@@ -142,17 +149,17 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     }
     if (!success) {
       if (logger.level <= Logger.FINE) logger.log("Dropping message "+m+" because not enough bandwidth:"+bucket);
-      deliverAckToMe.sendFailed(returnMe, new NotEnoughBandwidthException(bucket, m.remaining()));
+      if (deliverAckToMe != null) deliverAckToMe.sendFailed(returnMe, new NotEnoughBandwidthException(bucket, m.remaining()));
       return returnMe;
     }
     
     returnMe.setSubCancellable(tl.sendMessage(i,m,new MessageCallback<Identifier, ByteBuffer>() {
       public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
-        deliverAckToMe.ack(returnMe);
+        if (deliverAckToMe != null) deliverAckToMe.ack(returnMe);
       }
 
       public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException reason) {
-        deliverAckToMe.sendFailed(returnMe, reason);
+        if (deliverAckToMe != null) deliverAckToMe.sendFailed(returnMe, reason);
       }    
     },options));
     return returnMe;
@@ -181,11 +188,64 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     callback.incomingSocket(new BandwidthLimitingSocket(s));
   }
   
+  /**
+   * Keep track of all of the BandwidthLimitingSocket
+   */
+  Collection<BandwidthLimitingSocket> sockets = new ArrayList<BandwidthLimitingSocket>();
+  
   class BandwidthLimitingSocket extends SocketWrapperSocket<Identifier, Identifier> {
     public BandwidthLimitingSocket(P2PSocket<Identifier> socket) {
       super(socket.getIdentifier(), socket, BandwidthLimitingTransportLayer.this.logger, socket.getOptions());
+      synchronized(BandwidthLimitingTransportLayer.this) {
+        sockets.add(this);
+      }
+    }
+
+    public void close() {
+      super.close();
+      synchronized(BandwidthLimitingTransportLayer.this) {
+        sockets.remove(this);      
+      }
     }
     
+    public void shutdownOutput() {
+      super.shutdownOutput();
+      synchronized(BandwidthLimitingTransportLayer.this) {
+        sockets.remove(this);
+      }
+    }
+    
+    /**
+     * Store the write requestor.
+     */
+    P2PSocketReceiver<Identifier> storedReceiver;
+    
+    @Override
+    public void register(boolean wantToRead, boolean wantToWrite, P2PSocketReceiver<Identifier> receiver) {
+      // this variable is what we will pass to super.register()
+      boolean myWantToWrite = wantToWrite;
+      
+      // if the user wants to write, and the bucket is empty, set our temp variable to false
+      if (wantToWrite == true && bucket == 0) {
+        myWantToWrite = false;
+        storedReceiver = receiver;
+      }
+
+      // only call super.register() if we have something to do
+      if (wantToRead || myWantToWrite) super.register(wantToRead, myWantToWrite, receiver);
+    }
+
+    /**
+     * Register and clear the storedReceiver
+     */
+    public void notifyBandwidthRefilled() {
+      if (storedReceiver != null) {
+        P2PSocketReceiver<Identifier> temp = storedReceiver;
+        storedReceiver = null;
+        super.register(false, true, temp);
+      }
+    }
+
     @Override
     public long write(ByteBuffer srcs) throws IOException {            
       if (srcs.remaining() <= bucket) {
@@ -200,6 +260,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
       }
 
       if (logger.level <= Logger.FINE) logger.log("Limiting "+socket+" to "+bucket+" bytes.");
+      
       // we're trying to write more than we can, we need to create a new ByteBuffer
       // we have to be careful about the bytebuffer calling into us to properly 
       // set the position when we are done, let's record the original position
@@ -321,7 +382,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
-        // get the standard layer
+        // get the default layer
         TransportLayer<InetSocketAddress, ByteBuffer> wtl = super.getWireTransportLayer(innermostAddress, pn);        
         
         // wrap it with our layer
@@ -342,10 +403,13 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
           TLPastryNode pn, 
           MultiInetSocketAddress proxyAddress, 
           MultiAddressSourceRouteFactory esrFactory) throws IOException {
+        
         final TransLivenessProximity<MultiInetSocketAddress, ByteBuffer> srm = super.getSourceRouteManagerLayer(
             ltl, livenessProvider, pinger, pn, proxyAddress, esrFactory);
+        
         final BandwidthLimitingTransportLayer bll = new BandwidthLimitingTransportLayer<MultiInetSocketAddress>(
             srm.getTransportLayer(), amt, time, pn.getEnvironment());
+        
         return new TransLivenessProximity<MultiInetSocketAddress, ByteBuffer>(){
           public TransportLayer<MultiInetSocketAddress, ByteBuffer> getTransportLayer() {
             return bll;

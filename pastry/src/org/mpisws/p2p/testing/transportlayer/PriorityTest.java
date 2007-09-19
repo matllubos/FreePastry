@@ -55,6 +55,8 @@ import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
 import org.mpisws.p2p.transport.priority.QueueOverflowException;
+import org.mpisws.p2p.transport.proximity.MinRTTProximityProvider;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.wire.WireTransportLayerImpl;
 
 import rice.environment.Environment;
@@ -85,13 +87,16 @@ public class PriorityTest extends TLTest<InetSocketAddress> {
     env.addDestructable(env_a);    
     InetSocketAddress addr_a = new InetSocketAddress(addr,port);
     
-    LivenessTransportLayerImpl ltli = new LivenessTransportLayerImpl<MultiInetSocketAddress>(
+    LivenessTransportLayerImpl<MultiInetSocketAddress> ltli = new LivenessTransportLayerImpl<MultiInetSocketAddress>(
         new MultiInetAddressTransportLayerImpl(new MultiInetSocketAddress(addr_a),
           new WireTransportLayerImpl(addr_a,env_a, null), 
         env_a, null, null),
       env_a, null, 5000);
+    
+    ProximityProvider<MultiInetSocketAddress> prox = new MinRTTProximityProvider<MultiInetSocketAddress>(ltli, env_a);
 
-    return new PriorityTransportLayerImpl<MultiInetSocketAddress>(ltli, ltli,
+    
+    return new PriorityTransportLayerImpl<MultiInetSocketAddress>(ltli, ltli, prox,
            env_a, 1024, 30, null);
   }
 

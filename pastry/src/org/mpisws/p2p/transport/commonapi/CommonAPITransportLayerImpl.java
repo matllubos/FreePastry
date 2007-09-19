@@ -140,7 +140,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
       final RawMessage m, 
       final MessageCallback<Identifier, RawMessage> deliverAckToMe,
       Map<String, Integer> options) {
-    // TODO Auto-generated method stub
+
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");
 
     final MessageRequestHandleImpl<Identifier, RawMessage> handle 

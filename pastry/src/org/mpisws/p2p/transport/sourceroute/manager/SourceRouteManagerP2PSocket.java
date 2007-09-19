@@ -119,6 +119,6 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
 
   @Override
   public String toString() {
-    return "SRMSocket("+socket.getIdentifier()+":"+getOptions()+") r:"+registeredToRead+" w:"+registeredToWrite+" e:"+exception;
+    return "SRMSocket("+socket.getIdentifier()+":"+getOptions()+")@"+System.identityHashCode(this)+" r:"+registeredToRead+" w:"+registeredToWrite+" e:"+exception;
   }
 }

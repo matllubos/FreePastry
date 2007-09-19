@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package rice.pastry.transport;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import rice.Continuation;
 import rice.environment.Environment;
@@ -105,13 +106,16 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
   
     
     NodeHandleAdapter nha = getNodeHanldeAdapter(pn, handleFactory, deserializer);
-    
-    PNSApplication pns = new PNSApplication(pn);
-    
+
     pn.setSocketElements(localhandle, leafSetMaintFreq, routeSetMaintFreq, 
-        nha, nha, nha, deserializer, handleFactory, getBootstrapper(pn, nha, handleFactory, pns));
+        nha, nha, nha, deserializer, handleFactory);
+    
+    ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
+    
+    Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns);
+    
+    pn.setBootstrapper(bootstrapper);
   
-    pns.register();
     
   //  final Logger lLogger = pn.getEnvironment().getLogManager().getLogger(TransportPastryNodeFactory.class, null);
   //  identity.getUpperIdentity().addLivenessListener(new LivenessListener<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
@@ -154,6 +158,26 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     return deserializer;
   }
 
+  /**
+   * Can be overridden.
+   * @param pn
+   * @return
+   */
+  protected ProximityNeighborSelector getProximityNeighborSelector(TLPastryNode pn) {    
+    if (environment.getParameters().getBoolean("transport_use_pns")) {
+      PNSApplication pns = new PNSApplication(pn);
+      pns.register();
+      return pns;
+    }
+  
+    // do nothing
+    return new ProximityNeighborSelector(){    
+      public void getNearHandles(Collection<NodeHandle> bootHandles, Continuation<Collection<NodeHandle>, Exception> deliverResultToMe) {
+        deliverResultToMe.receiveResult(bootHandles);
+      }    
+    };
+  }
+    
   protected abstract NodeHandle getLocalHandle(TLPastryNode pn, 
       NodeHandleFactory handleFactory, Object localNodeData) throws IOException;
   protected abstract NodeHandleAdapter getNodeHanldeAdapter(TLPastryNode pn, 
@@ -162,6 +186,5 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
   protected abstract Bootstrapper getBootstrapper(TLPastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
-      ProximityNeighborSelector pns);
-
+      ProximityNeighborSelector pns);  
 }
