@@ -28,6 +28,10 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
 
 <p/>This tutorial will show you how to keep track of your application's pending messages, and even cancel them.
 
+<p/>This tutorial is currently a stub.  The important new feature described here is that <code>Endpoint.route()</code> is overloaded so that now it takes a <code>rice.p2p.commonapi.DeliveryNotification</code> and returns a <code>rice.p2p.commonapi.MessageReceipt</code>.
+
+<p/>You can keep track of how many messages are pending in the queue by storing a list of the MessageReceipts who haven't been acknowledged by calling <code>DeliveryNotification.sent()</code>.  If this number gets too high, you can cancel stale messages by calling <code>MessageReceipt.cancel()</code>.  You can also be notified of dropped messages because the transport layer will call <code>DeliveryNotification.sendFailed()</code>.
+
 <hr/>
 <div class="nav">
   <span class="nav-left"><a href="tut_layers.html#layer">Previous (Transport Layers)</a></span> 

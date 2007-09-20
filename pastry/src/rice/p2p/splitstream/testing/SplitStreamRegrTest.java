@@ -195,7 +195,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
     
     // wait for LEASE+TimeToFindFaulty+SubscribeRetry
     // wait for notification of failure to propegate
-    waitToRecoverFromKilling(params.getInt("p2p_scribe_message_timeout"));
+    waitToRecoverFromKilling(params.getInt("p2p_scribe_message_timeout")*10);
     
     if (checkTree(num, NUM_NODES))
       stepDone(SUCCESS);
