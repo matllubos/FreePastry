@@ -39,29 +39,105 @@ package org.mpisws.p2p.transport.peerreview;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
+
+import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.util.RandomAccessFileIOBuffer;
 
-public class SecureHistoryFactoryImpl implements SecureHistoryFactory {
-  public static final int HASH_LENGTH = 20;
-  
+public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntryFactory {
   Logger logger;
   
-  public SecureHistory create(String name, long baseSeq, Hash baseHash) throws IOException {
-    SecureHistoryImpl history = new SecureHistoryImpl(name, false, logger);
+  Environment environment;
+  
+  HashDeserializer hashDeserializer;
+  
+  /**
+   * Creates a new history (aka log). Histories are stored as two files: The 'index' file has a 
+   * fixed-size record for each entry, which contains the sequence number, content and node
+   * hashes, as well as an index into the data file. The 'data' file just contains the raw
+   * bytes for each entry. Note that the caller must specify the node hash and the sequence
+   * number of the first log entry, which forms the base of the hash chain.
+   */
+  public SecureHistory create(String name, long baseSeq, Hash baseHash, HashProvider hashProv) throws IOException {
+    RandomAccessFileIOBuffer indexFile, dataFile;
     
-    /* Write the initial record to the index file. The data file remains empty. */
-    history.reset(baseSeq, baseHash);
+    if (name == null) {
+      name = "peerReview."+environment.getTimeSource().currentTimeMillis()+"."+environment.getRandomSource().nextInt();
+    }
+    String indexName = name+".index";
+    String dataName = name+".data";
+    
+    indexFile = new RandomAccessFileIOBuffer(indexName, "w+"); // may be rw
+    
+    try {
+      dataFile = new RandomAccessFileIOBuffer(dataName, "w+"); // may be rw
+    } catch (IOException ioe) {
+      indexFile.close();
+      throw ioe;
+    }
 
+    IndexEntry entry = new IndexEntry(baseSeq, (short)0,(short)0,(short)-1, hashDeserializer.getEmpty(), baseHash);
+    
+    entry.serialize(indexFile);
+    
+    SecureHistoryImpl history = new SecureHistoryImpl(indexFile, dataFile, false, hashProv, this, logger);
+    
     return history;
   }
 
   public int getHashSizeBytes() {
-    return HASH_LENGTH;
+    return hashDeserializer.getSerizlizedSize();
   }
 
-  public SecureHistory open(String name, boolean readonly) throws IOException {
-    return new SecureHistoryImpl(name, readonly, logger);
+  /**
+   *  Opens an existing history (aka log). The 'mode' can either be 'r' (read-only) or
+   *  'w' (read/write). 
+   */
+
+  public SecureHistory open(String name, String mode, HashProvider hashProv) throws IOException {
+    boolean readOnly = false;
+    
+    if (!mode.equals("r")) {
+      readOnly = true;
+    } else if (mode.equals("w")) {
+      return null;
+    }
+    
+    String fileMode;
+    if (readOnly) {
+      fileMode = "r";
+    } else {
+      fileMode = "r+"; // may be "rw"
+    }
+    
+    RandomAccessFileIOBuffer indexFile = new RandomAccessFileIOBuffer(name+".index",fileMode);
+
+    RandomAccessFileIOBuffer dataFile;
+    try {
+      dataFile = new RandomAccessFileIOBuffer(name+".data",fileMode);
+    } catch (IOException ioe) {
+      indexFile.close();
+      throw ioe;
+    }
+
+    return new SecureHistoryImpl(indexFile, dataFile, readOnly, hashProv, this, logger);
+  }
+
+  public IndexEntry build(InputBuffer buf) throws IOException {
+    long seq = buf.readLong();
+    short fileIndex = buf.readShort();
+    short sizeInFile = buf.readShort();
+    short type = buf.readShort();
+    Hash contentHash = hashDeserializer.build(buf);
+    Hash nodeHash = hashDeserializer.build(buf);
+    return new IndexEntry(seq, fileIndex, type, sizeInFile, contentHash, nodeHash);
+  }
+
+  public int getSerializedSize() {
+    return 8+2+2+2+hashDeserializer.getSerizlizedSize()*2;
   }
 
 }

@@ -45,6 +45,7 @@ import org.mpisws.p2p.transport.util.FileOutputBuffer;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.util.RandomAccessFileIOBuffer;
 
 /**
  * The following class implements PeerReview's log. A log entry consists of
@@ -58,13 +59,14 @@ public class SecureHistoryImpl implements SecureHistory {
 
   Logger logger;
   
+  HashProvider hashProv;
   boolean pointerAtEnd;
   IndexEntry topEntry;
   long baseSeq;
   long nextSeq;
   int numEntries;
-  File indexFile;
-  File dataFile;
+  RandomAccessFileIOBuffer indexFile;
+  RandomAccessFileIOBuffer dataFile;
   boolean readOnly;
   
   FileOutputBuffer indexFileWriter;
@@ -73,44 +75,38 @@ public class SecureHistoryImpl implements SecureHistory {
   FileInputBuffer indexFileReader;
   FileInputBuffer dataFileReader;
   
-  public SecureHistoryImpl(String baseFileName, boolean readOnly, Logger logger) throws FileNotFoundException {
+  public SecureHistoryImpl(RandomAccessFileIOBuffer indexFile, RandomAccessFileIOBuffer dataFile, boolean readOnly, HashProvider hashProv, IndexEntryFactory indexFactory, Logger logger) throws IOException {
     this.logger = logger;
-    this.readOnly = readOnly;
-    indexFile = new File(baseFileName+".index");      
-    dataFile = new File(baseFileName+".data");    
     
-    if (readOnly) {
-      if (!indexFile.exists()) throw new IllegalArgumentException("File "+indexFile+" doesn't exist.");
-      if (!dataFile.exists()) throw new IllegalArgumentException("File "+dataFile+" doesn't exist.");
-    }
-    initializeFileBuffers();
-  }
+    if (indexFile == null) throw new IllegalArgumentException("indexFile may not be null");
+    if (dataFile == null) throw new IllegalArgumentException("dataFile may not be null");
 
-  private void initializeFileBuffers() throws FileNotFoundException {    
-    indexFileReader = new FileInputBuffer(indexFile, logger);
-    dataFileReader = new FileInputBuffer(dataFile, logger);
+//    if (hashProv.getHashSizeBytes() != HASH_LENGTH) throw new IllegalArgumentException("HashProvider must use the same hashLength");
     
-    if (!readOnly) {
-      indexFileWriter = new FileOutputBuffer(indexFile);
-      dataFileWriter = new FileOutputBuffer(dataFile);
-    }
+    // read the first entry
+    indexFile.seek(0);
+    IndexEntry firstEntry = indexFactory.build(indexFile);
+    baseSeq = firstEntry.seq;
+    
+    // read the last entry (topEntry)
+    indexFile.seek(indexFile.length()-indexFactory.getSerializedSize());
+    topEntry = indexFactory.build(indexFile);
+    
+    numEntries = (int)(indexFile.length()/indexFactory.getSerializedSize());
+    
+    dataFile.seek(dataFile.length());
+    nextSeq = topEntry.seq+1;
+    pointerAtEnd = true;
+    
+    this.indexFile = indexFile;
+    this.dataFile = dataFile;
+    this.readOnly = readOnly;
+    this.hashProv = hashProv;
   }
   
-  public void reset(long baseSeq, Hash nodeHash) throws IOException {
-    if (indexFile.exists()) indexFile.delete();
-    if (dataFile.exists()) dataFile.delete();
-    initializeFileBuffers();
-    /* Write the initial record to the index file. The data file remains empty. */
-    
-    IndexEntry entry = new IndexEntry(baseSeq, (short)0, (short)0, (short)-1, null, nodeHash);
-    
-//    fwrite(&entry, sizeof(entry), 1, indexFile);
-    writeEntry(entry, indexFileWriter);
-  }
-
-  private void writeEntry(IndexEntry entry, OutputBuffer fileWriter) throws IOException {
-    entry.serialize(fileWriter);
-  }
+//  private void writeEntry(IndexEntry entry, OutputBuffer fileWriter) throws IOException {
+//    entry.serialize(fileWriter);
+//  }
   
   public long getBaseSeq() {
     return baseSeq;
@@ -122,33 +118,5 @@ public class SecureHistoryImpl implements SecureHistory {
 
   public int getNumEntries() {
     return numEntries;
-  }
-
-  
-  class IndexEntry {
-    long seq;
-    short fileIndex;
-    short sizeInFile;
-    short type;
-    Hash contentHash;
-    Hash nodeHash;
-    
-    public IndexEntry(long seq, short type, short index, short size, Hash contentHash, Hash nodeHash) {
-      this.seq = seq;
-      this.type = type;
-      this.fileIndex = index;
-      this.sizeInFile = size;
-      this.contentHash = contentHash;
-      this.nodeHash = nodeHash;
-    }
-
-    public void serialize(OutputBuffer buf) throws IOException {
-      buf.writeLong(seq);
-      buf.writeInt(fileIndex);
-      buf.writeInt(sizeInFile);
-      buf.writeInt(type);
-      contentHash.serialize(buf);
-      nodeHash.serialize(buf);
-    }
   }
 }
