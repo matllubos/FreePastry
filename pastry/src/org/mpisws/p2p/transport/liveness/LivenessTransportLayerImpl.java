@@ -733,6 +733,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * suspected.
      */
     protected void markSuspected(Map<String, Integer> options) {      
+      // note, can only go from alive -> suspected, can't go from dead->suspected
+      if (liveness > LivenessListener.LIVENESS_SUSPECTED) return;
+      
       boolean notify = false;
       if (liveness != LivenessListener.LIVENESS_SUSPECTED) notify = true;
       this.liveness = LivenessListener.LIVENESS_SUSPECTED;
