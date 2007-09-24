@@ -442,7 +442,7 @@ public class SecureHistoryImpl implements SecureHistory {
    *  
    *  @param idx the index you are interested in
    */
-  public IndexEntry statEntry(int idx) throws IOException {
+  public IndexEntry statEntry(long idx) throws IOException {
     if ((idx < 0) || (idx >= numEntries))
       return null;
       
@@ -474,4 +474,61 @@ public class SecureHistoryImpl implements SecureHistory {
     return ret;
   }
   
+  /**
+   * If the log already contains an entry in 'hashed' form and we learn the actual
+   * contents later, this function is called. 
+   */
+  public boolean upgradeHashedEntry(int idx, byte[] entry) throws IOException {
+    if (readOnly)
+      throw new IllegalStateException("Cannot upgrade hashed entry in readonly history");
+    
+    if ((idx<0) || (idx>=numEntries))
+      return false;
+      
+    pointerAtEnd = false;
+    
+    indexFile.seek(idx*indexFactory.getSerializedSize());
+    
+    IndexEntry ie = indexFactory.build(indexFile);
+
+    if (ie == null)
+      return false;
+      
+    if (ie.sizeInFile >= 0)
+      return false;
+    
+    dataFile.seek(dataFile.length());
+
+    ie.fileIndex = dataFile.getFilePointer();
+    ie.sizeInFile = entry.length;
+    
+    dataFile.write(entry);
+
+    indexFile.seek(idx*indexFactory.getSerializedSize());
+    ie.serialize(indexFile);
+    
+    return true;
+  }
+
+  /** 
+   * Find the most recent entry whose type is in the specified set. Useful e.g. for
+   * locating the last CHECKPOINT or INIT entry. 
+   */
+  public long findLastEntry(short[] types, long maxSeq) throws IOException {
+    long maxIdx = findSeqOrHigher(maxSeq, true);
+    long currentIdx = maxIdx;
+   
+    while (currentIdx >= 0) {
+      IndexEntry ie = statEntry(currentIdx);
+
+      if (ie == null) throw new IllegalStateException("Cannot stat history entry #"+currentIdx+" (num="+numEntries+")");
+       
+      for (int i=0; i<types.length; i++)
+        if (ie.type == types[i])
+          return currentIdx;
+         
+      currentIdx--;
+    }   
+    return -1;
+  }
 }

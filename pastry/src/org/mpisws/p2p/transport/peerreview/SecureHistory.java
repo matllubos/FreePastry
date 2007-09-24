@@ -111,11 +111,23 @@ public interface SecureHistory {
    *  
    *  @param idx the index you are interested in
    */
-  public IndexEntry statEntry(int idx) throws IOException;
+  public IndexEntry statEntry(long idx) throws IOException;
 
   /**
    *  Get the content of a log entry, specified by its record number 
    */
   public byte[] getEntry(int idx, int maxSizeToRead) throws IOException;
+
+  /**
+   * If the log already contains an entry in 'hashed' form and we learn the actual
+   * contents later, this function is called. 
+   */
+  public boolean upgradeHashedEntry(int idx, byte[] entry) throws IOException;
+  
+  /** 
+   * Find the most recent entry whose type is in the specified set. Useful e.g. for
+   * locating the last CHECKPOINT or INIT entry. 
+   */
+  public long findLastEntry(short[] types, long maxSeq) throws IOException;
 
 }
