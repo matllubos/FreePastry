@@ -1129,5 +1129,9 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       removePendingMessage(identifier, this);
       if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, reason);
     }
+    
+    public String toString() {
+      return "IdMsgHdl{"+message+"}->"+identifier;
+    }
   }
 }

@@ -539,6 +539,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     TimerTask livenessChecker = null;
     public void startLivenessChecker(final Identifier temp) {
       if (livenessChecker == null) {
+        if (logger.level <= Logger.FINER) logger.log("startLivenessChecker("+temp+") pend:"+pendingSocket+" writingS:"+writingSocket+" theQueue:"+queue.size());
         livenessChecker = new TimerTask() {        
           @Override
           public void run() {
@@ -567,7 +568,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
     public void stopLivenessChecker() {
       if (livenessChecker == null) return;
-      
+      if (logger.level <= Logger.FINER) logger.log("stopLivenessChecker("+identifier.get()+") pend:"+pendingSocket+" writingS:"+writingSocket+" theQueue:"+queue.size());
+
       livenessChecker.cancel();
       livenessChecker = null;
     }

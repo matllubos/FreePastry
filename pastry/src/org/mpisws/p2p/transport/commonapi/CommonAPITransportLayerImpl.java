@@ -53,6 +53,7 @@ import org.mpisws.p2p.transport.priority.QueueOverflowException;
 import org.mpisws.p2p.transport.util.DefaultCallback;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -207,7 +208,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
             }
           }
         }, 
-        options));
+        OptionsFactory.addOption(options, m.toString(), 0)));
     return handle;
   }
 
