@@ -8,4 +8,17 @@ SecureHistory:
   open() throws an exception if the file doesn't exist on readOnly, rather than retun null
   fwrite(&entry) => SecureHistory.writeEntry()
 
+Notes on the history:
+indexFile // contains fixed size objects including where the content starts in Data
+  
+dataFile 
+
+IndexEntry
+  type can be 8-bit
+  contentHash = H(full content) 
+  nodeHash = H(prevNode.nodeHash, seq, type, contentHash)
+  
+entry/header may be byte[] or ByteBuffer
+
+NodeHandle, content, sygnature // this is typically the input
 

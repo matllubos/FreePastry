@@ -849,8 +849,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
       boolean ret = false;
       int rto = DEFAULT_RTO;
       synchronized (this) {
-        if (this.pending != null)
-          return true;
+        if (this.pending != null) {
+          if (this.liveness < LivenessListener.LIVENESS_DEAD) { 
+            return true;
+          } else {
+            return false; // prolly won't change
+          }
+        } 
         
         long now = time.currentTimeMillis();
         if ((this.liveness < LivenessListener.LIVENESS_DEAD) || 
@@ -872,6 +877,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
           ping(temp, options);
         }
       }
+      
+      if (this.liveness >= LivenessListener.LIVENESS_DEAD) return false; // prolly won't change
       
       return ret;
     }

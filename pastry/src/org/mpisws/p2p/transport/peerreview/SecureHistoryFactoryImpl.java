@@ -79,17 +79,13 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
       throw ioe;
     }
 
-    IndexEntry entry = new IndexEntry(baseSeq, (short)0,(short)0,(short)-1, hashDeserializer.getEmpty(), baseHash);
+    IndexEntry entry = new IndexEntry(baseSeq, (short)0,(byte)0,(short)-1, hashDeserializer.getEmpty(), baseHash);
     
     entry.serialize(indexFile);
     
     SecureHistoryImpl history = new SecureHistoryImpl(indexFile, dataFile, false, hashProv, this, logger);
     
     return history;
-  }
-
-  public int getHashSizeBytes() {
-    return hashDeserializer.getSerizlizedSize();
   }
 
   /**
@@ -130,7 +126,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     long seq = buf.readLong();
     short fileIndex = buf.readShort();
     short sizeInFile = buf.readShort();
-    short type = buf.readShort();
+    byte type = buf.readByte();
     Hash contentHash = hashDeserializer.build(buf);
     Hash nodeHash = hashDeserializer.build(buf);
     return new IndexEntry(seq, fileIndex, type, sizeInFile, contentHash, nodeHash);

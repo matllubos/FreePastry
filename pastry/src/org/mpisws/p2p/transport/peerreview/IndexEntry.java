@@ -7,15 +7,22 @@ import java.io.IOException;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
-class IndexEntry {
+public class IndexEntry {
   long seq;
   short fileIndex;
+  /**
+   * The size in the dataFile
+   */
   short sizeInFile;
-  short type;
+  byte type;
   Hash contentHash;
   Hash nodeHash;
   
-  public IndexEntry(long seq, short index, short type, short size, Hash contentHash, Hash nodeHash) {
+  public IndexEntry(long seq) {
+    this.seq = seq;
+  }
+
+  public IndexEntry(long seq, short index, byte type, short size, Hash contentHash, Hash nodeHash) {
     this.seq = seq;
     this.fileIndex = index;
     this.type = type;
@@ -28,7 +35,7 @@ class IndexEntry {
     buf.writeLong(seq);
     buf.writeShort(fileIndex);
     buf.writeShort(sizeInFile);
-    buf.writeShort(type);
+    buf.writeByte(type);
     contentHash.serialize(buf);
     nodeHash.serialize(buf);
   }

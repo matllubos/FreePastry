@@ -49,5 +49,4 @@ public interface SecureHistoryFactory {
    */
   SecureHistory create(String name, long baseSeq, Hash baseHash, HashProvider hashProv) throws IOException;
   SecureHistory open(String name, String mode, HashProvider hashProv) throws IOException;
-  int getHashSizeBytes();
 }

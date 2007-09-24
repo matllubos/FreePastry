@@ -588,7 +588,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
 
   
   protected void zoomToGlobal() {
-    System.out.println("zoomToGlobal()");
+//    System.out.println("zoomToGlobal()");
     renderStartTime = startTime;
     renderEndTime = endTime;
     renderStartSpace = 0;
@@ -596,7 +596,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }
   
   protected void zoom(Details d1, Details d2) {
-    System.out.println("zoom("+d1+","+d2+")");
+//    System.out.println("zoom("+d1+","+d2+")");
     if ((d1.time == d2.time) || (d1.space == d2.space)) {
       zoomToGlobal(); 
     } else {
@@ -615,7 +615,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   
   boolean firstTime = true;
   protected void paintComponent(Graphics gr) {
-    System.out.println("paintComponent begin");
+//    System.out.println("paintComponent begin");
     if (firstTime) zoomToGlobal();
     firstTime = false;
     

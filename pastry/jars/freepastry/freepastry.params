@@ -371,5 +371,7 @@ fileLogManager_keepLinePrefix = false
 fileLogManager_multipleFiles = true
 fileLogManager_defaultFileName = main
 
+# false = append true = overwrite
+fileLogManager_overwrite_existing_log_file = false
 
 

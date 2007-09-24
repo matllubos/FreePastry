@@ -112,14 +112,15 @@ public class FileLogManager extends SimpleLogManager {
     return getPrintStream(
         params.getString("fileLogManager_filePrefix"),
         params.getString("fileLogManager_defaultFileName"),
-        params.getString("fileLogManager_fileSuffix"));
+        params.getString("fileLogManager_fileSuffix"), 
+        !params.getBoolean("fileLogManager_overwrite_existing_log_file"));
   }
   
-  private static PrintStream getPrintStream(String filePrefix, String detail, String fileSuffix) {
+  private static PrintStream getPrintStream(String filePrefix, String detail, String fileSuffix, boolean append) {
     PrintStream newPS = System.out;
     try {
       String fname = filePrefix+detail+fileSuffix;
-      newPS = new PrintStream(new FileOutputStream(fname,true));
+      newPS = new PrintStream(new FileOutputStream(fname,append));
     } catch (IOException ioe) {
       throw new RuntimeException(ioe); 
 //      ioe.printStackTrace(newPS);
@@ -129,8 +130,9 @@ public class FileLogManager extends SimpleLogManager {
   
   public LogManager clone(String detail) {
     PrintStream newPS = this.ps;
+    boolean append = !params.getBoolean("fileLogManager_overwrite_existing_log_file");
     if (params.getBoolean("fileLogManager_multipleFiles")) {
-      newPS = getPrintStream(filePrefix, detail, fileSuffix);
+      newPS = getPrintStream(filePrefix, detail, fileSuffix, append);
     }
     String linePrefix = "";
     if (params.getBoolean("fileLogManager_keepLinePrefix")) {
