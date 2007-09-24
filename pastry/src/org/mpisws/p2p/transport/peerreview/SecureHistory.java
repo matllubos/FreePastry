@@ -38,6 +38,8 @@ package org.mpisws.p2p.transport.peerreview;
 
 import java.io.IOException;
 
+import rice.p2p.util.RandomAccessFileIOBuffer;
+
 public interface SecureHistory {
   public int getNumEntries();
   public long getBaseSeq();
@@ -54,14 +56,14 @@ public interface SecureHistory {
    * 'header' and 'entry'; otherwise, only 'entry' is used. 
    * @throws IOException 
    */
-  public void appendEntry(byte type, boolean storeFullEntry, byte[] entry, byte[] header) throws IOException;
+  public void appendEntry(short type, boolean storeFullEntry, byte[] entry, byte[] header) throws IOException;
   
   /**
    * Append a new hashed entry to the log. Unlike appendEntry(), this only keeps
    * the content type, sequence number, and hash values. No entry is made in
    * the data file. 
    */
-  public void appendHash(byte type, Hash hash) throws IOException;
+  public void appendHash(short type, Hash hash) throws IOException;
 
   /**
    * Sets the next sequence number to be used. The PeerReview library typically
@@ -76,5 +78,44 @@ public interface SecureHistory {
    * @throws IOException 
    */
   public void close() throws IOException;
-  
+ 
+  /**
+   * Look up a given sequence number, or the first sequence number that is 
+   * not lower than a given number. The return value is the number of
+   * the corresponding record in the index file, or -1 if no matching
+   * record was found. 
+   */
+  public long findSeqOrHigher(long seq, boolean allowHigher) throws IOException;
+
+  /** 
+   * Serialize a given range of entries, and write the result to the specified file.
+   * This is used when we need to send a portion of our log to some other node,
+   * e.g. during an audit. The format of the serialized log segment is as follows:
+   *     1. base hash value (size depends on hash function)
+   *     2. entry type (1 byte)
+   *     3. entry size in bytes (1 byte); 0x00=entry is hashed; 0xFF=16-bit size follows
+   *     4. entry content (size as specified; omitted if entry is hashed)
+   *     5. difference to next sequence number (1 byte)
+   *           0x00: increment by one
+   *           0xFF: 64-bit sequence number follows
+   *           Otherwise:  Round down to nearest multiple of 1000, then add specified
+   *               value times 1000
+   *     6. repeat 2-5 as often as necessary; 5 is omitted on last entry.
+   * Note that the idxFrom and idxTo arguments are record numbers, NOT sequence numbers.
+   * Use findSeqOrHigher() to get these if only sequence numbers are known. 
+   */
+  public boolean serializeRange(int idxFrom, int idxTo, HashPolicy hashPolicy, RandomAccessFileIOBuffer outfile) throws IOException;
+
+  /**
+   *  Retrieve information about a given record 
+   *  
+   *  @param idx the index you are interested in
+   */
+  public IndexEntry statEntry(int idx) throws IOException;
+
+  /**
+   *  Get the content of a log entry, specified by its record number 
+   */
+  public byte[] getEntry(int idx, int maxSizeToRead) throws IOException;
+
 }

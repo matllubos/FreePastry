@@ -69,17 +69,13 @@ public class SecureHistoryImpl implements SecureHistory {
   RandomAccessFileIOBuffer dataFile;
   boolean readOnly;
   
-  FileOutputBuffer indexFileWriter;
-  FileOutputBuffer dataFileWriter;
-  
-  FileInputBuffer indexFileReader;
-  FileInputBuffer dataFileReader;
+  IndexEntryFactory indexFactory;
   
   public SecureHistoryImpl(RandomAccessFileIOBuffer indexFile, RandomAccessFileIOBuffer dataFile, boolean readOnly, HashProvider hashProv, IndexEntryFactory indexFactory, Logger logger) throws IOException {
-    this.logger = logger;
+    assert(indexFile != null && dataFile != null);
     
-    if (indexFile == null) throw new IllegalArgumentException("indexFile may not be null");
-    if (dataFile == null) throw new IllegalArgumentException("dataFile may not be null");
+    this.logger = logger;
+    this.indexFactory = indexFactory;
 
 //    if (hashProv.getHashSizeBytes() != HASH_LENGTH) throw new IllegalArgumentException("HashProvider must use the same hashLength");
     
@@ -132,9 +128,8 @@ public class SecureHistoryImpl implements SecureHistory {
    * entry is stored. If 'header' is not NULL, the log entry is formed by concatenating
    * 'header' and 'entry'; otherwise, only 'entry' is used. 
    */
-  public void appendEntry(byte type, boolean storeFullEntry, byte[] entry, byte[] header) throws IOException {
-    if (indexFile == null) throw new IllegalStateException("indexFile == null");
-    if (dataFile == null) throw new IllegalStateException("dataFile == null");
+  public void appendEntry(short type, boolean storeFullEntry, byte[] entry, byte[] header) throws IOException {
+    assert(indexFile != null && dataFile != null);
     
     // Sanity check (for debugging) 
 
@@ -201,9 +196,8 @@ public class SecureHistoryImpl implements SecureHistory {
    * the content type, sequence number, and hash values. No entry is made in
    * the data file. 
    */
-  public void appendHash(byte type, Hash hash) throws IOException {
-    if (indexFile == null) throw new IllegalStateException("indexFile == null");
-    if (dataFile == null) throw new IllegalStateException("dataFile == null");
+  public void appendHash(short type, Hash hash) throws IOException {
+    assert(indexFile != null && dataFile != null);
     
     // Sanity check (for debugging) 
 
@@ -252,8 +246,7 @@ public class SecureHistoryImpl implements SecureHistory {
    * The destructor.  Closes the file handles.
    */
   public void close() throws IOException {
-    if (indexFile == null) throw new IllegalStateException("indexFile == null");
-    if (dataFile == null) throw new IllegalStateException("dataFile == null");
+    assert(indexFile != null && dataFile != null);
 
     indexFile.close();
     dataFile.close();
@@ -261,4 +254,224 @@ public class SecureHistoryImpl implements SecureHistory {
     indexFile = null;
     dataFile = null;
   }
+  
+  /**
+   * Look up a given sequence number, or the first sequence number that is 
+   * not lower than a given number. The return value is the number of
+   * the corresponding record in the index file, or -1 if no matching
+   * record was found. 
+   */
+  public long findSeqOrHigher(long seq, boolean allowHigher) throws IOException {
+    assert(indexFile != null && dataFile != null);
+    
+    // Some special cases where we know the answer without looking
+
+    if (seq > topEntry.seq)
+      return -1;
+    
+    if (allowHigher && (seq < baseSeq))
+      return 0;
+        
+    if (seq == topEntry.seq)
+      return numEntries - 1;
+    
+    // Otherwise, do a binary search
+    
+    pointerAtEnd = false;
+    
+    indexFile.seek(indexFile.length());
+    long rbegin = 1;
+    long rend = (indexFile.getFilePointer() / (long)indexFactory.getSerializedSize()) - 1;
+    
+    while (rbegin != rend) {
+      assert(rend >= rbegin);
+
+      long pivot = (rbegin+rend)/2;      
+      indexFile.seek(pivot*indexFactory.getSerializedSize());
+
+      IndexEntry ie = indexFactory.build(indexFile);
+      if (ie.seq >= seq)
+        rend = pivot;
+      else 
+        rbegin = pivot+1;
+    }
+
+    if (allowHigher)
+      return rbegin;
+
+    indexFile.seek(rbegin * indexFactory.getSerializedSize());
+    IndexEntry ie = indexFactory.build(indexFile);
+    if (ie.seq != seq)
+      return -1;
+
+    return rbegin;  
+  }
+
+  /** 
+   * Serialize a given range of entries, and write the result to the specified file.
+   * This is used when we need to send a portion of our log to some other node,
+   * e.g. during an audit. The format of the serialized log segment is as follows:
+   *     1. base hash value (size depends on hash function)
+   *     2. entry type (1 byte)
+   *     3. entry size in bytes (1 byte); 0x00=entry is hashed; 0xFF=16-bit size follows
+   *     4. entry content (size as specified; omitted if entry is hashed)
+   *     5. difference to next sequence number (1 byte)
+   *           0x00: increment by one
+   *           0xFF: 64-bit sequence number follows
+   *           Otherwise:  Round down to nearest multiple of 1000, then add specified
+   *               value times 1000
+   *     6. repeat 2-5 as often as necessary; 5 is omitted on last entry.
+   * Note that the idxFrom and idxTo arguments are record numbers, NOT sequence numbers.
+   * Use findSeqOrHigher() to get these if only sequence numbers are known. 
+   */
+  public boolean serializeRange(int idxFrom, int idxTo, HashPolicy hashPolicy, RandomAccessFileIOBuffer outfile) throws IOException {
+    assert((0 < idxFrom) && (idxFrom <= idxTo) && (idxTo < numEntries));
+
+    IndexEntry ie;
+
+    // Write base hash value
+
+    pointerAtEnd = false;  
+    indexFile.seek((idxFrom-1) * indexFactory.getSerializedSize());
+    ie = indexFactory.build(indexFile);
+    ie.nodeHash.serialize(outfile);
+    
+    // Go through entries one by one    
+    long previousSeq = -1;
+    for (int idx=idxFrom; idx<=idxTo; idx++) {
+    
+      // Read index entry
+    
+      ie = indexFactory.build(indexFile);
+      if (ie == null) 
+        throw new IOException("History read error");
+        
+      // we're going to write directly to outfile, in the c++ impl it used header[]/bytesInHeader
+//      byte[] header = new byte[200];
+//      int bytesInHeader = 0;
+      
+      assert((previousSeq == -1) || (ie.seq > previousSeq));
+      
+      // This code compresses the common case, and falls back to a longer version if 
+      // it can't encode it in the compressed form
+      
+      // Encode difference to previous sequence number (unless this is the first entry)
+      
+      if (previousSeq >= 0) {
+        if (ie.seq == (previousSeq+1)) {
+          outfile.writeByte(0);
+//          header[bytesInHeader++] = 0;
+        } else {
+          long dhigh = (ie.seq/1000) - (previousSeq/1000);
+          if ((dhigh < 255) && ((ie.seq%1000)==0)) {
+            outfile.writeByte((byte)(dhigh & 0xFF));
+//            header[bytesInHeader++] = (byte)(dhigh & 0xFF);
+          } else {
+            outfile.writeByte(0xFF);
+//            header[bytesInHeader++] = (byte)0xFF;
+            outfile.writeLong(ie.seq);
+//          *(long*)&header[bytesInHeader] = ie.seq; 
+//            bytesInHeader += sizeof(long long);
+          }
+        }
+      }
+      
+      previousSeq = ie.seq;
+      
+      // Append entry type
+      
+      outfile.writeShort(ie.type);
+      //header[bytesInHeader++] = ie.type;
+      
+      // If entry is not hashed, read contents from the data file       
+      byte[] buffer = null;
+      if (ie.sizeInFile > 0) {
+        buffer = new byte[(int)ie.sizeInFile]; // grumble...  This needs to be long eventually...
+//        buffer = (unsigned char*) malloc(ie.sizeInFile);
+        assert(ie.fileIndex >= 0);
+        dataFile.seek(ie.fileIndex);
+        dataFile.read(buffer);
+      }
+      
+      // The entry is hashed if (a) it is already hashed in the log file,
+      // or (b) the hash policy tells us to.   
+      boolean hashIt = (ie.sizeInFile<0) || (hashPolicy != null && hashPolicy.hashEntry(ie.type, buffer, ie.sizeInFile));
+
+      // Encode the size of the entry
+
+      if (hashIt) {
+        outfile.writeByte(0);
+//        header[bytesInHeader++] = 0;
+        ie.contentHash.serialize(outfile);
+//        for (int i=0; i<hashProv.getSizeOfHash(); i++)
+//          header[bytesInHeader++] = ie.contentHash[i];
+      } else if (ie.sizeInFile < 255) {
+        outfile.writeByte((byte)(ie.sizeInFile & 0xFF));
+//        header[bytesInHeader++] = (unsigned char) ie.sizeInFile;
+      } else if (ie.sizeInFile < 65536) {
+        outfile.writeByte(0xFF);
+//        header[bytesInHeader++] = 0xFF;
+        outfile.writeShort((short)(ie.sizeInFile & 0xFFFF));
+//        *(unsigned short*)&header[bytesInHeader] = (unsigned short) ie.sizeInFile;
+//        bytesInHeader += sizeof(unsigned short);
+      } else {
+//  panic("A");    
+        outfile.writeByte(0xFE);
+        //header[bytesInHeader++] = 0xFE;
+        outfile.writeLong(ie.sizeInFile);
+//        *(unsigned int*)&header[bytesInHeader] = (unsigned int) ie.sizeInFile;
+//        bytesInHeader += sizeof(unsigned int);
+      }
+      
+      // Write the entry to the output file
+      
+      // don't need to do this in this impl, becuase we've been doing it all along
+//      fwrite(&header, bytesInHeader, 1, outfile);
+
+      if (!hashIt) { 
+        outfile.write(buffer);
+        //fwrite(buffer, ie.sizeInFile, 1, outfile);
+      }        
+    } // for
+
+    return true;
+  }
+  
+  /**
+   *  Retrieve information about a given record 
+   *  
+   *  @param idx the index you are interested in
+   */
+  public IndexEntry statEntry(int idx) throws IOException {
+    if ((idx < 0) || (idx >= numEntries))
+      return null;
+      
+    IndexEntry ie;
+    
+    pointerAtEnd = false;
+    indexFile.seek(idx*indexFactory.getSerializedSize());
+    ie = indexFactory.build(indexFile);
+    
+    return ie;
+  }
+
+  /**
+   *  Get the content of a log entry, specified by its record number 
+   */
+  public byte[] getEntry(int idx, int maxSizeToRead) throws IOException {
+    IndexEntry ie = statEntry(idx);
+    if (ie == null) return null;
+    
+    if (ie.sizeInFile < 0) return null;
+    
+    dataFile.seek(ie.fileIndex);
+    
+    int bytesToRead = (maxSizeToRead>=ie.sizeInFile) ? ie.sizeInFile : maxSizeToRead;
+    
+    byte[] ret = new byte[bytesToRead];
+    dataFile.read(ret);
+    
+    return ret;
+  }
+  
 }

@@ -124,16 +124,16 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
 
   public IndexEntry build(InputBuffer buf) throws IOException {
     long seq = buf.readLong();
-    short fileIndex = buf.readShort();
-    short sizeInFile = buf.readShort();
-    byte type = buf.readByte();
+    long fileIndex = buf.readLong();
+    int sizeInFile = buf.readInt();
+    short type = buf.readShort();
     Hash contentHash = hashDeserializer.build(buf);
     Hash nodeHash = hashDeserializer.build(buf);
     return new IndexEntry(seq, fileIndex, type, sizeInFile, contentHash, nodeHash);
   }
 
   public int getSerializedSize() {
-    return 8+2+2+2+hashDeserializer.getSerizlizedSize()*2;
+    return 8+8+4+2+hashDeserializer.getSerizlizedSize()*2;
   }
 
 }
