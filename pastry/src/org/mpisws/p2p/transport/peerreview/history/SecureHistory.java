@@ -34,7 +34,7 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.transport.peerreview.history;
 
 import java.io.IOException;
 

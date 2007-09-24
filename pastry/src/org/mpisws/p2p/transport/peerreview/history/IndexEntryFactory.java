@@ -1,4 +1,4 @@
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.transport.peerreview.history;
 
 import java.io.IOException;
 

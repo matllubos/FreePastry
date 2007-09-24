@@ -34,17 +34,19 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.transport.peerreview.history;
 
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import java.io.IOException;
 
-public interface Hash {
+public interface SecureHistoryFactory {
 
   /**
-   * Write self to file.
-   * 
-   * @param buf
+   * Creates a new history (aka log). Histories are stored as two files: The 'index' file has a 
+   * fixed-size record for each entry, which contains the sequence number, content and node
+   * hashes, as well as an index into the data file. The 'data' file just contains the raw
+   * bytes for each entry. Note that the caller must specify the node hash and the sequence
+   * number of the first log entry, which forms the base of the hash chain.
    */
-  void serialize(OutputBuffer buf);
-
+  SecureHistory create(String name, long baseSeq, Hash baseHash, HashProvider hashProv) throws IOException;
+  SecureHistory open(String name, String mode, HashProvider hashProv) throws IOException;
 }
