@@ -284,76 +284,8 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
       srcs.position(originalPosition+(int)ret);
       return ret;
     }
-
-    @Override
-    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-      // calculate how much they are trying to write:
-      int toWrite = 0;
-      for (int i = offset; i < offset+length; i++) {
-        toWrite += srcs[i].remaining();
-      }
-      
-      int tempBucket = bucket; // so we don't get confused by synchronization
-                  
-      if (toWrite <= tempBucket) {
-        long ret = super.write(srcs, offset, length);
-        if (ret >= 0) {
-          // EOF is usually -1
-          synchronized(this) {
-            bucket -= ret;
-          }
-        }
-        return ret;
-      }
-      
-      if (logger.level <= Logger.FINE) logger.log("Limiting "+socket+" to "+bucket+" bytes.");
-      
-      // we're trying to write more than we can, we need to create a new ByteBuffer
-      // in the overflowing position, and set the length properly      
-      // we have to be careful about the bytebuffer calling into us to properly 
-      // set the position when we are done
-      ByteBuffer[] temp = new ByteBuffer[srcs.length];
-      System.arraycopy(srcs, 0, temp, 0, srcs.length);
-      int myLength = length; // we'll pass this to the call that we want
-      int myIndex = 0;
-      toWrite = 0; // reset this one
-      for (int i = offset; i < offset+length; i++) {
-        int next = srcs[i].remaining();
-        if (next+toWrite > tempBucket) {
-          //we have the problem at this slot
-          
-          // set the myLength
-          myLength = i-offset+1;
-          myIndex = i;
-          
-          // replace it with a temporary byteBuffer
-          srcs[i] = ByteBuffer.wrap(srcs[i].array(), srcs[i].position(), tempBucket-toWrite);
-          break;
-        }
-        toWrite+=next;
-      }
-      
-      // try to write our temp buffer
-      long ret = super.write(temp, offset, myLength);
-      
-      if (ret < 0) {
-        // there was a problem
-        return ret;
-      }
-      
-      // allocate the bandwidth
-      synchronized(this) {
-        bucket -= ret;
-      }
-      
-      // we need to properly set the position on the buffer we replaced
-      // the idea here is that we are advancing the srcs[i].position() with the
-      // amount that was written in temp[i].position()
-      srcs[myIndex].position(srcs[myIndex].position()+temp[myIndex].position());
-      return ret;
-    }    
   }
-
+  
   public void acceptMessages(boolean b) {
     tl.acceptMessages(b);
   }

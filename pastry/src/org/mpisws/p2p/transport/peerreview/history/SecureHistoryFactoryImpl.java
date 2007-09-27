@@ -52,7 +52,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
   
   Environment environment;
   
-  HashDeserializer hashDeserializer;
+  HashProvider hashProv;
   
   /**
    * Creates a new history (aka log). Histories are stored as two files: The 'index' file has a 
@@ -62,6 +62,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
    * number of the first log entry, which forms the base of the hash chain.
    */
   public SecureHistory create(String name, long baseSeq, Hash baseHash, HashProvider hashProv) throws IOException {
+    this.hashProv = hashProv;
     RandomAccessFileIOBuffer indexFile, dataFile;
     
     if (name == null) {
@@ -79,7 +80,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
       throw ioe;
     }
 
-    IndexEntry entry = new IndexEntry(baseSeq, (short)0,(byte)0,(short)-1, hashDeserializer.getEmpty(), baseHash);
+    IndexEntry entry = new IndexEntry(baseSeq, (short)0,(byte)0,(short)-1, hashProv.getEmpty(), baseHash);
     
     entry.serialize(indexFile);
     
@@ -127,13 +128,13 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     long fileIndex = buf.readLong();
     int sizeInFile = buf.readInt();
     short type = buf.readShort();
-    Hash contentHash = hashDeserializer.build(buf);
-    Hash nodeHash = hashDeserializer.build(buf);
+    Hash contentHash = hashProv.build(buf);
+    Hash nodeHash = hashProv.build(buf);
     return new IndexEntry(seq, fileIndex, type, sizeInFile, contentHash, nodeHash);
   }
 
   public int getSerializedSize() {
-    return 8+8+4+2+hashDeserializer.getSerizlizedSize()*2;
+    return 8+8+4+2+hashProv.getSerizlizedSize()*2;
   }
 
 }

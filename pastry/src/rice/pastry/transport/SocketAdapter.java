@@ -64,9 +64,13 @@ public class SocketAdapter implements AppSocket {
   public void close() {
     internal.close();
   }
-
+  
   public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-    return internal.read(dsts, offset, length);
+    long ret = 0;
+    for (int i = offset; i < offset+length; i++) {
+      ret += internal.read(dsts[i]);
+    }
+    return ret;
   }
 
   public void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver) {
@@ -79,6 +83,18 @@ public class SocketAdapter implements AppSocket {
   }
 
   public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-    return internal.write(srcs, offset, length);
+    long ret = 0;
+    for (int i = offset; i < offset+length; i++) {
+      ret += internal.write(srcs[i]);
+    }
+    return ret;
+  }
+
+  public long read(ByteBuffer dst) throws IOException {
+    return internal.read(dst);
+  }
+
+  public long write(ByteBuffer src) throws IOException {
+    return internal.write(src);
   }
 }

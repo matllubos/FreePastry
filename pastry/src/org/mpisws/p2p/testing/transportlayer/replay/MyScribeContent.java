@@ -35,62 +35,44 @@ advised of the possibility of such damage.
 
 *******************************************************************************/ 
 /*
- * Created on Jan 30, 2006
+ * Created on May 4, 2005
  */
-package rice.p2p.commonapi.appsocket;
+package org.mpisws.p2p.testing.transportlayer.replay;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.scribe.ScribeContent;
 
 /**
- * Interface for sending bulk data from the application.  Mimics 
- * java's non-blocking SocketChannel interface this should make it
- * easier to implement in any Java-based p2p overlay.
- */ 
-public interface AppSocket {
+ * @author Jeff Hoye
+ */
+public class MyScribeContent implements ScribeContent {
   /**
-   * Reads a sequence of bytes from this channel into a subsequence of the given buffers.
-   * @deprecated use read(ByteBuffer)
+   * The source of this content.
    */
-  long read(ByteBuffer[] dsts, int offset, int length) throws IOException; 
-  /**
-   * Writes a sequence of bytes to this channel from a subsequence of the given buffers.
-   * @throws IOException 
-   * @deprecated use write(ByteBuffer)
-   */  
-  long write(ByteBuffer[] srcs, int offset, int length) throws IOException; 
+  NodeHandle from;
   
   /**
-   * Reads a sequence of bytes from this channel into a subsequence of the given buffers.
+   * The sequence number of the content.
    */
-  long read(ByteBuffer dst) throws IOException; 
-  /**
-   * Writes a sequence of bytes to this channel from a subsequence of the given buffers.
-   * @throws IOException 
-   */  
-  long write(ByteBuffer src) throws IOException; 
+  int seq;
   
   /**
-   * Must be called every time a Read/Write occurs to continue operation.
-   *
-   * @param wantToRead if you want to read from this socket
-   * @param wantToWrite if you want to write to this socket
-   * @param timeout // the socket's timeout value (this is a TCP level param)
-   * @param receiver will have receiveSelectResult() called on it
-   * note that you must call select() each time receiveSelectResult() is called.  This is so
-   * your application can properly handle flow control
+   * Simple constructor.  Typically, you would also like some
+   * interesting payload for your application.
+   * 
+   * @param from Who sent the message.
+   * @param seq the sequence number of this content.
    */
-  void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver);
-  
-  /**
-   * Disables the output stream for this socket.  Used to properly close down a socket
-   * used for bi-directional communication that can be initated by either side.   
-   */
-  void shutdownOutput();
-  
-  /**
-   * Closes this socket.
-   */
-  void close(); 
+  public MyScribeContent(NodeHandle from, int seq) {
+    this.from = from;
+    this.seq = seq;
+//    System.out.println(this+".ctor");
+  }
 
+  /**
+   * Ye ol' toString() 
+   */
+  public String toString() {
+    return "MyScribeContent #"+seq+" from "+from;
+  }  
 }

@@ -4,9 +4,6 @@ Differences between CPP/Java:
   
 SecureHistory:
   create()/open() come from a factory  
-  open() takes a boolean readOnly rather than char[] {"r","w"}
-  open() throws an exception if the file doesn't exist on readOnly, rather than retun null
-  fwrite(&entry) => SecureHistory.writeEntry()
 
 Notes on the history:
 indexFile // contains fixed size objects including where the content starts in Data
@@ -22,3 +19,11 @@ entry/header may be byte[] or ByteBuffer
 
 NodeHandle, content, sygnature // this is typically the input
 
+Record: peerreview.cc:PeerReview::send() -> commitment.cc:handleOutgoingMessage
+
+Replay: Verifier.makeProgress()
+
+
+
+
+Suggestions: make History.appendEntry() take a variable number of event args (rather than a header)

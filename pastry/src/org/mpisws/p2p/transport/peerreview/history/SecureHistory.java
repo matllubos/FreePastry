@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.history;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import rice.p2p.util.RandomAccessFileIOBuffer;
 
@@ -54,9 +55,12 @@ public interface SecureHistory {
    * Appends a new entry to the log. If 'storeFullEntry' is false, only the hash of the
    * entry is stored. If 'header' is not NULL, the log entry is formed by concatenating
    * 'header' and 'entry'; otherwise, only 'entry' is used. 
+   * 
+   * Takes an ordered list of ByteBuffers to append
+   * 
    * @throws IOException 
    */
-  public void appendEntry(short type, boolean storeFullEntry, byte[] entry, byte[] header) throws IOException;
+  public void appendEntry(short type, boolean storeFullEntry, ByteBuffer ... entry) throws IOException;
   
   /**
    * Append a new hashed entry to the log. Unlike appendEntry(), this only keeps
@@ -122,7 +126,7 @@ public interface SecureHistory {
    * If the log already contains an entry in 'hashed' form and we learn the actual
    * contents later, this function is called. 
    */
-  public boolean upgradeHashedEntry(int idx, byte[] entry) throws IOException;
+  public boolean upgradeHashedEntry(int idx, ByteBuffer entry) throws IOException;
   
   /** 
    * Find the most recent entry whose type is in the specified set. Useful e.g. for

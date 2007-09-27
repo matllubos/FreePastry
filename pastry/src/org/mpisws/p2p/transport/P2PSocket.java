@@ -84,14 +84,14 @@ public interface P2PSocket<Identifier> {
    * @return
    * @throws IOException
    */
-  long read(ByteBuffer[] dsts, int offset, int length) throws IOException; 
+//  long read(ByteBuffer[] dsts, int offset, int length) throws IOException; 
   
   /**
    * Writes a sequence of bytes to this channel from a subsequence of the given buffers.
    * @throws IOException 
    */  
   long write(ByteBuffer srcs) throws IOException; 
-  long write(ByteBuffer[] srcs, int offset, int length) throws IOException; 
+//  long write(ByteBuffer[] srcs, int offset, int length) throws IOException; 
   
   /**
    * Must be called every time a Read/Write occurs to continue operation.

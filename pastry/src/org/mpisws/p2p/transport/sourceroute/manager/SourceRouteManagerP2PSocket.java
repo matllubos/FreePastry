@@ -71,10 +71,10 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
     return socket.read(dsts);
   }
 
-  public long read(ByteBuffer[] dsts, int offset, int length)
-      throws IOException {
-    return socket.read(dsts, offset, length);
-  }
+//  public long read(ByteBuffer[] dsts, int offset, int length)
+//      throws IOException {
+//    return socket.read(dsts, offset, length);
+//  }
 
   private P2PSocketReceiver<Identifier> registeredToRead = null;
   private P2PSocketReceiver<Identifier> registeredToWrite = null;
@@ -108,10 +108,10 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
     return socket.write(srcs);
   }
 
-  public long write(ByteBuffer[] srcs, int offset, int length)
-      throws IOException {
-    return socket.write(srcs, offset, length);
-  }
+//  public long write(ByteBuffer[] srcs, int offset, int length)
+//      throws IOException {
+//    return socket.write(srcs, offset, length);
+//  }
 
   public Map<String, Integer> getOptions() {
     return socket.getOptions();

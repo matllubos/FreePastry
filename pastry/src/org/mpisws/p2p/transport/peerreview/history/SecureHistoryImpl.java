@@ -39,6 +39,7 @@ package org.mpisws.p2p.transport.peerreview.history;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.mpisws.p2p.transport.util.FileInputBuffer;
 import org.mpisws.p2p.transport.util.FileOutputBuffer;
@@ -128,7 +129,7 @@ public class SecureHistoryImpl implements SecureHistory {
    * entry is stored. If 'header' is not NULL, the log entry is formed by concatenating
    * 'header' and 'entry'; otherwise, only 'entry' is used. 
    */
-  public void appendEntry(short type, boolean storeFullEntry, byte[] entry, byte[] header) throws IOException {
+  public void appendEntry(short type, boolean storeFullEntry, ByteBuffer ... entry) throws IOException {
     assert(indexFile != null && dataFile != null);
     
     // Sanity check (for debugging) 
@@ -150,11 +151,7 @@ public class SecureHistoryImpl implements SecureHistory {
     
     // Calculate the content hash */
     
-    if (header != null) {
-      e.contentHash = hashProv.hash(header, entry);
-    } else {
-      e.contentHash = hashProv.hash(entry);
-    }
+    e.contentHash = hashProv.hash(entry);
     
     // Calculate the node hash. Note that this also covers the sequence number and
     // the entry type.
@@ -166,12 +163,11 @@ public class SecureHistoryImpl implements SecureHistory {
     e.type = type;
     e.fileIndex = (short)dataFile.getFilePointer();
     if (storeFullEntry) {
-      e.sizeInFile = (short)entry.length;
-      if (header != null) {
-        dataFile.write(header);
-        e.sizeInFile += header.length;
+      e.sizeInFile = 0;
+      for (ByteBuffer ent : entry) {
+        e.sizeInFile += (short)ent.remaining();
+        dataFile.write(ent.array(), ent.position(), ent.remaining());        
       }
-      dataFile.write(entry);
     } else {
       e.sizeInFile = -1;
     }
@@ -478,7 +474,7 @@ public class SecureHistoryImpl implements SecureHistory {
    * If the log already contains an entry in 'hashed' form and we learn the actual
    * contents later, this function is called. 
    */
-  public boolean upgradeHashedEntry(int idx, byte[] entry) throws IOException {
+  public boolean upgradeHashedEntry(int idx, ByteBuffer entry) throws IOException {
     if (readOnly)
       throw new IllegalStateException("Cannot upgrade hashed entry in readonly history");
     
@@ -500,9 +496,9 @@ public class SecureHistoryImpl implements SecureHistory {
     dataFile.seek(dataFile.length());
 
     ie.fileIndex = dataFile.getFilePointer();
-    ie.sizeInFile = entry.length;
+    ie.sizeInFile = entry.remaining();
     
-    dataFile.write(entry);
+    dataFile.write(entry.array(), entry.position(), entry.remaining());
 
     indexFile.seek(idx*indexFactory.getSerializedSize());
     ie.serialize(indexFile);

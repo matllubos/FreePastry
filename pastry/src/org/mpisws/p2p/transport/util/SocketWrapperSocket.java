@@ -81,10 +81,10 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
     return ret;
   }
 
-  public long read(ByteBuffer[] dsts, int offset, int length)
-      throws IOException {
-    return socket.read(dsts, offset, length);
-  }
+//  public long read(ByteBuffer[] dsts, int offset, int length)
+//      throws IOException {
+//    return socket.read(dsts, offset, length);
+//  }
 
   public void register(boolean wantToRead, boolean wantToWrite,
       final P2PSocketReceiver<Identifier> receiver) {
@@ -112,10 +112,10 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
     return ret;
   }
 
-  public long write(ByteBuffer[] srcs, int offset, int length)
-      throws IOException {
-    return socket.write(srcs, offset, length);
-  }
+//  public long write(ByteBuffer[] srcs, int offset, int length)
+//      throws IOException {
+//    return socket.write(srcs, offset, length);
+//  }
   
   @Override
   public String toString() {
