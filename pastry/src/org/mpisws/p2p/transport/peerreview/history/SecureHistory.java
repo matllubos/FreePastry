@@ -41,8 +41,8 @@ import java.nio.ByteBuffer;
 
 import rice.p2p.util.RandomAccessFileIOBuffer;
 
-public interface SecureHistory {
-  public int getNumEntries();
+public interface SecureHistory /* extends Iterable<IndexEntry> */ {
+  public long getNumEntries();
   public long getBaseSeq();
   public long getLastSeq();
   

@@ -65,7 +65,7 @@ public class SecureHistoryImpl implements SecureHistory {
   IndexEntry topEntry;
   long baseSeq;
   long nextSeq;
-  int numEntries;
+  long numEntries;
   RandomAccessFileIOBuffer indexFile;
   RandomAccessFileIOBuffer dataFile;
   boolean readOnly;
@@ -113,7 +113,7 @@ public class SecureHistoryImpl implements SecureHistory {
     return topEntry.seq;
   }
 
-  public int getNumEntries() {
+  public long getNumEntries() {
     return numEntries;
   }
 

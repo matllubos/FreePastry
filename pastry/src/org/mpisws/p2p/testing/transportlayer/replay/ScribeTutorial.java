@@ -44,6 +44,7 @@ import java.util.*;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.RecordLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
@@ -97,7 +98,18 @@ public class ScribeTutorial {
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
         // record here
-        return new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), pn.getEnvironment());
+        return new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new IdentifierSerializer<InetSocketAddress>() {
+
+          public ByteBuffer serialize(InetSocketAddress i) {
+            byte[] output = new byte[i.getAddress().getAddress().length+2]; // may be IPV4...
+            ByteBuffer ret = ByteBuffer.wrap(output);
+            ret.put(i.getAddress().getAddress());
+            ret.putShort((short)i.getPort());
+            ret.flip();
+            return ret;
+          }
+          
+        }, pn.getEnvironment());
       }
       
     };

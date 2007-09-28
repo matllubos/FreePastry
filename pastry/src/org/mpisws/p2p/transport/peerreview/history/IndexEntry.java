@@ -59,4 +59,28 @@ public class IndexEntry {
     contentHash.serialize(buf);
     nodeHash.serialize(buf);
   }
+
+  public Hash getContentHash() {
+    return contentHash;
+  }
+
+  public long getFileIndex() {
+    return fileIndex;
+  }
+
+  public Hash getNodeHash() {
+    return nodeHash;
+  }
+
+  public long getSeq() {
+    return seq;
+  }
+
+  public int getSizeInFile() {
+    return sizeInFile;
+  }
+
+  public short getType() {
+    return type;
+  }
 }

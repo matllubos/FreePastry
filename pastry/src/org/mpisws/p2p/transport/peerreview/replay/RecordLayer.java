@@ -52,10 +52,13 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   
   int socketCtr = Integer.MIN_VALUE;
   
-  public RecordLayer(TransportLayer<Identifier, ByteBuffer> tl, String name, Environment env) throws IOException {
+  public RecordLayer(TransportLayer<Identifier, ByteBuffer> tl, String name, IdentifierSerializer<Identifier> serializer, Environment env) throws IOException {
     SecureHistoryFactoryImpl shf = new SecureHistoryFactoryImpl();
     NullHashProvider nhp = new NullHashProvider();
+    this.tl = tl;
+    this.tl.setCallback(this);
     this.history = shf.create(name, 0, nhp.EMPTY_HASH, nhp);
+    this.identifierSerializer = serializer;
     
     this.environment = env;
     this.lastLogEntry = -1;

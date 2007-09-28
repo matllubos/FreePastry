@@ -71,10 +71,10 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     String indexName = name+".index";
     String dataName = name+".data";
     
-    indexFile = new RandomAccessFileIOBuffer(indexName, "w+"); // may be rw
+    indexFile = new RandomAccessFileIOBuffer(indexName, "rw"); // may be rw
     
     try {
-      dataFile = new RandomAccessFileIOBuffer(dataName, "w+"); // may be rw
+      dataFile = new RandomAccessFileIOBuffer(dataName, "rw"); // may be rw
     } catch (IOException ioe) {
       indexFile.close();
       throw ioe;
@@ -107,7 +107,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     if (readOnly) {
       fileMode = "r";
     } else {
-      fileMode = "r+"; // may be "rw"
+      fileMode = "rw"; // may be "rw"
     }
     
     RandomAccessFileIOBuffer indexFile = new RandomAccessFileIOBuffer(name+".index",fileMode);
