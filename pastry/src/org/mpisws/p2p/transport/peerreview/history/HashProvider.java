@@ -8,10 +8,11 @@ public interface HashProvider {
   public Hash hash(long seq, short type, Hash nodeHash, Hash contentHash);
   public Hash hash(ByteBuffer ... hashMe);
   
-  Hash build(InputBuffer buf);
+  public Hash build(InputBuffer buf);
+  public Hash build(byte[] hashBytes, int start, int length);
 
   int getSerizlizedSize(); // 20 by default
 
-  Hash getEmpty();
+  public Hash getEmpty();
 
 }

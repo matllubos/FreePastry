@@ -14,14 +14,17 @@ public class LogReader {
   SecureHistory history;
   long entryIndex;
   
-  public LogReader(String name, SecureHistoryFactory factory, HashProvider hashProv, EntryDeserializer deserializer) throws IOException {
-    history = factory.open(name, "r", hashProv);
+  public LogReader(String name, SecureHistoryFactory factory, EntryDeserializer deserializer) throws IOException {
+    this.deserializer = deserializer;
+    history = factory.open(name, "r");
     entryIndex = 0;
   }    
   
-  protected String readEntry() throws IOException {
+  public String readEntry() throws IOException {
     if (entryIndex >= history.getNumEntries()) return null;
     IndexEntry ie = history.statEntry(entryIndex);
-    return deserializer.read(ie, history);    
+    String ret = deserializer.read(ie, history);    
+    entryIndex++;
+    return ret;
   }
 }

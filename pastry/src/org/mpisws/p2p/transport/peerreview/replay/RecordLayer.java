@@ -52,12 +52,23 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   
   int socketCtr = Integer.MIN_VALUE;
   
+  public static ByteBuffer ONE, ZERO;
+  
   public RecordLayer(TransportLayer<Identifier, ByteBuffer> tl, String name, IdentifierSerializer<Identifier> serializer, Environment env) throws IOException {
-    SecureHistoryFactoryImpl shf = new SecureHistoryFactoryImpl();
     NullHashProvider nhp = new NullHashProvider();
+    SecureHistoryFactoryImpl shf = new SecureHistoryFactoryImpl(nhp);
+    
+    byte[] one = new byte[1];
+    one[0] = 1;
+    ONE = ByteBuffer.wrap(one);
+    
+    byte[] zero = new byte[1];
+    zero[0] = 0;
+    ZERO = ByteBuffer.wrap(zero);
+    
     this.tl = tl;
     this.tl.setCallback(this);
-    this.history = shf.create(name, 0, nhp.EMPTY_HASH, nhp);
+    this.history = shf.create(name, 0, nhp.EMPTY_HASH);
     this.identifierSerializer = serializer;
     
     this.environment = env;
@@ -106,7 +117,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
     callback.incomingSocket(s);
   }
-
+  
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
     // If the 'RELEVANT_MSG' flag is set to false, the message is passed through to the transport
     // layer. This is used e.g. for liveness/proximity pings in Pastry. 
@@ -121,7 +132,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       }
       
       try {
-        history.appendEntry(EVT_SEND, true, identifierSerializer.serialize(i), m);
+        history.appendEntry(EVT_SEND, true, identifierSerializer.serialize(i), ZERO, m);
       } catch (IOException ioe) {
         if (logger.level <= Logger.WARNING) logger.logException("sendMessage("+i+","+m+")",ioe); 
       }

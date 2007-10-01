@@ -39,14 +39,8 @@ advised of the possibility of such damage.
  */
 package org.mpisws.p2p.testing.transportlayer.replay;
 
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.Application;
-import rice.p2p.commonapi.CancellableTask;
-import rice.p2p.commonapi.Endpoint;
-import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.Message;
-import rice.p2p.commonapi.NodeHandle;
-import rice.p2p.commonapi.RouteMessage;
 import rice.p2p.scribe.Scribe;
 import rice.p2p.scribe.ScribeClient;
 import rice.p2p.scribe.ScribeContent;
@@ -90,12 +84,16 @@ public class MyScribeClient implements ScribeClient, Application {
    */
   protected Endpoint endpoint;
 
+  protected Logger logger;
+  
   /**
    * The constructor for this scribe client.  It will construct the ScribeApplication.
    * 
    * @param node the PastryNode
    */
   public MyScribeClient(Node node) {
+    logger = node.getEnvironment().getLogManager().getLogger(MyScribeClient.class, null);
+    
     // you should recognize this from lesson 3
     this.endpoint = node.buildEndpoint(this, "myinstance");
 
@@ -149,7 +147,7 @@ public class MyScribeClient implements ScribeClient, Application {
    * Called whenever we receive a published message.
    */
   public void deliver(Topic topic, ScribeContent content) {
-    System.out.println("MyScribeClient.deliver("+topic+","+content+")");
+    logger.log("MyScribeClient.deliver("+topic+","+content+")");
     if (((MyScribeContent)content).from == null) {
       new Exception("Stack Trace").printStackTrace();
     }

@@ -53,6 +53,10 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
   Environment environment;
   
   HashProvider hashProv;
+
+  public SecureHistoryFactoryImpl(HashProvider hashProv) {
+    this.hashProv = hashProv;
+  }
   
   /**
    * Creates a new history (aka log). Histories are stored as two files: The 'index' file has a 
@@ -61,8 +65,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
    * bytes for each entry. Note that the caller must specify the node hash and the sequence
    * number of the first log entry, which forms the base of the hash chain.
    */
-  public SecureHistory create(String name, long baseSeq, Hash baseHash, HashProvider hashProv) throws IOException {
-    this.hashProv = hashProv;
+  public SecureHistory create(String name, long baseSeq, Hash baseHash) throws IOException {
     RandomAccessFileIOBuffer indexFile, dataFile;
     
     if (name == null) {
@@ -94,7 +97,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
    *  'w' (read/write). 
    */
 
-  public SecureHistory open(String name, String mode, HashProvider hashProv) throws IOException {
+  public SecureHistory open(String name, String mode) throws IOException {
     boolean readOnly = false;
     
     if (!mode.equals("r")) {

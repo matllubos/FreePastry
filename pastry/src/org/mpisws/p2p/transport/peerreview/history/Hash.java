@@ -47,4 +47,6 @@ public interface Hash {
    */
   void serialize(OutputBuffer buf);
 
+  byte[] getBytes();
+  
 }

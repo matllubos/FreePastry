@@ -44,13 +44,17 @@ import java.util.*;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.RecordLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.*;
+import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.TLPastryNode;
@@ -66,7 +70,7 @@ public class ScribeTutorial {
   /**
    * this will keep track of our Scribe applications
    */
-  Vector apps = new Vector();
+  ArrayList<MyScribeClient> apps = new ArrayList<MyScribeClient>();
 
   /**
    * Based on the rice.tutorial.lesson4.DistTutorial
@@ -107,6 +111,17 @@ public class ScribeTutorial {
             ret.putShort((short)i.getPort());
             ret.flip();
             return ret;
+          }
+
+          public InetSocketAddress deserialize(InputBuffer buf) throws IOException {
+            byte[] addr = new byte[4];
+            buf.read(addr);
+            return new InetSocketAddress(InetAddress.getByAddress(addr), buf.readShort());
+          }
+
+          public void serialize(InetSocketAddress i, OutputBuffer buf) throws IOException {
+            ByteBuffer bb = serialize(i);
+            buf.write(bb.array(), bb.position(), bb.remaining());
           }
           
         }, pn.getEnvironment());
@@ -163,6 +178,13 @@ public class ScribeTutorial {
     // now, print the tree
     env.getTimeSource().sleep(5000);
     printTree(apps);
+
+    env.getTimeSource().sleep(15000);
+
+    
+    String[] argz = new String[1];
+    argz[0] = "0x"+apps.iterator().next().endpoint.getId().toStringFull().substring(0,6);
+    BasicEntryDeserializer.main(argz);
   }
 
   /**
@@ -171,7 +193,7 @@ public class ScribeTutorial {
    * 
    * @param apps Vector of the applicatoins.
    */
-  public static void printTree(Vector apps) {
+  public static void printTree(ArrayList<MyScribeClient> apps) {
     // build a hashtable of the apps, keyed by nodehandle
     Hashtable appTable = new Hashtable();
     Iterator i = apps.iterator();

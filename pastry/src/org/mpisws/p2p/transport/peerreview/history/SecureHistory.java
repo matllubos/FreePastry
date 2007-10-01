@@ -120,7 +120,7 @@ public interface SecureHistory /* extends Iterable<IndexEntry> */ {
   /**
    *  Get the content of a log entry, specified by its record number 
    */
-  public byte[] getEntry(int idx, int maxSizeToRead) throws IOException;
+  public byte[] getEntry(long idx, int maxSizeToRead) throws IOException;
 
   /**
    * If the log already contains an entry in 'hashed' form and we learn the actual
