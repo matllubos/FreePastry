@@ -41,13 +41,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
+
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.RandomAccessFileIOBuffer;
 
-public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntryFactory {
+public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntryFactory, PeerReviewEvents {
   Logger logger;
   
   Environment environment;
@@ -83,7 +85,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
       throw ioe;
     }
 
-    IndexEntry entry = new IndexEntry(baseSeq, (short)0,(byte)0,(short)-1, hashProv.getEmpty(), baseHash);
+    IndexEntry entry = new IndexEntry(baseSeq, (long)0,EVT_INIT,-1, hashProv.getEmpty(), baseHash);
     
     entry.serialize(indexFile);
     

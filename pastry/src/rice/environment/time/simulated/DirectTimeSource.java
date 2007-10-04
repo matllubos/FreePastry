@@ -126,5 +126,19 @@ public class DirectTimeSource implements TimeSource {
       }
     }
   }
+
+//  public void wait(Object lock, int timeToWait) throws InterruptedException {
+//    if (selector.isSelectorThread()) throw new IllegalStateException("You can't call this on the selector thread.");
+//    
+//    BlockingTimerTask2 btt = new BlockingTimerTask2(Thread.currentThread());
+//    selectorManager.getTimer().schedule(btt,timeToWait);
+//    try {
+//      lock.wait();
+//    } catch (InterruptedException ie) {
+//      
+//    }
+//    btt.cancel();
+//    
+//  }
   
 }

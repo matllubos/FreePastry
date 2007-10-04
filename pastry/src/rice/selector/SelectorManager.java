@@ -72,7 +72,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 
   // the set used to store the timer events
 //  protected TreeSet timerQueue = new TreeSet();
-  protected Queue timerQueue = new PriorityQueue();
+  protected Queue<TimerTask> timerQueue = new PriorityQueue<TimerTask>();
 
   // the next time the selector is schedeled to wake up
   protected long wakeupTime = 0;
@@ -610,6 +610,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    *
    */
   public void wakeup() {
+    //System.out.println("wakeup()");
     selector.wakeup();
     this.notifyAll();
   }
@@ -618,7 +619,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 //    if (!invocations.isEmpty()) return timeSource.currentTimeMillis();
     if (timerQueue.size() > 0) {
       TimerTask next = (TimerTask) timerQueue.peek();
-      return next.nextExecutionTime;
+      //System.out.println(next);
+      return next.scheduledExecutionTime();
     }
     return -1;    
   }

@@ -671,7 +671,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
     
     public void messageReceived(LowerIdentifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
-      Map<String, Integer> newOptions = new HashMap<String, Integer>(options);
+      Map<String, Integer> newOptions = OptionsFactory.copyOptions(options);
       
       byte msgType = m.get();
       if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+"):"+msgType);

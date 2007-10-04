@@ -78,11 +78,36 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     initialized = true;
   }
 
+  /**
+   * PeerReview only updates its internal clock when it returns to the main loop, but not
+   * in between (e.g. while it is handling messages). When the clock needs to be
+   * updated, this function is called. 
+   */  
+  public void updateLogTime() {
+   long now = environment.getTimeSource().currentTimeMillis();
+  
+   if (now > lastLogEntry) {
+     if (!history.setNextSeq(now * 1000000))
+       throw new RuntimeException("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
+       
+     lastLogEntry = now;
+   }
+  }
+  
+  /* Called by applications to log some application-specific event, such as PAST_GET. */
+  
+  public void logEvent(short type, ByteBuffer ... entry) throws IOException {
+//   assert(initialized && (type > EVT_MAX_RESERVED));
+   updateLogTime();
+   history.appendEntry(type, true, entry);   
+  }
+
+  
   public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Integer> options) {
     final int socketId = socketCtr++;
     final ByteBuffer socketIdBuffer = ByteBuffer.wrap(MathUtils.intToByteArray(socketId));
     try {
-      history.appendEntry(EVT_SOCKET_OPEN_OUTGOING, true, identifierSerializer.serialize(i), socketIdBuffer);
+      logEvent(EVT_SOCKET_OPEN_OUTGOING, identifierSerializer.serialize(i), socketIdBuffer);
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
     }
@@ -93,7 +118,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
         socketIdBuffer.clear();
         try {
-          history.appendEntry(EVT_SOCKET_OPENED_OUTGOING, true, identifierSerializer.serialize(i), socketIdBuffer);
+          logEvent(EVT_SOCKET_OPENED_OUTGOING, identifierSerializer.serialize(i), socketIdBuffer);
         } catch (IOException ioe) {
           if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
         }
@@ -103,7 +128,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
         socketIdBuffer.clear();
         try {
-          history.appendEntry(EVT_SOCKET_EXCEPTION, true, identifierSerializer.serialize(i), socketIdBuffer);
+          logEvent(EVT_SOCKET_EXCEPTION, identifierSerializer.serialize(i), socketIdBuffer);
         } catch (IOException ioe) {
           if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
         }
@@ -119,6 +144,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
+    logger.logException("sendMessage("+i+","+m+")", new Exception("Stack Trace"));
     // If the 'RELEVANT_MSG' flag is set to false, the message is passed through to the transport
     // layer. This is used e.g. for liveness/proximity pings in Pastry. 
     if (options == null || !options.containsKey(PR_RELEVANT_MSG) || options.get(PR_RELEVANT_MSG) != 0) {
@@ -132,7 +158,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       }
       
       try {
-        history.appendEntry(EVT_SEND, true, identifierSerializer.serialize(i), ZERO, m);
+        logEvent(EVT_SEND, identifierSerializer.serialize(i), m);
       } catch (IOException ioe) {
         if (logger.level <= Logger.WARNING) logger.logException("sendMessage("+i+","+m+")",ioe); 
       }
@@ -152,25 +178,9 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     
   }
   
-  /**
-   * PeerReview only updates its internal clock when it returns to the main loop, but not
-   * in between (e.g. while it is handling messages). When the clock needs to be
-   * updated, this function is called. 
-   */
-   void updateLogTime() {
-     long now = environment.getTimeSource().currentTimeMillis(); // transport->getTime();
-    
-     if (now > lastLogEntry) {
-       if (!history.setNextSeq(now * 1000))
-         throw new RuntimeException("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000+" did you change the local time?");
-         
-       lastLogEntry = now;
-     }
-   }
-
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
     try {
-      history.appendEntry(EVT_RECV, true, identifierSerializer.serialize(i), m);
+      logEvent(EVT_RECV, identifierSerializer.serialize(i), m);
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("messageReceived("+i+","+m+")",ioe); 
     }

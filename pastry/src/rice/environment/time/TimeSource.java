@@ -63,4 +63,16 @@ public interface TimeSource {
    * @throws InterruptedException 
    */
   public void sleep(long delay) throws InterruptedException;
+
+  /**
+   * This method has the same syntax as lock.wait(timeToWait), but works in the simulator.
+   * 
+   * You need to be holding the lock on lock before calling this.
+   * You may not call this on the SelectorThread
+   *  
+   * @param lock
+   * @param timeToWait
+   * @throws InterruptedException 
+   */
+//  public void wait(Object lock, int timeToWait) throws InterruptedException;
 }

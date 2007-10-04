@@ -16,6 +16,7 @@ import org.mpisws.p2p.transport.peerreview.Verifier;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -26,14 +27,15 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   TransportLayer<Identifier, ByteBuffer> {
 
   TransportLayerCallback<Identifier, ByteBuffer> callback;
-  DirectTimeSource timeSource;
+//  DirectTimeSource timeSource;
   
   long nextHistoryIndex = 0;
   IndexEntry next;
   
-  public ReplayLayer(IdentifierSerializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, long initialTime, DirectTimeSource ts, Environment environment) throws IOException {
+  public ReplayLayer(IdentifierSerializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, long initialTime, Environment environment) throws IOException {
     super(serializer, hashProv, history, localHandle, (short)0, (short)0, 0, initialTime, environment.getLogManager().getLogger(ReplayLayer.class, localHandle.toString()));
-    this.timeSource = ts;
+    this.environment = environment;
+//    this.timeSource = ts;
   }
   
 
@@ -72,7 +74,16 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
-    return null;
+    logger.logException("sendMessage("+i+","+m+")", new Exception("Stack Trace"));
+    if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+options+")");
+    MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
+    try {
+      send(i, m, -1);
+      if (deliverAckToMe != null) deliverAckToMe.ack(ret);
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("", ioe);
+    }
+    return ret;
   }
 
   public Identifier getLocalIdentifier() {
@@ -100,6 +111,8 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
 
   @Override
   protected void receive(final Identifier from, final ByteBuffer msg, final long timeToDeliver) {
+//    logger.log("receive("+from+","+msg+","+timeToDeliver+"):"+(timeToDeliver-environment.getTimeSource().currentTimeMillis()));
+    if (logger.level <= Logger.FINER) logger.log("receive("+from+","+msg+","+timeToDeliver+"):"+(timeToDeliver-environment.getTimeSource().currentTimeMillis()));
     environment.getSelectorManager().schedule(new TimerTask() {
     
       @Override
@@ -110,12 +123,17 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
       @Override
       public void run() {
         try {
+          if (logger.level <= Logger.FINE) logger.log("receive("+from+","+msg+","+timeToDeliver+")");
           callback.messageReceived(from, msg, null);
         } catch (IOException ioe) {
           if (logger.level <= Logger.WARNING) logger.logException("Error in receive",ioe);
         }
         // TODO: pump next event makeProgress()
       }    
+      
+      public String toString() {
+        return "Delivery for receive("+from+","+msg+","+timeToDeliver+")";
+      }
     });
   }
   

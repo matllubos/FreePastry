@@ -43,6 +43,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   boolean useSendSign = false;  // true if we're sending the signature after the message
   boolean useSenderSeq = false;
   boolean useLogHashFlag = false;
+//  boolean useBeginInitialized = true;
   
   public Verifier(
       IdentifierSerializer<Identifier> serializer, 
@@ -54,6 +55,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       int firstEntryToReplay, 
       long initialTime,
       Logger logger) /* : ReplayWrapper() */ throws IOException {
+    this.logger = logger;
     this.history = history;
 //    this->app = NULL;
     this.numEventCallbacks = 0;
@@ -65,6 +67,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     this.haveNextEvent = false;
     this.nextEventIndex = firstEntryToReplay-1;
     this.initialized = false;
+//    if (useBeginInitialized) this.initialized = true;
     this.signatureSizeBytes = signatureSizeBytes;
     this.hashSizeBytes = hashSizeBytes;
     this.numTimers = 0;
@@ -88,6 +91,8 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 
 //    unsigned char chash[hashSizeBytes];
     next = history.statEntry(nextEventIndex);
+    if (logger.level <= Logger.FINE) logger.log("fetchNextEvent():"+next);
+
     if (next == null)
       return;
       
@@ -98,14 +103,14 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       nextEvent = new SimpleInputBuffer(next.getContentHash().getBytes());
 //      nextEventSize = hashSizeBytes;
 //      memcpy(nextEvent, chash, hashSizeBytes);
-      if (logger.level <= Logger.WARNING) logger.log("Fetched log entry #"+nextEventIndex+" (type "+next.getType()+", hashed, seq="+next.getSeq()+")");
+      if (logger.level <= Logger.FINE) logger.log("Fetched log entry #"+nextEventIndex+" (type "+next.getType()+", hashed, seq="+next.getSeq()+")");
     } else {
       // load the nextEvent from the file
       
       nextEventIsHashed = false;
 //      assert(nextEventSize < (int)sizeof(nextEvent));
       nextEvent = new SimpleInputBuffer(history.getEntry(nextEventIndex, next.getSizeInFile()));
-      if (logger.level <= Logger.WARNING) logger.log("Fetched log entry #"+nextEventIndex+" (type "+next.getType()+", size "+next.getSizeInFile()+" bytes, seq="+next.getSeq()+")");
+      if (logger.level <= Logger.FINE) logger.log("Fetched log entry #"+nextEventIndex+" (type "+next.getType()+", size "+next.getSizeInFile()+" bytes, seq="+next.getSeq()+")");
 //      vdump(nextEvent, nextEventSize);
     }
     
@@ -280,6 +285,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       assert(next.getType() == EVT_SENDSIGN);
     }
     fetchNextEvent();
+    makeProgress();
   }
   
   /**
@@ -289,11 +295,12 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
    * handle foreground requests 
    */
   public boolean makeProgress() throws IOException {
+    if (logger.level <= Logger.FINE) logger.log("makeProgress()");
     if (foundFault || !haveNextEvent)
       return false;
       
-    if (!initialized && (next.getType() != EVT_CHECKPOINT)) {
-      if (logger.level <= Logger.WARNING) logger.log("Replay: No INIT or CHECKPOINT found at the beginning of the log; marking as invalid");
+    if (!initialized && (next.getType() != EVT_CHECKPOINT) && (next.getType() != EVT_INIT)) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: No INIT or CHECKPOINT found at the beginning of the log; marking as invalid "+next);
       foundFault = true;
       return false;
     }
@@ -328,14 +335,14 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 
     /* If we're done with this replay, return false */
 
-    if (!haveNextEvent)
-      return false;  
+//    if (!haveNextEvent)
+//      return false;  
 
     /* Sanity checks */
 
     if (logger.level <= Logger.FINE) logger.log("Replaying event #"+nextEventIndex+" (type "+next.getType()+", seq="+next.getSeq()+", now="+now+")");
       
-    if (nextEventIsHashed && (next.getType() != EVT_CHECKPOINT)) {
+    if (nextEventIsHashed && (next.getType() != EVT_CHECKPOINT) && (next.getType() != EVT_INIT)) {
       if (logger.level <= Logger.WARNING) logger.log("Replay: Trying to replay hashed event");
       foundFault = true;
       return false;
@@ -346,9 +353,10 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     switch (next.getType()) {
       case EVT_SEND : /* SEND events should have been handled by Verifier::send() */
       {
-        if (logger.level <= Logger.WARNING) logger.log("Replay: Encountered EVT_SEND; marking as invalid");
+        if (logger.level <= Logger.FINE) logger.log("Replay: Encountered EVT_SEND, waiting for node.");
+//        if (logger.level <= Logger.WARNING) logger.log("Replay: Encountered EVT_SEND; marking as invalid");
 //        transport->dump(2, nextEvent, next.getSizeInFile());
-        foundFault = true;
+//        foundFault = true;
         return false;
       }
       case EVT_RECV : /* Incoming message; feed it to the state machine */
@@ -370,7 +378,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         nextEvent.read(msgBytes);
         ByteBuffer msgBuf = ByteBuffer.wrap(msgBytes);
         
-        long receiveTime = next.getSeq()/1000;
+        long receiveTime = next.getSeq()/1000000;
         /* The next event is going to be a SIGN; skip it, since it's irrelevant here */
 
         if (useSendSign) {
@@ -484,12 +492,12 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //        break;
 //      }
       case EVT_INIT : /* State machine is reinitialized; issue upcall */
-//      {
-//        initialized = true;
+      {
+        initialized = true;
 //        app->init();
-//        fetchNextEvent();
-//        break;
-//      }
+        fetchNextEvent();
+        break;
+      }
       default :
 //      {
 //        if (eventToCallback[nextEventType] < 0) {

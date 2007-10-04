@@ -40,7 +40,7 @@ public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializ
   }
 
   public String read(IndexEntry ie, SecureHistory history) {
-    return entryId(ie.getType());
+    return entryId(ie.getType())+" "+ie.getSeq()+" "+ie.getSizeInFile();
   }
 
   

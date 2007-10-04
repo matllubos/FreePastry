@@ -37,19 +37,36 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.testing.transportlayer.replay;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.direct.EventSimulator;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
+import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.RecordLayer;
+import org.mpisws.p2p.transport.peerreview.replay.ReplayLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
+import rice.environment.logging.LogManager;
+import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
+import rice.environment.processing.Processor;
+import rice.environment.processing.sim.SimProcessor;
+import rice.environment.random.RandomSource;
+import rice.environment.time.simulated.DirectTimeSource;
+import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -59,6 +76,7 @@ import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.TLPastryNode;
 import rice.pastry.transport.TransportPastryNodeFactory;
+import rice.selector.SelectorManager;
 
 /**
  * This tutorial shows how to use Scribe.
@@ -90,6 +108,8 @@ public class ScribeTutorial {
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
 
+    long startTime = env.getTimeSource().currentTimeMillis();
+    
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
 
@@ -102,29 +122,7 @@ public class ScribeTutorial {
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
         // record here
-        return new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new IdentifierSerializer<InetSocketAddress>() {
-
-          public ByteBuffer serialize(InetSocketAddress i) {
-            byte[] output = new byte[i.getAddress().getAddress().length+2]; // may be IPV4...
-            ByteBuffer ret = ByteBuffer.wrap(output);
-            ret.put(i.getAddress().getAddress());
-            ret.putShort((short)i.getPort());
-            ret.flip();
-            return ret;
-          }
-
-          public InetSocketAddress deserialize(InputBuffer buf) throws IOException {
-            byte[] addr = new byte[4];
-            buf.read(addr);
-            return new InetSocketAddress(InetAddress.getByAddress(addr), buf.readShort());
-          }
-
-          public void serialize(InetSocketAddress i, OutputBuffer buf) throws IOException {
-            ByteBuffer bb = serialize(i);
-            buf.write(bb.array(), bb.position(), bb.remaining());
-          }
-          
-        }, pn.getEnvironment());
+        return new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
       }
       
     };
@@ -181,12 +179,47 @@ public class ScribeTutorial {
 
     env.getTimeSource().sleep(15000);
 
+    env.destroy();
     
-    String[] argz = new String[1];
-    argz[0] = "0x"+apps.iterator().next().endpoint.getId().toStringFull().substring(0,6);
-    BasicEntryDeserializer.main(argz);
+    Iterator<MyScribeClient> mscI = apps.iterator();
+    mscI.next();
+    Endpoint endpoint = mscI.next().endpoint;
+    
+    printLog("0x"+endpoint.getId().toStringFull().substring(0,6));
+    
+    SocketNodeHandle snh = (SocketNodeHandle)endpoint.getLocalNodeHandle();
+    Replayer.replayNode((rice.pastry.Id)snh.getId(), snh.getInetSocketAddress(), bootaddress, startTime);
   }
 
+  public void printLog(String arg) throws IOException {
+    String[] argz = new String[1];
+    argz[0] = arg;
+    BasicEntryDeserializer.main(argz); 
+  }
+  
+  static class ISASerializer implements IdentifierSerializer<InetSocketAddress> {
+
+    public ByteBuffer serialize(InetSocketAddress i) {
+      byte[] output = new byte[i.getAddress().getAddress().length+2]; // may be IPV4...
+      ByteBuffer ret = ByteBuffer.wrap(output);
+      ret.put(i.getAddress().getAddress());
+      ret.putShort((short)i.getPort());
+      ret.flip();
+      return ret;
+    }
+
+    public InetSocketAddress deserialize(InputBuffer buf) throws IOException {
+      byte[] addr = new byte[4];
+      buf.read(addr);
+      return new InetSocketAddress(InetAddress.getByAddress(addr), buf.readShort());
+    }
+
+    public void serialize(InetSocketAddress i, OutputBuffer buf) throws IOException {
+      ByteBuffer bb = serialize(i);
+      buf.write(bb.array(), bb.position(), bb.remaining());
+    }    
+  }
+  
   /**
    * Note that this function only works because we have global knowledge. Doing
    * this in an actual distributed environment will take some more work.
@@ -249,6 +282,9 @@ public class ScribeTutorial {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
+    System.setOut(new PrintStream("replay.txt"));
+    System.setErr(System.out);
+    
     // Loads pastry configurations
     Environment env = new Environment();
 

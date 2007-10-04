@@ -40,6 +40,7 @@ advised of the possibility of such damage.
 package rice.environment.time.simple;
 
 import rice.environment.time.TimeSource;
+import rice.selector.SelectorManager;
 
 
 /**
@@ -48,6 +49,11 @@ import rice.environment.time.TimeSource;
  * @author Jeff Hoye
  */
 public class SimpleTimeSource implements TimeSource {
+//  SelectorManager selector;
+  
+  public SimpleTimeSource(/*SelectorManager sm*/) {
+  //  this.selector = sm;
+  }
   
   /**
    * Returns the System.currentTimeMillis();
@@ -58,5 +64,10 @@ public class SimpleTimeSource implements TimeSource {
 
   public void sleep(long delay) throws InterruptedException {
     Thread.sleep(delay);
-  }    
+  }
+
+//  public void wait(Object lock, int timeToWait) throws InterruptedException {
+//    if (selector.isSelectorThread()) throw new IllegalStateException("You can't call this on the selector thread.");
+//    lock.wait(timeToWait);
+//  }    
 }

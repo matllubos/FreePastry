@@ -119,6 +119,7 @@ import rice.pastry.transport.TLDeserializer;
 import rice.pastry.transport.TLPastryNode;
 import rice.pastry.transport.TransportPastryNodeFactory;
 import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 /**
  * Pastry node factory for Socket-linked nodes.
@@ -154,9 +155,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 
   public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler) throws IOException {
     super(env);
-    if (env.getTimeSource() instanceof DirectTimeSource) {
-      throw new IllegalArgumentException("SocketPastryNodeFactory is not compatible with the DirectTimeSource in the environment.  Please use the SimpleTimeSource or an equivalent.");
-    }
+//    if (env.getTimeSource() instanceof DirectTimeSource) {
+//      throw new IllegalArgumentException("SocketPastryNodeFactory is not compatible with the DirectTimeSource in the environment.  Please use the SimpleTimeSource or an equivalent.");
+//    }
     
     environment = env;
     nidFactory = nf;
@@ -705,7 +706,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       synchronized(bootHandles) {
         try {
           if (bootHandles.size() < tempBootHandles.size()) {          
-            bootHandles.wait(10000); // only wait 10 seconds for the nodes
+            // only wait 10 seconds for the nodes
+            environment.getSelectorManager().schedule(new TimerTask(){
+            
+              @Override
+              public void run() {
+                synchronized(bootHandles) {
+                  bootHandles.notify();
+                }
+              }            
+            }, 10000);
+            bootHandles.wait(); 
           }
         } catch (InterruptedException ie) {
           return;

@@ -83,4 +83,8 @@ public class IndexEntry {
   public short getType() {
     return type;
   }
+  
+  public String toString() {
+    return "IE{#"+seq+" t:"+type+" s:"+sizeInFile+"}";
+  }
 }
