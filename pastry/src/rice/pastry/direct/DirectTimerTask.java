@@ -49,7 +49,7 @@ public class DirectTimerTask extends TimerTask {
   DirectTimerTask(MessageDelivery md, long nextExecutionTime, int period, boolean fixed) {
 //    super(md.node,md.msg);
     this.md = md; 
-    this.nextExecutionTime = nextExecutionTime;
+    setNextExecutionTime(nextExecutionTime);
     this.period = period;
     this.fixedRate = fixed;
   }

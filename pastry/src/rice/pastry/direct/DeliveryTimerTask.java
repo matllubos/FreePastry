@@ -48,7 +48,7 @@ public class DeliveryTimerTask extends TimerTask {
   
   DeliveryTimerTask(Delivery md, long nextExecutionTime, int period, boolean fixed, int seq) {
     this.md = md; 
-    this.nextExecutionTime = nextExecutionTime;
+    setNextExecutionTime(nextExecutionTime);
     this.period = period;
     this.fixedRate = fixed;
     this.seq = seq;

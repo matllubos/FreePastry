@@ -254,7 +254,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
           int selectTime = SelectorManager.TIMEOUT;
           if (timerQueue.size() > 0) {
             TimerTask first = (TimerTask) timerQueue.peek();
-            selectTime = (int) (first.nextExecutionTime - timeSource
+            selectTime = (int) (first.scheduledExecutionTime() - timeSource
                 .currentTimeMillis());
           }
 
@@ -279,7 +279,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
         environment.getExceptionStrategy().handleException(this, t);
         System.exit(-1);
       }
-    }
+    } // while(running)
     invocations.clear();
     loopObservers.clear();
     cancelledKeys.clear();
@@ -532,7 +532,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   }
   
   public void schedule(TimerTask task, long delay) {
-    task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
+    task.setNextExecutionTime(timeSource.currentTimeMillis() + delay);
     addTask(task);
   }
 
@@ -545,7 +545,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @param period The period with which to run in milliseconds
    */
   public void schedule(TimerTask task, long delay, long period) {
-    task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
+    task.setNextExecutionTime(timeSource.currentTimeMillis() + delay);
     task.period = (int) period;
     addTask(task);
   }
@@ -559,7 +559,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @param period The period with which to run in milliseconds
    */
   public void scheduleAtFixedRate(TimerTask task, long delay, long period) {
-    task.nextExecutionTime = timeSource.currentTimeMillis() + delay;
+    task.setNextExecutionTime(timeSource.currentTimeMillis() + delay);
     task.period = (int) period;
     task.fixedRate = true;
     addTask(task);
@@ -631,7 +631,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   protected void executeDueTasks() {
     //System.out.println("SM.executeDueTasks()");
     long now = timeSource.currentTimeMillis();
-    ArrayList executeNow = new ArrayList();
+    ArrayList<TimerTask> executeNow = new ArrayList<TimerTask>();
 
     // step 1, fetch all due timers
     synchronized (this) {
@@ -639,7 +639,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       while (!done) {
         if (timerQueue.size() > 0) {
           TimerTask next = (TimerTask) timerQueue.peek();
-          if (next.nextExecutionTime <= now) {
+          if (next.scheduledExecutionTime() <= now) {
             executeNow.add(next);
             //System.out.println("Removing:"+next);
 //            timerQueue.remove(next);
@@ -655,7 +655,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 
     // step 2, execute them all
     // items to be added back into the queue
-    ArrayList addBack = new ArrayList();
+    ArrayList<TimerTask> addBack = new ArrayList<TimerTask>();
     Iterator i = executeNow.iterator();
     while (i.hasNext()) {
       TimerTask next = (TimerTask) i.next();

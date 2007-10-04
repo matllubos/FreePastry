@@ -48,7 +48,7 @@ import rice.p2p.commonapi.CancellableTask;
  * @author Jeff Hoye
  */
 public abstract class TimerTask implements Comparable, CancellableTask {
-  protected long nextExecutionTime;
+  private long nextExecutionTime;
   protected boolean cancelled = false;
   protected int seq;
   protected SelectorManager selector;
@@ -127,5 +127,9 @@ public abstract class TimerTask implements Comparable, CancellableTask {
    */
   public void setSelectorManager(SelectorManager selector) {
     this.selector = selector;
+  }
+
+  protected void setNextExecutionTime(long l) {
+    nextExecutionTime = l;
   }
 }

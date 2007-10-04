@@ -16,7 +16,7 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.ReplayLayer;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
@@ -39,9 +39,9 @@ import rice.selector.SelectorManager;
 
 public class Replayer {
 
-  public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime) throws Exception {
+  public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
 //  Environment env = Environment.directEnvironment();
-    System.out.println(id.toStringFull()+" "+addr.getAddress()+" "+bootaddress.getPort()+" "+startTime);
+    System.out.println(id.toStringFull()+" "+addr.getAddress().getHostAddress()+" "+bootaddress.getPort()+" "+startTime+" "+randSeed);
     
     RandomSource rs = null;
     Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
@@ -156,8 +156,9 @@ public class Replayer {
     InetSocketAddress addr = new InetSocketAddress(a,startPort+1);
     InetSocketAddress bootaddress = new InetSocketAddress(a,startPort);
     long startTime = Long.decode(args[3]).longValue();
+    long randSeed = Long.decode(args[4]).longValue();
     
-    replayNode(Id.build(hex), addr, bootaddress, startTime);
+    replayNode(Id.build(hex), addr, bootaddress, startTime, randSeed);
 
   }
 

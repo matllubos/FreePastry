@@ -1,4 +1,4 @@
-package org.mpisws.p2p.transport.peerreview.replay;
+package org.mpisws.p2p.transport.peerreview.replay.playback;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -16,6 +16,7 @@ import org.mpisws.p2p.transport.peerreview.Verifier;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 
 import rice.environment.Environment;

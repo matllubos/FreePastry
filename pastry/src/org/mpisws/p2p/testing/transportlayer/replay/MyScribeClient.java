@@ -77,6 +77,8 @@ public class MyScribeClient implements ScribeClient, Application {
    */
   Topic myTopic;
 
+  Node node;
+  
   /**
    * The Endpoint represents the underlieing node.  By making calls on the 
    * Endpoint, it assures that the message will be delivered to a MyApp on whichever
@@ -92,6 +94,7 @@ public class MyScribeClient implements ScribeClient, Application {
    * @param node the PastryNode
    */
   public MyScribeClient(Node node) {
+    this.node = node;
     logger = node.getEnvironment().getLogManager().getLogger(MyScribeClient.class, null);
     
     // you should recognize this from lesson 3

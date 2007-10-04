@@ -1,4 +1,4 @@
-package org.mpisws.p2p.transport.peerreview.replay;
+package org.mpisws.p2p.transport.peerreview.replay.record;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,17 +13,25 @@ import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
-import org.mpisws.p2p.transport.peerreview.history.Hash;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
+import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
 import rice.environment.Environment;
+import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
+import rice.environment.processing.Processor;
+import rice.environment.processing.sim.SimProcessor;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.simple.SimpleTimeSource;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.util.MathUtils;
-import rice.pastry.PastryNode;
+import rice.selector.SelectorManager;
 
 public class RecordLayer<Identifier> implements PeerReviewEvents,
   TransportLayer<Identifier, ByteBuffer>,
@@ -144,7 +152,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
-    logger.logException("sendMessage("+i+","+m+")", new Exception("Stack Trace"));
+//    logger.logException("sendMessage("+i+","+m+")", new Exception("Stack Trace"));
     // If the 'RELEVANT_MSG' flag is set to false, the message is passed through to the transport
     // layer. This is used e.g. for liveness/proximity pings in Pastry. 
     if (options == null || !options.containsKey(PR_RELEVANT_MSG) || options.get(PR_RELEVANT_MSG) != 0) {
@@ -213,4 +221,27 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     tl.destroy();
   }
   
+  public static Environment generateEnvironment() {
+    return generateEnvironment(null);
+  }
+  
+  public static Environment generateEnvironment(int randomSeed) {
+    SimpleRandomSource srs = new SimpleRandomSource(randomSeed, null);
+    Environment env = generateEnvironment(srs);
+    srs.setLogManager(env.getLogManager());
+    return env;
+  }
+  
+  public static Environment generateEnvironment(RandomSource rs) {
+    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
+    DirectTimeSource dts = new DirectTimeSource(System.currentTimeMillis());
+    LogManager lm = Environment.generateDefaultLogManager(dts,params);
+    dts.setLogManager(lm);
+    SelectorManager selector = new RecordSM("Default", new SimpleTimeSource(), dts,lm);
+    dts.setSelectorManager(selector);
+    Processor proc = new SimProcessor(selector);
+    Environment ret = new Environment(selector,proc,rs,dts,lm,
+        params, Environment.generateDefaultExceptionStrategy(lm));
+    return ret;
+  }
 }

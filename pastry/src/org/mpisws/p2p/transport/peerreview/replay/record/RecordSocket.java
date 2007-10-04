@@ -1,4 +1,4 @@
-package org.mpisws.p2p.transport.peerreview.replay;
+package org.mpisws.p2p.transport.peerreview.replay.record;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

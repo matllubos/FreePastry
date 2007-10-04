@@ -914,31 +914,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 //                + localAddress + ":" + port + "...");
 
     // this code builds a different environment for each PastryNode
-    Environment environment = this.environment;
-    if (this.environment.getParameters().getBoolean(
-        "pastry_factory_multipleNodes")) {
-      if (this.environment.getLogManager() instanceof CloneableLogManager) {
-        LogManager lman = ((CloneableLogManager) this.environment
-            .getLogManager()).clone("0x" + nodeId.toStringBare());
-        SelectorManager sman = this.environment.getSelectorManager();
-        Processor proc = this.environment.getProcessor();
-        if (this.environment.getParameters().getBoolean(
-            "pastry_factory_selectorPerNode")) {
-          sman = new SelectorManager(nodeId.toString() + " Selector",
-              this.environment.getTimeSource(), lman);
-        }
-        if (this.environment.getParameters().getBoolean(
-            "pastry_factory_processorPerNode")) {
-          proc = new SimpleProcessor(nodeId.toString() + " Processor");
-        }
-
-        environment = new Environment(sman, proc, this.environment
-            .getRandomSource(), this.environment.getTimeSource(), lman,
-            this.environment.getParameters(), this.environment.getExceptionStrategy());
-
-        this.environment.addDestructable(environment);
-      }
-    }
+    Environment environment = cloneEnvironment(this.environment, nodeId);
     
 //    System.out.println(environment.getLogManager());
 
@@ -962,6 +938,65 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     TLPastryNode pn = nodeHandleHelper(nodeId, environment, proxyAddress);
         
     return pn;
+  }
+  
+  protected Environment cloneEnvironment(Environment rootEnvironment, Id nodeId) {
+    Environment ret = rootEnvironment;
+    if (rootEnvironment.getParameters().getBoolean("pastry_factory_multipleNodes")) {
+  
+      // new logManager
+      LogManager lman = cloneLogManager(rootEnvironment, nodeId);
+      
+      // new selector
+      SelectorManager sman = cloneSelectorManager(rootEnvironment, nodeId, lman);
+      
+      // new processor
+      Processor proc = cloneProcessor(rootEnvironment, nodeId, lman);
+      
+      // new random source
+      RandomSource rand = cloneRandomSource(rootEnvironment, nodeId, lman);
+      
+      // build the environment
+      ret = new Environment(sman, proc, rand, rootEnvironment.getTimeSource(), lman,
+          rootEnvironment.getParameters(), rootEnvironment.getExceptionStrategy());
+    
+      // gain shared fate with the rootEnvironment
+      rootEnvironment.addDestructable(ret);     
+    }
+    return ret;
+  }
+
+  protected LogManager cloneLogManager(Environment rootEnvironment, Id nodeId) {
+    LogManager lman = rootEnvironment.getLogManager();
+    if (lman instanceof CloneableLogManager) {
+      lman = ((CloneableLogManager) rootEnvironment
+          .getLogManager()).clone("0x" + nodeId.toStringBare());
+    }
+    return lman;
+  }
+  
+
+  protected SelectorManager cloneSelectorManager(Environment rootEnvironment, Id nodeId, LogManager lman) {
+    SelectorManager sman = rootEnvironment.getSelectorManager();
+    if (rootEnvironment.getParameters().getBoolean("pastry_factory_selectorPerNode")) {
+      sman = new SelectorManager(nodeId.toString() + " Selector",
+          rootEnvironment.getTimeSource(), lman);
+    }
+    return sman;
+  }
+  
+  protected Processor cloneProcessor(Environment rootEnvironment, Id nodeId, LogManager lman) {
+    Processor proc = rootEnvironment.getProcessor();
+    if (rootEnvironment.getParameters().getBoolean("pastry_factory_processorPerNode")) {
+      proc = new SimpleProcessor(nodeId.toString() + " Processor");
+    }
+
+    return proc;
+  }
+  
+  protected RandomSource cloneRandomSource(Environment rootEnvironment, Id nodeId, LogManager lman) {
+    long randSeed = rootEnvironment.getRandomSource().nextLong();
+    return new SimpleRandomSource(randSeed, lman);    
   }
   
   /**

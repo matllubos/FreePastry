@@ -43,15 +43,19 @@ public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializ
     return entryId(ie.getType())+" "+ie.getSeq()+" "+ie.getSizeInFile();
   }
 
-  
-  public static final void main(String[] args) throws IOException {
+  public static void printLog(String name, EntryDeserializer deserializer) throws IOException {
     String line;
     
     HashProvider hashProv = new NullHashProvider();
     
-    LogReader reader = new LogReader(args[0], new SecureHistoryFactoryImpl(hashProv), new BasicEntryDeserializer());
+    LogReader reader = new LogReader(name, new SecureHistoryFactoryImpl(hashProv), deserializer);
     while ((line = reader.readEntry()) != null) {
       System.out.println(line);
-    }
+    }    
   }
+  
+  public static final void main(String[] args) throws IOException {
+    printLog(args[0], new BasicEntryDeserializer());
+  }
+  
 }

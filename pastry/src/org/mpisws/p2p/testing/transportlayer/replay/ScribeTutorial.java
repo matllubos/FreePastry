@@ -53,8 +53,8 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.RecordLayer;
-import org.mpisws.p2p.transport.peerreview.replay.ReplayLayer;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
+import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
@@ -65,15 +65,20 @@ import rice.environment.params.simple.SimpleParameters;
 import rice.environment.processing.Processor;
 import rice.environment.processing.sim.SimProcessor;
 import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.Endpoint;
+import rice.p2p.commonapi.Node;
 import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.*;
+import rice.pastry.boot.Bootstrapper;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.standard.RandomNodeIdFactory;
+import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLPastryNode;
 import rice.pastry.transport.TransportPastryNodeFactory;
 import rice.selector.SelectorManager;
@@ -83,12 +88,16 @@ import rice.selector.SelectorManager;
  * 
  * @author Jeff Hoye
  */
-public class ScribeTutorial {
+public class ScribeTutorial implements MyEvents {
 
   /**
    * this will keep track of our Scribe applications
    */
   ArrayList<MyScribeClient> apps = new ArrayList<MyScribeClient>();
+
+  final Map<Id, Long> storedRandSeed = new HashMap<Id, Long>();
+
+  final Map<Node, RecordLayer<InetSocketAddress>> recorders = new HashMap<Node, RecordLayer<InetSocketAddress>>();
 
   /**
    * Based on the rice.tutorial.lesson4.DistTutorial
@@ -105,13 +114,22 @@ public class ScribeTutorial {
   public ScribeTutorial(int bindport, InetSocketAddress bootaddress,
       int numNodes, Environment env) throws Exception {
     
-    // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
-
     long startTime = env.getTimeSource().currentTimeMillis();
     
+    // Generate the NodeIds Randomly
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
+    
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
+      @Override
+      protected RandomSource cloneRandomSource(Environment rootEnvironment, Id nodeId, LogManager lman) {
+        long randSeed = rootEnvironment.getRandomSource().nextLong();
+        logger.log("RandSeed for "+nodeId+" "+randSeed);
+        
+        storedRandSeed.put(nodeId, randSeed); 
+        
+        return new SimpleRandomSource(randSeed, lman);    
+      }
 
       @Override
       protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
@@ -122,12 +140,31 @@ public class ScribeTutorial {
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
         // record here
-        return new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
+        
+        RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
+        recorders.put(pn, ret);
+        return ret;
       }
       
+      @Override
+      protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns) {
+        final Bootstrapper internal = super.getBootstrapper(pn, tl, handleFactory, pns);
+        Bootstrapper ret = new Bootstrapper() {        
+          public void boot(Collection bootaddresses) {
+            try {
+              recorders.get(pn).logEvent(EVT_BOOT);
+            } catch (IOException ioe) {
+              pn.getEnvironment().getLogManager().getLogger(Bootstrapper.class, null).logException("Error recording EVT_BOOT",ioe);
+            }
+            internal.boot(bootaddresses);
+          }        
+        };
+        
+        return ret;
+      }      
     };
 //    PastryNodeFactory factory = new TransportPastryNodeFactory(nidFactory, bindport, env);
-
+    
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
       // This will return null if we there is no node at that location
@@ -136,7 +173,13 @@ public class ScribeTutorial {
       
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
-      PastryNode node = factory.newNode((rice.pastry.NodeHandle) bootHandle);
+      TLPastryNode node = (TLPastryNode)factory.newNode();
+      
+      // construct a new scribe application
+      MyScribeClient app = new MyScribeClient(node);
+      apps.add(app);
+
+      node.getBootstrapper().boot(Collections.singleton(bootaddress));
       
       // this is an example of th enew way
 //      PastryNode node = factory.newNode(nidFactory.generateNodeId());
@@ -156,21 +199,17 @@ public class ScribeTutorial {
       }
       
       System.out.println("Finished creating new node: " + node);
-
-      // construct a new scribe application
-      MyScribeClient app = new MyScribeClient(node);
-      apps.add(app);
     }
 
     // for the first app subscribe then start the publishtask
     Iterator i = apps.iterator();
     MyScribeClient app = (MyScribeClient) i.next();
-    app.subscribe();
-    app.startPublishTask();
+    env.getSelectorManager().invoke(new SubscribeInvokation(app));
+    env.getSelectorManager().invoke(new PublishInvokation(app));
     // for all the rest just subscribe
     while (i.hasNext()) {
       app = (MyScribeClient) i.next();
-      app.subscribe();
+      env.getSelectorManager().invoke(new SubscribeInvokation(app));
     }
 
     // now, print the tree
@@ -188,13 +227,52 @@ public class ScribeTutorial {
     printLog("0x"+endpoint.getId().toStringFull().substring(0,6));
     
     SocketNodeHandle snh = (SocketNodeHandle)endpoint.getLocalNodeHandle();
-    Replayer.replayNode((rice.pastry.Id)snh.getId(), snh.getInetSocketAddress(), bootaddress, startTime);
+    Replayer.replayNode((rice.pastry.Id)snh.getId(), snh.getInetSocketAddress(), bootaddress, startTime, storedRandSeed.get(snh.getId()));
+  }
+  
+  public abstract class AppInvokation implements Runnable {
+    MyScribeClient app;
+    public AppInvokation(MyScribeClient app) {
+      this.app = app;
+    }
+
+    public abstract void doIt() throws IOException;
+    
+    public void run() {
+      try {
+        doIt();
+      } catch (IOException ioe) {
+        app.node.getEnvironment().getLogManager().getLogger(Bootstrapper.class, null).logException("Error recording event",ioe);
+      }      
+    }        
+  }
+  
+  public class SubscribeInvokation extends AppInvokation {
+    public SubscribeInvokation(MyScribeClient app) {
+      super(app);
+    }
+
+    @Override
+    public void doIt() throws IOException {
+      recorders.get(app.node).logEvent(EVT_SUBSCRIBE);
+      app.subscribe();
+    }    
+  }
+
+  public class PublishInvokation extends AppInvokation {
+    public PublishInvokation(MyScribeClient app) {
+      super(app);
+    }
+
+    @Override
+    public void doIt() throws IOException {
+      recorders.get(app.node).logEvent(EVT_PUBLISH);
+      app.startPublishTask();
+    }    
   }
 
   public void printLog(String arg) throws IOException {
-    String[] argz = new String[1];
-    argz[0] = arg;
-    BasicEntryDeserializer.main(argz); 
+    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer()); 
   }
   
   static class ISASerializer implements IdentifierSerializer<InetSocketAddress> {
@@ -282,11 +360,11 @@ public class ScribeTutorial {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
-    System.setOut(new PrintStream("replay.txt"));
-    System.setErr(System.out);
+//    System.setOut(new PrintStream("replay.txt"));
+//    System.setErr(System.out);
     
     // Loads pastry configurations
-    Environment env = new Environment();
+    Environment env = RecordLayer.generateEnvironment();
 
     // disable the UPnP setting (in case you are testing this on a NATted LAN)
     env.getParameters().setString("nat_search_policy","never");

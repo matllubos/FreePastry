@@ -46,10 +46,10 @@ import rice.selector.*;
 
 public class DirectTimeSource implements TimeSource {
 
-  private long time = 0;
-  private Logger logger = null;
-  private String instance;
-  private SelectorManager selectorManager;
+  protected long time = 0;
+  protected Logger logger = null;
+  protected String instance;
+  protected SelectorManager selectorManager;
   
   public DirectTimeSource(long time) {
     this(time, null);
