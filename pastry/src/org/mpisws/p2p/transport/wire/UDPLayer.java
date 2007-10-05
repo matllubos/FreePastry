@@ -222,7 +222,7 @@ public class UDPLayer extends SelectionKeyHandler implements Destructable {
 //      return;
 //    }
     if (logger.level <= Logger.FINE) 
-      logger.log("readheader("+address+","+readBuffer.remaining()+")");
+      logger.log("readHeader("+address+","+readBuffer.remaining()+")");
     byte[] remaining = new byte[readBuffer.remaining()];      
     readBuffer.get(remaining);
     wire.messageReceived(address, ByteBuffer.wrap(remaining));    
@@ -251,7 +251,7 @@ public class UDPLayer extends SelectionKeyHandler implements Destructable {
 //            ByteBuffer buf = ByteBuffer.wrap(whole_msg);
 
             int len = write.msg.remaining();
-            if (logger.level <= Logger.FINEST) {
+            if (logger.level <= Logger.FINE) {
               logger.log("writing "+len+" to "+write.destination);
             }
             if (channel.send(write.msg, write.destination) == len) {

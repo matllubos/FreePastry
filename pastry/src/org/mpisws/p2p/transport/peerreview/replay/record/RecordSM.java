@@ -28,25 +28,39 @@ public class RecordSM extends SelectorManager {
     //System.out.println("SM.executeDueTasks()");
     long now = realTime.currentTimeMillis();
         
-    synchronized (this) {
-      boolean done = false;
-      while (!done) {
+    boolean done = false;
+    while (!done) {
+      TimerTask next = null;
+      synchronized (this) {
         if (timerQueue.size() > 0) {
-          TimerTask next = (TimerTask) timerQueue.peek();
+          next = (TimerTask) timerQueue.peek();
           if (next.scheduledExecutionTime() <= now) {
             timerQueue.poll(); // remove the event
             simTime.setTime(next.scheduledExecutionTime()); // set the time
-            if (next.execute(simTime)) { // execute the event
-              timerQueue.add(next); // if the event needs to be rescheduled, add it back on
-            }
           } else {
             done = true;
           }
         } else {
           done = true;
         }
+      } // sync
+      
+      if (!done) {
+        super.doInvocations();
+        if (next.execute(simTime)) { // execute the event
+          synchronized(this) {
+            timerQueue.add(next); // if the event needs to be rescheduled, add it back on
+          }
+        }
       }
     }
     simTime.setTime(now); // so we always make some progress
+    super.doInvocations();
+  }  
+  
+  @Override
+  protected void doInvocations() {
+    // do nothing, this is called in executeDueTasks
   }
 }
+

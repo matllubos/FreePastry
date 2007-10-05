@@ -43,6 +43,7 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
@@ -172,8 +173,9 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
   
     // do nothing
     return new ProximityNeighborSelector(){    
-      public void getNearHandles(Collection<NodeHandle> bootHandles, Continuation<Collection<NodeHandle>, Exception> deliverResultToMe) {
+      public Cancellable getNearHandles(Collection<NodeHandle> bootHandles, Continuation<Collection<NodeHandle>, Exception> deliverResultToMe) {
         deliverResultToMe.receiveResult(bootHandles);
+        return null;
       }    
     };
   }

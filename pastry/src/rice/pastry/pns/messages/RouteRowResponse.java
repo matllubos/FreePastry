@@ -61,6 +61,10 @@ public class RouteRowResponse extends PRawMessage {
     this.row = row;
     setPriority(HIGH_PRIORITY);
   }
+  
+  public String toString() {
+    return "RRresp["+index+"]:"+getSender();
+  }
 
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeByte((byte)0); // version    

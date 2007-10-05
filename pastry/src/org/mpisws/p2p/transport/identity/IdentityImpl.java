@@ -1108,7 +1108,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
     
     public boolean cancel() {
-      pendingMessages.get(identifier).remove(this);
+      removePendingMessage(identifier, this);
       return subCancellable.cancel();
     }
 

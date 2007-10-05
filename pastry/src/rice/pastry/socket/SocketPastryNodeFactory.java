@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -649,94 +650,164 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl;
     SocketNodeHandleFactory handleFactory;
     ProximityNeighborSelector pns;
+    Logger logger;
+    
+    // we need to store this in a mutable final object
+    final List<LivenessListener<NodeHandle>> listener = new ArrayList<LivenessListener<NodeHandle>>();
     
     public TLBootstrapper(TLPastryNode pn, 
         TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl, 
         SocketNodeHandleFactory handleFactory,
         ProximityNeighborSelector pns) {
+      this.logger = pn.getEnvironment().getLogManager().getLogger(TLBootstrapper.class, null);
       this.pn = pn;
       this.tl = tl;
       this.handleFactory = handleFactory;
       this.pns = pns;
     }
 
+    /**
+     * This method is a bit out of order to make it work on any thread.  The method itself is non-blocking.  
+     * 
+     * The problem is that we don't have any NodeHandles yet, only Ip addresses.  So, we're going to check liveness on a 
+     * bogus node handle, and when the WrongEpochAddress message comes back, the bogus node will be faulty, but a new
+     * node (the real NodeHandle at that address) will come alive.  We can discover this by installing a LivenessListener
+     * on the transport layer.
+     * 
+     * Here is what happens:
+     * Create the "bogus" NodeHandles and store them in tempBootHandles 
+     * Register LivenessListener on transport layer.
+     * Ping all of the "bogus" NodeHandles
+     * When liveness changes to Non-Faulty it means we have found a new node.
+     * When we collect all of the bootaddresses, or there is a timeout, we call continuation.receiveResult()
+     * Continuation.receiveResult() unregisters the LivenessListener and then calls ProximityNeighborSelection.nearNodes()
+     * PNS.nearNodes() calls into the continuation which calls PastryNode.doneNode() 
+     */
     public void boot(Collection<InetSocketAddress> bootaddresses) {
+      if (logger.level <= Logger.FINE) logger.log("boot("+bootaddresses+")");
       if (bootaddresses == null) bootaddresses = Collections.EMPTY_LIST;
+
+      // bogus handles
       final Collection<SocketNodeHandle> tempBootHandles = new ArrayList<SocketNodeHandle>(bootaddresses.size());
+      
+      // real handles
       final Collection<rice.pastry.NodeHandle> bootHandles = 
         new HashSet<rice.pastry.NodeHandle>();
       
       TransportLayerNodeHandle<MultiInetSocketAddress> local = tl.getLocalIdentifier();
       InetSocketAddress localAddr = local.getAddress().getInnermostAddress();
       
-      LivenessListener<NodeHandle> listener = 
-        new LivenessListener<NodeHandle>() {
-          Logger logger = pn.getEnvironment().getLogManager().getLogger(SocketPastryNodeFactory.class, null);
-          public void livenessChanged(NodeHandle i2, int val, Map<String, Integer> options) {
-            SocketNodeHandle i = (SocketNodeHandle)i2;
-//            logger.log("livenessChanged("+i+","+val+")");
-            if (logger.level <= Logger.FINE) {
-              logger.log("livenessChanged("+i+","+val+")");
-            }
-//            System.out.println("here");
-            if (val <= LIVENESS_SUSPECTED && i.getEpoch() != 0L) {
-              synchronized(bootHandles) {
-                bootHandles.add((SocketNodeHandle)i);
-                if (bootHandles.size() == tempBootHandles.size()) {
-                  bootHandles.notify();
-                }
-              }
-            }
-          }        
-        };
-      
-      pn.getLivenessProvider().addLivenessListener(listener);
-
+      // fill in tempBootHandles
       for (InetSocketAddress addr : bootaddresses) { 
         if (logger.level <= Logger.FINER) logger.log("addr:"+addr+" local:"+localAddr);
         if (!addr.equals(localAddr)) {
           tempBootHandles.add(handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), 0, Id.build()));
         }
       }
-            
-      for (SocketNodeHandle h : tempBootHandles) {
-        pn.getLivenessProvider().checkLiveness(h, null);
-      }
 
-      synchronized(bootHandles) {
-        try {
-          if (bootHandles.size() < tempBootHandles.size()) {          
-            // only wait 10 seconds for the nodes
-            environment.getSelectorManager().schedule(new TimerTask(){
-            
-              @Override
-              public void run() {
-                synchronized(bootHandles) {
-                  bootHandles.notify();
-                }
-              }            
-            }, 10000);
-            bootHandles.wait(); 
-          }
-        } catch (InterruptedException ie) {
-          return;
-        }
-      }
-      
-      pn.getLivenessProvider().removeLivenessListener(listener);
-      
-      pns.getNearHandles(bootHandles, new Continuation<Collection<NodeHandle>, Exception>(){
-      
+      // this is the end of the task, but we have to declare it here
+      final Continuation beginPns = new Continuation<Collection<NodeHandle>, Exception>(){
+        boolean done = false; // to make sure this is only called once
+        /**
+         * This is usually going to get called twice.  The first time when bootHandles is complete,
+         * the second time on a timeout.
+         * 
+         * @param result
+         */
         public void receiveResult(Collection<NodeHandle> result) {
-          pn.doneNode(bootHandles);
+          // make sure this only gets called once
+          if (done) return;
+          done = true;
+          if (logger.level <= Logger.FINE) logger.log("boot() beginning pns with "+result);
+          
+          // remove the listener
+          pn.getLivenessProvider().removeLivenessListener(listener.get(0));
+          
+          // do proximity neighbor selection
+          pns.getNearHandles(result, new Continuation<Collection<NodeHandle>, Exception>(){
+          
+            public void receiveResult(Collection<NodeHandle> result) {
+              // done!!!
+              if (logger.level <= Logger.INFO) logger.log("boot() calling pn.doneNode("+result+")");
+              pn.doneNode(result);
+            }
+          
+            public void receiveException(Exception exception) {
+              // TODO Auto-generated method stub          
+            }
+          
+          });
         }
       
         public void receiveException(Exception exception) {
           // TODO Auto-generated method stub          
+        }      
+      };
+
+
+      // Create the listener for the "real" nodes coming online based on WrongAddress messages from the "Bogus" ones
+      listener.add( 
+        new LivenessListener<NodeHandle>() {
+          Logger logger = pn.getEnvironment().getLogManager().getLogger(SocketPastryNodeFactory.class, null);
+          public void livenessChanged(NodeHandle i2, int val, Map<String, Integer> options) {
+            SocketNodeHandle i = (SocketNodeHandle)i2;
+            if (logger.level <= Logger.FINE) logger.log("livenessChanged("+i+","+val+")");
+            
+//            System.out.println("here");
+            if (val <= LIVENESS_SUSPECTED && i.getEpoch() != 0L) {
+              boolean complete = false;
+              
+              // add the new handle
+              synchronized(bootHandles) {
+                bootHandles.add((SocketNodeHandle)i);
+                if (bootHandles.size() == tempBootHandles.size()) {
+                  complete = true;
+                }
+              }
+              if (complete) {
+                beginPns.receiveResult(bootHandles);
+              }
+            }
+          }        
+        });
+
+      if (logger.level <= Logger.FINE) logger.log("boot() adding liveness listener");
+      // register the listener
+      pn.getLivenessProvider().addLivenessListener(listener.get(0));
+
+      if (logger.level <= Logger.FINE) logger.log("boot() checking liveness");
+      // check liveness on the bogus nodes
+      for (SocketNodeHandle h : tempBootHandles) {
+        pn.getLivenessProvider().checkLiveness(h, null);
+      }
+
+      // need to synchronize, because this can be called on any thread
+      synchronized(bootHandles) {
+        if (bootHandles.size() < tempBootHandles.size()) {          
+          // only wait 10 seconds for the nodes
+          environment.getSelectorManager().schedule(new TimerTask(){
+          
+            @Override
+            public void run() {
+              if (logger.level <= Logger.FINE) logger.log("boot() timer expiring, attempting to start pns (it may have already started)");
+
+              beginPns.receiveResult(bootHandles);
+            }            
+          }, 10000);
         }
+      }
+
+      // the root node (no boot addresses)
+      if (tempBootHandles.isEmpty()) {
+        if (logger.level <= Logger.FINE) logger.log("invoking receiveResult (this is probably the first node in the ring)");
+        environment.getSelectorManager().invoke(new Runnable(){          
+          public void run() {
+            beginPns.receiveResult(bootHandles);
+          }          
+        });
+      }
       
-      });
-      
+      if (logger.level <= Logger.FINE) logger.log("boot() returning");
       
 //      // use the WrongEpochMessage to fetch the identity
 //      logger.log("boot");

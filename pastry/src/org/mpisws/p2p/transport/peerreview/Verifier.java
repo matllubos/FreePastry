@@ -3,11 +3,14 @@ package org.mpisws.p2p.transport.peerreview;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.history.Hash;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 
 import rice.environment.logging.Logger;
@@ -79,7 +82,16 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     if (!haveNextEvent)
       foundFault = true;
   }
+  
+  public boolean verifiedOK() { 
+    return !foundFault; 
+  };
 
+
+  public IndexEntry getNextEvent() {
+    return next;
+  }
+  
   protected abstract void receive(Identifier from, ByteBuffer msg, long timeToDeliver);
   
   /**
@@ -285,7 +297,27 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       assert(next.getType() == EVT_SENDSIGN);
     }
     fetchNextEvent();
-    makeProgress();
+  }
+  
+  /**
+   * Maps EVT_XXX -> EventCallback
+   */
+  Map<Short, EventCallback> eventCallback = new HashMap<Short, EventCallback>();
+  
+  /**
+   * This binds specific event types to one of the handlers 
+   */
+  public void registerEvent(EventCallback callback, short... eventType) {
+    for (short s : eventType) {
+      registerEvent(callback, s);
+    }
+  }
+  
+  public void registerEvent(EventCallback callback, short eventType) {
+    if (eventCallback.containsKey(eventType)) {
+      if (callback != eventCallback.get(eventType)) throw new IllegalStateException("Event #"+eventType+" registered twice");
+    }
+    eventCallback.put(eventType,callback);
   }
   
   /**
@@ -295,7 +327,8 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
    * handle foreground requests 
    */
   public boolean makeProgress() throws IOException {
-    if (logger.level <= Logger.FINE) logger.log("makeProgress()");
+    logger.log("makeProgress()");
+//    if (logger.level <= Logger.FINE) logger.log("makeProgress()");
     if (foundFault || !haveNextEvent)
       return false;
       
@@ -309,7 +342,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
      * Handle any pending timers. Note that we have to be sure to call them in the exact same
      * order as in the main code; otherwise there can be subtle bugs and side-effects. 
      */    
-    // TODO make this work properly, need to advance time to next timer like selector/simulator does
+    // This code is the job of the SelectorManager, it's done in the super class of ReplaySM
     
 //    boolean timerProgress = true;
 //    while (timerProgress) {
@@ -353,10 +386,10 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     switch (next.getType()) {
       case EVT_SEND : /* SEND events should have been handled by Verifier::send() */
       {
-        if (logger.level <= Logger.FINE) logger.log("Replay: Encountered EVT_SEND, waiting for node.");
-//        if (logger.level <= Logger.WARNING) logger.log("Replay: Encountered EVT_SEND; marking as invalid");
+//        if (logger.level <= Logger.FINE) logger.log("Replay: Encountered EVT_SEND, waiting for node.");
+        if (logger.level <= Logger.WARNING) logger.log("Replay: Encountered EVT_SEND; marking as invalid");
 //        transport->dump(2, nextEvent, next.getSizeInFile());
-//        foundFault = true;
+        foundFault = true;
         return false;
       }
       case EVT_RECV : /* Incoming message; feed it to the state machine */
@@ -499,26 +532,26 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         break;
       }
       default :
-//      {
-//        if (eventToCallback[nextEventType] < 0) {
-//          if (logger.level <= Logger.WARNING) logger.log("Replay: Unregistered event #%d; marking as invalid", nextEventType);
-//          foundFault = true;
-//          return false;
-//        }
-//
-//        unsigned char thisType = nextEventType;      
-//        unsigned char *buf = (unsigned char*)malloc(nextEventSize);
-//        memcpy(buf, nextEvent, nextEventSize);
-//        int thisSize = nextEventSize;
-//        fetchNextEvent();
-//        eventCallback[eventToCallback[thisType]]->replayEvent(thisType, buf, thisSize);
-//        free(buf);
-//        break;
-//      }
-        throw new IllegalStateException("Unknown type "+next.getType());
+      {
+        if (!eventCallback.containsKey(next.getType())) {
+          if (logger.level <= Logger.WARNING) logger.log("Replay: Unregistered event #"+next.getType()+"; marking as invalid");
+          foundFault = true;
+          return false;
+        }
+
+        IndexEntry temp = next;
+        InputBuffer tempEvent = nextEvent;
+        fetchNextEvent();
+        eventCallback.get(temp.getType()).replayEvent(temp.getType(), tempEvent);
+        break;
+      }
     }
     
     return true;
+  }
+
+  public long getNextEventTime() {
+    return next.getSeq()/1000000;
   }
 
 }

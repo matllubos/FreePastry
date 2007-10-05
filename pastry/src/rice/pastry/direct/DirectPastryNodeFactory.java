@@ -321,6 +321,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
       public void boot(Collection<NodeHandle> bootaddresses) {
         pns.getNearHandles(bootaddresses, new Continuation<Collection<NodeHandle>, Exception>() {        
           public void receiveResult(Collection<NodeHandle> result) {
+            if (logger.level <= Logger.INFO) logger.log("boot() calling pn.doneNode("+result+")");
             pn.doneNode(result);
           }        
           public void receiveException(Exception exception) {

@@ -119,7 +119,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     lastTime = timeSource.currentTimeMillis();
   }
 
-  Environment environment;
+  protected Environment environment;
   
   /**
    * Can only be called once.  The rest of the time the argument is rejected.
@@ -233,7 +233,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * to be started when this thread's start() method is invoked.
    */
   public void run() {
-    //System.out.println("SelectorManager starting...");
+//    System.out.println("SelectorManager starting...");
     if (logger.level <= Logger.INFO) logger.log("SelectorManager -- " + instance + " starting...");
 
     lastTime = timeSource.currentTimeMillis();

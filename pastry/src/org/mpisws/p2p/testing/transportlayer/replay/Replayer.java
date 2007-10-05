@@ -6,6 +6,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 import org.mpisws.p2p.testing.transportlayer.replay.ScribeTutorial.ISASerializer;
 import org.mpisws.p2p.transport.TransportLayer;
@@ -15,8 +17,10 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
+import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
@@ -27,6 +31,7 @@ import rice.environment.processing.Processor;
 import rice.environment.processing.sim.SimProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.time.simulated.DirectTimeSource;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
@@ -37,33 +42,25 @@ import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.transport.TLPastryNode;
 import rice.selector.SelectorManager;
 
-public class Replayer {
-
-  public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
-//  Environment env = Environment.directEnvironment();
-    System.out.println(id.toStringFull()+" "+addr.getAddress().getHostAddress()+" "+bootaddress.getPort()+" "+startTime+" "+randSeed);
-    
-    RandomSource rs = null;
-    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
-    DirectTimeSource dts = new DirectTimeSource(startTime);
-    LogManager lm = Environment.generateDefaultLogManager(dts,params);
-    dts.setLogManager(lm);
-    SelectorManager selector = Environment.generateDefaultSelectorManager(dts,lm);
-    selector.setSelect(false);
-    dts.setSelectorManager(selector);
-    Processor proc = new SimProcessor(selector);
-    Environment env = new Environment(selector,proc,rs,dts,lm,
-        params, Environment.generateDefaultExceptionStrategy(lm));
+public class Replayer implements MyEvents, EventCallback {
+  InetSocketAddress bootaddress;
+  TLPastryNode node;
+  MyScribeClient app;
+  Logger logger;
   
-    params.setInt("org.mpisws.p2p.transport.peerreview.replay_loglevel", Logger.FINER);
-    
+  public Replayer(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
+    this.bootaddress = bootaddress;
+    Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed);
+    logger = env.getLogManager().getLogger(Replayer.class, null);
+
+    env.getParameters().setInt("org.mpisws.p2p.transport.peerreview.replay_loglevel", Logger.FINER);
     
     final Logger simLogger = env.getLogManager().getLogger(EventSimulator.class, null);
     
-    final Collection<ReplayLayer<InetSocketAddress>> replayers = new ArrayList<ReplayLayer<InetSocketAddress>>();
+    final List<ReplayLayer<InetSocketAddress>> replayers = new ArrayList<ReplayLayer<InetSocketAddress>>();
     
     
-    PastryNodeFactory factory = new SocketPastryNodeFactory(new NodeIdFactory() {    
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new NodeIdFactory() {    
       public Id generateNodeId() {
         return id;
       }    
@@ -79,62 +76,50 @@ public class Replayer {
         SecureHistory hist = shFactory.open(logName, "r");
         
         ReplayLayer<InetSocketAddress> replay = new ReplayLayer<InetSocketAddress>(serializer,hashProv,hist,addr,startTime,pn.getEnvironment());
-        replay.makeProgress();
+        replay.registerEvent(Replayer.this, EVT_BOOT, EVT_SUBSCRIBE, EVT_PUBLISH);
         replayers.add(replay);
         return replay;
       }
       
     };
-
-    EventSimulator sim = new EventSimulator(env,env.getRandomSource(),simLogger) {
-      @Override
-      protected boolean simulate() throws InterruptedException {
-        boolean ret = super.simulate();
-        try {
-          for (ReplayLayer<InetSocketAddress> replay : replayers) {
-            replay.makeProgress();
-          }
-        } catch (IOException ioe) {
-          simLogger.logException("makeProgress() threw ", ioe);
-        }
-        return ret;
-      }      
-    };
-
-    sim.setMaxSpeed(0.1f);
-    sim.start();
     
-    NodeHandle bootHandle = ((SocketPastryNodeFactory) factory).getNodeHandle(bootaddress);
-
     // construct a node, passing the null boothandle on the first loop will
     // cause the node to start its own ring
-    PastryNode node = factory.newNode((rice.pastry.NodeHandle) bootHandle);
+    node = (TLPastryNode)factory.newNode();
+    app = new MyScribeClient(node);
+    
+    ReplaySM sim = (ReplaySM)env.getSelectorManager();
+    ReplayLayer<InetSocketAddress> replay = replayers.get(0);
+    replay.makeProgress(); // get rid of INIT event
+    sim.setVerifier(replay);
     
     
-    // this is an example of th enew way
-    //PastryNode node = factory.newNode(nidFactory.generateNodeId());
-    //node.getBootstrapper().boot(Collections.singleton(bootaddress));
-    
-    // the node may require sending several messages to fully boot into the ring
-    synchronized(node) {
-      while(!node.isReady() && !node.joinFailed()) {
-        // delay so we don't busy-wait
-        node.wait(500);
-        
-        // abort if can't join
-        if (node.joinFailed()) {
-          throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
-        }
-      }       
-    }
-    
-    System.out.println("Finished creating new node: " + node);
-    
-    // construct a new scribe application
-    MyScribeClient app = new MyScribeClient(node);
-  
-    // for all the rest just subscribe
-    app.subscribe();
+    sim.start();
+
+//    // this is an example of th enew way
+//    //PastryNode node = factory.newNode(nidFactory.generateNodeId());
+//    //node.getBootstrapper().boot(Collections.singleton(bootaddress));
+//    
+//    // the node may require sending several messages to fully boot into the ring
+//    synchronized(node) {
+//      while(!node.isReady() && !node.joinFailed()) {
+//        // delay so we don't busy-wait
+//        node.wait(500);
+//        
+//        // abort if can't join
+//        if (node.joinFailed()) {
+//          throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
+//        }
+//      }       
+//    }
+//    
+//    System.out.println("Finished creating new node: " + node);
+//    
+//    // construct a new scribe application
+//    MyScribeClient app = new MyScribeClient(node);
+//  
+//    // for all the rest just subscribe
+//    app.subscribe();
   
     // now, print the tree
     env.getTimeSource().sleep(5000);
@@ -142,6 +127,13 @@ public class Replayer {
     env.getTimeSource().sleep(15000);
   
     env.destroy();    
+  }
+  
+  public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
+//  Environment env = Environment.directEnvironment();
+    System.out.println(id.toStringFull()+" "+addr.getAddress().getHostAddress()+" "+bootaddress.getPort()+" "+startTime+" "+randSeed);
+    
+    new Replayer(id, addr, bootaddress, startTime, randSeed);
   }
 
 
@@ -160,6 +152,21 @@ public class Replayer {
     
     replayNode(Id.build(hex), addr, bootaddress, startTime, randSeed);
 
+  }
+
+  public void replayEvent(short type, InputBuffer entry) {
+    logger.log("replayEvent("+type+")");
+    switch (type) {
+    case EVT_BOOT:
+      node.getBootstrapper().boot(Collections.singletonList(bootaddress));
+      break;
+    case EVT_SUBSCRIBE:
+      app.subscribe();
+      break;
+    case EVT_PUBLISH:
+      app.startPublishTask();
+      break;
+    }
   }
 
 }

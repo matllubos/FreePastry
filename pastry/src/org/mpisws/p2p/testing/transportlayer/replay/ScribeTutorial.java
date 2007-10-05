@@ -360,8 +360,8 @@ public class ScribeTutorial implements MyEvents {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
-//    System.setOut(new PrintStream("replay.txt"));
-//    System.setErr(System.out);
+    System.setOut(new PrintStream("replay.txt"));
+    System.setErr(System.out);
     
     // Loads pastry configurations
     Environment env = RecordLayer.generateEnvironment();

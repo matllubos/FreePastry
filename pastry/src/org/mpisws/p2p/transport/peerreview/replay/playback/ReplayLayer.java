@@ -11,7 +11,6 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
-import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
 import org.mpisws.p2p.transport.peerreview.Verifier;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
@@ -20,8 +19,16 @@ import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 
 import rice.environment.Environment;
+import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
+import rice.environment.params.simple.SimpleParameters;
+import rice.environment.processing.Processor;
+import rice.environment.processing.sim.SimProcessor;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.simulated.DirectTimeSource;
+import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
 public class ReplayLayer<Identifier> extends Verifier<Identifier> implements 
@@ -71,7 +78,7 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
 
   public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
     // TODO Auto-generated method stub
-    return null;
+    throw new RuntimeException("Not Implemented.");
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
@@ -136,6 +143,20 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
         return "Delivery for receive("+from+","+msg+","+timeToDeliver+")";
       }
     });
+  }
+
+  public static Environment generateEnvironment(String name, long startTime, long randSeed) {
+    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
+    DirectTimeSource dts = new DirectTimeSource(startTime);
+    LogManager lm = Environment.generateDefaultLogManager(dts,params);
+    RandomSource rs = new SimpleRandomSource(randSeed, lm);
+    dts.setLogManager(lm);
+    SelectorManager selector = new ReplaySM("Replay "+name, dts, lm);
+    dts.setSelectorManager(selector);
+    Processor proc = new SimProcessor(selector);
+    Environment env = new Environment(selector,proc,rs,dts,lm,
+        params, Environment.generateDefaultExceptionStrategy(lm));
+    return env;
   }
   
 }

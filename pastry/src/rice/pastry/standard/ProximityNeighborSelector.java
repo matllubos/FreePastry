@@ -39,6 +39,7 @@ package rice.pastry.standard;
 import java.util.Collection;
 
 import rice.Continuation;
+import rice.p2p.commonapi.Cancellable;
 import rice.pastry.NodeHandle;
 
 /**
@@ -49,6 +50,6 @@ import rice.pastry.NodeHandle;
  */
 public interface ProximityNeighborSelector {
 
-  void getNearHandles(Collection<NodeHandle> bootHandles, Continuation<Collection<NodeHandle>, Exception> deliverResultToMe);
+  public Cancellable getNearHandles(Collection<NodeHandle> bootHandles, Continuation<Collection<NodeHandle>, Exception> deliverResultToMe);
 
 }

@@ -39,9 +39,11 @@ advised of the possibility of such damage.
  */
 package rice.p2p.commonapi.exception;
 
+import java.io.IOException;
+
 import rice.p2p.commonapi.NodeHandle;
 
-public class AppSocketException extends Exception {
+public class AppSocketException extends IOException {
   Throwable reason;
 
   public AppSocketException() {}
