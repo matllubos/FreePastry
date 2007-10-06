@@ -1,4 +1,4 @@
-package rice.p2p;
+package rice.p2p.util;
 
 import java.util.ArrayList;
 import java.util.Collection;

@@ -57,12 +57,12 @@ import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
-import rice.p2p.AttachableCancellable;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.exception.TimeoutException;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.MessageDeserializer;
+import rice.p2p.util.AttachableCancellable;
 import rice.p2p.util.tuples.MutableTuple;
 import rice.p2p.util.tuples.Tuple;
 import rice.pastry.Id;
@@ -566,9 +566,13 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
         cancellable.attach(task);
         environment.getSelectorManager().schedule(task, timeout);
         return cancellable;
-      }
+      } 
       
       // else we have the proximity, no need to wait for it, just return the correct result
+    }
+    
+    synchronized(pingCache) {
+      pingCache.put(handle,prox);
     }
     
     // we already had the right proximity

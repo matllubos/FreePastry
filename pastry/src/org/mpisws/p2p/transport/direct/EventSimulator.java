@@ -92,7 +92,7 @@ public class EventSimulator {
           if (maxSimTime < newSimTime) {
             // we need to throttle
             long neededSysDelay = (long)((newSimTime-maxSimTime)/maxSpeed);
-            System.out.println("Waiting for "+neededSysDelay+" at "+timeSource.currentTimeMillis());
+//            logger.log("Waiting for "+neededSysDelay+" at "+timeSource.currentTimeMillis());
             if (neededSysDelay >= 1) {
               manager.wait(neededSysDelay);          
               long now = System.currentTimeMillis();
@@ -144,7 +144,7 @@ public class EventSimulator {
         running = true;
         manager.invoke(new Runnable() {    
           public void run() {
-            logger.log("EventSimulator.run()");
+//            logger.log("EventSimulator.run()");
             if (!running) return;            
             try {
             if (!simulate()) {
