@@ -121,28 +121,32 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   protected void receive(final Identifier from, final ByteBuffer msg, final long timeToDeliver) {
 //    logger.log("receive("+from+","+msg+","+timeToDeliver+"):"+(timeToDeliver-environment.getTimeSource().currentTimeMillis()));
     if (logger.level <= Logger.FINER) logger.log("receive("+from+","+msg+","+timeToDeliver+"):"+(timeToDeliver-environment.getTimeSource().currentTimeMillis()));
-    environment.getSelectorManager().schedule(new TimerTask() {
     
-      @Override
-      public long scheduledExecutionTime() {
-        return timeToDeliver;
-      }
+    long now = environment.getTimeSource().currentTimeMillis();
+    if (timeToDeliver != now) throw new RuntimeException("Incorrect time on receive now:"+now+" timeToDeliver:"+timeToDeliver);
     
-      @Override
-      public void run() {
+//    environment.getSelectorManager().schedule(new TimerTask() {
+//    
+//      @Override
+//      public long scheduledExecutionTime() {
+//        return timeToDeliver;
+//      }
+//    
+//      @Override
+//      public void run() {
         try {
-          if (logger.level <= Logger.FINE) logger.log("receive("+from+","+msg+","+timeToDeliver+")");
+//          if (logger.level <= Logger.FINE) logger.log("receive("+from+","+msg+","+timeToDeliver+")");
           callback.messageReceived(from, msg, null);
         } catch (IOException ioe) {
           if (logger.level <= Logger.WARNING) logger.logException("Error in receive",ioe);
         }
-        // TODO: pump next event makeProgress()
-      }    
-      
-      public String toString() {
-        return "Delivery for receive("+from+","+msg+","+timeToDeliver+")";
-      }
-    });
+//        // TODO: pump next event makeProgress()
+//      }    
+//      
+//      public String toString() {
+//        return "Delivery for receive("+from+","+msg+","+timeToDeliver+")";
+//      }
+//    });
   }
 
   public static Environment generateEnvironment(String name, long startTime, long randSeed) {
