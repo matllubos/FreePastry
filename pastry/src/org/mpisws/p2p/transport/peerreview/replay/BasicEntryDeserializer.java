@@ -11,6 +11,8 @@ import org.mpisws.p2p.transport.peerreview.history.reader.EntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.history.reader.LogReader;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 
+import rice.environment.Environment;
+
 public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializer {
 
   public String entryId(short id) {
@@ -40,22 +42,24 @@ public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializ
   }
 
   public String read(IndexEntry ie, SecureHistory history) {
-    return entryId(ie.getType())+" "+ie.getSeq()+" "+ie.getSizeInFile();
+    return entryId(ie.getType())+" n:"+ie.getSeq()+" s:"+ie.getSizeInFile()+" i:"+ie.getFileIndex();
   }
 
-  public static void printLog(String name, EntryDeserializer deserializer) throws IOException {
+  public static void printLog(String name, EntryDeserializer deserializer, Environment env) throws IOException {
     String line;
     
     HashProvider hashProv = new NullHashProvider();
     
-    LogReader reader = new LogReader(name, new SecureHistoryFactoryImpl(hashProv), deserializer);
+    int ctr = 0;
+    LogReader reader = new LogReader(name, new SecureHistoryFactoryImpl(hashProv, env), deserializer);
     while ((line = reader.readEntry()) != null) {
-      System.out.println(line);
+      System.out.println("#"+ctr+" "+line);
+      ctr++;
     }    
   }
   
   public static final void main(String[] args) throws IOException {
-    printLog(args[0], new BasicEntryDeserializer());
+    printLog(args[0], new BasicEntryDeserializer(), new Environment());
   }
   
 }

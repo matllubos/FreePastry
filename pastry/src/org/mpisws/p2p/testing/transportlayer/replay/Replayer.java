@@ -9,9 +9,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.mpisws.p2p.testing.transportlayer.replay.ScribeTutorial.ISASerializer;
+import org.mpisws.p2p.testing.transportlayer.replay.Recorder.ISASerializer;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.direct.EventSimulator;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
@@ -21,6 +23,7 @@ import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
@@ -35,6 +38,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
+import rice.pastry.NodeHandleFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.socket.SocketNodeHandle;
@@ -51,9 +55,12 @@ public class Replayer implements MyEvents, EventCallback {
   public Replayer(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
     this.bootaddress = bootaddress;
     Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed);
+    env.getParameters().setBoolean("pastry_socket_use_own_random",false);
+//    env.getParameters().setInt("rice.environment.random_loglevel", Logger.FINER);
+
     logger = env.getLogManager().getLogger(Replayer.class, null);
 
-    env.getParameters().setInt("org.mpisws.p2p.transport.peerreview.replay_loglevel", Logger.FINER);
+//    env.getParameters().setInt("org.mpisws.p2p.transport.peerreview.replay_loglevel", Logger.FINER);
     
     final Logger simLogger = env.getLogManager().getLogger(EventSimulator.class, null);
     
@@ -67,15 +74,33 @@ public class Replayer implements MyEvents, EventCallback {
     },addr.getPort(),env) {
   
       @Override
+      protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
+        // get rid of the priorityLayer
+        return trans;
+      }
+
+      @Override
+      public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
+        SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf, localNodeInfo);
+        logger.log(ret.toStringFull());
+        return ret;
+      }
+      
+      @Override
+      protected RandomSource cloneRandomSource(Environment rootEnvironment, Id nodeId, LogManager lman) {
+        return rootEnvironment.getRandomSource();    
+      }
+      
+      @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
         IdentifierSerializer<InetSocketAddress> serializer = new ISASerializer();
         
         HashProvider hashProv = new NullHashProvider();
-        SecureHistoryFactory shFactory = new SecureHistoryFactoryImpl(hashProv);
+        SecureHistoryFactory shFactory = new SecureHistoryFactoryImpl(hashProv, pn.getEnvironment());
         String logName = "0x"+id.toStringFull().substring(0,6);
         SecureHistory hist = shFactory.open(logName, "r");
         
-        ReplayLayer<InetSocketAddress> replay = new ReplayLayer<InetSocketAddress>(serializer,hashProv,hist,addr,startTime,pn.getEnvironment());
+        ReplayLayer<InetSocketAddress> replay = new ReplayLayer<InetSocketAddress>(serializer,hashProv,hist,addr,pn.getEnvironment());
         replay.registerEvent(Replayer.this, EVT_BOOT, EVT_SUBSCRIBE, EVT_PUBLISH);
         replayers.add(replay);
         return replay;

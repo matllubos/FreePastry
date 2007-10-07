@@ -572,10 +572,14 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @param task The task to add
    */
   private synchronized void addTask(TimerTask task) {
+    if (logger.level <= Logger.FINE) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
+    if (task.scheduledExecutionTime() < timeSource.currentTimeMillis()) {
+      if (logger.level <= Logger.WARNING) logger.logException("Can't schedule a task in the past. "+task, new Exception("Stack Trace"));
+      throw new RuntimeException("Can't schedule a task in the past.");
+    }
 //    synchronized (selector) {
       if (!timerQueue.add(task)) {
-        System.out.println("ERROR: Got false while enqueueing task " + task
-            + "!");
+        if (logger.level <= Logger.WARNING) logger.log("ERROR: Got false while enqueueing task "+task+"!");
         Thread.dumpStack();
       } else {
         task.setSelectorManager(this); 
@@ -602,6 +606,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   }
   
   public synchronized void removeTask(TimerTask task) {
+    if (logger.level <= Logger.FINE) logger.log("removeTask("+task+") scheduled for "+task.scheduledExecutionTime());
     timerQueue.remove(task);
   }
 
@@ -660,7 +665,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     while (i.hasNext()) {
       TimerTask next = (TimerTask) i.next();
       try {
-        //System.out.println("SM.Executing "+next);
+        if (logger.level <= Logger.FINE) logger.log("executing task "+next);
         if (next.execute(timeSource)) {
           addBack.add(next);
         }

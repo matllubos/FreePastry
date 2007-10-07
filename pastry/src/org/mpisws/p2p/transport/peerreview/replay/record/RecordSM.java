@@ -1,6 +1,7 @@
 package org.mpisws.p2p.transport.peerreview.replay.record;
 
 import rice.environment.logging.LogManager;
+import rice.environment.logging.Logger;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.selector.SelectorManager;
@@ -47,6 +48,7 @@ public class RecordSM extends SelectorManager {
       
       if (!done) {
         super.doInvocations();
+        if (logger.level <= Logger.FINE) logger.log("executing task "+next);
         if (next.execute(simTime)) { // execute the event
           synchronized(this) {
             timerQueue.add(next); // if the event needs to be rescheduled, add it back on

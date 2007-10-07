@@ -76,6 +76,7 @@ public class SecureHistoryImpl implements SecureHistory {
     assert(indexFile != null && dataFile != null);
     
     this.logger = logger;
+    if (logger == null) throw new IllegalArgumentException("logger is null");
     this.indexFactory = indexFactory;
 
 //    if (hashProv.getHashSizeBytes() != HASH_LENGTH) throw new IllegalArgumentException("HashProvider must use the same hashLength");
@@ -161,11 +162,11 @@ public class SecureHistoryImpl implements SecureHistory {
     // Write the entry to the data file 
 
     e.type = type;
-    e.fileIndex = (short)dataFile.getFilePointer();
+    e.fileIndex = dataFile.getFilePointer();
     if (storeFullEntry) {
       e.sizeInFile = 0;
       for (ByteBuffer ent : entry) {
-        e.sizeInFile += (short)ent.remaining();
+        e.sizeInFile += ent.remaining();
         dataFile.write(ent.array(), ent.position(), ent.remaining());        
       }
     } else {
@@ -460,8 +461,12 @@ public class SecureHistoryImpl implements SecureHistory {
     
     if (ie.sizeInFile < 0) return null;
     
-    dataFile.seek(ie.fileIndex);
-    
+    try {
+      dataFile.seek(ie.fileIndex);
+    } catch (IOException ioe) {
+      logger.log("fileIndex:"+ie.fileIndex+" "+ie);
+      throw ioe;
+    }
     int bytesToRead = (maxSizeToRead>=ie.sizeInFile) ? ie.sizeInFile : maxSizeToRead;
     
     byte[] ret = new byte[bytesToRead];

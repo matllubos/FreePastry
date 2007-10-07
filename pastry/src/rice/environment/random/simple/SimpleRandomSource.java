@@ -112,7 +112,7 @@ public class SimpleRandomSource implements RandomSource {
   public void nextBytes(byte[] bytes) {
     rnd.nextBytes(bytes);
     if (logger != null) 
-      if (logger.level <= Logger.FINER) logger.log("nextBytes = "+bytes);
+      if (logger.level <= Logger.FINER) logger.log("nextBytes["+bytes.length+"] = "+bytes);
   }
   
   public double nextDouble() {
@@ -146,7 +146,7 @@ public class SimpleRandomSource implements RandomSource {
   public int nextInt(int max) {
     int ret = rnd.nextInt(max);
     if (logger != null) 
-      if (logger.level <= Logger.FINER) logger.log("nextInt = "+ret);
+      if (logger.level <= Logger.FINER) logger.log("nextInt2 = "+ret);
     return ret;
   }
   

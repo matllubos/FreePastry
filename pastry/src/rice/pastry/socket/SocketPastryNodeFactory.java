@@ -253,29 +253,14 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         natHandler = new StubNATHandler(environment, this.localAddress);
 //      natHandler = new SBBINatHandler(environment, this.localAddress);
       }
-    }
-    
-    if (params.contains("pastry_socket_use_own_random")
-        && params.getBoolean("pastry_socket_use_own_random")) {
-      if (params.contains("pastry_socket_random_seed")
-          && !params.getString("pastry_socket_random_seed").equalsIgnoreCase(
-              "clock")) {
-        this.random = new SimpleRandomSource(params
-            .getLong("pastry_socket_random_seed"), env.getLogManager(),
-            "socket");
-      } else {
-        this.random = new SimpleRandomSource(env.getLogManager(), "socket");
-      }
-    } else {
-      this.random = env.getRandomSource();
-    }
+    }    
   }
 
   // ********************** abstract methods **********************
   public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
     SocketNodeHandleFactory pnhf = (SocketNodeHandleFactory)nhf;
     MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)localNodeInfo;
-    return pnhf.getNodeHandle(proxyAddress, environment.getTimeSource().currentTimeMillis(), pn.getNodeId());
+    return pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId());
   }
   
   public NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) {
@@ -987,22 +972,15 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     // this code builds a different environment for each PastryNode
     Environment environment = cloneEnvironment(this.environment, nodeId);
     
+    Parameters params = environment.getParameters();
 //    System.out.println(environment.getLogManager());
-
-    // NOTE: We _don't_ want to use the environment RandomSource because this
-    // will cause
-    // problems if we run the same node twice quickly with the same seed. Epochs
-    // should really
-    // be different every time.
-    long epoch = random.nextLong();
 
     MultiInetSocketAddress localAddress = null;
     MultiInetSocketAddress proxyAddress = null;
     localAddress = getEpochAddress(port);
     proxyAddress = localAddress;
     
-    if (environment.getParameters().getBoolean(
-        "pastry_socket_increment_port_after_construction"))
+    if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
       port++; // this statement must go after the construction of srManager
               // because the
 

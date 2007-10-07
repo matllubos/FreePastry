@@ -202,6 +202,10 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
 //    }
   }
 
+  public String toStringFull() {
+    return "[SNH: " + nodeId + "/" + eaddress + " " + epoch+"]";
+  }
+
   /**
    * Equivalence relation for nodehandles. They are equal if and only if their
    * corresponding NodeIds are equal.

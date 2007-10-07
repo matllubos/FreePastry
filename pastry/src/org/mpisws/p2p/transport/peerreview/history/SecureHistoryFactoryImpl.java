@@ -50,14 +50,13 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.RandomAccessFileIOBuffer;
 
 public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntryFactory, PeerReviewEvents {
-  Logger logger;
-  
   Environment environment;
   
   HashProvider hashProv;
 
-  public SecureHistoryFactoryImpl(HashProvider hashProv) {
+  public SecureHistoryFactoryImpl(HashProvider hashProv, Environment env) {    
     this.hashProv = hashProv;
+    this.environment = env;
   }
   
   /**
@@ -89,7 +88,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     
     entry.serialize(indexFile);
     
-    SecureHistoryImpl history = new SecureHistoryImpl(indexFile, dataFile, false, hashProv, this, logger);
+    SecureHistoryImpl history = new SecureHistoryImpl(indexFile, dataFile, false, hashProv, this, environment.getLogManager().getLogger(SecureHistoryImpl.class, name));
     
     return history;
   }
@@ -125,7 +124,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
       throw ioe;
     }
 
-    return new SecureHistoryImpl(indexFile, dataFile, readOnly, hashProv, this, logger);
+    return new SecureHistoryImpl(indexFile, dataFile, readOnly, hashProv, this, environment.getLogManager().getLogger(SecureHistoryImpl.class, name));
   }
 
   public IndexEntry build(InputBuffer buf) throws IOException {

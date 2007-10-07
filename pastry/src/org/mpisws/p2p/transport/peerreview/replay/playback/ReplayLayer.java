@@ -28,6 +28,7 @@ import rice.environment.processing.sim.SimProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.simulated.DirectTimeSource;
+import rice.p2p.util.MathUtils;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
@@ -40,8 +41,8 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   long nextHistoryIndex = 0;
   IndexEntry next;
   
-  public ReplayLayer(IdentifierSerializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, long initialTime, Environment environment) throws IOException {
-    super(serializer, hashProv, history, localHandle, (short)0, (short)0, 0, initialTime, environment.getLogManager().getLogger(ReplayLayer.class, localHandle.toString()));
+  public ReplayLayer(IdentifierSerializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, Environment environment) throws IOException {
+    super(serializer, hashProv, history, localHandle, (short)0, (short)0, 0, environment.getLogManager().getLogger(ReplayLayer.class, localHandle.toString()));
     this.environment = environment;
 //    this.timeSource = ts;
   }
@@ -82,7 +83,7 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
-    logger.logException("sendMessage("+i+","+m+")", new Exception("Stack Trace"));
+//    logger.logException("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()), new Exception("Stack Trace"));
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+options+")");
     MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
     try {
@@ -90,6 +91,7 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
       if (deliverAckToMe != null) deliverAckToMe.ack(ret);
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("", ioe);
+      throw new RuntimeException(ioe);
     }
     return ret;
   }

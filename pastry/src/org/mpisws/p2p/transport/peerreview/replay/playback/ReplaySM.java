@@ -6,6 +6,7 @@ import org.mpisws.p2p.transport.peerreview.Verifier;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
+import rice.environment.logging.Logger;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.selector.SelectorManager;
@@ -50,13 +51,13 @@ public class ReplaySM extends SelectorManager {
   protected void executeDueTasks() {
     // Handle any pending timers. Note that we have to be sure to call them in the exact same
     // order as in the main code; otherwise there can be subtle bugs and side-effects. 
-    logger.log("executeDueTasks()");
+    if (logger.level <= Logger.FINER) logger.log("executeDueTasks()");
 
     boolean timerProgress = true;
     long now = verifier.getNextEventTime();
     while (timerProgress) {
       now = verifier.getNextEventTime();
-      timerProgress = false;
+//      timerProgress = false;
   
 //     int best = -1;
 //     for (int i=0; i<numTimers; i++) {
@@ -83,7 +84,7 @@ public class ReplaySM extends SelectorManager {
           next = (TimerTask) timerQueue.peek();
           if (next.scheduledExecutionTime() <= now) {
             timerQueue.poll(); // remove the event
-            simTime.setTime(next.scheduledExecutionTime()); // set the time
+            simTime.setTime(next.scheduledExecutionTime()); // set the time            
           } else {
             timerProgress = false;
           }
@@ -94,6 +95,7 @@ public class ReplaySM extends SelectorManager {
       
       if (timerProgress) {
         super.doInvocations();
+        if (logger.level <= Logger.FINE) logger.log("executing task "+next);
         if (next.execute(simTime)) { // execute the event
           synchronized(this) {
             timerQueue.add(next); // if the event needs to be rescheduled, add it back on

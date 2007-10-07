@@ -24,7 +24,6 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   protected SecureHistory history;
   PeerReviewCallback app;
   int numEventCallbacks;
-  long now;
   boolean foundFault;
   
   boolean haveNextEvent;
@@ -56,7 +55,6 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       short signatureSizeBytes, 
       short hashSizeBytes, 
       int firstEntryToReplay, 
-      long initialTime,
       Logger logger) /* : ReplayWrapper() */ throws IOException {
     this.logger = logger;
     this.history = history;
@@ -65,7 +63,6 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     this.serializer = serializer;
     this.hashProv = hashProv;
     this.localHandle = localHandle;
-    this.now = initialTime;
     this.foundFault = false;
     this.haveNextEvent = false;
     this.nextEventIndex = firstEntryToReplay-1;
@@ -283,9 +280,18 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       }
       
       byte[] loggedMsg = new byte[nextEvent.bytesRemaining()];
-      nextEvent.read(loggedMsg);
-      ByteBuffer loggedMsgBB = ByteBuffer.wrap(loggedMsg);
-      if ((msgLen > 0) && loggedMsgBB.equals(message)) {
+      byte[] sentMsg = new byte[message.remaining()];
+      message.get(sentMsg);
+      
+      if (loggedMsg.length != sentMsg.length) {
+        if (logger.level <= Logger.WARNING) logger.log("Replay: Message sent during replay differs from message in the log by length log:"+loggedMsg.length+" sent:"+sentMsg.length);
+        foundFault = true;
+        return;        
+      }
+      
+//      nextEvent.read(loggedMsg);
+//      ByteBuffer loggedMsgBB = ByteBuffer.wrap(loggedMsg);
+      if ((msgLen > 0) && Arrays.equals(loggedMsg, sentMsg)) {
         if (logger.level <= Logger.WARNING) logger.log("Replay: Message sent during replay differs from message in the log");
         foundFault = true;
         return;
@@ -327,8 +333,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
    * handle foreground requests 
    */
   public boolean makeProgress() throws IOException {
-    logger.log("makeProgress()");
-//    if (logger.level <= Logger.FINE) logger.log("makeProgress()");
+    if (logger.level <= Logger.FINE) logger.log("makeProgress()");
     if (foundFault || !haveNextEvent)
       return false;
       
@@ -370,10 +375,10 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 
 //    if (!haveNextEvent)
 //      return false;  
-
+    
     /* Sanity checks */
 
-    if (logger.level <= Logger.FINE) logger.log("Replaying event #"+nextEventIndex+" (type "+next.getType()+", seq="+next.getSeq()+", now="+now+")");
+    if (logger.level <= Logger.FINE) logger.log("Replaying event #"+nextEventIndex+" (type "+next.getType()+", seq="+next.getSeq()+")");
       
     if (nextEventIsHashed && (next.getType() != EVT_CHECKPOINT) && (next.getType() != EVT_INIT)) {
       if (logger.level <= Logger.WARNING) logger.log("Replay: Trying to replay hashed event");
@@ -387,7 +392,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       case EVT_SEND : /* SEND events should have been handled by Verifier::send() */
       {
 //        if (logger.level <= Logger.FINE) logger.log("Replay: Encountered EVT_SEND, waiting for node.");
-        if (logger.level <= Logger.WARNING) logger.log("Replay: Encountered EVT_SEND; marking as invalid");
+        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SEND; marking as invalid", new Exception("Stack Trace"));
 //        transport->dump(2, nextEvent, next.getSizeInFile());
         foundFault = true;
         return false;
