@@ -40,8 +40,11 @@ public class AttachableCancellable implements Cancellable {
     if (c == null) return;
     boolean cancel = false;
     synchronized(this) {
-      if (subCancellable == null) cancel = true;
-      subCancellable.add(c);      
+      if (subCancellable == null) {
+        cancel = true;
+      } else {
+        subCancellable.add(c);      
+      }
     } 
     if (cancel) {
       c.cancel();

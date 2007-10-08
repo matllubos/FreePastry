@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -73,6 +74,7 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.exception.NodeIsDeadException;
 import rice.p2p.util.SortedLinkedList;
+import rice.p2p.util.tuples.Tuple;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
@@ -694,18 +696,29 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     
     public void purge(IOException ioe) {
       if (logger.level <= Logger.FINE) logger.log(this+"purge("+ioe+"):"+messageThatIsBeingWritten);
+      ArrayList<Tuple<MessageCallback<Identifier, ByteBuffer>, MessageWrapper>> callSendFailed = 
+        new ArrayList<Tuple<MessageCallback<Identifier, ByteBuffer>, MessageWrapper>>();
       synchronized(queue) {
         // return NodeIsFaultyException to all of the message(s) deliverAckToMe(s)
         if (messageThatIsBeingWritten != null) {
           messageThatIsBeingWritten.reset();
-          if (messageThatIsBeingWritten.deliverAckToMe != null) 
-            messageThatIsBeingWritten.deliverAckToMe.sendFailed(messageThatIsBeingWritten, ioe);           
+          if (messageThatIsBeingWritten.deliverAckToMe != null) {
+            callSendFailed.add(new Tuple(messageThatIsBeingWritten.deliverAckToMe, messageThatIsBeingWritten));
+//            messageThatIsBeingWritten.deliverAckToMe.sendFailed(messageThatIsBeingWritten, ioe);           
+          }
           messageThatIsBeingWritten = null;
         }
         for (MessageWrapper msg : queue) {
-          if (msg.deliverAckToMe != null) msg.deliverAckToMe.sendFailed(msg, ioe); 
+          if (msg.deliverAckToMe != null) {
+            callSendFailed.add(new Tuple(msg.deliverAckToMe, msg));
+//            msg.deliverAckToMe.sendFailed(msg, ioe); 
+          }
         }
         queue.clear();
+      }
+      
+      for (Tuple<MessageCallback<Identifier, ByteBuffer>, MessageWrapper> t : callSendFailed) {
+        t.a().sendFailed(t.b(), ioe);
       }
       
       synchronized(sockets) {

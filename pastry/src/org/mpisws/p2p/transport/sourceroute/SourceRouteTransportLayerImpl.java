@@ -346,7 +346,17 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
     
     int pos = m.position(); // need to reset to this spot if we forward the message
     SimpleInputBuffer sib = new SimpleInputBuffer(m.array(), pos);
-    final SourceRoute<Identifier> sr = srFactory.build(sib);
+
+    SourceRoute<Identifier> tempSr;
+    try {
+      tempSr = srFactory.build(sib);
+    } catch (Exception e) {
+      // Got NegativeArrayException from serialized message
+      errorHandler.receivedException(srFactory.getSourceRoute(etl.getLocalIdentifier(), i), e);
+      return;
+    }
+    
+    final SourceRoute<Identifier> sr = tempSr;
     
     // advance m properly
     m.position(m.array().length - sib.bytesRemaining());
