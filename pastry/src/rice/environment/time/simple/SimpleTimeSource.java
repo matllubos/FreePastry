@@ -66,6 +66,10 @@ public class SimpleTimeSource implements TimeSource {
     Thread.sleep(delay);
   }
 
+  public void destroy() {
+
+  }
+
 //  public void wait(Object lock, int timeToWait) throws InterruptedException {
 //    if (selector.isSelectorThread()) throw new IllegalStateException("You can't call this on the selector thread.");
 //    lock.wait(timeToWait);

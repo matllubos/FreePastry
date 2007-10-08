@@ -147,16 +147,16 @@ public class Replayer implements MyEvents, EventCallback {
 //    app.subscribe();
   
     // now, print the tree
-    env.getTimeSource().sleep(5000);
+//    env.getTimeSource().sleep(5000);
   
-    env.getTimeSource().sleep(15000);
+    env.getTimeSource().sleep(55000);
   
     env.destroy();    
   }
   
   public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
 //  Environment env = Environment.directEnvironment();
-    System.out.println(id.toStringFull()+" "+addr.getAddress().getHostAddress()+" "+bootaddress.getPort()+" "+startTime+" "+randSeed);
+    System.out.println(id.toStringFull()+" "+addr.getAddress().getHostAddress()+" "+addr.getPort()+" "+bootaddress.getPort()+" "+startTime+" "+randSeed);
     
     new Replayer(id, addr, bootaddress, startTime, randSeed);
   }
@@ -170,17 +170,18 @@ public class Replayer implements MyEvents, EventCallback {
     String hex = args[0];
     InetAddress a = InetAddress.getByName(args[1]);
     int startPort = Integer.decode(args[2]).intValue();
-    InetSocketAddress addr = new InetSocketAddress(a,startPort+1);
-    InetSocketAddress bootaddress = new InetSocketAddress(a,startPort);
-    long startTime = Long.decode(args[3]).longValue();
-    long randSeed = Long.decode(args[4]).longValue();
+    int bootPort = Integer.decode(args[3]).intValue();
+    InetSocketAddress addr = new InetSocketAddress(a,startPort);
+    InetSocketAddress bootaddress = new InetSocketAddress(a,bootPort);
+    long startTime = Long.decode(args[4]).longValue();
+    long randSeed = Long.decode(args[5]).longValue();
     
     replayNode(Id.build(hex), addr, bootaddress, startTime, randSeed);
 
   }
 
   public void replayEvent(short type, InputBuffer entry) {
-    logger.log("replayEvent("+type+")");
+    if (logger.level <= Logger.FINE) logger.log("replayEvent("+type+")");
     switch (type) {
     case EVT_BOOT:
       node.getBootstrapper().boot(Collections.singletonList(bootaddress));

@@ -216,7 +216,13 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     }
 
     // Are we sending to the same destination? 
-    Identifier logReceiver = serializer.deserialize(nextEvent);
+    Identifier logReceiver;
+    try {
+     logReceiver = serializer.deserialize(nextEvent);
+    } catch (IllegalArgumentException iae) {
+      if (logger.level <= Logger.WARNING) logger.log("Error deserializing event "+nextEventIndex+". send("+target+","+message+")");
+      throw iae;
+    }
     if (!logReceiver.equals(target)) {
       if (logger.level <= Logger.WARNING) logger.log("Replay: SEND to "+target+" during replay, but log shows SEND to "+logReceiver+"; marking as invalid");
       foundFault = true;

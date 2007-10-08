@@ -51,10 +51,10 @@ public class SimpleExceptionStrategy implements ExceptionStrategy {
   }
   
   public void handleException(Object source, Throwable t) {
-    if (logger.level <= Logger.WARNING) logger.log("handleException("+source+","+t+")");
+    if (logger.level <= Logger.WARNING) logger.logException("handleException("+source+")",t);
     if (source instanceof SelectorManager) {
       SelectorManager sm = (SelectorManager)source;
-      sm.destroy();
+      sm.getEnvironment().destroy();
     }
   }
 

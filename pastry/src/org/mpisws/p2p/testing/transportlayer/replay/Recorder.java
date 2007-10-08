@@ -114,6 +114,8 @@ public class Recorder implements MyEvents {
   public Recorder(int bindport, InetSocketAddress bootaddress,
       int numNodes, Environment env) throws Exception {
     
+    Parameters params = env.getParameters();
+    
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
@@ -123,14 +125,14 @@ public class Recorder implements MyEvents {
       @Override
       public rice.pastry.NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
         SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf, localNodeInfo);
-        //logger.log(ret.toStringFull());
+        if (logger.level <= Logger.FINE) logger.log("getLocalHandle():"+ret.toStringFull());
         return ret;
       }
       
       @Override
       protected RandomSource cloneRandomSource(Environment rootEnvironment, Id nodeId, LogManager lman) {
         long randSeed = rootEnvironment.getRandomSource().nextLong();
-//        logger.log("RandSeed for "+nodeId+" "+randSeed);
+        if (logger.level <= Logger.FINE) logger.log("RandSeed for "+nodeId+" "+randSeed);
         
         storedRandSeed.put(nodeId, randSeed); 
         
@@ -226,14 +228,28 @@ public class Recorder implements MyEvents {
 
     env.destroy();
     
+    System.out.println("done recording");
+    Thread.sleep(1000);
+
     Iterator<MyScribeClient> mscI = apps.iterator();
-    mscI.next();
-    Endpoint endpoint = mscI.next().endpoint;
-    
-    printLog("0x"+endpoint.getId().toStringFull().substring(0,6), new Environment());
-    
-    SocketNodeHandle snh = (SocketNodeHandle)endpoint.getLocalNodeHandle();
-    Replayer.replayNode((rice.pastry.Id)snh.getId(), snh.getInetSocketAddress(), bootaddress, snh.getEpoch(), storedRandSeed.get(snh.getId()));
+    while(mscI.hasNext()) {
+      app = mscI.next();
+      Endpoint endpoint = app.endpoint;
+      
+      System.out.println("playing back "+app.node);
+
+      
+      if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.Recorder_printlog")) 
+        printLog("0x"+endpoint.getId().toStringFull().substring(0,6), new Environment());
+      
+      SocketNodeHandle snh = (SocketNodeHandle)endpoint.getLocalNodeHandle();
+      try {
+        Replayer.replayNode((rice.pastry.Id)snh.getId(), snh.getInetSocketAddress(), bootaddress, snh.getEpoch(), storedRandSeed.get(snh.getId()));
+      } catch (InterruptedException ie) {
+       
+      }
+      System.out.println("finished playing "+app.node);
+    }
   }
   
   public abstract class AppInvokation implements Runnable {
@@ -366,8 +382,12 @@ public class Recorder implements MyEvents {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
-//    System.setOut(new PrintStream("replay.txt"));
-//    System.setErr(System.out);
+    Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
+
+    if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.Recorder_logtofile")) {
+      System.setOut(new PrintStream("replay.txt"));
+      System.setErr(System.out);
+    }
     
     // Loads pastry configurations
     Environment env = RecordLayer.generateEnvironment();

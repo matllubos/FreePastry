@@ -39,6 +39,10 @@ advised of the possibility of such damage.
  */
 package rice.environment.time.simulated;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+
+import rice.Destructable;
 import rice.environment.logging.*;
 import rice.environment.params.Parameters;
 import rice.environment.time.TimeSource;
@@ -50,6 +54,11 @@ public class DirectTimeSource implements TimeSource {
   protected Logger logger = null;
   protected String instance;
   protected SelectorManager selectorManager;
+  
+  /**
+   * When destry is called, throw an interrupted exception on all of these.
+   */
+  protected HashSet<BlockingTimerTask> pendingTimers = new HashSet<BlockingTimerTask>();
   
   public DirectTimeSource(long time) {
     this(time, null);
@@ -74,6 +83,7 @@ public class DirectTimeSource implements TimeSource {
   
   public void setSelectorManager(SelectorManager sm) {
     selectorManager = sm;
+    
   }
   
   public long currentTimeMillis() {
@@ -101,6 +111,7 @@ public class DirectTimeSource implements TimeSource {
 
   private class BlockingTimerTask extends TimerTask {
     boolean done = false;
+    boolean interrupted = false;
     
     public void run() {
       synchronized(selectorManager) {
@@ -110,6 +121,10 @@ public class DirectTimeSource implements TimeSource {
 //        Thread.yield();
       }
     }
+
+    public void interrupt() {
+      interrupted = true;
+    }
     
   }
   
@@ -117,13 +132,16 @@ public class DirectTimeSource implements TimeSource {
     synchronized(selectorManager) { // to prevent an out of order acquisition
       // we only lock on the selector
       BlockingTimerTask btt = new BlockingTimerTask();
+      pendingTimers.add(btt);
       if (logger.level <= Logger.FINE) logger.log("DirectTimeSource.sleep("+delay+")");
       
       selectorManager.getTimer().schedule(btt,delay);
       
       while(!btt.done) {
         selectorManager.wait(); 
+        if (btt.interrupted) throw new InterruptedException("TimeSource destroyed.");
       }
+      pendingTimers.remove(btt);
     }
   }
 
@@ -140,5 +158,15 @@ public class DirectTimeSource implements TimeSource {
 //    btt.cancel();
 //    
 //  }
+  
+  /**
+   * TODO: Get the synchronization on this correct
+   */
+  public void destroy() {
+    for (BlockingTimerTask btt : new ArrayList<BlockingTimerTask>(pendingTimers)) {
+      btt.interrupt();
+    }
+    pendingTimers.clear();
+  }
   
 }

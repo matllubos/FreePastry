@@ -62,13 +62,13 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   protected Selector selector;
 
   // a list of the invocations that need to be done in this thread
-  protected LinkedList invocations;
+  protected LinkedList<Runnable> invocations;
 
   // the list of handlers which want to change their key
-  protected HashSet modifyKeys;
+  protected HashSet<SelectionKey> modifyKeys;
 
   // the list of keys waiting to be cancelled
-  protected HashSet cancelledKeys;
+  protected HashSet<SelectionKey> cancelledKeys;
 
   // the set used to store the timer events
 //  protected TreeSet timerQueue = new TreeSet();
@@ -103,9 +103,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
         + instance);
     this.instance = instance;
     this.logger = log.getLogger(getClass(), instance);
-    this.invocations = new LinkedList();
-    this.modifyKeys = new HashSet();
-    this.cancelledKeys = new HashSet();
+    this.invocations = new LinkedList<Runnable>();
+    this.modifyKeys = new HashSet<SelectionKey>();
+    this.cancelledKeys = new HashSet<SelectionKey>();
     this.timeSource = timeSource;
 
     // attempt to create selector
@@ -277,7 +277,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
         if (logger.level <= Logger.SEVERE) logger.logException(
             "ERROR (SelectorManager.run): " , t);
         environment.getExceptionStrategy().handleException(this, t);
-        System.exit(-1);
+//        System.exit(-1);
       }
     } // while(running)
     invocations.clear();
@@ -327,7 +327,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     lastTime = now;
   }
 
-  ArrayList loopObservers = new ArrayList();
+  ArrayList<LoopObserver> loopObservers = new ArrayList<LoopObserver>();
 
   public void addLoopObserver(LoopObserver lo) {
     synchronized (loopObservers) {
@@ -347,7 +347,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     // to debug weird selection bug
     if (keys.length > 1000 && logger.level <= Logger.FINE) {
       logger.log("lots of selection keys!");
-      HashMap histo = new HashMap();
+      HashMap<String, Integer> histo = new HashMap<String, Integer>();
       for (int i = 0; i < keys.length; i++) {
         String keyclass = keys[i].getClass().getName();
         if (histo.containsKey(keyclass)) {
@@ -404,9 +404,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * called by the selector thread.
    */
   protected void doInvocations() {
-    Iterator i;
+    Iterator<Runnable> i;
     synchronized (this) {
-      i = new ArrayList(invocations).iterator();
+      i = new ArrayList<Runnable>(invocations).iterator();
       invocations.clear();
     }
 
@@ -420,13 +420,14 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       }
     }
 
+    Iterator<SelectionKey> i2;
     synchronized (this) {
-      i = new ArrayList(modifyKeys).iterator();
+      i2 = new ArrayList<SelectionKey>(modifyKeys).iterator();
       modifyKeys.clear();
     }
 
-    while (i.hasNext()) {
-      SelectionKey key = (SelectionKey) i.next();
+    while (i2.hasNext()) {
+      SelectionKey key = (SelectionKey) i2.next();
       if (key.isValid() && (key.attachment() != null))
         ((SelectionKeyHandler) key.attachment()).modifyKey(key);
     }
@@ -497,9 +498,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @return The array of keys
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  private SelectionKey[] keys() throws IOException {
-    return (SelectionKey[]) selector.keys().toArray(new SelectionKey[0]);
-  }
+//  private SelectionKey[] keys() throws IOException {
+//    return (SelectionKey[]) selector.keys().toArray(new SelectionKey[0]);
+//  }
 
   /**
    * Selects all of the currenlty selected keys on the selector and returns the
@@ -701,6 +702,10 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 
   public void setSelect(boolean b) {
     select = b;
+  }
+
+  public Environment getEnvironment() {
+    return environment;
   }
 
 }

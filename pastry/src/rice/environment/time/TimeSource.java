@@ -39,6 +39,8 @@ advised of the possibility of such damage.
  */
 package rice.environment.time;
 
+import rice.Destructable;
+
 /**
  * Virtualized clock for FreePastry.  
  * 
@@ -50,7 +52,7 @@ package rice.environment.time;
  * 
  * @author Jeff Hoye
  */
-public interface TimeSource {
+public interface TimeSource extends Destructable {
   /**
    * @return the current time in millis
    */

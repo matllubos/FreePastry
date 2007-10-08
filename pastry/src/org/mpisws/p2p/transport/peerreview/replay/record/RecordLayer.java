@@ -152,7 +152,13 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
-//    logger.logException("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()), new Exception("Stack Trace"));
+    if (logger.level <= Logger.FINEST) {
+      logger.logException("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()), new Exception("Stack Trace"));      
+    } else if (logger.level <= Logger.FINER) {
+      logger.log("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()));
+    } else if (logger.level <= Logger.FINE) {
+      logger.log("sendMessage("+i+","+m+")");      
+    }
     // If the 'RELEVANT_MSG' flag is set to false, the message is passed through to the transport
     // layer. This is used e.g. for liveness/proximity pings in Pastry. 
     if (options == null || !options.containsKey(PR_RELEVANT_MSG) || options.get(PR_RELEVANT_MSG) != 0) {

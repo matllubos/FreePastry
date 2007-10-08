@@ -83,8 +83,13 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
-//    logger.logException("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()), new Exception("Stack Trace"));
-    if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+options+")");
+    if (logger.level <= Logger.FINEST) {
+      logger.logException("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()), new Exception("Stack Trace"));      
+    } else if (logger.level <= Logger.FINER) {
+      logger.log("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()));
+    } else if (logger.level <= Logger.FINE) {
+      logger.log("sendMessage("+i+","+m+")");      
+    }
     MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
     try {
       send(i, m, -1);

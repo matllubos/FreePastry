@@ -46,6 +46,7 @@ public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializ
   }
 
   public static void printLog(String name, EntryDeserializer deserializer, Environment env) throws IOException {
+    System.out.println("printLog("+name+")");
     String line;
     
     HashProvider hashProv = new NullHashProvider();
