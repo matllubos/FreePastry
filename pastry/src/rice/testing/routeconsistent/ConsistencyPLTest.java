@@ -75,6 +75,7 @@ import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.splitstream.ChannelId;
 import rice.p2p.splitstream.testing.MySplitStreamClient;
@@ -100,6 +101,39 @@ import rice.selector.TimerTask;
  * @author Jeff Hoye
  */
 public class ConsistencyPLTest implements Observer, LoopObserver {
+  static void setupParams(Parameters params) {
+    params.setBoolean("logging_packageOnly",false);
+    
+    params.setInt("rice.pastry_loglevel", Logger.INFO);
+//    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO);
+   
+//    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
+//    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
+//    params.setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
+//    params.setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
+//    params.setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
+//    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
+//    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
+//    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.INFO);
+//    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
+    params.setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);
+    
+    params.setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
+    
+    // turn on consistent join protocol's logger to make sure this is correct for consistency
+    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE);
+    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
+    
+    // to see rapid rerouting and dropping from consistency if gave lease
+//    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
+//    params.setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
+    
+//    params.setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
+//    params.setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
+    
+//    params.setInt("rice.pastry.socket.SocketNodeHandle_loglevel",Logger.ALL);
+    }
+  
   public static final int startPort = 21854;
   public static final int WAIT_TO_SUBSCRIBE_DELAY = 60000;
   
@@ -333,36 +367,14 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       Environment env = new Environment();
       
       environment = env;
-      environment.getParameters().setBoolean("logging_packageOnly",false);
       
-      environment.getParameters().setInt("rice.pastry_loglevel", Logger.INFO);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO);
-     
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
-//      environment.getParameters().setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
-//      environment.getParameters().setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
-      environment.getParameters().setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.INFO);
-//      environment.getParameters().setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
-      environment.getParameters().setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);
+      Parameters params = environment.getParameters(); 
       
-      environment.getParameters().setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
+      setupParams(params);
       
-      // turn on consistent join protocol's logger to make sure this is correct for consistency
-      environment.getParameters().setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE);
-      environment.getParameters().setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
+      // log everything while booting, this gets turned off on SETREADY
+      params.setInt("org.mpisws.p2p.transport_loglevel",Logger.ALL);
       
-      // to see rapid rerouting and dropping from consistency if gave lease
-//      environment.getParameters().setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
-//      environment.getParameters().setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
-      
-//      environment.getParameters().setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
-//      environment.getParameters().setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
-      
-//      environment.getParameters().setInt("rice.pastry.socket.SocketNodeHandle_loglevel",Logger.ALL);
 //      if (args.length > 0) {
 //        int theVal = Integer.parseInt(args[0]);
 //        if (theVal >= 0) {
@@ -378,6 +390,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //          env.getParameters().setInt("pastry_socket_srm_num_source_route_attempts", (int)now); 
 //        }
 //      }
+      
             
       System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
 //      System.out.println("Ping Neighbor Period:"+env.getParameters().getInt("pastry_protocol_periodicLeafSet_ping_neighbor_period"));
@@ -666,6 +679,9 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         Thread.sleep(100);
       }
       System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
+      
+      params.setInt("org.mpisws.p2p.transport_loglevel",Logger.WARNING);
+      setupParams(params);
       
       if (useSplitStream) {
         app.subscribeToAllChannels();    

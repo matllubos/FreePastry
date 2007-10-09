@@ -53,6 +53,7 @@ public class ReplaySM extends SelectorManager {
     // order as in the main code; otherwise there can be subtle bugs and side-effects. 
     if (logger.level <= Logger.FINER) logger.log("executeDueTasks()");
 
+    if (isSuccess()) return;
     boolean timerProgress = true;
     long now = verifier.getNextEventTime();
     while (timerProgress) {
@@ -107,12 +108,27 @@ public class ReplaySM extends SelectorManager {
     super.doInvocations();
     
     try {
-      verifier.makeProgress();
+      if (!verifier.makeProgress()) {
+        isSuccess();
+      }
       if (!verifier.verifiedOK()) throw new RuntimeException("Verification failed.");
+
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
   }  
+
+  protected boolean isSuccess() {
+    boolean ret = verifier.isSuccess();
+    if (ret) {
+      // success!
+      logger.log("success!");
+      // TODO: do something different 
+      environment.destroy();    
+    }
+    return ret;
+  }
+  
   
   @Override
   protected void doInvocations() {

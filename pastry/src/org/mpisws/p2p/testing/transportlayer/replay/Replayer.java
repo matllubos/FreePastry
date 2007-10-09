@@ -55,7 +55,10 @@ public class Replayer implements MyEvents, EventCallback {
   public Replayer(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
     this.bootaddress = bootaddress;
     Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed);
-    env.getParameters().setBoolean("pastry_socket_use_own_random",false);
+    
+    final Parameters params = env.getParameters();
+    
+    params.setBoolean("pastry_socket_use_own_random",false);
 //    env.getParameters().setInt("rice.environment.random_loglevel", Logger.FINER);
 
     logger = env.getLogManager().getLogger(Replayer.class, null);
@@ -76,7 +79,11 @@ public class Replayer implements MyEvents, EventCallback {
       @Override
       protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
         // get rid of the priorityLayer
-        return trans;
+        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
+          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
+        } else {
+          return trans;
+        }
       }
 
       @Override

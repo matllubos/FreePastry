@@ -131,7 +131,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
           if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
         }
         socketIdBuffer.clear();
-        deliverSocketToMe.receiveResult(ret, new RecordSocket(i, sock, logger, options, socketId, socketIdBuffer, history));
+        deliverSocketToMe.receiveResult(ret, new RecordSocket<Identifier>(i, sock, logger, options, socketId, socketIdBuffer, history));
       }
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
         socketIdBuffer.clear();
@@ -148,7 +148,15 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
-    callback.incomingSocket(s);
+    final int socketId = socketCtr++;
+    final ByteBuffer socketIdBuffer = ByteBuffer.wrap(MathUtils.intToByteArray(socketId));
+    try {
+      logEvent(EVT_SOCKET_OPEN_INCOMING, identifierSerializer.serialize(s.getIdentifier()), socketIdBuffer);
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("incomingSocket("+s.getIdentifier()+")",ioe); 
+    }
+    
+    callback.incomingSocket(new RecordSocket<Identifier>(s.getIdentifier(), s, logger, s.getOptions(), socketId, socketIdBuffer, history));
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {

@@ -89,7 +89,36 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     return next;
   }
   
-  protected abstract void receive(Identifier from, ByteBuffer msg, long timeToDeliver);
+  /**
+   * Callback when a message has arrived.
+   * 
+   * @param from
+   * @param msg
+   * @throws IOException
+   */
+  protected abstract void receive(Identifier from, ByteBuffer msg) throws IOException;
+  
+  /**
+   * Callback when a socket comes in from a remote node.
+   * 
+   * @param from
+   * @param socketId
+   * @throws IOException
+   */
+  protected abstract void incomingSocket(Identifier from, int socketId) throws IOException;
+  
+  /**
+   * Callback when a socket is ready to read/write.
+   * 
+   * Note that the simulated node should have already registered for this event, even though it is
+   * not logged.  If the node is not registred for the event, it is an error.
+   * 
+   * @param socketId
+   * @param canRead
+   * @param canWrite
+   * @throws IOException
+   */
+  protected abstract void socketIO(int socketId, boolean canRead, boolean canWrite) throws IOException;
   
   /**
    * Fetch the next log entry, or set the EOF flag 
@@ -217,12 +246,12 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 
     // Are we sending to the same destination? 
     Identifier logReceiver;
-    try {
+//    try {
      logReceiver = serializer.deserialize(nextEvent);
-    } catch (IllegalArgumentException iae) {
-      if (logger.level <= Logger.WARNING) logger.log("Error deserializing event "+nextEventIndex+". send("+target+","+message+")");
-      throw iae;
-    }
+//    } catch (IllegalArgumentException iae) {
+//      if (logger.level <= Logger.WARNING) logger.log("Error deserializing event "+nextEventIndex+". send("+target+","+message+")");
+//      throw iae;
+//    }
     if (!logReceiver.equals(target)) {
       if (logger.level <= Logger.WARNING) logger.log("Replay: SEND to "+target+" during replay, but log shows SEND to "+logReceiver+"; marking as invalid");
       foundFault = true;
@@ -286,6 +315,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       }
       
       byte[] loggedMsg = new byte[nextEvent.bytesRemaining()];
+      nextEvent.read(loggedMsg);
       byte[] sentMsg = new byte[message.remaining()];
       message.get(sentMsg);
       
@@ -297,7 +327,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       
 //      nextEvent.read(loggedMsg);
 //      ByteBuffer loggedMsgBB = ByteBuffer.wrap(loggedMsg);
-      if ((msgLen > 0) && Arrays.equals(loggedMsg, sentMsg)) {
+      if ((msgLen > 0) && !Arrays.equals(loggedMsg, sentMsg)) {
         if (logger.level <= Logger.WARNING) logger.log("Replay: Message sent during replay differs from message in the log");
         foundFault = true;
         return;
@@ -309,6 +339,123 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       assert(next.getType() == EVT_SENDSIGN);
     }
     fetchNextEvent();
+  }
+  
+  /**
+   * Return the new socketId
+   * @param i
+   * @return the new socketId, Integer.MIN_VALUE for an error
+   */
+  public int openSocket(Identifier target) throws IOException {
+    if (!haveNextEvent) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: OpenSocket event after end of segment; marking as invalid");
+      foundFault = true;
+      return Integer.MIN_VALUE;
+    }
+
+    if (next.getType() != EVT_SOCKET_OPEN_OUTGOING) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_OPEN_OUTGOING event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      foundFault = true;
+      return Integer.MIN_VALUE;
+    }
+
+    Identifier logReceiver;
+    logReceiver = serializer.deserialize(nextEvent);
+    if (!logReceiver.equals(target)) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_OPEN_OUTGOING to "+target+" during replay, but log shows SOCKET_OPEN_OUTGOING to "+logReceiver+"; marking as invalid");
+      foundFault = true;
+      return Integer.MIN_VALUE;
+    }
+
+    return nextEvent.readInt();
+  }
+  
+  /**
+   * Return the bytes read.
+   * 
+   * @param socketId
+   * @return number of bytes read
+   */
+  public int readSocket(int socketId, ByteBuffer dst) throws IOException {
+    if (!haveNextEvent) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: ReadSocket event after end of segment; marking as invalid");
+      foundFault = true;
+      return 0;
+    }
+    
+    if (next.getType() != EVT_SOCKET_READ) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_READ event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      foundFault = true;
+      return Integer.MIN_VALUE;
+    }
+
+    int loggedSocket = nextEvent.readInt();
+    if (loggedSocket != socketId) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_READ on socket "+socketId+" during replay, but log shows SOCKET_READ to "+loggedSocket+"; marking as invalid");
+      foundFault = true;
+      return 0;
+    }
+    
+    // TODO: Change this when we make multiple reads a single event
+    int ret = nextEvent.bytesRemaining();
+    if (dst.remaining() < ret) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_READ reading a maximum of "+dst.remaining()+" on socket "+socketId+" during replay, but log shows SOCKET_READ reading "+ret+" bytes; marking as invalid");
+      foundFault = true;
+      return 0;
+    }
+    
+    nextEvent.read(dst.array(), dst.position(), ret);
+    dst.position(dst.position()+ret);
+    return ret;
+  }
+  
+  /**
+   * Return the bytes written.
+   * 
+   * @param socketId
+   * @return number of bytes written
+   */
+  public int writeSocket(int socketId, ByteBuffer src) throws IOException {
+    if (!haveNextEvent) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: WriteSocket event after end of segment; marking as invalid");
+      foundFault = true;
+      return 0;
+    }
+    
+    if (next.getType() != EVT_SOCKET_WRITE) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_WRITE event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      foundFault = true;
+      return Integer.MIN_VALUE;
+    }
+
+    int loggedSocket = nextEvent.readInt();
+    if (loggedSocket != socketId) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_WRITE on socket "+socketId+" during replay, but log shows SOCKET_WRITE to "+loggedSocket+"; marking as invalid");
+      foundFault = true;
+      return 0;
+    }
+    
+    // TODO: Change this when we make multiple reads a single event
+    int ret = nextEvent.bytesRemaining();
+    if (src.remaining() < ret) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_WRITE writing a maximum of "+src.remaining()+" on socket "+socketId+" during replay, but log shows SOCKET_WRITE writing "+ret+" bytes; marking as invalid");
+      foundFault = true;
+      return 0;
+    }
+    
+    byte[] loggedMsg = new byte[ret];
+    byte[] sentMsg = new byte[ret];
+    nextEvent.read(loggedMsg);
+    src.get(sentMsg);
+
+    if (!Arrays.equals(loggedMsg, sentMsg)) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: Message wrote during replay differs from message in the log");
+      foundFault = true;
+      return 0;
+    }
+    
+    return ret;
+
   }
   
   /**
@@ -422,7 +569,6 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         nextEvent.read(msgBytes);
         ByteBuffer msgBuf = ByteBuffer.wrap(msgBytes);
         
-        long receiveTime = next.getSeq()/1000000;
         /* The next event is going to be a SIGN; skip it, since it's irrelevant here */
 
         if (useSendSign) {
@@ -439,7 +585,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         /* Deliver the message to the state machine */
         
 //        app->receive(sender, false, msgbuf, msglen);
-        receive(sender, msgBuf, receiveTime);
+        receive(sender, msgBuf);
         break;
       }
       case EVT_SIGN : /* SIGN events should have been handled by the preceding RECV */
@@ -535,13 +681,16 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //        fetchNextEvent();
 //        break;
 //      }
-      case EVT_INIT : /* State machine is reinitialized; issue upcall */
-      {
+      case EVT_INIT: /* State machine is reinitialized; issue upcall */
         initialized = true;
 //        app->init();
         fetchNextEvent();
         break;
-      }
+      case EVT_SOCKET_OPEN_INCOMING:
+        Identifier opener = serializer.deserialize(nextEvent);
+        int socketId = nextEvent.readInt();
+        incomingSocket(opener, socketId);
+      
       default :
       {
         if (!eventCallback.containsKey(next.getType())) {
@@ -564,5 +713,15 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   public long getNextEventTime() {
     return next.getSeq()/1000000;
   }
+  
+  public boolean isSuccess() {
+    if (initialized && verifiedOK()) {
+      if (next == null) return true;
+    }
+//    logger.log("i:"+initialized+" v:"+verifiedOK()+" n:"+nextEvent);
+    return false;
+  }
+  
+
 
 }

@@ -36,46 +36,14 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   TransportLayer<Identifier, ByteBuffer> {
 
   TransportLayerCallback<Identifier, ByteBuffer> callback;
-//  DirectTimeSource timeSource;
-  
-  long nextHistoryIndex = 0;
-  IndexEntry next;
-  
+    
   public ReplayLayer(IdentifierSerializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, Environment environment) throws IOException {
     super(serializer, hashProv, history, localHandle, (short)0, (short)0, 0, environment.getLogManager().getLogger(ReplayLayer.class, localHandle.toString()));
     this.environment = environment;
-//    this.timeSource = ts;
   }
   
 
   
-//  public IndexEntry getNextEvent() {
-//    IndexEntry event = log.statEntry(nextHistoryIndex);
-//    nextHistoryIndex++;
-//    return event;
-//  }
-//  
-//  public boolean playNextEvent() {
-//    if (next != null) return false;
-//    next = getNextEvent();
-//    setTime(next.getSeq()/1000);
-//    switch(next.getType()) {
-//    case EVT_SEND:
-//      // wait for the message to be sent
-//      break;
-//    case EVT_RECV:
-//      playReceived(next);
-//      next = null;
-//    }
-//  }
-//  
-//  public void playReceived(IndexEntry ie) {
-//    
-//  }
-//  
-//  public void setTime(long now) {
-//    timeSource.setTime(now);
-//  }
 
   public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
     // TODO Auto-generated method stub
@@ -119,43 +87,30 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   public void acceptMessages(boolean b) {
   }
 
-  public void acceptSockets(boolean b) {
+  public void acceptSockets(boolean b) {    
   }
 
   Environment environment;
 
   @Override
-  protected void receive(final Identifier from, final ByteBuffer msg, final long timeToDeliver) {
-//    logger.log("receive("+from+","+msg+","+timeToDeliver+"):"+(timeToDeliver-environment.getTimeSource().currentTimeMillis()));
-    if (logger.level <= Logger.FINER) logger.log("receive("+from+","+msg+","+timeToDeliver+"):"+(timeToDeliver-environment.getTimeSource().currentTimeMillis()));
-    
-    long now = environment.getTimeSource().currentTimeMillis();
-    if (timeToDeliver != now) throw new RuntimeException("Incorrect time on receive now:"+now+" timeToDeliver:"+timeToDeliver);
-    
-//    environment.getSelectorManager().schedule(new TimerTask() {
-//    
-//      @Override
-//      public long scheduledExecutionTime() {
-//        return timeToDeliver;
-//      }
-//    
-//      @Override
-//      public void run() {
-        try {
+  protected void receive(final Identifier from, final ByteBuffer msg) throws IOException {
+    if (logger.level <= Logger.FINER) logger.log("receive("+from+","+msg+")");
+        
 //          if (logger.level <= Logger.FINE) logger.log("receive("+from+","+msg+","+timeToDeliver+")");
-          callback.messageReceived(from, msg, null);
-        } catch (IOException ioe) {
-          if (logger.level <= Logger.WARNING) logger.logException("Error in receive",ioe);
-        }
-//        // TODO: pump next event makeProgress()
-//      }    
-//      
-//      public String toString() {
-//        return "Delivery for receive("+from+","+msg+","+timeToDeliver+")";
-//      }
-//    });
+    callback.messageReceived(from, msg, null);
   }
 
+  @Override
+  protected void socketIO(int socketId, boolean canRead, boolean canWrite) throws IOException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  protected void incomingSocket(Identifier from, int socketId) throws IOException {
+    callback.incomingSocket(new ReplaySocket(from, socketId, this));
+  }
+  
   public static Environment generateEnvironment(String name, long startTime, long randSeed) {
     Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
     DirectTimeSource dts = new DirectTimeSource(startTime);
@@ -168,6 +123,5 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
     Environment env = new Environment(selector,proc,rs,dts,lm,
         params, Environment.generateDefaultExceptionStrategy(lm));
     return env;
-  }
-  
+  }  
 }

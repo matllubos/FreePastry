@@ -111,16 +111,16 @@ public class Recorder implements MyEvents {
    * @param numNodes the number of nodes to create in this JVM
    * @param env the Environment
    */
-  public Recorder(int bindport, InetSocketAddress bootaddress,
+  public Recorder(int bindport, final InetSocketAddress bootaddress,
       int numNodes, Environment env) throws Exception {
     
-    Parameters params = env.getParameters();
+    final Parameters params = env.getParameters();
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
+    final SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
       
       @Override
       public rice.pastry.NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
@@ -142,7 +142,11 @@ public class Recorder implements MyEvents {
       @Override
       protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
         // get rid of the priorityLayer
-        return trans;
+        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
+          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
+        } else {
+          return trans;
+        }
       }
 
       @Override
@@ -175,27 +179,39 @@ public class Recorder implements MyEvents {
     
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
-      // This will return null if we there is no node at that location
-      NodeHandle bootHandle = ((SocketPastryNodeFactory) factory)
-          .getNodeHandle(bootaddress);
       
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
-      TLPastryNode node = (TLPastryNode)factory.newNode();
+      final ArrayList<TLPastryNode> nodeContainer = new ArrayList<TLPastryNode>(1); 
+      env.getSelectorManager().invoke(new Runnable() {
       
-      // construct a new scribe application
-      MyScribeClient app = new MyScribeClient(node);
-      apps.add(app);
+        public void run() {
+          TLPastryNode node = (TLPastryNode)factory.newNode();
+          nodeContainer.add(node);
+          // construct a new scribe application
+          MyScribeClient app = new MyScribeClient(node);
+          apps.add(app);
 
-      node.getBootstrapper().boot(Collections.singleton(bootaddress));
+          node.getBootstrapper().boot(Collections.singleton(bootaddress));
+        }      
+      });
       
       // this is an example of th enew way
 //      PastryNode node = factory.newNode(nidFactory.generateNodeId());
 //      node.getBootstrapper().boot(Collections.singleton(bootaddress));
       
       // the node may require sending several messages to fully boot into the ring
+      synchronized(nodeContainer) {
+        while(nodeContainer.isEmpty()) {
+          // delay so we don't busy-wait
+          nodeContainer.wait(500);
+        }
+      }
+      
+      TLPastryNode node = nodeContainer.get(0);
+
       synchronized(node) {
-        while(!node.isReady() && !node.joinFailed()) {
+        while (!node.isReady() && !node.joinFailed()) {
           // delay so we don't busy-wait
           node.wait(500);
           
