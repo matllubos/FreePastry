@@ -13,7 +13,8 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier> {
   protected Identifier identifier;
   protected int socketId;
   protected Verifier<Identifier> verifier;
-
+  boolean closed = false;
+  
   /**
    * TODO: Make extensible by putting into a factory.
    * 
@@ -27,38 +28,52 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier> {
     this.verifier = verifier;
   }
 
-  public void close() {
-    // TODO Auto-generated method stub
-    
-  }
-
   public Identifier getIdentifier() {
     return identifier;
   }
 
   public Map<String, Integer> getOptions() {
-    // TODO Auto-generated method stub
     return null;
   }
 
-  public long read(ByteBuffer dsts) throws IOException {
-    // TODO Auto-generated method stub
-    return 0;
+  public long read(ByteBuffer dst) throws IOException {
+    return verifier.readSocket(socketId, dst);
   }
 
+  public long write(ByteBuffer src) throws IOException {
+    return verifier.writeSocket(socketId, src);
+  }
+
+  P2PSocketReceiver<Identifier> reader;
+  P2PSocketReceiver<Identifier> writer;
   public void register(boolean wantToRead, boolean wantToWrite, P2PSocketReceiver<Identifier> receiver) {
-    // TODO Auto-generated method stub
+    if (closed) throw new IllegalStateException("Socket "+identifier+" "+this+" is already closed.");
+
+    if (wantToWrite) {
+      if (writer != null) {
+        if (writer != receiver) throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!"); 
+      }
+    }
     
+    if (wantToRead) {
+      if (reader != null) {
+        if (reader != receiver) throw new IllegalStateException("Already registered "+reader+" for reading, you can't register "+receiver+" for reading as well!"); 
+      }
+      reader = receiver; 
+    }
+    
+    if (wantToWrite) {
+      writer = receiver; 
+    }
+  }
+
+  public void close() {
+    closed = true;
+    verifier.close(socketId);
   }
 
   public void shutdownOutput() {
-    // TODO Auto-generated method stub
-    
-  }
-
-  public long write(ByteBuffer srcs) throws IOException {
-    // TODO Auto-generated method stub
-    return 0;
+    throw new RuntimeException("Not implemented.");
   }
 
 }

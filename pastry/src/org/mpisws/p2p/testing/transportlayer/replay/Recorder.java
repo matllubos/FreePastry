@@ -247,8 +247,9 @@ public class Recorder implements MyEvents {
     System.out.println("done recording");
     Thread.sleep(1000);
 
+    int playbackCtr = 0;
     Iterator<MyScribeClient> mscI = apps.iterator();
-    while(mscI.hasNext()) {
+    while(playbackCtr < params.getInt("org.mpisws.p2p.testing.transportlayer.replay.num_playbacks") && mscI.hasNext()) {
       app = mscI.next();
       Endpoint endpoint = app.endpoint;
       
@@ -265,6 +266,7 @@ public class Recorder implements MyEvents {
        
       }
       System.out.println("finished playing "+app.node);
+      playbackCtr++;
     }
   }
   

@@ -455,9 +455,38 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     }
     
     return ret;
-
   }
   
+  public void close(int socketId) {
+    if (!haveNextEvent) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_CLOSE event after end of segment; marking as invalid");
+      foundFault = true;
+      return;
+    }
+    
+    if (next.getType() != EVT_SOCKET_CLOSE) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_CLOSE event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      foundFault = true;
+      return;
+    }
+
+    int loggedSocket;
+    try {
+      loggedSocket = nextEvent.readInt();
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: Error deserializing event "+next);
+      foundFault = true;
+      return;
+    }
+
+    if (loggedSocket != socketId) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_CLOSE on socket "+socketId+" during replay, but log shows SOCKET_CLOSE to "+loggedSocket+"; marking as invalid");
+      foundFault = true;
+      return;
+    }
+  }
+  
+
   /**
    * Maps EVT_XXX -> EventCallback
    */
@@ -485,7 +514,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
    * is that we can stop calling this if there is more important work to do, e.g. 
    * handle foreground requests 
    */
-  public boolean makeProgress() throws IOException {
+  public boolean makeProgress() {
     if (logger.level <= Logger.FINE) logger.log("makeProgress()");
     if (foundFault || !haveNextEvent)
       return false;
@@ -502,32 +531,8 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
      */    
     // This code is the job of the SelectorManager, it's done in the super class of ReplaySM
     
-//    boolean timerProgress = true;
-//    while (timerProgress) {
-//      now = next.getSeq() / 1000;
-//      timerProgress = false;
-//
-//      int best = -1;
-//      for (int i=0; i<numTimers; i++) {
-//        if ((timer[i].time <= now) && ((best<0) || (timer[i].time<timer[best].time) || ((timer[i].time==timer[best].time) && (timer[i].id<timer[best].id))))
-//          best = i;
-//      }
-//
-//      if (best >= 0) {
-//        int id = timer[best].id;
-//        TimerCallback callback = timer[best].callback;
-//        now = timer[best].time;
-//        timer[best] = timer[--numTimers];
-//        if (logger.level <= Logger.WARNING) logger.log(2, "Verifier: Timer expired (#"+id+", now="+now+")");
-//        callback.timerExpired(id);
-//        timerProgress = true;
-//      }
-//    }
-
-    /* If we're done with this replay, return false */
-
-//    if (!haveNextEvent)
-//      return false;  
+    if (!haveNextEvent)
+      return false;  
     
     /* Sanity checks */
 
@@ -540,18 +545,16 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     }
       
     /* Replay the next event */
-      
-    switch (next.getType()) {
+
+    try {
+      switch (next.getType()) {
       case EVT_SEND : /* SEND events should have been handled by Verifier::send() */
-      {
 //        if (logger.level <= Logger.FINE) logger.log("Replay: Encountered EVT_SEND, waiting for node.");
         if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SEND; marking as invalid", new Exception("Stack Trace"));
 //        transport->dump(2, nextEvent, next.getSizeInFile());
         foundFault = true;
         return false;
-      }
       case EVT_RECV : /* Incoming message; feed it to the state machine */
-      {
         Identifier sender = serializer.deserialize(nextEvent);
 
         long senderSeq = 0;
@@ -587,26 +590,18 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //        app->receive(sender, false, msgbuf, msglen);
         receive(sender, msgBuf);
         break;
-      }
       case EVT_SIGN : /* SIGN events should have been handled by the preceding RECV */
-      {
         if (logger.level <= Logger.WARNING) logger.log("Replay: Spurious SIGN event; marking as invalid");
         foundFault = true;
         return false;
-      }
       case EVT_ACK : /* Skip ACKs */
-      {
   // warning there should be an upcall here
         fetchNextEvent();
         break;
-      }
       case EVT_SENDSIGN : /* Skip SENDSIGN events; they are not relevant during replay */
-      {
         fetchNextEvent();
         break;
-      }
       case EVT_CHECKPOINT : /* Verify CHECKPOINTs */
-//      {
 //        if (!initialized) {
 //          if (!nextEventIsHashed) {
 //          
@@ -680,19 +675,19 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //          
 //        fetchNextEvent();
 //        break;
-//      }
       case EVT_INIT: /* State machine is reinitialized; issue upcall */
         initialized = true;
 //        app->init();
         fetchNextEvent();
         break;
       case EVT_SOCKET_OPEN_INCOMING:
+        logger.log(next+" s:"+nextEvent.bytesRemaining());
         Identifier opener = serializer.deserialize(nextEvent);
         int socketId = nextEvent.readInt();
-        incomingSocket(opener, socketId);
-      
+        fetchNextEvent();
+        incomingSocket(opener, socketId);          
+        break;
       default :
-      {
         if (!eventCallback.containsKey(next.getType())) {
           if (logger.level <= Logger.WARNING) logger.log("Replay: Unregistered event #"+next.getType()+"; marking as invalid");
           foundFault = true;
@@ -704,7 +699,11 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         fetchNextEvent();
         eventCallback.get(temp.getType()).replayEvent(temp.getType(), tempEvent);
         break;
-      }
+      }// switch
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("Exception handling event #"+nextEventIndex+" "+next,ioe);
+      foundFault = true;
+      return false;
     }
     
     return true;
@@ -721,7 +720,4 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //    logger.log("i:"+initialized+" v:"+verifiedOK()+" n:"+nextEvent);
     return false;
   }
-  
-
-
 }

@@ -107,14 +107,9 @@ public class ReplaySM extends SelectorManager {
     simTime.setTime(now); // so we always make some progress
     super.doInvocations();
     
-    try {
-      if (!verifier.makeProgress()) {
-        isSuccess();
-      }
+    if (!verifier.makeProgress()) {
+      isSuccess();
       if (!verifier.verifiedOK()) throw new RuntimeException("Verification failed.");
-
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
     }
   }  
 
