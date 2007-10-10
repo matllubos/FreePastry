@@ -120,6 +120,10 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
    */
   protected abstract void socketIO(int socketId, boolean canRead, boolean canWrite) throws IOException;
   
+  protected abstract void socketOpened(int socketId) throws IOException;
+
+
+  
   /**
    * Fetch the next log entry, or set the EOF flag 
    */
@@ -367,7 +371,10 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       return Integer.MIN_VALUE;
     }
 
-    return nextEvent.readInt();
+    int ret = nextEvent.readInt(); 
+    fetchNextEvent();
+    
+    return ret;
   }
   
   /**
@@ -377,6 +384,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
    * @return number of bytes read
    */
   public int readSocket(int socketId, ByteBuffer dst) throws IOException {
+//    logger.log("readSocket("+socketId+","+dst+")");
     if (!haveNextEvent) {
       if (logger.level <= Logger.WARNING) logger.log("Replay: ReadSocket event after end of segment; marking as invalid");
       foundFault = true;
@@ -406,6 +414,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     
     nextEvent.read(dst.array(), dst.position(), ret);
     dst.position(dst.position()+ret);
+    fetchNextEvent();
     return ret;
   }
   
@@ -454,6 +463,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       return 0;
     }
     
+    fetchNextEvent();
     return ret;
   }
   
@@ -554,6 +564,12 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //        transport->dump(2, nextEvent, next.getSizeInFile());
         foundFault = true;
         return false;
+      case EVT_SOCKET_READ: {
+        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SOCKET_READ; marking as invalid", new Exception("Stack Trace"));
+        foundFault = true;
+        return false;        
+      }
+        
       case EVT_RECV : /* Incoming message; feed it to the state machine */
         Identifier sender = serializer.deserialize(nextEvent);
 
@@ -680,14 +696,39 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //        app->init();
         fetchNextEvent();
         break;
-      case EVT_SOCKET_OPEN_INCOMING:
-        logger.log(next+" s:"+nextEvent.bytesRemaining());
+      case EVT_SOCKET_OPEN_INCOMING: {
+//        logger.log(next+" s:"+nextEvent.bytesRemaining());
         Identifier opener = serializer.deserialize(nextEvent);
         int socketId = nextEvent.readInt();
         fetchNextEvent();
         incomingSocket(opener, socketId);          
         break;
-      default :
+      }
+      case EVT_SOCKET_OPENED_OUTGOING: {
+        int socketId = nextEvent.readInt();
+        fetchNextEvent();
+        socketOpened(socketId);
+        break;
+      }
+      case EVT_SOCKET_CAN_READ: {
+        int socketId = nextEvent.readInt();
+        fetchNextEvent();
+        socketIO(socketId, true, false);
+        break;
+      }
+      case EVT_SOCKET_CAN_WRITE: {
+        int socketId = nextEvent.readInt();
+        fetchNextEvent();
+        socketIO(socketId, false, true);
+        break;
+      }
+      case EVT_SOCKET_CAN_RW: {
+        int socketId = nextEvent.readInt();
+        fetchNextEvent();
+        socketIO(socketId, true, true);
+        break;
+      }
+      default:
         if (!eventCallback.containsKey(next.getType())) {
           if (logger.level <= Logger.WARNING) logger.log("Replay: Unregistered event #"+next.getType()+"; marking as invalid");
           foundFault = true;

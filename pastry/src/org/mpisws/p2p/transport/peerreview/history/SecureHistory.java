@@ -104,7 +104,7 @@ public interface SecureHistory /* extends Iterable<IndexEntry> */ {
    *           0xFF: 64-bit sequence number follows
    *           Otherwise:  Round down to nearest multiple of 1000, then add specified
    *               value times 1000
-   *     6. repeat 2-5 as often as necessary; 5 is omitted on last entry.
+   *     6. repeat 2-5 as often as necessary; 5 is omitted on last entry.4
    * Note that the idxFrom and idxTo arguments are record numbers, NOT sequence numbers.
    * Use findSeqOrHigher() to get these if only sequence numbers are known. 
    */
@@ -121,6 +121,7 @@ public interface SecureHistory /* extends Iterable<IndexEntry> */ {
    *  Get the content of a log entry, specified by its record number 
    */
   public byte[] getEntry(long idx, int maxSizeToRead) throws IOException;
+  public byte[] getEntry(IndexEntry ie, int maxSizeToRead) throws IOException;
 
   /**
    * If the log already contains an entry in 'hashed' form and we learn the actual

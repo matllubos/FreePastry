@@ -456,7 +456,10 @@ public class SecureHistoryImpl implements SecureHistory {
    *  Get the content of a log entry, specified by its record number 
    */
   public byte[] getEntry(long idx, int maxSizeToRead) throws IOException {
-    IndexEntry ie = statEntry(idx);
+    return getEntry(statEntry(idx), maxSizeToRead);
+  }
+  
+  public byte[] getEntry(IndexEntry ie, int maxSizeToRead) throws IOException {
     if (ie == null) return null;
     
     if (ie.sizeInFile < 0) return null;

@@ -126,9 +126,9 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
         socketIdBuffer.clear();
         try {
-          logEvent(EVT_SOCKET_OPENED_OUTGOING, identifierSerializer.serialize(i), socketIdBuffer);
+          logEvent(EVT_SOCKET_OPENED_OUTGOING, socketIdBuffer);
         } catch (IOException ioe) {
-          if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
+          if (logger.level <= Logger.WARNING) logger.logException("error logging in openSocket("+i+")",ioe); 
         }
         socketIdBuffer.clear();
         deliverSocketToMe.receiveResult(ret, new RecordSocket<Identifier>(i, sock, logger, options, socketId, socketIdBuffer, RecordLayer.this));

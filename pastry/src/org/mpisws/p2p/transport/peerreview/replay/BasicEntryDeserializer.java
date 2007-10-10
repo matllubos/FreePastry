@@ -1,6 +1,8 @@
 package org.mpisws.p2p.transport.peerreview.replay;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
@@ -12,6 +14,7 @@ import org.mpisws.p2p.transport.peerreview.history.reader.LogReader;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 
 import rice.environment.Environment;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 
 public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializer {
 
@@ -41,7 +44,7 @@ public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializ
     }
   }
 
-  public String read(IndexEntry ie, SecureHistory history) {
+  public String read(IndexEntry ie, SecureHistory history) throws IOException {
     return entryId(ie.getType())+" n:"+ie.getSeq()+" s:"+ie.getSizeInFile()+" i:"+ie.getFileIndex();
   }
 

@@ -6,14 +6,17 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
+import org.mpisws.p2p.transport.SocketCallback;
+import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.peerreview.Verifier;
 
-public class ReplaySocket<Identifier> implements P2PSocket<Identifier> {
+public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRequestHandle<Identifier> {
 
   protected Identifier identifier;
   protected int socketId;
   protected Verifier<Identifier> verifier;
   boolean closed = false;
+  Map<String, Integer> options;
   
   /**
    * TODO: Make extensible by putting into a factory.
@@ -22,10 +25,11 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier> {
    * @param socketId
    * @param verifier
    */
-  public ReplaySocket(Identifier identifier, int socketId, Verifier<Identifier> verifier) {
+  public ReplaySocket(Identifier identifier, int socketId, Verifier<Identifier> verifier, Map<String, Integer> options) {
     this.identifier = identifier;
     this.socketId = socketId;
     this.verifier = verifier;
+    this.options = options;
   }
 
   public Identifier getIdentifier() {
@@ -33,7 +37,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier> {
   }
 
   public Map<String, Integer> getOptions() {
-    return null;
+    return options;
   }
 
   public long read(ByteBuffer dst) throws IOException {
@@ -66,13 +70,57 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier> {
       writer = receiver; 
     }
   }
+  
+  public void notifyIO(boolean canRead, boolean canWrite) throws IOException {
+    if (!canRead && !canWrite) {
+      throw new IOException("I can't read or write. canRead:"+canRead+" canWrite:"+canWrite);
+    }
+    if (canRead && canWrite) {
+      if (writer != reader) throw new IllegalStateException("weader != writer canRead:"+canRead+" canWrite:"+canWrite);
+      P2PSocketReceiver<Identifier> temp = writer;
+      writer = null;
+      reader = null;
+      temp.receiveSelectResult(this, canRead, canWrite);
+      return;
+    } 
+    
+    if (canRead) {
+      if (reader == null) throw new IllegalStateException("reader:"+reader+" canRead:"+canRead);
+      P2PSocketReceiver<Identifier> temp = reader;
+      reader = null;
+      temp.receiveSelectResult(this, canRead, canWrite);
+      return;
+    } 
+    
+    if (canWrite) {
+      if (writer == null) throw new IllegalStateException("writer:"+writer+" canWrite:"+canWrite);
+      P2PSocketReceiver<Identifier> temp = writer;
+      writer = null;
+      temp.receiveSelectResult(this, canRead, canWrite);
+      return;
+    }     
+  }
 
   public void close() {
     closed = true;
     verifier.close(socketId);
   }
 
+  SocketCallback<Identifier> deliverSocketToMe;
+  public void setDeliverSocketToMe(SocketCallback<Identifier> deliverSocketToMe) {
+    this.deliverSocketToMe = deliverSocketToMe;
+  }
+  
+  public void socketOpened() {
+    deliverSocketToMe.receiveResult(this, this);
+    deliverSocketToMe = null;
+  }
+  
   public void shutdownOutput() {
+    throw new RuntimeException("Not implemented.");
+  }
+
+  public boolean cancel() {
     throw new RuntimeException("Not implemented.");
   }
 

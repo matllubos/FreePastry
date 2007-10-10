@@ -2,6 +2,7 @@ package org.mpisws.p2p.transport.peerreview.replay.playback;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -36,18 +37,40 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   TransportLayer<Identifier, ByteBuffer> {
 
   TransportLayerCallback<Identifier, ByteBuffer> callback;
-    
+  Map<Integer, ReplaySocket<Identifier>> sockets = new HashMap<Integer, ReplaySocket<Identifier>>();
+
   public ReplayLayer(IdentifierSerializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, Environment environment) throws IOException {
     super(serializer, hashProv, history, localHandle, (short)0, (short)0, 0, environment.getLogManager().getLogger(ReplayLayer.class, localHandle.toString()));
     this.environment = environment;
   }
   
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, SocketCallback<Identifier> deliverSocketToMe, final Map<String, Integer> options) {
+    try {
+      int socketId = openSocket(i);
+//      logger.log("openSocket("+i+"):"+socketId);
+      ReplaySocket<Identifier> socket = new ReplaySocket<Identifier>(i,socketId,this,options);
+      socket.setDeliverSocketToMe(deliverSocketToMe);
+      sockets.put(socketId, socket);
+      return socket;
+    } catch (IOException ioe) {      
+      SocketRequestHandle<Identifier> ret = new SocketRequestHandle<Identifier>(){
 
-  
+        public Identifier getIdentifier() {
+          return i;
+        }
 
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
-    // TODO Auto-generated method stub
-    throw new RuntimeException("Not Implemented.");
+        public Map<String, Integer> getOptions() {
+          return options;
+        }
+
+        public boolean cancel() {
+          return true;
+        }      
+      };
+      
+      deliverSocketToMe.receiveException(ret, ioe);
+      return ret;
+    }
   }
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
@@ -102,13 +125,14 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
 
   @Override
   protected void socketIO(int socketId, boolean canRead, boolean canWrite) throws IOException {
-    // TODO Auto-generated method stub
-    
+    sockets.get(socketId).notifyIO(canRead, canWrite);
   }
 
   @Override
   protected void incomingSocket(Identifier from, int socketId) throws IOException {
-    callback.incomingSocket(new ReplaySocket(from, socketId, this));
+    ReplaySocket<Identifier> socket = new ReplaySocket<Identifier>(from, socketId, this, null);
+    sockets.put(socketId, socket);
+    callback.incomingSocket(socket);
   }
   
   public static Environment generateEnvironment(String name, long startTime, long randSeed) {
@@ -123,5 +147,11 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
     Environment env = new Environment(selector,proc,rs,dts,lm,
         params, Environment.generateDefaultExceptionStrategy(lm));
     return env;
+  }
+
+  @Override
+  protected void socketOpened(int socketId) throws IOException {
+//    logger.log("socketOpened("+socketId+")");
+    sockets.get(socketId).socketOpened();
   }  
 }

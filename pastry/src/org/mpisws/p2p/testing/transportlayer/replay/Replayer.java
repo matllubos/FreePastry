@@ -19,6 +19,7 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
+import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
@@ -155,20 +156,32 @@ public class Replayer implements MyEvents, EventCallback {
   
     // now, print the tree
 //    env.getTimeSource().sleep(5000);
-  
-    env.getTimeSource().sleep(55000);
-  
+    
+    try {
+      env.getTimeSource().sleep(55000);
+    } catch (InterruptedException ie) {
+      return;
+    }
     env.destroy();    
+
   }
   
   public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
+    Environment env = new Environment();
+    if (env.getParameters().getBoolean("org.mpisws.p2p.testing.transportlayer.replay.Replayer_printlog")) 
+      printLog("0x"+id.toStringFull().substring(0,6), env);
+
+    
 //  Environment env = Environment.directEnvironment();
     System.out.println(id.toStringFull()+" "+addr.getAddress().getHostAddress()+" "+addr.getPort()+" "+bootaddress.getPort()+" "+startTime+" "+randSeed);
     
     new Replayer(id, addr, bootaddress, startTime, randSeed);
   }
 
-
+  public static void printLog(String arg, Environment env) throws IOException {
+    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(), env); 
+  }
+  
   /**
    * @param args
    */
