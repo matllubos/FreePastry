@@ -119,7 +119,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       LeafSet ls, RoutingTable rt) {
     super(ln, null, LeafSetProtocolAddress.getCode(), new PLSPMessageDeserializer(ln));    
     this.localNode = ln;
-
+    ln.addObserver(this); // to call start() if we are the seed node
+    
     Parameters params = ln.getEnvironment().getParameters();
     if (params.contains("pastry_periodic_leafset_protocol_use_own_random")
         && params.getBoolean("pastry_periodic_leafset_protocol_use_own_random")) {
@@ -547,12 +548,22 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
   public void update(final Observable o, final Object arg) {
     if (destroyed) return;
 //    logger.log("update("+o+","+arg+")");
-//  if (o instanceof NodeHandle) {      
-    if (arg == NodeHandle.DECLARED_DEAD) {
-      removeFromLeafsetIfPossible((NodeHandle)o);
+    if (o instanceof NodeHandle) {      
+      if (arg == NodeHandle.DECLARED_DEAD) {
+        removeFromLeafsetIfPossible((NodeHandle)o);
+      }
+      return;
+    }    
+    
+    // this is if we are the "seed" node
+    if (o instanceof PastryNode) {
+      Boolean rdy = (Boolean)arg;
+      if (rdy.equals(Boolean.TRUE)) {
+        localNode.deleteObserver(this);
+        start();
+      }
     }
-//  }    
-}
+  }
 
   public void removeFromLeafsetIfPossible(final NodeHandle nh) {
     if (nh.isAlive()) return;

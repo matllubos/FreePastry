@@ -136,6 +136,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   }
   
   public void setReadyStrategy(ReadyStrategy rs) {
+//    logger.log("setReadyStrategy("+rs+")");
+//    logger.logException("setReadyStrategy("+rs+")", new Exception());
     readyStrategy = rs; 
   }
   
@@ -232,7 +234,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param bootstrap
    *          Node handle to bootstrap with.
    */
-  public abstract void initiateJoin(NodeHandle[] bootstrap);
+  public abstract void initiateJoin(Collection<NodeHandle> bootstrap);
 
   public void setReady() {
     setReady(true);

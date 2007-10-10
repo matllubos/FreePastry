@@ -66,7 +66,7 @@ public class InitiateJoin extends Message implements Serializable {
 //  }
 
 
-  public InitiateJoin(NodeHandle[] nh) {
+  public InitiateJoin(Collection<NodeHandle> nh) {
     this(null, nh);
   }
 
@@ -79,9 +79,9 @@ public class InitiateJoin extends Message implements Serializable {
    * @param nh the node handle that the join will begin from.
    */
 
-  public InitiateJoin(Date stamp, NodeHandle[] nh) {
+  public InitiateJoin(Date stamp, Collection<NodeHandle> nh) {
     super(JoinAddress.getCode(), stamp);
-    handle = nh;
+    handle = nh.toArray(new NodeHandle[1]);
 //    System.out.println("IJ<ctor>"+this);
   }
 

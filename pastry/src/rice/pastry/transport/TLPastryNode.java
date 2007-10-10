@@ -334,10 +334,10 @@ public class TLPastryNode extends PastryNode implements
 
   
   @Override
-  public void initiateJoin(NodeHandle[] bootstrap) {
+  public void initiateJoin(Collection<NodeHandle> bootstrap) {
     if (logger.level <= Logger.CONFIG) logger.log(
       "initiateJoin("+bootstrap+")");
-    if (bootstrap == null || bootstrap[0] == null) {      
+    if (bootstrap == null || bootstrap.isEmpty()) {      
       // no bootstrap node, so ready immediately
       setReady();
     } else {
@@ -555,11 +555,11 @@ public class TLPastryNode extends PastryNode implements
    */
   public void doneNode(Collection<NodeHandle> bootstrap) { 
     if (logger.level <= Logger.INFO) logger.log("doneNode:"+bootstrap);
-    doneNode(bootstrap.toArray(new NodeHandle[1]));
-  }
-
-  public void doneNode(NodeHandle[] bootstrap) {
-    if (logger.level <= Logger.INFO) logger.log("doneNode:"+bootstrap[0]);
+//    doneNode(bootstrap.toArray(new NodeHandle[1]));
+//  }
+//
+//  public void doneNode(NodeHandle[] bootstrap) {
+    if (logger.level <= Logger.INFO) logger.log("doneNode:"+bootstrap);
     if (routeSetMaintFreq > 0) {
       // schedule the routeset maintenance event
       routeSetRoutineMaintenance = scheduleMsgAtFixedRate(new InitiateRouteSetMaintenance(),

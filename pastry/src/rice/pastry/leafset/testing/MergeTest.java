@@ -183,7 +183,7 @@ public class MergeTest {
       }
     
       @Override
-      public void initiateJoin(NodeHandle[] bootstrap) {
+      public void initiateJoin(Collection<NodeHandle> bootstrap) {
         // TODO Auto-generated method stub
         
       }
