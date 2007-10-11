@@ -65,6 +65,7 @@ import org.mpisws.p2p.transport.identity.LowerIdentity;
 import org.mpisws.p2p.transport.identity.NodeChangeStrategy;
 import org.mpisws.p2p.transport.identity.SanityChecker;
 import org.mpisws.p2p.transport.identity.UpperIdentity;
+import org.mpisws.p2p.transport.limitsockets.LimitSocketsTransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
@@ -287,8 +288,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     // magic number layer
     TransportLayer<InetSocketAddress, ByteBuffer> mntl = getMagicNumberTransportLayer(wtl,pn);
 
+    // Limited sockets layer
+    TransportLayer<InetSocketAddress, ByteBuffer> lstl = getLimitSocketsTransportLayer(mntl,pn);
+       
     // MultiInet layer
-    TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteFactory(mntl, pn, localAddress);
+    TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteFactory(lstl, pn, localAddress);
 
     // SourceRoute<MultiInet> layer
     TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> srl = getSourceRouteTransportLayer(etl, pn, esrFactory);
@@ -355,6 +359,15 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       new MagicNumberTransportLayer<InetSocketAddress>(wtl,environment,null,PASTRY_MAGIC_NUMBER, 5000);
     return mntl;
   }
+
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getLimitSocketsTransportLayer(
+      TransportLayer<InetSocketAddress, ByteBuffer> mntl, TLPastryNode pn) {
+    Environment environment = pn.getEnvironment();
+    LimitSocketsTransportLayer<InetSocketAddress, ByteBuffer> lstl = 
+      new LimitSocketsTransportLayer<InetSocketAddress, ByteBuffer>(environment.getParameters().getInt("pastry_socket_scm_max_open_sockets"),mntl,environment);
+    return lstl;
+  }
+  
 
   protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getMultiAddressSourceRouteFactory(
       TransportLayer<InetSocketAddress, ByteBuffer> mntl, 

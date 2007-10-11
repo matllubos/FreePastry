@@ -180,7 +180,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
     }
     
     buf = ByteBuffer.wrap(sob.getBytes());
-    if (logger.level <= Logger.FINER) logger.log("sendMessage("+i+","+m+") serizlized:"+buf);
+    if (logger.level <= Logger.FINEST) logger.log("sendMessage("+i+","+m+") serizlized:"+buf);
 
     handle.setSubCancellable(tl.sendMessage(
         i, 
@@ -188,6 +188,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
         new MessageCallback<Identifier, ByteBuffer>() {
     
           public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
+            if (logger.level <= Logger.FINER) logger.log("sendMessage("+i+","+m+").ack()");
             if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
             if (deliverAckToMe != null) deliverAckToMe.ack(handle);
           }
@@ -219,7 +220,9 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
 //    Id id = idFactory.build(buf);
 //    TransportLayerNodeHandle<Identifier> handle = nodeHandleFactory.getNodeHandle(i, epoch, id); 
 //    if (logger.level <= Logger.FINER) logger.log("messageReceived(): epoch:"+epoch+" id:"+id+" hand:"+handle);
-    callback.messageReceived(i, deserializer.deserialize(buf, i), options);
+    RawMessage ret = deserializer.deserialize(buf, i);
+    if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+ret+")");
+    callback.messageReceived(i, ret, options);
   }
 
   public void setCallback(

@@ -40,6 +40,8 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ClosedSelectorException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -448,6 +450,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      * @return true if we did it now
      */
     public boolean closeMe(P2PSocket<Identifier> socket) {
+      if (logger.level <= Logger.FINE) logger.log("closeMe("+socket+"):"+(socket == writingSocket)+","+messageThatIsBeingWritten);
       if (socket == writingSocket) {
         if (messageThatIsBeingWritten == null) {
           sockets.remove(socket);
@@ -491,6 +494,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
     
     public void setWritingSocket(P2PSocket<Identifier> s/*, String loc*/) {
+      if (logger.level <= Logger.FINEST) logger.log(this+".setWritingSocket("+s+")");
 //      if (logger.level <= Logger.INFO) logger.log(this+".setWritingSocket("+s+") loc:"+loc);
       writingSocket = s;
     }
@@ -532,8 +536,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (haveMessageToSend()) {
           //logger.log(this+" registering on "+writingSocket);
           // maybe we should remember if we were registered, and don't reregister, but for now it doesn't hurt
+          registered = true;  // may fail in this call and set registered back to false, so make sure to do this before calling register
           writingSocket.register(false, true, this);
-          registered = true;
         }
       }      
     }
@@ -594,6 +598,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     private MessageWrapper poll() {
       if (messageThatIsBeingWritten == null) {
         messageThatIsBeingWritten = queue.poll();
+        if (logger.level <= Logger.FINEST) logger.log("poll("+identifier.get()+") set messageThatIsBeingWritten = "+messageThatIsBeingWritten);
       }
       if (queue.size() >= (MAX_QUEUE_SIZE-1) && logger.level <= Logger.INFO) {
         logger.log(this+"polling from full queue (this is a good thing) "+messageThatIsBeingWritten);
@@ -641,6 +646,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (logger.level <= Logger.WARNING) logger.log("receivedSelectResult("+socket+","+canRead+","+canWrite);
         return;
       }
+      
+      if (logger.level <= Logger.FINEST) logger.log("receivedSelectResult("+socket+","+canRead+","+canWrite);
       MessageWrapper current = poll();
       while (current != null && current.receiveSelectResult(writingSocket)) {
         current = poll();
@@ -798,6 +805,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
 
     protected boolean complete(MessageWrapper wrapper) {
+      if (logger.level <= Logger.FINEST) logger.log(this+".complete("+wrapper+")");
       if (wrapper != messageThatIsBeingWritten) throw new IllegalArgumentException("Wrapper:"+wrapper+" messageThatIsBeingWritten:"+messageThatIsBeingWritten);
       
       messageThatIsBeingWritten = null;
@@ -883,9 +891,11 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
        * @return true if should keep writing
        */
       public boolean receiveSelectResult(P2PSocket<Identifier> socket) throws IOException {
+        if (logger.level <= Logger.FINEST) logger.log(this+".receiveSelectResult("+socket+")");
+        try {
         if (this.socket != null && this.socket != socket) {
           // this shouldn't happen
-          logger.log(this+" Socket changed!!! can:"+cancelled+" comp:"+completed+" socket:"+socket+" writingSocket:"+writingSocket+" this.socket:"+this.socket);
+          if (logger.level <= Logger.WARNING) logger.log(this+" Socket changed!!! can:"+cancelled+" comp:"+completed+" socket:"+socket+" writingSocket:"+writingSocket+" this.socket:"+this.socket);
           socket.shutdownOutput();
           
           // do we need to reset?
@@ -898,24 +908,30 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         this.socket = socket;
         
         if (cancelled && message.position() == 0) {
+          if (logger.level <= Logger.FINEST) logger.log(this+".rsr("+socket+") cancelled"); 
           // cancel
           return true;
         } else {
           long bytesWritten;
           if ((bytesWritten = socket.write(message)) == -1) {
             // socket was closed, need to register new socket
-            
+            if (logger.level <= Logger.FINEST) logger.log(this+".rsr("+socket+") socket was closed"); 
             clearAndEnqueue(this); //             messageThatIsBeingWritten = null;            
             return false;
           }
           if (logger.level <= Logger.FINER) logger.log(this+" wrote "+bytesWritten+" bytes of "+message.capacity()+" remaining:"+message.remaining());
 
           if (message.hasRemaining()) {
+            if (logger.level <= Logger.FINEST) logger.log(this+".rsr("+socket+") has remaining"); 
             return false;
           }
         }
                 
         return EntityManager.this.complete(this); 
+        } catch (IOException ioe) {
+          if (logger.level <= Logger.FINEST) logger.logException(this+".rsr("+socket+")", ioe);
+          throw ioe;
+        }
       }
       
       public void drop() {

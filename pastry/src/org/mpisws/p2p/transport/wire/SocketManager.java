@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -73,7 +74,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   
   Map<String, Integer> options;
   
-  protected P2PSocketReceiver reader, writer;
+  protected P2PSocketReceiver<InetSocketAddress> reader, writer;
 
   
   /**
@@ -204,10 +205,12 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    */
   Exception closeEx;
   public void close() {
+//    logger.log("Closing " + this);
 //    if (logger.level <= Logger.FINE) logger.log("close()");
     try {
       if (logger.level <= Logger.FINE) {
-        logger.log("Closing connection to " + addr);
+        logger.log("Closing " + this +" r:"+reader+" w:"+writer);
+//        logger.log("Closing connection to " + addr);
       }
       
       if (key != null) {
@@ -215,10 +218,30 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         key.cancel();
         key.attach(null);
         key = null;
+      } else {
+        // we were already closed
+        return;
       }
       
       if (channel != null) 
         channel.close();
+      
+      // notify the writer/reader because an intermediate layer may have closed the socket, and they need to know
+      if (writer != null) {
+        if (writer == reader) {
+          writer.receiveSelectResult(this, true, true);
+          writer = null;
+          reader = null;
+        } else {
+          writer.receiveSelectResult(this, false, true);          
+          writer = null;
+        }
+      }
+      
+      if (reader != null) {
+        reader.receiveSelectResult(this, true, false);                  
+        reader = null;
+      }
 
 //      if (path != null) {
 //        manager.socketClosed(path, this);
@@ -283,7 +306,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * @param key The selection key for this manager
    */
   public void read(SelectionKey key) {
-    P2PSocketReceiver temp = null;
+    P2PSocketReceiver<InetSocketAddress> temp = null;
     synchronized(this) {
       if (reader == null) {
         key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
@@ -306,7 +329,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * @param key The selection key for this manager
    */
   public void write(SelectionKey key) {
-    P2PSocketReceiver temp = null;
+    P2PSocketReceiver<InetSocketAddress> temp = null;
     synchronized(this) {
       if (writer == null) {
         key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
@@ -324,21 +347,42 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     tcp.wire.environment.getSelectorManager().modifyKey(key);
   }
 
-  public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver receiver) {
+  public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver<InetSocketAddress> receiver) {
     if (key == null) {
-      if (closeEx == null) {
-        logger.log("No closeEx "+addr);
-      } else {
-        logger.logException("closeEx "+addr, closeEx);
-      }
-      throw new IllegalStateException("Socket "+addr+" "+this+" is already closed.");
+//      if (closeEx == null) {
+//        logger.log("No closeEx "+addr);
+//      } else {
+//        logger.logException("closeEx "+addr, closeEx);
+//      }
+      ClosedChannelException cce = new ClosedChannelException() {
+            public String getMessage() {
+              return "Socket "+addr+" "+this+" is already closed.";
+            }
+          };
+      if (logger.level <= Logger.CONFIG) logger.logException("Socket "+addr+" "+this+" is already closed.", cce);
+      receiver.receiveException(this, cce);
+      return;
     }
-    
     // this check happens before setting the reader because we don't want to change any state if the exception is going ot be thrown
     // so don't put this check down below!
     if (wantToWrite) {
+      if (channel.socket().isOutputShutdown()) {
+        receiver.receiveException(this, 
+            new ClosedChannelException() {
+              public String getMessage() {
+                return "Socket "+addr+" "+this+" already shut down output.";
+              }
+            });        
+        return;
+      }
       if (writer != null) {
-        if (writer != receiver) throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!"); 
+        if (writer != receiver) {
+          throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!");
+//          receiver.receiveException(this, 
+//              new IOException(
+//                  "Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!")); 
+//          return;
+        }
       }
     }
     
@@ -396,36 +440,50 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   }
 
   public long read(ByteBuffer dst) throws IOException {
-    long ret = channel.read(dst);
-    if (logger.level <= Logger.FINER) {
-      if (logger.level <= Logger.FINEST) {
-        logger.log(this+"read("+ret+"):"+Arrays.toString(dst.array()));
-      } else {
-        logger.log(this+"read("+ret+")");
-      }
-    }    
-    return ret;
+    if (key == null || channel.socket().isInputShutdown()) return -1;
+    try {
+      long ret = channel.read(dst);
+      if (logger.level <= Logger.FINER) {
+        if (logger.level <= Logger.FINEST) {
+          logger.log(this+"read("+ret+"):"+Arrays.toString(dst.array()));
+        } else {
+          logger.log(this+"read("+ret+")");
+        }
+      }    
+      return ret;
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.log(this+" error reading");
+      close();
+      throw ioe;
+    }
   }
-  public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-    //System.out.println(this+"read");
-    return channel.read(dsts, offset, length);
-  }
+//  public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+//    //System.out.println(this+"read");
+//    return channel.read(dsts, offset, length);
+//  }
 
   public long write(ByteBuffer src) throws IOException {
-    long ret = channel.write(src);
-    if (logger.level <= Logger.FINER) {
-      if (logger.level <= Logger.FINEST) {
-        logger.log(this+"write("+ret+"):"+Arrays.toString(src.array()));
-      } else {
-        logger.log(this+"write("+ret+")");
+    if (key == null || channel.socket().isOutputShutdown()) return -1;
+    try {
+      long ret = channel.write(src);
+      if (logger.level <= Logger.FINER) {
+        if (logger.level <= Logger.FINEST) {
+          logger.log(this+"write("+ret+"):"+Arrays.toString(src.array()));
+        } else {
+          logger.log(this+"write("+ret+")");
+        }
       }
-    }
-    return ret;
+      return ret;
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.log(this+" error writing");
+      close();
+      throw ioe;
+    }      
   }
-  public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-    //System.out.println(this+"write("+srcs.length+","+offset+","+length+")");
-    return channel.write(srcs, offset, length);
-  }
+//  public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+//    //System.out.println(this+"write("+srcs.length+","+offset+","+length+")");
+//    return channel.write(srcs, offset, length);
+//  }
 
   public boolean cancel() {
     if (key == null) return false;

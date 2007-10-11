@@ -81,7 +81,7 @@ public class Environment implements Destructable {
   private Logger logger;
   private ExceptionStrategy exceptionStrategy;
 
-  private HashSet destructables = new HashSet();
+  private HashSet<Destructable> destructables = new HashSet<Destructable>();
   
   /**
    * Constructor.  You can provide null values for all/any paramenters, which will result
@@ -109,14 +109,16 @@ public class Environment implements Destructable {
     
     // choose defaults for all non-specified parameters
     chooseDefaults();
+    logger = this.logManager.getLogger(getClass(), null);
     
-    selectorManager.setEnvironment(this);
-    addDestructable(time);
+    
+    this.selectorManager.setEnvironment(this);
+    
+    addDestructable(this.time);
     
 //    addDestructable(this.selectorManager);
 //    addDestructable(this.processor);
     
-    logger = this.logManager.getLogger(getClass(), null);
   }
   
   /**
@@ -284,11 +286,19 @@ public class Environment implements Destructable {
   }
 
   public void addDestructable(Destructable destructable) {
+    if (destructable == null) {
+      if (logger.level <= Logger.WARNING) logger.logException("addDestructable(null)", new Exception("Stack Trace"));
+      return;
+    }
     destructables.add(destructable);
     
   }
   
   public void removeDestructable(Destructable destructable) {
+    if (destructable == null) {
+      if (logger.level <= Logger.WARNING) logger.logException("addDestructable(null)", new Exception("Stack Trace"));
+      return;
+    }
     destructables.remove(destructable);
   }
 

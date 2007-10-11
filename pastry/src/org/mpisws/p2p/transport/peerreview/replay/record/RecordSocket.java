@@ -135,6 +135,7 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
         } catch (IOException ioe2) {
           if (logger.level <= Logger.WARNING) logger.logException(this+".receiveException()",ioe2); 
         }
+        receiver.receiveException(socket, ioe);
       }
     });
   }
