@@ -285,10 +285,11 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     if (logger.level <= Logger.INFO) logger.log("ConsistentJonProtocol.setReady()");
     gotResponse.clear();
     //failed.clear(); // done by cleanup task as of March 6th, 2006
+    
     // send a probe to everyone in the leafset
-    Iterator i = leafSet.neighborSet(Integer.MAX_VALUE).iterator();
+    Iterator<NodeHandle> i = whoDoWeNeedAResponseFrom().iterator(); //leafSet.neighborSet(Integer.MAX_VALUE).iterator();
     while(i.hasNext()) {
-      NodeHandle nh = (NodeHandle)i.next();
+      NodeHandle nh = i.next();
       sendTheMessage(nh, false);      
     }
         
@@ -369,7 +370,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * Returns all members of the leafset that are not in gotResponse
    * @return
    */
-  public Collection whoDoWeNeedAResponseFrom() {
+  public Collection<NodeHandle> whoDoWeNeedAResponseFrom() {
     HashSet<NodeHandle> ret = new HashSet<NodeHandle>();
     int leftIndex = leafSet.ccwSize();
     if (leftIndex > MAX_NUM_TO_HEAR_FROM/2) leftIndex = MAX_NUM_TO_HEAR_FROM/2;

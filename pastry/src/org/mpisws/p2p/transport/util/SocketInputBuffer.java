@@ -42,8 +42,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
-import java.nio.channels.ClosedChannelException;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.P2PSocket;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -233,7 +233,7 @@ public class SocketInputBuffer implements InputBuffer {
     }
     
     int ret = (int)socket.read(in);
-    if (ret == -1) throw new ClosedChannelException();
+    if (ret == -1) throw new ClosedChannelException("Socket "+socket+" is already closed. (during read)"); 
     in.flip();
     while (writeBB.remaining() < ret) {
       grow(); 

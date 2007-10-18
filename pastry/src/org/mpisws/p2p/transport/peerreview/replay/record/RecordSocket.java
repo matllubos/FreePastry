@@ -96,7 +96,8 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
   @Override
   public void close() {
     try {
-      socketIdBuffer.clear();
+//      logger.logException("close()",new Exception("close()"));
+      socketIdBuffer.clear();      
       recordLayer.logEvent(EVT_SOCKET_CLOSE, socketIdBuffer);
     } catch (IOException ioe2) {
       if (logger.level <= Logger.WARNING) logger.logException(this+".receiveException()",ioe2); 

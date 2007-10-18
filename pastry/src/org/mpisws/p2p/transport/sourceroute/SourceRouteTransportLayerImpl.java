@@ -271,7 +271,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
         } catch (InsufficientBytesException ibe) {
           socket.register(true, false, this); 
         } catch (IOException e) {
-          errorHandler.receivedException(srFactory.getSourceRoute(etl.getLocalIdentifier(), socket.getIdentifier()), e);
+          if (logger.level <= Logger.INFO) errorHandler.receivedException(srFactory.getSourceRoute(etl.getLocalIdentifier(), socket.getIdentifier()), e);
           socka.close();
         }
       }

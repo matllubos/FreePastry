@@ -134,9 +134,12 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
      *
      */
     public void forceClose() {
-      logger.log(this+".forceClose()");
+//      logger.log(this+".forceClose()");
+      if (logger.level <= Logger.FINE) logger.log(this+".forceClose()");
       closed = true;
-      super.close();
+      cache.remove(this);
+      super.shutdownOutput();
+//      super.close();
     }
     
     /**
@@ -144,7 +147,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
      */
     @Override
     public void close() {
-      logger.log(this+".close()");
+      if (logger.level <= Logger.FINER) logger.log(this+".close()");
       closed = true;
       cache.remove(this);
       super.close();

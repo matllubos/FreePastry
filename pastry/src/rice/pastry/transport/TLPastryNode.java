@@ -38,12 +38,12 @@ package rice.pastry.transport;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
@@ -157,7 +157,7 @@ public class TLPastryNode extends PastryNode implements
               
               // write the appId
               if (socket.write(b) == -1) {
-                deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new ClosedChannelException());
+                deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new ClosedChannelException("Remote node closed socket while opening.  Try again."));
                 return;
               }
               
@@ -173,7 +173,7 @@ public class TLPastryNode extends PastryNode implements
                   public void receiveSelectResult(P2PSocket<NodeHandle> socket, boolean canRead, boolean canWrite) throws IOException {
                     
                     if (socket.read(answer) == -1) {
-                      deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new ClosedChannelException());
+                      deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new ClosedChannelException("Remote node closed socket while opening.  Try again."));
                       return;
                     };
                     

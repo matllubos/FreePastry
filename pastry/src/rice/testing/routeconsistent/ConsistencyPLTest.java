@@ -48,13 +48,18 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Random;
+import java.util.Set;
 
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
@@ -158,7 +163,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
   /**
    * Of InetSocketAddress
    */
-  static HashSet bootAddresses = new HashSet();
+  static Set<InetSocketAddress> bootAddresses = Collections.synchronizedSet(new HashSet<InetSocketAddress>());
   
   public ConsistencyPLTest(PastryNode localNode, LeafSet leafSet) {
     this.localNode = localNode;
@@ -317,6 +322,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 
     System.out.println("artificialChurn = "+artificialChurn+" useSplitStream = "+useSplitStream);
     
+    InetSocketAddress bootaddress;
     {
       InetAddress bootaddr;
       // build the bootaddress from the command line args
@@ -335,8 +341,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       if (args.length > 7) {
         bootport = Integer.parseInt(args[7]);
       }
-      InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-      bootAddresses.add(bootaddress);
+      bootaddress = new InetSocketAddress(bootaddr,bootport);
+      //bootAddresses.add(bootaddress);
       
     }
     
@@ -374,6 +380,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       // log everything while booting, this gets turned off on SETREADY
       params.setInt("org.mpisws.p2p.transport_loglevel",Logger.ALL);
+      params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.ALL);
       
 //      if (args.length > 0) {
 //        int theVal = Integer.parseInt(args[0]);
@@ -565,10 +572,20 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         } 
       };
   
-      InetSocketAddress[] bootAddressCandidates = (InetSocketAddress[])bootAddresses.toArray(new InetSocketAddress[0]);
+//      InetSocketAddress[] bootAddressCandidates = (InetSocketAddress[])bootAddresses.toArray(new InetSocketAddress[0]);
       // This will return null if we there is no node at that location
 //      NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootAddressCandidates, 30000);
-      System.out.println("bootAddrCandidates "+bootAddressCandidates.length+":"+bootAddressCandidates[0]);
+      Collection<InetSocketAddress> bootAddrCandidates = new ArrayList<InetSocketAddress>();
+      bootAddrCandidates.add(bootaddress);
+      synchronized(bootAddresses) {
+        int ctr = 10;
+        Iterator<InetSocketAddress> i = bootAddresses.iterator();
+        while(ctr > 0 && i.hasNext()) {
+          bootAddrCandidates.add(i.next());
+          ctr--;
+        }
+      }
+      System.out.println("bootAddrCandidates "+bootAddrCandidates.size()+":"+bootAddrCandidates.iterator().next());
       
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
@@ -596,13 +613,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       });
       node.addNetworkListener(networkActivity);
       
-      InetSocketAddress[] boots = new InetSocketAddress[6];
-      boots[0] = new InetSocketAddress(InetAddress.getByName("ricepl-1.cs.rice.edu"), startPort);
-      boots[1] = new InetSocketAddress(InetAddress.getByName("ricepl-2.cs.rice.edu"), startPort);
-      boots[2] = new InetSocketAddress(InetAddress.getByName("ricepl-3.cs.rice.edu"), startPort);
-      boots[3] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.umass.edu"), startPort);
-      boots[4] = new InetSocketAddress(InetAddress.getByName("planet1.scs.cs.nyu.edu"), startPort);
-      boots[5] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.cornell.edu"), startPort);
+//      InetSocketAddress[] boots = new InetSocketAddress[6];
+//      boots[0] = new InetSocketAddress(InetAddress.getByName("ricepl-1.cs.rice.edu"), startPort);
+//      boots[1] = new InetSocketAddress(InetAddress.getByName("ricepl-2.cs.rice.edu"), startPort);
+//      boots[2] = new InetSocketAddress(InetAddress.getByName("ricepl-3.cs.rice.edu"), startPort);
+//      boots[3] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.umass.edu"), startPort);
+//      boots[4] = new InetSocketAddress(InetAddress.getByName("planet1.scs.cs.nyu.edu"), startPort);
+//      boots[5] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.cornell.edu"), startPort);
       
 //      PartitionHandler ph = new PartitionHandler(node, (SocketPastryNodeFactory)factory, boots);
 //      ph.start(node.getEnvironment().getSelectorManager().getTimer());
@@ -664,7 +681,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       // this is to cause different connections to open
       // TODO: Implement
 
-      node.getBootstrapper().boot(Arrays.asList(bootAddressCandidates));
+      node.getBootstrapper().boot(bootAddrCandidates);
 
       ls.addNodeSetListener(preObserver);  
       // the node may require sending several messages to fully boot into the ring
@@ -681,6 +698,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
       
       params.setInt("org.mpisws.p2p.transport_loglevel",Logger.WARNING);
+      params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
       setupParams(params);
       
       if (useSplitStream) {

@@ -39,7 +39,6 @@ package org.mpisws.p2p.transport.identity;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -378,7 +378,10 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
                   if (canRead) throw new IOException("Never asked to read!");
                   if (!canWrite) throw new IOException("Can't write!");
-                  socket.write(buf);
+                  if (socket.write(buf) < 0)  {
+                    deliverSocketToMe.receiveException(ret, new ClosedChannelException("Remote node closed socket while opening.  Try again."));
+                    return;
+                  }
                   if (buf.hasRemaining()) {
                     socket.register(false, true, this);
                   } else {
@@ -396,7 +399,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                         if (socket.read(responseBuffer) == -1) {
                           // socket unexpectedly closed
                           socket.close();
-                          deliverSocketToMe.receiveException(ret, new ClosedChannelException());                           
+                          deliverSocketToMe.receiveException(ret, new ClosedChannelException("Remote node closed socket while opening.  Try again."));                           
                           return;
                         }
                         
@@ -444,14 +447,14 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           handler.receivedException(socket.getIdentifier(), ioe);
         }
 
-        public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+        public void receiveSelectResult(final P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
           if (canWrite) throw new IOException("Never asked to write!");
           if (!canRead) throw new IOException("Can't read!");
           
           // read the TO field
           if (socket.read(buf) == -1) {
             // socket closed
-            handler.receivedException(socket.getIdentifier(), new ClosedChannelException());
+            if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new IOException("Socket closed while incoming."));
             return;
           }
           
@@ -503,7 +506,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 final ByteBuffer writeMe = ByteBuffer.wrap(result);
                 socket.register(false, true, new P2PSocketReceiver<LowerIdentifier>() {
                   public void receiveException(P2PSocket<LowerIdentifier> socket, IOException ioe) {
-                    handler.receivedException(socket.getIdentifier(), ioe);                
+                    if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), ioe);                
                   }
 
                   public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
@@ -512,7 +515,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                     
                     if (socket.write(writeMe) == -1) {
                       // socket closed
-                      handler.receivedException(socket.getIdentifier(), new ClosedChannelException());
+                      if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
                       return;                  
                     }
                     
@@ -553,7 +556,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 
                 if (socket.write(writeMe) == -1) {
                   // socket closed
-                  handler.receivedException(socket.getIdentifier(), new ClosedChannelException());
+                  if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
                   return;                  
                 }
                 

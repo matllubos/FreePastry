@@ -725,6 +725,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * @param route The now-dead route
      */
     protected synchronized void markDead(SourceRoute deadRoute, Map<String, Integer> options) {
+//      logger.logException(this+" markDead("+deadRoute+"):"+best, new Exception());
       if (logger.level <= Logger.FINE) logger.log(this+" markDead("+deadRoute+"):"+best);
       
       // if we're already dead, who cares

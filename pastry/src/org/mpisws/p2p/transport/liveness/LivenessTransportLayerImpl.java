@@ -39,7 +39,6 @@ package org.mpisws.p2p.transport.liveness;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,6 +49,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
@@ -260,8 +260,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
         // the upper layer is probably going to retry, so mark this dead first
         if (connectionExceptionMeansFaulty) {
-          if (logger.level <= Logger.FINER) logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
-          getManager(i).markDead(options);
+          if (ex instanceof java.nio.channels.ClosedChannelException) {
+            // don't mark dead
+          } else {
+            logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
+            if (logger.level <= Logger.FINER) logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
+            getManager(i).markDead(options);
+          }
         }
         deliverSocketToMe.receiveException(s, ex);
       }
@@ -929,7 +934,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
     @Override
     public void register(boolean wantToRead, boolean wantToWrite, final P2PSocketReceiver<Identifier> receiver) {     
       if (closed) {
-        receiver.receiveException(this, new ClosedChannelException());
+//        logger.logException("closeEx", closeEx);
+//        logger.logException("here", new Exception());
+        receiver.receiveException(this, new ClosedChannelException("Socket "+this+" is already closed."));
         return;
       }
       if (wantToWrite) startLivenessCheckerTimer();
@@ -981,10 +988,12 @@ public class LivenessTransportLayerImpl<Identifier> implements
         livenessCheckerTimer = null;
       }
     }
-    
+
+//    Exception closeEx;
     @Override
     public void close() {
       closed = true;
+//      closeEx = new Exception();
       manager.removeSocket(this);
       super.close();
     }

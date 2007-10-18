@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -154,7 +155,10 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
               if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
               
               // do the work
-              socket.write(b);
+              if (socket.write(b) < 0) {
+                deliverSocketToMe.receiveException(handle, new ClosedChannelException("Remote node closed socket while opening.  Try again."));
+                return;
+              }
               
               // keep working or pass up the new socket
               if (b.hasRemaining()) {
@@ -200,7 +204,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
           } catch (InsufficientBytesException ibe) {
             socket.register(true, false, this); 
           } catch (IOException e) {
-            errorHandler.receivedException(new MultiInetSocketAddress(socket.getIdentifier()), e);
+            if (logger.level <= Logger.INFO) errorHandler.receivedException(new MultiInetSocketAddress(socket.getIdentifier()), e);
           }
         }
       

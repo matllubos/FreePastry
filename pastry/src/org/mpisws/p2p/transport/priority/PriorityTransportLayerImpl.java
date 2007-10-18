@@ -156,7 +156,14 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (canWrite || !canRead) throw new IllegalArgumentException("Should only be able to read! canRead:"+canRead+" canWrite:"+canWrite);
         // the first thing we need to do is to find out if this is a primary socket or a passthrough
         ByteBuffer hdr = ByteBuffer.allocate(1);
-        int ret = (int)socket.read(hdr);
+        int ret;
+        try {
+          ret = (int)socket.read(hdr);
+        } catch (IOException ioe) {
+//          errorHandler.receivedException(s.getIdentifier(), new IOException("Incoming socket terminated early."));
+          socket.close();
+          return;
+        }
         switch (ret) {
         case -1: 
           // closed... strange
@@ -455,6 +462,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (messageThatIsBeingWritten == null) {
           sockets.remove(socket);
           socket.close();
+          setWritingSocket(null);
           return true;
         }
         closeWritingSocket = writingSocket;
@@ -494,6 +502,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
     
     public void setWritingSocket(P2PSocket<Identifier> s/*, String loc*/) {
+//      logger.log(this+".setWritingSocket("+s+")");
       if (logger.level <= Logger.FINEST) logger.log(this+".setWritingSocket("+s+")");
 //      if (logger.level <= Logger.INFO) logger.log(this+".setWritingSocket("+s+") loc:"+loc);
       writingSocket = s;
@@ -536,7 +545,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (haveMessageToSend()) {
           //logger.log(this+" registering on "+writingSocket);
           // maybe we should remember if we were registered, and don't reregister, but for now it doesn't hurt
-          registered = true;  // may fail in this call and set registered back to false, so make sure to do this before calling register
+          registered = true;  // may fail in this call and set registered back to false, so make sure to do this before calling register          
+          //logger.log(this+".scheduleToWriteIfNeeded() registering to write");
           writingSocket.register(false, true, this);
         }
       }      
@@ -631,8 +641,12 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       } else if (logger.level <= Logger.INFO) logger.log(this+".receiveException("+socket+","+ioe+"):"+messageThatIsBeingWritten+" wrS:"+writingSocket+" "+ioe);
       registered = false;
       sockets.remove(socket);
-      socket.close();
-      
+      if (ioe instanceof ClosedChannelException) {
+        // don't close, will get cleaned up by the reader
+      } else {
+        socket.close();
+      }
+        
       if (socket == writingSocket) {
         clearAndEnqueue(messageThatIsBeingWritten);
       }
@@ -647,6 +661,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         return;
       }
       
+//      logger.log("receivedSelectResult("+socket+","+canRead+","+canWrite);
       if (logger.level <= Logger.FINEST) logger.log("receivedSelectResult("+socket+","+canRead+","+canWrite);
       MessageWrapper current = poll();
       while (current != null && current.receiveSelectResult(writingSocket)) {
@@ -828,7 +843,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       if (messageThatIsBeingWritten != null) messageThatIsBeingWritten.reset();
       messageThatIsBeingWritten = null;
       if (writingSocket != null) {
-        writingSocket.close();
+//        writingSocket.close();
         sockets.remove(writingSocket);
         setWritingSocket(null/*, "CaE("+wrapper+")"*/);
       }
@@ -929,6 +944,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
                 
         return EntityManager.this.complete(this); 
         } catch (IOException ioe) {
+          // note, clearAndEnqueue() gets called later by the writer when the stack unravels again
           if (logger.level <= Logger.FINEST) logger.logException(this+".rsr("+socket+")", ioe);
           throw ioe;
         }

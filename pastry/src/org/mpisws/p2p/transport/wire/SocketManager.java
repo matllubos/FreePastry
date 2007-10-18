@@ -40,13 +40,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
@@ -354,11 +354,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
 //      } else {
 //        logger.logException("closeEx "+addr, closeEx);
 //      }
-      ClosedChannelException cce = new ClosedChannelException() {
-            public String getMessage() {
-              return "Socket "+addr+" "+this+" is already closed.";
-            }
-          };
+      ClosedChannelException cce = new ClosedChannelException("Socket "+addr+" "+SocketManager.this+" is already closed.");
       if (logger.level <= Logger.CONFIG) logger.logException("Socket "+addr+" "+this+" is already closed.", cce);
       receiver.receiveException(this, cce);
       return;
@@ -368,11 +364,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     if (wantToWrite) {
       if (channel.socket().isOutputShutdown()) {
         receiver.receiveException(this, 
-            new ClosedChannelException() {
-              public String getMessage() {
-                return "Socket "+addr+" "+this+" already shut down output.";
-              }
-            });        
+            new ClosedChannelException("Socket "+addr+" "+SocketManager.this+" already shut down output."));        
         return;
       }
       if (writer != null) {
