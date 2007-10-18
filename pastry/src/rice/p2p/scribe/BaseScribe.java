@@ -70,6 +70,7 @@ public interface BaseScribe extends Destructable {
    */
   public void unsubscribe(Topic topic, ScribeClient client);
   public void unsubscribe(Topic topic, ScribeMultiClient client);
+  public void unsubscribe(Collection<Topic> topicsToUnsubscribe, ScribeMultiClient client);
 
   /**
    * Adds a child to the given topic

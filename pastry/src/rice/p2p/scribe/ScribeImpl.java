@@ -784,7 +784,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   public void unsubscribe(Topic topic, ScribeMultiClient client) {
     unsubscribe(Collections.singletonList(topic), client);
   }
-  public void unsubscribe(List<Topic> topicsToUnsubscribe, ScribeMultiClient client) {
+  public void unsubscribe(Collection<Topic> topicsToUnsubscribe, ScribeMultiClient client) {
     if (logger.level <= Logger.FINER) logger.log("Unsubscribing client " + client + " from topic " + topicManagers);
     HashMap<NodeHandle, List<Topic>> needToUnsubscribe = new HashMap<NodeHandle, List<Topic>>();
 

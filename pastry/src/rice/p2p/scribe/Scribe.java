@@ -38,8 +38,6 @@ advised of the possibility of such damage.
 package rice.p2p.scribe;
 
 
-import rice.*;
-import rice.p2p.commonapi.*;
 import rice.p2p.scribe.javaserialized.JavaScribe;
 import rice.p2p.scribe.rawserialization.*;
 
