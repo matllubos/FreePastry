@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
@@ -16,6 +17,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   protected int socketId;
   protected Verifier<Identifier> verifier;
   boolean closed = false;
+  boolean outputClosed = false;
   Map<String, Integer> options;
   
   /**
@@ -41,10 +43,12 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   }
 
   public long read(ByteBuffer dst) throws IOException {
+    if (closed) throw new ClosedChannelException("Socket already closed.");
     return verifier.readSocket(socketId, dst);
   }
 
   public long write(ByteBuffer src) throws IOException {
+    if (closed || outputClosed) throw new ClosedChannelException("Socket already closed.");
     return verifier.writeSocket(socketId, src);
   }
 
@@ -117,7 +121,9 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   }
   
   public void shutdownOutput() {
-    throw new RuntimeException("Not implemented.");
+    outputClosed = true;
+    verifier.shutdownOutput(socketId);
+//    throw new RuntimeException("Not implemented.");
   }
 
   public boolean cancel() {

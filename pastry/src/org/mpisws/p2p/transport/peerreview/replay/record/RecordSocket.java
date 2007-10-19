@@ -106,6 +106,18 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
   }
   
   @Override
+  public void shutdownOutput() {
+    try {
+//    logger.logException("close()",new Exception("close()"));
+      socketIdBuffer.clear();      
+      recordLayer.logEvent(EVT_SOCKET_SHUTDOWN_OUTPUT, socketIdBuffer);
+    } catch (IOException ioe2) {
+      if (logger.level <= Logger.WARNING) logger.logException(this+".receiveException()",ioe2); 
+    }        
+    super.shutdownOutput();
+  }
+
+  @Override
   public void register(boolean wantToRead, boolean wantToWrite, final P2PSocketReceiver<Identifier> receiver) {
     super.register(wantToRead, wantToWrite, new P2PSocketReceiver<Identifier>(){
 

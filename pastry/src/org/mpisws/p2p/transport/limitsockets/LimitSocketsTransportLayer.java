@@ -134,7 +134,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
      *
      */
     public void forceClose() {
-//      logger.log(this+".forceClose()");
+      logger.log(this+".forceClose()");
       if (logger.level <= Logger.FINE) logger.log(this+".forceClose()");
       closed = true;
       cache.remove(this);

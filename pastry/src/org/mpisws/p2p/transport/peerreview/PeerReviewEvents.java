@@ -15,10 +15,14 @@ public interface PeerReviewEvents {
   public static final short EVT_SOCKET_OPENED_OUTGOING = 18; 
   public static final short EVT_SOCKET_EXCEPTION = 19; 
   public static final short EVT_SOCKET_CLOSE = 11; 
+  public static final short EVT_SOCKET_SHUTDOWN_OUTPUT = 20; 
   public static final short EVT_SOCKET_CLOSED = 12; 
   public static final short EVT_SOCKET_CAN_READ = 13; 
   public static final short EVT_SOCKET_CAN_WRITE = 14; 
   public static final short EVT_SOCKET_CAN_RW = 15; 
   public static final short EVT_SOCKET_READ = 16; 
   public static final short EVT_SOCKET_WRITE = 17;   
+  
+  public static final short EVT_MIN_SOCKET_EVT = EVT_SOCKET_OPEN_INCOMING;
+  public static final short EVT_MAX_SOCKET_EVT = EVT_SOCKET_SHUTDOWN_OUTPUT;
 }

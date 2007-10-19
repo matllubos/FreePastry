@@ -107,7 +107,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   public void logEvent(short type, ByteBuffer ... entry) throws IOException {
 //   assert(initialized && (type > EVT_MAX_RESERVED));
    
-//    logger.logException("logging #"+history.getNumEntries()+" t:"+type, new Exception("Stack Trace"));
+    logger.logException("logging #"+history.getNumEntries()+" t:"+type, new Exception("Stack Trace"));
     updateLogTime();
     history.appendEntry(type, true, entry);   
   }
@@ -117,7 +117,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     final int socketId = socketCtr++;
     final ByteBuffer socketIdBuffer = ByteBuffer.wrap(MathUtils.intToByteArray(socketId));
     try {
-      logEvent(EVT_SOCKET_OPEN_OUTGOING, identifierSerializer.serialize(i), socketIdBuffer);
+      logEvent(EVT_SOCKET_OPEN_OUTGOING, socketIdBuffer, identifierSerializer.serialize(i));
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
     }
@@ -154,7 +154,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     final ByteBuffer socketIdBuffer = ByteBuffer.wrap(MathUtils.intToByteArray(socketId));
     try {
       socketIdBuffer.clear();
-      logEvent(EVT_SOCKET_OPEN_INCOMING, identifierSerializer.serialize(s.getIdentifier()), socketIdBuffer);
+      logEvent(EVT_SOCKET_OPEN_INCOMING, socketIdBuffer, identifierSerializer.serialize(s.getIdentifier()));
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("incomingSocket("+s.getIdentifier()+")",ioe); 
     }

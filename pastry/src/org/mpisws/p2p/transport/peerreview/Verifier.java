@@ -127,12 +127,19 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   /**
    * Fetch the next log entry, or set the EOF flag 
    */
-  protected void fetchNextEvent() throws IOException {
+  protected void fetchNextEvent() {
     haveNextEvent = false;
     nextEventIndex++;
 
 //    unsigned char chash[hashSizeBytes];
-    next = history.statEntry(nextEventIndex);
+    try {
+      next = history.statEntry(nextEventIndex);
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("Error fetching log entry #"+nextEventIndex,ioe);
+      foundFault = true;
+      return;
+    }
+
     if (logger.level <= Logger.FINE) logger.log("fetchNextEvent():"+next);
 
     if (next == null)
@@ -151,7 +158,13 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       
       nextEventIsHashed = false;
 //      assert(nextEventSize < (int)sizeof(nextEvent));
-      nextEvent = new SimpleInputBuffer(history.getEntry(nextEventIndex, next.getSizeInFile()));
+      try {
+        nextEvent = new SimpleInputBuffer(history.getEntry(nextEventIndex, next.getSizeInFile()));
+      } catch (IOException ioe) {
+        if (logger.level <= Logger.WARNING) logger.logException("Error fetching log entry #"+nextEventIndex+" (type "+next.getType()+", size "+next.getSizeInFile()+" bytes, seq="+next.getSeq()+")",ioe);
+        foundFault = true;
+        return;
+      }
       if (logger.level <= Logger.FINE) logger.log("Fetched log entry #"+nextEventIndex+" (type "+next.getType()+", size "+next.getSizeInFile()+" bytes, seq="+next.getSeq()+")");
 //      vdump(nextEvent, nextEventSize);
     }
@@ -363,6 +376,8 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       return Integer.MIN_VALUE;
     }
 
+    int ret = nextEvent.readInt(); 
+    
     Identifier logReceiver;
     logReceiver = serializer.deserialize(nextEvent);
     if (!logReceiver.equals(target)) {
@@ -371,7 +386,6 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       return Integer.MIN_VALUE;
     }
 
-    int ret = nextEvent.readInt(); 
     fetchNextEvent();
     
     return ret;
@@ -391,8 +405,13 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       return 0;
     }
     
+    if (next.getType() == EVT_SOCKET_CLOSED) {
+      fetchNextEvent();
+      return -1;
+    }
+    
     if (next.getType() != EVT_SOCKET_READ) {
-      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_READ event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      if (logger.level <= Logger.WARNING) logger.logException("Replay ("+nextEventIndex+"): SOCKET_READ event during replay, but next event in log is #"+next.getType()+"; marking as invalid", new Exception("Stack Trace"));
       foundFault = true;
       return Integer.MIN_VALUE;
     }
@@ -429,6 +448,11 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       if (logger.level <= Logger.WARNING) logger.log("Replay: WriteSocket event after end of segment; marking as invalid");
       foundFault = true;
       return 0;
+    }
+    
+    if (next.getType() == EVT_SOCKET_CLOSED) {
+      fetchNextEvent();
+      return -1;
     }
     
     if (next.getType() != EVT_SOCKET_WRITE) {
@@ -494,6 +518,39 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       foundFault = true;
       return;
     }
+    
+    fetchNextEvent();
+  }
+  
+  public void shutdownOutput(int socketId) {
+    if (!haveNextEvent) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: EVT_SOCKET_SHUTDOWN_OUTPUT event after end of segment; marking as invalid");
+      foundFault = true;
+      return;
+    }
+    
+    if (next.getType() != EVT_SOCKET_SHUTDOWN_OUTPUT) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: EVT_SOCKET_SHUTDOWN_OUTPUT event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      foundFault = true;
+      return;
+    }
+
+    int loggedSocket;
+    try {
+      loggedSocket = nextEvent.readInt();
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: Error deserializing event "+next);
+      foundFault = true;
+      return;
+    }
+
+    if (loggedSocket != socketId) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: EVT_SOCKET_SHUTDOWN_OUTPUT on socket "+socketId+" during replay, but log shows EVT_SOCKET_SHUTDOWN_OUTPUT to "+loggedSocket+"; marking as invalid");
+      foundFault = true;
+      return;
+    }
+    
+    fetchNextEvent();
   }
   
 
@@ -560,12 +617,22 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       switch (next.getType()) {
       case EVT_SEND : /* SEND events should have been handled by Verifier::send() */
 //        if (logger.level <= Logger.FINE) logger.log("Replay: Encountered EVT_SEND, waiting for node.");
-        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SEND; marking as invalid", new Exception("Stack Trace"));
+        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SEND evt #"+nextEventIndex+"; marking as invalid", new Exception("Stack Trace"));
 //        transport->dump(2, nextEvent, next.getSizeInFile());
         foundFault = true;
         return false;
       case EVT_SOCKET_READ: {
-        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SOCKET_READ; marking as invalid", new Exception("Stack Trace"));
+        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SOCKET_READ evt #"+nextEventIndex+"; marking as invalid", new Exception("Stack Trace"));
+        foundFault = true;
+        return false;        
+      }
+      case EVT_SOCKET_CLOSE: {
+        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SOCKET_CLOSE evt #"+nextEventIndex+"; marking as invalid", new Exception("Stack Trace"));
+        foundFault = true;
+        return false;        
+      }
+      case EVT_SOCKET_SHUTDOWN_OUTPUT: {
+        if (logger.level <= Logger.WARNING) logger.logException("Replay: Encountered EVT_SOCKET_SHUTDOWN_OUTPUT evt #"+nextEventIndex+"; marking as invalid", new Exception("Stack Trace"));
         foundFault = true;
         return false;        
       }
@@ -698,8 +765,8 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         break;
       case EVT_SOCKET_OPEN_INCOMING: {
 //        logger.log(next+" s:"+nextEvent.bytesRemaining());
-        Identifier opener = serializer.deserialize(nextEvent);
         int socketId = nextEvent.readInt();
+        Identifier opener = serializer.deserialize(nextEvent);
         fetchNextEvent();
         incomingSocket(opener, socketId);          
         break;

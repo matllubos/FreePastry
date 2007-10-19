@@ -32,10 +32,10 @@ public class MyEntryDeserializer extends BasicEntryDeserializer implements MyEve
     if (ie.getSizeInFile() > 0) nextEvent = new SimpleInputBuffer(history.getEntry(ie, ie.getSizeInFile()));
     switch (ie.getType()) {
     case EVT_SOCKET_OPEN_OUTGOING: {
+      int socketId = nextEvent.readInt();      
       byte[] addrBytes = new byte[4];
       nextEvent.read(addrBytes);
       InetSocketAddress addr = new InetSocketAddress(InetAddress.getByAddress(addrBytes), nextEvent.readShort());
-      int socketId = nextEvent.readInt();      
       return entryId(ie.getType())+" socketId:"+socketId+" addr:"+addr;
     }
     case EVT_SOCKET_OPENED_OUTGOING: {

@@ -39,12 +39,17 @@ public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializ
     case EVT_SOCKET_CAN_RW: return "Socket_can_RW"; 
     case EVT_SOCKET_READ: return "Socket_R";
     case EVT_SOCKET_WRITE: return "Socket_W";
+    case EVT_SOCKET_SHUTDOWN_OUTPUT: return "Socket_shutdown_output";
 
     default: return null;
     }
   }
 
   public String read(IndexEntry ie, SecureHistory history) throws IOException {
+    if (ie.getType() >= EVT_MIN_SOCKET_EVT && ie.getType() <= EVT_MAX_SOCKET_EVT) {
+      return entryId(ie.getType())+" n:"+ie.getSeq()+" i:"+ie.getFileIndex()+" sock:"+new SimpleInputBuffer(history.getEntry(ie, 4)).readInt();
+    }
+    
     return entryId(ie.getType())+" n:"+ie.getSeq()+" s:"+ie.getSizeInFile()+" i:"+ie.getFileIndex();
   }
 
