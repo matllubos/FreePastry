@@ -122,6 +122,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   
   protected abstract void socketOpened(int socketId) throws IOException;
 
+  protected abstract void socketException(int socketId) throws IOException;
 
   
   /**
@@ -203,7 +204,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     }
     
     if (next.getType() != EVT_SEND) {
-      if (logger.level <= Logger.WARNING) logger.log("Replay: SEND event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      if (logger.level <= Logger.WARNING) logger.log("Replay("+nextEventIndex+"): SEND event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
       foundFault = true;
       return;
     }
@@ -437,6 +438,36 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
     return ret;
   }
   
+  public void generatedSocketException(int socketId, IOException ioe) {
+    if (!haveNextEvent) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: WriteSocket event after end of segment; marking as invalid");
+      foundFault = true;
+      return;
+    }
+    
+    if (next.getType() != EVT_SOCKET_EXCEPTION) {
+      if (logger.level <= Logger.WARNING) logger.log("Replay: EVT_SOCKET_EXCEPTION event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      foundFault = true;
+      return;
+    }
+
+    try {
+      int loggedSocket = nextEvent.readInt();
+      if (loggedSocket != socketId) {
+        if (logger.level <= Logger.WARNING) logger.log("Replay: EVT_SOCKET_EXCEPTION on socket "+socketId+" during replay, but log shows EVT_SOCKET_EXCEPTION to "+loggedSocket+"; marking as invalid");
+        foundFault = true;
+        return;
+      }
+    } catch (IOException ioe2) {
+      if (logger.level <= Logger.WARNING) logger.logException("Replay: Error reading log", ioe2);      
+    }
+    
+    // all good
+    fetchNextEvent();
+    return;
+    
+  }
+  
   /**
    * Return the bytes written.
    * 
@@ -493,13 +524,13 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   
   public void close(int socketId) {
     if (!haveNextEvent) {
-      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_CLOSE event after end of segment; marking as invalid");
+      if (logger.level <= Logger.WARNING) logger.log("Replay("+nextEventIndex+"): SOCKET_CLOSE event after end of segment; marking as invalid");
       foundFault = true;
       return;
     }
     
     if (next.getType() != EVT_SOCKET_CLOSE) {
-      if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_CLOSE event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
+      if (logger.level <= Logger.WARNING) logger.log("Replay("+nextEventIndex+"): SOCKET_CLOSE event during replay, but next event in log is #"+next.getType()+"; marking as invalid");
       foundFault = true;
       return;
     }
@@ -793,6 +824,12 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         int socketId = nextEvent.readInt();
         fetchNextEvent();
         socketIO(socketId, true, true);
+        break;
+      }
+      case EVT_SOCKET_EXCEPTION: {
+        int socketId = nextEvent.readInt();
+        fetchNextEvent();
+        socketException(socketId);
         break;
       }
       default:

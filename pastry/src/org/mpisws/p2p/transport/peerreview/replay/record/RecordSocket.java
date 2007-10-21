@@ -144,9 +144,10 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
       public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
         try {
           socketIdBuffer.clear();
+//          logger.logException(this+".register()", ioe);
           recordLayer.logEvent(EVT_SOCKET_EXCEPTION, socketIdBuffer);
         } catch (IOException ioe2) {
-          if (logger.level <= Logger.WARNING) logger.logException(this+".receiveException()",ioe2); 
+          if (logger.level <= Logger.WARNING) logger.logException(this+"@"+socketId+".receiveException()",ioe2); 
         }
         receiver.receiveException(socket, ioe);
       }

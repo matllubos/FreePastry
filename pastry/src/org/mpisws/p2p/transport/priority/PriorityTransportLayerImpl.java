@@ -457,7 +457,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      * @return true if we did it now
      */
     public boolean closeMe(P2PSocket<Identifier> socket) {
-      if (logger.level <= Logger.FINE) logger.log("closeMe("+socket+"):"+(socket == writingSocket)+","+messageThatIsBeingWritten);
+      if (logger.level <= Logger.FINE) logger.logException("closeMe("+socket+"):"+(socket == writingSocket)+","+messageThatIsBeingWritten, new Exception("Stack Trace"));
       if (socket == writingSocket) {
         if (messageThatIsBeingWritten == null) {
           sockets.remove(socket);

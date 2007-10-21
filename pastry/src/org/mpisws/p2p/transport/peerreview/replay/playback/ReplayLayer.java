@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -153,5 +154,14 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   protected void socketOpened(int socketId) throws IOException {
 //    logger.log("socketOpened("+socketId+")");
     sockets.get(socketId).socketOpened();
+  }
+
+  @Override
+  protected void socketException(int socketId) throws IOException {
+    //logger.log("socketException("+socketId+")");
+//    sockets.get(socketId).receiveException(new IOException("Replay Exception"));
+    sockets.get(socketId).receiveException(new ClosedChannelException("Replay Exception"));
+    // TODO Auto-generated method stub
+    
   }  
 }

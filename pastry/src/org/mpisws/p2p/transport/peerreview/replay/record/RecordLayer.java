@@ -82,6 +82,8 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     this.environment = env;
     this.lastLogEntry = -1;
     this.logger = env.getLogManager().getLogger(RecordLayer.class, null);
+
+    env.addDestructable(this);
     
     initialized = true;
   }
@@ -142,9 +144,10 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
         socketIdBuffer.clear();
         try {
+//          logger.logException("socket "+socketId+" .register()", ex);
           logEvent(EVT_SOCKET_EXCEPTION, socketIdBuffer);
         } catch (IOException ioe) {
-          if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
+          if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")@"+socketId,ioe); 
         }
         deliverSocketToMe.receiveException(ret, ex);
       }
@@ -239,7 +242,13 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
 
   public void destroy() {
-    tl.destroy();
+//    logger.log(this+".destroy()");
+//    try {
+//      history.close();
+//    } catch (IOException ioe) {
+//      if (logger.level <= Logger.WARNING) logger.logException("Error destroying.", ioe);
+//    }
+//    tl.destroy();
   }
   
   public static Environment generateEnvironment() {

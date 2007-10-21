@@ -58,6 +58,13 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
     if (closed) throw new IllegalStateException("Socket "+identifier+" "+this+" is already closed.");
 
     if (wantToWrite) {
+      if (outputClosed) {
+        // need to record/remove EVT_SOCKET_EXCEPTION
+        verifier.generatedSocketException(socketId, null);
+        receiver.receiveException(this, 
+            new ClosedChannelException("Socket "+identifier+" "+this+" already shut down output."));        
+        return;
+      }
       if (writer != null) {
         if (writer != receiver) throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!"); 
       }
@@ -126,6 +133,28 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
 //    throw new RuntimeException("Not implemented.");
   }
 
+  public void receiveException(IOException ioe) {
+    if (deliverSocketToMe != null) {
+      deliverSocketToMe.receiveException(this, ioe);
+      return;
+    }
+    if (writer != null) {
+      if (writer == reader) {
+        writer.receiveException(this, ioe);
+        writer = null;
+        reader = null;
+      } else {
+        writer.receiveException(this, ioe);
+        writer = null;
+      }
+    }
+    
+    if (reader != null) {
+      reader.receiveException(this, ioe);
+      reader = null;
+    }
+  }
+  
   public boolean cancel() {
     throw new RuntimeException("Not implemented.");
   }

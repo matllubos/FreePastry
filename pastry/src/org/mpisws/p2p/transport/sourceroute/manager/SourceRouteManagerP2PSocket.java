@@ -82,13 +82,19 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
   
   public void register(boolean wantToRead, boolean wantToWrite,
       final P2PSocketReceiver<Identifier> receiver) {
-    if (wantToRead) registeredToRead = receiver;
+    if (wantToRead) {
+      registeredToRead = receiver;
+      //logger.logException(SourceRouteManagerP2PSocket.this+".register("+registeredToRead+")1",new Exception("Stack Trace"));
+    }
     if (wantToWrite) registeredToWrite = receiver;
     if (logger.level <= Logger.FINEST) logger.log(this+"register("+wantToRead+","+wantToWrite+","+receiver+")");
     socket.register(wantToRead, wantToWrite, new P2PSocketReceiver<SourceRoute<Identifier>>(){    
       public void receiveSelectResult(P2PSocket<SourceRoute<Identifier>> socket, boolean canRead, boolean canWrite) throws IOException {
         if (socket != SourceRouteManagerP2PSocket.this.socket) throw new IllegalStateException("socket != this.socket"+socket+","+SourceRouteManagerP2PSocket.this.socket); // it is a bug if this gets tripped
-        if (canRead) registeredToRead = null;
+        if (canRead) {
+          //logger.logException(SourceRouteManagerP2PSocket.this+".register("+registeredToRead+")2",new Exception("Stack Trace"));
+          registeredToRead = null;
+        }
         if (canWrite) registeredToWrite = null;
         receiver.receiveSelectResult(SourceRouteManagerP2PSocket.this, canRead, canWrite);
       }

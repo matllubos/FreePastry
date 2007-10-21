@@ -998,6 +998,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
       super.close();
     }
     
+    public String toString() {
+      return "LSocket{"+socket+"}";
+    }
 //    public void closeButDontRemove() {
 //      super.close();
 //    }
