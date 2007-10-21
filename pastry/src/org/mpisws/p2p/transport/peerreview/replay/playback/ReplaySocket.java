@@ -43,12 +43,12 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   }
 
   public long read(ByteBuffer dst) throws IOException {
-    if (closed) throw new ClosedChannelException("Socket already closed.");
+//    if (closed) throw new ClosedChannelException("Socket already closed.");
     return verifier.readSocket(socketId, dst);
   }
 
   public long write(ByteBuffer src) throws IOException {
-    if (closed || outputClosed) throw new ClosedChannelException("Socket already closed.");
+//    if (closed || outputClosed) throw new ClosedChannelException("Socket already closed.");
     return verifier.writeSocket(socketId, src);
   }
 

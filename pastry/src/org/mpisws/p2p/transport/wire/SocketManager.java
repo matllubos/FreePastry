@@ -226,23 +226,42 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       if (channel != null) 
         channel.close();
       
+      
+      tcp.wire.environment.getSelectorManager().invoke(new Runnable() {
+        public void run() {
       // notify the writer/reader because an intermediate layer may have closed the socket, and they need to know
       if (writer != null) {
         if (writer == reader) {
-          writer.receiveSelectResult(this, true, true);
+//          try {
+//            writer.receiveSelectResult(SocketManager.this, true, true);
+//          } catch (IOException e) {
+//            if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
+//          }
+          writer.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
           writer = null;
           reader = null;
         } else {
-          writer.receiveSelectResult(this, false, true);          
+//          try {
+//            writer.receiveSelectResult(SocketManager.this, false, true);          
+//          } catch (IOException e) {
+//            if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
+//          }
+          writer.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
           writer = null;
         }
       }
       
       if (reader != null) {
-        reader.receiveSelectResult(this, true, false);                  
+//        try {
+//          reader.receiveSelectResult(SocketManager.this, true, false);                  
+//        } catch (IOException e) {
+//          if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
+//        }
+        reader.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
         reader = null;
       }
-
+        }
+      });
 //      if (path != null) {
 //        manager.socketClosed(path, this);
 //
@@ -409,6 +428,22 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         if (channel != null) {
           if (!channel.socket().isClosed()) {
             channel.socket().shutdownOutput();
+            
+            tcp.wire.environment.getSelectorManager().invoke(new Runnable() {
+              public void run() {
+                // notify the writer/reader because an intermediate layer may have closed the socket, and they need to know
+                if (writer != null) {
+//                  try {
+                    writer.receiveException(SocketManager.this, new ClosedChannelException("Channel shut down."));
+                    //writer.receiveSelectResult(SocketManager.this, false, true);          
+//                  } catch (IOException e) {
+//                    if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
+//                  }
+                  writer = null;
+                }
+              }
+            });
+
           } else {
             closeMe = true; 
           }

@@ -797,7 +797,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       }
       default:
         if (!eventCallback.containsKey(next.getType())) {
-          if (logger.level <= Logger.WARNING) logger.log("Replay: Unregistered event #"+next.getType()+"; marking as invalid");
+          if (logger.level <= Logger.WARNING) logger.log("Replay("+nextEventIndex+"): Unregistered event #"+next.getType()+"; marking as invalid");
           foundFault = true;
           return false;
         }

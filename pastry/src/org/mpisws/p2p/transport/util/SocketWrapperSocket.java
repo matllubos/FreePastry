@@ -71,7 +71,9 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
     return identifier;
   }
   public void close() {    
-    if (logger.level <= Logger.FINE) logger.log("Closing "+this);
+    if (logger.level <= Logger.FINER) {
+      logger.logException("Closing "+this, new Exception("Stack Trace"));
+    } else if (logger.level <= Logger.FINE) logger.log("Closing "+this);
     socket.close();
   }
 

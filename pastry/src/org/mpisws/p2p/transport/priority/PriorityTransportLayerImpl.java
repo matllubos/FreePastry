@@ -502,7 +502,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
     
     public void setWritingSocket(P2PSocket<Identifier> s/*, String loc*/) {
-//      logger.log(this+".setWritingSocket("+s+")");
+//      logger.logException(this+".setWritingSocket("+s+")", new Exception());
       if (logger.level <= Logger.FINEST) logger.log(this+".setWritingSocket("+s+")");
 //      if (logger.level <= Logger.INFO) logger.log(this+".setWritingSocket("+s+") loc:"+loc);
       writingSocket = s;
@@ -657,7 +657,12 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       registered  = false;
       if (canRead || !canWrite) throw new IllegalStateException(this+" Expected only to write. canRead:"+canRead+" canWrite:"+canWrite+" socket:"+socket);
       if (socket != writingSocket) {
-        if (logger.level <= Logger.WARNING) logger.log("receivedSelectResult("+socket+","+canRead+","+canWrite);
+        // this is because the close() method calls receiveSelectResult
+//        if (writingSocket == null) {          
+//          scheduleToWriteIfNeeded();
+//        }
+//        logger.logException("receivedSelectResult("+socket+", r:"+canRead+" w:"+canWrite+") ws:"+writingSocket, new IOException());
+        if (logger.level <= Logger.WARNING) logger.log("receivedSelectResult("+socket+", r:"+canRead+" w:"+canWrite+") ws:"+writingSocket);
         return;
       }
       

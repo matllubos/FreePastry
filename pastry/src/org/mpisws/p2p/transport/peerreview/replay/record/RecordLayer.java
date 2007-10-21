@@ -107,7 +107,11 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   public void logEvent(short type, ByteBuffer ... entry) throws IOException {
 //   assert(initialized && (type > EVT_MAX_RESERVED));
    
-    logger.logException("logging #"+history.getNumEntries()+" t:"+type, new Exception("Stack Trace"));
+    if (logger.level <= Logger.FINEST) {
+      logger.logException("logging #"+history.getNumEntries()+" t:"+type, new Exception("Stack Trace"));
+    } else if (logger.level <= Logger.FINER) {
+      logger.log("logging #"+history.getNumEntries()+" t:"+type);
+    }
     updateLogTime();
     history.appendEntry(type, true, entry);   
   }
