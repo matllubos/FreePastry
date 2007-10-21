@@ -105,6 +105,7 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.Id;
+import rice.pastry.JoinFailedException;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
@@ -681,10 +682,15 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
      * Continuation.receiveResult() unregisters the LivenessListener and then calls ProximityNeighborSelection.nearNodes()
      * PNS.nearNodes() calls into the continuation which calls PastryNode.doneNode() 
      */
-    public void boot(Collection<InetSocketAddress> bootaddresses) {
-      if (logger.level <= Logger.FINE) logger.log("boot("+bootaddresses+")");
-      if (bootaddresses == null) bootaddresses = Collections.EMPTY_LIST;
-
+    public void boot(Collection<InetSocketAddress> bootaddresses_temp) {
+      if (logger.level <= Logger.FINE) logger.log("boot("+bootaddresses_temp+")");
+      final Collection<InetSocketAddress> bootaddresses;
+      if (bootaddresses_temp == null) {
+        bootaddresses = Collections.EMPTY_LIST;
+      } else {
+        bootaddresses = bootaddresses_temp;
+      }
+      
       // bogus handles
       final Collection<SocketNodeHandle> tempBootHandles = new ArrayList<SocketNodeHandle>(bootaddresses.size());
       
@@ -712,20 +718,24 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
          * 
          * @param result
          */
-        public void receiveResult(Collection<NodeHandle> result) {
+        public void receiveResult(Collection<NodeHandle> initialSet) {
           // make sure this only gets called once
           if (done) return;
           done = true;
-          if (logger.level <= Logger.FINE) logger.log("boot() beginning pns with "+result);
+          if (logger.level <= Logger.FINE) logger.log("boot() beginning pns with "+initialSet);
           
           // remove the listener
           pn.getLivenessProvider().removeLivenessListener(listener.get(0));
           
           // do proximity neighbor selection
-          pns.getNearHandles(result, new Continuation<Collection<NodeHandle>, Exception>(){
+          pns.getNearHandles(initialSet, new Continuation<Collection<NodeHandle>, Exception>(){
           
             public void receiveResult(Collection<NodeHandle> result) {
               // done!!!
+              if (!bootaddresses.isEmpty() && result.isEmpty()) {
+                pn.joinFailed(new JoinFailedException("Cannot join ring.  All bootstraps are faulty."+bootaddresses));
+                return;
+              }
               if (logger.level <= Logger.INFO) logger.log("boot() calling pn.doneNode("+result+")");
               pn.doneNode(result);
             }
@@ -791,7 +801,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 
               beginPns.receiveResult(bootHandles);
             }            
-          }, 10000);
+          }, 20000);
         }
       }
 

@@ -131,7 +131,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
     
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
-//    params.setInt("rice.pastry.socket.SocketSourceRouteManager_loglevel",Logger.INFO);
+      params.setInt("rice.pastry.socket_loglevel",Logger.ALL);
     
 //    params.setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
 //    params.setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
@@ -686,15 +686,30 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       ls.addNodeSetListener(preObserver);  
       // the node may require sending several messages to fully boot into the ring
       long lastTimePrinted = 0;
-      while(!node.isReady()) {
+      while(!node.isReady() && !node.joinFailed()) {
         // delay so we don't busy-wait
         long now = env.getTimeSource().currentTimeMillis();
         if (now-lastTimePrinted > 3*60*1000) {
           System.out.println("LEAFSET5:"+env.getTimeSource().currentTimeMillis()+":"+ls);
           lastTimePrinted = now;
         }
-        Thread.sleep(100);
+        Thread.sleep(1000);
       }
+      
+      if (node.joinFailed()) {
+        Runtime.getRuntime().removeShutdownHook(shutdownHook);
+        System.out.println("Join failed. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
+        System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node);
+        //              System.exit(25);
+//        node.destroy(); // done in env.destroy()
+        env.destroy();              
+        int waittime = env.getRandomSource().nextInt(30000)+30000;
+        System.out.println("Waiting for "+waittime+" millis before restarting.");
+        Thread.sleep(waittime); // wait up to 1 minute
+
+        break; // restartNode
+      }
+      
       System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
       
       params.setInt("org.mpisws.p2p.transport_loglevel",Logger.WARNING);

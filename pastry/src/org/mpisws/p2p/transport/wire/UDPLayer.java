@@ -163,7 +163,7 @@ public class UDPLayer extends SelectionKeyHandler implements Destructable {
 
       key = wire.environment.getSelectorManager().register(channel, this, 0);
       key.interestOps(SelectionKey.OP_READ);
-      if (logger.level <= Logger.INFO) logger.log("UDPLayer binding to "+wire.bindAddress);
+      if (logger.level <= Logger.INFO) logger.log("UDPLayer bound to "+wire.bindAddress);
     } catch (IOException e) {
 //      if (logger.level <= Logger.SEVERE) logger.log(
 //          "PANIC: Error binding datagram server to address " + localAddress + ": " + e);

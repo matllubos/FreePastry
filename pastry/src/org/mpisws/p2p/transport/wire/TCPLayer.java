@@ -117,6 +117,7 @@ public class TCPLayer extends SelectionKeyHandler {
     channel.configureBlocking(false);
     channel.socket().setReuseAddress(true);
     channel.socket().bind(wire.bindAddress);
+    if (logger.level <= Logger.INFO) logger.log("TCPLayer bound to "+wire.bindAddress);
     
     this.key = wire.environment.getSelectorManager().register(channel, this, SelectionKey.OP_ACCEPT);
   }
