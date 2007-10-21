@@ -17,7 +17,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   protected int socketId;
   protected Verifier<Identifier> verifier;
   boolean closed = false;
-  boolean outputClosed = false;
+  boolean outputShutdown = false;
   Map<String, Integer> options;
   
   /**
@@ -55,16 +55,16 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   P2PSocketReceiver<Identifier> reader;
   P2PSocketReceiver<Identifier> writer;
   public void register(boolean wantToRead, boolean wantToWrite, P2PSocketReceiver<Identifier> receiver) {
-    if (closed) throw new IllegalStateException("Socket "+identifier+" "+this+" is already closed.");
+    if (closed) {
+      receiver.receiveException(this, new ClosedChannelException("Socket "+this+" already closed."));
+      return;
+    }
+    if (wantToWrite && outputShutdown) {
+      receiver.receiveException(this, new ClosedChannelException("Socket "+this+" already shutdown output."));
+      return;
+    }
 
     if (wantToWrite) {
-      if (outputClosed) {
-        // need to record/remove EVT_SOCKET_EXCEPTION
-        verifier.generatedSocketException(socketId, null);
-        receiver.receiveException(this, 
-            new ClosedChannelException("Socket "+identifier+" "+this+" already shut down output."));        
-        return;
-      }
       if (writer != null) {
         if (writer != receiver) throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!"); 
       }
@@ -114,6 +114,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
 
   public void close() {
     closed = true;
+    
     verifier.close(socketId);
   }
 
@@ -128,7 +129,8 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   }
   
   public void shutdownOutput() {
-    outputClosed = true;
+    outputShutdown = true;
+    
     verifier.shutdownOutput(socketId);
 //    throw new RuntimeException("Not implemented.");
   }

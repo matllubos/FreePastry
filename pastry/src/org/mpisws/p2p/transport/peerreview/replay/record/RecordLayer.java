@@ -243,12 +243,12 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
 
   public void destroy() {
 //    logger.log(this+".destroy()");
-//    try {
-//      history.close();
-//    } catch (IOException ioe) {
-//      if (logger.level <= Logger.WARNING) logger.logException("Error destroying.", ioe);
-//    }
-//    tl.destroy();
+    try {
+      history.close();
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("Error destroying.", ioe);
+    }
+    tl.destroy();
   }
   
   public static Environment generateEnvironment() {

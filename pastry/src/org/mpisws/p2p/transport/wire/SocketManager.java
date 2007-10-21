@@ -416,6 +416,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * the open list.
    */
   public void shutdownOutput() {    
+//    logger.logException(this+".shutdownOutput()", new Exception());
     boolean closeMe = false;
     synchronized(this) {
       if (key == null) throw new IllegalStateException("Socket already closed.");

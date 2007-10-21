@@ -49,7 +49,6 @@ public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializ
     if (ie.getType() >= EVT_MIN_SOCKET_EVT && ie.getType() <= EVT_MAX_SOCKET_EVT) {
       return entryId(ie.getType())+" n:"+ie.getSeq()+" i:"+ie.getFileIndex()+" sock:"+new SimpleInputBuffer(history.getEntry(ie, 4)).readInt();
     }
-    
     return entryId(ie.getType())+" n:"+ie.getSeq()+" s:"+ie.getSizeInFile()+" i:"+ie.getFileIndex();
   }
 

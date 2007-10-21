@@ -271,7 +271,9 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //      throw iae;
 //    }
     if (!logReceiver.equals(target)) {
-      if (logger.level <= Logger.WARNING) logger.log("Replay: SEND to "+target+" during replay, but log shows SEND to "+logReceiver+"; marking as invalid");
+      if (logger.level <= Logger.WARNING) logger.log("Replay("+nextEventIndex+"): SEND to "+target+" during replay, but log shows SEND to "+logReceiver+"; marking as invalid");      
+      // reset nextEvent so next time we parse this event it isn't nonsense
+      nextEvent = new SimpleInputBuffer(history.getEntry(next, next.getSizeInFile()));
       foundFault = true;
       return;
     }

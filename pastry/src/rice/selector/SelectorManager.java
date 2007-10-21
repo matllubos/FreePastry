@@ -572,7 +572,12 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * 
    * @param task The task to add
    */
+  protected Object seqLock = new Object();
+  protected int seqCtr = Integer.MIN_VALUE;
   private synchronized void addTask(TimerTask task) {
+    synchronized(seqLock) {
+      task.seq = seqCtr++;
+    }
     if (logger.level <= Logger.FINE) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
     if (task.scheduledExecutionTime() < timeSource.currentTimeMillis()) {
       if (logger.level <= Logger.WARNING) logger.logException("Can't schedule a task in the past. "+task, new Exception("Stack Trace"));

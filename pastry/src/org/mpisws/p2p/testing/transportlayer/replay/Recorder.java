@@ -312,7 +312,7 @@ public class Recorder implements MyEvents {
   }
 
   public void printLog(String arg, Environment env) throws IOException {
-    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(), env); 
+    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(new ISASerializer()), env); 
   }
   
   static class ISASerializer implements IdentifierSerializer<InetSocketAddress> {

@@ -7,11 +7,18 @@ import java.net.InetSocketAddress;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
+import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 
 public class MyEntryDeserializer extends BasicEntryDeserializer implements MyEvents {
+  IdentifierSerializer serializer;
 
+  public MyEntryDeserializer(IdentifierSerializer serializer) {
+    this.serializer = serializer;
+  }
+  
   @Override
   public String entryId(short id) {
     String ret = super.entryId(id);
@@ -41,6 +48,10 @@ public class MyEntryDeserializer extends BasicEntryDeserializer implements MyEve
     case EVT_SOCKET_OPENED_OUTGOING: {
       int socketId = nextEvent.readInt();      
       return entryId(ie.getType())+" socketId:"+socketId;
+    }
+    case EVT_SEND: {
+      InputBuffer buf = new SimpleInputBuffer(history.getEntry(ie, ie.getSizeInFile()));
+      return entryId(ie.getType())+" n:"+ie.getSeq()+" s:"+ie.getSizeInFile()+" i:"+ie.getFileIndex()+" ->"+serializer.deserialize(buf);  
     }
     default:
       return super.read(ie, history);

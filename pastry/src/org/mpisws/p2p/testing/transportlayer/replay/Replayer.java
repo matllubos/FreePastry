@@ -179,7 +179,7 @@ public class Replayer implements MyEvents, EventCallback {
   }
 
   public static void printLog(String arg, Environment env) throws IOException {
-    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(), env); 
+    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(new ISASerializer()), env); 
   }
   
   /**

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
@@ -18,6 +19,8 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
   int socketId;
   ByteBuffer socketIdBuffer;
   RecordLayer<Identifier> recordLayer;
+  boolean closed = false;
+  boolean outputShutdown = false;
   
   public RecordSocket(Identifier identifier, P2PSocket<Identifier> socket, Logger logger, Map<String, Integer> options, int socketId, ByteBuffer sib, RecordLayer<Identifier> recordLayer) {
     super(identifier, socket, logger, options);
@@ -96,6 +99,7 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
   @Override
   public void close() {
     try {
+      closed = true;
 //      logger.logException("close()",new Exception("close()"));
       socketIdBuffer.clear();      
       recordLayer.logEvent(EVT_SOCKET_CLOSE, socketIdBuffer);
@@ -108,6 +112,8 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
   @Override
   public void shutdownOutput() {
     try {
+      outputShutdown = true;
+      
 //    logger.logException("close()",new Exception("close()"));
       socketIdBuffer.clear();      
       recordLayer.logEvent(EVT_SOCKET_SHUTDOWN_OUTPUT, socketIdBuffer);
@@ -119,6 +125,15 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
 
   @Override
   public void register(boolean wantToRead, boolean wantToWrite, final P2PSocketReceiver<Identifier> receiver) {
+    if (closed) {
+      receiver.receiveException(this, new ClosedChannelException("Socket "+this+" already closed."));
+      return;
+    }
+    if (wantToWrite && outputShutdown) {
+      receiver.receiveException(this, new ClosedChannelException("Socket "+this+" already shutdown output."));
+      return;
+    }
+    
     super.register(wantToRead, wantToWrite, new P2PSocketReceiver<Identifier>(){
 
       public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
