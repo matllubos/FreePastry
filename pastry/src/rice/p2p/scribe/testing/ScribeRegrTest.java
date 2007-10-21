@@ -672,19 +672,24 @@ public class ScribeRegrTest extends CommonAPITest {
 
 
     protected void testSingleRoot(String name) {
-  sectionStart(name + "");
-  int numTrees = 10;
-  boolean failed = false;
+      sectionStart(name + "");
+      int numTrees = 10;
+      boolean failed = false;
 
   for(int num=0; num<numTrees; num ++) {
-      Topic topic = new Topic(generateId());
-      TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+      final Topic topic = new Topic(generateId());
+      final TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
       
       stepStart(name + " TopicId=" + topic.getId());
       for (int i = 0; i < NUM_NODES; i++) {
-      clients[i] = new TestScribeClient(scribes[i], topic, i);
-      scribes[i].subscribe(topic, clients[i]);
-      simulate();
+        final int i2 = i;
+        clients[i] = new TestScribeClient(scribes[i], topic, i);
+        environment.getSelectorManager().invoke(new Runnable() {
+          public void run() {
+            scribes[i2].subscribe(topic, clients[i2]);
+          }
+        });
+        simulate();
       }
       
       int numRoot = 0;
@@ -741,6 +746,7 @@ public class ScribeRegrTest extends CommonAPITest {
     stepStart("Killing Nodes");
     for (int i=0; i<NUM_NODES/2; i++) {
 //      System.out.println("Killing " + scribes[i].getId());
+//      logger.log("Killing " + nodes[i]);
       if (logger.level <= Logger.INFO) logger.log("Killing " + nodes[i]);
       scribes[i].destroy();
       kill(i);

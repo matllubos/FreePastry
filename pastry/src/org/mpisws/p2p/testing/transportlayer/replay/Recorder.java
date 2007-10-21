@@ -159,8 +159,8 @@ public class Recorder implements MyEvents {
       }
       
       @Override
-      protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns) {
-        final Bootstrapper internal = super.getBootstrapper(pn, tl, handleFactory, pns);
+      protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns, Object localNodeData) {
+        final Bootstrapper internal = super.getBootstrapper(pn, tl, handleFactory, pns, localNodeData);
         Bootstrapper ret = new Bootstrapper() {        
           public void boot(Collection bootaddresses) {
             try {

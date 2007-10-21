@@ -637,14 +637,15 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   protected Bootstrapper getBootstrapper(TLPastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
-      ProximityNeighborSelector pns) {
+      ProximityNeighborSelector pns, Object localNodeData) {
 
-    TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns);
+    TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns, localNodeData);
     return bootstrapper;
   }
 
   class TLBootstrapper implements Bootstrapper<InetSocketAddress>
   {
+    InetSocketAddress localAddr;
     TLPastryNode pn;
     TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl;
     SocketNodeHandleFactory handleFactory;
@@ -657,12 +658,14 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     public TLBootstrapper(TLPastryNode pn, 
         TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl, 
         SocketNodeHandleFactory handleFactory,
-        ProximityNeighborSelector pns) {
+        ProximityNeighborSelector pns,
+        Object localAddr) {
       this.logger = pn.getEnvironment().getLogManager().getLogger(TLBootstrapper.class, null);
       this.pn = pn;
       this.tl = tl;
       this.handleFactory = handleFactory;
       this.pns = pns;
+      this.localAddr = ((MultiInetSocketAddress)localAddr).getInnermostAddress();
     }
 
     /**
@@ -689,6 +692,13 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         bootaddresses = Collections.EMPTY_LIST;
       } else {
         bootaddresses = bootaddresses_temp;
+      }
+      
+      if (bootaddresses.isEmpty() ||
+          (bootaddresses.size() == 1 && bootaddresses.iterator().next().equals(localAddr))) {
+        if (logger.level <= Logger.INFO) logger.log("boot() calling pn.doneNode(empty)");
+        pn.doneNode(Collections.EMPTY_LIST); 
+        return;
       }
       
       // bogus handles

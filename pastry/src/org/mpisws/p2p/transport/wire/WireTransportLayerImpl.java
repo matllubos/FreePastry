@@ -151,12 +151,18 @@ public class WireTransportLayerImpl implements WireTransportLayer {
     return bindAddress;
   }
 
+  boolean destroyed = false;
   public void destroy() {
     if (logger.level <= Logger.INFO) logger.log("destroy()");
+    destroyed = true;
     udp.destroy();
     tcp.destroy();
   }
 
+  public boolean isDestroyed() {   
+    return destroyed;
+  }
+  
   public void setErrorHandler(ErrorHandler<InetSocketAddress> handler) {
     if (handler == null) {
       this.errorHandler = new DefaultErrorHandler<InetSocketAddress>(logger);

@@ -246,6 +246,10 @@ public class TCPLayer extends SelectionKeyHandler {
     }
   }
 
+  public boolean isDestroyed() {
+    return wire.isDestroyed();
+  }
+
 //  private void putSM(SocketManager sm) {
 //    sockets.put(sm, sm);
 //  }

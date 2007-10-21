@@ -113,7 +113,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     
     ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
     
-    Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns);
+    Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);
     
     pn.setBootstrapper(bootstrapper);
   
@@ -188,5 +188,6 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
   protected abstract Bootstrapper getBootstrapper(TLPastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
-      ProximityNeighborSelector pns);  
+      ProximityNeighborSelector pns,
+      Object localNodeData);  
 }

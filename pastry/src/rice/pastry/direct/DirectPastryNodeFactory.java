@@ -188,7 +188,11 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
       ((NetworkSimulatorImpl)simulator).registerNode(pn, nr);
       // pn.doneNode(bootstrap);
       //pn.doneNode( simulator.getClosest(localhandle) );    
-      pn.getBootstrapper().boot(Collections.singleton(bootstrap));
+      if (bootstrap == null) {
+        pn.getBootstrapper().boot(Collections.EMPTY_LIST);
+      } else {
+        pn.getBootstrapper().boot(Collections.singleton(bootstrap));
+      }
 //      ((DirectPastryNode)pn).doneNode(getNearest(pn.getLocalHandle(), bootstrap));
         
       return pn;
@@ -315,7 +319,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
-  protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, final ProximityNeighborSelector pns) {
+  protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, final ProximityNeighborSelector pns, Object localNodeData) {
     return new Bootstrapper<NodeHandle>() {
     
       public void boot(Collection<NodeHandle> bootaddresses) {

@@ -252,6 +252,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       
       if (reader != null) {
+        if (tcp.isDestroyed()) return;
 //        try {
 //          reader.receiveSelectResult(SocketManager.this, true, false);                  
 //        } catch (IOException e) {

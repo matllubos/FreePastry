@@ -425,8 +425,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
 
+  boolean destroyed = false;
   public void destroy() {
     if (logger.level <= Logger.INFO) logger.log("destroy()");
+    destroyed = true;
     tl.destroy();    
     livenessListeners.clear();
     livenessListeners = null;
@@ -464,6 +466,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Integer> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
     List<LivenessListener<Identifier>> temp;
+
     synchronized(livenessListeners) {
       temp = new ArrayList<LivenessListener<Identifier>>(livenessListeners);
     }
@@ -586,6 +589,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * 
      */
     public void run() {
+      if (destroyed) return;
 //      logger.log(this+".run()");
       if (tries < numTries) {
         tries++;

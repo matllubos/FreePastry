@@ -579,8 +579,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       task.seq = seqCtr++;
     }
     if (logger.level <= Logger.FINE) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
-    if (task.scheduledExecutionTime() < timeSource.currentTimeMillis()) {
-      if (logger.level <= Logger.WARNING) logger.logException("Can't schedule a task in the past. "+task, new Exception("Stack Trace"));
+    long now = timeSource.currentTimeMillis();
+    if (task.scheduledExecutionTime() < now) {
+      if (logger.level <= Logger.WARNING) logger.logException("Can't schedule a task in the past. "+task+" now:"+now+" task.execTime:"+task.scheduledExecutionTime(), new Exception("Stack Trace"));
       throw new RuntimeException("Can't schedule a task in the past.");
     }
 //    synchronized (selector) {
