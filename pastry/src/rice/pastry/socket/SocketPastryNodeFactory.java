@@ -694,8 +694,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         bootaddresses = bootaddresses_temp;
       }
       
+      final boolean seed = bootaddresses.isEmpty() || bootaddresses.contains(localAddr);
+      
       if (bootaddresses.isEmpty() ||
-          (bootaddresses.size() == 1 && bootaddresses.iterator().next().equals(localAddr))) {
+          (bootaddresses.size() == 1 && seed)) {
         if (logger.level <= Logger.INFO) logger.log("boot() calling pn.doneNode(empty)");
         pn.doneNode(Collections.EMPTY_LIST); 
         return;
@@ -742,7 +744,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           
             public void receiveResult(Collection<NodeHandle> result) {
               // done!!!
-              if (!bootaddresses.isEmpty() && result.isEmpty()) {
+              if (!seed && result.isEmpty()) {
                 pn.joinFailed(new JoinFailedException("Cannot join ring.  All bootstraps are faulty."+bootaddresses));
                 return;
               }
