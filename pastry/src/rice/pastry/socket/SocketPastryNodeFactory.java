@@ -694,7 +694,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         bootaddresses = bootaddresses_temp;
       }
       
-      final boolean seed = bootaddresses.isEmpty() || bootaddresses.contains(localAddr);
+      final boolean seed = environment.getParameters().getBoolean("rice_socket_seed") || bootaddresses.isEmpty() || bootaddresses.contains(localAddr);
       
       if (bootaddresses.isEmpty() ||
           (bootaddresses.size() == 1 && seed)) {

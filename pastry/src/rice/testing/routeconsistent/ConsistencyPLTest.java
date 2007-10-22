@@ -373,8 +373,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       Environment env = new Environment();
       
       environment = env;
-      
+            
       Parameters params = environment.getParameters(); 
+      
+      if (isBootNode) {
+        params.setBoolean("rice_socket_seed", true);
+      }
       
       setupParams(params);
       
