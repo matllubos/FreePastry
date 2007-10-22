@@ -1,11 +1,14 @@
 package org.mpisws.p2p.transport.peerreview;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.peerreview.history.Hash;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
@@ -122,7 +125,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   
   protected abstract void socketOpened(int socketId) throws IOException;
 
-  protected abstract void socketException(int socketId) throws IOException;
+  protected abstract void socketException(int socketId, IOException ioe) throws IOException;
 
   
   /**
@@ -830,8 +833,10 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       }
       case EVT_SOCKET_EXCEPTION: {
         int socketId = nextEvent.readInt();
+        IOException ex = deserializeException(nextEvent);
+        logger.log("deserializeException("+ex+")");
         fetchNextEvent();
-        socketException(socketId);
+        socketException(socketId, ex);
         break;
       }
       default:
@@ -867,4 +872,48 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //    logger.log("i:"+initialized+" v:"+verifiedOK()+" n:"+nextEvent);
     return false;
   }
+  
+  protected IOException deserializeException(InputBuffer nextEvent) throws IOException {
+    short exType = nextEvent.readShort();
+    switch (exType) {
+    case EX_TYPE_IO:
+      return new IOException(nextEvent.readUTF());
+    case EX_TYPE_ClosedChannel:
+      return new ClosedChannelException(nextEvent.readUTF());
+    case EX_TYPE_Unknown:
+      String className = nextEvent.readUTF();
+      String message = nextEvent.readUTF();     
+      Class c;
+      try {
+        c = Class.forName(className);
+      } catch (ClassNotFoundException cnfe) {
+        throw new RuntimeException("Couldn't find class"+className+" "+message);                  
+      }
+      
+      Class[] parameterTypes = new Class[1];
+      parameterTypes[0] = String.class;      
+      try {
+        Constructor ctor = c.getConstructor(parameterTypes);
+        IOException ioe = (IOException)ctor.newInstance(message);
+        return ioe;
+//      } catch (NoSuchMethodException nsme) {
+//      } catch (IllegalAccessException iae) {        
+//      } catch (InvocationTargetException ite) {
+      } catch (Exception e) {
+        try {
+          Constructor ctor = c.getConstructor(new Class[0]);
+          IOException ioe = (IOException)ctor.newInstance(message);
+          return ioe;
+        } catch (Exception e2) {
+          throw new RuntimeException("Couldn't find constructor for"+className+" "+message);          
+        }
+      }
+      // TODO: make sure this is an IOException
+//      if (c.getInterfaces()
+      
+      
+    default: throw new RuntimeException("Unknown EX_TYPE:"+exType);
+    }
+//    return new ClosedChannelException("Replay Exception"); //new IOException();
+  } 
 }

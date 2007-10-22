@@ -49,63 +49,57 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Random;
-import java.util.Set;
 
-import org.mpisws.p2p.transport.ErrorHandler;
-import org.mpisws.p2p.transport.MessageCallback;
-import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
-import org.mpisws.p2p.transport.SocketCallback;
-import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
-import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
-import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
-import org.mpisws.p2p.transport.sourceroute.SourceRoute;
-import org.mpisws.p2p.transport.proximity.ProximityProvider;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
+import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
+import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
+import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
+import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
 
 import rice.environment.Environment;
+import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.splitstream.ChannelId;
 import rice.p2p.splitstream.testing.MySplitStreamClient;
 import rice.pastry.Id;
 import rice.pastry.NetworkListener;
 import rice.pastry.NodeHandle;
+import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
-import rice.pastry.NodeSetEventSource;
-import rice.pastry.NodeSetListener;
 import rice.pastry.PastryNode;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.SocketNodeHandle;
-import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
-import rice.pastry.transport.TLDeserializer;
 import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
-import rice.selector.TimerTask;
 
 /**
  * @author Jeff Hoye
  */
-public class ConsistencyPLTest implements Observer, LoopObserver {
+public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
   static void setupParams(Parameters params) {
     params.setBoolean("logging_packageOnly",false);
     
@@ -163,9 +157,10 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
   /**
    * Of InetSocketAddress
    */
-  static Set<InetSocketAddress> bootAddresses = Collections.synchronizedSet(new HashSet<InetSocketAddress>());
+//  static Set<InetSocketAddress> bootAddresses = Collections.synchronizedSet(new HashSet<InetSocketAddress>());
   
   public ConsistencyPLTest(PastryNode localNode, LeafSet leafSet) {
+    this.environment = localNode.getEnvironment();
     this.localNode = localNode;
     this.leafSet = leafSet;
     localNode.addObserver(this);
@@ -211,8 +206,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
     public boolean running = true; 
   }
   
-  static Environment environment;
-  static MyNetworkListener networkActivity;
+  Environment environment;
+//  static MyNetworkListener networkActivity;
 
   static class MyNetworkListener implements NetworkListener {      
     public static final int TRACKS = 2;
@@ -368,11 +363,198 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       }
       Thread.sleep(BASE_DELAY+new Random(time).nextInt(RND_DELAY));
     }
-    boolean restartNode = true;
+    
+    // the port to use locally    
+    int bindport = startPort;
+    if (args.length > 5) {
+      bindport = Integer.parseInt(args[5]);
+    }
+    
+    runNodes(isBootNode, bindport, bootaddress, bootTime, artificialChurnTime, killRingTime);
+  }
+  
+  static boolean restartNode;
+  public static void runNodes(
+      boolean isBootNode, int bindport, InetSocketAddress bootaddress, 
+      long bootTime, int artificialChurnTime, int killRingTime) throws Exception {
+    restartNode = true;
     while(restartNode) { // to allow churn
-      Environment env = new Environment();
+      Environment env = RecordLayer.generateEnvironment();
       
-      environment = env;
+      // Generate the NodeIds Randomly
+      NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
+
+      final ArrayList<RecordLayer<InetSocketAddress>> historyHolder = new ArrayList<RecordLayer<InetSocketAddress>>();
+
+      // construct the PastryNodeFactory, this is how we use rice.pastry.socket
+      SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
+      {
+//        @Override
+//        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
+//          // TODO Auto-generated method stub
+//          return super.getTLDeserializer(handleFactory, pn);
+//        }
+
+//        @Override
+//        protected IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> getIdentityImpl(TLPastryNode pn, SocketNodeHandleFactory handleFactory) throws IOException {          
+//          final IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> ret = super.getIdentityImpl(pn, handleFactory);
+//          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
+//            @Override
+//            public void run() {
+//              ret.printMemStats(Logger.FINER);
+//            }          
+//          }, 60000, 60000);                    
+//          return ret;
+//        }
+
+        @Override
+        protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+          RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
+//          recorders.put(pn, ret);
+          historyHolder.add(ret);
+          return ret;
+        }
+
+//        @Override
+//        protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> 
+//          getCommonAPITransportLayer(
+//              TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, 
+//              TLPastryNode pn, TLDeserializer deserializer) {
+//          
+//          final TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl = 
+//            super.getCommonAPITransportLayer(upperIdentity, pn, deserializer);
+//
+//          TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> ret = 
+//            new TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage>(){          
+//            
+//            public void destroy() {
+//              tl.destroy();
+//            }
+//          
+//            public void setErrorHandler(ErrorHandler<TransportLayerNodeHandle<MultiInetSocketAddress>> handler) {
+//              tl.setErrorHandler(handler);
+//            }
+//          
+//            public void setCallback(final TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback) {
+//              tl.setCallback(new MyCallback(callback, environment, logger));
+//            }
+//          
+//            public MessageRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> sendMessage(TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m, MessageCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> deliverAckToMe, Map<String, Integer> options) {
+//              if (printMe(m)) logger.log("sendMessage("+i+","+m+")");
+//              return tl.sendMessage(i, m, deliverAckToMe, options);
+//            }
+//          
+//            public SocketRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>> openSocket(TransportLayerNodeHandle<MultiInetSocketAddress> i, SocketCallback<TransportLayerNodeHandle<MultiInetSocketAddress>> deliverSocketToMe, Map<String, Integer> options) {
+//              return tl.openSocket(i, deliverSocketToMe, options);
+//            }
+//          
+//            public TransportLayerNodeHandle<MultiInetSocketAddress> getLocalIdentifier() {
+//              return tl.getLocalIdentifier();
+//            }
+//          
+//            public void acceptSockets(boolean b) {
+//              tl.acceptSockets(b);
+//            }
+//          
+//            public void acceptMessages(boolean b) {
+//              tl.acceptMessages(b);
+//            }          
+//          };
+//          
+//          return ret;
+//        }
+
+//        @Override
+//        protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(
+//            TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, 
+//            LivenessProvider<MultiInetSocketAddress> liveness, 
+//            ProximityProvider<MultiInetSocketAddress> prox, 
+//            TLPastryNode pn) {
+//          final PriorityTransportLayerImpl<MultiInetSocketAddress> ret = 
+//            (PriorityTransportLayerImpl<MultiInetSocketAddress>)super.getPriorityTransportLayer(trans, liveness, prox, pn);          
+//          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
+//            @Override
+//            public void run() {
+//              ret.printMemStats(Logger.FINEST);
+//            }          
+//          }, 60000, 60000);          
+//          return ret;
+//        }
+
+//        @Override
+//        protected TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>
+//          getLivenessTransportLayer(
+//            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
+//            TLPastryNode pn) {
+//          
+//          TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+//            super.getLivenessTransportLayer(tl, pn);
+//          
+//          ltl.getLivenessProvider().addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
+//            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Integer> options) {
+//              logger.log("SR.livenessChanged("+i+","+val+")");
+//            }
+//          });
+//          return ltl;
+//        } 
+      };
+      runNode(env, factory, isBootNode, bindport, bootaddress, bootTime, artificialChurnTime, killRingTime, historyHolder);
+    }
+  }
+  
+  public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, long startTime, int randSeed) throws Exception {
+//    this.bootaddress = bootaddress;
+    Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed);
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new NodeIdFactory() {    
+      public Id generateNodeId() {
+        return id;
+      }    
+    },addr.getPort(), env)
+    {
+
+      @Override
+      public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
+        SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf, localNodeInfo);
+        logger.log(ret.toStringFull());
+        return ret;
+      }
+      
+      @Override
+      protected RandomSource cloneRandomSource(Environment rootEnvironment, Id nodeId, LogManager lman) {
+        return rootEnvironment.getRandomSource();    
+      }
+      
+      @Override
+      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+        IdentifierSerializer<InetSocketAddress> serializer = new ISASerializer();
+        
+        HashProvider hashProv = new NullHashProvider();
+        SecureHistoryFactory shFactory = new SecureHistoryFactoryImpl(hashProv, pn.getEnvironment());
+        String logName = "0x"+id.toStringFull().substring(0,6);
+        SecureHistory hist = shFactory.open(logName, "r");
+        
+        ReplayLayer<InetSocketAddress> replay = new ReplayLayer<InetSocketAddress>(serializer,hashProv,hist,addr,pn.getEnvironment());
+        replay.registerEvent(new EventCallback(){
+        
+          public void replayEvent(short type, InputBuffer entry) {
+            throw new RuntimeException("Not implemented.");
+          }
+        
+        }, EVT_BOOT, EVT_SUBSCRIBE_PUBLISH, EVT_SHUTDOWN);
+//        replayers.add(replay);
+        return replay;
+      }
+    };
+    
+    
+  }
+  
+  public static void runNode(final Environment env, SocketPastryNodeFactory factory, boolean isBootNode, int bindport, InetSocketAddress bootaddress, 
+      long bootTime, int artificialChurnTime, int killRingTime, final ArrayList<RecordLayer<InetSocketAddress>> historyHolder) throws Exception {
+    { // old while loop
+//      final Environment env = RecordLayer.generateEnvironment(); //new Environment();
+      
+      final Environment environment = env;
             
       Parameters params = environment.getParameters(); 
       
@@ -428,12 +610,6 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         }
       },"ImALIVE").start();
       
-      // the port to use locally    
-      int bindport = startPort;
-      if (args.length > 5) {
-        bindport = Integer.parseInt(args[5]);
-      }
-      
       // test port bindings before proceeding
       int tries = 0;
       boolean success = false;
@@ -464,131 +640,20 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         }
       }
       
-      // Generate the NodeIds Randomly
-      NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
-      
-      // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-      SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
-      {
-//        @Override
-//        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
-//          // TODO Auto-generated method stub
-//          return super.getTLDeserializer(handleFactory, pn);
-//        }
-
-//        @Override
-//        protected IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> getIdentityImpl(TLPastryNode pn, SocketNodeHandleFactory handleFactory) throws IOException {          
-//          final IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> ret = super.getIdentityImpl(pn, handleFactory);
-//          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
-//            @Override
-//            public void run() {
-//              ret.printMemStats(Logger.FINER);
-//            }          
-//          }, 60000, 60000);                    
-//          return ret;
-//        }
-
-        @Override
-        protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> 
-          getCommonAPITransportLayer(
-              TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, 
-              TLPastryNode pn, TLDeserializer deserializer) {
-          
-          final TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl = 
-            super.getCommonAPITransportLayer(upperIdentity, pn, deserializer);
-
-          TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> ret = 
-            new TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage>(){          
-            
-            public void destroy() {
-              tl.destroy();
-            }
-          
-            public void setErrorHandler(ErrorHandler<TransportLayerNodeHandle<MultiInetSocketAddress>> handler) {
-              tl.setErrorHandler(handler);
-            }
-          
-            public void setCallback(final TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback) {
-              tl.setCallback(new MyCallback(callback, logger));
-            }
-          
-            public MessageRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> sendMessage(TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m, MessageCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> deliverAckToMe, Map<String, Integer> options) {
-              if (printMe(m)) logger.log("sendMessage("+i+","+m+")");
-              return tl.sendMessage(i, m, deliverAckToMe, options);
-            }
-          
-            public SocketRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>> openSocket(TransportLayerNodeHandle<MultiInetSocketAddress> i, SocketCallback<TransportLayerNodeHandle<MultiInetSocketAddress>> deliverSocketToMe, Map<String, Integer> options) {
-              return tl.openSocket(i, deliverSocketToMe, options);
-            }
-          
-            public TransportLayerNodeHandle<MultiInetSocketAddress> getLocalIdentifier() {
-              return tl.getLocalIdentifier();
-            }
-          
-            public void acceptSockets(boolean b) {
-              tl.acceptSockets(b);
-            }
-          
-            public void acceptMessages(boolean b) {
-              tl.acceptMessages(b);
-            }          
-          };
-          
-          return ret;
-        }
-
-        @Override
-        protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(
-            TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, 
-            LivenessProvider<MultiInetSocketAddress> liveness, 
-            ProximityProvider<MultiInetSocketAddress> prox, 
-            TLPastryNode pn) {
-          final PriorityTransportLayerImpl<MultiInetSocketAddress> ret = 
-            (PriorityTransportLayerImpl<MultiInetSocketAddress>)super.getPriorityTransportLayer(trans, liveness, prox, pn);          
-          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
-            @Override
-            public void run() {
-              ret.printMemStats(Logger.FINEST);
-            }          
-          }, 60000, 60000);          
-          return ret;
-        }
-
-        @Override
-        protected TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>
-          getLivenessTransportLayer(
-            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
-            TLPastryNode pn) {
-//        protected LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> 
-//            getLivenessTransportLayer(
-//                TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
-//                TLPastryNode pn) {
-          
-          TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
-            super.getLivenessTransportLayer(tl, pn);
-          
-          ltl.getLivenessProvider().addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
-            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Integer> options) {
-              logger.log("SR.livenessChanged("+i+","+val+")");
-            }
-          });
-          return ltl;
-        } 
-      };
-  
+        
 //      InetSocketAddress[] bootAddressCandidates = (InetSocketAddress[])bootAddresses.toArray(new InetSocketAddress[0]);
       // This will return null if we there is no node at that location
 //      NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootAddressCandidates, 30000);
-      Collection<InetSocketAddress> bootAddrCandidates = new ArrayList<InetSocketAddress>();
+      final Collection<InetSocketAddress> bootAddrCandidates = new ArrayList<InetSocketAddress>();
       bootAddrCandidates.add(bootaddress);
-      synchronized(bootAddresses) {
-        int ctr = 10;
-        Iterator<InetSocketAddress> i = bootAddresses.iterator();
-        while(ctr > 0 && i.hasNext()) {
-          bootAddrCandidates.add(i.next());
-          ctr--;
-        }
-      }
+//      synchronized(bootAddresses) {
+//        int ctr = 10;
+//        Iterator<InetSocketAddress> i = bootAddresses.iterator();
+//        while(ctr > 0 && i.hasNext()) {
+//          bootAddrCandidates.add(i.next());
+//          ctr--;
+//        }
+//      }
       System.out.println("bootAddrCandidates "+bootAddrCandidates.size()+":"+bootAddrCandidates.iterator().next());
       
       
@@ -615,7 +680,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
 //          logger.log("livenessChanged("+i+","+val+")");
         }      
       });
-      node.addNetworkListener(networkActivity);
+//      node.addNetworkListener(networkActivity);
       
 //      InetSocketAddress[] boots = new InetSocketAddress[6];
 //      boots[0] = new InetSocketAddress(InetAddress.getByName("ricepl-1.cs.rice.edu"), startPort);
@@ -641,22 +706,22 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       
       System.out.println("STARTUP "+env.getTimeSource().currentTimeMillis()+" "+node);    
       
-      NodeSetListener preObserver = 
-        new NodeSetListener() {
-          public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
-            System.out.println("LEAFSET4:"+environment.getTimeSource().currentTimeMillis()+":"+ls);
-            bootAddresses.add(((SocketNodeHandle)handle).getInetSocketAddress());
-          }
-        };
-        
-      ls.addNodeSetListener(new NodeSetListener() {
-        public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
-          int num = 1;
-          if (!node.isReady()) num = 4;
-          System.out.println("LEAFSET"+num+":"+environment.getTimeSource().currentTimeMillis()+":"+ls);
-          bootAddresses.add(((SocketNodeHandle)handle).getInetSocketAddress());
-        }
-      });
+//      NodeSetListener preObserver = 
+//        new NodeSetListener() {
+//          public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
+//            System.out.println("LEAFSET4:"+environment.getTimeSource().currentTimeMillis()+":"+ls);
+//            bootAddresses.add(((SocketNodeHandle)handle).getInetSocketAddress());
+//          }
+//        };
+//        
+//      ls.addNodeSetListener(new NodeSetListener() {
+//        public void nodeSetUpdate(NodeSetEventSource set, NodeHandle handle, boolean added) {
+//          int num = 1;
+//          if (!node.isReady()) num = 4;
+//          System.out.println("LEAFSET"+num+":"+environment.getTimeSource().currentTimeMillis()+":"+ls);
+//          bootAddresses.add(((SocketNodeHandle)handle).getInetSocketAddress());
+//        }
+//      });
   
       if (useScribe) {
         // this is to do scribe stuff
@@ -667,9 +732,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         }
       }
       
+      final ArrayList<MySplitStreamClient> appHolder = new ArrayList<MySplitStreamClient>();
       MySplitStreamClient app = null;
       if (useSplitStream) {
         app = new MySplitStreamClient(node, INSTANCE);      
+        appHolder.add(app);
         ChannelId CHANNEL_ID = new ChannelId(generateId());    
         app.attachChannel(CHANNEL_ID);
         
@@ -685,9 +752,18 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       // this is to cause different connections to open
       // TODO: Implement
 
-      node.getBootstrapper().boot(bootAddrCandidates);
-
-      ls.addNodeSetListener(preObserver);  
+      environment.getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          try {
+            historyHolder.get(0).logEvent(EVT_BOOT);
+          } catch (IOException ioe) {
+            ioe.printStackTrace();
+          }
+          node.getBootstrapper().boot(bootAddrCandidates);
+        }
+      });
+      
+//      ls.addNodeSetListener(preObserver);  
       // the node may require sending several messages to fully boot into the ring
       long lastTimePrinted = 0;
       while(!node.isReady() && !node.joinFailed()) {
@@ -711,7 +787,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
         System.out.println("Waiting for "+waittime+" millis before restarting.");
         Thread.sleep(waittime); // wait up to 1 minute
 
-        break; // restartNode
+        return; // restartNode
       }
       
       System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
@@ -721,11 +797,21 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
       setupParams(params);
       
       if (useSplitStream) {
-        app.subscribeToAllChannels();    
-        app.startPublishTask(); 
+        env.getSelectorManager().invoke(new Runnable(){
+        
+          public void run() {
+            try {
+              historyHolder.get(0).logEvent(EVT_SUBSCRIBE_PUBLISH);
+            } catch (IOException ioe) {
+              ioe.printStackTrace();
+            }
+            appHolder.get(0).subscribeToAllChannels();    
+            appHolder.get(0).startPublishTask();             
+          }        
+        });
       }
       
-      ls.deleteNodeSetListener(preObserver);
+//      ls.deleteNodeSetListener(preObserver);
   
       int maxLeafsetSize = ls.getUniqueCount();
       boolean running = true;
@@ -762,7 +848,16 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
               System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node);
               //              System.exit(25);
 //              node.destroy(); // done in env.destroy()
-              env.destroy();              
+              env.getSelectorManager().invoke(new Runnable() {
+                public void run() {        
+                  try {
+                    historyHolder.get(0).logEvent(EVT_SHUTDOWN);
+                  } catch (IOException ioe) {
+                    ioe.printStackTrace();
+                  }                      
+                  env.destroy();   
+                }
+              });
               running = false;
               int waittime = env.getRandomSource().nextInt(30000)+30000;
               System.out.println("Waiting for "+waittime+" millis before restarting.");
@@ -783,10 +878,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver {
   static class MyCallback implements TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> {              
     TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback;
     Logger logger;
+    Environment environment;
     
-    public MyCallback(TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback, Logger logger) {
+    public MyCallback(TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> callback, Environment env, Logger logger) {
       this.callback = callback;
       this.logger = logger;
+      this.environment = env;
     }
 
     public void messageReceived(

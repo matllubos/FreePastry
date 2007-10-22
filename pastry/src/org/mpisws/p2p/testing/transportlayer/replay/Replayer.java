@@ -59,6 +59,8 @@ public class Replayer implements MyEvents, EventCallback {
     
     final Parameters params = env.getParameters();
     
+    params.setInt("pastry_socket_scm_max_open_sockets", params.getInt("org.mpisws.p2p.testing.transportlayer.replay_pastry_socket_scm_max_open_sockets"));
+
     params.setBoolean("pastry_socket_use_own_random",false);
 //    env.getParameters().setInt("rice.environment.random_loglevel", Logger.FINER);
 

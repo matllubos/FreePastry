@@ -157,10 +157,10 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   }
 
   @Override
-  protected void socketException(int socketId) throws IOException {
+  protected void socketException(int socketId, IOException ioe) throws IOException {
     //logger.log("socketException("+socketId+")");
 //    sockets.get(socketId).receiveException(new IOException("Replay Exception"));
-    sockets.get(socketId).receiveException(new ClosedChannelException("Replay Exception"));
+    sockets.get(socketId).receiveException(ioe);
     // TODO Auto-generated method stub
     
   }  

@@ -25,4 +25,9 @@ public interface PeerReviewEvents {
   
   public static final short EVT_MIN_SOCKET_EVT = EVT_SOCKET_OPEN_INCOMING;
   public static final short EVT_MAX_SOCKET_EVT = EVT_SOCKET_SHUTDOWN_OUTPUT;
+  
+  public static final short EX_TYPE_IO = 1;
+  public static final short EX_TYPE_ClosedChannel = 2;
+  public static final short EX_TYPE_Unknown = 0;
+  
 }

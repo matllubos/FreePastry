@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -31,6 +32,7 @@ import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.simple.SimpleTimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.util.MathUtils;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.selector.SelectorManager;
 
 public class RecordLayer<Identifier> implements PeerReviewEvents,
@@ -145,7 +147,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
         socketIdBuffer.clear();
         try {
 //          logger.logException("socket "+socketId+" .register()", ex);
-          logEvent(EVT_SOCKET_EXCEPTION, socketIdBuffer);
+          logSocketException(socketIdBuffer, ex);
         } catch (IOException ioe) {
           if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")@"+socketId,ioe); 
         }
@@ -273,5 +275,26 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     Environment ret = new Environment(selector,proc,rs,dts,lm,
         params, Environment.generateDefaultExceptionStrategy(lm));
     return ret;
+  }
+  
+  public void logSocketException(ByteBuffer socketId, IOException ioe) throws IOException {
+    logger.log("logSocketException("+ioe+")");
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    String className = ioe.getClass().getName();
+    if (className.endsWith("ClosedChannelException")) {
+      sob.writeShort(EX_TYPE_ClosedChannel);
+      sob.writeUTF(ioe.getMessage());
+    } else if (className.equals("java.io.IOException")) {
+      sob.writeShort(EX_TYPE_IO);
+      sob.writeUTF(ioe.getMessage());      
+    } else {
+      sob.writeShort(EX_TYPE_Unknown);
+      sob.writeUTF(className);
+      sob.writeUTF(ioe.getMessage());
+    }
+        
+    ByteBuffer ioeBuffer = ByteBuffer.wrap(sob.getBytes());
+    ioeBuffer.limit(sob.getWritten());
+    logEvent(EVT_SOCKET_EXCEPTION, socketId, ioeBuffer); 
   }
 }

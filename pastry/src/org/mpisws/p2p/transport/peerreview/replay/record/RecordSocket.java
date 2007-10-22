@@ -160,7 +160,7 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
         try {
           socketIdBuffer.clear();
 //          logger.logException(this+".register()", ioe);
-          recordLayer.logEvent(EVT_SOCKET_EXCEPTION, socketIdBuffer);
+          recordLayer.logSocketException(socketIdBuffer, ioe);
         } catch (IOException ioe2) {
           if (logger.level <= Logger.WARNING) logger.logException(this+"@"+socketId+".receiveException()",ioe2); 
         }

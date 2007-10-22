@@ -387,12 +387,16 @@ public class Recorder implements MyEvents {
     
     // Loads pastry configurations
     Environment env = RecordLayer.generateEnvironment();
+    params = env.getParameters();
+    
+    
+    params.setInt("pastry_socket_scm_max_open_sockets", params.getInt("org.mpisws.p2p.testing.transportlayer.replay_pastry_socket_scm_max_open_sockets"));
 
-    env.getParameters().setBoolean("pastry_socket_use_own_random",false);
+    params.setBoolean("pastry_socket_use_own_random",false);
 //    env.getParameters().setInt("rice.environment.random_loglevel", Logger.FINER);
 
     // disable the UPnP setting (in case you are testing this on a NATted LAN)
-    env.getParameters().setString("nat_search_policy","never");
+    params.setString("nat_search_policy","never");
     
     try {
       // the port to use locally
