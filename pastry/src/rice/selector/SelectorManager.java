@@ -44,6 +44,7 @@ import rice.Destructable;
 import rice.environment.Environment;
 import rice.environment.logging.*;
 import rice.environment.time.TimeSource;
+import rice.environment.time.simulated.DirectTimeSource;
 
 /**
  * This class is the class which handles the selector, and listens for activity.
@@ -580,7 +581,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     }
     if (logger.level <= Logger.FINE) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
     long now = timeSource.currentTimeMillis();
-    if (task.scheduledExecutionTime() < now) {
+    if (task.scheduledExecutionTime() < now && timeSource instanceof DirectTimeSource) {
       if (logger.level <= Logger.WARNING) logger.logException("Can't schedule a task in the past. "+task+" now:"+now+" task.execTime:"+task.scheduledExecutionTime(), new Exception("Stack Trace"));
       throw new RuntimeException("Can't schedule a task in the past.");
     }

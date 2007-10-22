@@ -557,10 +557,12 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     
     // this is if we are the "seed" node
     if (o instanceof PastryNode) {
-      Boolean rdy = (Boolean)arg;
-      if (rdy.equals(Boolean.TRUE)) {
-        localNode.deleteObserver(this);
-        start();
+      if (arg instanceof Boolean) { // could also be a JoinFailedException
+        Boolean rdy = (Boolean)arg;
+        if (rdy.equals(Boolean.TRUE)) {
+          localNode.deleteObserver(this);
+          start();
+        }
       }
     }
   }

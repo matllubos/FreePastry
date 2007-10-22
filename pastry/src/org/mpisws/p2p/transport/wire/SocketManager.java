@@ -367,6 +367,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     tcp.wire.environment.getSelectorManager().modifyKey(key);
   }
 
+  Exception regWriteEx;
   public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver<InetSocketAddress> receiver) {
     if (key == null) {
 //      if (closeEx == null) {
@@ -389,6 +390,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       if (writer != null) {
         if (writer != receiver) {
+          logger.logException("Already registered",regWriteEx);
           throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!");
 //          receiver.receiveException(this, 
 //              new IOException(
@@ -397,6 +399,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         }
       }
     }
+    regWriteEx = new Exception("regWriteEx Stack Trace");
     
     if (wantToRead) {
       if (reader != null) {
@@ -416,19 +419,33 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * shutdownOutput().  This has the effect of removing the manager from
    * the open list.
    */
+  Exception shutEx;
   public void shutdownOutput() {    
 //    logger.logException(this+".shutdownOutput()", new Exception());
     boolean closeMe = false;
     synchronized(this) {
-      if (key == null) throw new IllegalStateException("Socket already closed.");
+      if (key == null) {
+        logger.logException("Socket already closed.",closeEx);
+        throw new IllegalStateException("Socket already closed.");
+      }
+      
+      if (channel.socket().isClosed()) {
+        logger.logException("Socket already closed2.",closeEx);        
+      }
+
+      if (channel.socket().isOutputShutdown()) {
+        logger.logException("Socket already shutdown.",shutEx);        
+      }
+      
       try {
         if (logger.level <= Logger.FINE) logger.log("Shutting down output on app connection " + this);
+        shutEx = new Exception("shutdownOutput Stack Trace");
         
         // do we need to do this?  or does this happen twice now?
 //        manager.appSocketClosed(this);
         
-        if (channel != null) {
-          if (!channel.socket().isClosed()) {
+//        if (channel != null) {
+//          if (!channel.socket().isClosed()) {
             channel.socket().shutdownOutput();
             
             tcp.wire.environment.getSelectorManager().invoke(new Runnable() {
@@ -446,11 +463,11 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
               }
             });
 
-          } else {
-            closeMe = true; 
-          }
-        } else
-          if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
+//          } else {
+//            closeMe = true; 
+//          }
+//        } else
+//          if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Unable to shutdown output on channel; channel is null!");
   
 //      } catch (SocketException e) {
 //        if (logger.level <= Logger.FINE) logger.log( "ERROR: Received exception " + e + " while shutting down output for socket "+this);

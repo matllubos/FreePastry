@@ -53,6 +53,7 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
@@ -314,30 +315,7 @@ public class Recorder implements MyEvents {
   public void printLog(String arg, Environment env) throws IOException {
     BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(new ISASerializer()), env); 
   }
-  
-  static class ISASerializer implements IdentifierSerializer<InetSocketAddress> {
-
-    public ByteBuffer serialize(InetSocketAddress i) {
-      byte[] output = new byte[i.getAddress().getAddress().length+2]; // may be IPV4...
-      ByteBuffer ret = ByteBuffer.wrap(output);
-      ret.put(i.getAddress().getAddress());
-      ret.putShort((short)i.getPort());
-      ret.flip();
-      return ret;
-    }
-
-    public InetSocketAddress deserialize(InputBuffer buf) throws IOException {
-      byte[] addr = new byte[4];
-      buf.read(addr);
-      return new InetSocketAddress(InetAddress.getByAddress(addr), buf.readShort());
-    }
-
-    public void serialize(InetSocketAddress i, OutputBuffer buf) throws IOException {
-      ByteBuffer bb = serialize(i);
-      buf.write(bb.array(), bb.position(), bb.remaining());
-    }    
-  }
-  
+    
   /**
    * Note that this function only works because we have global knowledge. Doing
    * this in an actual distributed environment will take some more work.

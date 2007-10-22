@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.mpisws.p2p.testing.transportlayer.replay.Recorder.ISASerializer;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.direct.EventSimulator;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
@@ -22,6 +21,7 @@ import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;

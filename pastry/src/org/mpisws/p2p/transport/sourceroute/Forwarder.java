@@ -69,6 +69,8 @@ public class Forwarder<Identifier> {
 
     public void receiveException(P2PSocket socket, IOException e) {
       if (logger.level <= Logger.FINE) logger.logException(this+" "+socket, e);
+      from.close();
+      to.close();
     }
 
     public void receiveSelectResult(P2PSocket socket, boolean canRead, boolean canWrite) throws IOException {
