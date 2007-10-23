@@ -83,14 +83,22 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     tl.setCallback(this);
   }
 
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
-    final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options);
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+    final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options) {
+      @Override
+      public boolean cancel() {
+        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+this+".cancel()");
+        return super.cancel();
+      }      
+    };
     
     ret.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
+        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveResult()");
         deliverSocketToMe.receiveResult(ret, getLSSock(sock));
       }
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveException()");
         deliverSocketToMe.receiveException(ret, ex);
       }
     }, options));

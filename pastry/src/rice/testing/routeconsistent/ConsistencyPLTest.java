@@ -71,6 +71,7 @@ import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
 
 import rice.environment.Environment;
@@ -78,6 +79,7 @@ import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.splitstream.ChannelId;
@@ -102,8 +104,9 @@ import rice.selector.LoopObserver;
 public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
   static void setupParams(Parameters params) {
     params.setBoolean("logging_packageOnly",false);
+    params.setInt("loglevel", Logger.FINER);
     
-    params.setInt("rice.pastry_loglevel", Logger.INFO);
+//    params.setInt("rice.pastry_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
@@ -115,17 +118,17 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
-    params.setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);
     
-    params.setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
+//    params.setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);    
+//    params.setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
     
     // turn on consistent join protocol's logger to make sure this is correct for consistency
-    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE);
-    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
+//    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE);
+//    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
     
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
-      params.setInt("rice.pastry.socket_loglevel",Logger.ALL);
+//      params.setInt("rice.pastry.socket_loglevel",Logger.ALL);
     
 //    params.setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
 //    params.setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
@@ -389,6 +392,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
       SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
       {
+        @Override
+        protected RandomSource cloneRandomSource(Environment rootEnvironment, Id nodeId, LogManager lman) {
+          long randSeed = rootEnvironment.getRandomSource().nextLong();
+          logger.log("RandSeed for "+nodeId.toStringFull()+" "+randSeed);
+                   
+          return new SimpleRandomSource(randSeed, lman);    
+        }
 //        @Override
 //        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
 //          // TODO Auto-generated method stub
@@ -409,6 +419,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 
         @Override
         protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+          System.out.println("Initializing RecordLayer "+pn.getNodeId());
           RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
 //          recorders.put(pn, ret);
           historyHolder.add(ret);
@@ -502,8 +513,18 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     }
   }
   
-  public static void replayNode(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, long startTime, int randSeed) throws Exception {
+  public static void replayNode(final Id id, final InetSocketAddress addr, final Collection<InetSocketAddress> bootAddrCandidates, long startTime, long randSeed) throws Exception {
 //    this.bootaddress = bootaddress;
+    boolean isBootNode = false;
+    InetAddress localAddress = InetAddress.getLocalHost();
+    System.out.println(localAddress.getHostName());
+    System.out.println(BOOTNODE);
+    if (localAddress.toString().contains(BOOTNODE)) {
+      isBootNode = true;      
+    }
+    
+    final ArrayList<ReplayLayer<InetSocketAddress>> replayers = new ArrayList<ReplayLayer<InetSocketAddress>>();
+    
     Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed);
     SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new NodeIdFactory() {    
       public Id generateNodeId() {
@@ -541,12 +562,95 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
           }
         
         }, EVT_BOOT, EVT_SUBSCRIBE_PUBLISH, EVT_SHUTDOWN);
-//        replayers.add(replay);
+        replayers.add(replay);
         return replay;
       }
     };
     
+    System.out.println("bootAddrCandidates "+bootAddrCandidates);
     
+    
+    // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
+    final PastryNode node = factory.newNode();
+    
+    System.out.println("node: "+node.getLocalHandle().getEpoch());
+    
+//    if (isBootNode) {
+//      // go ahead and start a new ring
+//    } else {
+//      node.getBootstrapper().boot(Arrays.asList(bootAddressCandidates));
+//      // don't boot your own ring unless you are ricepl-1
+//      System.out.println("Couldn't find bootstrap... exiting.");        
+//      break; // restart join process
+//    }
+
+    node.addLivenessListener(new LivenessListener<NodeHandle>() {      
+      Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
+      public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
+//        if (i.getId().toString().startsWith("<0x000")) {
+//          logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
+//        } else {
+          logger.log("livenessChanged1("+i+","+val+")"+i.getId().toString());
+//        }
+//        logger.log("livenessChanged("+i+","+val+")");
+      }      
+    });
+//    node.addNetworkListener(networkActivity);
+    
+//    InetSocketAddress[] boots = new InetSocketAddress[6];
+//    boots[0] = new InetSocketAddress(InetAddress.getByName("ricepl-1.cs.rice.edu"), startPort);
+//    boots[1] = new InetSocketAddress(InetAddress.getByName("ricepl-2.cs.rice.edu"), startPort);
+//    boots[2] = new InetSocketAddress(InetAddress.getByName("ricepl-3.cs.rice.edu"), startPort);
+//    boots[3] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.umass.edu"), startPort);
+//    boots[4] = new InetSocketAddress(InetAddress.getByName("planet1.scs.cs.nyu.edu"), startPort);
+//    boots[5] = new InetSocketAddress(InetAddress.getByName("planetlab2.cs.cornell.edu"), startPort);
+    
+//    PartitionHandler ph = new PartitionHandler(node, (SocketPastryNodeFactory)factory, boots);
+//    ph.start(node.getEnvironment().getSelectorManager().getTimer());
+    
+    System.out.println("BOOTUP:"+env.getTimeSource().currentTimeMillis());
+
+//    final String nodeString = node.toString();
+    
+    final LeafSet ls = node.getLeafSet();
+    new ConsistencyPLTest(node, ls);
+   
+    System.out.println("STARTUP "+env.getTimeSource().currentTimeMillis()+" "+node);    
+    
+    if (useScribe) {
+      // this is to do scribe stuff
+      MyScribeClient app = new MyScribeClient(node);      
+      app.subscribe();
+      if (isBootNode) {
+        app.startPublishTask(); 
+      }
+    }
+    
+    final ArrayList<MySplitStreamClient> appHolder = new ArrayList<MySplitStreamClient>();
+    MySplitStreamClient app = null;
+    if (useSplitStream) {
+      app = new MySplitStreamClient(node, INSTANCE);      
+      appHolder.add(app);
+      ChannelId CHANNEL_ID = new ChannelId(generateId());    
+      app.attachChannel(CHANNEL_ID);
+      
+//      if (!isBootNode) {
+//        System.out.println("Sleeping(2) for "+WAIT_TO_SUBSCRIBE_DELAY+" at "+env.getTimeSource().currentTimeMillis());
+//        Thread.sleep(WAIT_TO_SUBSCRIBE_DELAY);
+//        System.out.println("Done(2) sleeping at "+env.getTimeSource().currentTimeMillis());
+//      }   
+      
+//      app.subscribeToAllChannels();    
+//      app.startPublishTask(); 
+    }  
+
+    ReplaySM sim = (ReplaySM)env.getSelectorManager();
+    ReplayLayer<InetSocketAddress> replay = replayers.get(0);
+    replay.makeProgress(); // get rid of INIT event
+    sim.setVerifier(replay);
+     
+    sim.start();
+
   }
   
   public static void runNode(final Environment env, SocketPastryNodeFactory factory, boolean isBootNode, int bindport, InetSocketAddress bootaddress, 
@@ -565,8 +669,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       setupParams(params);
       
       // log everything while booting, this gets turned off on SETREADY
-      params.setInt("org.mpisws.p2p.transport_loglevel",Logger.ALL);
-      params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.ALL);
+//      params.setInt("org.mpisws.p2p.transport_loglevel",Logger.ALL);
+//      params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.ALL);
       
 //      if (args.length > 0) {
 //        int theVal = Integer.parseInt(args[0]);
@@ -654,11 +758,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //          ctr--;
 //        }
 //      }
-      System.out.println("bootAddrCandidates "+bootAddrCandidates.size()+":"+bootAddrCandidates.iterator().next());
+      System.out.println("bootAddrCandidates "+bootAddrCandidates);
       
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
       final PastryNode node = factory.newNode();
+      
+      System.out.println("node: "+node.getLocalHandle().getEpoch());
       
 //      if (isBootNode) {
 //        // go ahead and start a new ring
@@ -792,9 +898,9 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       
       System.out.println("SETREADY:"+env.getTimeSource().currentTimeMillis()+" "+node);
       
-      params.setInt("org.mpisws.p2p.transport_loglevel",Logger.WARNING);
-      params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
-      setupParams(params);
+//      params.setInt("org.mpisws.p2p.transport_loglevel",Logger.WARNING);
+//      params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
+//      setupParams(params);
       
       if (useSplitStream) {
         env.getSelectorManager().invoke(new Runnable(){
