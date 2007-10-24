@@ -44,6 +44,8 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.direct.DirectTransportLayer;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -52,9 +54,13 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
+import rice.pastry.direct.EuclideanNetwork;
+import rice.pastry.direct.NetworkSimulator;
+import rice.pastry.direct.NodeRecord;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
+import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLPastryNode;
 
 /**
@@ -78,19 +84,48 @@ public class DistTutorial {
    * @param env the environment for these nodes
    */
   public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
+    // Construct the simulator
+    final NetworkSimulator<InetSocketAddress, ByteBuffer> simulator = new EuclideanNetwork<InetSocketAddress, ByteBuffer>(env);
+    simulator.setMaxSpeed(10.0f);
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
+      
+      /**
+       * Swap in Direct instead of wire.
+       */
       @Override
-      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(final InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+        DirectTransportLayer<InetSocketAddress, ByteBuffer> tl = new DirectTransportLayer<InetSocketAddress, ByteBuffer>(
+            innermostAddress, simulator.getGenericSimulator(), simulator.getLivenessProvider(), pn.getEnvironment());
+
+
+//        NodeHandleAdapter nha = new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<InetSocketAddress>(){    
+//          public int proximity(InetSocketAddress i) {
+//            return (int)simulator.proximity(innermostAddress, i);
+//          }
+//        
+//          List<ProximityListener<InetSocketAdd>> proxListeners = new ArrayList<ProximityListener<NodeHandle>>();
+//          public void addProximityListener(ProximityListener<NodeHandle> name) {
+//            proxListeners.add(name);
+//          }
+//
+//          public boolean removeProximityListener(ProximityListener<NodeHandle> name) {
+//            return proxListeners.remove(name);
+//          }    
+//        });
         
-        return super.getWireTransportLayer(innermostAddress, pn);
+        simulator.registerNode(innermostAddress, tl, simulator.generateNodeRecord());
+
+        return tl; //super.getWireTransportLayer(innermostAddress, pn);
       }      
     };
 
+    
+    simulator.start();
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
       // This will return null if we there is no node at that location
@@ -178,7 +213,7 @@ public class DistTutorial {
    */
   public static void main(String[] args) throws Exception {
     // Loads pastry settings
-    Environment env = new Environment();
+    Environment env = Environment.directEnvironment();
     
     // disable the UPnP setting (in case you are testing this on a NATted LAN)
     env.getParameters().setString("nat_search_policy","never");

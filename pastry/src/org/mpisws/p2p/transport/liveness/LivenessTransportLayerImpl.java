@@ -213,7 +213,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
   public EntityManager deleteManager(Identifier i) {
     synchronized(managers) {
       EntityManager manager = managers.remove(i);
-      if (manager.pending != null) manager.pending.cancel();
+      if (manager != null) {
+        if (manager.pending != null) manager.pending.cancel();
+      }
       return manager;
     }
   }
@@ -837,7 +839,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      */
 //    long start = 0; // delme
 //    int ctr = 0; // delme
-    protected boolean checkLiveness(Map<String, Integer> options) {
+    protected boolean checkLiveness(final Map<String, Integer> options) {
 //      logger.log(this+".checkLiveness()");
       if (logger.level <= Logger.FINER) logger.log(this+".checkLiveness()");
 
@@ -880,10 +882,20 @@ public class LivenessTransportLayerImpl<Identifier> implements
         }
       }
       if (ret) {
-        timer.schedule(pending, rto);
-        Identifier temp = identifier.get();
-        if (temp != null) {
-          ping(temp, options);
+        final int theRTO = rto;
+        Runnable r = new Runnable() {
+          public void run() {
+            timer.schedule(pending, theRTO);
+            Identifier temp = identifier.get();
+            if (temp != null) {
+              ping(temp, options);
+            }
+          }
+        };
+        if (environment.getSelectorManager().isSelectorThread()) {
+          r.run();
+        } else {
+          environment.getSelectorManager().invoke(r);
         }
       }
       

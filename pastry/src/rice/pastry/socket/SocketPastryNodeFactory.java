@@ -717,7 +717,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       for (InetSocketAddress addr : bootaddresses) { 
         if (logger.level <= Logger.FINER) logger.log("addr:"+addr+" local:"+localAddr);
         if (!addr.equals(localAddr)) {
-          tempBootHandles.add(handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), 0, Id.build()));
+          tempBootHandles.add(handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build()));
         }
       }
 
@@ -774,7 +774,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
             if (logger.level <= Logger.FINE) logger.log("livenessChanged("+i+","+val+")");
             
 //            System.out.println("here");
-            if (val <= LIVENESS_SUSPECTED && i.getEpoch() != 0L) {
+            if (val <= LIVENESS_SUSPECTED && i.getEpoch() != -1L) {
               boolean complete = false;
               
               // add the new handle

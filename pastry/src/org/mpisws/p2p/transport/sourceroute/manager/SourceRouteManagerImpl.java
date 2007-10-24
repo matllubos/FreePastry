@@ -374,6 +374,7 @@ public class SourceRouteManagerImpl<Identifier> implements
 //      }
       for (SourceRoute<Identifier> sr : temp) {
         livenessProvider.clearState(sr);
+        proxProvider.clearState(sr);
       }
     }
 

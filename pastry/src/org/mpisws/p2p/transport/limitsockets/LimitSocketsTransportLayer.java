@@ -164,7 +164,12 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     @Override
     public long read(ByteBuffer dsts) throws IOException {
       if (!closed) touch(this);
-      return super.read(dsts);
+      try {
+        return super.read(dsts);
+      } catch (IOException ioe) {
+        close();
+        throw ioe;
+      }
     }
 
     @Override
@@ -176,7 +181,12 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     @Override
     public long write(ByteBuffer srcs) throws IOException {
       if (!closed) touch(this);
-      return super.write(srcs);
+      try {
+        return super.write(srcs);
+      } catch (IOException ioe) {
+        close();
+        throw ioe;
+      }
     }
 
     @Override

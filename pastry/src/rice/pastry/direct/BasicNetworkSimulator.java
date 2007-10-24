@@ -67,10 +67,10 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
     GenericNetworkSimulator<Identifier, MessageType> {
   class Tupel {
     Identifier i;
-    TransportLayer<Identifier, MessageType> tl;
+    DirectTransportLayer<Identifier, MessageType> tl;
     NodeRecord record;
     
-    public Tupel(Identifier i, TransportLayer<Identifier, MessageType> tl, NodeRecord record) {
+    public Tupel(Identifier i, DirectTransportLayer<Identifier, MessageType> tl, NodeRecord record) {
       super();
       this.i = i;
       this.tl = tl;
@@ -182,7 +182,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
 //  }
 
 
-  public void registerIdentifier(Identifier i, TransportLayer<Identifier, MessageType> dtl, NodeRecord record) {
+  public void registerIdentifier(Identifier i, DirectTransportLayer<Identifier, MessageType> dtl, NodeRecord record) {
     nodes.put(i, new Tupel(i, dtl, record));
   }
 
@@ -207,8 +207,9 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
   public DirectTransportLayer<Identifier, MessageType> getTL(Identifier i) {
     Tupel t = nodes.get(i);
     if (t == null) return null;
-    NodeHandleAdapter nha = (NodeHandleAdapter)t.tl;
-    return (DirectTransportLayer<Identifier, MessageType>)nha.getTL();
+    return t.tl;
+//    NodeHandleAdapter nha = (NodeHandleAdapter)t.tl;
+//    return (DirectTransportLayer<Identifier, MessageType>)nha.getTL();
 //    return (DirectTransportLayer<Identifier, MessageType>)nodes.get(i).tl;
   }
   

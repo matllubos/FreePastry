@@ -53,7 +53,7 @@ import rice.pastry.messaging.*;
  * @author Y. Charlie Hu
  * @author Rongmei Zhang
  */
-public class SphereNetwork extends NetworkSimulatorImpl {
+public class SphereNetwork<Identifier, MessageType> extends NetworkSimulatorImpl<Identifier, MessageType> {
 
   /**
    * Constructor.

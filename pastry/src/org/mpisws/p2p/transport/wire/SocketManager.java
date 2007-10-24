@@ -369,6 +369,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
 
   Exception regWriteEx;
   public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver<InetSocketAddress> receiver) {
+    if (logger.level <= Logger.FINER) logger.log(this+".register("+wantToRead+","+wantToWrite+","+receiver+")");
     if (key == null) {
 //      if (closeEx == null) {
 //        logger.log("No closeEx "+addr);
@@ -498,7 +499,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }    
       return ret;
     } catch (IOException ioe) {
-      if (logger.level <= Logger.WARNING) logger.log(this+" error reading");
+      if (logger.level <= Logger.INFO) {
+        logger.logException(this+" error reading", ioe);
+      } else if (logger.level <= Logger.WARNING) logger.log(this+" error reading");
       close();
       throw ioe;
     }
@@ -521,7 +524,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       return ret;
     } catch (IOException ioe) {
-      if (logger.level <= Logger.WARNING) logger.log(this+" error writing");
+      if (logger.level <= Logger.INFO) {
+        logger.logException(this+" error writing", ioe);        
+      } else if (logger.level <= Logger.WARNING) logger.log(this+" error writing");
       close();
       throw ioe;
     }      

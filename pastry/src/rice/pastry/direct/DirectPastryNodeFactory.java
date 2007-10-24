@@ -114,7 +114,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
 
-  Hashtable recordTable = new Hashtable();
+  HashMap<Id, NodeRecord> recordTable = new HashMap<Id, NodeRecord>();
   
   /**
    * Manufacture a new Pastry node.
@@ -142,13 +142,13 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
         }
       }    
   
-      NodeRecord nr = (NodeRecord)recordTable.get(nodeId);
-      if (nr == null) {
-        nr = simulator.generateNodeRecord();
-        recordTable.put(nodeId,nr);
-      }
+//      NodeRecord nr = (NodeRecord)recordTable.get(nodeId);
+//      if (nr == null) {
+//        nr = simulator.generateNodeRecord();
+//        recordTable.put(nodeId,nr);
+//      }
       
-      TLPastryNode pn = nodeHandleHelper(nodeId, environment, nr);
+      TLPastryNode pn = nodeHandleHelper(nodeId, environment, null);
   //    
   //    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment, nr);
   //
@@ -185,7 +185,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   //      jProtocol.register();      
   //    }
       
-      ((NetworkSimulatorImpl)simulator).registerNode(pn, nr);
+//      ((NetworkSimulatorImpl)simulator).registerNode(pn.getLocalHandle(), pn.getTL(), nr);
       // pn.doneNode(bootstrap);
       //pn.doneNode( simulator.getClosest(localhandle) );    
       if (bootstrap == null) {
@@ -299,13 +299,21 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
 
   @Override
   protected NodeHandleAdapter getNodeHanldeAdapter(final TLPastryNode pn, NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException {
-    TransportLayer<NodeHandle, RawMessage> tl = new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator.getGenericSimulator(), simulator.getLivenessProvider(), pn.getEnvironment());
+    DirectTransportLayer<NodeHandle, RawMessage> tl = new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator.getGenericSimulator(), simulator.getLivenessProvider(), pn.getEnvironment());
+      NodeRecord nr = (NodeRecord)recordTable.get(pn.getId());
+      if (nr == null) {
+        nr = simulator.generateNodeRecord();
+        recordTable.put(pn.getNodeId(),nr);
+      }
     
-    return new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<NodeHandle>(){    
+//    ((NetworkSimulatorImpl)simulator).registerNode(pn, nr);
+    
+    NodeHandleAdapter nha = new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<NodeHandle>(){          
       public int proximity(NodeHandle i) {
         return (int)simulator.proximity((DirectNodeHandle)pn.getLocalHandle(), (DirectNodeHandle)i);
       }
     
+      // proximity won't change, so don't worry about it
       List<ProximityListener<NodeHandle>> proxListeners = new ArrayList<ProximityListener<NodeHandle>>();
       public void addProximityListener(ProximityListener<NodeHandle> name) {
         proxListeners.add(name);
@@ -314,8 +322,15 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
       public boolean removeProximityListener(ProximityListener<NodeHandle> name) {
         return proxListeners.remove(name);
       }
-    
+
+      public void clearState(NodeHandle i) {
+
+      }    
     });
+    
+    simulator.registerNode(pn.getLocalHandle(), tl, nr);
+
+    return nha;
   }
 
   @Override

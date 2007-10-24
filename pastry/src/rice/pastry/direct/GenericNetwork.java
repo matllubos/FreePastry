@@ -54,7 +54,7 @@ import java.io.*;
 
 // This topology will read in a topology-distance matrix and the corresponding
 // coordinates from input files
-public class GenericNetwork extends NetworkSimulatorImpl {
+public class GenericNetwork<Identifier, MessageType> extends NetworkSimulatorImpl<Identifier, MessageType> {
   
   // The static variable MAXOVERLAYSIZE should be set to the n, where its input
   // is a N*N matrix

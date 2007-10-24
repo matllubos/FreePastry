@@ -43,6 +43,7 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.direct.Delivery;
+import org.mpisws.p2p.transport.direct.DirectTransportLayer;
 import org.mpisws.p2p.transport.direct.GenericNetworkSimulator;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
@@ -60,11 +61,11 @@ import rice.pastry.ScheduledMessage;
 import rice.pastry.messaging.Message;
 import rice.pastry.transport.TLPastryNode;
 
-public class NetworkSimulatorImpl implements NetworkSimulator {
-  protected BasicNetworkSimulator<NodeHandle, RawMessage> simulator;
+public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSimulator<Identifier, MessageType> {
+  protected BasicNetworkSimulator<Identifier, MessageType> simulator;
   protected RandomSource random;
   protected ProximityGenerator generator;
-  protected LivenessProvider<NodeHandle> livenessProvider;
+  protected LivenessProvider<Identifier> livenessProvider;
   
   // TODO: add listener to top level tl, to notify simulator listeners
   public NetworkSimulatorImpl(Environment env, ProximityGenerator generator) {
@@ -86,7 +87,7 @@ public class NetworkSimulatorImpl implements NetworkSimulator {
     }
     generator.setRandom(random);
     this.generator = generator;
-    simulator = new BasicNetworkSimulator<NodeHandle, RawMessage>(env, random);
+    simulator = new BasicNetworkSimulator<Identifier, MessageType>(env, random);
     livenessProvider = simulator;
   }
 
@@ -241,15 +242,15 @@ public class NetworkSimulatorImpl implements NetworkSimulator {
     return null;
   }
 
-  public boolean isAlive(DirectNodeHandle nh) {
+  public boolean isAlive(Identifier nh) {
     return simulator.isAlive(nh);
   }
 
-  public float networkDelay(DirectNodeHandle a, DirectNodeHandle b) {
+  public float networkDelay(Identifier a, Identifier b) {
     return simulator.networkDelay(a, b);
   }
 
-  public float proximity(DirectNodeHandle a, DirectNodeHandle b) {
+  public float proximity(Identifier a, Identifier b) {
     return simulator.proximity(a, b);
   }
 
@@ -262,15 +263,17 @@ public class NetworkSimulatorImpl implements NetworkSimulator {
     return simulator.getNodeRecord(handle);
   }
 
-  public LivenessProvider<NodeHandle> getLivenessProvider() {
+  public LivenessProvider<Identifier> getLivenessProvider() {
     return livenessProvider;
   }
 
-  public GenericNetworkSimulator<NodeHandle, RawMessage> getGenericSimulator() {
+  public GenericNetworkSimulator<Identifier, MessageType> getGenericSimulator() {
     return simulator;
   }
 
-  public void registerNode(TLPastryNode dpn, NodeRecord nr) {
-    simulator.registerIdentifier(dpn.getLocalHandle(), dpn.getTL(), nr);
+//  public void registerNode(TLPastryNode dpn, NodeRecord nr) {
+//  simulator.registerIdentifier(dpn.getLocalHandle(), dpn.getTL(), nr);
+  public void registerNode(Identifier i, DirectTransportLayer<Identifier, MessageType> dtl, NodeRecord nr) {
+    simulator.registerIdentifier(i, dtl, nr);
   }
 }

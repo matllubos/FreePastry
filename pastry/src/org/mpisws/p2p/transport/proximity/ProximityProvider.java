@@ -44,4 +44,6 @@ public interface ProximityProvider<Identifier> {
 
   public void addProximityListener(ProximityListener<Identifier> listener);
   public boolean removeProximityListener(ProximityListener<Identifier> listener);
+  
+  public void clearState(Identifier i);
 }

@@ -54,7 +54,7 @@ import rice.pastry.messaging.*;
  * @author Andrew Ladd
  * @author Rongmei Zhang
  */
-public class EuclideanNetwork extends NetworkSimulatorImpl {
+public class EuclideanNetwork<Identifier, MessageType> extends NetworkSimulatorImpl<Identifier, MessageType> {
 
   /**
    * Constructor.

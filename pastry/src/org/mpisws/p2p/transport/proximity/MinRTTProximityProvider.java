@@ -98,11 +98,18 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
 
   }
   
+  public void clearState(Identifier i) {
+    synchronized(managers) {
+      managers.remove(i);
+    }    
+  }
+  
   public EntityManager getManager(Identifier i) {
     synchronized(managers) {
       EntityManager manager = managers.get(i);
       if (manager == null) {
         manager = new EntityManager(i);
+        if (logger.level <= Logger.FINER) logger.log("Creating EM for "+i);
         managers.put(i,manager);
       }
       return manager;
@@ -122,7 +129,7 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
     // the current best-known proximity of this route
     protected int proximity;
     
-    protected long lastPingTime = 0;
+    protected long lastPingTime = Integer.MIN_VALUE; // we don't want underflow, but we don't want this to be zero either
     /**
      * Constructor - builds a route manager given the route
      *
@@ -137,6 +144,7 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
     public void ping() {
       long now = time.currentTimeMillis();
       if ((now - lastPingTime) < pingThrottle) {
+        if  (logger.level <= Logger.FINE) logger.log("Dropping ping because pingThrottle."+(pingThrottle - (now - lastPingTime)));
         return;
       }          
       lastPingTime = now;

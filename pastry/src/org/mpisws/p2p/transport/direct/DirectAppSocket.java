@@ -72,7 +72,7 @@ public class DirectAppSocket<Identifier, MessageType> {
   DirectAppSocketEndpoint acceptorEndpoint;
   DirectAppSocketEndpoint connectorEndpoint;
   
-  SocketRequestHandle<Identifier> connectorHandle;
+  SocketRequestHandle<Identifier> connectorHandle; 
   
   Logger logger;
 
@@ -85,6 +85,7 @@ public class DirectAppSocket<Identifier, MessageType> {
     this.connector = connector;
     this.connectorReceiver = connectorCallback;
     this.simulator = simulator;
+    this.connectorHandle = handle;
     logger = simulator.getEnvironment().getLogManager().getLogger(DirectAppSocket.class,"");
     
     
@@ -131,12 +132,12 @@ public class DirectAppSocket<Identifier, MessageType> {
     }
   
     public long read(ByteBuffer dsts) throws IOException {
-      ByteBuffer[] foo = new ByteBuffer[1];
-      foo[0] = dsts;
-      return read(foo, 0, 1);
-    }
-
-    public long read(ByteBuffer[] dsts, int offset, int length) {
+//      ByteBuffer[] foo = new ByteBuffer[1];
+//      foo[0] = dsts;
+//      return read(foo, 0, 1);
+//    }
+//
+//    public long read(ByteBuffer[] dsts, int offset, int length) {
       int lengthRead = 0;
       
       synchronized(this) {
@@ -150,8 +151,8 @@ public class DirectAppSocket<Identifier, MessageType> {
           byte[] msg = (byte[])i.next();          
           
           // loop through all the dsts, and fill them with the current message if possible
-          for (int dstCtr = offset; dstCtr < offset+length;dstCtr++) {
-            ByteBuffer curBuffer = dsts[dstCtr];
+//          for (int dstCtr = offset; dstCtr < offset+length;dstCtr++) {
+            ByteBuffer curBuffer = dsts;
             int lengthToPut = curBuffer.remaining();
             if (lengthToPut > (msg.length-firstOffset)) {
               lengthToPut = msg.length-firstOffset;
@@ -162,12 +163,12 @@ public class DirectAppSocket<Identifier, MessageType> {
             lengthRead+=lengthToPut;
             
             // we finished a message
-            if (firstOffset == msg.length)
-              break; // for distCtr loop
+//            if (firstOffset == msg.length)
+//              break; // for distCtr loop
             
             // optimization: if we are here then there must be no more remaining in curBuffer
-            offset=dstCtr+1;
-          }
+//            offset=dstCtr+1;
+//          }
           
           // see if we finished a message
           if (firstOffset == msg.length) {
@@ -192,17 +193,17 @@ public class DirectAppSocket<Identifier, MessageType> {
     }
 
     public long write(ByteBuffer srcs) throws IOException {
-      ByteBuffer[] foo = new ByteBuffer[1];
-      foo[0] = srcs;
-      return write(foo, 0, 1);
-    }
-
-    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+//      ByteBuffer[] foo = new ByteBuffer[1];
+//      foo[0] = srcs;
+//      return write(foo, 0, 1);
+//    }
+//
+//    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
       if (outputClosed) throw new ClosedChannelException();
-      int availableToWrite = 0;
-      for (int i = offset; i < offset+length; i++) {
-        availableToWrite+=srcs[i].remaining(); 
-      }
+      int availableToWrite = srcs.remaining();
+//      for (int i = offset; i < offset+length; i++) {
+//        availableToWrite+=srcs[i].remaining(); 
+//      }
       
       int lengthToWrite;
       synchronized(counterpart) {
@@ -213,13 +214,13 @@ public class DirectAppSocket<Identifier, MessageType> {
 
       final byte[] msg = new byte[lengthToWrite]; 
       int remaining = lengthToWrite;
-      int i = offset;
+//      int i = offset;
       while(remaining > 0) {
-        int lengthToReadFromBuffer = srcs[i].remaining();
+        int lengthToReadFromBuffer = srcs.remaining();
         if (remaining < lengthToReadFromBuffer) lengthToReadFromBuffer = remaining;
-        srcs[i].get(msg,lengthToWrite-remaining,lengthToReadFromBuffer);
+        srcs.get(msg,lengthToWrite-remaining,lengthToReadFromBuffer);
         remaining-=lengthToReadFromBuffer;
-        i++;
+//        i++;
       }
       
       if (logger.level <= Logger.FINER) logger.log(this+".write("+lengthToWrite+")");

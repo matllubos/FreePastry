@@ -56,6 +56,7 @@ import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
+import rice.p2p.commonapi.CancellableTask;
 
 public class DirectTransportLayer<Identifier, MessageType> implements TransportLayer<Identifier, MessageType> {
   protected boolean acceptMessages = true;
@@ -93,10 +94,15 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
     return localIdentifier;
   }
   
-  static class CancelAndClose implements Cancellable {
-    DirectAppSocket closeMe;
+  static class CancelAndClose<Identifier, MessageType> implements Cancellable {
+    DirectAppSocket<Identifier, MessageType> closeMe;
     Cancellable cancelMe;
     
+    public CancelAndClose(DirectAppSocket<Identifier, MessageType> socket, CancellableTask task) {
+      this.closeMe = socket;
+      this.cancelMe = task;
+    }
+
     public boolean cancel() {
       closeMe.connectorEndpoint.close();
       return cancelMe.cancel();
@@ -107,10 +113,9 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
   public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
     SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options);
     DirectAppSocket<Identifier, MessageType> socket = new DirectAppSocket<Identifier, MessageType>(i, localIdentifier, deliverSocketToMe, simulator, handle, options);
-    CancelAndClose cancelAndClose = new CancelAndClose();
+    CancelAndClose cancelAndClose = new CancelAndClose(socket, simulator.enqueueDelivery(socket.getAcceptorDelivery(),
+        (int)Math.round(simulator.networkDelay(localIdentifier, i))));
     handle.setSubCancellable(cancelAndClose);
-    cancelAndClose.cancelMe = simulator.enqueueDelivery(socket.getAcceptorDelivery(),
-        (int)Math.round(simulator.networkDelay(localIdentifier, i)));
     return handle;
   }
 

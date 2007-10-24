@@ -38,6 +38,7 @@ package rice.pastry.direct;
 
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.direct.Delivery;
+import org.mpisws.p2p.transport.direct.DirectTransportLayer;
 import org.mpisws.p2p.transport.direct.GenericNetworkSimulator;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
@@ -57,7 +58,7 @@ import rice.pastry.transport.TLPastryNode;
  * @author Andrew Ladd
  */
 
-public interface NetworkSimulator {
+public interface NetworkSimulator<Identifier, MessageType> {
 
   public Environment getEnvironment();
   
@@ -70,7 +71,7 @@ public interface NetworkSimulator {
    * @return true if alive, false otherwise.
    */
 
-  public boolean isAlive(DirectNodeHandle nh);
+  public boolean isAlive(Identifier nh);
 
   /**
    * Determines rtt between two nodes.
@@ -80,7 +81,7 @@ public interface NetworkSimulator {
    * 
    * @return proximity of b to a.
    */
-  public float proximity(DirectNodeHandle a, DirectNodeHandle b);
+  public float proximity(Identifier a, Identifier b);
   
   /**
    * Determines delivery time from a to b.
@@ -90,7 +91,7 @@ public interface NetworkSimulator {
    * 
    * @return proximity of b to a.
    */
-  public float networkDelay(DirectNodeHandle a, DirectNodeHandle b);
+  public float networkDelay(Identifier a, Identifier b);
   
 //  /**
 //   * Deliver message.
@@ -237,10 +238,11 @@ public interface NetworkSimulator {
 
   public NodeRecord getNodeRecord(DirectNodeHandle handle);
   
-  public LivenessProvider<NodeHandle> getLivenessProvider();
+  public LivenessProvider<Identifier> getLivenessProvider();
 
 //  public ProximityProvider<NodeHandle> getProximityProvider();
 
-  public GenericNetworkSimulator<NodeHandle, RawMessage> getGenericSimulator();
+  public GenericNetworkSimulator<Identifier, MessageType> getGenericSimulator();
   
+  public void registerNode(Identifier i, DirectTransportLayer<Identifier, MessageType> dtl, NodeRecord nr);  
 }
