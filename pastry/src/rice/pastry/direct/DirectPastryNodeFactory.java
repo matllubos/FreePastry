@@ -142,12 +142,6 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
         }
       }    
   
-//      NodeRecord nr = (NodeRecord)recordTable.get(nodeId);
-//      if (nr == null) {
-//        nr = simulator.generateNodeRecord();
-//        recordTable.put(nodeId,nr);
-//      }
-      
       TLPastryNode pn = nodeHandleHelper(nodeId, environment, null);
   //    
   //    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment, nr);
@@ -185,7 +179,6 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   //      jProtocol.register();      
   //    }
       
-//      ((NetworkSimulatorImpl)simulator).registerNode(pn.getLocalHandle(), pn.getTL(), nr);
       // pn.doneNode(bootstrap);
       //pn.doneNode( simulator.getClosest(localhandle) );    
       if (bootstrap == null) {
@@ -299,15 +292,13 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
 
   @Override
   protected NodeHandleAdapter getNodeHanldeAdapter(final TLPastryNode pn, NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException {
-    DirectTransportLayer<NodeHandle, RawMessage> tl = new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator.getGenericSimulator(), simulator.getLivenessProvider(), pn.getEnvironment());
-      NodeRecord nr = (NodeRecord)recordTable.get(pn.getId());
-      if (nr == null) {
-        nr = simulator.generateNodeRecord();
-        recordTable.put(pn.getNodeId(),nr);
-      }
-    
-//    ((NetworkSimulatorImpl)simulator).registerNode(pn, nr);
-    
+    NodeRecord nr = (NodeRecord)recordTable.get(pn.getId());
+    if (nr == null) {
+      nr = simulator.generateNodeRecord();
+      recordTable.put(pn.getNodeId(),nr);
+    }
+    DirectTransportLayer<NodeHandle, RawMessage> tl = new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator, nr, pn.getEnvironment());
+        
     NodeHandleAdapter nha = new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<NodeHandle>(){          
       public int proximity(NodeHandle i) {
         return (int)simulator.proximity((DirectNodeHandle)pn.getLocalHandle(), (DirectNodeHandle)i);
@@ -328,8 +319,6 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
       }    
     });
     
-    simulator.registerNode(pn.getLocalHandle(), tl, nr);
-
     return nha;
   }
 

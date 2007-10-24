@@ -100,32 +100,16 @@ public class DistTutorial {
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(final InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
         DirectTransportLayer<InetSocketAddress, ByteBuffer> tl = new DirectTransportLayer<InetSocketAddress, ByteBuffer>(
-            innermostAddress, simulator.getGenericSimulator(), simulator.getLivenessProvider(), pn.getEnvironment());
-
-
-//        NodeHandleAdapter nha = new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<InetSocketAddress>(){    
-//          public int proximity(InetSocketAddress i) {
-//            return (int)simulator.proximity(innermostAddress, i);
-//          }
-//        
-//          List<ProximityListener<InetSocketAdd>> proxListeners = new ArrayList<ProximityListener<NodeHandle>>();
-//          public void addProximityListener(ProximityListener<NodeHandle> name) {
-//            proxListeners.add(name);
-//          }
-//
-//          public boolean removeProximityListener(ProximityListener<NodeHandle> name) {
-//            return proxListeners.remove(name);
-//          }    
-//        });
-        
-        simulator.registerNode(innermostAddress, tl, simulator.generateNodeRecord());
+            innermostAddress, simulator, simulator.generateNodeRecord(), pn.getEnvironment());
 
         return tl; //super.getWireTransportLayer(innermostAddress, pn);
       }      
     };
 
     
+    // start the simulator
     simulator.start();
+    
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
       // This will return null if we there is no node at that location

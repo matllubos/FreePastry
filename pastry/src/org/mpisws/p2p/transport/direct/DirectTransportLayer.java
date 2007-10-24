@@ -57,6 +57,8 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.CancellableTask;
+import rice.pastry.direct.NetworkSimulator;
+import rice.pastry.direct.NodeRecord;
 
 public class DirectTransportLayer<Identifier, MessageType> implements TransportLayer<Identifier, MessageType> {
   protected boolean acceptMessages = true;
@@ -72,14 +74,16 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
   protected Logger logger;
   
   public DirectTransportLayer(Identifier local, 
-      GenericNetworkSimulator<Identifier, MessageType> simulator, 
-      LivenessProvider<Identifier> liveness, Environment env) {
+      NetworkSimulator<Identifier, MessageType> simulator, 
+      NodeRecord nr, Environment env) {
     this.localIdentifier = local;
-    this.simulator = simulator;
-    this.livenessProvider = liveness;
+    this.simulator = simulator.getGenericSimulator();
+    this.livenessProvider = simulator.getLivenessProvider();
     
     this.environment = env;
     this.logger = environment.getLogManager().getLogger(DirectTransportLayer.class, null);
+    simulator.registerNode(local, this, nr);
+
   }
   
   public void acceptMessages(boolean b) {
