@@ -117,6 +117,10 @@ pastry_socket_allow_loopback = false
 # these params will be used if the computer attempts to bind to the loopback address, they will open a socket to this address/port to identify which network adapter to bind to
 pastry_socket_known_network_address = yahoo.com
 pastry_socket_known_network_address_port = 80
+pastry_socket_use_own_random = true
+pastry_socket_random_seed = clock
+# force the node to be a seed node
+rice_socket_seed = false
 
 # FP 2.1 uses the new transport layer
 transport_wire_datagram_receive_buffer_size = 131072
@@ -340,6 +344,9 @@ p2p_glacier_jitterRange = 0.1
 #1 MINUTE
 p2p_glacier_statisticsReportInterval = 60000 
 p2p_glacier_maxActiveRestores = 3
+
+#transport layer testing params
+org.mpisws.p2p.testing.transportlayer.replay.Recorder_pringlog = true
 
 # logging
 #default log level
