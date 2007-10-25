@@ -70,6 +70,7 @@ import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl;
+import org.mpisws.p2p.transport.liveness.OverrideLiveness;
 import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
@@ -318,7 +319,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 
     // UpperIdentiy
     TransLivenessProximity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentityLayer = getUpperIdentityLayer(
-        priorityTL, pn, identity, srm.getLivenessProvider(), srm.getProximityProvider());
+        priorityTL, pn, identity, srm.getLivenessProvider(), srm.getProximityProvider(), ltl.getOverrideLiveness());
     
     // CommonAPI
     TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> commonAPItl = getCommonAPITransportLayer(
@@ -335,6 +336,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   protected interface TransLiveness<Identifier, MessageType> {
     TransportLayer<Identifier, MessageType> getTransportLayer();
     LivenessProvider<Identifier> getLivenessProvider();
+    OverrideLiveness<Identifier> getOverrideLiveness();
     Pinger<Identifier> getPinger();
   }
 
@@ -399,13 +401,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     SourceRoute<MultiInetSocketAddress>> serializer = new IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>>() {
 
       public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(
-          InputBuffer buf, SourceRoute<MultiInetSocketAddress> i)
+          InputBuffer buf, SourceRoute<MultiInetSocketAddress> i, boolean coalesce)
           throws IOException {
         long epoch = buf.readLong();
         Id nid = Id.build(buf);
+        
+        SocketNodeHandle ret = new SocketNodeHandle(i.getLastHop(), epoch, nid, pn);
         // logger.log("deserialize("+i+") epoch:"+epoch+" nid:"+nid);
-        return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory
-            .coalesce(new SocketNodeHandle(i.getLastHop(), epoch, nid, pn));
+        if (coalesce) {
+          return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory.coalesce(ret);
+        }
+        return ret;
       }
 
       public void serialize(OutputBuffer buf,
@@ -430,6 +436,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       public TransportLayerNodeHandle<MultiInetSocketAddress> translateUp(
           MultiInetSocketAddress i) {
         return handleFactory.lookupNodeHandle(i);
+      }
+
+      public TransportLayerNodeHandle<MultiInetSocketAddress> coalesce(TransportLayerNodeHandle<MultiInetSocketAddress> i) {
+        return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory.coalesce((SocketNodeHandle)i);      
       }
     };
 
@@ -495,7 +505,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     Environment environment = pn.getEnvironment();
     int checkDeadThrottle = environment.getParameters().getInt("pastry_socket_srm_check_dead_throttle"); // 300000
 
-    final LivenessTransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
+    final LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>> ltl = 
       new LivenessTransportLayerImpl<SourceRoute<MultiInetSocketAddress>>(tl,environment, null, checkDeadThrottle);
 
     return new TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>(){    
@@ -503,6 +513,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           return ltl;
         }
         public LivenessProvider<SourceRoute<MultiInetSocketAddress>> getLivenessProvider() {
+          return ltl;
+        }
+        public OverrideLiveness<SourceRoute<MultiInetSocketAddress>> getOverrideLiveness() {
           return ltl;
         }
         public Pinger<SourceRoute<MultiInetSocketAddress>> getPinger() {
@@ -565,10 +578,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
                    ByteBuffer, 
                    SourceRoute<MultiInetSocketAddress>> identity, 
       LivenessProvider<MultiInetSocketAddress> live,
-      ProximityProvider<MultiInetSocketAddress> prox) {
+      ProximityProvider<MultiInetSocketAddress> prox,
+      OverrideLiveness<SourceRoute<MultiInetSocketAddress>> overrideLiveness) {
     
     SocketNodeHandle localhandle = (SocketNodeHandle)pn.getLocalHandle();
-    identity.initUpperLayer(localhandle, priorityTL, live, prox);    
+    identity.initUpperLayer(localhandle, priorityTL, live, prox, overrideLiveness);    
     final UpperIdentity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentityLayer = identity.getUpperIdentity();
     return new TransLivenessProximity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer>(){    
         public TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> getTransportLayer() {
@@ -771,8 +785,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           Logger logger = pn.getEnvironment().getLogManager().getLogger(SocketPastryNodeFactory.class, null);
           public void livenessChanged(NodeHandle i2, int val, Map<String, Integer> options) {
             SocketNodeHandle i = (SocketNodeHandle)i2;
+//            logger.logException("livenessChanged("+i+","+val+")", new Exception("Stack Trace"));
             if (logger.level <= Logger.FINE) logger.log("livenessChanged("+i+","+val+")");
-            
 //            System.out.println("here");
             if (val <= LIVENESS_SUSPECTED && i.getEpoch() != -1L) {
               boolean complete = false;

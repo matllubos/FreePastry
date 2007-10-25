@@ -63,6 +63,8 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
+import org.mpisws.p2p.transport.liveness.LivenessTypes;
+import org.mpisws.p2p.transport.liveness.OverrideLiveness;
 import org.mpisws.p2p.transport.liveness.PingListener;
 import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.proximity.ProximityListener;
@@ -83,7 +85,7 @@ import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.socket.SocketNodeHandle;
 
-public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, LowerIdentifier> {
+public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, LowerIdentifier> implements LivenessTypes {
   protected byte[] localIdentifier;
   
   protected LowerIdentityImpl lower;
@@ -200,11 +202,17 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
   }
   
-  public void setDeadForever(UpperIdentifier i, Map<String, Integer> options) {
+  OverrideLiveness<LowerIdentifier> overrideLiveness;
+  public void setOverrideLiveness(OverrideLiveness<LowerIdentifier> ol) {
+    this.overrideLiveness = ol;
+  }
+  
+  public void setDeadForever(LowerIdentifier l, UpperIdentifier i, Map<String, Integer> options) {
     if (deadForever.contains(i)) return;
     if (logger.level <= Logger.INFO) logger.log("setDeadForever("+i+")");
     deadForever.add(i);
-    upper.notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD_FOREVER, options);
+    overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, options);
+//    upper.notifyLivenessListeners(i, LIVENESS_DEAD_FOREVER, options);  // now called as a result of overrideLiveness
     Set<IdentityMessageHandle> cancelMe = pendingMessages.remove(i);
     if (cancelMe != null) {
       for (IdentityMessageHandle msg : cancelMe) {
@@ -239,6 +247,14 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
   }
   
+
+  /**
+   * 
+   * @param u
+   * @param l
+   * @param options
+   * @return false if the new binding is actually old (IE, don't upgrade it)
+   */
   protected boolean addBinding(UpperIdentifier u, LowerIdentifier l, Map<String, Integer> options) {
     synchronized(bindings) {
       if (deadForever.contains(u)) return false;
@@ -254,13 +270,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         
         // they are different        
         if (destinationChanged(old, u, l, options)) {
-          bindings.put(l, u);          
+          bindings.put(l, u);             
           return true;
         } else {          
           // mark the new one as faulty
           if (logger.level <= Logger.WARNING) logger.log("The nodeChangeStrategy found identifier "+u+
               " to be stale.  Should be using "+old);
-          setDeadForever(u, options);  
+//          setDeadForever(l, u, options);  
           return false;
         }
       }
@@ -291,7 +307,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //              if (logger.level <= Logger.FINE) logger.log("4");
         if (nodeChangeStrategy.canChange(oldDest, newDest, i)) {
 //                if (logger.level <= Logger.FINE) logger.log("5");
-          setDeadForever(oldDest, options);     
+          setDeadForever(i, oldDest, options);   
           return true;
         } else {
           return false;
@@ -412,12 +428,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                             // TODO read the new address
                             if (logger.level <= Logger.INFO) logger.log("openSocket("+i+","+deliverSocketToMe+") answer = FAILURE");
 //                            setDeadForever(dest);
-                            UpperIdentifier newDest = serializer.deserialize(new SocketInputBuffer(socket, localIdentifier.length), i);
+                            UpperIdentifier newDest = serializer.deserialize(new SocketInputBuffer(socket, localIdentifier.length), i, true);
                             
                             addBinding(newDest, i, options);
                             
                             // need to do this so the boostrapper knows the proper identity
-                            upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE, options);
+                            upper.notifyLivenessListeners(newDest, LIVENESS_ALIVE, options);
                             deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
                           } else {
                             deliverSocketToMe.receiveResult(ret, socket);
@@ -481,7 +497,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 UpperIdentifier from;
                 try {
                   // add to intendedDest, add option index                  
-                  from = serializer.deserialize(sib, socket.getIdentifier());                  
+                  from = serializer.deserialize(sib, socket.getIdentifier(), true);                  
                   newOptions.put(NODE_HANDLE_FROM_INDEX, addIntendedDest(from));
                 } catch (InsufficientBytesException ibe) {
                   socket.register(true, false, this); 
@@ -700,11 +716,14 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           
         case NO_ID:
           SimpleInputBuffer sib = new SimpleInputBuffer(m.array(),m.position());
-          UpperIdentifier from = serializer.deserialize(sib, i);
+          UpperIdentifier from = serializer.deserialize(sib, i, false);
           m.position(m.array().length - sib.bytesRemaining());
 
           if (addBinding(from, i, options)) {
-            // no problem 
+            from = serializer.coalesce(from);
+            
+            // need to do this so the boostrapper knows the proper identity
+            overrideLiveness.setLiveness(i, LIVENESS_ALIVE, options);
           } else {
             if (logger.level <= Logger.WARNING) logger.log("Warning.  Received message from stale identifier:"+
                 from+". Current identifier is "+bindings.get(i)+" lower:"+i+" Probably a delayed message, dropping.");
@@ -731,16 +750,20 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           // it's an error, read it in
           UpperIdentifier oldDest = bindings.get(i);
           
-          UpperIdentifier newDest = serializer.deserialize(new SimpleInputBuffer(m.array(),m.position()), i);
+          UpperIdentifier newDest = serializer.deserialize(new SimpleInputBuffer(m.array(),m.position()), i, false);
           if (logger.level <= Logger.INFO) logger.log(
               "received INCORRECT_IDENTITY:"+i+
               " old:"+oldDest+
               " new:"+newDest);
           
-          addBinding(newDest, i, options);
-
-          // need to do this so the boostrapper knows the proper identity
-          upper.notifyLivenessListeners(newDest, LivenessListener.LIVENESS_ALIVE, options);
+          if (addBinding(newDest, i, options)) { // should call setDeadForever
+            
+            newDest = serializer.coalesce(newDest);
+            
+            // need to do this so the boostrapper knows the proper identity
+            overrideLiveness.setLiveness(i, LIVENESS_ALIVE, options);
+            //          upper.notifyLivenessListeners(newDest, LIVENESS_ALIVE, options);
+          }
       }
     }    
 
@@ -776,9 +799,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   
   public void initUpperLayer(UpperIdentifier localIdentifier, TransportLayer<MiddleIdentifier, UpperMsgType> tl,
       LivenessProvider<MiddleIdentifier> live,
-      ProximityProvider<MiddleIdentifier> prox) {
-    if (upper != null) throw new IllegalStateException("upper already initialized:"+upper);
+      ProximityProvider<MiddleIdentifier> prox,
+      OverrideLiveness<LowerIdentifier> overrideLiveness) {
+    if (upper != null) throw new IllegalStateException("upper already initialized:"+upper);    
     upper = new UpperIdentityImpl(localIdentifier, tl, live, prox);
+    
+    setOverrideLiveness(overrideLiveness);
   }
 
   

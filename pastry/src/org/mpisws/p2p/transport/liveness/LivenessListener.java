@@ -47,11 +47,7 @@ import java.util.Map;
  * @author Jeff Hoye
  *
  */
-public interface LivenessListener<Identifier> {
-  public static final int LIVENESS_ALIVE = 1;
-  public static final int LIVENESS_SUSPECTED = 2;
-  public static final int LIVENESS_DEAD = 3;
-  public static final int LIVENESS_DEAD_FOREVER = 4;
+public interface LivenessListener<Identifier> extends LivenessTypes {
 
   /**
    * Called when the liveness changes.

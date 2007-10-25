@@ -626,7 +626,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       
       switch (liveness) {
         case LIVENESS_DEAD_FOREVER:
-          return false;
+//          return false;
         case LIVENESS_DEAD:
         {
           if (logger.level <= Logger.FINE) logger.logException( "(SSRM) CHECKLIVENESS: CHECKING DEAD ON DEAD ADDRESS " + address + " - JUST IN CASE, NO HARM ANYWAY", new Exception("Stack Trace"));
@@ -669,9 +669,9 @@ public class SourceRouteManagerImpl<Identifier> implements
       case LIVENESS_DEAD:
         markDead(i, options);
         return;
-//      case LIVENESS_DEAD_FOREVER:
-//        markDeadForever(i);
-//        return;        
+      case LIVENESS_DEAD_FOREVER:
+        markDeadForever(options);
+        return;        
       default:
         throw new IllegalArgumentException("Unexpected val:"+val+" i:"+i+" address:"+address);
       }
@@ -858,6 +858,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       if (pendingMessages.isEmpty() && pendingSockets.isEmpty()) hardLinks.remove(this);      
       
       switch (liveness) {
+        case LIVENESS_DEAD_FOREVER:
         case LIVENESS_DEAD:
           liveness = LIVENESS_ALIVE;
           notifyLivenessListeners(address, LIVENESS_ALIVE, options);
@@ -869,9 +870,9 @@ public class SourceRouteManagerImpl<Identifier> implements
           notifyLivenessListeners(address, LIVENESS_ALIVE, options);
           if (logger.level <= Logger.FINE) logger.log( "COUNT: " + localAddress + " Found address " + address + " to be unsuspected.");
           break;
-        case LIVENESS_DEAD_FOREVER:
-          if (logger.level <= Logger.WARNING) logger.log( "ERROR: Found dead-forever handle to " + address + " to be alive again!");
-          break;
+//        case LIVENESS_DEAD_FOREVER:
+//          if (logger.level <= Logger.WARNING) logger.log( "ERROR: Found dead-forever handle to " + address + " to be alive again!");
+//          break;
       }
     }
     
@@ -888,6 +889,7 @@ public class SourceRouteManagerImpl<Identifier> implements
             logger.log("COUNT: " + environment.getTimeSource().currentTimeMillis() + 
                 " " + localAddress + " Found address " + address + " to be suspected.");
           break;
+        case LIVENESS_DEAD_FOREVER:
         case LIVENESS_DEAD:
           liveness = LIVENESS_SUSPECTED;
           notifyLivenessListeners(address, LIVENESS_SUSPECTED, options);
@@ -897,13 +899,13 @@ public class SourceRouteManagerImpl<Identifier> implements
                 " to be suspected from dead - should not happen!", 
                 new Exception("Stack Trace"));
           break;
-        case LIVENESS_DEAD_FOREVER:
-          if (logger.level <= Logger.WARNING) 
-            logger.logException(
-                "ERROR: Found node handle " + address + 
-                " to be suspected from dead forever - should never ever happen!", 
-                new Exception("Stack Trace"));
-          break;
+//        case LIVENESS_DEAD_FOREVER:
+//          if (logger.level <= Logger.WARNING) 
+//            logger.logException(
+//                "ERROR: Found node handle " + address + 
+//                " to be suspected from dead forever - should never ever happen!", 
+//                new Exception("Stack Trace"));
+//          break;
       }
       
       // and finally we can now reroute any route messages
@@ -929,14 +931,15 @@ public class SourceRouteManagerImpl<Identifier> implements
     protected void setDead(Map<String, Integer> options) {
 //      logger.log(this+" marking as dead.");
       switch (liveness) {
+        case LIVENESS_DEAD_FOREVER:
         case LIVENESS_DEAD:
           return;
-        case LIVENESS_DEAD_FOREVER:
-          if (logger.level <= Logger.WARNING) 
-            logger.log(
-                "ERROR: Found node handle " + address + 
-                " to be dead from dead forever - should not happen!");
-          break;
+//        case LIVENESS_DEAD_FOREVER:
+//          if (logger.level <= Logger.WARNING) 
+//            logger.log(
+//                "ERROR: Found node handle " + address + 
+//                " to be dead from dead forever - should not happen!");
+//          break;
         default:
           this.best = null;
           this.liveness = LIVENESS_DEAD;

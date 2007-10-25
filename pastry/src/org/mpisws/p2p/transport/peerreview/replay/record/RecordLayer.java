@@ -278,7 +278,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
   
   public void logSocketException(ByteBuffer socketId, IOException ioe) throws IOException {
-    logger.log("logSocketException("+ioe+")");
+    logger.logException("logSocketException("+ioe+")", ioe);
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     String className = ioe.getClass().getName();
     if (className.endsWith("ClosedChannelException")) {

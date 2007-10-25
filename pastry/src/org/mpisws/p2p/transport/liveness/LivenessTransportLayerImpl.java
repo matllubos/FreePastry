@@ -74,8 +74,10 @@ import rice.selector.Timer;
 import rice.selector.TimerTask;
 
 public class LivenessTransportLayerImpl<Identifier> implements 
+    LivenessTypes,
     LivenessTransportLayer<Identifier, ByteBuffer>, 
-    TransportLayerCallback<Identifier, ByteBuffer> {
+    TransportLayerCallback<Identifier, ByteBuffer>,
+    OverrideLiveness<Identifier> {
   // how long to wait for a ping response to come back before declaring lost
   public final int PING_DELAY;
   
@@ -226,7 +228,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (managers.containsKey(i))
         return managers.get(i).liveness;
     }
-    return LivenessListener.LIVENESS_SUSPECTED;
+    return LIVENESS_SUSPECTED;
   }
 
   public void acceptMessages(boolean b) {
@@ -288,7 +290,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
         
     EntityManager mgr = getManager(i);
-    if ((mgr != null) && (mgr.liveness >= LivenessListener.LIVENESS_DEAD)) {
+    if ((mgr != null) && (mgr.liveness >= LIVENESS_DEAD)) {
       if (deliverAckToMe != null) deliverAckToMe.sendFailed(handle, new NodeIsFaultyException(i, m));
       return handle;
     }
@@ -445,7 +447,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {    
     EntityManager m = getManager(s.getIdentifier());
-    if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) {
+    if (m.liveness > LIVENESS_SUSPECTED) {
       m.updated = 0L;
       m.checkLiveness(s.getOptions());
     }
@@ -675,7 +677,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     public EntityManager(Identifier identifier) {
       if (identifier == null) throw new IllegalArgumentException("identifier is null");
       this.identifier = new WeakReference<Identifier>(identifier);
-      this.liveness = LivenessListener.LIVENESS_SUSPECTED;
+      this.liveness = LIVENESS_SUSPECTED;
 
 //      proximity = DEFAULT_PROXIMITY;
 //      proximityTimeout = time.currentTimeMillis()+PROX_TIMEOUT;
@@ -729,8 +731,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
      */
     protected void markAlive(Map<String, Integer> options) {
       boolean notify = false;
-      if (liveness != LivenessListener.LIVENESS_ALIVE) notify = true;
-      this.liveness = LivenessListener.LIVENESS_ALIVE;
+      if (liveness != LIVENESS_ALIVE) notify = true;
+      this.liveness = LIVENESS_ALIVE;
       if (notify) {
         Identifier temp = identifier.get();
         if (temp != null) {
@@ -745,11 +747,11 @@ public class LivenessTransportLayerImpl<Identifier> implements
      */
     protected void markSuspected(Map<String, Integer> options) {      
       // note, can only go from alive -> suspected, can't go from dead->suspected
-      if (liveness > LivenessListener.LIVENESS_SUSPECTED) return;
+      if (liveness > LIVENESS_SUSPECTED) return;
       
       boolean notify = false;
-      if (liveness != LivenessListener.LIVENESS_SUSPECTED) notify = true;
-      this.liveness = LivenessListener.LIVENESS_SUSPECTED;
+      if (liveness != LIVENESS_SUSPECTED) notify = true;
+      this.liveness = LIVENESS_SUSPECTED;
       if (notify) {
         if (logger.level <= Logger.FINE) logger.log(this+".markSuspected() notify = true");
         Identifier temp = identifier.get();
@@ -765,9 +767,20 @@ public class LivenessTransportLayerImpl<Identifier> implements
      */
     protected void markDead(Map<String, Integer> options) {
       boolean notify = false;
-      if (liveness != LivenessListener.LIVENESS_DEAD) notify = true;
+      if (liveness < LIVENESS_DEAD) notify = true;
       if (logger.level <= Logger.FINER) logger.log(this+".markDead() notify:"+notify);
-      this.liveness = LivenessListener.LIVENESS_DEAD;
+      markDeadHelper(LIVENESS_DEAD, options, notify);
+    }
+    
+    protected void markDeadForever(Map<String, Integer> options) {
+      boolean notify = false;
+      if (liveness < LIVENESS_DEAD_FOREVER) notify = true;
+      if (logger.level <= Logger.FINER) logger.log(this+".markDeadForever() notify:"+notify);
+      markDeadHelper(LIVENESS_DEAD_FOREVER, options, notify);
+    }
+    
+    protected void markDeadHelper(int liveness, Map<String, Integer> options, boolean notify) {
+      this.liveness = liveness;
       if (pending != null) {
         pending.cancel(); // sets to null too
       }
@@ -785,8 +798,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
         if (temp != null) {
           notifyLivenessListeners(temp, liveness, options);
         }
-      }
+      }      
     }
+    
     
     /**
      * This method should be called when this route has its proximity updated
@@ -861,7 +875,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       int rto = DEFAULT_RTO;
       synchronized (this) {
         if (this.pending != null) {
-          if (this.liveness < LivenessListener.LIVENESS_DEAD) { 
+          if (this.liveness < LIVENESS_DEAD) { 
             return true;
           } else {
             return false; // prolly won't change
@@ -869,7 +883,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         } 
         
         long now = time.currentTimeMillis();
-        if ((this.liveness < LivenessListener.LIVENESS_DEAD) || 
+        if ((this.liveness < LIVENESS_DEAD) || 
             (this.updated < now - CHECK_DEAD_THROTTLE)) {
           this.updated = now;
           rto = rto();
@@ -899,7 +913,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         }
       }
       
-      if (this.liveness >= LivenessListener.LIVENESS_DEAD) return false; // prolly won't change
+      if (this.liveness >= LIVENESS_DEAD) return false; // prolly won't change
       
       return ret;
     }
@@ -964,7 +978,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
 
         public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
           EntityManager m = getManager(socket.getIdentifier());
-          if (m.liveness > LivenessListener.LIVENESS_SUSPECTED) {
+          if (m.liveness > LIVENESS_SUSPECTED) {
             m.updated = 0L;
             m.checkLiveness(socket.getOptions());
           }
@@ -1020,5 +1034,23 @@ public class LivenessTransportLayerImpl<Identifier> implements
 //    public void closeButDontRemove() {
 //      super.close();
 //    }
+  }
+
+  public void setLiveness(Identifier i, int liveness, Map<String, Integer> options) {
+    EntityManager man = getManager(i);
+    switch(liveness) {
+    case LIVENESS_ALIVE:
+      man.markAlive(options);
+      return;
+    case LIVENESS_SUSPECTED:
+      man.markSuspected(options);
+      return;
+    case LIVENESS_DEAD:
+      man.markDead(options);
+      return;
+    case LIVENESS_DEAD_FOREVER:      
+      man.markDeadForever(options);
+      return;
+    }    
   }
 }
