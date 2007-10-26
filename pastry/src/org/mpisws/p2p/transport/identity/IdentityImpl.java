@@ -360,7 +360,9 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         deliverSocketToMe.receiveException(ret, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+index)); 
         return ret;
       }
-      
+
+      if (logger.level <= Logger.FINE) logger.log("openSocket1("+i+") dest:"+dest);
+
       if (addBinding(dest, i, options)) {
         // no problem, sending message
       } else {
@@ -368,7 +370,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         return ret;
       }
 
-      if (logger.level <= Logger.FINE) logger.log("openSocket("+i+") dest:"+dest);
+      if (logger.level <= Logger.FINE) logger.log("openSocket2("+i+") dest:"+dest);
       
       final ByteBuffer buf;
       try {

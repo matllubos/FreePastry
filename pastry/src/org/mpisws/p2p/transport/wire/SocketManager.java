@@ -369,7 +369,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
 
   Exception regWriteEx;
   public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver<InetSocketAddress> receiver) {
-    if (logger.level <= Logger.FINER) logger.log(this+".register("+wantToRead+","+wantToWrite+","+receiver+")");
+    if (logger.level <= Logger.FINER) logger.log(this+".register("+(wantToRead?"r":"")+(wantToWrite?"w":"")+","+receiver+")");
     if (key == null) {
 //      if (closeEx == null) {
 //        logger.log("No closeEx "+addr);
