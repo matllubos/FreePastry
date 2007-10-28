@@ -282,8 +282,8 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
     
     ((Pinger<MultiInetSocketAddress>)SRManagerTest.bob).addPingListener(pl);
 
-    ((ProximityProvider)bob).proximity(alice.getLocalIdentifier()); // initial check, causes ping if no data
-    ((ProximityProvider)bob).proximity(carol.getLocalIdentifier()); // initial check, causes ping if no data
+    ((ProximityProvider)bob).proximity(alice.getLocalIdentifier(), options); // initial check, causes ping if no data
+    ((ProximityProvider)bob).proximity(carol.getLocalIdentifier(), options); // initial check, causes ping if no data
 
     long timeout = env.getTimeSource().currentTimeMillis()+4000;
     synchronized(lock) {
@@ -294,8 +294,8 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
       }
     }
     
-    int aliceProx = ((ProximityProvider)bob).proximity(alice.getLocalIdentifier());
-    int carolProx = ((ProximityProvider)bob).proximity(carol.getLocalIdentifier());
+    int aliceProx = ((ProximityProvider)bob).proximity(alice.getLocalIdentifier(), options);
+    int carolProx = ((ProximityProvider)bob).proximity(carol.getLocalIdentifier(), options);
 
     assertTrue("aliceProx:"+aliceProx+" carolProx:"+carolProx,aliceProx > carolProx+100);
 //    System.out.println("aliceProx"+aliceProx);

@@ -300,7 +300,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
     DirectTransportLayer<NodeHandle, RawMessage> tl = new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator, nr, pn.getEnvironment());
         
     NodeHandleAdapter nha = new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<NodeHandle>(){          
-      public int proximity(NodeHandle i) {
+      public int proximity(NodeHandle i, Map<String, Integer> options) {
         return (int)simulator.proximity((DirectNodeHandle)pn.getLocalHandle(), (DirectNodeHandle)i);
       }
     

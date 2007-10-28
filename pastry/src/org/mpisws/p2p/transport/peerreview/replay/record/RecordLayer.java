@@ -214,6 +214,12 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
     try {
+      if (identifierSerializer == null) {
+        // just drop this event, it's while we're booting, 
+        // don't forward it or you will mess up the state of the state machine vs the log
+        if (logger.level <= Logger.WARNING) logger.log("Dropping messageReceived("+i+","+m+") while booting");
+        return; 
+      }
       logEvent(EVT_RECV, identifierSerializer.serialize(i), m);
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("messageReceived("+i+","+m+")",ioe); 

@@ -274,8 +274,8 @@ public class SourceRouteManagerImpl<Identifier> implements
    * @param address The address to return the value for
    * @return The ping value to the remote address
    */
-  public int proximity(Identifier address) {
-    return getAddressManager(address).proximity();
+  public int proximity(Identifier address, Map<String, Integer> options) {
+    return getAddressManager(address).proximity(options);
   }
   
   public void acceptMessages(boolean b) {
@@ -389,7 +389,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       }
 
       public void receiveResult(SocketRequestHandle<SourceRoute<Identifier>> cancellable, P2PSocket<SourceRoute<Identifier>> sock) {
-        deliverSocketToMe.receiveResult(this, new SourceRouteManagerP2PSocket(sock, environment));
+        deliverSocketToMe.receiveResult(this, new SourceRouteManagerP2PSocket<Identifier>(sock, environment));
       }
       
       public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, IOException ex) {
@@ -459,11 +459,11 @@ public class SourceRouteManagerImpl<Identifier> implements
      * @param address The address to return the value for
      * @return The ping value to the remote address
      */
-    public int proximity() {
+    public int proximity(Map<String, Integer> options) {
       if (best == null)
         return DEFAULT_PROXIMITY;
       else
-        return proxProvider.proximity(best);
+        return proxProvider.proximity(best, options);
     }  
     
 //    public int rto() {
@@ -574,7 +574,7 @@ public class SourceRouteManagerImpl<Identifier> implements
           public void receiveResult(
               SocketRequestHandle<SourceRoute<Identifier>> cancellable, 
               P2PSocket<SourceRoute<Identifier>> sock) {
-            deliverSocketToMe.receiveResult(handle, new SourceRouteManagerP2PSocket(sock, environment));
+            deliverSocketToMe.receiveResult(handle, new SourceRouteManagerP2PSocket<Identifier>(sock, environment));
           }        
           public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, IOException ex) {
             deliverSocketToMe.receiveException(handle, ex);
@@ -656,7 +656,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       return "AM "+this.address; 
     }
 
-    public void livenessChanged(SourceRoute i, int val, Map<String, Integer> options) {
+    public void livenessChanged(SourceRoute<Identifier> i, int val, Map<String, Integer> options) {
       routes.add(i);
       if (!i.getLastHop().equals(address)) throw new IllegalArgumentException(i+"!="+address+" val:"+val);
       switch(val) {
@@ -683,7 +683,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-live route
      */
-    protected synchronized void markAlive(SourceRoute route, Map<String, Integer> options) {
+    protected synchronized void markAlive(SourceRoute<Identifier> route, Map<String, Integer> options) {
       if (logger.level <= Logger.FINER) logger.log(this+" markAlive("+route+"):"+best);
       // first, we check and see if we have no best route (this can happen if the best just died)
       if (best == null) {
@@ -695,7 +695,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       // if se, we switch our best route to that one
       if ((best.getNumHops() > route.getNumHops()) || 
           ((best.getNumHops() == route.getNumHops()) &&
-           (proxProvider.proximity(best) > proxProvider.proximity(route)))) {
+           (proxProvider.proximity(best, options) > proxProvider.proximity(route, options)))) {
         if (logger.level <= Logger.FINE) logger.log( "(SSRM) Route " + route + " is better than previous best route " + best + " - replacing");
             
         best = route;  
@@ -711,7 +711,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-suspected route
      */
-    protected synchronized void markSuspected(SourceRoute route, Map<String, Integer> options) {      
+    protected synchronized void markSuspected(SourceRoute<Identifier> route, Map<String, Integer> options) {      
       if (logger.level <= Logger.FINER) logger.log(this+" markSuspected("+route+"):"+best);
       // mark this address as suspected, if this is currently the best route
       if (((best == null) || (best.equals(route))) && // because we set the best == null when we didn't have a route
@@ -725,7 +725,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-dead route
      */
-    protected synchronized void markDead(SourceRoute deadRoute, Map<String, Integer> options) {
+    protected synchronized void markDead(SourceRoute<Identifier> deadRoute, Map<String, Integer> options) {
 //      logger.logException(this+" markDead("+deadRoute+"):"+best, new Exception());
       if (logger.level <= Logger.FINE) logger.log(this+" markDead("+deadRoute+"):"+best);
       
@@ -746,7 +746,8 @@ public class SourceRouteManagerImpl<Identifier> implements
 
         SourceRoute<Identifier> newBest = null;
         
-        for (SourceRoute<Identifier> route : this.routes) {
+        // must wrap it in another collection to prevent a ConcurrentModificationException
+        for (SourceRoute<Identifier> route : new ArrayList<SourceRoute<Identifier>>(this.routes)) {
           // assert the strategy did the right thing
           if (!route.getLastHop().equals(address)) {
             if (logger.level <= Logger.SEVERE) logger.log("SRStrategy "+strategy+" is broken.  It returned "+route+" as a route to "+address);
@@ -763,7 +764,7 @@ public class SourceRouteManagerImpl<Identifier> implements
               if (newBest == null ||
                  (newBest.getNumHops() > route.getNumHops()) || 
                  ((newBest.getNumHops() == route.getNumHops()) &&
-                   (proxProvider.proximity(newBest) > proxProvider.proximity(route)))) {                    
+                   (proxProvider.proximity(newBest, options) > proxProvider.proximity(route, options)))) {                    
                 newBest = route;
               }
               if (logger.level <= Logger.FINEST) logger.log(this+" Found "+route);
@@ -812,7 +813,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * @param route The route
      * @param proximity The proximity
      */
-    protected synchronized void markProximity(SourceRoute route, int proximity, Map<String, Integer> options) {
+    protected synchronized void markProximity(SourceRoute<Identifier> route, int proximity, Map<String, Integer> options) {
 //      getRouteManager(route).markAlive();
 //      getRouteManager(route).markProximity(proximity);
       
@@ -1041,7 +1042,7 @@ public class SourceRouteManagerImpl<Identifier> implements
 //  }
 
   public void incomingSocket(P2PSocket<SourceRoute<Identifier>> s) throws IOException {
-    callback.incomingSocket(new SourceRouteManagerP2PSocket(s, environment));
+    callback.incomingSocket(new SourceRouteManagerP2PSocket<Identifier>(s, environment));
   }
 
   public void messageReceived(SourceRoute<Identifier> i, ByteBuffer m, Map<String, Integer> options) throws IOException {

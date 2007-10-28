@@ -401,17 +401,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     SourceRoute<MultiInetSocketAddress>> serializer = new IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>>() {
 
       public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(
-          InputBuffer buf, SourceRoute<MultiInetSocketAddress> i, boolean coalesce)
+          InputBuffer buf, SourceRoute<MultiInetSocketAddress> i)
           throws IOException {
         long epoch = buf.readLong();
         Id nid = Id.build(buf);
         
         SocketNodeHandle ret = new SocketNodeHandle(i.getLastHop(), epoch, nid, pn);
         // logger.log("deserialize("+i+") epoch:"+epoch+" nid:"+nid);
-        if (coalesce) {
+//        if (coalesce) {
           return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory.coalesce(ret);
-        }
-        return ret;
+//        }
+//        return ret;
       }
 
       public void serialize(OutputBuffer buf,
@@ -433,14 +433,14 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         return i.getAddress();
       }
 
-      public TransportLayerNodeHandle<MultiInetSocketAddress> translateUp(
-          MultiInetSocketAddress i) {
-        return handleFactory.lookupNodeHandle(i);
-      }
+//      public TransportLayerNodeHandle<MultiInetSocketAddress> translateUp(
+//          MultiInetSocketAddress i) {
+//        return handleFactory.lookupNodeHandle(i);
+//      }
 
-      public TransportLayerNodeHandle<MultiInetSocketAddress> coalesce(TransportLayerNodeHandle<MultiInetSocketAddress> i) {
-        return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory.coalesce((SocketNodeHandle)i);      
-      }
+//      public TransportLayerNodeHandle<MultiInetSocketAddress> coalesce(TransportLayerNodeHandle<MultiInetSocketAddress> i) {
+//        return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory.coalesce((SocketNodeHandle)i);      
+//      }
     };
 
 

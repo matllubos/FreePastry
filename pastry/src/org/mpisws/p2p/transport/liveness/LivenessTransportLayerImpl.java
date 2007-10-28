@@ -345,7 +345,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
             manager.pending.pingResponse(sendTime, options);
           }
         }
-        notifyPingListenersPong(i,rtt);
+        notifyPingListenersPong(i,rtt, options);
       } else {
         if (logger.level <= Logger.WARNING) logger.log("I think the clock is fishy, rtt must be >= 0, was:"+rtt);
         errorHandler.receivedUnexpectedData(i, m.array(), 0, null);      
@@ -502,13 +502,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
   
-  private void notifyPingListenersPong(Identifier i, int rtt) {
+  private void notifyPingListenersPong(Identifier i, int rtt, Map<String, Integer> options) {
     List<PingListener<Identifier>> temp;
     synchronized(pingListeners) {
       temp = new ArrayList<PingListener<Identifier>>(pingListeners);
     }
     for (PingListener<Identifier> listener : temp) {
-      listener.pingResponse(i, rtt, null);
+      listener.pingResponse(i, rtt, options);
     }
   }
   
@@ -784,6 +784,17 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (pending != null) {
         pending.cancel(); // sets to null too
       }
+      
+      // it's very important to notify before closing the sockets,
+      // otherwise the higher layers may fight you here by trying to open 
+      // sockets that this layer is closing
+      if (notify) {
+        Identifier temp = identifier.get();
+        if (temp != null) {
+          notifyLivenessListeners(temp, liveness, options);
+        }
+      }
+      
       synchronized(sockets) {
         // the close() operation can cause a ConcurrentModificationException
         for (LSocket sock : new ArrayList<LSocket>(sockets)) {
@@ -791,13 +802,6 @@ public class LivenessTransportLayerImpl<Identifier> implements
           sock.notifyRecievers();          
         }
         sockets.clear();
-      }
-      
-      if (notify) {
-        Identifier temp = identifier.get();
-        if (temp != null) {
-          notifyLivenessListeners(temp, liveness, options);
-        }
       }      
     }
     

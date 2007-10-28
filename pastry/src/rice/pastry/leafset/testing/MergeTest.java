@@ -176,6 +176,11 @@ public class MergeTest {
         return 0;
       }
     
+      public int proximity(NodeHandle nh, Map<String, Integer> options) {
+        // TODO Auto-generated method stub
+        return 0;
+      }
+    
       @Override
       public void nodeIsReady() {
         // TODO Auto-generated method stub

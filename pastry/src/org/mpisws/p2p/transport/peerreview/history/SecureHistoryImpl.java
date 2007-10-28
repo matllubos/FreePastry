@@ -244,7 +244,7 @@ public class SecureHistoryImpl implements SecureHistory {
    */
   public void close() throws IOException {
     assert(indexFile != null && dataFile != null);
-
+    if (logger.level <= Logger.FINE) logger.logException(this+".close()", new Exception("Stack Trace"));
     indexFile.close();
     dataFile.close();
     

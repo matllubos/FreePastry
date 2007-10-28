@@ -81,11 +81,11 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
     this.managers = new HashMap<Identifier, EntityManager>();
   }
   
-  public int proximity(Identifier i) {
+  public int proximity(Identifier i, Map<String, Integer> options) {
     EntityManager manager = getManager(i);
     int ret = manager.proximity;
     if (ret == DEFAULT_PROXIMITY) {
-      manager.ping();
+      manager.ping(options);
     }
     return ret;
   }
@@ -141,14 +141,14 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
       proximity = DEFAULT_PROXIMITY;
     }
     
-    public void ping() {
+    public void ping(Map<String, Integer> options) {
       long now = time.currentTimeMillis();
       if ((now - lastPingTime) < pingThrottle) {
         if  (logger.level <= Logger.FINE) logger.log("Dropping ping because pingThrottle."+(pingThrottle - (now - lastPingTime)));
         return;
       }          
       lastPingTime = now;
-      tl.ping(identifier, null);
+      tl.ping(identifier, options);
     }
 
     /**

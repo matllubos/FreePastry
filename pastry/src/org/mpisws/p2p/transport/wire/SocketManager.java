@@ -76,6 +76,10 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   
   protected P2PSocketReceiver<InetSocketAddress> reader, writer;
 
+  /**
+   * becomes true before we deliver this to the SocketCallback, this invalidates the cancel() operation
+   */
+  boolean delivered = false;
   
   /**
    * Constructor which accepts an incoming connection, represented by the
@@ -131,6 +135,8 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     
     if (channel.connect(addr)) {
       key = tcp.wire.environment.getSelectorManager().register(channel, this, 0);
+      delivered = true;
+      if (logger.level <= Logger.FINE) logger.log("delivering1 "+SocketManager.this);
       c.receiveResult(SocketManager.this, SocketManager.this);
     } else {
       key = tcp.wire.environment.getSelectorManager().register(channel, new SelectionKeyHandler(){
@@ -159,12 +165,16 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
             // deregister interest in connecting to this socket
             if (channel.finishConnect()) {
               key = tcp.wire.environment.getSelectorManager().register(channel, SocketManager.this, key.interestOps() & ~SelectionKey.OP_CONNECT);
+              delivered = true;
+              if (logger.level <= Logger.FINE) logger.log("delivering2 "+SocketManager.this);
               c.receiveResult(SocketManager.this, SocketManager.this);
             }
           } catch (IOException e) {
             if (c == null) {
               tcp.wire.errorHandler.receivedException(addr, e);              
             } else {
+//              delivered = true;
+//              logger.log("delivering2 "+SocketManager.this);
               c.receiveException(SocketManager.this, e);
             }
             close();
@@ -494,6 +504,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         if (logger.level <= Logger.FINEST) {
           logger.log(this+"read("+ret+"):"+Arrays.toString(dst.array()));
         } else {
+//          logger.logException(this+"read("+ret+")", new Exception("Stack Trace"));
           logger.log(this+"read("+ret+")");
         }
       }    
@@ -519,6 +530,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         if (logger.level <= Logger.FINEST) {
           logger.log(this+"write("+ret+"):"+Arrays.toString(src.array()));
         } else {
+//          logger.logException(this+"write("+ret+")", new Exception("Stack Trace"));
           logger.log(this+"write("+ret+")");
         }
       }
@@ -538,7 +550,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
 
   public boolean cancel() {
     if (key == null) return false;
-    
+    if (delivered) throw new IllegalStateException(this+".cancel() Can't cancel, already delivered");
     close();
     return true;
   }

@@ -252,7 +252,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
    * @return the proximity metric value
    */
   public int proximity() {
-    return ((TLPastryNode)localnode).getProxProvider().proximity(this);
+    return ((TLPastryNode)localnode).getProxProvider().proximity(this, null);
   }
 
   /**

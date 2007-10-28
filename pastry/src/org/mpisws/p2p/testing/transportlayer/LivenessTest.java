@@ -214,8 +214,8 @@ public class LivenessTest extends SRTest {
     
     ((Pinger<SourceRoute<MultiInetSocketAddress>>)LivenessTest.bob).addPingListener(pl);
 
-    bob_prox.proximity(getIdentifier(bob, alice)); // initial check, causes ping if no data
-    bob_prox.proximity(getIdentifier(bob, carol)); // initial check, causes ping if no data
+    bob_prox.proximity(getIdentifier(bob, alice), options); // initial check, causes ping if no data
+    bob_prox.proximity(getIdentifier(bob, carol), options); // initial check, causes ping if no data
 
     long timeout = env.getTimeSource().currentTimeMillis()+4000;
     synchronized(lock) {
@@ -226,8 +226,8 @@ public class LivenessTest extends SRTest {
       }
     }
     
-    int aliceProx = bob_prox.proximity(getIdentifier(bob, alice));
-    int carolProx = bob_prox.proximity(getIdentifier(bob, carol));
+    int aliceProx = bob_prox.proximity(getIdentifier(bob, alice), options);
+    int carolProx = bob_prox.proximity(getIdentifier(bob, carol), options);
 
     assertTrue("aliceProx:"+aliceProx+" carolProx:"+carolProx,aliceProx > carolProx+100);
 //    System.out.println("aliceProx"+aliceProx);

@@ -44,11 +44,11 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 public interface IdentitySerializer<UpperIdentifier, MiddleIdentifier, LowerIdentifier> {
   public void serialize(OutputBuffer buf, UpperIdentifier i) throws IOException;
 
-  public UpperIdentifier deserialize(InputBuffer buf, LowerIdentifier l, boolean coalesce) throws IOException;
+  public UpperIdentifier deserialize(InputBuffer buf, LowerIdentifier l) throws IOException;
   
   public MiddleIdentifier translateDown(UpperIdentifier i);
-  public UpperIdentifier translateUp(MiddleIdentifier i);
+//  public UpperIdentifier translateUp(MiddleIdentifier i);
   
-  public UpperIdentifier coalesce(UpperIdentifier i);
+//  public UpperIdentifier coalesce(UpperIdentifier i);
   
 }

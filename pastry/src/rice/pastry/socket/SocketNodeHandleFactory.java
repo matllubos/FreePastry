@@ -128,8 +128,8 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
   }
 
 
-  public TransportLayerNodeHandle<MultiInetSocketAddress> lookupNodeHandle(MultiInetSocketAddress i) {
-    return handles.get(i);
-  }
+//  public TransportLayerNodeHandle<MultiInetSocketAddress> lookupNodeHandle(MultiInetSocketAddress i) {
+//    return handles.get(i);
+//  }
 
 }

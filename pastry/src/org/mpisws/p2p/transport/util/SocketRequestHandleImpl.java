@@ -46,6 +46,7 @@ public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<
   Identifier identifier;
   Map<String, Integer> options;
   Cancellable subCancellable;
+//  protected boolean cancelled = false;
   
   public SocketRequestHandleImpl(Identifier i, Map<String, Integer> options) {
     this.identifier = i;
@@ -61,10 +62,17 @@ public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<
   }
 
   public boolean cancel() {
-    return subCancellable.cancel();
+//    if (cancelled) return true;
+//    cancelled = true;
+    if (subCancellable != null) {
+      return subCancellable.cancel();
+    }
+    return false;
   }
 
   public void setSubCancellable(Cancellable sub) {
+//    if (sub == null) throw new IllegalArgumentException("sub must be non-null");
+//    if (cancelled) sub.cancel();
     this.subCancellable = sub;
   }
 
@@ -76,5 +84,4 @@ public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<
   public String toString() {
     return "SRHi{"+identifier+","+options+"}";
   }
-
 }

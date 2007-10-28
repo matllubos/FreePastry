@@ -329,6 +329,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
             if (canRead || !canWrite) throw new IllegalArgumentException("expected to write!  canRead:"+canRead+" canWrite:"+canWrite);
             if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
+//            if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
             cancelLivenessChecker(i);
             socket.write(ByteBuffer.wrap(PRIMARY_SOCKET));
             getEntityManager(socket.getIdentifier()).incomingSocket(socket, handle);
@@ -488,6 +489,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       if (receipt != null) {
         if (receipt == pendingSocket) {
           stopLivenessChecker();
+//          logger.log("got socket:"+s+" clearing pendingSocket:"+pendingSocket);
           pendingSocket = null;  // this is the one we requested
         } else {
           logger.log("receipt != pendingSocket!!! receipt:"+receipt+" pendingSocket:"+pendingSocket);
@@ -534,7 +536,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             MessageWrapper peek = peek();
             if (peek != null) {
               pendingSocket = openPrimarySocket(temp, peek.options);
-              startLivenessChecker(temp);              
+              startLivenessChecker(temp, peek.options);              
             }
           }
         }
@@ -553,7 +555,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
 
     TimerTask livenessChecker = null;
-    public void startLivenessChecker(final Identifier temp) {
+    public void startLivenessChecker(final Identifier temp, Map<String, Integer> options) {
       if (livenessChecker == null) {
         if (logger.level <= Logger.FINER) logger.log("startLivenessChecker("+temp+") pend:"+pendingSocket+" writingS:"+writingSocket+" theQueue:"+queue.size());
         livenessChecker = new TimerTask() {        
@@ -574,7 +576,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           }        
         };
 
-        int delay = proximityProvider.proximity(temp)*4;
+        int delay = proximityProvider.proximity(temp, options)*4;
         if (delay < 5000) delay = 5000; // 1 second
         if (delay > 40000) delay = 40000; // 20 seconds
         
@@ -761,6 +763,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       setWritingSocket(null/*, "purge"*/);
       if (pendingSocket != null) {
         stopLivenessChecker();
+//        logger.log("cancelling "+pendingSocket);
         pendingSocket.cancel();
       }
       pendingSocket = null;
@@ -1078,6 +1081,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //          return; 
 //        }
 
+        if (e instanceof ClosedChannelException) {
+          return;
+        }
+        
         if (!(e instanceof NodeIsFaultyException)) {
           errorHandler.receivedException(socket.getIdentifier(), e);
         }

@@ -357,8 +357,13 @@ public class TLPastryNode extends PastryNode implements
 
   @Override
   public int proximity(NodeHandle nh) {
-    return proxProvider.proximity(nh);
+    return proximity(nh, null);
   }
+  
+  public int proximity(NodeHandle nh, Map<String, Integer> options) {
+    return proxProvider.proximity(nh, options);
+  }
+  
   /**
    * Schedule the specified message to be sent to the local node after a
    * specified delay. Useful to provide timeouts.

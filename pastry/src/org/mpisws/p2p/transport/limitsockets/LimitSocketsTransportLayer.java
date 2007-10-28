@@ -191,7 +191,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
 
     @Override
     public String toString() {
-      return "LSSocket<"+identifier+">["+closed+"]";
+      return "LSSocket<"+identifier+">["+(closed?"closed":"open")+"]@"+System.identityHashCode(this);
     }
   }
   

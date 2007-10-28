@@ -112,8 +112,8 @@ public class NodeHandleAdapter implements
   public void addProximityListener(ProximityListener<NodeHandle> listener) {
     proxProvider.addProximityListener(listener);
   }
-  public int proximity(NodeHandle i) {
-    return proxProvider.proximity(i);
+  public int proximity(NodeHandle i, Map<String, Integer> options) {
+    return proxProvider.proximity(i, options);
   }
   public boolean removeProximityListener(ProximityListener<NodeHandle> listener) {
     return proxProvider.removeProximityListener(listener);
