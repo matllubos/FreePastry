@@ -115,7 +115,7 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
   }
 
   public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
-    SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options);
+    SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options, logger);
     DirectAppSocket<Identifier, MessageType> socket = new DirectAppSocket<Identifier, MessageType>(i, localIdentifier, deliverSocketToMe, simulator, handle, options);
     CancelAndClose cancelAndClose = new CancelAndClose(socket, simulator.enqueueDelivery(socket.getAcceptorDelivery(),
         (int)Math.round(simulator.networkDelay(localIdentifier, i))));

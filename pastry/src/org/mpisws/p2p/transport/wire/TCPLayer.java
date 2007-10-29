@@ -140,7 +140,7 @@ public class TCPLayer extends SelectionKeyHandler {
 //      }
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.logException("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + destination + " AS DEAD!",e);
-      SocketRequestHandle can = new SocketRequestHandleImpl<InetSocketAddress>(destination, options);
+      SocketRequestHandle can = new SocketRequestHandleImpl<InetSocketAddress>(destination, options, logger);
       deliverSocketToMe.receiveException(can, e);
       return can;
     }

@@ -371,7 +371,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         final Map<String, Integer> options) {      
       // what happens if they cancel after the socket has been received by a lower layer, but is still reading the header?  
       // May need to re-think this SRHI at all the layers
-      final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options);
+      final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options, logger);
       final UpperIdentifier dest = getIntendedDest(options);
       
       if (dest == null) {
@@ -403,10 +403,6 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       }
       ret.setSubCancellable(tl.openSocket(i, 
           new SocketCallback<LowerIdentifier>(){
-
-            public void receiveException(SocketRequestHandle<LowerIdentifier> s, IOException ex) {
-              deliverSocketToMe.receiveException(ret, ex);
-            }
 
             public void receiveResult(SocketRequestHandle<LowerIdentifier> cancellable, final P2PSocket<LowerIdentifier> sock) {
               ret.setSubCancellable(new Cancellable() {              
@@ -481,6 +477,11 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 }              
               });
             }
+
+            public void receiveException(SocketRequestHandle<LowerIdentifier> s, IOException ex) {
+              deliverSocketToMe.receiveException(ret, ex);
+            }
+
           }, 
           options));
       return ret;
@@ -882,7 +883,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       if (logger.level <= Logger.FINE) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
       
       final SocketRequestHandleImpl<UpperIdentifier> handle = 
-        new SocketRequestHandleImpl<UpperIdentifier>(i, options);
+        new SocketRequestHandleImpl<UpperIdentifier>(i, options, logger);
 
       synchronized(deadForever) {
         if (deadForever.contains(i)) {

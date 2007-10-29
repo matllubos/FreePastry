@@ -84,7 +84,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
   }
 
   public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
-    final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options) {
+    final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
       @Override
       public boolean cancel() {
         if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+this+".cancel()");

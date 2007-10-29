@@ -176,7 +176,7 @@ public class Replayer implements MyEvents, EventCallback {
     
 //  Environment env = Environment.directEnvironment();
     System.out.println(id.toStringFull()+" "+addr.getAddress().getHostAddress()+" "+addr.getPort()+" "+bootaddress.getPort()+" "+startTime+" "+randSeed);
-    
+    env.destroy();
     new Replayer(id, addr, bootaddress, startTime, randSeed);
   }
 

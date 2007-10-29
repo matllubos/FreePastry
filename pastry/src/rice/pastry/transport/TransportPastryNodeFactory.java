@@ -37,10 +37,12 @@ advised of the possibility of such damage.
 package rice.pastry.transport;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 
 import rice.Continuation;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.Cancellable;
@@ -91,65 +93,101 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     routeSetMaintFreq = params.getInt("pastry_routeSetMaintFreq");
   }
     
-  protected TLPastryNode nodeHandleHelper(Id nodeId, Environment environment, Object localNodeData) throws IOException {
-    TLPastryNode pn = new TLPastryNode(nodeId, environment);    
-    final NodeHandleFactory handleFactory = getNodeHandleFactory(pn);
-    final NodeHandle localhandle = getLocalHandle(pn, handleFactory, localNodeData);    
+  protected TLPastryNode nodeHandleHelper(Id nodeId, final Environment environment, final Object localNodeData) throws IOException {
+//    final Object lock = new Object();
+//    final ArrayList<IOException> retException = new ArrayList<IOException>();
+    final TLPastryNode pn = new TLPastryNode(nodeId, environment);    
     
-    TLDeserializer deserializer = getTLDeserializer(handleFactory,pn);
-  
-    MessageDispatch msgDisp = new MessageDispatch(pn);
-    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
-        pn);
-    LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
-    StandardRouter router = new RapidRerouter(pn, msgDisp);
-    pn.setElements(localhandle, msgDisp, leafSet, routeTable, router);
-  
+    // do this to not have weirdness while constructing the layers
+//    Runnable r = new Runnable() {
+//      public void run() {
+//        System.out.println("here1");
+//        synchronized(lock) {
+//          try {
+//            System.out.println("here2");
+            final NodeHandleFactory handleFactory = getNodeHandleFactory(pn);
+            final NodeHandle localhandle = getLocalHandle(pn, handleFactory, localNodeData);    
+            
+            TLDeserializer deserializer = getTLDeserializer(handleFactory,pn);
+          
+            MessageDispatch msgDisp = new MessageDispatch(pn);
+            RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
+                pn);
+            LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
+            StandardRouter router = new RapidRerouter(pn, msgDisp);
+            pn.setElements(localhandle, msgDisp, leafSet, routeTable, router);
+          
+            
+            NodeHandleAdapter nha = getNodeHanldeAdapter(pn, handleFactory, deserializer);
+        
+            pn.setSocketElements(localhandle, leafSetMaintFreq, routeSetMaintFreq, 
+                nha, nha, nha, deserializer, handleFactory);
+            
+            ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
+            
+            Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);
+            
+            pn.setBootstrapper(bootstrapper);
+          
+            
+          //  final Logger lLogger = pn.getEnvironment().getLogManager().getLogger(TransportPastryNodeFactory.class, null);
+          //  identity.getUpperIdentity().addLivenessListener(new LivenessListener<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
+          //    public void livenessChanged(
+          //        TransportLayerNodeHandle<MultiInetSocketAddress> i, int val) {
+          //      if (val != 1) {
+          //        lLogger.log("liveness:"+i+" "+val);
+          //      }
+          //    }    
+          //  });
+          //  
+          //  ltl.addPingListener(new PingListener<SourceRoute<MultiInetSocketAddress>>() {    
+          //    public void pingResponse(SourceRoute<MultiInetSocketAddress> i, int rtt, Map<String, Integer> options) {
+          //      lLogger.log("response:"+i);
+          //    }    
+          //    public void pingReceived(SourceRoute<MultiInetSocketAddress> i, Map<String, Integer> options) {
+          //      lLogger.log("ping:"+i);
+          //    }    
+          //  });
+            
+            StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn,
+                routeTable, environment);
+            
+            router.register();
+            rsProtocol.register();
+          
+            PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
+                localhandle, leafSet, routeTable);
+            lsProtocol.register();
+            ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
+                localhandle, routeTable, leafSet, lsProtocol);
+            jProtocol.register();
+//          } catch (IOException ioe) {
+//            retException.add(ioe);
+//          } finally {
+//            lock.notify();
+//          }
+//        } 
+//      }
+//    };    
     
-    NodeHandleAdapter nha = getNodeHanldeAdapter(pn, handleFactory, deserializer);
-
-    pn.setSocketElements(localhandle, leafSetMaintFreq, routeSetMaintFreq, 
-        nha, nha, nha, deserializer, handleFactory);
-    
-    ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
-    
-    Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);
-    
-    pn.setBootstrapper(bootstrapper);
-  
-    
-  //  final Logger lLogger = pn.getEnvironment().getLogManager().getLogger(TransportPastryNodeFactory.class, null);
-  //  identity.getUpperIdentity().addLivenessListener(new LivenessListener<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
-  //    public void livenessChanged(
-  //        TransportLayerNodeHandle<MultiInetSocketAddress> i, int val) {
-  //      if (val != 1) {
-  //        lLogger.log("liveness:"+i+" "+val);
-  //      }
-  //    }    
-  //  });
-  //  
-  //  ltl.addPingListener(new PingListener<SourceRoute<MultiInetSocketAddress>>() {    
-  //    public void pingResponse(SourceRoute<MultiInetSocketAddress> i, int rtt, Map<String, Integer> options) {
-  //      lLogger.log("response:"+i);
-  //    }    
-  //    public void pingReceived(SourceRoute<MultiInetSocketAddress> i, Map<String, Integer> options) {
-  //      lLogger.log("ping:"+i);
-  //    }    
-  //  });
-    
-    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn,
-        routeTable, environment);
-    
-    router.register();
-    rsProtocol.register();
-  
-    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-        localhandle, leafSet, routeTable);
-    lsProtocol.register();
-    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-        localhandle, routeTable, leafSet, lsProtocol);
-    jProtocol.register();
-    
+//    System.out.println("here5"); 
+//    r.run();
+//    if (environment.getSelectorManager().isSelectorThread()) {
+//      r.run();
+//    } else {
+//      synchronized(lock) {
+//        System.out.println("invoking "+environment.getSelectorManager());
+//        environment.getSelectorManager().invoke(r);
+//        System.out.println("invoked");
+//        try {
+//          lock.wait();
+//        } catch (InterruptedException ie) {
+//          if (logger.level <= Logger.WARNING) logger.logException("Interrupted", ie);
+//          return null;
+//        }
+//      }
+//    }
+//    if (!retException.isEmpty()) throw retException.get(0);
     return pn;
   }
 

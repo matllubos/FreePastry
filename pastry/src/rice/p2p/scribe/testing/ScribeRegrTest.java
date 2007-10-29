@@ -473,8 +473,9 @@ public class ScribeRegrTest extends CommonAPITest {
 
       stepStart(name + " Unsubscribe");
       for (int i=0; i < NUM_NODES/SKIP; i++) {
-        for (Topic topic : topics)
+        for (Topic topic : topics) {
           scribes[i].unsubscribe(topic, clients[i]);
+        }
         simulate();
       }
 
@@ -677,18 +678,13 @@ public class ScribeRegrTest extends CommonAPITest {
       boolean failed = false;
 
   for(int num=0; num<numTrees; num ++) {
-      final Topic topic = new Topic(generateId());
-      final TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
+      Topic topic = new Topic(generateId());
+      TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
       
       stepStart(name + " TopicId=" + topic.getId());
       for (int i = 0; i < NUM_NODES; i++) {
-        final int i2 = i;
         clients[i] = new TestScribeClient(scribes[i], topic, i);
-        environment.getSelectorManager().invoke(new Runnable() {
-          public void run() {
-            scribes[i2].subscribe(topic, clients[i2]);
-          }
-        });
+        scribes[i].subscribe(topic, clients[i]);
         simulate();
       }
       

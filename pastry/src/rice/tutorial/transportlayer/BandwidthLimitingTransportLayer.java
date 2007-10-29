@@ -166,7 +166,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
   }  
   
   public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
-    final SocketRequestHandleImpl<Identifier> returnMe = new SocketRequestHandleImpl<Identifier>(i,options);
+    final SocketRequestHandleImpl<Identifier> returnMe = new SocketRequestHandleImpl<Identifier>(i,options, logger);
     returnMe.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
         deliverSocketToMe.receiveResult(returnMe, new BandwidthLimitingSocket(sock));

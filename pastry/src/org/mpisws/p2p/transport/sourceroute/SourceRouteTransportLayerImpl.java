@@ -136,7 +136,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
         
     if (logger.level <= Logger.FINE) logger.log("openSocket("+i+")");    
     
-    final SocketRequestHandleImpl<SourceRoute<Identifier>> handle = new SocketRequestHandleImpl<SourceRoute<Identifier>>(i, options);
+    final SocketRequestHandleImpl<SourceRoute<Identifier>> handle = new SocketRequestHandleImpl<SourceRoute<Identifier>>(i, options, logger);
     
     SimpleOutputBuffer sob = new SimpleOutputBuffer(i.getSerializedLength());
     try {
@@ -150,9 +150,16 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
     handle.setSubCancellable(etl.openSocket(i.getHop(1), new SocketCallback<Identifier>(){    
       public void receiveResult(
           SocketRequestHandle<Identifier> c, 
-          P2PSocket<Identifier> result) {
-        if (c != handle.getSubCancellable()) throw new RuntimeException("c != handle.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
+          final P2PSocket<Identifier> result) {
+        if (handle.getSubCancellable() != null && c != handle.getSubCancellable()) throw new RuntimeException("c != handle.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
         
+        handle.setSubCancellable(new Cancellable() {        
+          public boolean cancel() {
+            result.close();
+            return true;
+          }        
+        });
+
         if (logger.level <= Logger.FINER) logger.log("openSocket("+i+"):receiveResult("+result+")");
         result.register(false, true, new P2PSocketReceiver<Identifier>() {        
           public void receiveSelectResult(P2PSocket<Identifier> socket,

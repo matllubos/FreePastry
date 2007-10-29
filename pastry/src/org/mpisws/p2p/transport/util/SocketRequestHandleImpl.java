@@ -40,17 +40,21 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.SocketRequestHandle;
 
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 
 public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<Identifier> {
   Identifier identifier;
   Map<String, Integer> options;
   Cancellable subCancellable;
+  Logger logger;
 //  protected boolean cancelled = false;
   
-  public SocketRequestHandleImpl(Identifier i, Map<String, Integer> options) {
+  public SocketRequestHandleImpl(Identifier i, Map<String, Integer> options, Logger logger) {
     this.identifier = i;
     this.options = options;
+    if (logger == null) throw new IllegalArgumentException("logger is null");
+    this.logger = logger;
   }
 
   public Identifier getIdentifier() {
@@ -65,7 +69,12 @@ public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<
 //    if (cancelled) return true;
 //    cancelled = true;
     if (subCancellable != null) {
-      return subCancellable.cancel();
+//      try {
+        return subCancellable.cancel();
+//      } catch (IllegalStateException ise) {
+//        if (logger.level <= Logger.WARNING) logger.log(ise.toString());
+//        throw ise;
+//      }
     }
     return false;
   }

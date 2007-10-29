@@ -568,7 +568,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         return pending;
       } else {
         final SocketRequestHandleImpl<Identifier> handle = 
-          new SocketRequestHandleImpl<Identifier>(address, options);
+          new SocketRequestHandleImpl<Identifier>(address, options, logger);
         
         handle.setSubCancellable(tl.openSocket(best, new SocketCallback<SourceRoute<Identifier>>(){        
           public void receiveResult(

@@ -261,6 +261,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
     // should be moved to the source route manager, but there needs to be a way to cancel the liveness
     // checks, or maybe the higher layer can ignore them.
     return tl.openSocket(i, new SocketCallback<Identifier>(){
+      public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
+        deliverSocketToMe.receiveResult(cancellable, getManager(i).getLSocket(sock));
+      }    
+      
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
         // the upper layer is probably going to retry, so mark this dead first
         if (connectionExceptionMeansFaulty) {
@@ -274,9 +278,6 @@ public class LivenessTransportLayerImpl<Identifier> implements
         }
         deliverSocketToMe.receiveException(s, ex);
       }
-      public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
-        deliverSocketToMe.receiveResult(cancellable, getManager(i).getLSocket(sock));
-      }    
     }, options);
   }
 
@@ -858,6 +859,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
 //    long start = 0; // delme
 //    int ctr = 0; // delme
     protected boolean checkLiveness(final Map<String, Integer> options) {
+//      if (options == null) throw new RuntimeException("options is null"); // remove, this is for debugging
 //      logger.log(this+".checkLiveness()");
       if (logger.level <= Logger.FINER) logger.log(this+".checkLiveness()");
 

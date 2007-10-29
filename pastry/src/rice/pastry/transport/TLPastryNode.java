@@ -134,7 +134,7 @@ public class TLPastryNode extends PastryNode implements
     
     final SocketNodeHandle i = (SocketNodeHandle)i2;
     
-    final SocketRequestHandleImpl<SocketNodeHandle> handle = new SocketRequestHandleImpl<SocketNodeHandle>(i, null);
+    final SocketRequestHandleImpl<SocketNodeHandle> handle = new SocketRequestHandleImpl<SocketNodeHandle>(i, null, logger);
 
     // use the proper application address
     final ByteBuffer b = ByteBuffer.allocate(4);

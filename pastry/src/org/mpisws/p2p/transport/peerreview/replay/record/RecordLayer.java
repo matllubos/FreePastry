@@ -65,6 +65,9 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   public static ByteBuffer ONE, ZERO;
   
   public RecordLayer(TransportLayer<Identifier, ByteBuffer> tl, String name, IdentifierSerializer<Identifier> serializer, Environment env) throws IOException {
+    this.logger = env.getLogManager().getLogger(RecordLayer.class, null);
+    this.identifierSerializer = serializer;
+    
     NullHashProvider nhp = new NullHashProvider();
     SecureHistoryFactoryImpl shf = new SecureHistoryFactoryImpl(nhp, env);
     
@@ -79,11 +82,9 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     this.tl = tl;
     this.tl.setCallback(this);
     this.history = shf.create(name, 0, nhp.EMPTY_HASH);
-    this.identifierSerializer = serializer;
     
     this.environment = env;
     this.lastLogEntry = -1;
-    this.logger = env.getLogManager().getLogger(RecordLayer.class, null);
 
     env.addDestructable(this);
     
@@ -110,7 +111,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   
   public void logEvent(short type, ByteBuffer ... entry) throws IOException {
 //   assert(initialized && (type > EVT_MAX_RESERVED));
-   
+    if (history == null) return;
     if (logger.level <= Logger.FINEST) {
       logger.logException("logging #"+history.getNumEntries()+" t:"+type, new Exception("Stack Trace"));
     } else if (logger.level <= Logger.FINER) {
@@ -130,7 +131,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
     }
 
-    final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options);
+    final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options, logger);
     
     ret.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
@@ -253,6 +254,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
 //    logger.log(this+".destroy()");
     try {
       history.close();
+      history = null;
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("Error destroying.", ioe);
     }

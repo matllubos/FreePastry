@@ -99,7 +99,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * Constructor, which is private since there is only one selector per JVM.
    */
   public SelectorManager(String instance,
-      TimeSource timeSource, LogManager log) {
+      TimeSource timeSource, LogManager log) {    
     super(instance == null ? "Selector Thread" : "Selector Thread -- "
         + instance);
     this.instance = instance;
@@ -575,16 +575,11 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    */
   protected Object seqLock = new Object();
   protected int seqCtr = Integer.MIN_VALUE;
-  private synchronized void addTask(TimerTask task) {
+  protected synchronized void addTask(TimerTask task) {
     synchronized(seqLock) {
       task.seq = seqCtr++;
     }
     if (logger.level <= Logger.FINE) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
-    long now = timeSource.currentTimeMillis();
-    if (task.scheduledExecutionTime() < now && timeSource instanceof DirectTimeSource) {
-      if (logger.level <= Logger.WARNING) logger.logException("Can't schedule a task in the past. "+task+" now:"+now+" task.execTime:"+task.scheduledExecutionTime(), new Exception("Stack Trace"));
-      throw new RuntimeException("Can't schedule a task in the past.");
-    }
 //    synchronized (selector) {
       if (!timerQueue.add(task)) {
         if (logger.level <= Logger.WARNING) logger.log("ERROR: Got false while enqueueing task "+task+"!");

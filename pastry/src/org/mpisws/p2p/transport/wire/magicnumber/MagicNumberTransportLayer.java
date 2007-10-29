@@ -58,6 +58,7 @@ import org.mpisws.p2p.transport.wire.exception.StalledSocketException;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.Cancellable;
 import rice.selector.TimerTask;
 
 /**
@@ -143,11 +144,18 @@ public class MagicNumberTransportLayer<Identity> implements
       Map<String, Integer> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
-    final SocketRequestHandleImpl<Identity> cancellable = new SocketRequestHandleImpl<Identity>(i, options);
+    final SocketRequestHandleImpl<Identity> cancellable = new SocketRequestHandleImpl<Identity>(i, options, logger);
 
     cancellable.setSubCancellable(wire.openSocket(i, new SocketCallback<Identity>(){    
-      public void receiveResult(SocketRequestHandle<Identity> c, P2PSocket<Identity> result) {
+      public void receiveResult(SocketRequestHandle<Identity> c, final P2PSocket<Identity> result) {
         if (cancellable.getSubCancellable() != null && c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
+        
+        cancellable.setSubCancellable(new Cancellable() {        
+          public boolean cancel() {
+            result.close();
+            return true;
+          }        
+        });
         
         result.register(false, true, new P2PSocketReceiver<Identity>(){        
           ByteBuffer buf = ByteBuffer.wrap(HEADER);

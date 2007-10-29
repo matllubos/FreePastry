@@ -528,7 +528,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     final ArrayList<ReplayLayer<InetSocketAddress>> replayers = new ArrayList<ReplayLayer<InetSocketAddress>>();
     
     Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed);
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new NodeIdFactory() {    
+    final SocketPastryNodeFactory factory = new SocketPastryNodeFactory(new NodeIdFactory() {    
       public Id generateNodeId() {
         return id;
       }    
@@ -573,7 +573,25 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     
     
     // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-    final PastryNode node = factory.newNode();
+    
+    // need this mechanism to make the construction of the TL atomic, looking for better solution...
+    final ArrayList<PastryNode> holder = new ArrayList<PastryNode>();
+    env.getSelectorManager().invoke(new Runnable(){    
+      public void run() {
+        synchronized(holder) {
+          holder.add(factory.newNode());        
+          holder.notify();
+        }
+      }    
+    });
+    
+    synchronized(holder) {
+      while(holder.isEmpty()) {
+        holder.wait();
+      }
+    }
+    
+    final PastryNode node = holder.get(0); //factory.newNode();
     
     System.out.println("node: "+node.getLocalHandle().getEpoch());
     

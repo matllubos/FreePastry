@@ -63,6 +63,7 @@ import org.mpisws.p2p.transport.wire.WireTransportLayer;
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
@@ -127,7 +128,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
     
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
-    final SocketRequestHandleImpl<MultiInetSocketAddress> handle = new SocketRequestHandleImpl<MultiInetSocketAddress>(i, options);
+    final SocketRequestHandleImpl<MultiInetSocketAddress> handle = new SocketRequestHandleImpl<MultiInetSocketAddress>(i, options, logger);
     
     if (logger.level <= Logger.FINE) logger.log("openSocket("+i+")");
     SimpleOutputBuffer sob = new SimpleOutputBuffer(localAddress.getSerializedLength());
@@ -144,9 +145,16 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
     handle.setSubCancellable(wire.openSocket(addr, 
         new SocketCallback<InetSocketAddress>(){    
       
-      public void receiveResult(SocketRequestHandle<InetSocketAddress> c, P2PSocket<InetSocketAddress> result) {
+      public void receiveResult(SocketRequestHandle<InetSocketAddress> c, final P2PSocket<InetSocketAddress> result) {
         if (handle.getSubCancellable() != null && c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
         
+        handle.setSubCancellable(new Cancellable() {        
+          public boolean cancel() {
+            result.close();
+            return true;
+          }        
+        });
+
         if (logger.level <= Logger.FINER) logger.log("openSocket("+i+"):receiveResult("+result+")");
         if (sendIdentifier) {
           result.register(false, true, new P2PSocketReceiver<InetSocketAddress>() {        
