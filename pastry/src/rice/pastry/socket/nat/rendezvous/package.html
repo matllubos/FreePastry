@@ -1,0 +1,12 @@
+This layer maintains temporary information in the NodeHandle for rendezvous nodes.  
+Whenever a NodeHandle is deserialized it may contain more current rendezvous information, 
+and the call to coalesce() will update this info in the coalesced() NodeHandle.  Note that
+the rendezvous list includes a timestamp, and should eventually be signed by the Node.
+
+Extend SRM to use SRStrategy for connecting direct as well. (So can always use the rendezvous if Natted)
+
+Build Planetlab test to simulate NATs 
+
+Don't join if you can't get a rendezvous server.
+
+What if x

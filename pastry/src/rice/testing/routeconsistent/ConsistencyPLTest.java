@@ -74,6 +74,7 @@ import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
 
+import rice.Destructable;
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
@@ -104,12 +105,12 @@ import rice.selector.LoopObserver;
 public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
   static void setupParams(Parameters params) {
     params.setBoolean("logging_packageOnly",false);
-    params.setInt("loglevel", Logger.FINER);
+//    params.setInt("loglevel", Logger.FINER);
     
-    params.setInt("rice.environment.time.simulated_loglevel", Logger.WARNING);
+//    params.setInt("rice.environment.time.simulated_loglevel", Logger.WARNING);
     
 //    params.setInt("rice.pastry_loglevel", Logger.INFO);
-    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.ALL);
+//    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.ALL);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
@@ -673,7 +674,9 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 
   }
   
-  public static void runNode(final Environment env, SocketPastryNodeFactory factory, boolean isBootNode, int bindport, InetSocketAddress bootaddress, 
+  static boolean running;
+  
+  public static void runNode(final Environment env, final SocketPastryNodeFactory factory, boolean isBootNode, int bindport, InetSocketAddress bootaddress, 
       long bootTime, int artificialChurnTime, int killRingTime, final ArrayList<RecordLayer<InetSocketAddress>> historyHolder) throws Exception {
     { // old while loop
 //      final Environment env = RecordLayer.generateEnvironment(); //new Environment();
@@ -782,7 +785,34 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       
       
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      final PastryNode node = factory.newNode();
+//      final PastryNode node = factory.newNode();
+      
+      // need this mechanism to make the construction of the TL atomic, looking for better solution...
+      final ArrayList<PastryNode> holder = new ArrayList<PastryNode>();
+      env.getSelectorManager().invoke(new Runnable(){    
+        public void run() {
+          synchronized(holder) {
+            holder.add(factory.newNode());        
+            holder.notify();
+          }
+        }    
+      });
+      
+      synchronized(holder) {
+        while(holder.isEmpty()) {
+          holder.wait();
+        }
+      }
+
+      
+      running = true;
+      final PastryNode node = holder.get(0); //factory.newNode();
+      node.addDestructable(new Destructable(){      
+        public void destroy() {
+          new Exception("Destroy Stack Trace").printStackTrace();
+          running = false;
+        }      
+      });      
       
       System.out.println("node: "+node.getLocalHandle().getEpoch());
       
@@ -892,7 +922,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //      ls.addNodeSetListener(preObserver);  
       // the node may require sending several messages to fully boot into the ring
       long lastTimePrinted = 0;
-      while(!node.isReady() && !node.joinFailed()) {
+      while(!node.isReady() && !node.joinFailed() && running) {
         // delay so we don't busy-wait
         long now = env.getTimeSource().currentTimeMillis();
         if (now-lastTimePrinted > 3*60*1000) {
@@ -902,7 +932,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         Thread.sleep(1000);
       }
       
-      if (node.joinFailed()) {
+      if (!running || node.joinFailed()) {
         Runtime.getRuntime().removeShutdownHook(shutdownHook);
         System.out.println("Join failed. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
         System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node);
@@ -940,7 +970,6 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //      ls.deleteNodeSetListener(preObserver);
   
       int maxLeafsetSize = ls.getUniqueCount();
-      boolean running = true;
       while(running) {
         int num = 2;
         if (!node.isReady()) num = 5;

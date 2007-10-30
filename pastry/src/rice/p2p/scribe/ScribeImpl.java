@@ -1916,7 +1916,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
           client.deliver(pMessage.getTopic(), pMessage.getContent());
         }
 
-        Collection<NodeHandle> handles = manager.getChildren();
+        Collection<NodeHandle> handles = new ArrayList<NodeHandle>(manager.getChildren());
 
         for (NodeHandle handle : handles) {
           if (logger.level <= Logger.FINER) logger.log("Forwarding publish message with data " + pMessage.getContent() + " for topic " +

@@ -116,9 +116,18 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
 
   public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
     SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options, logger);
+
     DirectAppSocket<Identifier, MessageType> socket = new DirectAppSocket<Identifier, MessageType>(i, localIdentifier, deliverSocketToMe, simulator, handle, options);
+    
+    int delay;
+    if (simulator.isAlive(i)) {
+      delay = (int)Math.round(simulator.networkDelay(localIdentifier, i));
+    } else {
+      delay = 5000;  // TODO: Make this configurable
+    }
+    
     CancelAndClose cancelAndClose = new CancelAndClose(socket, simulator.enqueueDelivery(socket.getAcceptorDelivery(),
-        (int)Math.round(simulator.networkDelay(localIdentifier, i))));
+        delay));
     handle.setSubCancellable(cancelAndClose);
     return handle;
   }
@@ -137,10 +146,14 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
       
       if (deliverAckToMe != null) deliverAckToMe.sendFailed(handle, new NodeIsFaultyException(i));
     } else {
-      int delay = (int)Math.round(simulator.networkDelay(localIdentifier, i));
-//      simulator.notifySimulatorListenersSent(m, localIdentifier, i, delay);
-      handle.setSubCancellable(simulator.deliverMessage(m, i, localIdentifier, delay));
-      if (deliverAckToMe != null) deliverAckToMe.ack(handle);
+      if (simulator.isAlive(i)) {
+        int delay = (int)Math.round(simulator.networkDelay(localIdentifier, i));
+  //      simulator.notifySimulatorListenersSent(m, localIdentifier, i, delay);
+        handle.setSubCancellable(simulator.deliverMessage(m, i, localIdentifier, delay));
+        if (deliverAckToMe != null) deliverAckToMe.ack(handle);
+      } else {
+        // drop message because the node is dead
+      }
     }
     return handle;
   }

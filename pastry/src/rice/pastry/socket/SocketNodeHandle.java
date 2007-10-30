@@ -62,7 +62,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
   public MultiInetSocketAddress eaddress;
   long epoch;
   
-  SocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node) {
+  protected SocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node) {
     super(id);
     this.eaddress = eisa;
     this.epoch = epoch;    

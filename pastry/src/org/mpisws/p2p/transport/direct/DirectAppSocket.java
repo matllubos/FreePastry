@@ -200,6 +200,11 @@ public class DirectAppSocket<Identifier, MessageType> {
 //
 //    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
       if (outputClosed) throw new ClosedChannelException();
+      
+      if (!simulator.isAlive(counterpart.localNodeHandle)) {
+        return 0; // TODO: Eventually simulate a socket reset.
+      }
+      
       int availableToWrite = srcs.remaining();
 //      for (int i = offset; i < offset+length; i++) {
 //        availableToWrite+=srcs[i].remaining(); 
@@ -323,6 +328,7 @@ public class DirectAppSocket<Identifier, MessageType> {
     public void shutdownOutput() {
       if (logger.level <= Logger.FINER) logger.log(this+".shutdownOutput()");
       outputClosed = true;
+      if (!simulator.isAlive(counterpart.localNodeHandle)) return; // do nothing
       simulator.enqueueDelivery(new Delivery() {      
         int mySeq = seq++;
         public void deliver() {
@@ -378,7 +384,8 @@ public class DirectAppSocket<Identifier, MessageType> {
         }
       } else {
         simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsFaultyException(acceptor)),
-            (int)Math.round(simulator.networkDelay(acceptor, connector))); 
+            (int)Math.round(simulator.networkDelay(acceptor, connector))+
+            (int)Math.round(simulator.networkDelay(connector, acceptor))); 
       }
     }
     public int getSeq() {

@@ -211,7 +211,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     if (deadForever.contains(i)) return;
     if (logger.level <= Logger.INFO) logger.log("setDeadForever("+i+")");
     deadForever.add(i);
-    overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, reverseIntendedDest.get(i)));
+    try {
+      overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, reverseIntendedDest.get(i)));
+    } catch (NullPointerException npe) {
+      logger.log("setDeadForever("+l+","+i+","+options+"):overL:"+overrideLiveness+" "+reverseIntendedDest);
+      throw npe;
+    }
 //    upper.notifyLivenessListeners(i, LIVENESS_DEAD_FOREVER, options);  // now called as a result of overrideLiveness
     Set<IdentityMessageHandle> cancelMe = pendingMessages.remove(i);
     if (cancelMe != null) {
