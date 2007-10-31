@@ -36,10 +36,12 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.routing;
 
+import rice.pastry.NodeHandle;
+
 public interface RouteMessageNotification {
 
   void sendFailed(RouteMessage message, Exception e);
 
-  void sendSuccess(RouteMessage message);
+  void sendSuccess(RouteMessage message, NodeHandle nextHop);
 
 }

@@ -86,7 +86,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     this.environment = env;
     this.lastLogEntry = -1;
 
-    env.addDestructable(this);
+//    env.addDestructable(this);  // TransportLayer will alrady call this.
     
     initialized = true;
   }
@@ -253,7 +253,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   public void destroy() {
 //    logger.log(this+".destroy()");
     try {
-      history.close();
+      if (history != null) history.close();
       history = null;
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("Error destroying.", ioe);
@@ -286,7 +286,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
   
   public void logSocketException(ByteBuffer socketId, IOException ioe) throws IOException {
-    logger.logException("logSocketException("+ioe+")", ioe);
+    if (logger.level <= Logger.CONFIG) logger.logException("logSocketException("+ioe+")", ioe);
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     String className = ioe.getClass().getName();
     if (className.endsWith("ClosedChannelException")) {

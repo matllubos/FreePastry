@@ -905,6 +905,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         final int theRTO = rto;
         Runnable r = new Runnable() {
           public void run() {
+            if (pending == null) return;  // could have been set to null in the meantime
             timer.schedule(pending, theRTO);
             Identifier temp = identifier.get();
             if (temp != null) {

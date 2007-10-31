@@ -135,7 +135,7 @@ public class StandardRouter extends PastryAppl implements Router {
     
     if (thePastryNode.getLocalHandle().equals(handle)) {
       thePastryNode.receiveMessage(rm.internalMsg);
-      rm.sendSuccess();
+      rm.sendSuccess(thePastryNode.getLocalHandle());
     } else {
       sendTheMessage(rm, handle);
     }
@@ -146,7 +146,7 @@ public class StandardRouter extends PastryAppl implements Router {
     if (logger.level <= Logger.FINER) logger.log("sendTheMessage("+rm+","+handle+")");
     rm.setTLCancellable(thePastryNode.send(handle, rm, new PMessageNotification(){    
       public void sent(PMessageReceipt msg) {
-        rm.sendSuccess();
+        rm.sendSuccess(handle);
       }    
       public void sendFailed(PMessageReceipt msg, Exception reason) {
         if (rm.sendFailed(reason)) {

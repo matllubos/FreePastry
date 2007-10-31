@@ -605,8 +605,8 @@ public class RouteMessage extends PRawMessage implements Serializable,
     notifyMe = notification;
   }
   
-  public void sendSuccess() {
-    if (notifyMe != null) notifyMe.sendSuccess(this);
+  public void sendSuccess(NodeHandle nextHop) {
+    if (notifyMe != null) notifyMe.sendSuccess(this, nextHop);
   }
   
   /**

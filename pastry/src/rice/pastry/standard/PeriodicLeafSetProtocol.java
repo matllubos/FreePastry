@@ -50,6 +50,7 @@ import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocol;
 import rice.pastry.leafset.LeafSetProtocolAddress;
 import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.messaging.*;
@@ -63,7 +64,7 @@ import rice.selector.TimerTask;
  * 
  * @author Alan Mislove
  */
-public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy, NodeSetListener, Observer {
+public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy, NodeSetListener, Observer, LeafSetProtocol {
 
   protected NodeHandle localHandle;
 

@@ -276,7 +276,7 @@ public class Environment implements Destructable {
   }
   
   private void callDestroyOnDestructables() {
-    Iterator i = destructables.iterator();
+    Iterator i = new ArrayList<Destructable>(destructables).iterator();
     while(i.hasNext()) {
       Destructable d = (Destructable)i.next();
       d.destroy();

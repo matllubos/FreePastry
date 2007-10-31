@@ -266,7 +266,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
       cancellable = null;
       rm.setTLCancellable(null);
       removeFromPending(this, dest);      
-      rm.sendSuccess();
+      rm.sendSuccess(dest);
     }
 
     public boolean cancel() {

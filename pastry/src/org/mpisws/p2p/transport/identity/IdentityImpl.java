@@ -209,10 +209,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   
   public void setDeadForever(LowerIdentifier l, UpperIdentifier i, Map<String, Integer> options) {
     if (deadForever.contains(i)) return;
-    if (logger.level <= Logger.INFO) logger.log("setDeadForever("+i+")");
+    if (logger.level <= Logger.INFO) logger.logException("setDeadForever("+l+","+i+","+options+")",new Exception("Stack Trace"));
     deadForever.add(i);
     try {
-      overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, reverseIntendedDest.get(i)));
+      logger.log("setDeadForever("+l+","+i+","+(options == null)+"):overL:"+overrideLiveness+" "+(reverseIntendedDest == null));
+      Map<String, Integer> o2 = OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, reverseIntendedDest.get(i));
+      overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, o2);
     } catch (NullPointerException npe) {
       logger.log("setDeadForever("+l+","+i+","+options+"):overL:"+overrideLiveness+" "+reverseIntendedDest);
       throw npe;
@@ -331,6 +333,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //              if (logger.level <= Logger.FINE) logger.log("4");
         if (nodeChangeStrategy.canChange(oldDest, newDest, i)) {
 //                if (logger.level <= Logger.FINE) logger.log("5");
+          if (logger.level <= Logger.INFO) logger.log("destinationChanged("+oldDest+"->"+newDest+","+i+","+options+")");
           setDeadForever(i, oldDest, options);   
           return true;
         } else {

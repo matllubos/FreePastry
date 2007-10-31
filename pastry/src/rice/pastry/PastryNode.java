@@ -103,6 +103,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     
     apps = new Vector();
     logger = e.getLogManager().getLogger(getClass(), null);
+    e.addDestructable(this);
   }
   
   /**
@@ -213,6 +214,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * successfully.
    * 
    * This one is for backwards compatability. It will soon be deprecated.
+   * 
+   * @deprecated use nodeIsReady(boolean)
+   * 
    */
   public abstract void nodeIsReady();
 
@@ -234,7 +238,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param bootstrap
    *          Node handle to bootstrap with.
    */
-  public abstract void initiateJoin(Collection<NodeHandle> bootstrap);
+//  public abstract void initiateJoin(Collection<NodeHandle> bootstrap);
 
   public void setReady() {
     setReady(true);

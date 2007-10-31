@@ -125,10 +125,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
             
             ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
             
-            Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);
-            
-            pn.setBootstrapper(bootstrapper);
-          
+            Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);          
             
           //  final Logger lLogger = pn.getEnvironment().getLogManager().getLogger(TransportPastryNodeFactory.class, null);
           //  identity.getUpperIdentity().addLivenessListener(new LivenessListener<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
@@ -161,6 +158,10 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
             ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
                 localhandle, routeTable, leafSet, lsProtocol);
             jProtocol.register();
+            
+            pn.setJoinProtocols(bootstrapper, jProtocol, lsProtocol, rsProtocol);
+
+            
 //          } catch (IOException ioe) {
 //            retException.add(ioe);
 //          } finally {

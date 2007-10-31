@@ -415,9 +415,10 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       Runnable run = (Runnable) i.next();
       try {
         run.run();
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
         if (logger.level <= Logger.SEVERE) logger.logException( 
             "Invoking runnable caused exception " + e + " - continuing",e);
+        throw e;
       }
     }
 

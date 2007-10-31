@@ -226,14 +226,14 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     // NOTE: Installing this anyway if the LogLevel is high enough is kind of wild, but really useful for debugging
     if ((deliverAckToMe != null) || (logger.level <= Logger.FINE)) {
       rm.setRouteMessageNotification(new RouteMessageNotification() {
+        public void sendSuccess(rice.pastry.routing.RouteMessage message, rice.pastry.NodeHandle nextHop) {
+          if (logger.level <= Logger.FINE) logger.log("routeHelper("+final_key+","+pm+","+hint+","+deliverAckToMe+").sendSuccess():"+nextHop);
+          if (deliverAckToMe != null) deliverAckToMe.sent(ret);
+        }    
         public void sendFailed(rice.pastry.routing.RouteMessage message, Exception e) {
           if (logger.level <= Logger.FINE) logger.log("routeHelper("+final_key+","+pm+","+hint+","+deliverAckToMe+").sendFailed("+e+")");
           if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, e);
         }
-        public void sendSuccess(rice.pastry.routing.RouteMessage message) {
-          if (logger.level <= Logger.FINE) logger.log("routeHelper("+final_key+","+pm+","+hint+","+deliverAckToMe+").sendSuccess()");
-          if (deliverAckToMe != null) deliverAckToMe.sent(ret);
-        }    
       });
     }
     
@@ -528,8 +528,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
             PastryEndpointMessage pMsg = (PastryEndpointMessage) rm.unwrap(deserializer);
             if (logger.level <= Logger.FINER) logger.log(
                 "[" + thePastryNode + "] deliver " + pMsg + " from " + pMsg.getSenderId());
-            rm.sendSuccess();
             application.deliver(rm.getTarget(), pMsg.getMessage());
+            rm.sendSuccess(thePastryNode.getLocalHandle());
           } else {
             // route the message
             // if getDestHandle() == me, rm destHandle()
@@ -544,7 +544,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
         }
       } else {
         // forward consumed the message
-        rm.sendSuccess();
+        rm.sendSuccess(thePastryNode.getLocalHandle());
       }
       } catch (IOException ioe) {
         if (logger.level <= Logger.SEVERE) logger.logException(this.toString(),ioe); 

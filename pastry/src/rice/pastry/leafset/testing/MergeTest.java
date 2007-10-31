@@ -188,12 +188,6 @@ public class MergeTest {
       }
     
       @Override
-      public void initiateJoin(Collection<NodeHandle> bootstrap) {
-        // TODO Auto-generated method stub
-        
-      }
-    
-      @Override
       public SocketRequestHandle connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout) {
         // TODO Auto-generated method stub
         return null;        

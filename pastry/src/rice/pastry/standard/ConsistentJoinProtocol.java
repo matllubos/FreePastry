@@ -280,6 +280,12 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    * setReady();
    */
   protected void setReady() {    
+    if (joinEvent != null) {
+      if (logger.level <= Logger.INFO) logger.log("cancelling "+joinEvent);
+      joinEvent.cancel();
+      joinEvent = null;
+    }
+    
     if (tryingToGoReady) return;
     tryingToGoReady = true;
     if (logger.level <= Logger.INFO) logger.log("ConsistentJonProtocol.setReady()");
@@ -337,7 +343,12 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       NodeHandle nh = (NodeHandle)i.next(); 
       if (logger.level <= Logger.FINE) logger.log("CJP: timeout2, still waiting to hear from "+nh);
       //nh.checkLiveness();
-      sendTheMessage(nh, false);
+      try {
+        sendTheMessage(nh, false);
+      } catch (NullPointerException npe) {
+        if (logger.level <= Logger.WARNING) logger.log("npe, nh = "+nh+" c:"+c);
+        throw npe;
+      }
     }
   }
   
@@ -662,6 +673,8 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
           }
         }
       }
+    } else {
+      if (logger.level <= Logger.FINEST) logger.logException("update()", new Exception("Stack Trace"));
     }
   }
 

@@ -57,7 +57,7 @@ import java.util.*;
  * @author Peter Druschel
  */
 
-public class StandardRouteSetProtocol extends PastryAppl {
+public class StandardRouteSetProtocol extends PastryAppl implements RouteSetProtocol {
   private final int maxTrials;
 
   private RoutingTable routeTable;

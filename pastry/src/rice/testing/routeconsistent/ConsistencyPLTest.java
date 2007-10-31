@@ -120,14 +120,14 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.INFO);
-//    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.FINER);
+    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
     
 //    params.setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);    
 //    params.setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
     
     // turn on consistent join protocol's logger to make sure this is correct for consistency
-//    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.FINE);
-//    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
+    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.ALL);
+    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.ALL);
     
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
@@ -193,12 +193,25 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       Boolean b = (Boolean)value;    
       boolean rdy = b.booleanValue();
       
-      long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+      Environment env = localNode.getEnvironment();
+      Parameters params = env.getParameters();
+      
+      long curTime = env.getTimeSource().currentTimeMillis();
       System.out.println("CPLT.update("+rdy+"):"+curTime);
       int num = 2;    
-      if (!rdy) num = 5;
+      
+      if (rdy) {
+        params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.CONFIG);        
+        params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.CONFIG);
+      } else {
+        params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.ALL);
+        params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.ALL);
+        num = 5;
+      }
       System.out.println("LEAFSET"+num+":"+curTime+":"+localNode.getLeafSet());
   //    System.out.println("CPLT.setReady("+rdy+"):"+localNode.getEnvironment().getTimeSource().currentTimeMillis()); 
+    } else {
+      System.out.println("update("+observable+","+value+")");
     }
   }
   

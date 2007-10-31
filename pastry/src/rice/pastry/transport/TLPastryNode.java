@@ -83,16 +83,21 @@ import rice.pastry.ScheduledMessage;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.join.InitiateJoin;
+import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.InitiateLeafSetMaintenance;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocol;
+import rice.pastry.leafset.LeafSetProtocolAddress;
 import rice.pastry.messaging.Message;
 import rice.pastry.messaging.MessageDispatch;
 import rice.pastry.messaging.PJavaSerializedMessage;
 import rice.pastry.messaging.PRawMessage;
 import rice.pastry.routing.InitiateRouteSetMaintenance;
+import rice.pastry.routing.RouteSetProtocol;
 import rice.pastry.routing.Router;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.standard.StandardJoinProtocol;
 
 public class TLPastryNode extends PastryNode implements 
     TransportLayerCallback<NodeHandle, RawMessage>, 
@@ -324,36 +329,6 @@ public class TLPastryNode extends PastryNode implements
 
 
 
-  // join retransmission stuff
-  protected ScheduledMessage joinEvent;
-
-  public ExponentialBackoffScheduledMessage scheduleMsgExpBackoff(Message msg, long delay, long initialPeriod, double expBase) {
-    ExponentialBackoffScheduledMessage sm = new ExponentialBackoffScheduledMessage(this,msg,getEnvironment().getSelectorManager().getTimer(),delay,initialPeriod,expBase);
-    return sm;
-  }
-
-  
-  @Override
-  public void initiateJoin(Collection<NodeHandle> bootstrap) {
-    if (logger.level <= Logger.CONFIG) logger.log(
-      "initiateJoin("+bootstrap+")");
-    if (bootstrap == null || bootstrap.isEmpty()) {      
-      // no bootstrap node, so ready immediately
-      setReady();
-    } else {
-      // schedule (re-)transmission of the join message at an exponential backoff
-      joinEvent = scheduleMsgExpBackoff(new InitiateJoin(bootstrap), 0, 15000, 2);
-    }
-  }
-
-  @Override
-  public void nodeIsReady() {
-    if (joinEvent != null) {
-      joinEvent.cancel();
-      joinEvent = null;
-    }
-    // cancel join retransmissions
-  }
 
   @Override
   public int proximity(NodeHandle nh) {
@@ -524,6 +499,8 @@ public class TLPastryNode extends PastryNode implements
   protected ScheduledMessage leafSetRoutineMaintenance = null;
   protected ScheduledMessage routeSetRoutineMaintenance = null;
   
+  protected JoinProtocol joiner;
+  
   // The address (ip + port) of this pastry node
   private NodeHandleFactory handleFactory;
   protected LivenessProvider<NodeHandle> livenessProvider;
@@ -549,8 +526,9 @@ public class TLPastryNode extends PastryNode implements
     livenessProvider.addLivenessListener(this);
   }
 
-  public void setBootstrapper(Bootstrapper boot) {
+  public void setJoinProtocols(Bootstrapper boot, JoinProtocol joinP, LeafSetProtocol leafsetP, RouteSetProtocol routeP) {
     this.bootstrapper = boot;
+    this.joiner = joinP;
   }
   
   /**
@@ -580,7 +558,8 @@ public class TLPastryNode extends PastryNode implements
           "Scheduling leafSetMaint for "+leafSetMaintFreq * 1000+","+leafSetMaintFreq * 1000);
     }
     
-    initiateJoin(bootstrap);
+    joiner.initiateJoin(bootstrap);
+//    initiateJoin(bootstrap);
   }
   
   public String toString() {
@@ -673,5 +652,10 @@ public class TLPastryNode extends PastryNode implements
 
   public boolean removeProximityListener(ProximityListener<NodeHandle> listener) {
     return proxProvider.removeProximityListener(listener);
+  }
+
+  @Override
+  public void nodeIsReady() {
+    // nothing, used to cancel the joinEvent
   }
 }

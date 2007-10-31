@@ -61,6 +61,7 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
   double expBase;
   int numTimes = 0;
   long lastTime = 0;
+  long maxTime = -1;
 
   /**
    * @param node
@@ -68,20 +69,21 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
    * @param initialPeriod
    * @param expBase
    */
-  public ExponentialBackoffScheduledMessage(PastryNode node, Message msg, Timer timer, long delay, long initialPeriod, double expBase) {
+  public ExponentialBackoffScheduledMessage(PastryNode node, Message msg, Timer timer, long initialDelay, long initialPeriod, double expBase, long maxPeriod) {
     super(node,msg);
     this.timer = timer;
     this.initialPeriod = initialPeriod;
     this.expBase = expBase;
-    schedule(delay);
+    schedule(initialDelay);
   }
 
   public ExponentialBackoffScheduledMessage(PastryNode node, Message msg, Timer timer, long initialDelay, double expBase) {
-    super(node,msg);
-    this.timer = timer;
-    this.initialPeriod = initialDelay;
-    this.expBase = expBase;
-    schedule(initialDelay);
+    this(node, msg, timer, initialDelay, initialDelay, expBase, -1);
+//    super(node,msg);
+//    this.timer = timer;
+//    this.initialPeriod = initialDelay;
+//    this.expBase = expBase;
+//    schedule(initialDelay);
     numTimes=1;
   }
 
@@ -109,6 +111,9 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
       }
       super.run();
       long time = (long)(initialPeriod * Math.pow(expBase,numTimes));
+      if (maxTime >= 0) {
+        time = Math.min(time, maxTime);
+      }
       schedule(time);
       numTimes++;
     }

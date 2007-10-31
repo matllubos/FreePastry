@@ -42,6 +42,8 @@ import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.leafset.*;
 import rice.pastry.routing.*;
+import rice.pastry.transport.PMessageNotification;
+import rice.pastry.transport.PMessageReceipt;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.join.*;
 
@@ -59,7 +61,7 @@ import java.util.*;
  * @author Y. Charlie Hu
  */
 
-public class StandardJoinProtocol extends PastryAppl {
+public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
   protected NodeHandle localHandle;
 
   protected RoutingTable routeTable;
@@ -109,6 +111,33 @@ public class StandardJoinProtocol extends PastryAppl {
     return JoinAddress.getCode();
   }
 
+  // join retransmission stuff
+  protected ScheduledMessage joinEvent;
+
+  public void initiateJoin(Collection<NodeHandle> bootstrap) {
+    if (logger.level <= Logger.CONFIG)
+      logger.log("initiateJoin(" + bootstrap + ")");
+    if (bootstrap == null || bootstrap.isEmpty()) {
+      // no bootstrap node, so ready immediately
+      thePastryNode.setReady();
+    } else {
+      // schedule (re-)transmission of the join message at an exponential backoff
+      joinEvent = new ExponentialBackoffScheduledMessage(
+          thePastryNode, new InitiateJoin(bootstrap),
+          thePastryNode.getEnvironment().getSelectorManager().getTimer(),
+          0, 2000, 2, 60000);
+    }
+  }
+
+//  @Override
+//  public void nodeIsReady() {
+//    if (joinEvent != null) {
+//      joinEvent.cancel();
+//      joinEvent = null;
+//    }
+//    // cancel join retransmissions
+//  }
+
   /**
    * Receives a message from the outside world.
    * 
@@ -116,7 +145,7 @@ public class StandardJoinProtocol extends PastryAppl {
    */
   public void receiveMessage(Message msg) {
     if (msg instanceof JoinRequest) {
-      JoinRequest jr = (JoinRequest) msg;
+      final JoinRequest jr = (JoinRequest) msg;
 
       NodeHandle nh = jr.getHandle();
 
@@ -125,8 +154,23 @@ public class StandardJoinProtocol extends PastryAppl {
         // this is the terminal node on the request path
         // leafSet.put(nh);
         if (thePastryNode.isReady()) {
+          if (logger.level <= Logger.CONFIG) logger.log("acceptJoin "+jr);
           jr.acceptJoin(localHandle, leafSet);
-          thePastryNode.send(nh,jr,null, options);
+          thePastryNode.send(nh,jr,new PMessageNotification(){          
+            public void sent(PMessageReceipt msg) {
+              if (logger.level <= Logger.CONFIG) logger.log("acceptJoin.sent("+msg+"):"+jr);
+            }          
+            public void sendFailed(PMessageReceipt msg, Exception reason2) {
+              Throwable reason = reason2;
+              if (logger.level <= Logger.CONFIG) {
+                logger.logException("acceptJoin.sendFailed("+msg+"):"+jr, reason);
+                while (reason.getCause() != null) {
+                  reason = reason.getCause();
+                  logger.logException("because", reason);
+                }
+              }
+            }          
+          }, options);
         } else {
           if (logger.level <= Logger.INFO) logger.log(
               "NOTE: Dropping incoming JoinRequest " + jr
@@ -177,7 +221,18 @@ public class StandardJoinProtocol extends PastryAppl {
     
             jr.pushRow(row);
           }
+          
+          rm.setRouteMessageNotification(new RouteMessageNotification(){          
+            public void sendSuccess(RouteMessage message, NodeHandle nextHop) {
+              if (logger.level <= Logger.CONFIG) logger.log("sendSuccess("+message+"):"+nextHop);
+            }
+          
+            public void sendFailed(RouteMessage message, Exception e) {
+              if (logger.level <= Logger.CONFIG) logger.log("sendFailed("+message+")");
+            }          
+          });
     
+          if (logger.level <= Logger.CONFIG) logger.log("Routing "+rm);
           thePastryNode.getRouter().route(rm);
         }      
       } catch (IOException ioe) {
@@ -198,7 +253,7 @@ public class StandardJoinProtocol extends PastryAppl {
         if (logger.level <= Logger.INFO) logger.log("InitiateJoin attempting to join:"+nh+" liveness:"+nh.getLiveness());
         if (nh.isAlive() == true) {
           JoinRequest jr = new JoinRequest(localHandle, thePastryNode
-              .getRoutingTable().baseBitLength());
+              .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());
   
           RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, null, null,
               (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
@@ -222,6 +277,9 @@ public class StandardJoinProtocol extends PastryAppl {
    * guaranteed.
    */
   protected void setReady() {
+    if (joinEvent != null) joinEvent.cancel();
+    joinEvent = null;
+
     thePastryNode.setReady();
   }
 

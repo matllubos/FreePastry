@@ -76,6 +76,9 @@ public class JoinRequest extends PRawMessage {
   private LeafSet leafSet;
 
   private byte rtBaseBitLength;
+  
+  long timestamp;
+  
   /**
    * Constructor.
    * 
@@ -83,6 +86,11 @@ public class JoinRequest extends PRawMessage {
    */
   public JoinRequest(NodeHandle nh, byte rtBaseBitLength) {
     this(nh, null, rtBaseBitLength);
+  }
+
+  public JoinRequest(NodeHandle nh, byte rtBaseBitLength, long timestamp) {
+    this(nh, null, rtBaseBitLength);
+    this.timestamp = timestamp;
   }
 
   /**
@@ -199,7 +207,7 @@ public class JoinRequest extends PRawMessage {
 
   public String toString() {
     return "JoinRequest(" + (handle != null ? handle.getNodeId() : null) + ","
-        + (joinHandle != null ? joinHandle.getNodeId() : null) + ")";
+        + (joinHandle != null ? joinHandle.getNodeId() : null) +","+timestamp+ ")";
   }
 
   /***************** Raw Serialization ***************************************/  
@@ -208,7 +216,12 @@ public class JoinRequest extends PRawMessage {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {    
-    buf.writeByte((byte)0); // version
+//    buf.writeByte((byte)0); // version
+    
+    // version 1
+    buf.writeByte((byte)1); // version
+    buf.writeLong(timestamp);
+    
     buf.writeByte((byte) rtBaseBitLength);    
     handle.serialize(buf);
     if (joinHandle != null) {
@@ -252,6 +265,8 @@ public class JoinRequest extends PRawMessage {
     
     byte version = buf.readByte();
     switch(version) {
+      case 1:
+        timestamp = buf.readLong();
       case 0:
         setSender(sender);
         rtBaseBitLength = buf.readByte();
@@ -283,7 +298,7 @@ public class JoinRequest extends PRawMessage {
         
         if (buf.readBoolean())
           leafSet = LeafSet.build(buf, nhf);
-        break;
+        break;        
       default:
         throw new IOException("Unknown Version: "+version);
     }
