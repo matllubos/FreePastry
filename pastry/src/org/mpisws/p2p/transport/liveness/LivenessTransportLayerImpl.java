@@ -271,7 +271,6 @@ public class LivenessTransportLayerImpl<Identifier> implements
           if (ex instanceof java.nio.channels.ClosedChannelException) {
             // don't mark dead
           } else {
-            logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
             if (logger.level <= Logger.FINER) logger.logException("Marking "+s+" dead due to exception opening socket.", ex);
             getManager(i).markDead(options);
           }

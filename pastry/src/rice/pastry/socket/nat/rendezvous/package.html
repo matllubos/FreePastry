@@ -9,4 +9,186 @@ Build Planetlab test to simulate NATs
 
 Don't join if you can't get a rendezvous server.
 
-What if x
+Invariants:
+  A NATted node has a rendezvous server (or kills self)
+  A node can send/receive leases,route messages to its direct neightbors
+  You have a Certificate for any node in your Routing State  
+
+Notes:
+New NAT idea:
+  General Strategy:
+    Maintain temporary state for rendezvous point for any NATted node that can be used to Source Route, or initiate STUN
+    The new Insight: Allow for a circular dependency: Transport depends on Overlay Routing.
+
+  Minimal Overlay Routing assumption: For a node to be in a FreePastry ring, it must be able to communicate with both direct neighbors.
+
+  Vocabulary:
+    Players:
+      Nancy (NATted node),
+      Alice (Also NATted),
+      Urkel ("Un"-NATted node),
+      Robert (Nancy's Rendezvous Point, Un-NATted),
+      Bob (A different Rendezvous Point)
+
+    Rendezvous Point data structure:
+      rendezvousNodes: A collection of non-NATted nodes, (including Robert), that the Nancy node will maintain a pilot connection to (This allows Robert to contact Nancy at any time they are both alive.)
+      timestamp: (so we know when to replace stale info, always take the newest one)
+      signature: (so that the data can't be poisoned)
+      validityPeriod: (? may be useful if you build some kind of contract with the rendezvous node)
+      certificate: (? necessary to verify the signature, but probably too expensive to include here)
+
+  Q1: How Big is the Rendezvous Point Data Structure?  (Impacts when/how often we send it.)
+      // can be small
+      a) How many rendezvous points? Each is only 6 Bytes in IPv4, use (1-4 nodes, so 24 bytes)
+      b) timestamp 8 bytes
+      c) Signature? 160 Bytes
+      d) Certificate? Big, probably too big for a MTU, so eliminates use in Liveness Probes
+
+  Q2: How do we discover the Rendezvous Point for a Node? (all or a subset of the following suggestions)
+*   a) Shipped with a NodeHandle whenever it is serialized.
+      Upon deserialization and coalescing of the NodeHandle the local Rendezvous Point data structure is updated if fresher
+      Still need backup strategy to find fresh version if the rendezvous point changes (see following ideas)
+*   b) RendezvousPointDiscoveryApp: This _is_ the circular dependency.
+      If you can't contact Nancy through the rendezvous point, there are 2 possibilities:
+        1) She is faulty
+        2) Her rendezvous point changed
+      This app can ask for a fresh Rendezvous Point from Nancy by routing a RequestRendezvousPoint message to Nancy.  This message will
+        1) Be received by Nancy and she will respond with a fresh Rendezvous Point.
+        2) Nancy is faulty, and the new root of the key responds saying so.
+        3) Message is dropped, retry.
+          #2 seems like a big security risk!  Need Secure Routing?
+          How do we know when to use Secure Routing?  The ring size estimate doesn't apply in this situation, because we are talking about the (non-)existence of a single node.  Also, this may occur every time any node changes Rendezvous point, so it's not an especially exceptional case.
+    c) store it in Past
+       bad: This increases the circular dependency s.t. that Transport depends on Past, only use this as an optimization
+    d) Push updates in Scribe
+       same problem as Q2.c
+
+  Q3: How does Nancy choose her Rendezvous Point?
+*   a) Leafset (scalability problem: may not be enough un-NATted nodes for you to join)
+*   b) Trusted Dedicated Node (reliability problem: you depend on that node to always be available)
+    c) Discovery (such as an Anycast in Scribe) (new security vulnerability)
+
+  Q4: How does a node communicate with a NATted node(Nancy) now that we have her up-to-date Rendezvous Point (Robert)?
+    1) From an un-NATted node (Urkel):
+      a) Send a "ConnectRequest" through Robert to Nancy who opens a socket back to Urkel
+        As usual Nancy can source route through her LeafSet to avoid Temporary Internet Routing Anomalies.
+    2) From a NATted node
+      a) Use STUN with Nancy's Rendezvous Point (Robert)
+      b) Source route through Robert:
+        This is slightly more complicated w/ TCP than usual source routing, because Robert will need to tell Nancy to open a new TCP connection back to him (because Robert can't initiate TCP connections to Nancy, only the other way around.)  We need a new TCP connection for flow control.
+
+Security:
+  If we have signatures, we also need to maintain a PKI (Public Key Infrastructure), specifically Certificate discovery.  This data is not near as temporal as the Rendezvous Points, but has similar discovery issues.  This is going to be necessary for any security features so it would be nice if we could build a reusable system.
+
+  Q5: When do we need to verify Signatures?
+   Whenever we deserialize a NodeHandle that claims to have fresher Rendezvous Point info.  However, there are 2 distinct use cases:
+    a) Update to Overlay Routing State.
+    b) Other.  (FreePastry Application such as Scribe where NodeHandles are passed in a message)
+
+  Q6: Where do we discover new Certificates?
+    a) Centralized, or "3rd channel" solution
+      no
+    b) Include in Rendezvous Point data structure
+      too big to be practical
+*   c) Ask the Node who told us of the new NodeHandle
+      This can work for Routing State by making an invariant that you keep the Certificate for every node in your Routing State
+      This solution doesn't work generally:
+        You may not know/be able to contact the node who packaged up the newly discovered NodeHandle:
+           intermediate nodes don't always deserialize a RouteMessage
+           the message containing the NodeHandle may be encrypted, so intermediate nodes couldn't read it
+           data could come from stored data (Such as Past) and the creating node may no longer exist in the network
+*   d) Ask the "new" NodeHandle directly
+      Do we need to do this?  How important is it to prevent poisoning of "normal" NodeHandles?
+      May be expensive, what if his (unverified) Rendezvous Point is stale?
+      1) Route for it, similarly to Q2.b?  Since Certificates can't be forged, and aren't temporal, could even be cached
+    e) Past
+     This is a bad idea for the Routing State, because it puts an additional circular dependency: Transport depends on Routing, which depends on Past (but isn't this argument similar for Q6.c.1?)
+
+// End of Security section
+
+  Q7: How do you bootstrap?
+    You don't have a LeafSet, so you don't have a Rendezvous Point.
+    a) Temporarily use the Bootstrap as the Rendezvous Point
+
+Other notes (problem cases and solutions, but not necessary for discussion)
+  Q8: Are there any cases when 2 direct neighbors can't communicate (our assumption is violated)?
+    Scenario:
+      Alice and Nancy are direct neighbors, NATted, and use the same Rendezvous Point, Bob.  They communicate by source-routing through Bob. Bob fails.
+    Nancy finds a new Rendezvous Point, Robert, but how does she notify Alice?
+    Alice doesn't know if Nancy failed, or just can't be contacted.
+    In a network where most nodes are NATted, you could imagine the whole LeafSet getting into this problem.
+
+    a) Source Route through the LeafSet
+      This makes it necessity to maintain connection with more LeafSet members for reliability
+      If you can't communicate with any nodes on 1 side of your LeafSet, this is a LeafSet collapse, kill yourself.  Otherwise, a ping will get through and the response will contain Nancy's new Rendezvous Point
+
+    Crazy scenario:
+      Alice/Nancy can't use STUN together, but they can use it with the rest of the LeafSet.  When Bob fails, they can get UDP Liveness Checks through the LeafSet, but can't establish new TCP connections?  In this case, need to make sure STUN can handle Source Routing.
+
+    New reasons to kill self:
+      Can't find a Rendezvous Point
+      Can verify liveness of direct neighbor, but can't get a socket through to establish leases. // this may be useful anyway, such as if your connection is so congested that you can't get valid leases before they expire 
+      
+      
+Hi Jeff,
+
+I think I still do not understand the properties you are trying
+to achieve with Q6. I can see two options:
+
+  1) FreePastry guarantees that, whenever a node X has a NodeHandle
+     to another node Y, then X also has the certificate for Y
+
+  2) FreePastry guarantees that, whenever a node X has a routing
+     table entry to another node Y, then X also has the certificate for Y
+
+Property #1 seems way too strong, since many messages are not signed
+(e.g. a PAST GET); there are many situations in which you would just
+want to talk to the node that sent a particular route message, regardless
+of what the identity of that node was.
+
+Here is a suggestion that achieves property #2:
+
+  1) Each node has a cache of node certificates and a CA certificate.
+
+  2) Whenever a node opens a direct connection to another node,
+     it checks whether it has the corresponding certificate in the cache.
+     If not, it asks the other node for it. Then it challenges the other
+     node to make sure it has the matching private key.
+
+  3) Node handles are (nodeID,epoch,seq#,{routes},signature). If a node
+     handle is deserialized, we check whether we have the certificate.
+     If we do, we check the signature; if we don't, we keep the handle
+     around nevertheless. Our singleton handle is updated a) if the
+     existing handle does not have a valid signature, or b) if both the
+     existing and the new handle have a valid signature but the new
+     handle has a higher epoch, or the same epoch but a higher sequence number.
+
+  4) The 'identity layer' exports a primitive requestCertificate(peer, nodeID).
+     If we already have the certificate for nodeID, the method does nothing.
+     If we don't have the certificate, it requests the certificate from 'peer'.
+     There is also a haveCertificate(nodeID).
+
+  5) Whenever the routing table gets an update from a peer, it calls
+     haveCertificate() for each nodeID, and it inserts only those entries
+     for which the method returns true. For the others, it calls
+     requestCertficate(peer, ...) and inserts the entries only after
+     that method succeeds.
+
+This achieves two things: First, the routing table contains only entries
+for which we have the certificate, and for which the node handle signature
+checked out okay. Second, routed messages (e.g. PAST GET) work without
+checking for certificates at intermediate hops. The destination may get
+a node handle without being able to check the signature, but when it opens
+a direct channel to send the response, it will obtain the certificate
+and the channel is still authenticated.
+
+Applications that do not care about signatures will profit automatically
+(because all direct connections are authenticated). If an application does
+care about signatures, it can have its own key distribution mechanism
+and/or use the provided requestCertificate() method.
+
+Please let me know what you think.
+
+Thanks,
+
+             - Andreas       

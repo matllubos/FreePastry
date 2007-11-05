@@ -202,7 +202,7 @@ public class DirectAppSocket<Identifier, MessageType> {
       if (outputClosed) throw new ClosedChannelException();
       
       if (!simulator.isAlive(counterpart.localNodeHandle)) {
-        return 0; // TODO: Eventually simulate a socket reset.
+        return -1; // TODO: Eventually simulate a socket reset.
       }
       
       int availableToWrite = srcs.remaining();
@@ -383,9 +383,10 @@ public class DirectAppSocket<Identifier, MessageType> {
               (int)Math.round(simulator.networkDelay(acceptor, connector))); 
         }
       } else {
-        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsFaultyException(acceptor)),
-            (int)Math.round(simulator.networkDelay(acceptor, connector))+
-            (int)Math.round(simulator.networkDelay(connector, acceptor))); 
+        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsFaultyException(acceptor)),0);
+        // TODO: this should probably take into account a real delay, however, acceptor has already been removed from the simulator
+//            (int)Math.round(simulator.networkDelay(acceptor, connector))+
+//            (int)Math.round(simulator.networkDelay(connector, acceptor))); 
       }
     }
     public int getSeq() {

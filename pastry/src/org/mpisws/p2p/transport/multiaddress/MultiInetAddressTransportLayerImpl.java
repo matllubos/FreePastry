@@ -51,6 +51,7 @@ import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 import org.mpisws.p2p.transport.util.DefaultCallback;
@@ -272,6 +273,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
           public void sendFailed(MessageRequestHandle<InetSocketAddress, ByteBuffer> msg, IOException ex) {
             if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
             if (deliverAckToMe == null) {
+              if (ex instanceof NodeIsFaultyException) return;
               errorHandler.receivedException(i, ex);
             } else {
               deliverAckToMe.sendFailed(handle, ex);

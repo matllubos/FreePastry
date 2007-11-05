@@ -288,15 +288,18 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       UpperIdentifier old = bindings.get(l);
       if (old == null) {
         bindings.put(l, u);
+        overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(u)));
         return true;
       } else {
         if (old.equals(u)) {
+          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(u)));
           return true;
         }
         
         // they are different        
         if (destinationChanged(old, u, l, options)) {
-          bindings.put(l, u);             
+          bindings.put(l, u);      
+          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(u)));
           return true;
         } else {          
           // mark the new one as faulty
@@ -455,7 +458,6 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                           byte answer = responseBuffer.array()[0];
                           if (answer == FAILURE) {
                             // wrong address, read more 
-                            // TODO read the new address
                             if (logger.level <= Logger.INFO) logger.log("openSocket("+i+","+deliverSocketToMe+") answer = FAILURE");
 //                            setDeadForever(dest);
                             UpperIdentifier newDest = serializer.deserialize(new SocketInputBuffer(socket, localIdentifier.length), i);
@@ -764,7 +766,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //            from = serializer.coalesce(from);
             
             // need to do this so the boostrapper knows the proper identity
-            overrideLiveness.setLiveness(i, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(from)));
+//            overrideLiveness.setLiveness(i, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(from)));
           } else {
             if (logger.level <= Logger.WARNING) logger.log("Warning.  Received message from stale identifier:"+
                 from+". Current identifier is "+bindings.get(i)+" lower:"+i+" Probably a delayed message, dropping.");
@@ -802,7 +804,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //            newDest = serializer.coalesce(newDest);
             
             // need to do this so the boostrapper knows the proper identity
-            overrideLiveness.setLiveness(i, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(newDest)));
+//            overrideLiveness.setLiveness(i, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(newDest)));
             //          upper.notifyLivenessListeners(newDest, LIVENESS_ALIVE, options);
           }
       }
