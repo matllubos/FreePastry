@@ -133,6 +133,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     if (env == null) throw new IllegalArgumentException("env is null!");
     if (environment != null) return;
     environment = env;
+    environment.addDestructable(this);
     start();
   }
   
