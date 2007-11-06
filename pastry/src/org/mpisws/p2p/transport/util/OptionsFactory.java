@@ -40,9 +40,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class OptionsFactory {
-  public static Map<String, Object> addOption(Map<String, Object> existing, String s, int i) {
+  public static Map<String, Object> addOption(Map<String, Object> existing, String s, Object i) {
     Map<String, Object> ret = copyOptions(existing);
     ret.put(s,i);
+    return ret;
+  }
+  public static Map<String, Object> addOption(Map<String, Object> existing, String s1, Object i1, String s2, Object i2) {
+    Map<String, Object> ret = copyOptions(existing);
+    ret.put(s1,i2);
+    ret.put(s1,i2);
     return ret;
   }
   public static Map<String, Object> copyOptions(Map<String, Object> existing) {

@@ -78,6 +78,9 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
   IdFactory idFactory;
 //  NodeHandleFactory<Identifier> nodeHandleFactory;
   Logger logger;
+  
+  public static final String MSG_STRING = "commonapi_msg_string";
+  public static final String DESTINATION_IDENTITY = "commonapi_destination_identity";
 
   public CommonAPITransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -209,7 +212,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
             }
           }
         }, 
-        OptionsFactory.addOption(options, m.toString(), 0)));
+        OptionsFactory.addOption(options, MSG_STRING, m.toString(), DESTINATION_IDENTITY, i)));
     return handle;
   }
 
@@ -300,7 +303,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
 //      new SocketRequestHandleImpl<TransportLayerNodeHandle<Identifier>>(i, options);
     
     if (logger.level <= Logger.FINE) logger.log("openSocket("+i+")");
-    return tl.openSocket(i, deliverSocketToMe, options);
+    return tl.openSocket(i, deliverSocketToMe, OptionsFactory.addOption(options, DESTINATION_IDENTITY, i));
     
     // we only serialize the Id, we assume the underlieing layer got the address of the NodeHandle correct
 //    SimpleOutputBuffer sob = new SimpleOutputBuffer(8+localAddress.getId().getByteArrayLength());

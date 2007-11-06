@@ -118,8 +118,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * Held in the options map of the message/socket.  This is a pointer from the upper 
    * level to the lower level.
    */
-  Map<Integer, WeakReference<UpperIdentifier>> intendedDest; // currently a very small memory leak
-  Map<UpperIdentifier, Integer> reverseIntendedDest;
+//  Map<Integer, WeakReference<UpperIdentifier>> intendedDest; // currently a very small memory leak
+//  Map<UpperIdentifier, Integer> reverseIntendedDest;
   int intendedDestCtr = Integer.MIN_VALUE;
   
   public static final byte SUCCESS = 1;
@@ -129,8 +129,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   public static final byte NORMAL = 1;
   public static final byte INCORRECT_IDENTITY = 0;
   
-  public static final String NODE_HANDLE_TO_INDEX = "identity.node_handle_to_index";
-  public static final String NODE_HANDLE_FROM_INDEX = NODE_HANDLE_TO_INDEX;
+//  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_to_index";
+  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_to_index";
 //  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_from_index";
   
   public IdentityImpl(
@@ -151,8 +151,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     this.pendingMessages = new HashMap<UpperIdentifier, Set<IdentityMessageHandle>>();
     this.deadForever = Collections.synchronizedSet(new HashSet<UpperIdentifier>());
     
-    this.intendedDest = new HashMap<Integer, WeakReference<UpperIdentifier>>(); // this is a memory leak, but very slow, maybe we should make a periodic iterator to clean this out...
-    this.reverseIntendedDest = new TimerWeakHashMap<UpperIdentifier, Integer>(environment.getSelectorManager(), 300000);
+//    this.intendedDest = new HashMap<Integer, WeakReference<UpperIdentifier>>(); // this is a memory leak, but very slow, maybe we should make a periodic iterator to clean this out...
+//    this.reverseIntendedDest = new TimerWeakHashMap<UpperIdentifier, Integer>(environment.getSelectorManager(), 300000);
     
     this.bindings = new HashMap<LowerIdentifier, UpperIdentifier>();
   }
@@ -212,11 +212,11 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     if (logger.level <= Logger.INFO) logger.logException("setDeadForever("+l+","+i+","+options+")",new Exception("Stack Trace"));
     deadForever.add(i);
     try {
-      logger.log("setDeadForever("+l+","+i+","+(options == null)+"):overL:"+overrideLiveness+" "+(reverseIntendedDest == null));
-      Map<String, Object> o2 = OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, reverseIntendedDest.get(i));
+      logger.log("setDeadForever("+l+","+i+","+(options == null)+"):overL:"+overrideLiveness);
+      Map<String, Object> o2 = OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, i);
       overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, o2);
     } catch (NullPointerException npe) {
-      logger.log("setDeadForever("+l+","+i+","+options+"):overL:"+overrideLiveness+" "+reverseIntendedDest);
+      logger.log("setDeadForever("+l+","+i+","+options+"):overL:"+overrideLiveness);
       throw npe;
     }
 //    upper.notifyLivenessListeners(i, LIVENESS_DEAD_FOREVER, options);  // now called as a result of overrideLiveness
@@ -235,43 +235,46 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * @param i
    * @return
    */
-  protected int addIntendedDest(UpperIdentifier i) {
-    synchronized(intendedDest) {
-      if (reverseIntendedDest.containsKey(i)) {
-        int ret = reverseIntendedDest.get(i);
-        // make sure that the value in memory is there (not garbage collected)
-        if (intendedDest.get(ret).get() == null) {
-          intendedDest.put(ret, new WeakReference<UpperIdentifier>(i));
-        }
-        return ret;
-      }
-      intendedDest.put(intendedDestCtr, new WeakReference<UpperIdentifier>(i));
-      reverseIntendedDest.put(i, intendedDestCtr);
-      intendedDestCtr++;
-      if (logger.level <= Logger.FINER) {
-        logger.log("addIntendedDest("+i+" hash:"+i.hashCode()+"):"+(intendedDestCtr-1));
-        if (i instanceof SocketNodeHandle) {
-          SocketNodeHandle snh = (SocketNodeHandle)i;
-          if (snh.getId().toString().startsWith("<0x000")) {
-            logger.logException("StackTrace snh:"+i+" epoch:"+snh.getEpoch(), new Exception("foo"));
-          }
-        }
-      }
-      return intendedDestCtr-1;
-    }
-  }
-  
+//  protected int addIntendedDest(UpperIdentifier i) {
+//    synchronized(intendedDest) {
+//      if (reverseIntendedDest.containsKey(i)) {
+//        int ret = reverseIntendedDest.get(i);
+//        // make sure that the value in memory is there (not garbage collected)
+//        if (intendedDest.get(ret).get() == null) {
+//          intendedDest.put(ret, new WeakReference<UpperIdentifier>(i));
+//        }
+//        return ret;
+//      }
+//      intendedDest.put(intendedDestCtr, new WeakReference<UpperIdentifier>(i));
+//      reverseIntendedDest.put(i, intendedDestCtr);
+//      intendedDestCtr++;
+//      if (logger.level <= Logger.FINER) {
+//        logger.log("addIntendedDest("+i+" hash:"+i.hashCode()+"):"+(intendedDestCtr-1));
+//        if (i instanceof SocketNodeHandle) {
+//          SocketNodeHandle snh = (SocketNodeHandle)i;
+//          if (snh.getId().toString().startsWith("<0x000")) {
+//            logger.logException("StackTrace snh:"+i+" epoch:"+snh.getEpoch(), new Exception("foo"));
+//          }
+//        }
+//      }
+//      return intendedDestCtr-1;
+//    }
+//  }
+//  
   protected UpperIdentifier getIntendedDest(Map<String,Object> options) {
     if (options == null) throw new IllegalArgumentException("options is null");
     if (!options.containsKey(NODE_HANDLE_FROM_INDEX)) throw new IllegalArgumentException("options doesn't have NODE_HANDLE_FROM_INDEX "+options);
-    int index = ((Integer)options.get(NODE_HANDLE_FROM_INDEX)).intValue();
-    WeakReference<UpperIdentifier> ret1 = intendedDest.get(index);
-    if (ret1 == null) throw new IllegalArgumentException("No record of NODE_HANDLE_FROM_INDEX "+index);
-    UpperIdentifier ret = ret1.get();
-    if (ret == null) {
-      if (logger.level <= Logger.WARNING) logger.log("Memory already collected for NODE_HANDLE_FROM_INDEX "+index);
-    }
-    return ret;
+    
+//    int index = ((Integer)options.get(NODE_HANDLE_FROM_INDEX)).intValue();
+//    WeakReference<UpperIdentifier> ret1 = intendedDest.get(index);
+//    if (ret1 == null) throw new IllegalArgumentException("No record of NODE_HANDLE_FROM_INDEX "+index);
+//    UpperIdentifier ret = ret1.get();
+//    if (ret == null) {
+//      if (logger.level <= Logger.WARNING) logger.log("Memory already collected for NODE_HANDLE_FROM_INDEX "+index);
+//    }
+//    return ret;
+    
+    return (UpperIdentifier)options.get(NODE_HANDLE_FROM_INDEX);
   }
 
   /**
@@ -288,18 +291,18 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       UpperIdentifier old = bindings.get(l);
       if (old == null) {
         bindings.put(l, u);
-        overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(u)));
+        overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
         return true;
       } else {
         if (old.equals(u)) {
-          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(u)));
+          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
           return true;
         }
         
         // they are different        
         if (destinationChanged(old, u, l, options)) {
           bindings.put(l, u);      
-          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(u)));
+          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
           return true;
         } else {          
           // mark the new one as faulty
@@ -542,7 +545,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 try {
                   // add to intendedDest, add option index                  
                   from = serializer.deserialize(sib, socket.getIdentifier());                  
-                  newOptions.put(NODE_HANDLE_FROM_INDEX, addIntendedDest(from));
+                  newOptions.put(NODE_HANDLE_FROM_INDEX, from);
                 } catch (InsufficientBytesException ibe) {
                   socket.register(true, false, this); 
                   return;
@@ -658,11 +661,11 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    
 //      Integer index = null;
 //      if (options != null) {
-//        index = options.get(NODE_HANDLE_TO_INDEX);
+//        index = options.get(NODE_HANDLE_FROM_INDEX);
 //      }
       
       byte[] msgWithHeader;
-      if (options.containsKey(NODE_HANDLE_TO_INDEX)) {
+      if (options.containsKey(NODE_HANDLE_FROM_INDEX)) {
         // don't include an id
         msgWithHeader = new byte[1+localIdentifier.length+m.remaining()];    
         msgWithHeader[0] = NO_ID;        
@@ -676,7 +679,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         UpperIdentifier dest = getIntendedDest(options);
       
         if (dest == null) {
-          if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+options.get(NODE_HANDLE_TO_INDEX))); 
+          if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+options.get(NODE_HANDLE_FROM_INDEX))); 
           return ret;
         }
 
@@ -775,7 +778,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
             return;
           }
           
-          newOptions.put(NODE_HANDLE_FROM_INDEX, addIntendedDest(from));          
+          newOptions.put(NODE_HANDLE_FROM_INDEX, from);
           // continue to read the rest of the message
           
           // it's for me, no problem
@@ -904,7 +907,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       }
       
       Map<String, Object> newOptions = OptionsFactory.copyOptions(options);
-      newOptions.put(NODE_HANDLE_TO_INDEX, addIntendedDest(i));      
+      newOptions.put(NODE_HANDLE_FROM_INDEX, i);      
 
 
       handle.setSubCancellable(tl.openSocket(serializer.translateDown(i), new SocketCallback<MiddleIdentifier>(){
@@ -938,7 +941,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         }
       
         options = OptionsFactory.copyOptions(options);
-        options.put(NODE_HANDLE_TO_INDEX, addIntendedDest(i));      
+        options.put(NODE_HANDLE_FROM_INDEX, i);      
         ret = new IdentityMessageHandle(i, m, options, deliverAckToMe);
         addPendingMessage(i, ret);
       }
@@ -997,7 +1000,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       if (deadForever.contains(i)) return false;
 
       options = OptionsFactory.copyOptions(options);
-      options.put(NODE_HANDLE_TO_INDEX, addIntendedDest(i));      
+      options.put(NODE_HANDLE_FROM_INDEX, i);      
       return livenessProvider.checkLiveness(serializer.translateDown(i), options);
     }
 
@@ -1018,7 +1021,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       if (logger.level <= Logger.FINER) logger.log("getLiveness("+i+","+options+")");
       if (deadForever.contains(i)) return LIVENESS_DEAD_FOREVER;
       options = OptionsFactory.copyOptions(options);
-      options.put(NODE_HANDLE_TO_INDEX, addIntendedDest(i));      
+      options.put(NODE_HANDLE_FROM_INDEX, i);      
       
       return livenessProvider.getLiveness(serializer.translateDown(i), options);
     }
@@ -1081,13 +1084,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     public int proximity(UpperIdentifier i, Map<String, Object> options) {
       if (logger.level <= Logger.FINE) logger.log("proximity("+i+")");
       if (deadForever.contains(i)) return Integer.MAX_VALUE;
-      return prox.proximity(serializer.translateDown(i), OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(i)));
+      return prox.proximity(serializer.translateDown(i), OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, i));
     }
 
     public void proximityChanged(MiddleIdentifier i, int newProx, Map<String, Object> options) {
       UpperIdentifier upper = getIntendedDest(options);
       if (upper == null) {
-        if (logger.level <= Logger.WARNING) logger.logException("Memory for index "+options.get(NODE_HANDLE_FROM_INDEX)+" collected suppressing proximityChanged()", new Exception("Stack Trace"));
+        if (logger.level <= Logger.WARNING) logger.logException("Memory for "+options.get(NODE_HANDLE_FROM_INDEX)+" collected suppressing proximityChanged()", new Exception("Stack Trace"));
         return;
       }
       
