@@ -579,12 +579,12 @@ public class RouteMessage extends PRawMessage implements Serializable,
     return destinationHandle;
   }
 
-  private transient Map<String, Integer> options;
-  public Map<String, Integer> getTLOptions() {
+  private transient Map<String, Object> options;
+  public Map<String, Object> getTLOptions() {
     return options;
   }
   
-  public void setTLOptions(Map<String, Integer> options) {
+  public void setTLOptions(Map<String, Object> options) {
     this.options = options;
   }
   

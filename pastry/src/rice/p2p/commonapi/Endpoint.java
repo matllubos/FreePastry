@@ -351,7 +351,7 @@ public interface Endpoint extends NodeHandleReader {
    * 
    * @param options
    */
-  public void setSendOptions(Map<String, Integer> options);
+  public void setSendOptions(Map<String, Object> options);
 }
 
 

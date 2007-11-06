@@ -160,7 +160,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
           }
 
           @Override
-          public void messageReceived(MultiInetSocketAddress i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+          public void messageReceived(MultiInetSocketAddress i, ByteBuffer m, Map<String, Object> options) throws IOException {
             if (connectionAllowed(myAddr, i, "message")) {
               super.messageReceived(i, m, options);
             }
@@ -235,7 +235,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
     }
     
     @Override
-    public void pong(final SourceRoute<MultiInetSocketAddress> i, final long senderTime, final Map<String, Integer> options) {
+    public void pong(final SourceRoute<MultiInetSocketAddress> i, final long senderTime, final Map<String, Object> options) {
       timer.schedule(new TimerTask() {      
         @Override
         public void run() {
@@ -267,7 +267,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
     final Object lock = new Object();
     
     PingListener<MultiInetSocketAddress> pl = new PingListener<MultiInetSocketAddress>() {    
-      public void pingResponse(MultiInetSocketAddress i, int rtt, Map<String, Integer> options) {
+      public void pingResponse(MultiInetSocketAddress i, int rtt, Map<String, Object> options) {
         synchronized(lock) {
 //          System.out.println("i"+i.getLastHop());
           pingResponse.put(i, new Tupel(i, rtt));
@@ -275,7 +275,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
         }
       }
       
-      public void pingReceived(MultiInetSocketAddress i, Map<String, Integer> options) {
+      public void pingReceived(MultiInetSocketAddress i, Map<String, Object> options) {
 
       }
     };
@@ -321,7 +321,7 @@ public class SRManagerTest extends TLTest<MultiInetSocketAddress> {
     final Object lock = new Object();
     
     alice.addLivenessListener(new LivenessListener<MultiInetSocketAddress>() {    
-      public void livenessChanged(MultiInetSocketAddress i, int val, Map<String, Integer> options) {
+      public void livenessChanged(MultiInetSocketAddress i, int val, Map<String, Object> options) {
         synchronized(lock) {
 //          System.out.println("adding("+i+","+val+")");
           tupels.add(new Tupel(i,val));        

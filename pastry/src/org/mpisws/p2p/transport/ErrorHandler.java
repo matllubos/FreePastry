@@ -54,7 +54,7 @@ public interface ErrorHandler<Identifier> {
    * @param bytes the entire message/socket header
    * @param location the location in the bytes that is unexpected
    */
-  public void receivedUnexpectedData(Identifier i, byte[] bytes, int location, Map<String, Integer> options);
+  public void receivedUnexpectedData(Identifier i, byte[] bytes, int location, Map<String, Object> options);
 
   /**
    * We got an exception.

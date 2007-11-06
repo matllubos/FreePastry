@@ -58,9 +58,9 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
   protected Identifier identifier;
   protected P2PSocket<SubIdentifier> socket;
   protected Logger logger;
-  protected Map<String, Integer> options;
+  protected Map<String, Object> options;
   
-  public SocketWrapperSocket(Identifier identifier, P2PSocket<SubIdentifier> socket, Logger logger, Map<String, Integer> options) {
+  public SocketWrapperSocket(Identifier identifier, P2PSocket<SubIdentifier> socket, Logger logger, Map<String, Object> options) {
     this.identifier = identifier;
     this.socket = socket;
     this.logger = logger;
@@ -124,7 +124,7 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
     return "Socket<"+identifier+">";
   }
 
-  public Map<String, Integer> getOptions() {
+  public Map<String, Object> getOptions() {
     return options;
   }
 }

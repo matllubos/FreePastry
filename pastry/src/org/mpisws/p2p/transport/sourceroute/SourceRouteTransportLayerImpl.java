@@ -122,7 +122,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
   public SocketRequestHandle<SourceRoute<Identifier>> openSocket(
       final SourceRoute<Identifier> i,
       final SocketCallback<SourceRoute<Identifier>> deliverSocketToMe,
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
     
     // invariants
@@ -313,7 +313,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
 
   public MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> sendMessage(final SourceRoute<Identifier> i, final ByteBuffer m,
       final MessageCallback<SourceRoute<Identifier>, ByteBuffer> deliverAckToMe,
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");    
     
     // invariants
@@ -366,7 +366,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
     return handle;
   }
 
-  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
     if (!m.hasRemaining()) {
       errorHandler.receivedUnexpectedData(srFactory.getSourceRoute(etl.getLocalIdentifier(), i), m.array(), m.position(), null);
     }

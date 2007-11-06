@@ -53,12 +53,12 @@ public interface PingListener<Identifier> {
    * @param rtt the RTT
    * @param options how the ping was sent (source route/udp etc)
    */
-  public void pingResponse(Identifier i, int rtt, Map<String, Integer> options);
+  public void pingResponse(Identifier i, int rtt, Map<String, Object> options);
   
   /**
    * Called when we receive a ping (not a pong)
    * @param i
    * @param options
    */
-  public void pingReceived(Identifier i, Map<String, Integer> options);
+  public void pingReceived(Identifier i, Map<String, Object> options);
 }

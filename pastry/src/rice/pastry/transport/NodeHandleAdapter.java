@@ -80,11 +80,11 @@ public class NodeHandleAdapter implements
   public NodeHandle getLocalIdentifier() {
     return (NodeHandle)tl.getLocalIdentifier();
   }
-  public SocketRequestHandle<NodeHandle> openSocket(NodeHandle i, SocketCallback<NodeHandle> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<NodeHandle> openSocket(NodeHandle i, SocketCallback<NodeHandle> deliverSocketToMe, Map<String, Object> options) {
     return tl.openSocket(i, deliverSocketToMe, options);
   }
   
-  public MessageRequestHandle<NodeHandle, RawMessage> sendMessage(NodeHandle i, RawMessage m, MessageCallback<NodeHandle, RawMessage> deliverAckToMe, Map<String, Integer> options) {
+  public MessageRequestHandle<NodeHandle, RawMessage> sendMessage(NodeHandle i, RawMessage m, MessageCallback<NodeHandle, RawMessage> deliverAckToMe, Map<String, Object> options) {
     return tl.sendMessage(i, m, deliverAckToMe, options);
   }
   public void setCallback(TransportLayerCallback<NodeHandle, RawMessage> callback) {
@@ -100,10 +100,10 @@ public class NodeHandleAdapter implements
   public void addLivenessListener(LivenessListener<NodeHandle> name) {
     livenessProvider.addLivenessListener(name);
   }
-  public boolean checkLiveness(NodeHandle i, Map<String, Integer> options) {
+  public boolean checkLiveness(NodeHandle i, Map<String, Object> options) {
     return livenessProvider.checkLiveness(i, options);
   }
-  public int getLiveness(NodeHandle i, Map<String, Integer> options) {
+  public int getLiveness(NodeHandle i, Map<String, Object> options) {
     return livenessProvider.getLiveness(i, options);
   }
   public boolean removeLivenessListener(LivenessListener<NodeHandle> name) {
@@ -112,7 +112,7 @@ public class NodeHandleAdapter implements
   public void addProximityListener(ProximityListener<NodeHandle> listener) {
     proxProvider.addProximityListener(listener);
   }
-  public int proximity(NodeHandle i, Map<String, Integer> options) {
+  public int proximity(NodeHandle i, Map<String, Object> options) {
     return proxProvider.proximity(i, options);
   }
   public boolean removeProximityListener(ProximityListener<NodeHandle> listener) {

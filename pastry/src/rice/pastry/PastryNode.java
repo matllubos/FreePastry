@@ -590,7 +590,7 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @return
    */
   abstract public PMessageReceipt send(NodeHandle handle, Message message, 
-      PMessageNotification deliverAckToMe, Map<String, Integer> options);
+      PMessageNotification deliverAckToMe, Map<String, Object> options);
   
   /**
    * Called by PastryAppl to ask the transport layer to open a Socket to its counterpart on another node.

@@ -119,7 +119,7 @@ public class SourceRouteManagerP2PSocket<Identifier> implements
 //    return socket.write(srcs, offset, length);
 //  }
 
-  public Map<String, Integer> getOptions() {
+  public Map<String, Object> getOptions() {
     return socket.getOptions();
   }
 

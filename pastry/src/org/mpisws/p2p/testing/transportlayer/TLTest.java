@@ -66,7 +66,7 @@ public abstract class TLTest<Identifier> {
   
   static Environment env;
   static Logger logger;
-  static Map<String, Integer> options = new HashMap<String, Integer>();
+  static Map<String, Object> options = new HashMap<String, Object>();
   static TransportLayer alice, bob;
   static final byte[] sentBytes = {0,1,2,3,4,5,6,7};
   static final int START_PORT = 5009;
@@ -121,7 +121,7 @@ public abstract class TLTest<Identifier> {
     // Part I opening a connection
     bob.setCallback(new TransportLayerCallback<Identifier, ByteBuffer>() {
     
-      public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options)
+      public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options)
           throws IOException {
         // TODO Auto-generated method stub
     
@@ -343,7 +343,7 @@ public abstract class TLTest<Identifier> {
 
     // make a way for bob to receive the callback
     bob.setCallback(new TransportLayerCallback<Identifier, ByteBuffer>() {    
-      public void messageReceived(Identifier i, ByteBuffer buf, Map<String, Integer> options) throws IOException {
+      public void messageReceived(Identifier i, ByteBuffer buf, Map<String, Object> options) throws IOException {
         synchronized(lock) {
           receivedList.add(new Tupel(i, buf));
           lock.notify();
@@ -471,7 +471,7 @@ public abstract class TLTest<Identifier> {
 
     // make a way for bob to receive the callback
     bob.setCallback(new TransportLayerCallback<Identifier, ByteBuffer>() {    
-      public void messageReceived(Identifier i, ByteBuffer buf, Map<String, Integer> options) throws IOException {
+      public void messageReceived(Identifier i, ByteBuffer buf, Map<String, Object> options) throws IOException {
         synchronized(lock) {
           receivedList.add(new Tupel(i, buf));
           lock.notify();

@@ -72,7 +72,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   
   InetSocketAddress addr;
   
-  Map<String, Integer> options;
+  Map<String, Object> options;
   
   protected P2PSocketReceiver<InetSocketAddress> reader, writer;
 
@@ -119,7 +119,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * @param proxy The intermediate destination of this socket (if a source route)
    * @exception IOException An error
    */
-  public SocketManager(final TCPLayer tcp, final InetSocketAddress addr, final SocketCallback<InetSocketAddress> c, Map<String, Integer> options) throws IOException {
+  public SocketManager(final TCPLayer tcp, final InetSocketAddress addr, final SocketCallback<InetSocketAddress> c, Map<String, Object> options) throws IOException {
     this.tcp = tcp;
     this.options = options;
     logger = tcp.logger;
@@ -565,7 +565,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     return addr;
   }
 
-  public Map<String, Integer> getOptions() {
+  public Map<String, Object> getOptions() {
     return options;
   }
 

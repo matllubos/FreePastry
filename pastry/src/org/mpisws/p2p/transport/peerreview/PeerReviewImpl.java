@@ -19,7 +19,7 @@ public class PeerReviewImpl<Identifier, MessageType> implements
   TransportLayer<Identifier, MessageType> tl;
   TransportLayerCallback<Identifier, MessageType> callback;
 
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     return tl.openSocket(i, deliverSocketToMe, options);
   }
 
@@ -27,11 +27,11 @@ public class PeerReviewImpl<Identifier, MessageType> implements
     callback.incomingSocket(s);
   }
 
-  public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Integer> options) {
+  public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Object> options) {
     return tl.sendMessage(i, m, deliverAckToMe, options);
   }
 
-  public void messageReceived(Identifier i, MessageType m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, MessageType m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
   }
   

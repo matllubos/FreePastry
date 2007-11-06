@@ -60,12 +60,12 @@ import rice.pastry.messaging.Message;
     protected int seq;
     GenericNetworkSimulator<Identifier, MessageType> networkSimulator;
     Identifier from;
-    protected Map<String, Integer> options;
+    protected Map<String, Object> options;
     
     /**
      * Constructor for MessageDelivery.
      */
-    public MessageDelivery(MessageType m, Identifier to, Identifier from, Map<String, Integer> options, GenericNetworkSimulator<Identifier, MessageType> sim) {
+    public MessageDelivery(MessageType m, Identifier to, Identifier from, Map<String, Object> options, GenericNetworkSimulator<Identifier, MessageType> sim) {
       logger = ((DirectTransportLayer)sim.getTL(to)).getLogger();
 //      if (m instanceof rice.pastry.routing.RouteMessage) {
 //        rice.pastry.routing.RouteMessage m1 = (rice.pastry.routing.RouteMessage)m;

@@ -155,7 +155,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       Identifier i, 
       ByteBuffer m, 
       MessageCallback<Identifier, ByteBuffer> deliverAckToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     return getAddressManager(i).sendMessage(m, deliverAckToMe, options);
   }
 
@@ -230,7 +230,7 @@ public class SourceRouteManagerImpl<Identifier> implements
   public SocketRequestHandle<Identifier> openSocket(
       Identifier i, 
       SocketCallback<Identifier> deliverSocketToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     return getAddressManager(i).openSocket(deliverSocketToMe, options);
   }
   
@@ -240,7 +240,7 @@ public class SourceRouteManagerImpl<Identifier> implements
    * @param address DESCRIBE THE PARAMETER
    * @param prl DESCRIBE THE PARAMETER
    */
-//  public boolean ping(Identifier address, Map<String, Integer> options) {
+//  public boolean ping(Identifier address, Map<String, Object> options) {
 //    return getAddressManager(address).ping(options);
 //  } 
   
@@ -252,7 +252,7 @@ public class SourceRouteManagerImpl<Identifier> implements
    *
    * @return true if node is currently alive.
    */
-  public boolean checkLiveness(Identifier address, Map<String, Integer> options) {
+  public boolean checkLiveness(Identifier address, Map<String, Object> options) {
     return getAddressManager(address).checkLiveness(options);
   }
 
@@ -263,7 +263,7 @@ public class SourceRouteManagerImpl<Identifier> implements
    * @param address The address to return the value for
    * @return The liveness value
    */
-  public int getLiveness(Identifier address, Map<String, Integer> options) {
+  public int getLiveness(Identifier address, Map<String, Object> options) {
     return getAddressManager(address).getLiveness(options);
   }  
    
@@ -274,7 +274,7 @@ public class SourceRouteManagerImpl<Identifier> implements
    * @param address The address to return the value for
    * @return The ping value to the remote address
    */
-  public int proximity(Identifier address, Map<String, Integer> options) {
+  public int proximity(Identifier address, Map<String, Object> options) {
     return getAddressManager(address).proximity(options);
   }
   
@@ -380,10 +380,10 @@ public class SourceRouteManagerImpl<Identifier> implements
 
     class PendingSocket implements SocketRequestHandle<Identifier>, SocketCallback<SourceRoute<Identifier>> {
       private SocketCallback<Identifier> deliverSocketToMe;
-      private Map<String, Integer> options;
+      private Map<String, Object> options;
       private Cancellable cancellable;
       
-      public PendingSocket(SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+      public PendingSocket(SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
         this.deliverSocketToMe = deliverSocketToMe;
         this.options = options;        
       }
@@ -407,7 +407,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         return address;
       }
 
-      public Map<String, Integer> getOptions() {
+      public Map<String, Object> getOptions() {
         return options;
       }      
     }
@@ -415,10 +415,10 @@ public class SourceRouteManagerImpl<Identifier> implements
     class PendingMessage implements MessageRequestHandle<Identifier, ByteBuffer>, MessageCallback<SourceRoute<Identifier>, ByteBuffer> {
       private ByteBuffer message;
       private MessageCallback<Identifier, ByteBuffer> deliverAckToMe;
-      private Map<String, Integer> options;
+      private Map<String, Object> options;
       private Cancellable cancellable;
       
-      public PendingMessage(ByteBuffer message, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
+      public PendingMessage(ByteBuffer message, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
         this.message = message;
         this.deliverAckToMe = deliverAckToMe;
         this.options = options;        
@@ -431,7 +431,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         return cancellable.cancel();
       }      
       
-      public Map<String, Integer> getOptions() {
+      public Map<String, Object> getOptions() {
         return options;
       }
 
@@ -459,7 +459,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * @param address The address to return the value for
      * @return The ping value to the remote address
      */
-    public int proximity(Map<String, Integer> options) {
+    public int proximity(Map<String, Object> options) {
       if (best == null)
         return DEFAULT_PROXIMITY;
       else
@@ -480,7 +480,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * @param address The address to return the value for
      * @return The Alive value
      */
-    public int getLiveness(Map<String, Integer> options) {
+    public int getLiveness(Map<String, Object> options) {
       if (liveness == LIVENESS_UNKNOWN) {
         // don't ping too often while we're already waiting for a response
         if (environment.getTimeSource().currentTimeMillis() >= this.updated+CHECK_LIVENESS_THROTTLE) {
@@ -503,7 +503,7 @@ public class SourceRouteManagerImpl<Identifier> implements
     public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(
         ByteBuffer message, 
         final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, 
-        Map<String, Integer> options) {
+        Map<String, Object> options) {
       
       // if we're dead, we go ahead and just checkDead on the direct route
       if (liveness == LIVENESS_DEAD) {
@@ -550,7 +550,7 @@ public class SourceRouteManagerImpl<Identifier> implements
 //    public synchronized void connect(int appAddress, AppSocketReceiver receiver, int timeout) {
     public SocketRequestHandle<Identifier> openSocket(
         final SocketCallback<Identifier> deliverSocketToMe, 
-        Map<String, Integer> options) {
+        Map<String, Object> options) {
       if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
       // if we're dead, we go ahead and just checkDead on the direct route
       if (liveness == LIVENESS_DEAD) {
@@ -587,7 +587,7 @@ public class SourceRouteManagerImpl<Identifier> implements
     /**
      * Method which suggests a ping to the remote node.
      */
-//    public boolean ping(Map<String, Integer> options) {
+//    public boolean ping(Map<String, Object> options) {
 //      if (environment.getTimeSource().currentTimeMillis() - updated > PING_THROTTLE) {
 //        this.updated = environment.getTimeSource().currentTimeMillis();
 //        
@@ -616,7 +616,7 @@ public class SourceRouteManagerImpl<Identifier> implements
     /**
      * Method which suggests a ping to the remote node.
      */
-    public boolean checkLiveness(Map<String, Integer> options) {
+    public boolean checkLiveness(Map<String, Object> options) {
       long now = environment.getTimeSource().currentTimeMillis();
 //      if (now < this.updated+CHECK_LIVENESS_THROTTLE) {
 //        return false;
@@ -656,7 +656,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       return "AM "+this.address; 
     }
 
-    public void livenessChanged(SourceRoute<Identifier> i, int val, Map<String, Integer> options) {
+    public void livenessChanged(SourceRoute<Identifier> i, int val, Map<String, Object> options) {
       routes.add(i);
       if (!i.getLastHop().equals(address)) throw new IllegalArgumentException(i+"!="+address+" val:"+val);
       switch(val) {
@@ -683,7 +683,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-live route
      */
-    protected synchronized void markAlive(SourceRoute<Identifier> route, Map<String, Integer> options) {
+    protected synchronized void markAlive(SourceRoute<Identifier> route, Map<String, Object> options) {
       if (logger.level <= Logger.FINER) logger.log(this+" markAlive("+route+"):"+best);
       // first, we check and see if we have no best route (this can happen if the best just died)
       if (best == null) {
@@ -711,7 +711,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-suspected route
      */
-    protected synchronized void markSuspected(SourceRoute<Identifier> route, Map<String, Integer> options) {      
+    protected synchronized void markSuspected(SourceRoute<Identifier> route, Map<String, Object> options) {      
       if (logger.level <= Logger.FINER) logger.log(this+" markSuspected("+route+"):"+best);
       // mark this address as suspected, if this is currently the best route
       if (((best == null) || (best.equals(route))) && // because we set the best == null when we didn't have a route
@@ -725,7 +725,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param route The now-dead route
      */
-    protected synchronized void markDead(SourceRoute<Identifier> deadRoute, Map<String, Integer> options) {
+    protected synchronized void markDead(SourceRoute<Identifier> deadRoute, Map<String, Object> options) {
 //      logger.logException(this+" markDead("+deadRoute+"):"+best, new Exception());
       if (logger.level <= Logger.FINE) logger.log(this+" markDead("+deadRoute+"):"+best);
       
@@ -802,7 +802,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      *
      * @param address The now-dead address
      */
-    protected synchronized void markDeadForever(Map<String, Integer> options) {      
+    protected synchronized void markDeadForever(Map<String, Object> options) {      
       this.best = null;            
       setDeadForever(options);
     }
@@ -813,7 +813,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * @param route The route
      * @param proximity The proximity
      */
-    protected synchronized void markProximity(SourceRoute<Identifier> route, int proximity, Map<String, Integer> options) {
+    protected synchronized void markProximity(SourceRoute<Identifier> route, int proximity, Map<String, Object> options) {
 //      getRouteManager(route).markAlive();
 //      getRouteManager(route).markProximity(proximity);
       
@@ -839,7 +839,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * 
      * @throws IllegalStateException if best is null.
      */
-    protected void setAlive(Map<String, Integer> options) {
+    protected void setAlive(Map<String, Object> options) {
       if (logger.level <= Logger.FINE) logger.log(this+"setAlive():"+best);
 
       if (best == null) throw new IllegalStateException("best is null in "+toString());
@@ -880,7 +880,7 @@ public class SourceRouteManagerImpl<Identifier> implements
     /**
      * Internal method which marks this address as being suspected.
      */
-    protected void setSuspected(Map<String, Integer> options) {
+    protected void setSuspected(Map<String, Object> options) {
       switch (liveness) {
         case LIVENESS_UNKNOWN:
         case LIVENESS_ALIVE:
@@ -929,7 +929,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * Internal method which marks this address as being dead.  If we were alive or suspected before, it
      * sends an update out to the observers.
      */
-    protected void setDead(Map<String, Integer> options) {
+    protected void setDead(Map<String, Object> options) {
 //      logger.log(this+" marking as dead.");
       switch (liveness) {
         case LIVENESS_DEAD_FOREVER:
@@ -961,7 +961,7 @@ public class SourceRouteManagerImpl<Identifier> implements
      * Internal method which marks this address as being dead.  If we were alive or suspected before, it
      * sends an update out to the observers.
      */
-    protected void setDeadForever(Map<String, Integer> options) {
+    protected void setDeadForever(Map<String, Object> options) {
       switch (liveness) {
         case LIVENESS_DEAD_FOREVER:
           return;
@@ -1008,7 +1008,7 @@ public class SourceRouteManagerImpl<Identifier> implements
     }
   }
   
-  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Integer> options) {
+  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
     List<LivenessListener<Identifier>> temp;
     synchronized(livenessListeners) {
@@ -1045,20 +1045,20 @@ public class SourceRouteManagerImpl<Identifier> implements
     callback.incomingSocket(new SourceRouteManagerP2PSocket<Identifier>(s, environment));
   }
 
-  public void messageReceived(SourceRoute<Identifier> i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(SourceRoute<Identifier> i, ByteBuffer m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i.getLastHop(), m, options);
   }
 
-  public void livenessChanged(SourceRoute<Identifier> i, int val, Map<String, Integer> options) {
+  public void livenessChanged(SourceRoute<Identifier> i, int val, Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log("livenessChanged("+i+","+val+")");
     getAddressManager(i.getLastHop()).livenessChanged(i,val, options);
   }
 
-//  public void pingResponse(SourceRoute<Identifier> i, int rtt, Map<String, Integer> options) {
+//  public void pingResponse(SourceRoute<Identifier> i, int rtt, Map<String, Object> options) {
 //    getAddressManager(i.getLastHop()).markProximity(i, rtt, options);
 //  }
 //  
-//  public void pingReceived(SourceRoute<Identifier> i, Map<String, Integer> options) {
+//  public void pingReceived(SourceRoute<Identifier> i, Map<String, Object> options) {
 //    getAddressManager(i.getLastHop()).markProximity(i, rtt, options);
 //  }
 
@@ -1075,11 +1075,11 @@ public class SourceRouteManagerImpl<Identifier> implements
     }
   }
 
-  public void proximityChanged(SourceRoute<Identifier> i, int newProximity, Map<String, Integer> options) {
+  public void proximityChanged(SourceRoute<Identifier> i, int newProximity, Map<String, Object> options) {
     getAddressManager(i.getLastHop()).markProximity(i, newProximity, options);
   }
   
-  public void notifyProximityListeners(Identifier i, int prox, Map<String, Integer> options) {
+  public void notifyProximityListeners(Identifier i, int prox, Map<String, Object> options) {
     Collection<ProximityListener<Identifier>> temp;
     synchronized(listeners) {
       temp = new ArrayList<ProximityListener<Identifier>>(listeners);

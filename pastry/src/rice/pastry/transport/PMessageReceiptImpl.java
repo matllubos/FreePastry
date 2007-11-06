@@ -63,7 +63,7 @@ public class PMessageReceiptImpl implements PMessageReceipt {
     return message;
   }
 
-  public Map<String, Integer> getOptions() {
+  public Map<String, Object> getOptions() {
     return internal.getOptions();
   }
 

@@ -22,7 +22,7 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
   boolean closed = false;
   boolean outputShutdown = false;
   
-  public RecordSocket(Identifier identifier, P2PSocket<Identifier> socket, Logger logger, Map<String, Integer> options, int socketId, ByteBuffer sib, RecordLayer<Identifier> recordLayer) {
+  public RecordSocket(Identifier identifier, P2PSocket<Identifier> socket, Logger logger, Map<String, Object> options, int socketId, ByteBuffer sib, RecordLayer<Identifier> recordLayer) {
     super(identifier, socket, logger, options);
     this.socketId = socketId;
     this.socketIdBuffer = sib;

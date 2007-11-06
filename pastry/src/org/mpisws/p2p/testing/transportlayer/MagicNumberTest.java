@@ -121,7 +121,7 @@ public class MagicNumberTest extends WireTest {
    */
   @Test
   public void wrongHeaderTCP() throws Exception {
-    Map<String, Integer> options = new HashMap<String, Integer>();
+    Map<String, Object> options = new HashMap<String, Object>();
     options.put(WireTransportLayer.OPTION_TRANSPORT_TYPE, WireTransportLayer.TRANSPORT_TYPE_GUARANTEED);
     
     final List<P2PSocket> aliceSockets = new ArrayList<P2PSocket>();
@@ -133,7 +133,7 @@ public class MagicNumberTest extends WireTest {
     // Part I opening a connection
     carol.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {
     
-      public void messageReceived(InetSocketAddress i, ByteBuffer m, Map<String, Integer> options)
+      public void messageReceived(InetSocketAddress i, ByteBuffer m, Map<String, Object> options)
           throws IOException {
         // TODO Auto-generated method stub
     
@@ -156,7 +156,7 @@ public class MagicNumberTest extends WireTest {
           lock.notify();
         }
       }    
-      public void receivedUnexpectedData(InetSocketAddress i, byte[] bytes, int pos, Map<String, Integer> options) {
+      public void receivedUnexpectedData(InetSocketAddress i, byte[] bytes, int pos, Map<String, Object> options) {
         synchronized(lock) {
           unexpectedData.add(bytes); 
           lock.notify();
@@ -215,7 +215,7 @@ public class MagicNumberTest extends WireTest {
    */
   @Test
   public void stallTCP() throws Exception {
-    Map<String, Integer> options = new HashMap<String, Integer>();
+    Map<String, Object> options = new HashMap<String, Object>();
     options.put(WireTransportLayer.OPTION_TRANSPORT_TYPE, WireTransportLayer.TRANSPORT_TYPE_GUARANTEED);
     
     final List<P2PSocket> aliceSockets = new ArrayList<P2PSocket>();
@@ -227,7 +227,7 @@ public class MagicNumberTest extends WireTest {
     
     // Part I opening a connection
     alice.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {    
-      public void messageReceived(InetSocketAddress i, ByteBuffer m, Map<String, Integer> options)
+      public void messageReceived(InetSocketAddress i, ByteBuffer m, Map<String, Object> options)
           throws IOException {
         // TODO Auto-generated method stub    
       }
@@ -243,7 +243,7 @@ public class MagicNumberTest extends WireTest {
     
     alice.setErrorHandler(new ErrorHandler<InetSocketAddress>(){
     
-      public void receivedUnexpectedData(InetSocketAddress i, byte[] bytes, int pos, Map<String, Integer> options) {        
+      public void receivedUnexpectedData(InetSocketAddress i, byte[] bytes, int pos, Map<String, Object> options) {        
       }
     
       public void receivedException(InetSocketAddress i, Throwable error) {        
@@ -314,14 +314,14 @@ public class MagicNumberTest extends WireTest {
     final List<byte[]> unexpectedData = new ArrayList<byte[]>(1);
     final Object lock = new Object();
     
-    Map<String, Integer> options = new HashMap<String, Integer>();
+    Map<String, Object> options = new HashMap<String, Object>();
     options.put(WireTransportLayer.OPTION_TRANSPORT_TYPE, WireTransportLayer.TRANSPORT_TYPE_DATAGRAM);
     
     
     
     // make a way for bob to receive the callback
     carol.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {    
-      public void messageReceived(InetSocketAddress i, ByteBuffer buf, Map<String, Integer> options) throws IOException {
+      public void messageReceived(InetSocketAddress i, ByteBuffer buf, Map<String, Object> options) throws IOException {
         synchronized(lock) {
           receivedList.add(buf);
           lock.notify();
@@ -339,7 +339,7 @@ public class MagicNumberTest extends WireTest {
           lock.notify();
         }
       }    
-      public void receivedUnexpectedData(InetSocketAddress i, byte[] bytes, int pos, Map<String, Integer> options) {
+      public void receivedUnexpectedData(InetSocketAddress i, byte[] bytes, int pos, Map<String, Object> options) {
         synchronized(lock) {
           unexpectedData.add(bytes); 
           lock.notify();

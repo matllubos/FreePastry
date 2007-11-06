@@ -44,7 +44,7 @@ public class NATSourceRouteTLImpl<Identifier> extends SourceRouteTransportLayerI
   }
 
   @Override
-  public SocketRequestHandle<SourceRoute<Identifier>> openSocket(SourceRoute<Identifier> i, SocketCallback<SourceRoute<Identifier>> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<SourceRoute<Identifier>> openSocket(SourceRoute<Identifier> i, SocketCallback<SourceRoute<Identifier>> deliverSocketToMe, Map<String, Object> options) {
     if (options != null && options.containsKey(NATTED) && options.get(NATTED).equals(TRUE)) {
       rendezvousStrategy.getRendezvous(i.getLastHop()); // what is the best destination to deliver here?
       

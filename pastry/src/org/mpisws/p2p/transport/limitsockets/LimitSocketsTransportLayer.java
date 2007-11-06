@@ -83,7 +83,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     tl.setCallback(this);
   }
 
-  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
       @Override
       public boolean cancel() {
@@ -216,11 +216,11 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     return tl.getLocalIdentifier();
   }
 
-  public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Integer> options) {
+  public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Object> options) {
     return tl.sendMessage(i, m, deliverAckToMe, options);
   }
 
-  public void messageReceived(Identifier i, MessageType m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, MessageType m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
   }
   

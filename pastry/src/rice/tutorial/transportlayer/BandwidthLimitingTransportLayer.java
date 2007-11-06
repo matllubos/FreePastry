@@ -134,7 +134,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
   }  
   
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, 
-      final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
+      final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
     
     final MessageRequestHandleImpl<Identifier, ByteBuffer> returnMe = 
       new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
@@ -165,7 +165,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     return returnMe;
   }  
   
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     final SocketRequestHandleImpl<Identifier> returnMe = new SocketRequestHandleImpl<Identifier>(i,options, logger);
     returnMe.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
@@ -306,7 +306,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     tl.destroy();
   }
 
-  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
   }
   

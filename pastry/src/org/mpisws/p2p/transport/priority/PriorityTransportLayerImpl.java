@@ -200,7 +200,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     });
   }
 
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("No handle to return socket to! (deliverSocketToMe must be non-null!)");
     
     final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options, logger);    
@@ -248,18 +248,18 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     return tl.getLocalIdentifier();
   }
 
-  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
   }  
 
-  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
+  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
     
 //    if (options == null) throw new IllegalArgumentException("options is null"); // delme, only for debugging something else
     // if it is to be sent UDP, just pass it through
     if (options != null && 
         options.containsKey(WireTransportLayer.OPTION_TRANSPORT_TYPE)) {
-        Integer val = options.get(WireTransportLayer.OPTION_TRANSPORT_TYPE);
+        Integer val = (Integer)options.get(WireTransportLayer.OPTION_TRANSPORT_TYPE);
         if (val != null &&
             val.intValue() == WireTransportLayer.TRANSPORT_TYPE_DATAGRAM) {
           return tl.sendMessage(i, m, deliverAckToMe, options);
@@ -302,7 +302,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
   }
 
-  public void livenessChanged(Identifier i, int val, Map<String, Integer> options) {
+  public void livenessChanged(Identifier i, int val, Map<String, Object> options) {
     if (val >= LivenessListener.LIVENESS_DEAD) {
       getEntityManager(i).markDead();
     }
@@ -318,7 +318,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
    * @param options
    * @return
    */
-  protected SocketRequestHandle<Identifier> openPrimarySocket(final Identifier i, Map<String, Integer> options) {
+  protected SocketRequestHandle<Identifier> openPrimarySocket(final Identifier i, Map<String, Object> options) {
 //    if (livenessProvider.getLiveness(i, options) >= LIVENESS_DEAD) {
 //      if (logger.level <= Logger.WARNING) logger.log("Not opening primary socket to "+i+" because it is dead.");  
 //      return null;
@@ -391,7 +391,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
              (queueSize > 0 && logLevel <= Logger.FINER)) {  // only prints non-empty queues
             Identifier temp = em.identifier.get();
             String s = "";
-            Map<String, Integer> options = null; 
+            Map<String, Object> options = null; 
             if (temp != null) {
               MessageWrapper peek = em.peek();
               if (peek != null) {
@@ -581,14 +581,14 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
 
     TimerTask livenessChecker = null;
-    public void startLivenessChecker(final Identifier temp, final Map<String, Integer> options) {
+    public void startLivenessChecker(final Identifier temp, final Map<String, Object> options) {
       if (livenessChecker == null) {
         if (logger.level <= Logger.FINER) logger.log("startLivenessChecker("+temp+","+options+") pend:"+pendingSocket+" writingS:"+writingSocket+" theQueue:"+queue.size());
         livenessChecker = new TimerTask() {        
           @Override
           public void run() {
             stopLivenessChecker(); // sets livenssChecker back to null
-//            Map<String, Integer> options;
+//            Map<String, Object> options;
 //            MessageWrapper peek = peek();
 //            if (peek != null) {
 //              options = peek.options;
@@ -811,14 +811,14 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         Identifier temp,
         ByteBuffer message, 
         MessageCallback<Identifier, ByteBuffer> deliverAckToMe, 
-        final Map<String, Integer> options) {      
+        final Map<String, Object> options) {      
       if (logger.level <= Logger.FINER) logger.log(this+"send("+message+")");
 
       // pick the priority
       int priority = DEFAULT_PRIORITY;
       if (options != null) {
         if (options.containsKey(OPTION_PRIORITY)) {
-          priority = options.get(OPTION_PRIORITY);          
+          priority = ((Integer)options.get(OPTION_PRIORITY)).intValue();          
         }
       }
 
@@ -901,7 +901,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       ByteBuffer originalMessage;
       ByteBuffer message;
       MessageCallback<Identifier, ByteBuffer> deliverAckToMe;
-      Map<String, Integer> options;      
+      Map<String, Object> options;      
       
       boolean cancelled = false; // true when cancel is called
       boolean completed = false; // true when completed is called
@@ -910,7 +910,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           Identifier temp,
           ByteBuffer message, 
           MessageCallback<Identifier, ByteBuffer> deliverAckToMe, 
-          Map<String, Integer> options, int priority, int seq) {
+          Map<String, Object> options, int priority, int seq) {
 
 //        if (options == null) throw new RuntimeException("options is null");  // debugging
         
@@ -1011,7 +1011,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         return originalMessage;
       }
 
-      public Map<String, Integer> getOptions() {
+      public Map<String, Object> getOptions() {
         return options;
       }
       

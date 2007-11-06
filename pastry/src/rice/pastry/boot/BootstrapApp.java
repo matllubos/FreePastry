@@ -75,7 +75,7 @@ public class BootstrapApp extends PastryAppl implements Bootstrapper, LivenessLi
     
   }
 
-  public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
+  public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
     // TODO Auto-generated method stub
     
   }

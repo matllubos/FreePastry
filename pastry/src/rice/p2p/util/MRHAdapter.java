@@ -69,7 +69,7 @@ public class MRHAdapter implements MessageRequestHandle<NodeHandle, Message> {
     return rawMessage;
   }
 
-  public Map getOptions() {
+  public Map<String, Object> getOptions() {
     return internal.getOptions();
   }
 

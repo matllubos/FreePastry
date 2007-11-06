@@ -45,7 +45,7 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
     this.environment = environment;
   }
   
-  public SocketRequestHandle<Identifier> openSocket(final Identifier i, SocketCallback<Identifier> deliverSocketToMe, final Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
     try {
       int socketId = openSocket(i);
 //      logger.log("openSocket("+i+"):"+socketId);
@@ -60,7 +60,7 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
           return i;
         }
 
-        public Map<String, Integer> getOptions() {
+        public Map<String, Object> getOptions() {
           return options;
         }
 
@@ -74,7 +74,7 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
     }
   }
   
-  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
+  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
     if (logger.level <= Logger.FINEST) {
       logger.logException("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()), new Exception("Stack Trace"));      
     } else if (logger.level <= Logger.FINER) {

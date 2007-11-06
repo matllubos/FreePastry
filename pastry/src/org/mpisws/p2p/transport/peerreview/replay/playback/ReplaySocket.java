@@ -18,7 +18,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
   protected Verifier<Identifier> verifier;
   boolean closed = false;
   boolean outputShutdown = false;
-  Map<String, Integer> options;
+  Map<String, Object> options;
   
   /**
    * TODO: Make extensible by putting into a factory.
@@ -27,7 +27,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
    * @param socketId
    * @param verifier
    */
-  public ReplaySocket(Identifier identifier, int socketId, Verifier<Identifier> verifier, Map<String, Integer> options) {
+  public ReplaySocket(Identifier identifier, int socketId, Verifier<Identifier> verifier, Map<String, Object> options) {
     this.identifier = identifier;
     this.socketId = socketId;
     this.verifier = verifier;
@@ -38,7 +38,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
     return identifier;
   }
 
-  public Map<String, Integer> getOptions() {
+  public Map<String, Object> getOptions() {
     return options;
   }
 

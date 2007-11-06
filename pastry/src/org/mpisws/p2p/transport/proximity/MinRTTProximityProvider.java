@@ -81,7 +81,7 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
     this.managers = new HashMap<Identifier, EntityManager>();
   }
   
-  public int proximity(Identifier i, Map<String, Integer> options) {
+  public int proximity(Identifier i, Map<String, Object> options) {
     EntityManager manager = getManager(i);
     int ret = manager.proximity;
     if (ret == DEFAULT_PROXIMITY) {
@@ -90,11 +90,11 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
     return ret;
   }
   
-  public void pingResponse(Identifier i, int rtt, Map<String, Integer> options) {
+  public void pingResponse(Identifier i, int rtt, Map<String, Object> options) {
     getManager(i).markProximity(rtt, options);
   }
 
-  public void pingReceived(Identifier i, Map<String, Integer> options) {
+  public void pingReceived(Identifier i, Map<String, Object> options) {
 
   }
   
@@ -141,7 +141,7 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
       proximity = DEFAULT_PROXIMITY;
     }
     
-    public void ping(Map<String, Integer> options) {
+    public void ping(Map<String, Object> options) {
       long now = time.currentTimeMillis();
       if ((now - lastPingTime) < pingThrottle) {
         if  (logger.level <= Logger.FINE) logger.log("Dropping ping because pingThrottle."+(pingThrottle - (now - lastPingTime)));
@@ -167,7 +167,7 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
      *
      * @param proximity The proximity
      */
-    protected void markProximity(int proximity, Map<String, Integer> options) {
+    protected void markProximity(int proximity, Map<String, Object> options) {
       if (proximity < 0) throw new IllegalArgumentException("proximity must be >= 0, was:"+proximity);
       if (logger.level <= Logger.FINER) logger.log(this+".markProximity("+proximity+")");
       if (this.proximity > proximity) {
@@ -195,7 +195,7 @@ public class MinRTTProximityProvider<Identifier> implements ProximityProvider<Id
     }
   }
   
-  public void notifyProximityListeners(Identifier i, int prox, Map<String, Integer> options) {
+  public void notifyProximityListeners(Identifier i, int prox, Map<String, Object> options) {
     Collection<ProximityListener<Identifier>> temp;
     synchronized(listeners) {
       temp = new ArrayList<ProximityListener<Identifier>>(listeners);

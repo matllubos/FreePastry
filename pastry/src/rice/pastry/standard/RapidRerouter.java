@@ -170,7 +170,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
     }    
   }
   
-  public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
+  public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
     if (val >= LIVENESS_SUSPECTED) {
       Collection<RouterNotification> rerouteMe;
       synchronized(pending) {

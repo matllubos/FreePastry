@@ -207,13 +207,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     this.overrideLiveness = ol;
   }
   
-  public void setDeadForever(LowerIdentifier l, UpperIdentifier i, Map<String, Integer> options) {
+  public void setDeadForever(LowerIdentifier l, UpperIdentifier i, Map<String, Object> options) {
     if (deadForever.contains(i)) return;
     if (logger.level <= Logger.INFO) logger.logException("setDeadForever("+l+","+i+","+options+")",new Exception("Stack Trace"));
     deadForever.add(i);
     try {
       logger.log("setDeadForever("+l+","+i+","+(options == null)+"):overL:"+overrideLiveness+" "+(reverseIntendedDest == null));
-      Map<String, Integer> o2 = OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, reverseIntendedDest.get(i));
+      Map<String, Object> o2 = OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, reverseIntendedDest.get(i));
       overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, o2);
     } catch (NullPointerException npe) {
       logger.log("setDeadForever("+l+","+i+","+options+"):overL:"+overrideLiveness+" "+reverseIntendedDest);
@@ -261,10 +261,10 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
   }
   
-  protected UpperIdentifier getIntendedDest(Map<String,Integer> options) {
+  protected UpperIdentifier getIntendedDest(Map<String,Object> options) {
     if (options == null) throw new IllegalArgumentException("options is null");
     if (!options.containsKey(NODE_HANDLE_FROM_INDEX)) throw new IllegalArgumentException("options doesn't have NODE_HANDLE_FROM_INDEX "+options);
-    int index = options.get(NODE_HANDLE_FROM_INDEX);
+    int index = ((Integer)options.get(NODE_HANDLE_FROM_INDEX)).intValue();
     WeakReference<UpperIdentifier> ret1 = intendedDest.get(index);
     if (ret1 == null) throw new IllegalArgumentException("No record of NODE_HANDLE_FROM_INDEX "+index);
     UpperIdentifier ret = ret1.get();
@@ -281,7 +281,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * @param options
    * @return false if the new binding is actually old (IE, don't upgrade it)
    */
-  protected boolean addBinding(UpperIdentifier u, LowerIdentifier l, Map<String, Integer> options) {
+  protected boolean addBinding(UpperIdentifier u, LowerIdentifier l, Map<String, Object> options) {
     synchronized(bindings) {
       if (deadForever.contains(u)) return false;
       
@@ -322,7 +322,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * @param i
    * @return
    */
-  public boolean destinationChanged(UpperIdentifier oldDest, UpperIdentifier newDest, LowerIdentifier i, Map<String, Integer> options) {
+  public boolean destinationChanged(UpperIdentifier oldDest, UpperIdentifier newDest, LowerIdentifier i, Map<String, Object> options) {
     if (oldDest.equals(newDest)) {
 //            if (logger.level <= Logger.FINE) logger.log("1");
       // don't do anything 
@@ -380,7 +380,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     public SocketRequestHandle<LowerIdentifier> openSocket(
         final LowerIdentifier i, 
         final SocketCallback<LowerIdentifier> deliverSocketToMe, 
-        final Map<String, Integer> options) {      
+        final Map<String, Object> options) {      
       // what happens if they cancel after the socket has been received by a lower layer, but is still reading the header?  
       // May need to re-think this SRHI at all the layers
       final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options, logger);
@@ -536,7 +536,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 if (canWrite) throw new IOException("Never asked to write!");
                 if (!canRead) throw new IOException("Can't read!");
                 
-                final Map<String, Integer> newOptions = OptionsFactory.copyOptions(socket.getOptions());
+                final Map<String, Object> newOptions = OptionsFactory.copyOptions(socket.getOptions());
                 
                 UpperIdentifier from;
                 try {
@@ -639,7 +639,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         final LowerIdentifier i, 
         ByteBuffer m, 
         final MessageCallback<LowerIdentifier, ByteBuffer> deliverAckToMe, 
-        final Map<String, Integer> options) {
+        final Map<String, Object> options) {
 
       if (logger.level <= Logger.FINEST) {
         byte[] b = new byte[m.remaining()];
@@ -733,8 +733,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       return ret;
     }
     
-    public void messageReceived(LowerIdentifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
-      Map<String, Integer> newOptions = OptionsFactory.copyOptions(options);
+    public void messageReceived(LowerIdentifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
+      Map<String, Object> newOptions = OptionsFactory.copyOptions(options);
       
       byte msgType = m.get();
       if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+"):"+msgType);
@@ -890,7 +890,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     public SocketRequestHandle<UpperIdentifier> openSocket(
         final UpperIdentifier i, 
         final SocketCallback<UpperIdentifier> deliverSocketToMe, 
-        final Map<String, Integer> options) {
+        final Map<String, Object> options) {
       if (logger.level <= Logger.FINE) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
       
       final SocketRequestHandleImpl<UpperIdentifier> handle = 
@@ -903,7 +903,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         }
       }
       
-      Map<String, Integer> newOptions = OptionsFactory.copyOptions(options);
+      Map<String, Object> newOptions = OptionsFactory.copyOptions(options);
       newOptions.put(NODE_HANDLE_TO_INDEX, addIntendedDest(i));      
 
 
@@ -922,7 +922,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         UpperIdentifier i, 
         UpperMsgType m, 
         MessageCallback<UpperIdentifier, UpperMsgType> deliverAckToMe, 
-        Map<String, Integer> options) {
+        Map<String, Object> options) {
       if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+options+")");
 
       // how to synchronized this properly?  It's too bad that we have to hold the lock for the calls into the lower levels.
@@ -972,7 +972,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       }
     }
 
-    public void messageReceived(MiddleIdentifier i, UpperMsgType m, Map<String, Integer> options) throws IOException {
+    public void messageReceived(MiddleIdentifier i, UpperMsgType m, Map<String, Object> options) throws IOException {
       if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+","+options+")");
 //      int index = options.get(NODE_HANDLE_FROM_INDEX);
       final UpperIdentifier from = getIntendedDest(options); //intendedDest.get(index).get();
@@ -992,7 +992,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
     
 
-    public boolean checkLiveness(UpperIdentifier i, Map<String, Integer> options) {
+    public boolean checkLiveness(UpperIdentifier i, Map<String, Object> options) {
       if (logger.level <= Logger.FINE) logger.log("checkLiveness("+i+","+options+")");
       if (deadForever.contains(i)) return false;
 
@@ -1014,7 +1014,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       }
     }
     
-    public int getLiveness(UpperIdentifier i, Map<String, Integer> options) {
+    public int getLiveness(UpperIdentifier i, Map<String, Object> options) {
       if (logger.level <= Logger.FINER) logger.log("getLiveness("+i+","+options+")");
       if (deadForever.contains(i)) return LIVENESS_DEAD_FOREVER;
       options = OptionsFactory.copyOptions(options);
@@ -1023,7 +1023,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       return livenessProvider.getLiveness(serializer.translateDown(i), options);
     }
 
-    public void livenessChanged(MiddleIdentifier i, int val, Map<String, Integer> options) {
+    public void livenessChanged(MiddleIdentifier i, int val, Map<String, Object> options) {
       if (deadForever.contains(i)) {
         if (val < LIVENESS_DEAD) {
           if (logger.level <= Logger.SEVERE) logger.log("Node "+i+" came back from the dead!  It's a miracle! "+val+" Ignoring."); 
@@ -1053,7 +1053,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 
 
     
-    private void notifyLivenessListeners(UpperIdentifier i, int liveness, Map<String, Integer> options) {
+    private void notifyLivenessListeners(UpperIdentifier i, int liveness, Map<String, Object> options) {
       if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
       List<LivenessListener<UpperIdentifier>> temp;
       synchronized(livenessListeners) {
@@ -1078,13 +1078,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       }
     }
     
-    public int proximity(UpperIdentifier i, Map<String, Integer> options) {
+    public int proximity(UpperIdentifier i, Map<String, Object> options) {
       if (logger.level <= Logger.FINE) logger.log("proximity("+i+")");
       if (deadForever.contains(i)) return Integer.MAX_VALUE;
       return prox.proximity(serializer.translateDown(i), OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(i)));
     }
 
-    public void proximityChanged(MiddleIdentifier i, int newProx, Map<String, Integer> options) {
+    public void proximityChanged(MiddleIdentifier i, int newProx, Map<String, Object> options) {
       UpperIdentifier upper = getIntendedDest(options);
       if (upper == null) {
         if (logger.level <= Logger.WARNING) logger.logException("Memory for index "+options.get(NODE_HANDLE_FROM_INDEX)+" collected suppressing proximityChanged()", new Exception("Stack Trace"));
@@ -1095,7 +1095,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //      notifyProximityListeners(reverseIntendedDest.get(options.get(NODE_HANDLE_FROM_INDEX))serializer.translateUp(i), newProx, options);    
     }
     
-    private void notifyProximityListeners(UpperIdentifier i, int newProx, Map<String, Integer> options) {
+    private void notifyProximityListeners(UpperIdentifier i, int newProx, Map<String, Object> options) {
       if (logger.level <= Logger.FINER) logger.log("notifyProximityListeners("+i+","+newProx+")");
       List<ProximityListener<UpperIdentifier>> temp;
       synchronized(proxListeners) {
@@ -1106,7 +1106,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       }
     }
 
-//    public boolean ping(UpperIdentifier i, Map<String, Integer> options) {      
+//    public boolean ping(UpperIdentifier i, Map<String, Object> options) {      
 //      if (logger.level <= Logger.FINE) logger.log("ping("+i+","+options+")");
 //      if (deadForever.contains(i)) return false;
 //      
@@ -1138,7 +1138,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       tl.destroy();
     }
 
-//    public void pingReceived(UpperIdentifier i, Map<String, Integer> options) {
+//    public void pingReceived(UpperIdentifier i, Map<String, Object> options) {
 //      if (deadForever.contains(i)) {
 //        if (logger.level <= Logger.SEVERE) logger.log("Dead forever Node "+i+" pinged us! Ignoring."+options); 
 //        return;
@@ -1153,7 +1153,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //      }
 //    }
 //
-//    public void pingResponse(UpperIdentifier i, int rtt, Map<String, Integer> options) {
+//    public void pingResponse(UpperIdentifier i, int rtt, Map<String, Object> options) {
 //      if (deadForever.contains(i)) {
 //        if (logger.level <= Logger.SEVERE) logger.log("Dead forever Node "+i+" responded to a ping! Ignoring. rtt: "+rtt+" options:"+options); 
 //        return;
@@ -1174,12 +1174,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     private Cancellable subCancellable;
     private UpperIdentifier identifier;
     private UpperMsgType message;
-    private Map<String, Integer> options;
+    private Map<String, Object> options;
     private MessageCallback<UpperIdentifier, UpperMsgType> deliverAckToMe;
     
     public IdentityMessageHandle(
         UpperIdentifier identifier, 
-        UpperMsgType message, Map<String, Integer> options, 
+        UpperMsgType message, Map<String, Object> options, 
         MessageCallback<UpperIdentifier, UpperMsgType> deliverAckToMe) {
       this.identifier = identifier;
       this.message = message;
@@ -1195,7 +1195,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       return message;
     }
 
-    public Map<String, Integer> getOptions() {
+    public Map<String, Object> getOptions() {
       return options;
     }
 

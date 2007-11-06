@@ -441,7 +441,7 @@ public class MultiringEndpoint implements Endpoint {
     return endpoint.routingConsistentFor(id);
   }
   
-  public void setSendOptions(Map<String, Integer> options) {
+  public void setSendOptions(Map<String, Object> options) {
     endpoint.setSendOptions(options);
   }
 

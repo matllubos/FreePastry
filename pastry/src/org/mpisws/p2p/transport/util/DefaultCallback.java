@@ -68,7 +68,7 @@ public class DefaultCallback<Identifier, MessageType> implements
     logger.log("livenessChanged("+i+","+state+")");
   }
 
-  public void messageReceived(Identifier i, MessageType m, Map<String, Integer> options)
+  public void messageReceived(Identifier i, MessageType m, Map<String, Object> options)
       throws IOException {
     logger.log("messageReceived("+i+","+m+")");
   }

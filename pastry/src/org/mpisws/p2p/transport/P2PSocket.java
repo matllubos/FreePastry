@@ -56,7 +56,7 @@ public interface P2PSocket<Identifier> {
    * 
    * @return a read-only list of options on this socket
    */
-  public Map<String, Integer> getOptions();
+  public Map<String, Object> getOptions();
   
   /**
    * The identification of the node at the other end of the socket.

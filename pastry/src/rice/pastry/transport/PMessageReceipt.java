@@ -51,5 +51,5 @@ public interface PMessageReceipt extends MessageRequestHandle<NodeHandle, Messag
 
   public Message getMessage();
 
-  public Map<String, Integer> getOptions();
+  public Map<String, Object> getOptions();
 }

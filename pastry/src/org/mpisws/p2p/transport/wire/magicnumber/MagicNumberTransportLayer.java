@@ -141,7 +141,7 @@ public class MagicNumberTransportLayer<Identity> implements
 
   public SocketRequestHandle openSocket(final Identity i, 
       final SocketCallback<Identity> deliverSocketToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
     final SocketRequestHandleImpl<Identity> cancellable = new SocketRequestHandleImpl<Identity>(i, options, logger);
@@ -188,7 +188,7 @@ public class MagicNumberTransportLayer<Identity> implements
       final Identity i, 
       final ByteBuffer m, 
       final MessageCallback<Identity, ByteBuffer> deliverAckToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     
     // build a new ByteBuffer with the header
     byte[] msgWithHeader = new byte[HEADER.length+m.remaining()];
@@ -232,7 +232,7 @@ public class MagicNumberTransportLayer<Identity> implements
     s.register(true, false, new VerifyHeaderReceiver(s));
   }
 
-  public void messageReceived(Identity i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identity i, ByteBuffer m, Map<String, Object> options) throws IOException {
     if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+")");
 
     if (m.remaining() < HEADER.length) {

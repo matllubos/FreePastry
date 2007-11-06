@@ -140,7 +140,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
       final Identifier i,
       final RawMessage m, 
       final MessageCallback<Identifier, RawMessage> deliverAckToMe,
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
 
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");
 
@@ -213,7 +213,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
     return handle;
   }
 
-  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
 //    if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+")");
     SimpleInputBuffer buf = new SimpleInputBuffer(m.array(), m.position());
 //    long epoch = buf.readLong();
@@ -254,7 +254,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
 //    }
 //  }
 //  
-//  private void notifyPingListenersResponse(TransportLayerNodeHandle<Identifier> i, int rtt, Map<String, Integer> options) {
+//  private void notifyPingListenersResponse(TransportLayerNodeHandle<Identifier> i, int rtt, Map<String, Object> options) {
 //    List<PingListener<TransportLayerNodeHandle<Identifier>>> temp;
 //    synchronized(pingListeners) {
 //      temp = new ArrayList<PingListener<TransportLayerNodeHandle<Identifier>>>(pingListeners);
@@ -264,7 +264,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
 //    }
 //  }
 //
-//  private void notifyPingListenersReceived(TransportLayerNodeHandle<Identifier> i, Map<String, Integer> options) {
+//  private void notifyPingListenersReceived(TransportLayerNodeHandle<Identifier> i, Map<String, Object> options) {
 //    List<PingListener<TransportLayerNodeHandle<Identifier>>> temp;
 //    synchronized(pingListeners) {
 //      temp = new ArrayList<PingListener<TransportLayerNodeHandle<Identifier>>>(pingListeners);
@@ -274,26 +274,26 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
 //    }
 //  }
 //
-//  public void pingReceived(Identifier i, Map<String, Integer> options) {
+//  public void pingReceived(Identifier i, Map<String, Object> options) {
 //    notifyPingListenersReceived(nodeHandleFactory.lookupNodeHandle(i), options);   
 //  }
 //
-//  public void pingResponse(Identifier i, int rtt, Map<String, Integer> options) {
+//  public void pingResponse(Identifier i, int rtt, Map<String, Object> options) {
 //    notifyPingListenersResponse(nodeHandleFactory.lookupNodeHandle(i), rtt, options);    
 //  }
 
-//  public boolean checkLiveness(TransportLayerNodeHandle<Identifier> i, Map<String, Integer> options) {
+//  public boolean checkLiveness(TransportLayerNodeHandle<Identifier> i, Map<String, Object> options) {
 //    return livenessProvider.checkLiveness(i.getAddress(), options);
 //  }
 
-//  public boolean ping(TransportLayerNodeHandle<Identifier> i, Map<String, Integer> options) {
+//  public boolean ping(TransportLayerNodeHandle<Identifier> i, Map<String, Object> options) {
 //    return tl.ping(i.getAddress(), options);
 //  }
 
   public SocketRequestHandle<Identifier> openSocket(
       final Identifier i,
       final SocketCallback<Identifier> deliverSocketToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
 //    final SocketRequestHandleImpl<TransportLayerNodeHandle<Identifier>> handle = 

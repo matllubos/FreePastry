@@ -335,7 +335,7 @@ public class TLPastryNode extends PastryNode implements
     return proximity(nh, null);
   }
   
-  public int proximity(NodeHandle nh, Map<String, Integer> options) {
+  public int proximity(NodeHandle nh, Map<String, Object> options) {
     return proxProvider.proximity(nh, options);
   }
   
@@ -395,21 +395,21 @@ public class TLPastryNode extends PastryNode implements
   public PMessageReceipt send(NodeHandle handle, 
       final Message msg, 
       final PMessageNotification deliverAckToMe, 
-      Map<String, Integer> tempOptions) {
+      Map<String, Object> tempOptions) {
     
     // set up the priority field in the options
     if (tempOptions != null && tempOptions.containsKey(PriorityTransportLayer.OPTION_PRIORITY)) {
       // already has the priority;
     } else {
       if (tempOptions == null) {
-        tempOptions = new HashMap<String, Integer>(); 
+        tempOptions = new HashMap<String, Object>(); 
       } else {
-        tempOptions = new HashMap<String, Integer>(tempOptions);
+        tempOptions = new HashMap<String, Object>(tempOptions);
       }
       tempOptions.put(PriorityTransportLayer.OPTION_PRIORITY, msg.getPriority());
     }
     
-    final Map<String, Integer> options = tempOptions;
+    final Map<String, Object> options = tempOptions;
     
     if (handle.equals(localhandle)) {
       receiveMessage(msg);
@@ -423,7 +423,7 @@ public class TLPastryNode extends PastryNode implements
           return localhandle;
         }
 
-        public Map<String, Integer> getOptions() {
+        public Map<String, Object> getOptions() {
           return options;
         }
 
@@ -463,7 +463,7 @@ public class TLPastryNode extends PastryNode implements
     return ret;
   }
   
-  public void messageReceived(NodeHandle i, RawMessage m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(NodeHandle i, RawMessage m, Map<String, Object> options) throws IOException {
     if (m.getType() == 0 && (m instanceof PJavaSerializedMessage)) {
       receiveMessage(((PJavaSerializedMessage)m).getMessage());
     } else {
@@ -580,7 +580,7 @@ public class TLPastryNode extends PastryNode implements
     }    
   }
 
-  public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
+  public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
     if (val == LIVENESS_ALIVE) {
       i.update(NodeHandle.DECLARED_LIVE);
     } else {
@@ -605,7 +605,7 @@ public class TLPastryNode extends PastryNode implements
     }    
   }
   
-  protected void notifyLivenessListeners(NodeHandle i, int val, Map<String, Integer> options) {
+  protected void notifyLivenessListeners(NodeHandle i, int val, Map<String, Object> options) {
     if (logger.level <= Logger.FINE) logger.log("notifyLivenessListeners("+i+","+val+")"); 
     ArrayList<LivenessListener<NodeHandle>> temp;
     synchronized(livenessListeners) {
@@ -616,16 +616,16 @@ public class TLPastryNode extends PastryNode implements
     }
   }
 
-  public boolean checkLiveness(NodeHandle i, Map<String, Integer> options) {    
+  public boolean checkLiveness(NodeHandle i, Map<String, Object> options) {    
     return livenessProvider.checkLiveness(i, options);
   }
 
-  public int getLiveness(NodeHandle i, Map<String, Integer> options) {
+  public int getLiveness(NodeHandle i, Map<String, Object> options) {
     return livenessProvider.getLiveness(i, options);
   }
 
 
-  public void proximityChanged(NodeHandle i, int val, Map<String, Integer> options) {
+  public void proximityChanged(NodeHandle i, int val, Map<String, Object> options) {
     SocketNodeHandle handle = ((SocketNodeHandle)i);
     handle.update(NodeHandle.PROXIMITY_CHANGED);     
   }

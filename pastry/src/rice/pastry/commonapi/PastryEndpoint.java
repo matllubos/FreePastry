@@ -237,11 +237,11 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       });
     }
     
-    Map<String, Integer> rOptions;
+    Map<String, Object> rOptions;
     if (options == null) {
-      rOptions = new HashMap<String, Integer>(); 
+      rOptions = new HashMap<String, Object>(); 
     } else {
-      rOptions = new HashMap<String, Integer>(options);
+      rOptions = new HashMap<String, Object>(options);
     }
     rOptions.put(PriorityTransportLayer.OPTION_PRIORITY, pm.getPriority());
 //    logger.log("NumOptions = "+rOptions.size());
@@ -698,7 +698,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     return set.getHandle(0).equals(thePastryNode.getLocalHandle());
   }
   
-  public void setSendOptions(Map<String, Integer> options) {
+  public void setSendOptions(Map<String, Object> options) {
     this.options = options;
   }
 

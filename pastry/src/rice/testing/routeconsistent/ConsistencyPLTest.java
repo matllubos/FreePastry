@@ -466,12 +466,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //              tl.setCallback(new MyCallback(callback, environment, logger));
 //            }
 //          
-//            public MessageRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> sendMessage(TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m, MessageCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> deliverAckToMe, Map<String, Integer> options) {
+//            public MessageRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> sendMessage(TransportLayerNodeHandle<MultiInetSocketAddress> i, RawMessage m, MessageCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> deliverAckToMe, Map<String, Object> options) {
 //              if (printMe(m)) logger.log("sendMessage("+i+","+m+")");
 //              return tl.sendMessage(i, m, deliverAckToMe, options);
 //            }
 //          
-//            public SocketRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>> openSocket(TransportLayerNodeHandle<MultiInetSocketAddress> i, SocketCallback<TransportLayerNodeHandle<MultiInetSocketAddress>> deliverSocketToMe, Map<String, Integer> options) {
+//            public SocketRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>> openSocket(TransportLayerNodeHandle<MultiInetSocketAddress> i, SocketCallback<TransportLayerNodeHandle<MultiInetSocketAddress>> deliverSocketToMe, Map<String, Object> options) {
 //              return tl.openSocket(i, deliverSocketToMe, options);
 //            }
 //          
@@ -518,7 +518,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //            super.getLivenessTransportLayer(tl, pn);
 //          
 //          ltl.getLivenessProvider().addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>(){    
-//            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Integer> options) {
+//            public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Object> options) {
 //              logger.log("SR.livenessChanged("+i+","+val+")");
 //            }
 //          });
@@ -620,7 +620,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 
     node.addLivenessListener(new LivenessListener<NodeHandle>() {      
       Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
-      public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
+      public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
 //        if (i.getId().toString().startsWith("<0x000")) {
 //          logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
 //        } else {
@@ -840,7 +840,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 
       node.addLivenessListener(new LivenessListener<NodeHandle>() {      
         Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
-        public void livenessChanged(NodeHandle i, int val, Map<String, Integer> options) {
+        public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
 //          if (i.getId().toString().startsWith("<0x000")) {
 //            logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
 //          } else {
@@ -1057,7 +1057,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     public void messageReceived(
         TransportLayerNodeHandle<MultiInetSocketAddress> i, 
         RawMessage m,
-        Map<String, Integer> options) throws IOException {
+        Map<String, Object> options) throws IOException {
       
       if (printMe(m)) logger.log("messageReceived("+i+","+m+")");
       callback.messageReceived(i, m, options);

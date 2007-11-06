@@ -66,9 +66,9 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.selector.SelectionKeyHandler;
 
 public class UDPLayer extends SelectionKeyHandler implements Destructable {
-  public static final Map<String, Integer> OPTIONS;  
+  public static final Map<String, Object> OPTIONS;  
   static {
-    Map<String, Integer> map = new HashMap<String, Integer>();
+    Map<String, Object> map = new HashMap<String, Object>();
     map.put(WireTransportLayer.OPTION_TRANSPORT_TYPE, WireTransportLayer.TRANSPORT_TYPE_DATAGRAM);
     OPTIONS = Collections.unmodifiableMap(map);    
   }
@@ -125,7 +125,7 @@ public class UDPLayer extends SelectionKeyHandler implements Destructable {
       InetSocketAddress destination, 
       ByteBuffer msg,
       MessageCallback<InetSocketAddress, ByteBuffer> deliverAckToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     //logger.log("sendMessage("+destination+","+msg+","+deliverAckToMe+")"); 
     Envelope envelope;
     if (logger.level <= Logger.FINER-3) logger.log("sendMessage("+destination+","+msg+","+deliverAckToMe+")"); 
@@ -316,7 +316,7 @@ public class UDPLayer extends SelectionKeyHandler implements Destructable {
      */
     protected ByteBuffer msg;
     protected MessageCallback<InetSocketAddress, ByteBuffer> continuation;
-    Map<String, Integer> options;
+    Map<String, Object> options;
 
     /**
      * Constructor for Envelope.
@@ -327,7 +327,7 @@ public class UDPLayer extends SelectionKeyHandler implements Destructable {
     public Envelope(InetSocketAddress destination, 
         ByteBuffer msg,
         MessageCallback<InetSocketAddress, ByteBuffer> deliverAckToMe, 
-        Map<String, Integer> options) {
+        Map<String, Object> options) {
       this.destination = destination;
       this.msg = msg;
       this.continuation = deliverAckToMe;
@@ -350,7 +350,7 @@ public class UDPLayer extends SelectionKeyHandler implements Destructable {
       return msg;
     }
 
-    public Map<String, Integer> getOptions() {
+    public Map<String, Object> getOptions() {
       return options;
     }
   }

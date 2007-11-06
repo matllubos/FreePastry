@@ -49,5 +49,5 @@ import rice.p2p.commonapi.Cancellable;
  */
 public interface SocketRequestHandle<Identifier> extends Cancellable {
   public Identifier getIdentifier();
-  public Map<String, Integer> getOptions();
+  public Map<String, Object> getOptions();
 }

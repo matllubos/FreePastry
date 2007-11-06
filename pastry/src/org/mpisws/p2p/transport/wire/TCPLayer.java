@@ -70,9 +70,9 @@ import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.selector.SelectionKeyHandler;
 
 public class TCPLayer extends SelectionKeyHandler {
-  public static final Map<String, Integer> OPTIONS;  
+  public static final Map<String, Object> OPTIONS;  
   static {
-    Map<String, Integer> map = new HashMap<String, Integer>();
+    Map<String, Object> map = new HashMap<String, Object>();
     map.put(WireTransportLayer.OPTION_TRANSPORT_TYPE, WireTransportLayer.TRANSPORT_TYPE_GUARANTEED);
     OPTIONS = Collections.unmodifiableMap(map);    
   }
@@ -125,7 +125,7 @@ public class TCPLayer extends SelectionKeyHandler {
   public SocketRequestHandle<InetSocketAddress> openSocket(
       InetSocketAddress destination, 
       SocketCallback<InetSocketAddress> deliverSocketToMe,
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     if (logger.level <= Logger.FINEST) {
       logger.logException("openSocket("+destination+")", new Exception("Stack Trace"));
     } else {

@@ -125,7 +125,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
   public SocketRequestHandle<MultiInetSocketAddress> openSocket(
       final MultiInetSocketAddress i,
       final SocketCallback<MultiInetSocketAddress> deliverSocketToMe,
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
@@ -235,7 +235,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
       final MultiInetSocketAddress i, 
       final ByteBuffer m,
       final MessageCallback<MultiInetSocketAddress, ByteBuffer> deliverAckToMe,
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");
 
@@ -284,7 +284,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
     return handle;
   }
 
-  public void messageReceived(InetSocketAddress i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(InetSocketAddress i, ByteBuffer m, Map<String, Object> options) throws IOException {
     if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+")");
     // read numAddresses
     if (sendIdentifier) {      

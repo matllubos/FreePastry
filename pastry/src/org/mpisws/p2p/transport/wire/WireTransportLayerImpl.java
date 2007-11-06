@@ -111,7 +111,7 @@ public class WireTransportLayerImpl implements WireTransportLayer {
     this.callback = callback;
   }
 
-  public SocketRequestHandle<InetSocketAddress> openSocket(InetSocketAddress destination, SocketCallback<InetSocketAddress> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<InetSocketAddress> openSocket(InetSocketAddress destination, SocketCallback<InetSocketAddress> deliverSocketToMe, Map<String, Object> options) {
     return tcp.openSocket(destination, deliverSocketToMe, options);
   }
 
@@ -119,7 +119,7 @@ public class WireTransportLayerImpl implements WireTransportLayer {
       InetSocketAddress destination, 
       ByteBuffer m, 
       MessageCallback<InetSocketAddress, ByteBuffer> deliverAckToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+destination+","+m+")");
     return udp.sendMessage(destination, m, deliverAckToMe, options); 
 //    if (options != null) {

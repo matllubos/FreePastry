@@ -59,7 +59,7 @@ public interface TransportLayerCallback<Identifier, MessageType> {
    * @param options describe how the message arrived (udp/tcp, encrypted etc)
    * @throws IOException if there is a problem decoding the message
    */
-  public void messageReceived(Identifier i, MessageType m, Map<String, Integer> options) throws IOException;
+  public void messageReceived(Identifier i, MessageType m, Map<String, Object> options) throws IOException;
   /**
    * Notification of a new socket.
    * 

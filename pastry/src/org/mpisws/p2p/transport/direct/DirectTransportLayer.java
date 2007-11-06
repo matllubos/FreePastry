@@ -114,7 +114,7 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
     
   }
 
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options, logger);
 
     DirectAppSocket<Identifier, MessageType> socket = new DirectAppSocket<Identifier, MessageType>(i, localIdentifier, deliverSocketToMe, simulator, handle, options);
@@ -135,7 +135,7 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
   public MessageRequestHandle<Identifier, MessageType> sendMessage(
       Identifier i, MessageType m, 
       MessageCallback<Identifier, MessageType> deliverAckToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
     
     MessageRequestHandleImpl<Identifier, MessageType> handle = new MessageRequestHandleImpl<Identifier, MessageType>(i, m, options);
     
@@ -192,7 +192,7 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
     return seq++;
   }
     
-  public void incomingMessage(Identifier i, MessageType m, Map<String, Integer> options) throws IOException {
+  public void incomingMessage(Identifier i, MessageType m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
   }
 

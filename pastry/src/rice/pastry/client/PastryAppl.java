@@ -71,7 +71,7 @@ public abstract class PastryAppl /*implements Observer*/
 
   protected Logger logger;
   
-  protected Map<String, Integer> options;
+  protected Map<String, Object> options;
   
   /**
    * Buffered while node is not ready to prevent inconsistent routing.

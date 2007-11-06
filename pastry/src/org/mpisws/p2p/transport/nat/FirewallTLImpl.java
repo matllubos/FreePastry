@@ -58,13 +58,13 @@ public class FirewallTLImpl<Identifier, MessageType> implements TransportLayer<I
     tl.acceptSockets(false);    
   }
   
-  public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Integer> options) {
+  public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Object> options) {
     long now = timeSource.currentTimeMillis();
     udpTable.put(i,now);
     return tl.sendMessage(i, m, deliverAckToMe, options);
   }
   
-  public void messageReceived(Identifier i, MessageType m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, MessageType m, Map<String, Object> options) throws IOException {
     if (udpTable.containsKey(i)) {
       long now = timeSource.currentTimeMillis();
       if (udpTable.get(i)+UDP_OPEN_MILLIS >= now) {
@@ -97,7 +97,7 @@ public class FirewallTLImpl<Identifier, MessageType> implements TransportLayer<I
     return tl.getLocalIdentifier();    
   }
 
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     return tl.openSocket(i, deliverSocketToMe, options);
   }
 

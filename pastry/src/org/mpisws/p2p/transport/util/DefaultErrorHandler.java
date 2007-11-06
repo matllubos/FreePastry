@@ -61,7 +61,7 @@ public class DefaultErrorHandler<Identifier> implements
     this.logger = logger;
   }
   
-  public void receivedUnexpectedData(Identifier id, byte[] bytes, int pos, Map<String, Integer> options) {
+  public void receivedUnexpectedData(Identifier id, byte[] bytes, int pos, Map<String, Object> options) {
     if (logger.level <= Logger.WARNING) {
       // make this pretty
       String s = "";

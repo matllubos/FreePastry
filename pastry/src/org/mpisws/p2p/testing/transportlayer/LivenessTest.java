@@ -167,7 +167,7 @@ public class LivenessTest extends SRTest {
     }
     
     @Override
-    public void pong(final SourceRoute i, final long senderTime, final Map<String, Integer> options) {
+    public void pong(final SourceRoute i, final long senderTime, final Map<String, Object> options) {
       timer.schedule(new TimerTask() {      
         @Override
         public void run() {
@@ -199,7 +199,7 @@ public class LivenessTest extends SRTest {
     final Object lock = new Object();
     
     PingListener<SourceRoute<MultiInetSocketAddress>> pl = new PingListener<SourceRoute<MultiInetSocketAddress>>() {    
-      public void pingResponse(SourceRoute<MultiInetSocketAddress> i, int rtt, Map<String, Integer> options) {
+      public void pingResponse(SourceRoute<MultiInetSocketAddress> i, int rtt, Map<String, Object> options) {
         synchronized(lock) {
 //          System.out.println("i"+i.getLastHop());
           pingResponse.put(i.getLastHop(), new Tupel(i, rtt));
@@ -207,7 +207,7 @@ public class LivenessTest extends SRTest {
         }
       }   
       
-      public void pingReceived(SourceRoute<MultiInetSocketAddress> i, Map<String, Integer> options) {
+      public void pingReceived(SourceRoute<MultiInetSocketAddress> i, Map<String, Object> options) {
 
       }
     };
@@ -253,7 +253,7 @@ public class LivenessTest extends SRTest {
     final Object lock = new Object();
     
     alice.addLivenessListener(new LivenessListener<SourceRoute<MultiInetSocketAddress>>() {    
-      public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Integer> options) {
+      public void livenessChanged(SourceRoute<MultiInetSocketAddress> i, int val, Map<String, Object> options) {
         synchronized(lock) {
           tupels.add(new Tupel(i,val));        
           lock.notify();

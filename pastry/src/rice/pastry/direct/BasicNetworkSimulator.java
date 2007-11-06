@@ -280,7 +280,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
     }
   }
   
-  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Integer> options) {
+  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+"):"+livenessListeners.get(0));
     List<LivenessListener<Identifier>> temp;
     synchronized(livenessListeners) {
@@ -291,11 +291,11 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
     }
   }
 
-  public boolean checkLiveness(Identifier i, Map<String, Integer> options) {
+  public boolean checkLiveness(Identifier i, Map<String, Object> options) {
     return false;
   }
 
-  public int getLiveness(Identifier i, Map<String, Integer> options) {
+  public int getLiveness(Identifier i, Map<String, Object> options) {
     if (nodes.containsKey(i)) {
       return LivenessListener.LIVENESS_ALIVE;
     }

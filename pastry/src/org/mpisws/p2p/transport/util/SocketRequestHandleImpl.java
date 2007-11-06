@@ -45,12 +45,12 @@ import rice.p2p.commonapi.Cancellable;
 
 public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<Identifier> {
   Identifier identifier;
-  Map<String, Integer> options;
+  Map<String, Object> options;
   Cancellable subCancellable;
   Logger logger;
 //  protected boolean cancelled = false;
   
-  public SocketRequestHandleImpl(Identifier i, Map<String, Integer> options, Logger logger) {
+  public SocketRequestHandleImpl(Identifier i, Map<String, Object> options, Logger logger) {
     this.identifier = i;
     this.options = options;
     if (logger == null) throw new IllegalArgumentException("logger is null");
@@ -61,7 +61,7 @@ public class SocketRequestHandleImpl<Identifier> implements SocketRequestHandle<
     return identifier;
   }
 
-  public Map<String, Integer> getOptions() {
+  public Map<String, Object> getOptions() {
     return options;
   }
 

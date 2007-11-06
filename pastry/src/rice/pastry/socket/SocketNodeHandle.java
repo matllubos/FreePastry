@@ -168,7 +168,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
    */
   public void receiveMessage(Message msg) {
     assertLocalNode();
-    Map<String, Integer> options = new HashMap<String, Integer>(1);
+    Map<String, Object> options = new HashMap<String, Object>(1);
     options.put(PriorityTransportLayer.OPTION_PRIORITY, msg.getPriority());
     getLocalNode().send(this, msg,null, options);
   }

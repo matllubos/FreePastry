@@ -147,7 +147,7 @@ public class MergeTest {
       }
     
       @Override
-      public PMessageReceipt send(NodeHandle handle, Message message, PMessageNotification deliverAckToMe, Map<String, Integer> options) {
+      public PMessageReceipt send(NodeHandle handle, Message message, PMessageNotification deliverAckToMe, Map<String, Object> options) {
         // TODO Auto-generated method stub
         return null;
       }
@@ -176,7 +176,7 @@ public class MergeTest {
         return 0;
       }
     
-      public int proximity(NodeHandle nh, Map<String, Integer> options) {
+      public int proximity(NodeHandle nh, Map<String, Object> options) {
         // TODO Auto-generated method stub
         return 0;
       }
@@ -210,12 +210,12 @@ public class MergeTest {
         
       }
 
-      public boolean checkLiveness(NodeHandle i, Map<String, Integer> options) {
+      public boolean checkLiveness(NodeHandle i, Map<String, Object> options) {
         // TODO Auto-generated method stub
         return false;
       }
 
-      public int getLiveness(NodeHandle i, Map<String, Integer> options) {
+      public int getLiveness(NodeHandle i, Map<String, Object> options) {
         // TODO Auto-generated method stub
         return 0;
       }

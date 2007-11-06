@@ -617,7 +617,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           Logger logger = environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null);
           public void receivedUnexpectedData(
               TransportLayerNodeHandle<MultiInetSocketAddress> id, byte[] bytes,
-              int location, Map<String, Integer> options) {
+              int location, Map<String, Object> options) {
             if (logger.level <= Logger.WARNING) {
               // make this pretty
               String s = "";
@@ -783,7 +783,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       listener.add( 
         new LivenessListener<NodeHandle>() {
           Logger logger = pn.getEnvironment().getLogManager().getLogger(SocketPastryNodeFactory.class, null);
-          public void livenessChanged(NodeHandle i2, int val, Map<String, Integer> options) {
+          public void livenessChanged(NodeHandle i2, int val, Map<String, Object> options) {
             SocketNodeHandle i = (SocketNodeHandle)i2;
 //            logger.logException("livenessChanged("+i+","+val+")", new Exception("Stack Trace"));
             if (logger.level <= Logger.FINE) logger.log("livenessChanged("+i+","+val+")");

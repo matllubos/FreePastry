@@ -76,10 +76,10 @@ public class DirectAppSocket<Identifier, MessageType> {
   
   Logger logger;
 
-  Map<String, Integer> options;
+  Map<String, Object> options;
   
   public DirectAppSocket(Identifier acceptor, Identifier connector, SocketCallback<Identifier> connectorCallback, 
-      GenericNetworkSimulator<Identifier, MessageType> simulator, SocketRequestHandle<Identifier> handle, Map<String, Integer>options) {
+      GenericNetworkSimulator<Identifier, MessageType> simulator, SocketRequestHandle<Identifier> handle, Map<String, Object> options) {
     this.options = options;
     this.acceptor = acceptor;
     this.connector = connector;
@@ -357,7 +357,7 @@ public class DirectAppSocket<Identifier, MessageType> {
       return getRemoteNodeHandle();
     }
 
-    public Map<String, Integer> getOptions() {
+    public Map<String, Object> getOptions() {
       return options;
     }
   }  

@@ -122,7 +122,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
 
   
-  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
     final int socketId = socketCtr++;
     final ByteBuffer socketIdBuffer = ByteBuffer.wrap(MathUtils.intToByteArray(socketId));
     try {
@@ -172,7 +172,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     callback.incomingSocket(new RecordSocket<Identifier>(s.getIdentifier(), s, logger, s.getOptions(), socketId, socketIdBuffer, RecordLayer.this));
   }
   
-  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Integer> options) {
+  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
     if (logger.level <= Logger.FINEST) {
       logger.logException("sendMessage("+i+","+m+"):"+MathUtils.toHex(m.array()), new Exception("Stack Trace"));      
     } else if (logger.level <= Logger.FINER) {
@@ -182,14 +182,14 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     }
     // If the 'RELEVANT_MSG' flag is set to false, the message is passed through to the transport
     // layer. This is used e.g. for liveness/proximity pings in Pastry. 
-    if (options == null || !options.containsKey(PR_RELEVANT_MSG) || options.get(PR_RELEVANT_MSG) != 0) {
+    if (options == null || !options.containsKey(PR_RELEVANT_MSG) || ((Integer)options.get(PR_RELEVANT_MSG)).intValue() != 0) {
       int position = m.position(); // mark the current position
       
       int relevantLen = m.remaining();
     
       // If someone sets relevantLen=-1, it means the whole message is relevant.
-      if (options != null && options.containsKey(PR_RELEVANT_LEN) && options.get(PR_RELEVANT_LEN) >= 0) {
-        relevantLen = options.get(PR_RELEVANT_LEN);
+      if (options != null && options.containsKey(PR_RELEVANT_LEN) && ((Integer)options.get(PR_RELEVANT_LEN)).intValue() >= 0) {
+        relevantLen = ((Integer)options.get(PR_RELEVANT_LEN)).intValue();
       }
       
       try {
@@ -213,7 +213,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     
   }
   
-  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
     try {
       if (identifierSerializer == null) {
         // just drop this event, it's while we're booting, 

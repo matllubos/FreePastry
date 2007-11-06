@@ -46,9 +46,9 @@ public class MessageRequestHandleImpl<Identifier, MessageType> implements Messag
   Cancellable subCancellable;
   Identifier identifier;
   MessageType msg;
-  Map<String, Integer> options;
+  Map<String, Object> options;
   
-  public MessageRequestHandleImpl(Identifier i, MessageType m, Map<String, Integer> options) {
+  public MessageRequestHandleImpl(Identifier i, MessageType m, Map<String, Object> options) {
     this.identifier = i;
     this.msg = m;
     this.options = options;
@@ -62,7 +62,7 @@ public class MessageRequestHandleImpl<Identifier, MessageType> implements Messag
     return msg;
   }
 
-  public Map<String, Integer> getOptions() {
+  public Map<String, Object> getOptions() {
     return options;
   }
 

@@ -52,7 +52,7 @@ import org.mpisws.p2p.transport.sourceroute.SourceRoute;
  */
 public interface LivenessProvider<Identifier> {
   
-  public int getLiveness(Identifier i, Map<String, Integer> options);
+  public int getLiveness(Identifier i, Map<String, Object> options);
   
   /**
    * Returns wether a new notification will occur.
@@ -65,7 +65,7 @@ public interface LivenessProvider<Identifier> {
    * @return true if there will be an update (either a ping, or a change in liveness)
    * false if there won't be an update due to bandwidth concernts
    */
-  public boolean checkLiveness(Identifier i, Map<String, Integer> options);
+  public boolean checkLiveness(Identifier i, Map<String, Object> options);
   
   public void addLivenessListener(LivenessListener<Identifier> name);
   public boolean removeLivenessListener(LivenessListener<Identifier> name);

@@ -197,7 +197,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     deleteManager(i);
   }
 
-  public boolean checkLiveness(Identifier i, Map<String, Integer> options) {
+  public boolean checkLiveness(Identifier i, Map<String, Object> options) {
     return getManager(i).checkLiveness(options);
   }
   
@@ -222,7 +222,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
   
-  public int getLiveness(Identifier i, Map<String, Integer> options) {
+  public int getLiveness(Identifier i, Map<String, Object> options) {
     if (logger.level <= Logger.FINEST) logger.log("getLiveness("+i+","+options+")");
     synchronized(managers) {
       if (managers.containsKey(i))
@@ -256,7 +256,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     connectionExceptionMeansFaulty = b;
   }
   
-  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Integer> options) {
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
     // this code marks the Identifier faulty if there is an error connecting the socket.  It's possible that this
     // should be moved to the source route manager, but there needs to be a way to cancel the liveness
     // checks, or maybe the higher layer can ignore them.
@@ -284,7 +284,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       final Identifier i, 
       final ByteBuffer m, 
       final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, 
-      Map<String, Integer> options) {
+      Map<String, Object> options) {
 //    logger.log("sendMessage("+i+","+m+")");      
     final MessageRequestHandleImpl<Identifier, ByteBuffer> handle = 
       new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
@@ -318,7 +318,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     return handle;
   }
 
-  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Integer> options) throws IOException {
+  public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
 //    logger.log("messageReceived1("+i+","+m+"):"+m.remaining());      
     byte hdr = m.get();
     switch(hdr) {
@@ -361,7 +361,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
    * 
    * @param i
    */
-  public boolean ping(final Identifier i, final Map<String, Integer> options) {
+  public boolean ping(final Identifier i, final Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log("ping("+i+")");
     if (i.equals(tl.getLocalIdentifier())) return false;
     try {
@@ -394,7 +394,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
    * @param i
    * @param senderTime
    */
-  public void pong(final Identifier i, final long senderTime, final Map<String, Integer> options) {
+  public void pong(final Identifier i, final long senderTime, final Map<String, Object> options) {
     if (logger.level <= Logger.FINEST) logger.log("pong("+i+","+senderTime+")");
     try {
       SimpleOutputBuffer sob = new SimpleOutputBuffer(1024);
@@ -467,7 +467,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
   
-  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Integer> options) {
+  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
     List<LivenessListener<Identifier>> temp;
 
@@ -502,7 +502,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
   
-  private void notifyPingListenersPong(Identifier i, int rtt, Map<String, Integer> options) {
+  private void notifyPingListenersPong(Identifier i, int rtt, Map<String, Object> options) {
     List<PingListener<Identifier>> temp;
     synchronized(pingListeners) {
       temp = new ArrayList<PingListener<Identifier>>(pingListeners);
@@ -533,7 +533,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     long startTime; // the start time
     int initialDelay; // the initial expected delay
     
-    Map<String, Integer> options;
+    Map<String, Object> options;
     
     /**
      * Constructor for DeadChecker.
@@ -542,7 +542,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * @param numTries DESCRIBE THE PARAMETER
      * @param mgr DESCRIBE THE PARAMETER
      */
-    public DeadChecker(EntityManager manager, int numTries, int initialDelay, Map<String, Integer> options) {
+    public DeadChecker(EntityManager manager, int numTries, int initialDelay, Map<String, Object> options) {
       if (logger.level <= Logger.FINE) {
 //        String s = 
 //        if (options.containsKey("identity.node_handle_to_index")) {
@@ -566,7 +566,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * @param RTT DESCRIBE THE PARAMETER
      * @param timeHeardFrom DESCRIBE THE PARAMETER
      */
-    public void pingResponse(long RTT, Map<String, Integer> options) {
+    public void pingResponse(long RTT, Map<String, Object> options) {
       if (!cancelled) {
         if (tries > 1) {
           long delay = time.currentTimeMillis()-startTime;
@@ -729,7 +729,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * This method should be called when this route is declared
      * alive.
      */
-    protected void markAlive(Map<String, Integer> options) {
+    protected void markAlive(Map<String, Object> options) {
       boolean notify = false;
       if (liveness != LIVENESS_ALIVE) notify = true;
       this.liveness = LIVENESS_ALIVE;
@@ -745,7 +745,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * This method should be called when this route is declared
      * suspected.
      */
-    protected void markSuspected(Map<String, Integer> options) {      
+    protected void markSuspected(Map<String, Object> options) {      
       // note, can only go from alive -> suspected, can't go from dead->suspected
       if (liveness > LIVENESS_SUSPECTED) return;
       
@@ -765,21 +765,21 @@ public class LivenessTransportLayerImpl<Identifier> implements
      * This method should be called when this route is declared
      * dead.
      */
-    protected void markDead(Map<String, Integer> options) {
+    protected void markDead(Map<String, Object> options) {
       boolean notify = false;
       if (liveness < LIVENESS_DEAD) notify = true;
       if (logger.level <= Logger.FINER) logger.log(this+".markDead() notify:"+notify);
       markDeadHelper(LIVENESS_DEAD, options, notify);
     }
     
-    protected void markDeadForever(Map<String, Integer> options) {
+    protected void markDeadForever(Map<String, Object> options) {
       boolean notify = false;
       if (liveness < LIVENESS_DEAD_FOREVER) notify = true;
       if (logger.level <= Logger.FINER) logger.log(this+".markDeadForever() notify:"+notify);
       markDeadHelper(LIVENESS_DEAD_FOREVER, options, notify);
     }
     
-    protected void markDeadHelper(int liveness, Map<String, Integer> options, boolean notify) {
+    protected void markDeadHelper(int liveness, Map<String, Object> options, boolean notify) {
       this.liveness = liveness;
       if (pending != null) {
         pending.cancel(); // sets to null too
@@ -857,7 +857,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
      */
 //    long start = 0; // delme
 //    int ctr = 0; // delme
-    protected boolean checkLiveness(final Map<String, Integer> options) {
+    protected boolean checkLiveness(final Map<String, Object> options) {
 //      if (options == null) throw new RuntimeException("options is null"); // remove, this is for debugging
 //      logger.log(this+".checkLiveness()");
       if (logger.level <= Logger.FINER) logger.log(this+".checkLiveness()");
@@ -1042,7 +1042,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
 //    }
   }
 
-  public void setLiveness(Identifier i, int liveness, Map<String, Integer> options) {
+  public void setLiveness(Identifier i, int liveness, Map<String, Object> options) {
     EntityManager man = getManager(i);
     switch(liveness) {
     case LIVENESS_ALIVE:

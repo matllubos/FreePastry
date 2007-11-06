@@ -583,7 +583,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
 
   Map<NodeHandle, Collection<Continuation<Integer, IOException>>> waitingForPing = 
     new HashMap<NodeHandle, Collection<Continuation<Integer, IOException>>>();
-  public void proximityChanged(NodeHandle i, int newProximity, Map<String, Integer> options) {
+  public void proximityChanged(NodeHandle i, int newProximity, Map<String, Object> options) {
     if (logger.level <= Logger.FINE) logger.log("proximityChanged("+i+","+newProximity+")");
     synchronized(pingCache) {
       pingCache.put(i, newProximity);
