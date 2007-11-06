@@ -1,3 +1,32 @@
+    Players:
+      Nancy (NATted node),
+      Alice (Also NATted),
+      Urkel ("Un"-NATted node),
+      Robert (Nancy's Rendezvous Point, Un-NATted),
+      Bob (A different Rendezvous Point)
+
+Strategy:
+  Each NodeHandle has a NATted bit.
+  If Urkel wants to open a socket to Nancy:
+    Urkel uses NATConnectivityApp to route a ConnectRequest to Nancy's key
+    Upon reception of the ConnectRequestMessage, 
+      if it matches the local key {
+        Open a connection Back
+      } else {
+        Send back a NodeIsFaultyMessage  
+      }
+  If Alice wants to connect to Nancy:
+    Alice chooses a 1-time RendezvousPoint, opens a Socket to it (and/or adds a STUN Record)
+    Alice Routes the ConnectionRequestMessage to Nancy, containing the RendezvousPoint
+    Upon reception of the ConnectRequestMessage, 
+      if it matches the local key {
+        Open a connection to the RendezvousPoint (and STUN if possible)
+      } else {
+        Send back a NodeIsFaultyMessage  
+      }
+    
+
+
 This layer maintains temporary information in the NodeHandle for rendezvous nodes.  
 Whenever a NodeHandle is deserialized it may contain more current rendezvous information, 
 and the call to coalesce() will update this info in the coalesced() NodeHandle.  Note that

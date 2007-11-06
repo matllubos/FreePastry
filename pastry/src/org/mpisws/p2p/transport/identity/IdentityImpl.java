@@ -340,6 +340,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           setDeadForever(i, oldDest, options);   
           return true;
         } else {
+          setDeadForever(i, newDest, options);   
           return false;
         }
       }

@@ -110,7 +110,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.environment.time.simulated_loglevel", Logger.WARNING);
     
 //    params.setInt("rice.pastry_loglevel", Logger.INFO);
-//    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.ALL);
+    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.ALL);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);

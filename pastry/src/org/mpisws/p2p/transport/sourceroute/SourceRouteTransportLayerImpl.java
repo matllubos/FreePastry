@@ -173,7 +173,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
             if (b.hasRemaining()) {
               socket.register(false, true, this); 
             } else {
-              deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(i, socket, logger, socket.getOptions())); 
+              openSocketHelper(deliverSocketToMe, handle, socket, i);
             }
           }
         
@@ -189,6 +189,26 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
     }, options));      
     
     return handle;
+  }
+  
+  protected void openSocketHelper(
+      SocketCallback<SourceRoute<Identifier>> deliverSocketToMe, 
+      SocketRequestHandleImpl<SourceRoute<Identifier>> handle, 
+      P2PSocket<Identifier> socket, 
+      SourceRoute<Identifier> i) {
+    
+    deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(i, socket, logger, socket.getOptions()));     
+  }
+  
+  /**
+   * To override this behaviour if needed.
+   * 
+   * @param socket
+   * @param sr
+   * @throws IOException
+   */
+  protected void incomingSocketHelper(P2PSocket<Identifier> socket, SourceRoute<Identifier> sr) throws IOException {
+    callback.incomingSocket(new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(sr, socket, logger, socket.getOptions())); 
   }
 
   public void incomingSocket(final P2PSocket<Identifier> socka) throws IOException {
@@ -208,7 +228,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
           if (logger.level <= Logger.FINEST) logger.log("Read socket "+sr);
           if (sr.getLastHop().equals(etl.getLocalIdentifier())) {    
             // last hop
-            callback.incomingSocket(new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(srFactory.reverse(sr), socket, logger, socket.getOptions()));
+            incomingSocketHelper(socket, srFactory.reverse(sr));
           } else {
             // sr hop
             int hopNum = sr.getHop(etl.getLocalIdentifier());

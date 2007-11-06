@@ -34,24 +34,7 @@ public abstract class RendezvousApp extends PastryAppl {
     
   }
 
-  /** 
-   * This only sets the local node's info, but you could imagine updating this 
-   * remotely with a push.
-   * 
-   * @param info
-   */
-  public void updateLocalRendezvousInfo(RendezvousInfo info) {
-    
-  }
   
-  /**
-   * Routes a message to the key:
-   *   If it is the key, gets the updated info.
-   *   Else, sets the rendezvousInfo as faulty and declares the node faulty.
-   *   
-   * @param handle
-   */
-  public void updateRemoteRendezvousInfo(NodeHandle handle) {
-    
-  }  
+  
+  
 }

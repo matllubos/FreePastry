@@ -167,21 +167,20 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
       nodes[theSize] = handle;
       //index = theSize;
       theSize++;
-    } else {
-      theSize--;
+    } else {      
 
+      NodeHandle removed = nodes[theSize-1];
 
-      if (leafSet.isProperlyRemoved(nodes[theSize])) {
+      nodes[theSize - 1] = handle;
+
+      if (leafSet.isProperlyRemoved(removed)) {
         if (leafSet.observe) {
-          notifyListeners(nodes[theSize], false);
+          notifyListeners(removed, false);
         }
       }
 //      if (leafSet.observe)
 //        nodes[theSize].deleteObserver(this);
 
-      theSize++;
-
-      nodes[theSize - 1] = handle;
       //index = theSize-1;
     }
 

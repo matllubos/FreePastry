@@ -574,7 +574,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           //logger.log(this+" registering on "+writingSocket);
           // maybe we should remember if we were registered, and don't reregister, but for now it doesn't hurt
           registered = true;  // may fail in this call and set registered back to false, so make sure to do this before calling register          
-          //logger.log(this+".scheduleToWriteIfNeeded() registering to write");
+          if (logger.level <= Logger.FINEST) logger.log(this+".scheduleToWriteIfNeeded() registering to write on "+writingSocket);
           writingSocket.register(false, true, this);
         }
       }      
