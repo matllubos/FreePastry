@@ -103,6 +103,8 @@ import rice.selector.LoopObserver;
  * @author Jeff Hoye
  */
 public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
+  public static final boolean USE_REPLAY = false;
+  
   static void setupParams(Parameters params) {
     params.setBoolean("logging_packageOnly",false);
 //    params.setInt("loglevel", Logger.FINER);
@@ -398,7 +400,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       long bootTime, int artificialChurnTime, int killRingTime) throws Exception {
     restartNode = true;
     while(restartNode) { // to allow churn
-      Environment env = RecordLayer.generateEnvironment();
+      Environment env;
+      if (USE_REPLAY) {
+        env = RecordLayer.generateEnvironment();
+      } else {
+        env = new Environment();
+      }
       
       // Generate the NodeIds Randomly
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -435,6 +442,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 
         @Override
         protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+          if (!USE_REPLAY) return super.getWireTransportLayer(innermostAddress, pn);
           System.out.println("Initializing RecordLayer "+pn.getNodeId());
           RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
 //          recorders.put(pn, ret);
@@ -923,10 +931,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 
       environment.getSelectorManager().invoke(new Runnable() {
         public void run() {
-          try {
-            historyHolder.get(0).logEvent(EVT_BOOT);
-          } catch (IOException ioe) {
-            ioe.printStackTrace();
+          if (USE_REPLAY) {
+            try {
+              historyHolder.get(0).logEvent(EVT_BOOT);
+            } catch (IOException ioe) {
+              ioe.printStackTrace();
+            }
           }
           node.getBootstrapper().boot(bootAddrCandidates);
         }
@@ -969,10 +979,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         env.getSelectorManager().invoke(new Runnable(){
         
           public void run() {
-            try {
-              historyHolder.get(0).logEvent(EVT_SUBSCRIBE_PUBLISH);
-            } catch (IOException ioe) {
-              ioe.printStackTrace();
+            if (USE_REPLAY) {
+              try {
+                historyHolder.get(0).logEvent(EVT_SUBSCRIBE_PUBLISH);
+              } catch (IOException ioe) {
+                ioe.printStackTrace();
+              }
             }
             appHolder.get(0).subscribeToAllChannels();    
             appHolder.get(0).startPublishTask();             
@@ -1018,11 +1030,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //              node.destroy(); // done in env.destroy()
               env.getSelectorManager().invoke(new Runnable() {
                 public void run() {        
-                  try {
-                    historyHolder.get(0).logEvent(EVT_SHUTDOWN);
-                  } catch (IOException ioe) {
-                    ioe.printStackTrace();
-                  }                      
+                  if (USE_REPLAY) {
+                    try {
+                      historyHolder.get(0).logEvent(EVT_SHUTDOWN);
+                    } catch (IOException ioe) {
+                      ioe.printStackTrace();
+                    }                      
+                  }
                   env.destroy();   
                 }
               });
