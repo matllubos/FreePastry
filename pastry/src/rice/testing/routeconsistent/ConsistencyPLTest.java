@@ -51,6 +51,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -200,6 +201,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       
       long curTime = env.getTimeSource().currentTimeMillis();
       System.out.println("CPLT.update("+rdy+"):"+curTime);
+      new Exception("Stack Trace").printStackTrace();
       int num = 2;    
       
       if (rdy) {
@@ -625,14 +627,30 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //      System.out.println("Couldn't find bootstrap... exiting.");        
 //      break; // restart join process
 //    }
-
+    
     node.addLivenessListener(new LivenessListener<NodeHandle>() {      
+      HashMap<NodeHandle, Integer> lastVal = new HashMap<NodeHandle, Integer>();
+      HashMap<NodeHandle, Exception> lastStack = new HashMap<NodeHandle, Exception>();
+      
       Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
       public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
 //        if (i.getId().toString().startsWith("<0x000")) {
 //          logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
-//        } else {
+//        } else {        
           logger.log("livenessChanged1("+i+","+val+")"+i.getId().toString());
+          
+          // this code prints stack trace if the value was notified, but didn't change
+          if (lastVal.containsKey(i)) {
+            if (lastVal.get(i).equals(val)) {
+              System.out.println("livenessChanged-not:");
+              lastStack.get(i).printStackTrace();
+              System.out.println("new:");
+              new Exception("Stack Trace").printStackTrace();
+            }
+          }
+          lastVal.put(i, val);
+          lastStack.put(i,new Exception("Stack Trace"));
+          
 //        }
 //        logger.log("livenessChanged("+i+","+val+")");
       }      

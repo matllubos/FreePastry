@@ -371,7 +371,9 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     thePastryNode.setReadyStrategy(thePastryNode.getDefaultReadyStrategy());
     tryingToGoReady = false;
 
-    thePastryNode.setReady(false);
+    // this doesn't actually do anything, because getDefaultReadyStrategy() is already false
+//    thePastryNode.setReady(false);
+    thePastryNode.notifyReadyObservers();
     
     // restart self
     setReady();

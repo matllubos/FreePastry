@@ -43,6 +43,7 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.TimeSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.TimerWeakHashMap;
 import rice.pastry.*;
@@ -94,6 +95,8 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
 
   RandomSource random;
   
+  TimeSource timeSource;
+  
   public static class PLSPMessageDeserializer extends PJavaSerializedDeserializer {
 
     public PLSPMessageDeserializer(PastryNode pn) {
@@ -138,6 +141,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       this.random = ln.getEnvironment().getRandomSource();
     }
     
+    this.timeSource = ln.getEnvironment().getTimeSource();
     this.localHandle = local;
     
     // make sure to register all the existing leafset entries
@@ -169,7 +173,15 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     Long oldTime = (Long) lastTimeReceivedBLS.get(from);
     if ((oldTime == null) || (oldTime.longValue() < time)) {
       lastTimeReceivedBLS.put(from, new Long(time));      
-      if (logger.level <= Logger.FINE) logger.log("PLSP.updateRecBLS("+from+","+time+")");
+      long leaseTime = time+LEASE_PERIOD-timeSource.currentTimeMillis();
+      if (logger.level <= Logger.FINE) {
+        logger.log("PLSP.updateRecBLS("+from+","+time+"):"+leaseTime);
+      } else {
+        if (leaseTime < 10 && logger.level <= Logger.INFO) {
+          logger.log("PLSP.updateRecBLS("+from+","+time+"):"+leaseTime);
+        }
+      }              
+        
       // need to do this so that nodes are notified
       if (hasSetStrategy)
         isReady();
@@ -229,7 +241,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
 
       if (rls.getTimeStamp() > 0) { // without a timestamp, this is just a normal request, not a lease request
         // remember that we gave out a lease, and go unReady() if the node goes faulty
-        lastTimeRenewedLease.put(rls.returnHandle(),new Long(localNode.getEnvironment().getTimeSource().currentTimeMillis()));
+        lastTimeRenewedLease.put(rls.returnHandle(),new Long(timeSource.currentTimeMillis()));
 
         // it's important to put the node in the leafset so that we don't accept messages for a node that
         // we issued a lease to
@@ -260,7 +272,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
       if (set.size() > 1) {
         NodeHandle handle = set.get(random.nextInt(set.size() - 1) + 1);
         thePastryNode.send(handle,
-            new RequestLeafSet(localHandle, localNode.getEnvironment().getTimeSource().currentTimeMillis()),null, options);
+            new RequestLeafSet(localHandle, timeSource.currentTimeMillis()),null, options);
         thePastryNode.send(handle,
             new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0),null, options);
 
@@ -428,7 +440,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    * @return if we have a lease from the NodeHandle
    */
   public boolean hasLease(NodeHandle nh) {
-    long curTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+    long curTime = timeSource.currentTimeMillis();
     long leaseOffset = curTime-LEASE_PERIOD;
 
     if (nh != null) {
@@ -449,7 +461,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
    */
   private boolean sendBLS(NodeHandle sendTo, boolean checkLiveness) {
     Long time = (Long) lastTimeSentBLS.get(sendTo);
-    long currentTime = localNode.getEnvironment().getTimeSource().currentTimeMillis();
+    long currentTime = timeSource.currentTimeMillis();
     if (time == null
         || (time.longValue() < (currentTime - BLS_THROTTLE))) {
       if (logger.level <= Logger.FINE) // only log if not throttled
@@ -577,7 +589,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     } else {
       // verify doesn't have a current lease
       long leaseExpiration = l_time.longValue()+LEASE_PERIOD;
-      long now = thePastryNode.getEnvironment().getTimeSource().currentTimeMillis();
+      long now = timeSource.currentTimeMillis();
       if (leaseExpiration > now) {
         if (logger.level <= Logger.INFO) logger.log("Removing "+nh+" from leafset later."+(leaseExpiration-now));
         // remove it later when lease expries
