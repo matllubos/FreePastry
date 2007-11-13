@@ -33,7 +33,7 @@ public class Replayer {
 
     System.out.println(bootAddrCandidates);
     
-    ConsistencyPLTest.replayNode(id, addr, bootAddrCandidates, startTime, randSeed);
+//    ConsistencyPLTest.replayNode(id, addr, bootAddrCandidates, startTime, randSeed);
   }
   
   public static List<InetSocketAddress> getAddr(String s) throws UnknownHostException {

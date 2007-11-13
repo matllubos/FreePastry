@@ -289,19 +289,22 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       if (deadForever.contains(u)) return false;
       
       UpperIdentifier old = bindings.get(l);
-      if (old == null) {
+      if (old == null) {        
+        if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old is null");
         bindings.put(l, u);
         overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
         return true;
       } else {
-        if (old.equals(u)) {
+        if (old.equals(u)) {          
+          if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old is equal");
           overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
           return true;
         }
         
         // they are different        
         if (destinationChanged(old, u, l, options)) {
-          bindings.put(l, u);      
+          bindings.put(l, u);                
+          if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old "+old+" is dead");
           overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
           return true;
         } else {          
@@ -334,18 +337,22 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //            if (logger.level <= Logger.FINE) logger.log("2");
       if (deadForever.contains(oldDest)) {
         return true;
+      }
+      if (deadForever.contains(newDest)) {
+        return false;
+      }
+
 //              if (logger.level <= Logger.FINE) logger.log("3");              
-      } else {
 //              if (logger.level <= Logger.FINE) logger.log("4");
-        if (nodeChangeStrategy.canChange(oldDest, newDest, i)) {
+      if (nodeChangeStrategy.canChange(oldDest, newDest, i)) {
 //                if (logger.level <= Logger.FINE) logger.log("5");
-          if (logger.level <= Logger.INFO) logger.log("destinationChanged("+oldDest+"->"+newDest+","+i+","+options+")");
-          setDeadForever(i, oldDest, options);   
-          return true;
-        } else {
-          setDeadForever(i, newDest, options);   
-          return false;
-        }
+        if (logger.level <= Logger.INFO) logger.log("destinationChanged("+oldDest+"->"+newDest+","+i+","+options+")");
+        setDeadForever(i, oldDest, options);   
+        return true;
+      } else {
+        if (logger.level <= Logger.INFO) logger.log("destinationDidntChange("+newDest+"->"+oldDest+","+i+","+options+")");
+        setDeadForever(i, newDest, options);   
+        return false;
       }
     }      
   }
@@ -899,18 +906,28 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       final SocketRequestHandleImpl<UpperIdentifier> handle = 
         new SocketRequestHandleImpl<UpperIdentifier>(i, options, logger);
 
-      synchronized(deadForever) {
-        if (deadForever.contains(i)) {
-          deliverSocketToMe.receiveException(handle, new NodeIsFaultyException(i));
-          return handle;
-        }
+      MiddleIdentifier middle = serializer.translateDown(i);
+      LowerIdentifier lower = serializer.translateDown2(middle);
+      
+      if (addBinding(i, lower, options)) {
+        // no problem, sending message
+      } else {
+        deliverSocketToMe.receiveException(handle, new NodeIsFaultyException(i));
+        return handle;
       }
+      
+//      synchronized(deadForever) {
+//        if (deadForever.contains(i)) {
+//          deliverSocketToMe.receiveException(handle, new NodeIsFaultyException(i));
+//          return handle;
+//        }
+//      }
       
       Map<String, Object> newOptions = OptionsFactory.copyOptions(options);
       newOptions.put(NODE_HANDLE_FROM_INDEX, i);      
 
 
-      handle.setSubCancellable(tl.openSocket(serializer.translateDown(i), new SocketCallback<MiddleIdentifier>(){
+      handle.setSubCancellable(tl.openSocket(middle, new SocketCallback<MiddleIdentifier>(){
         public void receiveException(SocketRequestHandle<MiddleIdentifier> s, IOException ex) {
           deliverSocketToMe.receiveException(handle, ex);
         }
@@ -932,24 +949,36 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       // an alternative would be to re-synchronized and check again, and immeadiately cancel the message
 
       IdentityMessageHandle ret;
-      synchronized(deadForever) {
-        if (deadForever.contains(i)) {
-          MessageRequestHandle<UpperIdentifier, UpperMsgType> mrh =             
-            new MessageRequestHandleImpl<UpperIdentifier, UpperMsgType>(i, m, options);
-          deliverAckToMe.sendFailed(mrh, new NodeIsFaultyException(i, m));
-          return mrh;
-        }
+      
+      MiddleIdentifier middle = serializer.translateDown(i);
+      LowerIdentifier lower = serializer.translateDown2(middle);
+      if (addBinding(i, lower, options)) {
+        // no problem, sending message
+      } else {
+        MessageRequestHandle<UpperIdentifier, UpperMsgType> mrh =             
+          new MessageRequestHandleImpl<UpperIdentifier, UpperMsgType>(i, m, options);
+        deliverAckToMe.sendFailed(mrh, new NodeIsFaultyException(i, m));
+        return mrh;
+      }
+      
+//      synchronized(deadForever) {
+//        if (deadForever.contains(i)) {
+//          MessageRequestHandle<UpperIdentifier, UpperMsgType> mrh =             
+//            new MessageRequestHandleImpl<UpperIdentifier, UpperMsgType>(i, m, options);
+//          deliverAckToMe.sendFailed(mrh, new NodeIsFaultyException(i, m));
+//          return mrh;
+//        }
       
         options = OptionsFactory.copyOptions(options);
         options.put(NODE_HANDLE_FROM_INDEX, i);      
         ret = new IdentityMessageHandle(i, m, options, deliverAckToMe);
         addPendingMessage(i, ret);
-      }
+//      }
       
       // the synchronization problem is here, if it goes dead now, then this message won't 
       // be cancelled... TODO: get this correct, it's probably currently broken, maybe 
       // need cancelled bit in ret so that it knows it's cancelled.
-      ret.setSubCancellable(tl.sendMessage(serializer.translateDown(i), m, ret, options));        
+      ret.setSubCancellable(tl.sendMessage(middle, m, ret, options));        
       return ret;
     }
     

@@ -53,7 +53,7 @@ import rice.pastry.transport.TLPastryNode;
 
 public class SocketNodeHandleFactory implements NodeHandleFactory {
   TLPastryNode pn;
-  Map<MultiInetSocketAddress, SocketNodeHandle> handles;
+//  Map<MultiInetSocketAddress, SocketNodeHandle> handles;
   Map<SocketNodeHandle, SocketNodeHandle> handleSet;
   
   Logger logger;
@@ -62,7 +62,7 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
     this.pn = pn;
     this.logger = pn.getEnvironment().getLogManager().getLogger(SocketNodeHandleFactory.class, null);
     
-    handles = new HashMap<MultiInetSocketAddress, SocketNodeHandle>();
+//    handles = new HashMap<MultiInetSocketAddress, SocketNodeHandle>();
     handleSet = new HashMap<SocketNodeHandle, SocketNodeHandle>();
   }
   
@@ -75,21 +75,23 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
    * @return
    */
   public SocketNodeHandle getNodeHandle(MultiInetSocketAddress i, long epoch, Id id) {
-    if (handles.containsKey(i)) {
-      SocketNodeHandle ret = handles.get(i);
-      if (ret.getEpoch() == epoch && ret.getId().equals(id)) {
-        return ret;        
-      } else {
-        // this is kind of dangerous because this dictionary is necessay for the identity layer, and could be 
-        // poisoned with this method 
-        
-        if (logger.level <= Logger.WARNING) logger.log("getNodeHandle("+i+","+epoch+","+id+") replacing "+ret);
-      }      
-    }
+//    if (handles.containsKey(i)) {
+//      SocketNodeHandle ret = handles.get(i);
+//      if (ret.getEpoch() == epoch && ret.getId().equals(id)) {
+//        return ret;        
+//      } else {
+//        // this is kind of dangerous because this dictionary is necessay for the identity layer, and could be 
+//        // poisoned with this method 
+//        
+//        if (logger.level <= Logger.WARNING) logger.log("getNodeHandle("+i+","+epoch+","+id+") replacing "+ret);
+//      }      
+//    }
     SocketNodeHandle handle = new SocketNodeHandle(i, epoch, id, pn);
-    handleSet.put(handle, handle);
-    handles.put(i, handle);
-    return handle;
+//    handleSet.put(handle, handle);
+//    handles.put(i, handle);
+//    return handle;
+    
+    return (SocketNodeHandle)coalesce(handle);
   }
 
   public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
@@ -122,7 +124,7 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
     
     handle.setLocalNode(pn);
     
-    handles.put(handle.eaddress, handle);
+//    handles.put(handle.eaddress, handle);
     handleSet.put(handle, handle);
     return handle;
   }

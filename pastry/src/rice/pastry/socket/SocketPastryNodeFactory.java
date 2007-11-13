@@ -433,6 +433,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         return i.getAddress();
       }
 
+      public SourceRoute<MultiInetSocketAddress> translateDown2(MultiInetSocketAddress i) {
+        throw new RuntimeException("Not implemented.");
+      }
+
 //      public TransportLayerNodeHandle<MultiInetSocketAddress> translateUp(
 //          MultiInetSocketAddress i) {
 //        return handleFactory.lookupNodeHandle(i);
@@ -462,12 +466,13 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 //              if (false) logger.log("");
 //              if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+")");
               if (newDest.getAddress().equals(i.getLastHop())) {
-//              if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+") 1");
+                if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+","+newDest+","+i+")");
                 if (newDest.getEpoch() > oldDest.getEpoch()) {
-//                  if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+") 2");
+                  if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+":"+oldDest.getEpoch()+","+newDest+":"+newDest.getEpoch()+","+i+"):true");
                   return true;
                 }
               }
+              if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+":"+oldDest.getEpoch()+","+newDest+":"+newDest.getEpoch()+","+i+"):false");
               return false;
               
 //            if (false) logger.log("");
