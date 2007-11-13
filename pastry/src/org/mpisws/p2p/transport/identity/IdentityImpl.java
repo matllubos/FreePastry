@@ -65,8 +65,6 @@ import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.LivenessTypes;
 import org.mpisws.p2p.transport.liveness.OverrideLiveness;
-import org.mpisws.p2p.transport.liveness.PingListener;
-import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.proximity.ProximityListener;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
@@ -83,7 +81,6 @@ import rice.p2p.commonapi.Cancellable;
 import rice.p2p.util.TimerWeakHashMap;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
-import rice.pastry.socket.SocketNodeHandle;
 
 public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, LowerIdentifier> implements LivenessTypes {
   protected byte[] localIdentifier;
@@ -98,7 +95,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   protected Logger logger;
   
   protected IdentitySerializer<UpperIdentifier, MiddleIdentifier, LowerIdentifier> serializer;
-  protected NodeChangeStrategy<UpperIdentifier, LowerIdentifier> nodeChangeStrategy;
+  protected NodeChangeStrategy<UpperIdentifier> nodeChangeStrategy;
   protected SanityChecker<UpperIdentifier, MiddleIdentifier> sanityChecker;
   
   /**
@@ -112,14 +109,12 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * Note, that it's possible to have the UpperIdentifier in multiple places if it
    * has multiple paths (such as source routing)
    */
-  protected Map<LowerIdentifier, UpperIdentifier> bindings;  // this one may be difficult as the Upper has a ref to the lower
+  protected Map<MiddleIdentifier, UpperIdentifier> bindings;  // this one may be difficult as the Upper has a ref to the lower
   
   /**
    * Held in the options map of the message/socket.  This is a pointer from the upper 
    * level to the lower level.
    */
-//  Map<Integer, WeakReference<UpperIdentifier>> intendedDest; // currently a very small memory leak
-//  Map<UpperIdentifier, Integer> reverseIntendedDest;
   int intendedDestCtr = Integer.MIN_VALUE;
   
   public static final byte SUCCESS = 1;
@@ -136,7 +131,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   public IdentityImpl(
       byte[] localIdentifier, 
       IdentitySerializer<UpperIdentifier, MiddleIdentifier, LowerIdentifier> serializer, 
-      NodeChangeStrategy<UpperIdentifier, LowerIdentifier> nodeChangeStrategy,
+      NodeChangeStrategy<UpperIdentifier> nodeChangeStrategy,
       SanityChecker<UpperIdentifier, MiddleIdentifier> sanityChecker,
       Environment environment) {
     this.logger = environment.getLogManager().getLogger(IdentityImpl.class, null);
@@ -154,7 +149,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //    this.intendedDest = new HashMap<Integer, WeakReference<UpperIdentifier>>(); // this is a memory leak, but very slow, maybe we should make a periodic iterator to clean this out...
 //    this.reverseIntendedDest = new TimerWeakHashMap<UpperIdentifier, Integer>(environment.getSelectorManager(), 300000);
     
-    this.bindings = new HashMap<LowerIdentifier, UpperIdentifier>();
+    this.bindings = new HashMap<MiddleIdentifier, UpperIdentifier>();
   }
   
   public void addPendingMessage(UpperIdentifier i, IdentityMessageHandle ret) {
@@ -207,18 +202,29 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     this.overrideLiveness = ol;
   }
   
+  /**
+   * Put this in lower.
+   * @param l
+   * @param i
+   * @param options
+   */
   public void setDeadForever(LowerIdentifier l, UpperIdentifier i, Map<String, Object> options) {
     if (deadForever.contains(i)) return;
     if (logger.level <= Logger.INFO) logger.logException("setDeadForever("+l+","+i+","+options+")",new Exception("Stack Trace"));
     deadForever.add(i);
-    try {
-      logger.log("setDeadForever("+l+","+i+","+(options == null)+"):overL:"+overrideLiveness);
+//    try {
+//      logger.log("setDeadForever("+l+","+i+","+(options == null)+"):overL:"+overrideLiveness);
       Map<String, Object> o2 = OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, i);
-      overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, o2);
-    } catch (NullPointerException npe) {
-      logger.log("setDeadForever("+l+","+i+","+options+"):overL:"+overrideLiveness);
-      throw npe;
-    }
+      // how do we notify?  If we have a lower, then let it trickle through the TLs, otherwise, call it only on the upper
+      if (l == null) {
+        upper.setLiveness(i, LIVENESS_DEAD_FOREVER, o2);
+      } else {
+        overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, o2);        
+      }
+//    } catch (NullPointerException npe) {
+//      logger.log("setDeadForever("+l+","+i+","+options+"):overL:"+overrideLiveness);
+//      throw npe;
+//    }
 //    upper.notifyLivenessListeners(i, LIVENESS_DEAD_FOREVER, options);  // now called as a result of overrideLiveness
     Set<IdentityMessageHandle> cancelMe = pendingMessages.remove(i);
     if (cancelMe != null) {
@@ -229,83 +235,55 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     upper.clearState(i);
   }
   
-  /**
-   * Returns the identifier.
-   * 
-   * @param i
-   * @return
-   */
-//  protected int addIntendedDest(UpperIdentifier i) {
-//    synchronized(intendedDest) {
-//      if (reverseIntendedDest.containsKey(i)) {
-//        int ret = reverseIntendedDest.get(i);
-//        // make sure that the value in memory is there (not garbage collected)
-//        if (intendedDest.get(ret).get() == null) {
-//          intendedDest.put(ret, new WeakReference<UpperIdentifier>(i));
-//        }
-//        return ret;
-//      }
-//      intendedDest.put(intendedDestCtr, new WeakReference<UpperIdentifier>(i));
-//      reverseIntendedDest.put(i, intendedDestCtr);
-//      intendedDestCtr++;
-//      if (logger.level <= Logger.FINER) {
-//        logger.log("addIntendedDest("+i+" hash:"+i.hashCode()+"):"+(intendedDestCtr-1));
-//        if (i instanceof SocketNodeHandle) {
-//          SocketNodeHandle snh = (SocketNodeHandle)i;
-//          if (snh.getId().toString().startsWith("<0x000")) {
-//            logger.logException("StackTrace snh:"+i+" epoch:"+snh.getEpoch(), new Exception("foo"));
-//          }
-//        }
-//      }
-//      return intendedDestCtr-1;
-//    }
-//  }
-//  
   protected UpperIdentifier getIntendedDest(Map<String,Object> options) {
     if (options == null) throw new IllegalArgumentException("options is null");
     if (!options.containsKey(NODE_HANDLE_FROM_INDEX)) throw new IllegalArgumentException("options doesn't have NODE_HANDLE_FROM_INDEX "+options);
-    
-//    int index = ((Integer)options.get(NODE_HANDLE_FROM_INDEX)).intValue();
-//    WeakReference<UpperIdentifier> ret1 = intendedDest.get(index);
-//    if (ret1 == null) throw new IllegalArgumentException("No record of NODE_HANDLE_FROM_INDEX "+index);
-//    UpperIdentifier ret = ret1.get();
-//    if (ret == null) {
-//      if (logger.level <= Logger.WARNING) logger.log("Memory already collected for NODE_HANDLE_FROM_INDEX "+index);
-//    }
-//    return ret;
     
     return (UpperIdentifier)options.get(NODE_HANDLE_FROM_INDEX);
   }
 
   /**
-   * 
+   * Put this in lower.
    * @param u
-   * @param l
+   * @param l is optional
    * @param options
    * @return false if the new binding is actually old (IE, don't upgrade it)
    */
   protected boolean addBinding(UpperIdentifier u, LowerIdentifier l, Map<String, Object> options) {
+    MiddleIdentifier m = serializer.translateDown(u);
     synchronized(bindings) {
       if (deadForever.contains(u)) return false;
       
-      UpperIdentifier old = bindings.get(l);
+      UpperIdentifier old = bindings.get(m);
       if (old == null) {        
         if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old is null");
-        bindings.put(l, u);
-        overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+        bindings.put(m, u);
+        if (l != null) {
+          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+        } else {
+          upper.setLiveness(u, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+        }
         return true;
       } else {
         if (old.equals(u)) {          
           if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old is equal");
-          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+          if (l != null) {
+            overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+          } else {
+            upper.setLiveness(u, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+          }
           return true;
         }
         
         // they are different        
         if (destinationChanged(old, u, l, options)) {
-          bindings.put(l, u);                
+          bindings.put(m, u);                
           if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old "+old+" is dead");
-          overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+          if (l != null) {
+            overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+          } else {
+            upper.setLiveness(u, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+          }
           return true;
         } else {          
           // mark the new one as faulty
@@ -319,6 +297,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   }
   
   /**
+   * Put this in lower.
+   * 
    * Return true if the new one is a valid replacement of the old
    * 
    * True if they are the same
@@ -344,7 +324,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 
 //              if (logger.level <= Logger.FINE) logger.log("3");              
 //              if (logger.level <= Logger.FINE) logger.log("4");
-      if (nodeChangeStrategy.canChange(oldDest, newDest, i)) {
+      if (nodeChangeStrategy.canChange(oldDest, newDest)) {
 //                if (logger.level <= Logger.FINE) logger.log("5");
         if (logger.level <= Logger.INFO) logger.log("destinationChanged("+oldDest+"->"+newDest+","+i+","+options+")");
         setDeadForever(i, oldDest, options);   
@@ -357,7 +337,6 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }      
   }
     
-
   public void initLowerLayer(TransportLayer<LowerIdentifier, ByteBuffer> tl, ErrorHandler<LowerIdentifier> handler) {
     lower = new LowerIdentityImpl(tl, handler);
   }
@@ -473,10 +452,17 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //                            setDeadForever(dest);
                             UpperIdentifier newDest = serializer.deserialize(new SocketInputBuffer(socket, localIdentifier.length), i);
                             
-                            addBinding(newDest, i, options);
+                            if (addBinding(newDest, i, options)) {
+//                              overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u)); 
+                            } else {
+                              // This is really bad if we get here, because someone responded to us who is dead, maybe a big network lag could cause this?
+                              socket.close();
+                              deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
+                            }
                             
                             // need to do this so the boostrapper knows the proper identity
-                            upper.notifyLivenessListeners(newDest, LIVENESS_ALIVE, options);
+                            // done in addBinding now
+//                            upper.setLiveness(newDest, LIVENESS_ALIVE, options);
                             deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
                           } else {
                             ret.setSubCancellable(new Cancellable() {
@@ -565,7 +551,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                   // this is bad, a previous instance is trying to open a socket
                   if (logger.level <= Logger.WARNING) 
                     logger.log("Serious error.  There was an attempt to open a socket from a supposedly stale identifier:"+
-                        from+". Current identifier is "+bindings.get(socket.getIdentifier())+" lower:"+socket.getIdentifier());
+                        from+". Current identifier is "+bindings.get(serializer.translateUp(socket.getIdentifier()))+" lower:"+socket.getIdentifier());
                   socket.close();
                   return;
                 }
@@ -780,7 +766,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //            overrideLiveness.setLiveness(i, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, addIntendedDest(from)));
           } else {
             if (logger.level <= Logger.WARNING) logger.log("Warning.  Received message from stale identifier:"+
-                from+". Current identifier is "+bindings.get(i)+" lower:"+i+" Probably a delayed message, dropping.");
+                from+". Current identifier is "+bindings.get(serializer.translateUp(i))+" lower:"+i+" Probably a delayed message, dropping.");
             handler.receivedUnexpectedData(i, m.array(), m.position(), newOptions);
             return;
           }
@@ -802,7 +788,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           break;
         case INCORRECT_IDENTITY:
           // it's an error, read it in
-          UpperIdentifier oldDest = bindings.get(i);
+          UpperIdentifier oldDest = bindings.get(serializer.translateUp(i));
           
           UpperIdentifier newDest = serializer.deserialize(new SimpleInputBuffer(m.array(),m.position()), i);
           if (logger.level <= Logger.INFO) logger.log(
@@ -907,9 +893,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         new SocketRequestHandleImpl<UpperIdentifier>(i, options, logger);
 
       MiddleIdentifier middle = serializer.translateDown(i);
-      LowerIdentifier lower = serializer.translateDown2(middle);
       
-      if (addBinding(i, lower, options)) {
+      if (addBinding(i, null, options)) {
         // no problem, sending message
       } else {
         deliverSocketToMe.receiveException(handle, new NodeIsFaultyException(i));
@@ -951,8 +936,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       IdentityMessageHandle ret;
       
       MiddleIdentifier middle = serializer.translateDown(i);
-      LowerIdentifier lower = serializer.translateDown2(middle);
-      if (addBinding(i, lower, options)) {
+      if (addBinding(i, null, options)) {
         // no problem, sending message
       } else {
         MessageRequestHandle<UpperIdentifier, UpperMsgType> mrh =             
@@ -1080,12 +1064,33 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //      if (upper == null) {
 //        upper = serializer.translateUp(i);
 //      }
-      notifyLivenessListeners(upper, val, options);          
+      setLiveness(upper, val, options);
+    }
+    
+    /**
+     * This is a guard so we don't notify about changes in liveness too many times.
+     * 
+     * @param i
+     * @param val
+     * @param options
+     */
+    protected void setLiveness(UpperIdentifier i, int val, Map<String, Object> options) {
+      // handle the first time
+      int oldLiveness = -55;
+      if (liveness.containsKey(i)) {        
+        oldLiveness = liveness.get(i);
+      }
+      
+      if (val != oldLiveness) {
+        liveness.put(i, val);
+        notifyLivenessListeners(i, val, options);           
+      }
     }
 
-
+    // todo, make this a timer weak hash map
+    protected Map<UpperIdentifier, Integer> liveness = new HashMap<UpperIdentifier, Integer>();
     
-    private void notifyLivenessListeners(UpperIdentifier i, int liveness, Map<String, Object> options) {
+    protected void notifyLivenessListeners(UpperIdentifier i, int liveness, Map<String, Object> options) {
       if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
       List<LivenessListener<UpperIdentifier>> temp;
       synchronized(livenessListeners) {
@@ -1169,36 +1174,6 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       if (logger.level <= Logger.INFO) logger.log("destroy()");
       tl.destroy();
     }
-
-//    public void pingReceived(UpperIdentifier i, Map<String, Object> options) {
-//      if (deadForever.contains(i)) {
-//        if (logger.level <= Logger.SEVERE) logger.log("Dead forever Node "+i+" pinged us! Ignoring."+options); 
-//        return;
-//      }
-//      
-//      ArrayList<PingListener<UpperIdentifier>> temp;
-//      synchronized(pingListeners) {
-//        temp = new ArrayList<PingListener<UpperIdentifier>>(pingListeners);
-//      }
-//      for (PingListener<UpperIdentifier> l : temp) {
-//        l.pingReceived(i, options); 
-//      }
-//    }
-//
-//    public void pingResponse(UpperIdentifier i, int rtt, Map<String, Object> options) {
-//      if (deadForever.contains(i)) {
-//        if (logger.level <= Logger.SEVERE) logger.log("Dead forever Node "+i+" responded to a ping! Ignoring. rtt: "+rtt+" options:"+options); 
-//        return;
-//      }
-//      
-//      ArrayList<PingListener<UpperIdentifier>> temp;
-//      synchronized(pingListeners) {
-//        temp = new ArrayList<PingListener<UpperIdentifier>>(pingListeners);
-//      }
-//      for (PingListener<UpperIdentifier> l : temp) {
-//        l.pingResponse(i, rtt, options); 
-//      }
-//    }
   }
   
   class IdentityMessageHandle implements MessageRequestHandle<UpperIdentifier, UpperMsgType>, MessageCallback<MiddleIdentifier, UpperMsgType> {

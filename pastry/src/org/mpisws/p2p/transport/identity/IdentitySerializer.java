@@ -48,10 +48,5 @@ public interface IdentitySerializer<UpperIdentifier, MiddleIdentifier, LowerIden
   
   public MiddleIdentifier translateDown(UpperIdentifier i);
   
-  public LowerIdentifier translateDown2(MiddleIdentifier i);
-  
-//  public UpperIdentifier translateUp(MiddleIdentifier i);
-  
-//  public UpperIdentifier coalesce(UpperIdentifier i);
-  
+  public MiddleIdentifier translateUp(LowerIdentifier i);
 }
