@@ -985,18 +985,36 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       });
       
 //      ls.addNodeSetListener(preObserver);  
-      // the node may require sending several messages to fully boot into the ring
+      
+      boolean ALL_LOGGING_WHEN_CANT_JOIN = false;
+      
+      int setLLBackTo = params.getInt("loglevel");
+      if (params.contains("org.mpisws.p2p.transport_loglevel")) {
+        setLLBackTo = params.getInt("org.mpisws.p2p.transport_loglevel");
+      }
+      
       long lastTimePrinted = 0;
       while(!node.isReady() && !node.joinFailed() && running) {
         // delay so we don't busy-wait
         long now = env.getTimeSource().currentTimeMillis();
         if (now-lastTimePrinted > 3*60*1000) {
-          System.out.println("LEAFSET5:"+env.getTimeSource().currentTimeMillis()+":"+ls);
+          System.out.println("LEAFSET5:"+env.getTimeSource().currentTimeMillis()+":"+ls);          
+          
+          // the first time we take 3 mins to join
+          if (ALL_LOGGING_WHEN_CANT_JOIN) {
+            if (lastTimePrinted != 0) {
+              params.setInt("org.mpisws.p2p.transport_loglevel",Logger.ALL);
+            }
+          }
           lastTimePrinted = now;
         }
         Thread.sleep(1000);
       }
       
+      if (ALL_LOGGING_WHEN_CANT_JOIN) {
+        params.setInt("org.mpisws.p2p.transport_loglevel",setLLBackTo);
+      }    
+            
       if (!running || node.joinFailed()) {
         Runtime.getRuntime().removeShutdownHook(shutdownHook);
         System.out.println("Join failed. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
@@ -1064,12 +1082,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         
         if (killSelf) {
           if (!isBootNode) {                        
-              imaliveRunning.running = false;
-              Runtime.getRuntime().removeShutdownHook(shutdownHook);
-              System.out.println("Killing self to cause churn. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
-              System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node);
-              //              System.exit(25);
+            imaliveRunning.running = false;
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
+            System.out.println("Killing self to cause churn. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
+            System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node);
+            //              System.exit(25);
 //              node.destroy(); // done in env.destroy()
+            try {
               env.getSelectorManager().invoke(new Runnable() {
                 public void run() {        
                   if (USE_REPLAY) {
@@ -1081,11 +1100,14 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
                   }
                   env.destroy();   
                 }
-              });
+              });             
               running = false;
               int waittime = env.getRandomSource().nextInt(30000)+30000;
               System.out.println("Waiting for "+waittime+" millis before restarting.");
               Thread.sleep(waittime); // wait up to 1 minute
+            } catch (Exception e) {
+              // the program exited abnormally, oh well, keep going
+            }
           }
         }
       }    

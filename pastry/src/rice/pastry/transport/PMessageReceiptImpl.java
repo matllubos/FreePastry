@@ -77,6 +77,6 @@ public class PMessageReceiptImpl implements PMessageReceipt {
   }
   
   public String toString() {
-    return "PMsgRecptI{"+message+","+(internal==null?null:getIdentifier())+"}";
+    return "PMsgRecptI{"+message+","+getIdentifier()+"}";
   }
 }

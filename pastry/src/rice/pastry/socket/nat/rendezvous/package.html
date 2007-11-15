@@ -1,3 +1,30 @@
+TODO:
+  Make Rendezvous Layer it's own thing
+  Make LeafSetSRStrategy only pick Non-NATted nodes.
+  Send keepalives on UDP/TCP
+
+  Ignore STUN for the first pass.
+  
+  RendezvousStrategy<Identifier>:
+    Identifier getRendezvousPoint();
+  
+  /**
+   * This method uses some third channel to get the node to connect to the dest.
+   */
+    requestOpenChannel(Identifier node, Identifier dest); // may need to include some kind of identifier, also some kind of failure notifier
+
+Chain of events:
+1) Priority or higher wants a socket/message
+2) It gets to the Rendezvous layer
+ a) The dest is not natted, open normally.
+ b) The dest is natted
+   i) Local Node is not natted
+    Route message for that node to open directly to me
+  ii) Local Node is natted:
+    Pick a rendezvous
+    Route Message to open to the rendezvous
+    Open a connection (socket/STUN) to the rendezvous
+
     Players:
       Nancy (NATted node),
       Alice (Also NATted),

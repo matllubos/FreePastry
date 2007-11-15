@@ -100,7 +100,6 @@ import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
-import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
@@ -112,7 +111,6 @@ import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.boot.Bootstrapper;
-import rice.pastry.pns.PNSApplication;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.socket.nat.StubNATHandler;
 import rice.pastry.standard.ProximityNeighborSelector;
@@ -433,8 +431,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         return i.getAddress();
       }
 
-      public SourceRoute<MultiInetSocketAddress> translateDown2(MultiInetSocketAddress i) {
-        throw new RuntimeException("Not implemented.");
+      public MultiInetSocketAddress translateUp(SourceRoute<MultiInetSocketAddress> i) {
+        return i.getLastHop();
       }
 
 //      public TransportLayerNodeHandle<MultiInetSocketAddress> translateUp(
@@ -458,21 +456,22 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       new IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, 
             ByteBuffer, SourceRoute<MultiInetSocketAddress>>(
           localHandleBytes, serializer, 
-          new NodeChangeStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>, SourceRoute<MultiInetSocketAddress>>(){
+          new NodeChangeStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>>(){
             public boolean canChange(
                 TransportLayerNodeHandle<MultiInetSocketAddress> oldDest, 
-                TransportLayerNodeHandle<MultiInetSocketAddress> newDest, 
-                SourceRoute<MultiInetSocketAddress> i) {
+                TransportLayerNodeHandle<MultiInetSocketAddress> newDest) {
 //              if (false) logger.log("");
 //              if (logger.level <= Logger.FINE) logger.log("canChange("+oldDest+","+newDest+","+i+")");
-              if (newDest.getAddress().equals(i.getLastHop())) {
-                if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+","+newDest+","+i+")");
+              if (newDest.getAddress().equals(oldDest.getAddress())) {
+                if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+","+newDest+")");
                 if (newDest.getEpoch() > oldDest.getEpoch()) {
-                  if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+":"+oldDest.getEpoch()+","+newDest+":"+newDest.getEpoch()+","+i+"):true");
+                  if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+":"+oldDest.getEpoch()+","+newDest+":"+newDest.getEpoch()+"):true");
                   return true;
                 }
+              } else {
+                throw new RuntimeException("canChange("+oldDest+","+newDest+") doesn't make any sense, these aren't comparable to eachother.");
               }
-              if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+":"+oldDest.getEpoch()+","+newDest+":"+newDest.getEpoch()+","+i+"):false");
+              if (logger.level <= Logger.INFO) logger.log("canChange("+oldDest+":"+oldDest.getEpoch()+","+newDest+":"+newDest.getEpoch()+"):false");
               return false;
               
 //            if (false) logger.log("");

@@ -53,7 +53,7 @@ public class GenericProximityGenerator implements ProximityGenerator {
   
   float MIN_DIST = 2.0f;
   
-  // This stores the matrix
+  // This stores the matrix stored in millis
   private float distance[][];
 
   // This stores the coordinates

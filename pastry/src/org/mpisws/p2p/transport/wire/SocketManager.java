@@ -402,7 +402,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       if (writer != null) {
         if (writer != receiver) {
           logger.logException("Already registered",regWriteEx);
-          throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!");
+          throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well! SM:"+this);
 //          receiver.receiveException(this, 
 //              new IOException(
 //                  "Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well!")); 
@@ -410,7 +410,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         }
       }
     }
-    regWriteEx = new Exception("regWriteEx Stack Trace");
+    regWriteEx = new Exception("regWriteEx Stack Trace "+this);
     
     if (wantToRead) {
       if (reader != null) {

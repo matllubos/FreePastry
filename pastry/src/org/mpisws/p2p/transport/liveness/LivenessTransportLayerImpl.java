@@ -792,7 +792,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
         Identifier temp = identifier.get();
         if (temp != null) {
           notifyLivenessListeners(temp, liveness, options);
-        }
+        } else {
+          if (logger.level <= Logger.WARNING) logger.log("markDeadHelper("+liveness+","+options+","+notify+") temp == null!  Can't notify listeners!");
+        } 
       }
       
       synchronized(sockets) {

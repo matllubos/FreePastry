@@ -217,6 +217,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       Map<String, Object> o2 = OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, i);
       // how do we notify?  If we have a lower, then let it trickle through the TLs, otherwise, call it only on the upper
       if (l == null) {
+        if (logger.level <= Logger.INFO) logger.log("setDeadForever("+l+","+i+","+options+"): l == null"); 
         upper.setLiveness(i, LIVENESS_DEAD_FOREVER, o2);
       } else {
         overrideLiveness.setLiveness(l, LIVENESS_DEAD_FOREVER, o2);        
@@ -279,15 +280,16 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         if (destinationChanged(old, u, l, options)) {
           bindings.put(m, u);                
           if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old "+old+" is dead");
-          if (l != null) {
-            overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
-          } else {
+          if (l == null) {
+            if (logger.level <= Logger.INFO) logger.log("addBinding("+u+","+l+"): l == null"); 
             upper.setLiveness(u, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
+          } else {
+            overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
           }
           return true;
         } else {          
           // mark the new one as faulty
-          if (logger.level <= Logger.WARNING) logger.log("The nodeChangeStrategy found identifier "+u+
+          if (logger.level <= Logger.INFO) logger.log("The nodeChangeStrategy found identifier "+u+
               " to be stale.  Should be using "+old);
 //          setDeadForever(l, u, options);  
           return false;

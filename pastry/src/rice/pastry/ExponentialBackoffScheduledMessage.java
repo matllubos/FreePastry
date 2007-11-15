@@ -74,6 +74,7 @@ public class ExponentialBackoffScheduledMessage extends ScheduledMessage {
     this.timer = timer;
     this.initialPeriod = initialPeriod;
     this.expBase = expBase;
+    this.maxTime = maxPeriod;
     schedule(initialDelay);
   }
 

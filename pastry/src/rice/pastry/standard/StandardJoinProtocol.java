@@ -169,7 +169,7 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
                   logger.logException("because", reason);
                 }
               }
-            }          
+            }
           }, options);
         } else {
           if (logger.level <= Logger.INFO) logger.log(
