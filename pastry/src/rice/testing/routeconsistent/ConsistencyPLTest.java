@@ -986,12 +986,12 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       
 //      ls.addNodeSetListener(preObserver);  
       
-      boolean ALL_LOGGING_WHEN_CANT_JOIN = false;
-      
-      int setLLBackTo = params.getInt("loglevel");
-      if (params.contains("org.mpisws.p2p.transport_loglevel")) {
-        setLLBackTo = params.getInt("org.mpisws.p2p.transport_loglevel");
-      }
+//      boolean ALL_LOGGING_WHEN_CANT_JOIN = false;
+//      
+//      int setLLBackTo = params.getInt("loglevel"); // BROKEN!!! this is a string, not an int
+//      if (params.contains("org.mpisws.p2p.transport_loglevel")) {
+//        setLLBackTo = params.getInt("org.mpisws.p2p.transport_loglevel");
+//      }
       
       long lastTimePrinted = 0;
       while(!node.isReady() && !node.joinFailed() && running) {
@@ -1001,19 +1001,19 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
           System.out.println("LEAFSET5:"+env.getTimeSource().currentTimeMillis()+":"+ls);          
           
           // the first time we take 3 mins to join
-          if (ALL_LOGGING_WHEN_CANT_JOIN) {
-            if (lastTimePrinted != 0) {
-              params.setInt("org.mpisws.p2p.transport_loglevel",Logger.ALL);
-            }
-          }
+//          if (ALL_LOGGING_WHEN_CANT_JOIN) {
+//            if (lastTimePrinted != 0) {
+//              params.setInt("org.mpisws.p2p.transport_loglevel",Logger.ALL);
+//            }
+//          }
           lastTimePrinted = now;
         }
         Thread.sleep(1000);
       }
       
-      if (ALL_LOGGING_WHEN_CANT_JOIN) {
-        params.setInt("org.mpisws.p2p.transport_loglevel",setLLBackTo);
-      }    
+//      if (ALL_LOGGING_WHEN_CANT_JOIN) {
+//        params.setInt("org.mpisws.p2p.transport_loglevel",setLLBackTo);
+//      }    
             
       if (!running || node.joinFailed()) {
         Runtime.getRuntime().removeShutdownHook(shutdownHook);
