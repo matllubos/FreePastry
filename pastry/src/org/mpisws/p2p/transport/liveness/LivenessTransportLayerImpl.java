@@ -688,7 +688,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
     
     public P2PSocket<Identifier> getLSocket(P2PSocket<Identifier> s) {
-      LSocket sock = new LSocket(this, s);
+      LSocket sock = new LSocket(this, s, identifier.get());
       synchronized(sockets) {
         sockets.add(sock);
       }
@@ -950,6 +950,13 @@ public class LivenessTransportLayerImpl<Identifier> implements
    */
   class LSocket extends SocketWrapperSocket<Identifier, Identifier> {
     EntityManager manager;
+    
+    /**
+     * This is for memory management, so that we don't collect the identifier in the EntityManager 
+     * while we still have open sockets.
+     */
+    Identifier hardRef;
+    
     /**
      * set every time we want to write, and killed every time we do write
      */
@@ -957,9 +964,11 @@ public class LivenessTransportLayerImpl<Identifier> implements
     
     boolean closed = false;
     
-    public LSocket(EntityManager manager, P2PSocket<Identifier> socket) {
+    public LSocket(EntityManager manager, P2PSocket<Identifier> socket, Identifier hardRef) {
       super(socket.getIdentifier(), socket, LivenessTransportLayerImpl.this.logger, socket.getOptions());
+      if (hardRef == null) throw new IllegalArgumentException("hardRef == null "+manager+" "+socket);
       this.manager = manager;
+      this.hardRef = hardRef;
     }
     
     public void notifyRecievers() {

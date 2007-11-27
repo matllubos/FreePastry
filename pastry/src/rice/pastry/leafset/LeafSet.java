@@ -169,15 +169,36 @@ public class LeafSet extends Observable implements Serializable {
     return false;
   }
 
+  /**
+   * There are 2 possible indexes (if the ring is small), the cw index and the ccw, this returns the nearest index, and if they are the same, the cw index.
+   * 
+   * Note: previous to FP2.1a3, this always returned the cw index if it existed.
+   * 
+   * @param nh
+   * @return
+   * @throws NoSuchElementException
+   */
   public int getIndex(NodeHandle nh) throws NoSuchElementException {
-    int index;
 
     if (baseId.equals(nh.getId())) return 0;
 
-    index = cwSet.getIndex(nh);
-    if (index >= 0) return index + 1;
-    index = ccwSet.getIndex(nh);
-    if (index >= 0) return -index - 1;
+    int cwIndex = cwSet.getIndex(nh);
+    int ccwIndex = ccwSet.getIndex(nh);
+    if (cwIndex >= 0 && ccwIndex >= 0) {
+      //the ring overlaps
+      
+      
+      if (cwIndex <= ccwIndex) { 
+        // cw is closer (or equal)
+        return cwIndex + 1;
+      }
+      
+      // ccw is closer
+      return -ccwIndex - 1;
+    }
+    
+    if (cwIndex >= 0) return cwIndex + 1;
+    if (ccwIndex >= 0) return -ccwIndex - 1;
 
     throw new NoSuchElementException();
   }
@@ -203,9 +224,12 @@ public class LeafSet extends Observable implements Serializable {
    * @param nid a NodeHandle.
    * @return true if that NodeHandle is in the set, false otherwise.
    */
-  public boolean member(NodeHandle nid)
-  {
+  public boolean member(NodeHandle nid) {
     return cwSet.member(nid) || ccwSet.member(nid);
+  }
+  
+  public boolean contains(NodeHandle nh) {
+    return member(nh);
   }
 
   /**

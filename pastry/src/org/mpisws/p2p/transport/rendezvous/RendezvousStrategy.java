@@ -20,10 +20,10 @@ public interface RendezvousStrategy<Identifier> {
    *   UnableToConnectException if dest is faulty
    *   
    * @param target call ChannelOpener.openChannel() on this Identifier
-   * @param dest pass this to ChannelOpener.openChannel(), it's who the ChannelOpener will connect to
+   * @param rendezvous pass this to ChannelOpener.openChannel(), it's who the ChannelOpener will connect to
    * @param credentials this is also passed to ChannelOpener.openChannel()
    * @param deliverResultToMe notify me when success/failure
    * @return a way to cancel the request
    */
-  public Cancellable openChannel(Identifier target, Identifier dest, byte[] credentials, Continuation<Integer, Exception> deliverResultToMe);
+  public Cancellable openChannel(Identifier target, Identifier rendezvous, byte[] credentials, Continuation<Integer, Exception> deliverResultToMe);
 }

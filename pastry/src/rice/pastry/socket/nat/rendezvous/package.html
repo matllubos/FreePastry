@@ -1,5 +1,15 @@
+The primitive that RendezvousStrategy provides:
+1) Nancy contacts Robert and sends him K
+2) Robert routes Alice's request to K
+3) Kelly at K contacts back to Robert to either stun or relay
+Alice can use this to do several things:
+  a) Bootstrap
+  b) Reconnect Leafset Member (probably, may need to choose Robert on other side of node)
+  c) Determine liveness of Alice with Key K (if a different node responds, then Alice is faulty)
+  d) This takes out a piece of non-determinism: the route message can't go faster than the connection to Robert, because that connection happens first.
+  e) There is still opportunity to choose other node Bob to rendezvous if the connection takes too long, maybe Robert is censoring.
+
 TODO:
-  Make Rendezvous Layer it's own thing
   Make LeafSetSRStrategy only pick Non-NATted nodes.
   Send keepalives on UDP/TCP
 
