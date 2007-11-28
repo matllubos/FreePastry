@@ -558,6 +558,14 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       }
       theTopics.add(topic);
     }
+    
+    if (logger.level <= Logger.FINEST) {
+      logger.log("buildManifest()");
+      for (NodeHandle node : manifest.keySet()) {
+        logger.log("  "+node+" "+manifest.get(node));
+      }
+    }
+    
     return manifest;    
   }
   
@@ -1605,7 +1613,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
         paths.add(tmanager.getPathToRoot());
       }
         
-      endpoint.route(null, new SubscribeAckMessage(localHandle, toReturn, paths, id), sMessage.getSubscriber());
+      endpoint.route(null, new SubscribeAckMessage(localHandle, toReturn, paths, sMessage.getId()), sMessage.getSubscriber());
     }
     
     // otherwise, we are effectively rejecting the child
