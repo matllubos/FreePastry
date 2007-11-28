@@ -674,16 +674,30 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     // step 2, execute them all
     // items to be added back into the queue
     ArrayList<TimerTask> addBack = new ArrayList<TimerTask>();
-    Iterator i = executeNow.iterator();
+    Iterator<TimerTask> i = executeNow.iterator();
     while (i.hasNext()) {
-      TimerTask next = (TimerTask) i.next();
+      TimerTask next = i.next();
       try {
         if (logger.level <= Logger.FINE) logger.log("executing task "+next);
         if (next.execute(timeSource)) {
           addBack.add(next);
         }
-      } catch (Exception e) {
-        if (logger.level <= Logger.SEVERE) logger.logException("",e);
+      } catch (RuntimeException e) {
+        // add back the un-executed tasks before continuing
+        while(i.hasNext()) {
+          addBack.add(i.next());
+        }
+        synchronized (this) {
+          i = addBack.iterator();
+          while (i.hasNext()) {
+            TimerTask tt = (TimerTask) i.next();
+            //System.out.println("SM.addBack("+tt+")");
+            timerQueue.add(tt);
+          }
+        }
+        
+//        if (logger.level <= Logger.SEVERE) logger.logException("",e);
+        throw e;
       }
     }
 

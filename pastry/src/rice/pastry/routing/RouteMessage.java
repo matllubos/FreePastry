@@ -384,13 +384,15 @@ public class RouteMessage extends PRawMessage implements Serializable,
         int auxAddress = buf.readInt();
         NodeHandle destHandle = null;
         Id target = null;
-        if (buf.readBoolean()) { // destHandle exists
+        boolean hasDestHandle = buf.readBoolean();
+        if (hasDestHandle) { // destHandle exists
           destHandle = pn.readNodeHandle(buf);
           target = (rice.pastry.Id)destHandle.getId();
         } else {
           target = Id.build(buf);
         }
 //        NodeHandle prev = pn.readNodeHandle(buf);
+//        System.out.println("RM.build() v:"+version+" aux:"+auxAddress+" t:"+target+" d:"+destHandle+" hDh:"+hasDestHandle); 
         return new RouteMessage(target, auxAddress, prev, buf, priority, pn, destHandle, outputVersion);
       }
       default:
@@ -413,6 +415,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
+//    System.out.println(this+".serialize()");
     buf.writeByte(version); // version (deserialized in build())
     buf.writeInt(auxAddress); // (deserialized in build())
     switch (version) {
@@ -426,12 +429,16 @@ public class RouteMessage extends PRawMessage implements Serializable,
       } else {
         target.serialize(buf); // (deserialized in build())        
       }            
-    }
+    } // switch
+    
 //    prevNode.serialize(buf); // (deserialized in build())
     if (serializedMsg != null) { // pri, sdr
+//      System.out.println(this+".serialize() 1 "+serializedMsg.bytesRemaining());
       // fixed Fabio's bug from Nov 2006 (these were deserialized in the constructer above, but not added back into the internal stream.)
       buf.writeBoolean(hasSender);
 //      buf.writeByte(internalPriority);      
+      
+      buf.writeShort(internalType);
       
       // optimize this, possibly by extending InternalBuffer interface to access the raw underlieing bytes
       byte[] raw = new byte[serializedMsg.bytesRemaining()]; 
@@ -440,6 +447,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
       serializedMsg = null;
       // note, this leaves the RouteMessage in a busted state no rawInternalMsg, internalMsg, serializedMsg
     } else {
+//      System.out.println(this+".serialize() 2");
       if (rawInternalMsg == null) {
         rawInternalMsg = convert(internalMsg); 
       }
