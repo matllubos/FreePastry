@@ -43,6 +43,8 @@ import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -126,6 +128,7 @@ public class TCPLayer extends SelectionKeyHandler {
       InetSocketAddress destination, 
       SocketCallback<InetSocketAddress> deliverSocketToMe,
       Map<String, Object> options) {
+    if (isDestroyed()) return null;
     if (logger.level <= Logger.FINEST) {
       logger.logException("openSocket("+destination+")", new Exception("Stack Trace"));
     } else {
@@ -133,17 +136,23 @@ public class TCPLayer extends SelectionKeyHandler {
     }
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
     try {
-//      synchronized (sockets) {
+      synchronized (sockets) {
         SocketManager sm = new SocketManager(this, destination, deliverSocketToMe, options); 
-//        sockets.put(sm, sm);
+        sockets.add(sm);
         return sm;
-//      }
+      }
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.logException("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + destination + " AS DEAD!",e);
       SocketRequestHandle can = new SocketRequestHandleImpl<InetSocketAddress>(destination, options, logger);
       deliverSocketToMe.receiveException(can, e);
       return can;
     }
+  }
+  
+  Collection<SocketManager> sockets = new HashSet<SocketManager>();
+  
+  protected void socketClosed(SocketManager sm) {
+    sockets.remove(sm);
   }
 
   /**
@@ -167,30 +176,18 @@ public class TCPLayer extends SelectionKeyHandler {
   public void destroy() {
     if (logger.level <= Logger.INFO) logger.log("destroy()");
 
-//    resigned = true;
-//    
-//    while (socketQueue.size() > 0) 
-//      ((SocketManager) sockets.get(socketQueue.getFirst())).close();
-//    
-//    while (sourceRouteQueue.size() > 0) 
-//      ((SourceRouteManager) sourceRouteQueue.getFirst()).close();
-//        
-//    // anything somehow left in sockets?
-//    while (sockets.size() > 0) {
-//      ((SocketManager) sockets.values().iterator().next()).close();   
-//    }
-    
-    // any left in un
-//    while (unIdentifiedSM.size() > 0) {
-//      ((SocketManager) unIdentifiedSM.iterator().next()).close();
-//    }
-    
     try {
       key.channel().close();
       key.cancel();    
       key.attach(null);
     } catch (IOException ioe) {
       wire.errorHandler.receivedException(null, ioe); 
+    }
+
+    // TODO: add a flag to disable this to simulate a silent fault
+    for (SocketManager socket : new ArrayList<SocketManager>(sockets)) {
+     // logger.log("closing "+socket);
+      socket.close();      
     }
   }
 
@@ -231,9 +228,9 @@ public class TCPLayer extends SelectionKeyHandler {
 //      channel.configureBlocking(false);
 //      InetSocketAddress addr = (InetSocketAddress)channel.socket().getRemoteSocketAddress();
       SocketManager sm = new SocketManager(this, key); 
-//      synchronized (sockets) {
-//        sockets.put(sm, sm);
-//      }
+      synchronized (sockets) {
+        sockets.add(sm);
+      }
       wire.incomingSocket(sm);
       
 //      pastryNode.broadcastChannelOpened((InetSocketAddress)channel.socket().getRemoteSocketAddress(), NetworkListener.REASON_ACC_NORMAL);

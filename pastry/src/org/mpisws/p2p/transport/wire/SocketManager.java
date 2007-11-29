@@ -235,6 +235,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       
       if (channel != null) 
         channel.close();
+      tcp.socketClosed(this);
       
       
       tcp.wire.environment.getSelectorManager().invoke(new Runnable() {
