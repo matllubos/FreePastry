@@ -424,7 +424,7 @@ public class LRUCache implements Cache {
       ObjectOutputStream oos = new XMLObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(baos)));
 
       oos.writeObject(obj);
-      oos.flush();
+      oos.close();
 
       return baos.toByteArray().length;
     } catch (IOException e) {
