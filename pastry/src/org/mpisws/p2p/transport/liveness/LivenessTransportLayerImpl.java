@@ -797,14 +797,17 @@ public class LivenessTransportLayerImpl<Identifier> implements
         } 
       }
       
+      ArrayList<LSocket> temp;
       synchronized(sockets) {
         // the close() operation can cause a ConcurrentModificationException
-        for (LSocket sock : new ArrayList<LSocket>(sockets)) {
-          sock.close(); 
-          sock.notifyRecievers();          
-        }
+        temp = new ArrayList<LSocket>(sockets);
         sockets.clear();
-      }      
+      }
+      for (LSocket sock : temp) {
+        if (logger.level <= Logger.INFO) logger.log("closing "+sock);
+        sock.close(); 
+//        sock.notifyRecievers();          
+      }
     }
     
     
@@ -970,13 +973,14 @@ public class LivenessTransportLayerImpl<Identifier> implements
       this.manager = manager;
       this.hardRef = hardRef;
     }
-    
-    public void notifyRecievers() {
-      if (reader != null) reader.receiveException(this, new NodeIsFaultyException(manager.identifier.get()));
-      if (writer != null && writer != reader) writer.receiveException(this, new NodeIsFaultyException(manager.identifier.get()));      
-    }
 
-    P2PSocketReceiver<Identifier> reader, writer;
+    // done with call to close
+//    public void notifyRecievers() {
+//      if (reader != null) reader.receiveException(this, new NodeIsFaultyException(manager.identifier.get()));
+//      if (writer != null && writer != reader) writer.receiveException(this, new NodeIsFaultyException(manager.identifier.get()));      
+//    }
+
+//    P2PSocketReceiver<Identifier> reader, writer;
 
     @Override
     public void register(boolean wantToRead, boolean wantToWrite, final P2PSocketReceiver<Identifier> receiver) {     
@@ -987,28 +991,22 @@ public class LivenessTransportLayerImpl<Identifier> implements
         return;
       }
       if (wantToWrite) startLivenessCheckerTimer();
-      super.register(wantToRead, wantToWrite, new P2PSocketReceiver<Identifier>() {
-
-        public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
-          receiver.receiveException(socket, ioe);
-        }
-
-        public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
-          EntityManager m = getManager(socket.getIdentifier());
-          if (m.liveness > LIVENESS_SUSPECTED) {
-            m.updated = 0L;
-            m.checkLiveness(socket.getOptions());
-          }
-          if (canRead) reader = null;
-          if (canWrite) {
-            writer = null;          
-            stopLivenessCheckerTimer();
-          }
-          receiver.receiveSelectResult(socket, canRead, canWrite);
-        }});
-      if (wantToRead) reader = receiver;
-      if (wantToWrite) writer = receiver;
+      super.register(wantToRead, wantToWrite, receiver);
     }
+    
+    @Override
+    public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
+      EntityManager m = getManager(socket.getIdentifier());
+      if (m.liveness > LIVENESS_SUSPECTED) {
+        m.updated = 0L;
+        m.checkLiveness(socket.getOptions());
+      }
+      if (canWrite) {
+        stopLivenessCheckerTimer();
+      }
+      super.receiveSelectResult(socket, canRead, canWrite);
+    }
+    
 
     public void startLivenessCheckerTimer() {      
       // it's already going to check

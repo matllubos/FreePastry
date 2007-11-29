@@ -531,6 +531,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     
     public void setWritingSocket(P2PSocket<Identifier> s/*, String loc*/) {
 //      logger.logException(this+".setWritingSocket("+s+")", new Exception());
+//      if (logger.level <= Logger.INFO) logger.log(this+".setWritingSocket("+s+")");
       if (logger.level <= Logger.FINEST) logger.log(this+".setWritingSocket("+s+")");
 //      if (logger.level <= Logger.INFO) logger.log(this+".setWritingSocket("+s+") loc:"+loc);
       writingSocket = s;

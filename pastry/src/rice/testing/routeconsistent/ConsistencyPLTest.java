@@ -113,6 +113,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.environment.time.simulated_loglevel", Logger.WARNING);
     
 //  params.setInt("rice.pastry_loglevel", Logger.INFO);
+    // ******** we overrode SPNF make sure to alos override routeconsistent *******
+    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.FINE);
     params.setInt("rice.testing.routeconsistent_loglevel", Logger.FINE);
 //    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.ALL);
    
@@ -122,9 +124,10 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
 //    params.setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
 //    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
-//    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
+    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.INFO);
-    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
+//    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
+    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINEST);
     
 //    params.setInt("rice.pastry.standard.RapidRerouter_loglevel", Logger.INFO);    
 //    params.setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
@@ -136,8 +139,6 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
     
-    // ******** don't use this, we overrode SPNF *******
-//      params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.FINE);
     
 //    params.setInt("pastry_socket_scm_socket_buffer_size", 131072); // see if things improve with big buffer, small queue
 //    params.setInt("pastry_socket_writer_max_queue_length", 3); // see if things improve with big buffer, small queue
@@ -158,6 +159,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
   public static String ALT_BOOTNODE = "planetlab02.mpi-sws.mpg.de";
   public static final int BASE_DELAY = 30000;
   public static final int RND_DELAY = 500000;
+//  public static final int RND_DELAY = 1;
   
   
   public static boolean artificialChurn = false;
@@ -411,6 +413,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       } else {
         env = new Environment();
       }
+
+      setupParams(env.getParameters());
       
       // Generate the NodeIds Randomly
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);

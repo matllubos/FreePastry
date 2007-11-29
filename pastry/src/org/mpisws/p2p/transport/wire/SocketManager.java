@@ -242,58 +242,25 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       // notify the writer/reader because an intermediate layer may have closed the socket, and they need to know
       if (writer != null) {
         if (writer == reader) {
-//          try {
-//            writer.receiveSelectResult(SocketManager.this, true, true);
-//          } catch (IOException e) {
-//            if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
-//          }
-          writer.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
+          P2PSocketReceiver<InetSocketAddress> temp = writer;
           writer = null;
           reader = null;
+          temp.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
         } else {
-//          try {
-//            writer.receiveSelectResult(SocketManager.this, false, true);          
-//          } catch (IOException e) {
-//            if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
-//          }
-          writer.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
+          P2PSocketReceiver<InetSocketAddress> temp = writer;
           writer = null;
+          temp.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
         }
       }
       
       if (reader != null) {
         if (tcp.isDestroyed()) return;
-//        try {
-//          reader.receiveSelectResult(SocketManager.this, true, false);                  
-//        } catch (IOException e) {
-//          if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
-//        }
-        reader.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
+        P2PSocketReceiver<InetSocketAddress> temp = reader;
         reader = null;
+        temp.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
       }
         }
       });
-//      if (path != null) {
-//        manager.socketClosed(path, this);
-//
-//        Iterator i = writer.getQueue().iterator();
-//        writer.reset();
-//
-//        /**
-//         * Here, if we have not been declared dead, then we attempt to resend
-//         * the messages. However, if we have been declared dead, we reroute
-//         * the route messages via the pastry node, but delete any messages
-//         * routed directly.
-//         */
-//        while (i.hasNext()) {
-//          Object o = i.next();
-//
-//          if ((o instanceof SocketBuffer) && (manager.manager != null)) 
-//            manager.manager.reroute(path.getLastHop(), (SocketBuffer) o);
-//        } 
-//
-//        path = null;
-//      }
     } catch (IOException e) {
       if (logger.level <= Logger.SEVERE) logger.log( "ERROR: Recevied exception " + e + " while closing socket!");
     }
@@ -378,6 +345,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   }
 
   Exception regWriteEx;
+  long regWriteExTime;
   public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver<InetSocketAddress> receiver) {
     if (logger.level <= Logger.FINER) logger.log(this+".register("+(wantToRead?"r":"")+(wantToWrite?"w":"")+","+receiver+")");
     if (key == null) {
@@ -401,7 +369,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       if (writer != null) {
         if (writer != receiver) {
-          logger.logException("Already registered",regWriteEx);
+          logger.logException("Already registered "+regWriteExTime,regWriteEx);
           throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well! SM:"+this);
 //          receiver.receiveException(this, 
 //              new IOException(
@@ -411,6 +379,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
     }
     regWriteEx = new Exception("regWriteEx Stack Trace "+this);
+    regWriteExTime = tcp.wire.environment.getTimeSource().currentTimeMillis();
     
     if (wantToRead) {
       if (reader != null) {

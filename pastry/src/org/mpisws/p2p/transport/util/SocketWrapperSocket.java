@@ -53,12 +53,14 @@ import rice.environment.logging.Logger;
  * @param <Identifier>
  * @param <SubIdentifier>
  */
-public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket<Identifier> {
+public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket<Identifier>, P2PSocketReceiver<SubIdentifier> {
 
   protected Identifier identifier;
   protected P2PSocket<SubIdentifier> socket;
   protected Logger logger;
   protected Map<String, Object> options;
+  // TODO: make getters
+  private P2PSocketReceiver<Identifier> reader, writer;
   
   public SocketWrapperSocket(Identifier identifier, P2PSocket<SubIdentifier> socket, Logger logger, Map<String, Object> options) {
     this.identifier = identifier;
@@ -82,28 +84,96 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
     if (logger.level <= Logger.FINEST) logger.log(this+"read():"+ret);
     return ret;
   }
-
-//  public long read(ByteBuffer[] dsts, int offset, int length)
-//      throws IOException {
-//    return socket.read(dsts, offset, length);
-//  }
-
+  
   public void register(boolean wantToRead, boolean wantToWrite,
       final P2PSocketReceiver<Identifier> receiver) {
+//    logger.log(this+"register("+wantToRead+","+wantToWrite+","+receiver+")");
     if (logger.level <= Logger.FINEST) logger.log(this+"register("+wantToRead+","+wantToWrite+","+receiver+")");
-    socket.register(wantToRead, wantToWrite, new P2PSocketReceiver<SubIdentifier>() {    
-      public void receiveSelectResult(P2PSocket<SubIdentifier> socket, boolean canRead,
-          boolean canWrite) throws IOException {
-        if (logger.level <= Logger.FINEST) logger.log(SocketWrapperSocket.this+"rsr("+socket+","+canRead+","+canWrite+")");
-        receiver.receiveSelectResult(SocketWrapperSocket.this, canRead, canWrite);
-      }
+    if (wantToRead) {
+      if (reader != null && reader != receiver) throw new IllegalStateException("Already registered "+reader+" for reading. Can't register "+receiver);
+      reader = receiver;
+    }
+    if (wantToWrite) {
+      if (writer != null && writer != receiver) throw new IllegalStateException("Already registered "+reader+" for writing. Can't register "+receiver);
+      writer = receiver;
+    }
+    socket.register(wantToRead, wantToWrite, this);
     
-      public void receiveException(P2PSocket<SubIdentifier> socket, IOException e) {
-        receiver.receiveException(SocketWrapperSocket.this, e);
-      }    
-    });
+//    new P2PSocketReceiver<SubIdentifier>() {    
+//      public void receiveSelectResult(P2PSocket<SubIdentifier> socket, boolean canRead,
+//          boolean canWrite) throws IOException {
+//        if (logger.level <= Logger.FINEST) logger.log(SocketWrapperSocket.this+"rsr("+socket+","+canRead+","+canWrite+")");
+//        receiver.receiveSelectResult(SocketWrapperSocket.this, canRead, canWrite);
+//      }
+//    
+//      public void receiveException(P2PSocket<SubIdentifier> socket, IOException e) {
+//        receiver.receiveException(SocketWrapperSocket.this, e);
+//      }    
+//      
+//      public String toString() {
+//        return SocketWrapperSocket.this+"$1";
+//      }
+//    });
   }
 
+  public void receiveSelectResult(P2PSocket<SubIdentifier> socket, boolean canRead,
+      boolean canWrite) throws IOException {
+//    logger.log(this+"rsr("+socket+","+canRead+","+canWrite+")");
+    if (logger.level <= Logger.FINEST) logger.log(this+"rsr("+socket+","+canRead+","+canWrite+")");
+    if (canRead && canWrite && (reader == writer)) {      
+      P2PSocketReceiver<Identifier> temp = reader;
+      reader = null;
+      writer = null;
+      temp.receiveSelectResult(this, canRead, canWrite);
+      return;
+    }
+
+    if (canRead) {      
+      if (reader == null) {
+        if (logger.level <= Logger.WARNING) logger.log("no reader in "+this+".rsr("+socket+","+canRead+","+canWrite+")");        
+      }
+      P2PSocketReceiver<Identifier> temp = reader;
+      reader = null;
+      temp.receiveSelectResult(this, true, false);
+    }
+
+    if (canWrite) {      
+      if (writer == null) {
+        if (logger.level <= Logger.WARNING) logger.log("no writer in "+this+".rsr("+socket+","+canRead+","+canWrite+")");        
+      }
+      P2PSocketReceiver<Identifier> temp = writer;
+      writer = null;
+      temp.receiveSelectResult(this, false, true);
+    }
+
+    
+//    receiver.receiveSelectResult(SocketWrapperSocket.this, canRead, canWrite);
+  }
+
+  public void receiveException(P2PSocket<SubIdentifier> socket, IOException e) {
+//    logger.log(this+".receiveException("+e+")");
+    if (writer != null) {
+      if (writer == reader) {
+        P2PSocketReceiver<Identifier> temp = writer;
+        writer = null;
+        reader = null;
+        temp.receiveException(this, e);
+      } else {
+        P2PSocketReceiver<Identifier> temp = writer;
+        writer = null;
+        temp.receiveException(this, e);
+      }
+    }
+    
+    if (reader != null) {
+      P2PSocketReceiver<Identifier> temp = reader;
+      reader = null;
+      temp.receiveException(this, e);
+    }
+//    receiver.receiveException(SocketWrapperSocket.this, e);
+  }    
+
+  
   public void shutdownOutput() {
     socket.shutdownOutput();
   }
@@ -114,14 +184,10 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
     return ret;
   }
 
-//  public long write(ByteBuffer[] srcs, int offset, int length)
-//      throws IOException {
-//    return socket.write(srcs, offset, length);
-//  }
-  
   @Override
   public String toString() {
-    return "Socket<"+identifier+">";
+    if (getIdentifier() == socket.getIdentifier()) return socket.toString();
+    return identifier+"-"+socket;
   }
 
   public Map<String, Object> getOptions() {
