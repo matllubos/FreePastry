@@ -195,7 +195,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   public synchronized void invoke(Runnable d) {
     if (d == null)
       throw new NullPointerException();
-
+    if (invocations == null) return;
     invocations.add(d);
     wakeup();
   }

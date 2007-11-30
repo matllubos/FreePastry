@@ -114,8 +114,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     
 //  params.setInt("rice.pastry_loglevel", Logger.INFO);
     // ******** we overrode SPNF make sure to alos override routeconsistent *******
-    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.FINE);
-    params.setInt("rice.testing.routeconsistent_loglevel", Logger.FINE);
+    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
+    params.setInt("rice.testing.routeconsistent_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.ALL);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
@@ -133,8 +133,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
     
     // turn on consistent join protocol's logger to make sure this is correct for consistency
-    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.ALL);
-    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.ALL);
+    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
+    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
     
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
@@ -206,17 +206,17 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       
       long curTime = env.getTimeSource().currentTimeMillis();
       System.out.println("CPLT.update("+rdy+"):"+curTime);
-      new Exception("Stack Trace").printStackTrace();
+//      new Exception("Stack Trace").printStackTrace();
       int num = 2;    
       
-      if (rdy) {
-        params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.CONFIG);        
-        params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.CONFIG);
-      } else {
-        params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.ALL);
-        params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.ALL);
-        num = 5;
-      }
+//      if (rdy) {
+//        params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.CONFIG);        
+//        params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.CONFIG);
+//      } else {
+//        params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.ALL);
+//        params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.ALL);
+//        num = 5;
+//      }
       System.out.println("LEAFSET"+num+":"+curTime+":"+localNode.getLeafSet());
   //    System.out.println("CPLT.setReady("+rdy+"):"+localNode.getEnvironment().getTimeSource().currentTimeMillis()); 
     } else {
