@@ -136,7 +136,7 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
       Identifier i, MessageType m, 
       MessageCallback<Identifier, MessageType> deliverAckToMe, 
       Map<String, Object> options) {
-    
+    if (!simulator.isAlive(localIdentifier)) return null; // just make this stop, the local node is dead, he shouldn't be doning anything
     MessageRequestHandleImpl<Identifier, MessageType> handle = new MessageRequestHandleImpl<Identifier, MessageType>(i, m, options);
     
     if (livenessProvider.getLiveness(i, null) >= LivenessListener.LIVENESS_DEAD) {

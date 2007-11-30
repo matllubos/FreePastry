@@ -187,6 +187,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
   }
 
   public void remove(Identifier i) {
+    if (!environment.getSelectorManager().isSelectorThread()) throw new IllegalStateException("Operation not permitted on non-selector thread.");
     nodes.remove(i);
     notifyLivenessListeners(i, LivenessListener.LIVENESS_DEAD, null);
   }

@@ -61,7 +61,7 @@ import rice.p2p.util.*;
  *
  * @author Alan Mislove
  */
-public class ReplicationImpl implements Replication, Application {
+public class ReplicationImpl implements Replication, Application, Destructable {
   /**
    * The amount of time to wait between replications
    */
@@ -133,6 +133,7 @@ public class ReplicationImpl implements Replication, Application {
    */
   public ReplicationImpl(Node node, ReplicationClient client, int replicationFactor, String instance, ReplicationPolicy policy) {
     this.environment = node.getEnvironment();
+    environment.addDestructable(this);
     logger = environment.getLogManager().getLogger(ReplicationImpl.class, instance);
     
     Parameters p = environment.getParameters();
@@ -245,6 +246,7 @@ public class ReplicationImpl implements Replication, Application {
       int total = 0;
 
       public void receiveResult(Object o) {
+        if (destroyed) return;
         final IdBloomFilter ourFilter = (IdBloomFilter) o;
 
         for (int i=0; i<handles.size(); i++) {
@@ -376,6 +378,11 @@ public class ReplicationImpl implements Replication, Application {
   public void update(NodeHandle handle, boolean joined) {
     updateClient();
   }
+  
+  protected boolean destroyed = false;
+  public void destroy() {
+    destroyed = true;
+  } 
 
   /**
    * Internal class which is an executable for creating a bloom filter
