@@ -144,7 +144,8 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
       final RawMessage m, 
       final MessageCallback<Identifier, RawMessage> deliverAckToMe,
       Map<String, Object> options) {
-
+    if (destroyed) return null;
+    
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+")");
 
     final MessageRequestHandleImpl<Identifier, RawMessage> handle 
@@ -237,7 +238,9 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
     this.errorHandler = handler;
   }
 
+  protected boolean destroyed = false;
   public void destroy() {
+    destroyed = true;
     tl.destroy();
   }
 

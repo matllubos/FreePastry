@@ -133,6 +133,12 @@ public interface Node {
    * @param instance
    * @return
    */
-  public Endpoint buildEndpoint(Application application, String instance);  
+  public Endpoint buildEndpoint(Application application, String instance);
+
+  /**
+   * For debugging: print the internal routing state of the Node.
+   * @return
+   */
+  public String printRouteState();  
 }
 

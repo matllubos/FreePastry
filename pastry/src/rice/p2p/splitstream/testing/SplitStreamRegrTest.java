@@ -300,7 +300,7 @@ public class SplitStreamRegrTest extends CommonAPITest {
           result = false;
           System.out
               .println("Node " + ssclients[i].getId()
-                  + " is parent less for topic "
+                  + " is parentless for topic "
                   + stripes[j].getStripeId().getId());
         }
         //if(stripes[j].getParent() == null && stripes[j].isRoot())

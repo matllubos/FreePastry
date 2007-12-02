@@ -152,6 +152,10 @@ public class GCNode implements Node {
   public Environment getEnvironment() {
     return node.getEnvironment();
   }
+
+  public String printRouteState() {
+    return node.printRouteState();
+  }
 }
 
 

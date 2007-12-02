@@ -644,5 +644,10 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     // TODO: implement 
   }
   
+  public String printRouteState() {
+    String ret = leafSet.toString()+"\n";
+    ret+=routeSet.toString();
+    return ret;
+  }
 }
 

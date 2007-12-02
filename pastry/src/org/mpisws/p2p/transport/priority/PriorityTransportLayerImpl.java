@@ -277,7 +277,9 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     this.errorHandler = handler;
   }
 
+  protected boolean destroyed = false;
   public void destroy() {
+    destroyed = true;
     tl.destroy();    
   }
   
@@ -587,8 +589,9 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         if (logger.level <= Logger.FINER) logger.log("startLivenessChecker("+temp+","+options+") pend:"+pendingSocket+" writingS:"+writingSocket+" theQueue:"+queue.size());
         livenessChecker = new TimerTask() {        
           @Override
-          public void run() {
+          public void run() {            
             stopLivenessChecker(); // sets livenssChecker back to null
+            if (destroyed) return;
 //            Map<String, Object> options;
 //            MessageWrapper peek = peek();
 //            if (peek != null) {

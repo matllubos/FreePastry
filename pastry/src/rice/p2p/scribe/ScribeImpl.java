@@ -114,6 +114,8 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   
   private String instance;
   
+  protected Node node;
+  
   /**
    * This contains a mapping of child - > all topics for which the local node
    * has this node(hashtable key) as a child
@@ -169,6 +171,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
    */
   public ScribeImpl(Node node, ScribePolicy policy, String instance, ScribeMaintenancePolicy maintenancePolicy) {
     this.environment = node.getEnvironment();
+    this.node = node;
     logger = environment.getLogManager().getLogger(ScribeImpl.class, instance);
     
     Parameters p = environment.getParameters();
@@ -547,7 +550,13 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       if (handle == null) {
         handle = this.localHandle;
         if (!isRoot(topic)) {
-          if (logger.level <= Logger.WARNING) logger.log("buildManifests() did not receive a next hop for topic "+topic+" but we are not the root of the topic. isRoot = "+isRoot(topic));          
+          if (logger.level <= Logger.WARNING) {            
+            logger.log("buildManifests("+topics+") did not receive a next hop for topic "+topic+" but we are not the root of the topic. isRoot = "+isRoot(topic));
+            // print handleSet
+            logger.log("handle set:"+handleSet);
+            // print leafset
+            logger.log(node.printRouteState());
+          }
         }
       }
       

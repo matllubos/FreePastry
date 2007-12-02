@@ -240,6 +240,9 @@ public class MergeTest {
         return false;
       }
     
+      public String printRouteState() {
+        return null;
+      }
     };
     
     RoutingTable rt = new RoutingTable(ls2.get(0),1,(byte)4,pn);

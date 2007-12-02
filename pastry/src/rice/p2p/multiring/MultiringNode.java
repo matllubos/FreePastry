@@ -434,6 +434,10 @@ public class MultiringNode implements Node, ScribeClient {
   public Environment getEnvironment() {
     return environment;
   }
+  
+  public String printRouteState() {
+    return node.printRouteState();
+  }
 }
 
 
