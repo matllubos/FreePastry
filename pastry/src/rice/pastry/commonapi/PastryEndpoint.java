@@ -327,7 +327,18 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     // safe ignored until we have the secure routing support
 
     // get the nodes from the routing table
-    return getRoutingTable().alternateRoutes((rice.pastry.Id) key, num);
+    NodeHandleSet ret = getRoutingTable().alternateRoutes((rice.pastry.Id) key, num);
+    
+    if (ret.size() == 0) {
+      // use the leafset
+      int index = getLeafSet().mostSimilar((rice.pastry.Id)key);
+      NodeHandle nh = getLeafSet().get(index);
+      NodeSet set = new NodeSet();
+      set.put((rice.pastry.NodeHandle)nh);
+      ret = set;
+    }
+    
+    return ret;
   }
 
   /**
