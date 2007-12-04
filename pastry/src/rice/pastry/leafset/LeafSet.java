@@ -54,7 +54,7 @@ import java.io.*;
  * @author Andrew Ladd
  * @author Peter Druschel
  */
-public class LeafSet extends Observable implements Serializable {
+public class LeafSet extends Observable implements Serializable, Iterable<NodeHandle> {
   static private final long serialVersionUID = 3960030608598552977L;
 
   private Id baseId;
@@ -490,6 +490,20 @@ public class LeafSet extends Observable implements Serializable {
 //    }
 //
 //    return v.size();
+  }
+  
+  /**
+   * Unordered iterator, does not contain local node.  Contains each element only once.
+   * 
+   * TODO: Make this in order from nearest neighbor to farthest neighbor, not by replica, but take cw[0], cc2[0], cw[1], ccw[1] etc...
+   * 
+   * @return
+   */
+  public Iterator<NodeHandle> iterator() {
+    HashSet superset = new HashSet();
+    superset.addAll(cwSet.getCollection());
+    superset.addAll(ccwSet.getCollection());
+    return superset.iterator();         
   }
 
   /**

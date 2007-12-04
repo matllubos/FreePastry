@@ -36,12 +36,46 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.socket.nat.rendezvous;
 
+import java.util.ArrayList;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
+
+import rice.environment.random.RandomSource;
+import rice.pastry.NodeHandle;
+import rice.pastry.transport.TLPastryNode;
+
 /**
  * Update RendezvousInfo based on the LeafSet
  * 
  * @author Jeff Hoye
  *
  */
-public class LeafSetRendezvousStrategy {
+public class LeafSetRendezvousStrategy implements RendezvousGenerationStrategy<RendezvousSocketNodeHandle>{
+
+  protected TLPastryNode pn;
+  protected RandomSource random;
+
+  public LeafSetRendezvousStrategy(TLPastryNode pn, RandomSource r) {
+    this.pn = pn;
+    this.random = r;
+  }
+  
+  public RendezvousSocketNodeHandle getRendezvousPoint(RendezvousSocketNodeHandle dest, Map<String, Object> options) {
+    ArrayList<RendezvousSocketNodeHandle> choiceSet = new ArrayList<RendezvousSocketNodeHandle>();
+    for (NodeHandle nh : pn.getLeafSet()) {
+      RendezvousSocketNodeHandle rnh = (RendezvousSocketNodeHandle)nh;
+      if (rnh.canContactDirect()) {
+        choiceSet.add(rnh);
+      }
+    }
+    if (choiceSet.size() == 0) {
+      // We can't find a rendezvous point!!!
+      // should probably log this
+      return null;
+    }
+    
+    return choiceSet.get(random.nextInt(choiceSet.size()));
+  }
 
 }

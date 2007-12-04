@@ -38,12 +38,32 @@ package rice.pastry.socket.nat.rendezvous;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
+import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
+import org.mpisws.p2p.transport.rendezvous.ContactDeserializer;
+import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
+import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
+import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 
 import rice.environment.Environment;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.nat.NATHandler;
+import rice.pastry.transport.TLPastryNode;
 
+
+/**
+ * This class assembles the rendezvous layer with the rendezvous app.
+ * 
+ * Need to think about where this best goes, but for now, we'll put it just above the magic number layer.
+ * 
+ * @author Jeff Hoye
+ *
+ */
 public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
 
   public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler) throws IOException {
@@ -56,4 +76,37 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     // TODO Auto-generated constructor stub
   }
   
+  @Override
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getMagicNumberTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
+    TransportLayer<InetSocketAddress, ByteBuffer> mtl = super.getMagicNumberTransportLayer(wtl, pn);
+    
+    return getRendezvousTransportLayer(mtl, pn);
+  }
+
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getRendezvousTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> mtl, TLPastryNode pn) {
+    
+    return new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
+        mtl, 
+        CommonAPITransportLayerImpl.DESTINATION_IDENTITY, 
+        (RendezvousSocketNodeHandle)pn.getLocalHandle(), 
+        getContactDeserializer(pn),
+        getRendezvousGenerator(pn), 
+        getRendezvousStrategy(pn), 
+        pn.getEnvironment());
+  }
+
+  private ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle> getContactDeserializer(TLPastryNode pn) {
+    return null;
+  }
+
+  protected RendezvousGenerationStrategy<RendezvousSocketNodeHandle> getRendezvousGenerator(TLPastryNode pn) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+  
+  protected RendezvousStrategy<RendezvousSocketNodeHandle> getRendezvousStrategy(TLPastryNode pn) {
+    RendezvousApp app = new RendezvousApp(pn);
+    app.register();
+    return app;
+  }
 }

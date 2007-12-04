@@ -49,12 +49,21 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.util.SocketInputBuffer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 
-public class RendezvousTransportLayerImpl<Identifier> implements 
+/**
+ * The trick here is that this layer is at some level, say InetSocketAddress, but must pass around very High-Level
+ * Identifiers, such as a NodeHandle for the rendezvous strategy to do its job, but maybe this can just be the RendezvousContact, and it can be casted.
+ * @author Jeff Hoye
+ *
+ * @param <Identifier>
+ */
+public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends RendezvousContact> implements 
     TransportLayer<Identifier, ByteBuffer>, TransportLayerCallback<Identifier, ByteBuffer> {
   
   public static final byte NORMAL_SOCKET = 0; // used when normally opening a channel (bypassing rendezvous)
@@ -73,18 +82,23 @@ public class RendezvousTransportLayerImpl<Identifier> implements
   
   TransportLayer<Identifier, ByteBuffer> tl;
   TransportLayerCallback<Identifier, ByteBuffer> callback;
-  RendezvousGenerationStrategy<Identifier> rendezvousGenerator;
-  RendezvousStrategy<Identifier> rendezvousStrategy;
+  RendezvousGenerationStrategy<HighIdentifier> rendezvousGenerator;
+  RendezvousStrategy<HighIdentifier> rendezvousStrategy;
+  HighIdentifier myRendezvousContact;
   Logger logger;
+  ContactDeserializer<Identifier, HighIdentifier> rendezvousContactDeserializer;
   
   public RendezvousTransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
       String RENDEZVOUS_CONTACT_STRING, 
-      boolean canContactDirect,
-      RendezvousGenerationStrategy<Identifier> rendezvousGenerator,
-      RendezvousStrategy<Identifier> rendezvousStrategy, 
+      HighIdentifier myRendezvousContact,
+      ContactDeserializer<Identifier, HighIdentifier> deserializer,
+      RendezvousGenerationStrategy<HighIdentifier> rendezvousGenerator,
+      RendezvousStrategy<HighIdentifier> rendezvousStrategy, 
       Environment env) {
     this.tl = tl;
+    this.myRendezvousContact = myRendezvousContact;
+    this.rendezvousContactDeserializer = deserializer;
     this.RENDEZVOUS_CONTACT_STRING = RENDEZVOUS_CONTACT_STRING;
     this.rendezvousGenerator = rendezvousGenerator;
     this.rendezvousStrategy = rendezvousStrategy;
@@ -166,7 +180,13 @@ public class RendezvousTransportLayerImpl<Identifier> implements
           callback.incomingSocket(socket);
           return;
         case CONNECTOR_SOCKET:
-          // TODO: read the credentials, and match to the ACCEPTOR, or wait, or return an error if the credentials are already used
+          // TODO: read the requested target, credentials, and route to it to establish a connection, which will respond as an ACCEPTOR
+          InputBuffer sib = new SocketInputBuffer(socket,1024);
+          HighIdentifier target = rendezvousContactDeserializer.deserialize(sib);
+          byte[] credentials = rendezvousContactDeserializer.readCredentials(sib);
+          rendezvousStrategy.openChannel(target, myRendezvousContact, credentials, null);
+          // TODO: store credentials/target -> map
+          // TODO: make a deliverResultToMe that closes the socket or returns some kind of error
           return;
         case ACCEPTOR_SOCKET:
           // read the credentials and match to the CONNECTOR, or Self, or wait
