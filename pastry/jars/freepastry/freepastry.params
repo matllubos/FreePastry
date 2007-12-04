@@ -222,11 +222,16 @@ p2p_past_messageTimeout = 30000
 p2p_past_successfulInsertThreshold = 0.5
 
 #replication
+
+# fetch delay is the delay between fetching successive keys
 p2p_replication_manager_fetch_delay = 500
+# the timeout delay is how long we take before we time out fetching a key
 p2p_replication_manager_timeout_delay = 20000
+# this is the number of keys to delete when we detect a change in the replica set
 p2p_replication_manager_num_delete_at_once = 100
-# 10 mins
+# this is how often replication will wake up and do maintainence; 10 mins
 p2p_replication_maintenance_interval = 600000 
+# the maximum number of keys replication will try to exchange in a maintainence message
 p2p_replication_max_keys_in_message = 1000
 
 #scribe
