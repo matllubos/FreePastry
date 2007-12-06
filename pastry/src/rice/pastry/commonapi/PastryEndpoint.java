@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.util.*;
 
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.*;
 import rice.environment.Environment;
@@ -237,16 +238,16 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
       });
     }
     
-    Map<String, Object> rOptions;
-    if (options == null) {
-      rOptions = new HashMap<String, Object>(); 
-    } else {
-      rOptions = new HashMap<String, Object>(options);
-    }
-    rOptions.put(PriorityTransportLayer.OPTION_PRIORITY, pm.getPriority());
-//    logger.log("NumOptions = "+rOptions.size());
-
-    rm.setTLOptions(rOptions);
+//    Map<String, Object> rOptions;
+//    if (options == null) {
+//      rOptions = new HashMap<String, Object>(); 
+//    } else {
+//      rOptions = new HashMap<String, Object>(options);
+//    }
+//    rOptions.put(PriorityTransportLayer.OPTION_PRIORITY, pm.getPriority());
+////    logger.log("NumOptions = "+rOptions.size());
+    
+    rm.setTLOptions(OptionsFactory.addOption(options, PriorityTransportLayer.OPTION_PRIORITY, pm.getPriority()));
         
     thePastryNode.getRouter().route(rm);
 

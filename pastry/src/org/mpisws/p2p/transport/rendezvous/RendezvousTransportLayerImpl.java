@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.rendezvous;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -49,12 +50,16 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketInputBuffer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.util.tuples.MutableTuple;
+import rice.p2p.util.tuples.Tuple;
 
 /**
  * The trick here is that this layer is at some level, say InetSocketAddress, but must pass around very High-Level
@@ -64,11 +69,12 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
  * @param <Identifier>
  */
 public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends RendezvousContact> implements 
-    TransportLayer<Identifier, ByteBuffer>, TransportLayerCallback<Identifier, ByteBuffer> {
+    TransportLayer<Identifier, ByteBuffer>, TransportLayerCallback<Identifier, ByteBuffer>, PilotManager<HighIdentifier> {
   
   public static final byte NORMAL_SOCKET = 0; // used when normally opening a channel (bypassing rendezvous)
   public static final byte CONNECTOR_SOCKET = 1; // sent to the rendezvous server
   public static final byte ACCEPTOR_SOCKET = 2; // used when openChannel() is called
+  public static final byte PILOT_SOCKET = 3; // used when openChannel() is called
   
   /**
    * TRUE if not Firewalled
@@ -86,7 +92,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   RendezvousStrategy<HighIdentifier> rendezvousStrategy;
   HighIdentifier myRendezvousContact;
   Logger logger;
-  ContactDeserializer<Identifier, HighIdentifier> rendezvousContactDeserializer;
+  ContactDeserializer<Identifier, HighIdentifier> serializer;
   
   public RendezvousTransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -98,7 +104,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       Environment env) {
     this.tl = tl;
     this.myRendezvousContact = myRendezvousContact;
-    this.rendezvousContactDeserializer = deserializer;
+    this.serializer = deserializer;
     this.RENDEZVOUS_CONTACT_STRING = RENDEZVOUS_CONTACT_STRING;
     this.rendezvousGenerator = rendezvousGenerator;
     this.rendezvousStrategy = rendezvousStrategy;
@@ -119,7 +125,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     final SocketRequestHandle<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options,logger);
     
     // TODO: throw proper exception if options == null, or !contains(R_C_S)
-    final RendezvousContact contact = (RendezvousContact)options.get(RENDEZVOUS_CONTACT_STRING);
+    final RendezvousContact contact = getHighIdentifier(options);
     if (contact.canContactDirect()) {
       // write NORMAL_SOCKET and continue
       tl.openSocket(i, new SocketCallback<Identifier>(){
@@ -152,6 +158,10 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
 
     return handle;
   }
+  protected HighIdentifier getHighIdentifier(Map<String, Object> options) {
+    return (HighIdentifier)options.get(RENDEZVOUS_CONTACT_STRING);
+  }
+
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
     s.register(true, false, new P2PSocketReceiver<Identifier>() {
 
@@ -182,8 +192,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         case CONNECTOR_SOCKET:
           // TODO: read the requested target, credentials, and route to it to establish a connection, which will respond as an ACCEPTOR
           InputBuffer sib = new SocketInputBuffer(socket,1024);
-          HighIdentifier target = rendezvousContactDeserializer.deserialize(sib);
-          byte[] credentials = rendezvousContactDeserializer.readCredentials(sib);
+          HighIdentifier target = serializer.deserialize(sib);
+          byte[] credentials = serializer.readCredentials(sib);
           rendezvousStrategy.openChannel(target, myRendezvousContact, credentials, null);
           // TODO: store credentials/target -> map
           // TODO: make a deliverResultToMe that closes the socket or returns some kind of error
@@ -204,10 +214,26 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
    * What to do if firewalled?
    *   ConnectRequest UDP only?  For now always use UDP_AND_TCP
    */
-  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
-    // TODO Auto-generated method stub
-    return null;
+  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
+    final MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
+    
+    MessageCallback<HighIdentifier, ByteBuffer> ack;
+    if (deliverAckToMe == null) {
+      ack = null;
+    } else {
+      ack = new MessageCallback<HighIdentifier, ByteBuffer>(){
+        public void ack(MessageRequestHandle<HighIdentifier, ByteBuffer> msg) {
+          deliverAckToMe.ack(ret);
+        }
+        public void sendFailed(MessageRequestHandle<HighIdentifier, ByteBuffer> msg, IOException reason) {
+          deliverAckToMe.sendFailed(ret, reason);
+        }
+      };
+    }
+    ret.setSubCancellable(rendezvousStrategy.sendMessage(getHighIdentifier(options), m, ack, options));
+    return ret;
   }
+  
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
     // TODO Auto-generated method stub    
   }
@@ -229,5 +255,48 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   }
   public void destroy() {
     // TODO Auto-generated method stub    
+  }
+
+  Map<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>> pilots = 
+    new HashMap<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>>();
+  
+  public SocketRequestHandle<HighIdentifier> openPilot(final HighIdentifier i, 
+      final Continuation<SocketRequestHandle<HighIdentifier>, IOException> deliverAckToMe) {    
+    if (pilots.containsKey(i)) {
+      return null; 
+    }
+
+    final SocketRequestHandle<HighIdentifier> ret = new SocketRequestHandleImpl<HighIdentifier>(i,null,logger);
+    
+    final MutableTuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>> tuple = 
+      new MutableTuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>();
+    
+    tuple.setA(tl.openSocket(serializer.convert(i), new SocketCallback<Identifier>(){
+      public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
+        tuple.setB(sock);
+        if (deliverAckToMe != null) deliverAckToMe.receiveResult(ret);
+      }
+    
+      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+        if (deliverAckToMe != null) deliverAckToMe.receiveException(ex);
+      }
+    }, serializer.getOptions(i)));    
+    
+    return ret;
   }  
+  
+  public void closePilot(HighIdentifier i) {
+    Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>> closeMe = pilots.remove(i);
+    if (closeMe != null) {
+      SocketRequestHandle<Identifier> deadHandle = closeMe.a();
+      P2PSocket<Identifier> deadSocket = closeMe.b();
+      if (deadSocket == null) {
+        // the socket hasn't come back, so cancel the task
+        deadHandle.cancel();
+      } else {
+        deadSocket.close();
+      }
+    }
+  }
+
 }

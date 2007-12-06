@@ -36,6 +36,8 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.rendezvous;
 
+import java.util.Map;
+
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public interface ContactDeserializer<Identifier, HighIdentifier> {
@@ -45,5 +47,13 @@ public interface ContactDeserializer<Identifier, HighIdentifier> {
   byte[] readCredentials(InputBuffer sib);
 
   Identifier convert(HighIdentifier high);
+  
+  /**
+   * Return the options that all the layers would make on this identifier.
+   * 
+   * @param high
+   * @return
+   */
+  Map<String, Object> getOptions(HighIdentifier high);
   
 }

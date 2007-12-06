@@ -37,8 +37,13 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.rendezvous;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Map;
 
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.rendezvous.ChannelOpener;
 import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
@@ -51,6 +56,7 @@ import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
+import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.selector.SelectorManager;
 
@@ -139,6 +145,26 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
     
     
     // TODO Auto-generated method stub
+    return null;
+  }
+
+  public MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer> sendMessage(
+      RendezvousSocketNodeHandle i, 
+      ByteBuffer m, 
+      MessageCallback<RendezvousSocketNodeHandle, ByteBuffer> deliverAckToMe, 
+      Map<String, Object> options) {
+    
+    // TODO: use the new method in PastryAppl
+    
+    Message msg = new ByteBufferMsg(m, ((Integer)options.get(PriorityTransportLayer.OPTION_PRIORITY)), getAddress());
+    
+    RouteMessage rm = 
+      new RouteMessage(
+          i.getNodeId(),
+          msg,
+        (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));    
+    rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
+    
     return null;
   }
 

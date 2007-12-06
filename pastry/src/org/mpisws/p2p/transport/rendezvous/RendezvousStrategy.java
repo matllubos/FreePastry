@@ -36,6 +36,12 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.rendezvous;
 
+import java.nio.ByteBuffer;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+
 import rice.Continuation;
 import rice.p2p.commonapi.Cancellable;
 
@@ -62,4 +68,15 @@ public interface RendezvousStrategy<Identifier> {
    * @return a way to cancel the request
    */
   public Cancellable openChannel(Identifier target, Identifier rendezvous, byte[] credentials, Continuation<Integer, Exception> deliverResultToMe);
+  
+  /**
+   * Sends the message via an out-of-band channel.  Usually routing.
+   * 
+   * @param i
+   * @param m
+   * @param deliverAckToMe
+   * @param options
+   * @return
+   */
+  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options);
 }

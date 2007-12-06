@@ -38,6 +38,8 @@ advised of the possibility of such damage.
 package rice.pastry.client;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.DeliveryNotification;
+import rice.p2p.commonapi.MessageReceipt;
 import rice.p2p.commonapi.appsocket.*;
 import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.pastry.*;
@@ -49,6 +51,9 @@ import rice.pastry.leafset.*;
 
 import java.io.IOException;
 import java.util.Map;
+
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 /**
  * A PastryAppl is an abstract class that every Pastry application
@@ -340,6 +345,54 @@ public abstract class PastryAppl /*implements Observer*/
         (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
     rm.setTLOptions(options);
     thePastryNode.getRouter().route(rm);
+  }
+  
+  // this one will replace the last one after the alpha release
+  public MessageReceipt routeMsg(final Id key, final Message msg, final SendOptions opt, final DeliveryNotification deliverAckToMe) {
+    if (logger.level <= Logger.FINER) logger.log(
+        "[" + thePastryNode + "] routemsg " + msg + " to " + key);
+    final RouteMessage rm = new RouteMessage(key, msg, opt,
+        (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
+    
+    final MessageReceipt ret = new MessageReceipt(){
+      
+      public boolean cancel() {
+        if (logger.level <= Logger.FINE) logger.log("routeMsg("+key+","+msg+","+deliverAckToMe+").cancel()");
+        return rm.cancel();
+      }
+    
+      public Message getMessage() {
+        return msg;
+      }
+    
+      public Id getId() {
+        return key;
+      }
+    
+      public NodeHandle getHint() {
+        return null;
+      }    
+    };
+    
+    // NOTE: Installing this anyway if the LogLevel is high enough is kind of wild, but really useful for debugging
+    if ((deliverAckToMe != null) || (logger.level <= Logger.FINE)) {
+      rm.setRouteMessageNotification(new RouteMessageNotification() {
+        public void sendSuccess(rice.pastry.routing.RouteMessage message, rice.pastry.NodeHandle nextHop) {
+          if (logger.level <= Logger.FINE) logger.log("routeMsg("+key+","+msg+","+deliverAckToMe+").sendSuccess():"+nextHop);
+          if (deliverAckToMe != null) deliverAckToMe.sent(ret);
+        }    
+        public void sendFailed(rice.pastry.routing.RouteMessage message, Exception e) {
+          if (logger.level <= Logger.FINE) logger.log("routeMsg("+key+","+msg+","+deliverAckToMe+").sendFailed("+e+")");
+          if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, e);
+        }
+      });
+    }
+
+    
+    rm.setTLOptions(OptionsFactory.addOption(options, PriorityTransportLayer.OPTION_PRIORITY, msg.getPriority()));
+    thePastryNode.getRouter().route(rm);
+    
+    return ret;
   }
 
   /**
