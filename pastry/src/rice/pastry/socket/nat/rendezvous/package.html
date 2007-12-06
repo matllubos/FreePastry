@@ -1,3 +1,27 @@
+1) Maintain a "pilot" connection to each non-natted leafset member
+Alice wants to communicate with Nancy (both NATted) using Bob as rendezvous.
+
+openSocket() (tcp)
+A->B: connect{Nancy, nonce}
+B: 
+  if have a pilot to Nancy
+    B->N (over pilot) connectTo{Alice via Bob, nonce}
+  else
+    B->N (route) connectTo{Alice via Bob, nonce}
+N->B: accept{Alice, nonce} 
+B->N: ack1
+N: incomingSocket(Alice)
+B->A: ack2
+A: success:openSocket(Nancy)
+
+rendezvousLayer.sendMessage() (udp, liveness)
+A.rendezvousApp.route(udpmessage, Nancy)
+  // see above
+N.rendezvousApp.receiveMessage(udpmessage, Alice)
+N.rendezvousLayer.messageReceived(udpmessage, alice)
+
+
+
 The primitive that RendezvousStrategy provides:
 1) Nancy contacts Robert and sends him K
 2) Robert routes Alice's request to K

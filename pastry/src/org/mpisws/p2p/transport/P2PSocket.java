@@ -56,14 +56,14 @@ public interface P2PSocket<Identifier> {
    * 
    * @return a read-only list of options on this socket
    */
-  public Map<String, Object> getOptions();
+  Map<String, Object> getOptions();
   
   /**
    * The identification of the node at the other end of the socket.
    * 
    * @return The identification of the node at the other end of the socket.
    */
-  public Identifier getIdentifier();
+  Identifier getIdentifier();
   
   /**
    *
@@ -76,22 +76,10 @@ public interface P2PSocket<Identifier> {
   long read(ByteBuffer dsts) throws IOException; 
   
   /**
-   * Reads a sequence of bytes from this channel into a subsequence of the given buffers.
-   * 
-   * @param dsts
-   * @param offset
-   * @param length
-   * @return
-   * @throws IOException
-   */
-//  long read(ByteBuffer[] dsts, int offset, int length) throws IOException; 
-  
-  /**
    * Writes a sequence of bytes to this channel from a subsequence of the given buffers.
    * @throws IOException 
    */  
   long write(ByteBuffer srcs) throws IOException; 
-//  long write(ByteBuffer[] srcs, int offset, int length) throws IOException; 
   
   /**
    * Must be called every time a Read/Write occurs to continue operation.
