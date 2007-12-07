@@ -199,7 +199,7 @@ public class DirectAppSocket<Identifier, MessageType> {
 //    }
 //
 //    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-      if (outputClosed) throw new ClosedChannelException();
+      if (outputClosed) return -1;
       
       if (!simulator.isAlive(counterpart.localNodeHandle)) {
         return -1; // TODO: Eventually simulate a socket reset.
