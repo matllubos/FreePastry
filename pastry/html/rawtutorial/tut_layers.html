@@ -41,10 +41,10 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
   <li><b>Wire</b> -- Opens/Accepts Sockets, Sends/Receives Datagrams</li>
   <li><b>MagicNumber</b> -- Throws away sockets/datagrams for other applications such as HTTP (if it doesn't match the application specific magic number)</li>
   <li><b>MultiInetAddressTransportLayer</b> -- Handles multi-homing (ex, when using a NAT a node may have more than 1 address:port, the internal address, and the NAT's external address that is forwarded)</li>
-  <li><b>SourceRoute</b> -- sends messages/opens sockets along a source route, this layer manages both the endpoints and the intermediate nodes, note that this layer does <i>not</i> determine the optimal route to an end host, that is done by another layer, the <i>SourceRouteManager</i>.</li>
+  <li><b>SourceRoute</b> -- sends messages/opens sockets along a source route to route around temporary routing anomalies.  This layer manages both the endpoints and the intermediate nodes.  Note that this layer does <i>not</i> determine the optimal route to an end host, that is done by another layer, the <i>SourceRouteManager</i>.</li>
   <li><b>LowerIdentity</b> -- This layer, in conjunction with the <i>UpperIdenity</i> maintains the "intention" of the sent/received message.  For example, if a node has restarted with a different NodeId this layer drops pings/sockets if they were intended for the previous node at this address.</li>
   <li><b>Liveness</b> -- Pings nodes to determine liveness/proximity, implements 2 new interfaces: <i>LivenessProvider, Pinger</i> </li>
-  <li><b>SourceRouteManager</b> -- Chooses the appropriate SourceRoute based on the liveness/proximity of the lower layer, implements another new interface <i>ProximityProvider</i></li>
+  <li><b>SourceRouteManager</b> -- Chooses the appropriate SourceRoute based on the liveness/proximity exported by the lower layer, implements another new interface <i>ProximityProvider</i></li>
   <li><b>Priority</b> -- Uses a single TCP socket to send messages.  Can select the order of the messages based on the priority.</li>
   <li><b>UpperIdentity</b> -- (See Lower Identity) This layer keeps track of the intended destination of the message so that the lower layer can properly encode that intention.</li>
   <li><b>CommonAPI</b> -- Serializes/Deserializes messages from a RawMessage to a ByteBuffer.</li>
@@ -73,7 +73,7 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
 public interface TransportLayer&lt;Identifier, MessageType&gt; extends Destructable {}
 </pre>
 
-<p/>Each transport layer operates on an <i>Identifier</i> (<b>InetSocketAddress</b>, <b>SourceRoute</b>, <b>NodeHandle</b> etc), and a <i>MessageType</i> (<b>ByteBuffer</b>, <b>RawMessage</b> etc)
+<p/>Each transport layer operates on an <i>Identifier</i> (<b>InetSocketAddress</b>, <b>SourceRoute</b>, <b>NodeHandle</b> etc.), and a <i>MessageType</i> (<b>ByteBuffer</b>, <b>RawMessage</b> etc.)
 
 <p/>The most common operations are <i>sending messages</i> and <i>opening sockets</i>:
 <pre>
@@ -81,28 +81,40 @@ public interface TransportLayer&lt;Identifier, MessageType&gt; extends Destructa
     Identifier i, 
     MessageType m, 
     MessageCallback&lt;Identifier, MessageType&gt; deliverAckToMe, 
-    Map&lt;String, Integer&gt; options);
+    Map&lt;String, Object&gt; options);
 
   public SocketRequestHandle&lt;Identifier&gt; openSocket(
     Identifier i, 
     SocketCallback&lt;Identifier&gt; deliverSocketToMe, 
-    Map&lt;String, Integer&gt; options);
+    Map&lt;String, Object&gt; options);
 </pre>
 
 <p/>For these methods, you need the <b>Identifier</b> of the remote node, and (for <code>sendMessage()</code>) the <b>Message</b> to be delivered.  Additionally, you may specify some transport-layer specific <b>Options</b> such as <i>Guaranteed</i>/<i>Unguaranteed</i>/<i>Encrypted</i> etc.  We will describe some of these options in a later tutorial.  Finally you provide a <b>Callback</b> (<code>deliverAckToMe</code>/<code>deliverSocketToMe</code>) to deliver notificaiton of success or failure when the operation completes.  These calls are non-blocking and return a <b>RequestHandle</b>.  The RequestHandle is like a receipt or a tracking number.  You can use the RequestHandle to cancel the existing request if it is no longer necessary.  For example if the operaiton takes too long.  The <a href="tut_cancellable_msg.html">next tutorial</a> shows you how to work with a RequestHandle.
 
 <a name="callback"><h3>The TransportLayerCallback interface:</h3></a>
-<p/>The <code>TransportLayerCallback</code> provides the inverse operations (the result of a remote node sends a message or opens a socket) and must have the identical <i>Identifier</i>/<i>MessageType</i>:
+<p/>The <code>TransportLayerCallback</code> provides the inverse operations (the result of a remote node sending a message or opening a socket) and must have the identical <i>Identifier</i>/<i>MessageType</i>:
 
 <pre>
 public interface TransportLayerCallback&lt;Identifier, MessageType&gt; {
-  public void messageReceived(Identifier i, MessageType m, Map&lt;String, Integer&gt; options) throws IOException;
+  public void messageReceived(Identifier i, MessageType m, Map&lt;String, Object&gt; options) throws IOException;
 
   public void incomingSocket(P2PSocket&lt;Identifier&gt; s) throws IOException;
 }
 </pre>
 
-<p/>The P2PSocket is similar to the <a href="tut_app_sockets.html">AppSocket</a>.
+<p/>The P2PSocket is similar to the <a href="tut_app_sockets.html">AppSocket</a>.  It is non-blocking and you must register each time you use it as explained in the AppSocket tutorial.  <i>If you have not taken the AppSocket tutorial already, you should probably do that one first.</i>  
+
+<p/>Here are the calls for the P2PSocket:
+
+<pre>
+  void register(boolean wantToRead, boolean wantToWrite, P2PSocketReceiver<Identifier> receiver);
+  long read(ByteBuffer dsts) throws IOException; 
+  long write(ByteBuffer srcs) throws IOException; 
+  void shutdownOutput();
+  void close(); 
+  Identifier getIdentifier();
+  Map<String, Object> getOptions();
+</pre>
 
 <h3>Other calls in the TransportLayer:</h3>
 
@@ -128,7 +140,7 @@ public interface TransportLayerCallback&lt;Identifier, MessageType&gt; {
   public void setErrorHandler(ErrorHandler&lt;Identifier&gt; handler);  
 </pre>
 
-<p/>This method cleans up the layer, for example closing down the AcceptorSocket.
+<p/>This method cleans up the layer, in case you wish to shut down the transport layer w/o exiting the jvm.   For example, it will close the ServerSocket that accepts new sockets, as well as clean up any memory.
 <pre>
   public void destroy();
 </pre>
@@ -137,13 +149,13 @@ public interface TransportLayerCallback&lt;Identifier, MessageType&gt; {
 
 <h4>Overview:</h4>
 <ul>
-  <li>In this tutorial, we'll create a new tranport layer that caps the peak outgoing bandwidth.  We will use a bucket sysetem with configurable bandwidth and bucket time limit. For example if we want to limit bandwidth to 10K/second, we can allow 10K for any second, or 1K for 1/10th of second.</li>  
+  <li>In this tutorial, we will create a new tranport layer that caps the peak outgoing bandwidth.  We will use a bucket sysetem with configurable bandwidth and bucket time limit. For example if we want to limit bandwidth to 10K/second, we can allow 10K for any second, or 1K for 1/10th of second.</li>  
 
   <li>For simplicity, we won't distinguish between socket and datagram traffic.</li>  
 
-  <li>The obvious place for this layer will be just above the Wire layer, but to provide maximum flexibility, we would like this layer to work with any <i>Identifier</i>.  Thus we will keep this parameter <i>generic</i>.</li>  
+  <li>The obvious place for this layer will be just above the Wire layer, but to provide maximum flexibility, we would like this layer to work with any <i>Identifier</i>.  Thus we will keep the Identifier parameter <i>generic</i>.</li>  
 
-  <li>We will have to specify a message type that we can determine the size.  In this case, we'll use the <code>ByteBuffer</code> as our Message type.</li>  
+  <li>Because of the nature of the layer, we must to specify a message type that has a size.  In this case, we'll use the <code>ByteBuffer</code> as our Message type.</li>  
 
   <li>To insert our new layer between 2 existing layers, we also need to implement a <code>TransportLayerCallback</code> of the same types so we can insert ourself between two existing layers.</li>  
 </ul>
@@ -165,7 +177,7 @@ public class BandwidthLimitingTransportLayer&lt;Identifier&gt; implements
 }
 </pre>
 
-<p/>Here is the constructor.  It takes the <code>TransportLayer</code> below this layer, the bucket size, and bucket time length.  We also want access to environment so we can create a logger.
+<p/>Here is the constructor.  It takes the <code>TransportLayer</code> immeadately below this layer, the bucket size, and bucket time length.  We also need access to the environment so we can create a logger.
 <pre>
   public BandwidthLimitingTransportLayer(
       TransportLayer&lt;Identifier, ByteBuffer&gt; tl, 
@@ -218,7 +230,7 @@ public class BandwidthLimitingTransportLayer&lt;Identifier&gt; implements
       Identifier i, 
       ByteBuffer m, 
       MessageCallback&lt;Identifier, ByteBuffer&gt; deliverAckToMe, 
-      Map&lt;String, Integer&gt; options) {
+      Map&lt;String, Object&gt; options) {
 
     boolean success = true;
     synchronized(this) {
@@ -244,7 +256,7 @@ public class BandwidthLimitingTransportLayer&lt;Identifier&gt; implements
 <pre>
   Identifier identifier;
   MessageType msg;
-  Map&lt;String, Integer&gt; options;
+  Map&lt;String, Object&gt; options;
 </pre> 
 
 <p/>There are also corresponding getters.  However, we still need to be able to <code>cancel()</code> the operation in the next transport layer.  This requires the 4th field:
@@ -262,7 +274,7 @@ public class BandwidthLimitingTransportLayer&lt;Identifier&gt; implements
 <p/>Here is the code that now properly returns a <code>MessageRequestHandle</code>:
 <pre>
   public MessageRequestHandle&lt;Identifier, ByteBuffer&gt; sendMessage(Identifier i, ByteBuffer m, 
-    MessageCallback&lt;Identifier, ByteBuffer&gt; deliverAckToMe, Map&lt;String, Integer&gt; options) {
+    MessageCallback&lt;Identifier, ByteBuffer&gt; deliverAckToMe, Map&lt;String, Object&gt; options) {
 
     MessageRequestHandleImpl&lt;Identifier, ByteBuffer> returnMe = 
       new MessageRequestHandleImpl&lt;Identifier, ByteBuffer&gt;(i, m, options);
@@ -295,7 +307,7 @@ public class BandwidthLimitingTransportLayer&lt;Identifier&gt; implements
 
 <pre>
   public MessageRequestHandle&lt;Identifier, ByteBuffer&gt; sendMessage(Identifier i, ByteBuffer m, 
-      final MessageCallback&lt;Identifier, ByteBuffer&gt; deliverAckToMe, Map&lt;String, Integer&gt; options) {
+      final MessageCallback&lt;Identifier, ByteBuffer&gt; deliverAckToMe, Map&lt;String, Object&gt; options) {
 
     final MessageRequestHandleImpl&lt;Identifier, ByteBuffer&gt; returnMe = 
       new MessageRequestHandleImpl&lt;Identifier, ByteBuffer&gt;(i, m, options);
@@ -320,7 +332,7 @@ public class BandwidthLimitingTransportLayer&lt;Identifier&gt; implements
 <p/>Here is the full code for the method:
 <pre>
   public MessageRequestHandle&lt;Identifier, ByteBuffer&gt; sendMessage(Identifier i, ByteBuffer m, 
-      final MessageCallback&lt;Identifier, ByteBuffer&gt; deliverAckToMe, Map&lt;String, Integer&gt; options) {
+      final MessageCallback&lt;Identifier, ByteBuffer&gt; deliverAckToMe, Map&lt;String, Object&gt; options) {
 
     final MessageRequestHandleImpl&lt;Identifier, ByteBuffer&gt; returnMe = 
       new MessageRequestHandleImpl&lt;Identifier, ByteBuffer&gt;(i, m, options);
@@ -681,7 +693,7 @@ public class BandwidthLimitingTransportLayer&lt;Identifier&gt; implements
     tl.destroy();
   }
 
-  public void messageReceived(Identifier i, ByteBuffer m, Map&lt;String, Integer&gt; options) throws IOException {
+  public void messageReceived(Identifier i, ByteBuffer m, Map&lt;String, Object&gt; options) throws IOException {
     callback.messageReceived(i, m, options);
   }
 </pre>

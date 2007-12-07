@@ -34,44 +34,71 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.socket.nat.rendezvous;
 
-import org.mpisws.p2p.transport.rendezvous.PilotManager;
-import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
+package rice.pastry.testing;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.*;
 
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeSetEventSource;
-import rice.pastry.NodeSetListener;
-import rice.pastry.leafset.LeafSet;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+import rice.environment.params.simple.SimpleParameters;
+import rice.environment.time.simulated.DirectTimeSource;
+import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.commonapi.testing.CommonAPITest;
+import rice.p2p.scribe.*;
+import rice.p2p.scribe.messaging.SubscribeMessage;
+import rice.p2p.scribe.rawserialization.*;
+import rice.p2p.scribe.testing.RawScribeRegrTest;
+import rice.pastry.testing.RoutingTableTest.TestScribeContent;
 
 /**
- * Notifies the pilot strategy of leafset changes involving non-natted nodes.
- * 
- * Only instantiate this on NATted nodes.
- * 
- * @author Jeff Hoye
+ * @(#) DistScribeRegrTest.java Provides regression testing for the Scribe service using distributed
+ * nodes.
  *
+ * @version $Id: ScribeRegrTest.java 3157 2006-03-19 12:16:58Z jeffh $
+ * @author Alan Mislove
  */
-public class LeafSetPilotStrategy<Identifier extends RendezvousContact> implements NodeSetListener {
-  LeafSet leafSet;
-  PilotManager<Identifier> manager;
+
+public class RendezvousScribeTest extends RawScribeRegrTest {
+
+  public RendezvousScribeTest(Environment env) throws IOException {
+    super(env);
+  }
   
-  public LeafSetPilotStrategy(LeafSet leafSet, PilotManager<Identifier> manager) {
-    this.leafSet = leafSet;
-    this.manager = manager;
-    
-    leafSet.addNodeSetListener(this);
+  public TestScribeContent buildTestScribeContent(Topic topic, int num) {
+    return new RawTestScribeContent(topic, num);
   }
 
-  public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
-    Identifier nh = (Identifier)handle;
-    if (nh.canContactDirect()) {
-      if (added) {
-        manager.openPilot(nh, null);
-      } else {
-        manager.closePilot(nh);        
-      }
-    }
+  /**
+   * Usage: DistScribeRegrTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (rmi|wire)]
+   * [-help]
+   *
+   * @param args DESCRIBE THE PARAMETER
+   */
+  public static void main(String args[]) throws IOException {
+    Environment env = parseArgs(args);
+    
+    RendezvousScribeTest scribeTest = new RendezvousScribeTest(env);
+    
+    
+    scribeTest.start();
+    env.destroy();
   }
-  
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

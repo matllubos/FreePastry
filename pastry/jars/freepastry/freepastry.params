@@ -60,7 +60,7 @@ pastry_direct_gtitm_matrix_file=GNPINPUT
 pastry_direct_gtitm_max_overlay_size=1000
 # the number of virtual nodes at each stub: this allows you to simulate multiple "LANs" and allows cheeper scaling
 pastry_direct_gtitm_nodes_per_stub=1
-# the factor to multiply your file by to reach micros.  Set this to 0.001 if your file is in millis.  Set this to 1000 if your file is in seconds.
+# the factor to multiply your file by to reach millis.  Set this to 0.001 if your file is in microseconds.  Set this to 1000 if your file is in seconds.
 pastry_direct_gtitm_delay_factor=1.0
 #millis of the maximum network delay for the generated network topologies
 pastry_direct_max_diameter=200

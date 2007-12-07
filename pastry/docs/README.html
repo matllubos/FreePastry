@@ -7,7 +7,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 2.1alpha2,&nbsp; 10 August 2007.
+Release 2.1alpha3,&nbsp; 7 December 2007.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://freepastry.org/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -117,6 +117,16 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.5.0+. The software was
 developed using Sun's SDK, version 1.5.0+
+
+<h3>Changes since release 2.1alpha2</h3>
+<ul>
+  <li>Various bug fixes</li>  
+  <li>Fixed several long term stability problems in TransportLayer and Scribe</li>
+  <li>Added Layer to limit sockets, to prevent FileDescriptor exhaustion</li>
+  <li>PeerReview for Record/Replay</li>
+  <li>Transport layer much easier to extend</li>
+</ul>
+
 <h3>Changes since release 2.1alpha</h3>
 <ul>
   <li>Various bug fixes</li>

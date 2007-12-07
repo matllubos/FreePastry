@@ -470,6 +470,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   }
   
   private void sendSubscribe(List<Topic> topics, ScribeMultiClient client, RawScribeContent content, NodeHandle hint) {
+    // remember that we're subscribing
     pending.addAll(topics);
 
     // choose the UID
@@ -486,7 +487,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
     
     if (logger.level <= Logger.FINEST) logger.log("sendSubscribe("+topics+","+client+","+content+","+hint+") theId:"+theId);
-    
+    // schedule a LostMessage
     SubscribeLostMessage slm = new SubscribeLostMessage(localHandle, topics, theId, client);
     CancellableTask task = endpoint.scheduleMessage(slm, MESSAGE_TIMEOUT);    
     slm.putTask(task);
