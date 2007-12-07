@@ -49,6 +49,7 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory;
 
 /**
  * An abstraction of the nodeId factory for distributed nodes. In order to
@@ -69,6 +70,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
    * DESCRIBE THE FIELD
    */
   public static int PROTOCOL_SOCKET = 2;
+  public static int PROTOCOL_RENDEZVOUS = 3;
 
   public static int PROTOCOL_DEFAULT = PROTOCOL_SOCKET;
   
@@ -320,7 +322,10 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
     if (protocol == PROTOCOL_SOCKET) {
       return new SocketPastryNodeFactory(nf, port, env);
     }
-
+    if (protocol == PROTOCOL_RENDEZVOUS) {
+      return new RendezvousSocketPastryNodeFactory(nf, port, env);
+    }
+    
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);
   }
 }

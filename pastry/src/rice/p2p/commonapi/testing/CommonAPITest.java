@@ -117,6 +117,8 @@ public abstract class CommonAPITest {
 
   // the direct protocol
   public static final String PROTOCOL_DIRECT = "direct";
+  public static final String PROTOCOL_SOCKET = "socket";
+  public static final String PROTOCOL_RENDEZVOUS = "rendezvous";
 
   // the possible network simulation models
   public static final String SIMULATOR_SPHERE = "sphere";
@@ -171,13 +173,19 @@ public abstract class CommonAPITest {
       }
       
       factory = new DirectPastryNodeFactory(idFactory, simulator, env);
-    } else {
+    } else if (PROTOCOL.equalsIgnoreCase(PROTOCOL_SOCKET)) {
       factory = DistPastryNodeFactory.getFactory(idFactory,
-          DistPastryNodeFactory.PROTOCOL_SOCKET,
-                                                 PORT,
-                                                 env);
+          DistPastryNodeFactory.PROTOCOL_SOCKET,PORT,env);
+    } else if (PROTOCOL.equalsIgnoreCase(PROTOCOL_RENDEZVOUS)) {
+      factory = DistPastryNodeFactory.getFactory(idFactory,
+          DistPastryNodeFactory.PROTOCOL_RENDEZVOUS,PORT,env);
     }
 
+    if (factory == null) {
+      factory = DistPastryNodeFactory.getFactory(idFactory,
+          DistPastryNodeFactory.PROTOCOL_SOCKET,PORT,env);
+    }
+      
     nodes = new Node[NUM_NODES+1];
   }
 
@@ -493,7 +501,7 @@ public abstract class CommonAPITest {
   /**
    * process command line args
    */
-  protected static Environment parseArgs(String args[]) throws IOException {
+  public static Environment parseArgs(String args[]) throws IOException {
     // process command line arguments
 
     for (int i = 0; i < args.length; i++) {

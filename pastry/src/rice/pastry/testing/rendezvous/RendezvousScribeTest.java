@@ -35,24 +35,12 @@ advised of the possibility of such damage.
 
 *******************************************************************************/ 
 
-package rice.pastry.testing;
-import java.io.FileOutputStream;
+package rice.pastry.testing.rendezvous;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.util.*;
 
 import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.environment.params.simple.SimpleParameters;
-import rice.environment.time.simulated.DirectTimeSource;
-import rice.p2p.commonapi.*;
-import rice.p2p.commonapi.rawserialization.*;
-import rice.p2p.commonapi.testing.CommonAPITest;
-import rice.p2p.scribe.*;
-import rice.p2p.scribe.messaging.SubscribeMessage;
-import rice.p2p.scribe.rawserialization.*;
+import rice.p2p.scribe.Topic;
 import rice.p2p.scribe.testing.RawScribeRegrTest;
-import rice.pastry.testing.RoutingTableTest.TestScribeContent;
 
 /**
  * @(#) DistScribeRegrTest.java Provides regression testing for the Scribe service using distributed
@@ -62,16 +50,12 @@ import rice.pastry.testing.RoutingTableTest.TestScribeContent;
  * @author Alan Mislove
  */
 
-public class RendezvousScribeTest extends RawScribeRegrTest {
+public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
 
-  public RendezvousScribeTest(Environment env) throws IOException {
-    super(env);
-  }
+//  public RendezvousScribeTest(Environment env) throws IOException {
+//    super(env);
+//  }
   
-  public TestScribeContent buildTestScribeContent(Topic topic, int num) {
-    return new RawTestScribeContent(topic, num);
-  }
-
   /**
    * Usage: DistScribeRegrTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (rmi|wire)]
    * [-help]
@@ -79,9 +63,9 @@ public class RendezvousScribeTest extends RawScribeRegrTest {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-    Environment env = parseArgs(args);
+    Environment env = RawScribeRegrTest.parseArgs(args);
     
-    RendezvousScribeTest scribeTest = new RendezvousScribeTest(env);
+    RawScribeRegrTest scribeTest = new RawScribeRegrTest(env);
     
     
     scribeTest.start();
