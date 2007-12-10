@@ -40,19 +40,28 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.rendezvous.ContactDeserializer;
 import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.nat.NATHandler;
+import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLPastryNode;
 
 
@@ -65,7 +74,13 @@ import rice.pastry.transport.TLPastryNode;
  *
  */
 public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
-
+  /**
+   * The local node's contact state.  
+   * 
+   * TODO: Configure this
+   */
+  byte localContactState = RendezvousSocketNodeHandle.CONTACT_DIRECT;
+  
   public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler) throws IOException {
     super(nf, bindAddress, startPort, env, handler);
     // TODO Auto-generated constructor stub
@@ -84,7 +99,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
 
   protected TransportLayer<InetSocketAddress, ByteBuffer> getRendezvousTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> mtl, TLPastryNode pn) {
-    
+    pn.getEnvironment().getParameters().setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
     return new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
         mtl, 
         CommonAPITransportLayerImpl.DESTINATION_IDENTITY, 
@@ -103,10 +118,32 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     // TODO Auto-generated method stub
     return null;
   }
-  
+
+  /**
+   * This is an annoying hack.  We can't register the RendezvousApp until registerApps(), but we need it here.
+   * 
+   * This table temporarily holds the rendezvousApps until they are needed, then it is deleted.
+   */
+  Map<TLPastryNode, RendezvousApp> rendezvousApps = new HashMap<TLPastryNode, RendezvousApp>();
   protected RendezvousStrategy<RendezvousSocketNodeHandle> getRendezvousStrategy(TLPastryNode pn) {
     RendezvousApp app = new RendezvousApp(pn);
-    app.register();
+    rendezvousApps.put(pn,app);
     return app;
+  }
+  
+  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData, Environment environment) {
+    super.registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData, environment);
+    RendezvousApp app = rendezvousApps.remove(pn);
+    app.register();
+  }
+  
+  public NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) {
+    return new RendezvousSNHFactory(pn);
+  }
+  
+  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
+    RendezvousSNHFactory pnhf = (RendezvousSNHFactory)nhf;
+    MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)localNodeInfo;
+    return pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId(), localContactState);
   }
 }

@@ -110,6 +110,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     this.rendezvousStrategy = rendezvousStrategy;
     
     this.logger = env.getLogManager().getLogger(RendezvousTransportLayerImpl.class, null);
+    tl.setCallback(this);
   }
   
   /**
@@ -122,10 +123,15 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   }
   
   public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
+    if (logger.level <= Logger.FINE) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
+
     final SocketRequestHandle<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options,logger);
     
     // TODO: throw proper exception if options == null, or !contains(R_C_S)
     final RendezvousContact contact = getHighIdentifier(options);
+    if (contact == null) {
+      logger.log("RendezvousTL.openSocket() here");
+    }
     if (contact.canContactDirect()) {
       // write NORMAL_SOCKET and continue
       tl.openSocket(i, new SocketCallback<Identifier>(){
@@ -163,6 +169,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   }
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
+    if (logger.level <= Logger.FINE) logger.log("incomingSocket("+s+")");
+
     s.register(true, false, new P2PSocketReceiver<Identifier>() {
 
       public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
@@ -215,27 +223,36 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
    *   ConnectRequest UDP only?  For now always use UDP_AND_TCP
    */
   public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
-    final MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
-    
-    MessageCallback<HighIdentifier, ByteBuffer> ack;
-    if (deliverAckToMe == null) {
-      ack = null;
+    if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
+
+    HighIdentifier high = getHighIdentifier(options);
+    if (high == null || high.canContactDirect()) {
+      // passthrough, need to allow for null during boostrap, we assume passthrough works
+      return tl.sendMessage(i, m, deliverAckToMe, options);
     } else {
-      ack = new MessageCallback<HighIdentifier, ByteBuffer>(){
-        public void ack(MessageRequestHandle<HighIdentifier, ByteBuffer> msg) {
-          deliverAckToMe.ack(ret);
-        }
-        public void sendFailed(MessageRequestHandle<HighIdentifier, ByteBuffer> msg, IOException reason) {
-          deliverAckToMe.sendFailed(ret, reason);
-        }
-      };
+      // rendezvous
+      final MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
+      MessageCallback<HighIdentifier, ByteBuffer> ack;
+      if (deliverAckToMe == null) {
+        ack = null;
+      } else {
+        ack = new MessageCallback<HighIdentifier, ByteBuffer>(){
+          public void ack(MessageRequestHandle<HighIdentifier, ByteBuffer> msg) {
+            deliverAckToMe.ack(ret);
+          }
+          public void sendFailed(MessageRequestHandle<HighIdentifier, ByteBuffer> msg, IOException reason) {
+            deliverAckToMe.sendFailed(ret, reason);
+          }
+        };
+      }
+      ret.setSubCancellable(rendezvousStrategy.sendMessage(high, m, ack, options));
+      return ret;
     }
-    ret.setSubCancellable(rendezvousStrategy.sendMessage(getHighIdentifier(options), m, ack, options));
-    return ret;
   }
   
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
-    // TODO Auto-generated method stub    
+    if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+","+options+")");
+    callback.messageReceived(i, m, options);
   }
   
   public void acceptMessages(boolean b) {

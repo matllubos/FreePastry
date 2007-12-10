@@ -123,75 +123,32 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
             pn.setSocketElements(localhandle, leafSetMaintFreq, routeSetMaintFreq, 
                 nha, nha, nha, deserializer, handleFactory);
             
-            ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
-            
-            Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);          
-            
-          //  final Logger lLogger = pn.getEnvironment().getLogManager().getLogger(TransportPastryNodeFactory.class, null);
-          //  identity.getUpperIdentity().addLivenessListener(new LivenessListener<TransportLayerNodeHandle<MultiInetSocketAddress>>() {    
-          //    public void livenessChanged(
-          //        TransportLayerNodeHandle<MultiInetSocketAddress> i, int val) {
-          //      if (val != 1) {
-          //        lLogger.log("liveness:"+i+" "+val);
-          //      }
-          //    }    
-          //  });
-          //  
-          //  ltl.addPingListener(new PingListener<SourceRoute<MultiInetSocketAddress>>() {    
-          //    public void pingResponse(SourceRoute<MultiInetSocketAddress> i, int rtt, Map<String, Integer> options) {
-          //      lLogger.log("response:"+i);
-          //    }    
-          //    public void pingReceived(SourceRoute<MultiInetSocketAddress> i, Map<String, Integer> options) {
-          //      lLogger.log("ping:"+i);
-          //    }    
-          //  });
-            
-            StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn,
-                routeTable, environment);
-            
             router.register();
-            rsProtocol.register();
-          
-            PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-                localhandle, leafSet, routeTable);
-            lsProtocol.register();
-            ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-                localhandle, routeTable, leafSet, lsProtocol);
-            jProtocol.register();
             
-            pn.setJoinProtocols(bootstrapper, jProtocol, lsProtocol, rsProtocol);
-
-            
-//          } catch (IOException ioe) {
-//            retException.add(ioe);
-//          } finally {
-//            lock.notify();
-//          }
-//        } 
-//      }
-//    };    
+            registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData, environment);
     
-//    System.out.println("here5"); 
-//    r.run();
-//    if (environment.getSelectorManager().isSelectorThread()) {
-//      r.run();
-//    } else {
-//      synchronized(lock) {
-//        System.out.println("invoking "+environment.getSelectorManager());
-//        environment.getSelectorManager().invoke(r);
-//        System.out.println("invoked");
-//        try {
-//          lock.wait();
-//        } catch (InterruptedException ie) {
-//          if (logger.level <= Logger.WARNING) logger.logException("Interrupted", ie);
-//          return null;
-//        }
-//      }
-//    }
-//    if (!retException.isEmpty()) throw retException.get(0);
     return pn;
   }
 
+  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData, Environment environment) {
+    ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
+    
+    Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);          
+
+    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn,
+        routeTable, environment);
+    
+    rsProtocol.register();
+  
+    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
+        pn.getLocalHandle(), leafSet, routeTable);
+    lsProtocol.register();
+    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
+        pn.getLocalHandle(), routeTable, leafSet, lsProtocol);
+    jProtocol.register();
+    
+    pn.setJoinProtocols(bootstrapper, jProtocol, lsProtocol, rsProtocol);    
+  }
   
   protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
     TLDeserializer deserializer = new TLDeserializer(handleFactory, pn.getEnvironment());

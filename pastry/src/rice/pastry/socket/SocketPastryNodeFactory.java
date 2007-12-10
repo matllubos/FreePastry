@@ -331,6 +331,48 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return nha;
   }
   
+  protected class SPNFIdentitySerializer implements IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> {
+    private final TLPastryNode pn;
+
+    private final SocketNodeHandleFactory factory;
+
+    protected SPNFIdentitySerializer(TLPastryNode pn, SocketNodeHandleFactory factory) {
+      this.pn = pn;
+      this.factory = factory;
+    }
+
+    public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(
+        InputBuffer buf, SourceRoute<MultiInetSocketAddress> i)
+        throws IOException {
+      long epoch = buf.readLong();
+      Id nid = Id.build(buf);
+      
+      SocketNodeHandle ret = new SocketNodeHandle(i.getLastHop(), epoch, nid, pn);
+      return (TransportLayerNodeHandle<MultiInetSocketAddress>) factory.coalesce(ret);
+    }
+
+    public void serialize(OutputBuffer buf,
+        TransportLayerNodeHandle<MultiInetSocketAddress> i)
+        throws IOException {
+      // SocketNodeHandle handle = (SocketNodeHandle)i;
+      // i.getAddress()
+      long epoch = i.getEpoch();
+      Id nid = (rice.pastry.Id) i.getId();
+      // logger.log("serialize("+i+") epoch:"+i.getEpoch()+" nid:"+nid);
+      buf.writeLong(epoch);
+      nid.serialize(buf);
+    }
+
+    public MultiInetSocketAddress translateDown(
+        TransportLayerNodeHandle<MultiInetSocketAddress> i) {
+      return i.getAddress();
+    }
+
+    public MultiInetSocketAddress translateUp(SourceRoute<MultiInetSocketAddress> i) {
+      return i.getLastHop();
+    }
+  }
+
   protected interface TransLiveness<Identifier, MessageType> {
     TransportLayer<Identifier, MessageType> getTransportLayer();
     LivenessProvider<Identifier> getLivenessProvider();
@@ -394,56 +436,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     Environment environment = pn.getEnvironment();
     SocketNodeHandle localhandle = (SocketNodeHandle)pn.getLocalHandle();
     
-    IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, 
-    MultiInetSocketAddress, 
-    SourceRoute<MultiInetSocketAddress>> serializer = new IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>>() {
-
-      public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(
-          InputBuffer buf, SourceRoute<MultiInetSocketAddress> i)
-          throws IOException {
-        long epoch = buf.readLong();
-        Id nid = Id.build(buf);
-        
-        SocketNodeHandle ret = new SocketNodeHandle(i.getLastHop(), epoch, nid, pn);
-        // logger.log("deserialize("+i+") epoch:"+epoch+" nid:"+nid);
-//        if (coalesce) {
-          return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory.coalesce(ret);
-//        }
-//        return ret;
-      }
-
-      public void serialize(OutputBuffer buf,
-          TransportLayerNodeHandle<MultiInetSocketAddress> i)
-          throws IOException {
-        // SocketNodeHandle handle = (SocketNodeHandle)i;
-        // i.getAddress()
-        long epoch = i.getEpoch();
-        Id nid = (rice.pastry.Id) i.getId();
-        // logger.log("serialize("+i+") epoch:"+i.getEpoch()+" nid:"+nid);
-        buf.writeLong(epoch);
-        nid.serialize(buf);
-
-        // handleFactory.getTLInterface().serialize(buf, i);
-      }
-
-      public MultiInetSocketAddress translateDown(
-          TransportLayerNodeHandle<MultiInetSocketAddress> i) {
-        return i.getAddress();
-      }
-
-      public MultiInetSocketAddress translateUp(SourceRoute<MultiInetSocketAddress> i) {
-        return i.getLastHop();
-      }
-
-//      public TransportLayerNodeHandle<MultiInetSocketAddress> translateUp(
-//          MultiInetSocketAddress i) {
-//        return handleFactory.lookupNodeHandle(i);
-//      }
-
-//      public TransportLayerNodeHandle<MultiInetSocketAddress> coalesce(TransportLayerNodeHandle<MultiInetSocketAddress> i) {
-//        return (TransportLayerNodeHandle<MultiInetSocketAddress>) handleFactory.coalesce((SocketNodeHandle)i);      
-//      }
-    };
+    IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> serializer = 
+      new SPNFIdentitySerializer(pn, handleFactory);
 
 
     SimpleOutputBuffer buf = new SimpleOutputBuffer();

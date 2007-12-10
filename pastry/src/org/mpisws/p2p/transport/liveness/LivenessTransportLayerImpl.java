@@ -907,6 +907,11 @@ public class LivenessTransportLayerImpl<Identifier> implements
       }
       if (ret) {
         final int theRTO = rto;
+        // delme
+//        if (!options.containsKey(org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl.DESTINATION_IDENTITY)) 
+//          throw new RuntimeException("options doesn't contain "+org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl.DESTINATION_IDENTITY+" "+options);
+        // /delme
+        
         Runnable r = new Runnable() {
           public void run() {
             if (pending == null) return;  // could have been set to null in the meantime

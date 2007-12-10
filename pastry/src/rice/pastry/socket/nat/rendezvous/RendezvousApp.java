@@ -71,7 +71,7 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
   SelectorManager selectorManager;
   
   public RendezvousApp(PastryNode pn) {
-    super(pn);
+    super(pn,null,0,null); // this constructor doesn't auto-register
     leafSet = pn.getLeafSet();
     selectorManager = pn.getEnvironment().getSelectorManager();
   }

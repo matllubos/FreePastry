@@ -48,7 +48,7 @@ public class OptionsFactory {
   public static Map<String, Object> addOption(Map<String, Object> existing, String s1, Object i1, String s2, Object i2) {
     Map<String, Object> ret = copyOptions(existing);
     ret.put(s1,i2);
-    ret.put(s1,i2);
+    ret.put(s2,i2);
     return ret;
   }
   public static Map<String, Object> copyOptions(Map<String, Object> existing) {

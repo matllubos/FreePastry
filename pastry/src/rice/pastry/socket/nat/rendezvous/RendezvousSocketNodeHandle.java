@@ -41,6 +41,7 @@ import java.io.IOException;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.socket.SocketNodeHandle;
@@ -52,27 +53,43 @@ import rice.pastry.transport.TLPastryNode;
  * @author Jeff Hoye
  */
 public class RendezvousSocketNodeHandle extends SocketNodeHandle implements RendezvousContact {
+  /**
+   * Internet Routable (or proper port forwarding)
+   */
+  public static final byte CONTACT_DIRECT = 0;
+  
+  /**
+   * Not internet routable
+   */
+  public static final byte CONTACT_FIREWALLED = 1;
 
-  RendezvousSocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node) {
+  private byte contactStatus;
+  
+  RendezvousSocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node, byte contactStatus) {
     super(eisa, epoch, id, node);
-    // TODO Auto-generated constructor stub
+    this.contactStatus = contactStatus; 
   }
 
   @Override
   public void serialize(OutputBuffer buf) throws IOException {
-    // TODO suffix w/ rendezvous stuff
     super.serialize(buf);
+    buf.writeByte(contactStatus);
   }
 
   public boolean canContactDirect() {
-    // TODO Auto-generated method stub
-    return false;
+    return contactStatus != CONTACT_FIREWALLED;
   }
 
   public boolean isConnected() {
-    // TODO Auto-generated method stub
-    return false;
+    throw new RuntimeException("Not implemented.");
+//    return false;
   }
-
+  static SocketNodeHandle build(InputBuffer buf, TLPastryNode local) throws IOException {
+    MultiInetSocketAddress eaddr = MultiInetSocketAddress.build(buf);
+    long epoch = buf.readLong();
+    Id nid = Id.build(buf);
+    byte contactStatus = buf.readByte();
+    return new RendezvousSocketNodeHandle(eaddr, epoch, nid, local, contactStatus);
+  }
   
 }
