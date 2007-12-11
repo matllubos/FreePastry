@@ -38,6 +38,7 @@ package rice.pastry.routing;
 
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.*;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 
 import rice.pastry.*;
 import rice.pastry.commonapi.PastryEndpointMessage;
@@ -444,8 +445,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
       byte[] raw = new byte[serializedMsg.bytesRemaining()]; 
       serializedMsg.read(raw);
       buf.write(raw,0,raw.length);
-      serializedMsg = null;
-      // note, this leaves the RouteMessage in a busted state no rawInternalMsg, internalMsg, serializedMsg
+      serializedMsg = new SimpleInputBuffer(raw);
     } else {
 //      System.out.println(this+".serialize() 2");
       if (rawInternalMsg == null) {
