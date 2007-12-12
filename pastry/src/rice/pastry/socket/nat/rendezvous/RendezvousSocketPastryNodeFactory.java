@@ -44,13 +44,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
-import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.rendezvous.ContactDeserializer;
 import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
+import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -59,6 +61,7 @@ import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.RoutingTable;
+import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.transport.NodeHandleAdapter;
@@ -98,8 +101,12 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return getRendezvousTransportLayer(mtl, pn);
   }
 
+  @Override
+  protected IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> getIdentiySerializer(TLPastryNode pn, SocketNodeHandleFactory handleFactory) {
+    return new RendezvousSPNFIdentitySerializer(pn, handleFactory);
+  }
+
   protected TransportLayer<InetSocketAddress, ByteBuffer> getRendezvousTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> mtl, TLPastryNode pn) {
-    pn.getEnvironment().getParameters().setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
     return new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
         mtl, 
         CommonAPITransportLayerImpl.DESTINATION_IDENTITY, 

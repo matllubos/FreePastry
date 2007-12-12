@@ -34,66 +34,63 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.socket.nat.rendezvous;
+package rice.pastry.socket;
 
 import java.io.IOException;
 
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
+import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
-import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.NodeHandle;
 import rice.pastry.transport.TLPastryNode;
 
-/**
- * Maintains RendezvousInfo with the NodeHandle
- * 
- * @author Jeff Hoye
- */
-public class RendezvousSocketNodeHandle extends SocketNodeHandle implements RendezvousContact {
-  /**
-   * Internet Routable (or proper port forwarding)
-   */
-  public static final byte CONTACT_DIRECT = 0;
-  
-  /**
-   * Not internet routable
-   */
-  public static final byte CONTACT_FIREWALLED = 1;
+public class SPNFIdentitySerializer  implements IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> {
+  protected TLPastryNode pn;
 
-  private byte contactStatus;
-  
-  RendezvousSocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node, byte contactStatus) {
-    super(eisa, epoch, id, node);
-    this.contactStatus = contactStatus; 
+  protected SocketNodeHandleFactory factory;
+
+  public SPNFIdentitySerializer(TLPastryNode pn, SocketNodeHandleFactory factory) {
+    this.pn = pn;
+    this.factory = factory;
   }
 
-  @Override
-  public void serialize(OutputBuffer buf) throws IOException {
-    super.serialize(buf);
-    buf.writeByte(contactStatus);
+  public void serialize(OutputBuffer buf,
+      TransportLayerNodeHandle<MultiInetSocketAddress> i)
+      throws IOException {
+    // SocketNodeHandle handle = (SocketNodeHandle)i;
+    // i.getAddress()
+    long epoch = i.getEpoch();
+    Id nid = (rice.pastry.Id) i.getId();
+    // logger.log("serialize("+i+") epoch:"+i.getEpoch()+" nid:"+nid);
+    buf.writeLong(epoch);
+    nid.serialize(buf);
   }
 
-  public boolean canContactDirect() {
-    return contactStatus != CONTACT_FIREWALLED;
-  }
-
-  public boolean isConnected() {
-    throw new RuntimeException("Not implemented.");
-//    return false;
-  }
-  static SocketNodeHandle build(InputBuffer buf, TLPastryNode local) throws IOException {
-    MultiInetSocketAddress eaddr = MultiInetSocketAddress.build(buf);
+  public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(
+      InputBuffer buf, SourceRoute<MultiInetSocketAddress> i)
+      throws IOException {
     long epoch = buf.readLong();
     Id nid = Id.build(buf);
-    byte contactStatus = buf.readByte();
-    return new RendezvousSocketNodeHandle(eaddr, epoch, nid, local, contactStatus);
-  }
-
-  public byte getContactStatus() {
-    return contactStatus;
+    
+    NodeHandle ret = buildSNH(buf, i.getLastHop(), epoch, nid);
+    return (TransportLayerNodeHandle<MultiInetSocketAddress>) factory.coalesce(ret);
   }
   
+  protected NodeHandle buildSNH(InputBuffer buf, MultiInetSocketAddress i, long epoch, Id nid) throws IOException {
+    return new SocketNodeHandle(i, epoch, nid, pn);
+  }
+
+  public MultiInetSocketAddress translateDown(
+      TransportLayerNodeHandle<MultiInetSocketAddress> i) {
+    return i.getAddress();
+  }
+
+  public MultiInetSocketAddress translateUp(SourceRoute<MultiInetSocketAddress> i) {
+    return i.getLastHop();
+  }
 }

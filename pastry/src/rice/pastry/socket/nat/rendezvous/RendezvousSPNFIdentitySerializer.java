@@ -34,60 +34,39 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
+package rice.pastry.socket.nat.rendezvous;
 
-package rice.pastry.testing.rendezvous;
 import java.io.IOException;
 
-import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.environment.params.Parameters;
-import rice.p2p.scribe.Topic;
-import rice.p2p.scribe.testing.RawScribeRegrTest;
+import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
-/**
- * @(#) DistScribeRegrTest.java Provides regression testing for the Scribe service using distributed
- * nodes.
- *
- * @version $Id: ScribeRegrTest.java 3157 2006-03-19 12:16:58Z jeffh $
- * @author Alan Mislove
- */
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.pastry.Id;
+import rice.pastry.NodeHandle;
+import rice.pastry.socket.SPNFIdentitySerializer;
+import rice.pastry.socket.SocketNodeHandleFactory;
+import rice.pastry.transport.TLPastryNode;
 
-public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
+public class RendezvousSPNFIdentitySerializer extends SPNFIdentitySerializer {
 
-//  public RendezvousScribeTest(Environment env) throws IOException {
-//    super(env);
-//  }
-  
-  /**
-   * Usage: DistScribeRegrTest [-port p] [-bootstrap host[:port]] [-nodes n] [-protocol (rmi|wire)]
-   * [-help]
-   *
-   * @param args DESCRIBE THE PARAMETER
-   */
-  public static void main(String args[]) throws IOException {
-    Environment env = RawScribeRegrTest.parseArgs(args);
-    
-    Parameters p = env.getParameters();
-//    p.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
-//    p.setInt("org.mpisws.p2p.transport.wire_loglevel", Logger.FINE);
-    
-    RawScribeRegrTest scribeTest = new RawScribeRegrTest(env);
-    
-    scribeTest.start();
-    env.destroy();
+  protected RendezvousSPNFIdentitySerializer(TLPastryNode pn, SocketNodeHandleFactory factory) {
+    super(pn, factory);
   }
+
+  @Override
+  public void serialize(OutputBuffer buf,
+      TransportLayerNodeHandle<MultiInetSocketAddress> i)
+      throws IOException {
+    super.serialize(buf, i);
+    buf.writeByte(((RendezvousSocketNodeHandle)i).getContactStatus());
+  }
+
+  @Override
+  protected NodeHandle buildSNH(InputBuffer buf, MultiInetSocketAddress i, long epoch, Id nid) throws IOException {
+    return new RendezvousSocketNodeHandle(i, epoch, nid, pn, buf.readByte());
+  }
+
+  
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -129,17 +130,28 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     
     // TODO: throw proper exception if options == null, or !contains(R_C_S)
     final RendezvousContact contact = getHighIdentifier(options);
-    if (contact == null) {
-      logger.log("RendezvousTL.openSocket() here");
-    }
-    if (contact.canContactDirect()) {
+
+    if (contact == null || contact.canContactDirect()) {
       // write NORMAL_SOCKET and continue
       tl.openSocket(i, new SocketCallback<Identifier>(){
         public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
           sock.register(false, true, new P2PSocketReceiver<Identifier>() {
+            ByteBuffer writeMe;
+            {
+              byte[] foo = {NORMAL_SOCKET};
+              writeMe = ByteBuffer.wrap(foo);              
+            }
             public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
-              // TODO Auto-generated method stub
-              
+              long ret = socket.write(writeMe);
+              if (ret < 0) {
+                deliverSocketToMe.receiveException(handle, new ClosedChannelException("Socket was closed while rendezvous layer was trying to open a normal socket to "+socket));
+                socket.close();
+              }
+              if (writeMe.hasRemaining()) {
+                socket.register(false, true, this);
+                return;
+              }
+              deliverSocketToMe.receiveResult(handle, socket);
             }
           
             public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
@@ -165,6 +177,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     return handle;
   }
   protected HighIdentifier getHighIdentifier(Map<String, Object> options) {
+    if (options == null) return null;
     return (HighIdentifier)options.get(RENDEZVOUS_CONTACT_STRING);
   }
 
@@ -174,6 +187,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     s.register(true, false, new P2PSocketReceiver<Identifier>() {
 
       public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
+        if (logger.level <= Logger.FINER) logger.log("incomingSocket("+socket+").rSR("+canRead+","+canWrite+")");
         // read byte, switch on it
         ByteBuffer buf = ByteBuffer.allocate(1);
         long bytesRead = socket.read(buf);
@@ -194,7 +208,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         buf.flip();
         byte socketType = buf.get();
         switch(socketType) {
-        case NORMAL_SOCKET:
+        case NORMAL_SOCKET:          
+          if (logger.level <= Logger.FINEST) logger.log("incomingSocket("+socket+").rSR("+canRead+","+canWrite+"):NORMAL");          
           callback.incomingSocket(socket);
           return;
         case CONNECTOR_SOCKET:
@@ -271,7 +286,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     // TODO Auto-generated method stub    
   }
   public void destroy() {
-    // TODO Auto-generated method stub    
+    tl.destroy();
   }
 
   Map<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>> pilots = 
