@@ -49,9 +49,12 @@ import rice.pastry.messaging.Message;
 public class PMessageReceiptImpl implements PMessageReceipt {
   MessageRequestHandle<NodeHandle, RawMessage> internal;
   Message message;
+  Map<String, Object> options;
+  boolean cancelled = false;
   
-  public PMessageReceiptImpl(Message msg) {
+  public PMessageReceiptImpl(Message msg, Map<String, Object> options) {
     this.message = msg;
+    this.options = options;
   }
 
   public NodeHandle getIdentifier() {
@@ -64,16 +67,54 @@ public class PMessageReceiptImpl implements PMessageReceipt {
   }
 
   public Map<String, Object> getOptions() {
-    return internal.getOptions();
+    return options;
+//    return internal.getOptions();
   }
 
-  public boolean cancel() {
-    if (internal != null) return internal.cancel();
+  /**
+   * The synchronization code here must do the following:
+   * 
+   * cancel/setInternal can be called on any thread at any time
+   * if both cancel and setInternal are called, then internal.cancel() is called the first time the second call is made.
+   * cannot hold a lock while calling internal.cancel()
+   * 
+   * can cancel be called off of the selector?
+   * 
+   * @return true if it has been cancelled for sure, false if it may/may-not be cancelled
+   */
+  public boolean cancel() {    
+    boolean callCancel = false;
+    synchronized(this) {
+      if (cancelled) return false;
+      cancelled = true;
+      if (internal != null) callCancel = true;
+    }
+    if (callCancel) return internal.cancel();
     return false;
   }
 
+  /**
+   * See synchronization note on cancel()
+   * 
+   * @param name
+   */
+//  Exception setInternalStack; // delme
   public void setInternal(MessageRequestHandle<NodeHandle, RawMessage> name) {
-    this.internal = name;
+    boolean callCancel = false;
+    synchronized(this) {      
+      if (internal != null && internal != name) {
+//        setInternalStack.printStackTrace();
+        throw new RuntimeException("Internal already set old:"+internal+" new:"+name);
+      }
+      internal = name;
+//      setInternalStack = new Exception();
+      callCancel = cancelled;
+    }
+    if (callCancel) internal.cancel();
+  }
+  
+  public boolean isCancelled() {
+    return cancelled;
   }
   
   public String toString() {

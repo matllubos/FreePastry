@@ -392,7 +392,7 @@ public class TLPastryNode extends PastryNode implements
   }
 
   @Override
-  public PMessageReceipt send(NodeHandle handle, 
+  public PMessageReceipt send(final NodeHandle handle, 
       final Message msg, 
       final PMessageNotification deliverAckToMe, 
       Map<String, Object> tempOptions) {
@@ -438,28 +438,40 @@ public class TLPastryNode extends PastryNode implements
       return ret;
     }
     
-    PRawMessage rm;
+    final PRawMessage rm;
     if (msg instanceof PRawMessage) {
       rm = (PRawMessage)msg; 
     } else {
       rm = new PJavaSerializedMessage(msg); 
     }
-    
-    final PMessageReceiptImpl ret = new PMessageReceiptImpl(msg);
-    ret.setInternal(tl.sendMessage(handle, rm, deliverAckToMe == null ? null : 
-      new MessageCallback<NodeHandle, RawMessage>(){
-    
-      public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, IOException reason) {        
-        if (ret.internal == null) ret.setInternal(msg);
-        deliverAckToMe.sendFailed(ret, reason);
-      }
-    
-      public void ack(MessageRequestHandle<NodeHandle, RawMessage> msg) {
-        if (ret.internal == null) ret.setInternal(msg);
-        deliverAckToMe.sent(ret);
-      }
-    
-    }, options));
+      
+    final PMessageReceiptImpl ret = new PMessageReceiptImpl(msg, options);
+    final MessageCallback<NodeHandle, RawMessage> callback;
+    if (deliverAckToMe == null) {
+      callback = null;
+    } else {
+      callback = new MessageCallback<NodeHandle, RawMessage>(){
+        
+        public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, IOException reason) {        
+          if (ret.internal == null) ret.setInternal(msg);
+          deliverAckToMe.sendFailed(ret, reason);
+        }
+      
+        public void ack(MessageRequestHandle<NodeHandle, RawMessage> msg) {
+          if (ret.internal == null) ret.setInternal(msg);
+          deliverAckToMe.sent(ret);
+        }      
+      };      
+    }
+    if (getEnvironment().getSelectorManager().isSelectorThread()) {              
+      ret.setInternal(tl.sendMessage(handle, rm, callback, options));
+    } else {
+      getEnvironment().getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          ret.setInternal(tl.sendMessage(handle, rm, callback, options));
+        }      
+      });
+    }
     return ret;
   }
   
