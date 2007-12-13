@@ -44,35 +44,66 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
-import rice.pastry.dist.DistPastryNodeFactory;
 import rice.pastry.join.JoinRequest;
 import rice.pastry.routing.*;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.selector.Timer;
 import rice.selector.TimerTask;
 
+/**
+ * The PartitionHandler does two things:  it collects a list of candidate nodes 
+ * that may be in another partition, and it periodically tries to reach these 
+ * nodes to heal a partition.  I can refactor the code to expose a method that 
+ * heals a partition tomorrow for you, but I'll paste the code below for the 
+ * moment.
+ * 
+ * The basic theory of healing a partition is to send a join request via a node 
+ * that may not be in your partition.  Join requests get routed to your own key.
+ * If the request comes back to you, then that node is in your partition and 
+ * nothing needs to be done.  If the request ends up at another node, it will 
+ * discover your existence and begin integrating the two rings, just as if you 
+ * were creating your local node for the first time.
+ * 
+ * The way we look for candidate nodes is we choose a mix of the original 
+ * bootstraps (as a last resort fallback) and nodes that we once believed were 
+ * alive but are no longer in contact with.  The idea is we may have declared 
+ * those nodes dead due to losing connectivity to them but at some later point 
+ * we again may be able to contact them.
+ * 
+ * The reason that we make the PartitionHandler a periodic process is that in 
+ * general you can't tell that a partition has happened.
+ * 
+ * @author jstewart
+ *
+ */
 public class PartitionHandler extends TimerTask implements NodeSetListener {
 
-  PastryNode pastryNode;
+  protected PastryNode pastryNode;
 
   // maybe move this to a subclass
-  InetSocketAddress[] bootstraps;
+  protected InetSocketAddress[] bootstraps;
   
-  SocketPastryNodeFactory factory;
+  protected SocketPastryNodeFactory factory;
   
-  Logger logger;
+  protected Logger logger;
   
-  double bootstrapRate;
-  int maxGoneSize;
-  int maxGoneAge;
+  protected double bootstrapRate;
+  protected int maxGoneSize;
+  protected int maxGoneAge;
   // map from Id's -> NodeHandle's to keep things unique per NodeId
-  Map gone;
+  protected Map gone;
   
-  Environment env;
+  protected Environment env;
   
-  // XXX think about multiring
   /**
-   * You must call start after construction!!!
+   * Constructs a PartitionHandler.  This will register the handler with the
+   * pastry node to begin collecting candidates nodes that may be in a
+   * partition, but it will not initiate probing.  You must call the start()
+   * method to do that.
+   * 
+   * @param pn the local pastry node
+   * @param factory the SocketPastryNodeFactory 
+   * @param bootstraps
    */
   public PartitionHandler(PastryNode pn, SocketPastryNodeFactory factory, InetSocketAddress[] bootstraps) {
     pastryNode = pn;
@@ -118,7 +149,6 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     if (logger.level <= Logger.FINER) logger.log("gone size 3 is "+gone.size()+" of "+maxGoneSize);
   }
 
-
   private List getRoutingTableAsList() {
     RoutingTable rt = pastryNode.getRoutingTable();
     List rtHandles = new ArrayList(rt.numEntries());
@@ -141,7 +171,19 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     return rtHandles;
   }
   
-  private NodeHandle getGone() {
+  /**
+   * This method randomly returns a node that was once in the LeafSet or in
+   * the routing table but has since been removed.  The idea is that the node
+   * may have been removed because it suffered a network outage that left it
+   * in a partition of the ring.
+   * 
+   * This method may also return a node from the current routing table if it
+   * doesn't know of sufficient nodes that have left to pick a good one.
+   * 
+   * @return a NodeHandle that may be in another partition, or null if no nodes
+   * have left the routing table or LeafSet, and the routing table is empty.
+   */
+  public NodeHandle getCandidateNode() {
     synchronized (this) {
       int which = env.getRandomSource().nextInt(maxGoneSize);
       if (logger.level <= Logger.FINEST) logger.log("getGone choosing node "+which+" from gone or routing table");
@@ -176,7 +218,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   // possibly make this abstract
   private void getNodeHandleToProbe(Continuation c) {
     if (env.getRandomSource().nextDouble() > bootstrapRate) {
-      NodeHandle nh = getGone();
+      NodeHandle nh = getCandidateNode();
       if (logger.level <= Logger.FINEST) logger.log("getGone chose "+nh);
       if (nh != null) {
         c.receiveResult(nh);
@@ -196,21 +238,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
 
       public void receiveResult(Object result) {
         if (result != null) {
-          JoinRequest jr = new JoinRequest(pastryNode.getLocalHandle(), pastryNode
-              .getRoutingTable().baseBitLength());
-  
-          RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), 
-              jr, null, null,
-              (byte)env.getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
-
-          rm.setPrevNode(pastryNode.getLocalHandle());
-          rm.getOptions().setRerouteIfSuspected(false);
-          NodeHandle nh = pastryNode.coalesce((NodeHandle)result);
-          try {
-            nh.bootstrap(rm);
-          } catch (IOException ioe) {
-            if (logger.level <= Logger.WARNING) logger.logException("Error bootstrapping.",ioe); 
-          }
+          rejoin((NodeHandle)result);
         } else {
           if (logger.level <= Logger.INFO) logger.log("getNodeHandleToProbe returned null");
         }
@@ -267,10 +295,41 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     }    
   }
 
+  /**
+   * This method starts the PartitionHandler's probing of candidate nodes.
+   * It should be called after the handler is constructed.
+   * 
+   * @param timer the timer used to schedule partition checks (normally from the environment)
+   */
   public void start(Timer timer) {
     if (logger.level <= Logger.INFO) logger.log("installing partition handler");
     timer.schedule(this, env.getParameters().getInt("partition_handler_check_interval"), 
         env.getParameters().getInt("partition_handler_check_interval"));
+  }
+
+  /**
+   * Manually kicks off a probe to a given target node.  This can be used to
+   * manually heal a partition if you know via some external mechanism that one
+   * occurred.
+   * 
+   * @param target the node to rejoin through
+   */
+  public void rejoin(NodeHandle target) {
+    JoinRequest jr = new JoinRequest(pastryNode.getLocalHandle(), pastryNode
+        .getRoutingTable().baseBitLength());
+ 
+    RouteMessage rm = new RouteMessage(pastryNode.getLocalHandle().getNodeId(), 
+        jr, null, null,
+        (byte)env.getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
+
+    rm.setPrevNode(pastryNode.getLocalHandle());
+    rm.getOptions().setRerouteIfSuspected(false);
+    NodeHandle nh = pastryNode.coalesce(target);
+    try {
+      nh.bootstrap(rm);
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("Error bootstrapping.",ioe); 
+    }
   }
 
 }
