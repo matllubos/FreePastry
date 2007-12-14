@@ -162,7 +162,11 @@ public class MagicNumberTransportLayer<Identity> implements
           public void receiveSelectResult(P2PSocket<Identity> socket, boolean canRead, boolean canWrite) throws IOException {
             if (canRead) throw new IOException("Never asked to read!");
             if (!canWrite) throw new IOException("Can't write!");
-            socket.write(buf);
+            long ret = socket.write(buf);
+            if (ret < 0) {
+              socket.close();
+              return;
+            }
             if (buf.hasRemaining()) {
               socket.register(false, true, this);
             } else {

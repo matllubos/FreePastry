@@ -507,7 +507,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
         
         // NOTE: this may have to be further thought throught and subdivided
         NodeHandleSet set = endpoint.replicaSet(msg.getTopic().getId(), 2);
-        if (set.getHandle(1) == localHandle) {
+        if (set.size() > 1 && set.getHandle(1) == localHandle) {
           endpoint.route(null, msg, nextHop);      
         } else {
           endpoint.route(msg.getTopic().getId(), msg, nextHop);                
@@ -520,7 +520,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       // see if hint is my direct neighbor, if so, route only directly, so that he will accept the connection even
       // though he may still be joining
       NodeHandleSet set = endpoint.replicaSet(msg.getTopic().getId(), 2);
-      if (set.getHandle(1) == localHandle) {
+      if (set.size() > 1 && set.getHandle(1) == localHandle) {
         endpoint.route(null, msg, hint);            
       } else {
         endpoint.route(msg.getTopic().getId(), msg, hint);                    
@@ -547,7 +547,9 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
       }
       
       // no next hop = we are the next hop
-      NodeHandle handle = handleSet.getHandle(0);
+      NodeHandle handle = null;
+      if (handleSet.size() > 0) handle = handleSet.getHandle(0);
+      
       if (handle == null) {
         handle = this.localHandle;
         if (!isRoot(topic)) {

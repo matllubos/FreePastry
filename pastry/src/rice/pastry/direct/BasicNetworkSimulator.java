@@ -196,6 +196,9 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
     return environment;
   }
 
+  public Environment getEnvironment(Identifier i) {
+    return nodes.get(i).tl.getEnvironment();
+  }
   
   public RandomSource getRandomSource() {
     return random;

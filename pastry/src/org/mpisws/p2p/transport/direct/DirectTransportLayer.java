@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.direct;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -117,18 +118,20 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
   public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options, logger);
 
-    DirectAppSocket<Identifier, MessageType> socket = new DirectAppSocket<Identifier, MessageType>(i, localIdentifier, deliverSocketToMe, simulator, handle, options);
     
-    int delay;
     if (simulator.isAlive(i)) {
-      delay = (int)Math.round(simulator.networkDelay(localIdentifier, i));
+      int delay = (int)Math.round(simulator.networkDelay(localIdentifier, i));
+      DirectAppSocket<Identifier, MessageType> socket = new DirectAppSocket<Identifier, MessageType>(i, localIdentifier, deliverSocketToMe, simulator, handle, options);
+      CancelAndClose cancelAndClose = new CancelAndClose(socket, simulator.enqueueDelivery(socket.getAcceptorDelivery(),
+          delay));
+      handle.setSubCancellable(cancelAndClose);
     } else {
-      delay = 5000;  // TODO: Make this configurable
+      int delay = 5000;  // TODO: Make this configurable
+      handle.setSubCancellable(
+          simulator.enqueueDelivery(
+              new ConnectorExceptionDelivery<Identifier>(deliverSocketToMe, handle, new SocketTimeoutException()),delay));
     }
     
-    CancelAndClose cancelAndClose = new CancelAndClose(socket, simulator.enqueueDelivery(socket.getAcceptorDelivery(),
-        delay));
-    handle.setSubCancellable(cancelAndClose);
     return handle;
   }
 
@@ -194,6 +197,10 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
     
   public void incomingMessage(Identifier i, MessageType m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
+  }
+  
+  public Environment getEnvironment() {
+    return environment;
   }
 
   public void clearState(Identifier i) {

@@ -46,6 +46,12 @@ import rice.p2p.commonapi.CancellableTask;
 public interface GenericNetworkSimulator<Identifier, MessageType> extends LivenessProvider<Identifier> {
 
   public Environment getEnvironment();
+  /**
+   * Get the environment related to a specific node.
+   * @param i
+   * @return
+   */
+  public Environment getEnvironment(Identifier i);
 
   /**
    * Determines delivery time from a to b.

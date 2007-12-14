@@ -53,6 +53,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 
+import rice.environment.Environment;
 import rice.environment.logging.Logger;
 
 public class DirectAppSocket<Identifier, MessageType> {
@@ -74,7 +75,11 @@ public class DirectAppSocket<Identifier, MessageType> {
   
   SocketRequestHandle<Identifier> connectorHandle; 
   
-  Logger logger;
+  /**
+   * So they show up with the correct prefixes/files of the logs
+   */
+  Logger acceptorLogger;
+  Logger connectorLogger;
 
   Map<String, Object> options;
   
@@ -86,16 +91,20 @@ public class DirectAppSocket<Identifier, MessageType> {
     this.connectorReceiver = connectorCallback;
     this.simulator = simulator;
     this.connectorHandle = handle;
-    logger = simulator.getEnvironment().getLogManager().getLogger(DirectAppSocket.class,"");
+    Environment aEnv = simulator.getEnvironment(acceptor);
+    Environment cEnv = simulator.getEnvironment(connector);
+    acceptorLogger = aEnv.getLogManager().getLogger(DirectAppSocket.class,"");
+    connectorLogger = cEnv.getLogManager().getLogger(DirectAppSocket.class,"");
     
     
-    acceptorEndpoint = new DirectAppSocketEndpoint(acceptor);
-    connectorEndpoint = new DirectAppSocketEndpoint(connector);
+    acceptorEndpoint = new DirectAppSocketEndpoint(acceptor, acceptorLogger);
+    connectorEndpoint = new DirectAppSocketEndpoint(connector, connectorLogger);
     acceptorEndpoint.setCounterpart(connectorEndpoint);
     connectorEndpoint.setCounterpart(acceptorEndpoint);
   }
   
   class DirectAppSocketEndpoint implements P2PSocket<Identifier> {
+    Logger logger;
     DirectAppSocketEndpoint counterpart;
     
     P2PSocketReceiver<Identifier> reader;
@@ -119,8 +128,9 @@ public class DirectAppSocket<Identifier, MessageType> {
     int firstOffset = 0;
  
     
-    public DirectAppSocketEndpoint(Identifier localNodeHandle) {
+    public DirectAppSocketEndpoint(Identifier localNodeHandle, Logger logger) {
       this.localNodeHandle = localNodeHandle;
+      this.logger = logger;
     }
     
     public void setCounterpart(DirectAppSocketEndpoint counterpart) {
@@ -181,13 +191,18 @@ public class DirectAppSocket<Identifier, MessageType> {
       } // synchronized(this)
 
       bytesInFlight-=lengthRead;
+      if (logger.level <= Logger.FINER) logger.log(this+".write("+dsts+") len:"+lengthRead+" inFlight:"+bytesInFlight);
+
       simulator.enqueueDelivery(new Delivery() {              
         public void deliver() {
           counterpart.notifyCanWrite();            
         }            
         public int getSeq() {
           return 0;            
-        }            
+        }
+        public String toString() {
+          return DirectAppSocketEndpoint.this.toString()+" counterpart notifyCanWrite()";
+        }
       }, 0);            
       return lengthRead;
     }
@@ -228,7 +243,7 @@ public class DirectAppSocket<Identifier, MessageType> {
 //        i++;
       }
       
-      if (logger.level <= Logger.FINER) logger.log(this+".write("+lengthToWrite+")");
+      if (logger.level <= Logger.FINER) logger.log(this+".write("+srcs+") len:"+lengthToWrite+" inFlight:"+counterpart.bytesInFlight);
       simulator.enqueueDelivery(new Delivery() {      
         int mySeq = seq++;
         public void deliver() {
@@ -236,6 +251,9 @@ public class DirectAppSocket<Identifier, MessageType> {
         }
         public int getSeq() {
           return mySeq; 
+        }
+        public String toString() {
+          return DirectAppSocketEndpoint.this.toString()+" deliver msg "+msg;
         }
       }, (int)Math.round(simulator.networkDelay(localNodeHandle, counterpart.localNodeHandle)));      
       return lengthToWrite;
@@ -268,6 +286,7 @@ public class DirectAppSocket<Identifier, MessageType> {
         P2PSocketReceiver<Identifier> temp = writer;
         writer = null;
         try {
+          if (logger.level <= Logger.FINEST) logger.log(this+".notifyCanWrite()");
           temp.receiveSelectResult(this, false, true);
         } catch (IOException ioe) {
           logger.logException("Error in "+temp, ioe);
@@ -284,6 +303,7 @@ public class DirectAppSocket<Identifier, MessageType> {
         P2PSocketReceiver<Identifier> temp = reader;
         reader = null;
         try {
+          if (logger.level <= Logger.FINEST) logger.log(this+".notifyCanRead()");
           temp.receiveSelectResult(this, true, false);
         } catch (IOException ioe) {
           logger.logException("Error in "+temp, ioe);
@@ -301,12 +321,17 @@ public class DirectAppSocket<Identifier, MessageType> {
         
         simulator.enqueueDelivery(new Delivery() {              
           public void deliver() {
+            if (!simulator.isAlive(localNodeHandle)) return;
             notifyCanWrite(); // only actually notifies if proper at the time
           }
           // I don't think this needs a sequence number, but I may be wrong
           public int getSeq() {
             return 0;
           }
+          public String toString() {
+            return DirectAppSocketEndpoint.this.toString()+" notifyCanWrite()";
+          }
+
         }, 0); // I dont think this needs a delay, but I could be wrong            
       }
       
@@ -315,11 +340,15 @@ public class DirectAppSocket<Identifier, MessageType> {
         
         simulator.enqueueDelivery(new Delivery() {              
           public void deliver() {
+            if (!simulator.isAlive(localNodeHandle)) return;
             notifyCanRead(); // only actually notifies if proper at the time           
           }            
           // I don't think this needs a sequence number, but I may be wrong
           public int getSeq() {
             return 0;
+          }
+          public String toString() {
+            return DirectAppSocketEndpoint.this.toString()+" notifyCanRead()";
           }
         }, 0); // I dont think this needs a delay, but I could be wrong            
       }        
@@ -337,6 +366,9 @@ public class DirectAppSocket<Identifier, MessageType> {
         public int getSeq() {
           return mySeq;
         }
+        public String toString() {
+          return DirectAppSocketEndpoint.this.toString()+" counterpart shutDownOutput()";
+        }
       }, (int)Math.round(simulator.networkDelay(localNodeHandle, counterpart.localNodeHandle))); // I dont think this needs a delay, but I could be wrong            
     }
   
@@ -350,7 +382,7 @@ public class DirectAppSocket<Identifier, MessageType> {
     }
     
     public String toString() {
-      return "DAS{"+localNodeHandle+":"+writer+"->"+counterpart.localNodeHandle+":"+reader+"}"; 
+      return "DAS{"+localNodeHandle+":"+simulator.isAlive(localNodeHandle)+"->"+counterpart.localNodeHandle+":"+simulator.isAlive(counterpart.localNodeHandle)+" w:"+writer+" r:"+reader+"}"; 
     }
 
     public Identifier getIdentifier() {
@@ -379,11 +411,11 @@ public class DirectAppSocket<Identifier, MessageType> {
           simulator.enqueueDelivery(new ConnectorDelivery(),
               (int)Math.round(simulator.networkDelay(acceptor, connector))); 
         } else {
-          simulator.enqueueDelivery(new ConnectorExceptionDelivery(new SocketTimeoutException()),
+          simulator.enqueueDelivery(new ConnectorExceptionDelivery(connectorReceiver,connectorHandle,new SocketTimeoutException()),
               (int)Math.round(simulator.networkDelay(acceptor, connector))); 
         }
       } else {
-        simulator.enqueueDelivery(new ConnectorExceptionDelivery(new NodeIsFaultyException(acceptor)),0);
+        simulator.enqueueDelivery(new ConnectorExceptionDelivery(connectorReceiver,connectorHandle,new NodeIsFaultyException(acceptor)),0);
         // TODO: this should probably take into account a real delay, however, acceptor has already been removed from the simulator
 //            (int)Math.round(simulator.networkDelay(acceptor, connector))+
 //            (int)Math.round(simulator.networkDelay(connector, acceptor))); 
@@ -409,20 +441,6 @@ public class DirectAppSocket<Identifier, MessageType> {
     }
   }
   
-  class ConnectorExceptionDelivery implements Delivery {
-    IOException e;
-    public ConnectorExceptionDelivery(IOException e) {
-      this.e = e; 
-    }
-    public void deliver() {
-      connectorReceiver.receiveException(connectorHandle, e);      
-    }
-    // out of band, needs to get in front of any other message
-    public int getSeq() {
-      return -1; 
-    }
-  }
-
   public Delivery getAcceptorDelivery() {
     return new AcceptorDelivery();
   }

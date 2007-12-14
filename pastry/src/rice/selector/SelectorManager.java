@@ -406,6 +406,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * called by the selector thread.
    */
   protected void doInvocations() {
+    if (logger.level <= Logger.FINEST) logger.log("SM.doInvocations()");
     Iterator<Runnable> i;
     synchronized (this) {
       i = new ArrayList<Runnable>(invocations).iterator();
@@ -480,6 +481,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @exception IOException DESCRIBE THE EXCEPTION
    */
   int select(int time) throws IOException {
+    if (logger.level <= Logger.FINEST) logger.log("SM.select("+time+")");
+
     if (time > TIMEOUT)
       time = TIMEOUT;
 
@@ -589,6 +592,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     synchronized(seqLock) {
       task.seq = seqCtr++;
     }
+//    if (logger.level <= Logger.FINE && task.scheduledExecutionTime() <= timeSource.currentTimeMillis()) {
+//      logger.logException("Scheduling task for now:"+task, new Exception());
+//    }
     if (logger.level <= Logger.FINE) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
 //    synchronized (selector) {
       if (!timerQueue.add(task)) {
@@ -647,8 +653,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * Internal method which finds all due tasks and executes them.
    */
   protected void executeDueTasks() {
-    //System.out.println("SM.executeDueTasks()");
     long now = timeSource.currentTimeMillis();
+    if (logger.level <= Logger.FINEST) logger.log("SM.executeDueTasks() "+now);
+    
     ArrayList<TimerTask> executeNow = new ArrayList<TimerTask>();
 
     // step 1, fetch all due timers
