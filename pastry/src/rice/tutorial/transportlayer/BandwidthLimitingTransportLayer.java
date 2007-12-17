@@ -189,60 +189,17 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
   }
   
   /**
-   * Keep track of all of the BandwidthLimitingSocket
+   * Keep track of all of the BandwidthLimitingSockets
    */
   Collection<BandwidthLimitingSocket> sockets = new ArrayList<BandwidthLimitingSocket>();
   
   class BandwidthLimitingSocket extends SocketWrapperSocket<Identifier, Identifier> {
     public BandwidthLimitingSocket(P2PSocket<Identifier> socket) {
-      super(socket.getIdentifier(), socket, BandwidthLimitingTransportLayer.this.logger, socket.getOptions());
+      super(socket.getIdentifier(), socket, 
+          BandwidthLimitingTransportLayer.this.logger, 
+          socket.getOptions());
       synchronized(BandwidthLimitingTransportLayer.this) {
         sockets.add(this);
-      }
-    }
-
-    public void close() {
-      super.close();
-      synchronized(BandwidthLimitingTransportLayer.this) {
-        sockets.remove(this);      
-      }
-    }
-    
-    public void shutdownOutput() {
-      super.shutdownOutput();
-      synchronized(BandwidthLimitingTransportLayer.this) {
-        sockets.remove(this);
-      }
-    }
-    
-    /**
-     * Store the write requestor.
-     */
-    P2PSocketReceiver<Identifier> storedReceiver;
-    
-    @Override
-    public void register(boolean wantToRead, boolean wantToWrite, P2PSocketReceiver<Identifier> receiver) {
-      // this variable is what we will pass to super.register()
-      boolean myWantToWrite = wantToWrite;
-      
-      // if the user wants to write, and the bucket is empty, set our temp variable to false
-      if (wantToWrite == true && bucket == 0) {
-        myWantToWrite = false;
-        storedReceiver = receiver;
-      }
-
-      // only call super.register() if we have something to do
-      if (wantToRead || myWantToWrite) super.register(wantToRead, myWantToWrite, receiver);
-    }
-
-    /**
-     * Register and clear the storedReceiver
-     */
-    public void notifyBandwidthRefilled() {
-      if (storedReceiver != null) {
-        P2PSocketReceiver<Identifier> temp = storedReceiver;
-        storedReceiver = null;
-        super.register(false, true, temp);
       }
     }
 
@@ -261,10 +218,13 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
 
       if (logger.level <= Logger.FINE) logger.log("Limiting "+socket+" to "+bucket+" bytes.");
       
-      // we're trying to write more than we can, we need to create a new ByteBuffer
-      // we have to be careful about the bytebuffer calling into us to properly 
-      // set the position when we are done, let's record the original position
+      // The user is trying to write more than is allowed.  To handle this we 
+      // will copy the allowed amount into a temporary ByteBuffer and pass that
+      // to the next layer.  It is critical set the proper position of scrs 
+      // before returning.  First, let's record the original position.
       int originalPosition = srcs.position();
+      
+      // now we create temp, who's size is "bucket"
       ByteBuffer temp = ByteBuffer.wrap(srcs.array(), originalPosition, bucket);
 
       // try to write our temp buffer
@@ -284,6 +244,53 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
       srcs.position(originalPosition+(int)ret);
       return ret;
     }
+
+    /**
+     * Store the write requestor.  If this variable is not null 
+     * it means that the storedWriter wants to write, but there
+     * wasn't enough bandwidth.
+     */
+    P2PSocketReceiver<Identifier> storedWriter;
+    
+    @Override
+    public void register(boolean wantToRead, boolean wantToWrite, P2PSocketReceiver<Identifier> receiver) {
+      // this variable is what we will pass to super.register()
+      boolean canWrite = wantToWrite;
+      
+      // if the user wants to write, and the bucket is empty, set our temp variable to false
+      if (wantToWrite == true && bucket == 0) {
+        canWrite = false;
+        storedWriter = receiver;
+      }
+
+      // only call super.register() if we have something to do
+      if (wantToRead || canWrite) super.register(wantToRead, canWrite, receiver);
+    }
+
+    /**
+     * Register and clear the storedWriter
+     */
+    public void notifyBandwidthRefilled() {
+      if (storedWriter != null) {
+        P2PSocketReceiver<Identifier> temp = storedWriter;
+        storedWriter = null;
+        super.register(false, true, temp);
+      }
+    }
+    
+    public void close() {
+      super.close();
+      synchronized(BandwidthLimitingTransportLayer.this) {
+        sockets.remove(this);      
+      }
+    }
+    
+    public void shutdownOutput() {
+      super.shutdownOutput();
+      synchronized(BandwidthLimitingTransportLayer.this) {
+        sockets.remove(this);
+      }
+    }    
   }
   
   public void acceptMessages(boolean b) {
@@ -310,21 +317,33 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     callback.messageReceived(i, m, options);
   }
   
-  public static PastryNodeFactory exampleA(int bindport, Environment env, NodeIdFactory nidFactory, final int amt, final int time) throws IOException {    
+  public static PastryNodeFactory exampleA(int bindport, Environment env, 
+      NodeIdFactory nidFactory, final int amt, final int time) throws IOException {  
+    
+    // anonymously extend SPNF
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
+      
+      /**
+       * Override getWireTransportLayer to return the BandwidthLimitingTL wrapping
+       * the default wire implementation.
+       */
       @Override
-      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(
+          InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
         // get the default layer
-        TransportLayer<InetSocketAddress, ByteBuffer> wtl = super.getWireTransportLayer(innermostAddress, pn);        
+        TransportLayer<InetSocketAddress, ByteBuffer> wtl = 
+          super.getWireTransportLayer(innermostAddress, pn);        
         
         // wrap it with our layer
-        return new BandwidthLimitingTransportLayer<InetSocketAddress>(wtl, amt, time, pn.getEnvironment());
+        return new BandwidthLimitingTransportLayer<InetSocketAddress>(
+            wtl, amt, time, pn.getEnvironment());
       }      
     };
     return factory;
   } 
   
-  public static PastryNodeFactory exampleB(int bindport, Environment env, NodeIdFactory nidFactory, final int amt, final int time) throws IOException {    
+  public static PastryNodeFactory exampleB(int bindport, Environment env, 
+      NodeIdFactory nidFactory, final int amt, final int time) throws IOException {    
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
 
       @Override
@@ -336,10 +355,14 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
           MultiInetSocketAddress proxyAddress, 
           MultiAddressSourceRouteFactory esrFactory) throws IOException {
         
-        final TransLivenessProximity<MultiInetSocketAddress, ByteBuffer> srm = super.getSourceRouteManagerLayer(
+        // get the default layer
+        final TransLivenessProximity<MultiInetSocketAddress, ByteBuffer> srm = 
+          super.getSourceRouteManagerLayer(
             ltl, livenessProvider, pinger, pn, proxyAddress, esrFactory);
         
-        final BandwidthLimitingTransportLayer bll = new BandwidthLimitingTransportLayer<MultiInetSocketAddress>(
+        // wrap the default layer with our layer
+        final BandwidthLimitingTransportLayer<MultiInetSocketAddress> bll = 
+          new BandwidthLimitingTransportLayer<MultiInetSocketAddress>(
             srm.getTransportLayer(), amt, time, pn.getEnvironment());
         
         return new TransLivenessProximity<MultiInetSocketAddress, ByteBuffer>(){

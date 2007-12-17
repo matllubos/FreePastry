@@ -73,7 +73,8 @@ public class DistTutorial {
    * @param numNodes the number of nodes to create in this JVM
    * @param env the environment for these nodes
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env, int bandwidth) throws Exception {
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, 
+      int numNodes, Environment env, int bandwidth) throws Exception {
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -85,8 +86,8 @@ public class DistTutorial {
     env.getParameters().setInt("rice.tutorial.transportlayer.BandwidthLimitingTransportLayer_loglevel", Logger.FINE);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleA(bindport, env, nidFactory, bandwidth, 1000);
-    //  PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleB(bindport, env, nidFactory, bandwidth, 1000);
+    //PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleA(bindport, env, nidFactory, bandwidth, 1000);
+    PastryNodeFactory factory = BandwidthLimitingTransportLayer.exampleB(bindport, env, nidFactory, bandwidth, 1000);
     //  PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
     // loop to construct the nodes/apps

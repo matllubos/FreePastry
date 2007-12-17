@@ -582,11 +582,11 @@ public class TLPastryNode extends PastryNode implements
   public void destroy() {
     super.destroy();
     if (getEnvironment().getSelectorManager().isSelectorThread()) {
-      tl.destroy();
+      if (tl != null) tl.destroy();
     } else {
       getEnvironment().getSelectorManager().invoke(new Runnable() {
         public void run() {
-          tl.destroy();
+          if (tl != null) tl.destroy();
         }
       });
     }    

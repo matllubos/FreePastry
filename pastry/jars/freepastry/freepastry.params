@@ -236,6 +236,7 @@ p2p_replication_max_keys_in_message = 1000
 
 #scribe
 p2p_scribe_maintenance_interval = 180000
+#time for a subscribe fail to be thrown (in millis)
 p2p_scribe_message_timeout = 15000
 
 #util
