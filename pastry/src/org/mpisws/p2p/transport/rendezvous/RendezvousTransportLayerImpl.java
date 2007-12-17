@@ -294,6 +294,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   
   public SocketRequestHandle<HighIdentifier> openPilot(final HighIdentifier i, 
       final Continuation<SocketRequestHandle<HighIdentifier>, IOException> deliverAckToMe) {    
+    if (logger.level <= Logger.INFO) logger.log("openPilot("+i+")");
     if (pilots.containsKey(i)) {
       return null; 
     }
@@ -318,6 +319,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   }  
   
   public void closePilot(HighIdentifier i) {
+    if (logger.level <= Logger.INFO) logger.log("closePilot("+i+")");
     Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>> closeMe = pilots.remove(i);
     if (closeMe != null) {
       SocketRequestHandle<Identifier> deadHandle = closeMe.a();

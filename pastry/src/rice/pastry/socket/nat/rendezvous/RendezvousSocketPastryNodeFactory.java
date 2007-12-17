@@ -48,7 +48,9 @@ import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.nat.FirewallTLImpl;
 import org.mpisws.p2p.transport.rendezvous.ContactDeserializer;
+import org.mpisws.p2p.transport.rendezvous.PilotManager;
 import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
@@ -56,6 +58,8 @@ import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
+import rice.environment.random.RandomSource;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
@@ -77,6 +81,9 @@ import rice.pastry.transport.TLPastryNode;
  *
  */
 public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
+  protected RandomSource random;
+
+  
   /**
    * The local node's contact state.  
    * 
@@ -86,12 +93,16 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   
   public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler) throws IOException {
     super(nf, bindAddress, startPort, env, handler);
-    // TODO Auto-generated constructor stub
+    init();
   }
 
   public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env) throws IOException {
     super(nf, startPort, env);
-    // TODO Auto-generated constructor stub
+    init();
+  }
+  
+  private void init() {
+    random = environment.getRandomSource();
   }
   
   @Override
@@ -107,7 +118,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
 
   protected TransportLayer<InetSocketAddress, ByteBuffer> getRendezvousTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> mtl, TLPastryNode pn) {
-    return new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
+    RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> ret = new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
         mtl, 
         CommonAPITransportLayerImpl.DESTINATION_IDENTITY, 
         (RendezvousSocketNodeHandle)pn.getLocalHandle(), 
@@ -115,10 +126,18 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         getRendezvousGenerator(pn), 
         getRendezvousStrategy(pn), 
         pn.getEnvironment());
+    generatePilotStrategy(pn, ret);
+    return ret;
+  }
+  
+  protected void generatePilotStrategy(TLPastryNode pn, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousLayer) {
+    //pilotStrategy = 
+    new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer);    
   }
 
-  private ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle> getContactDeserializer(TLPastryNode pn) {
-    return null;
+  protected ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle> getContactDeserializer(TLPastryNode pn) {
+    throw new RuntimeException("Not Implemented.");
+//    return null;
   }
 
   protected RendezvousGenerationStrategy<RendezvousSocketNodeHandle> getRendezvousGenerator(TLPastryNode pn) {
@@ -152,5 +171,31 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     RendezvousSNHFactory pnhf = (RendezvousSNHFactory)nhf;
     MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)localNodeInfo;
     return pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId(), localContactState);
+  }
+
+  /**
+   * Used with getWireTL to make sure to return the bootstrap as not firewalled.
+   */
+  boolean firstTime = true;
+  
+  /**
+   * For testing, may return a FirewallTL impl for testing.
+   */
+  @Override
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+    TransportLayer<InetSocketAddress, ByteBuffer> baseTl = super.getWireTransportLayer(innermostAddress, pn);
+    Parameters p = environment.getParameters();
+    if (firstTime && p.getBoolean("rendezvous_test_makes_bootstrap")) {
+      firstTime = false;
+      return baseTl;
+    }
+    if (p.getBoolean("rendezvous_test_firewall")) {
+      if (random.nextFloat() <= p.getFloat("rendezvous_test_num_firewalled")) {
+        if (logger.level <= Logger.INFO) logger.log(pn+" is firewalled.");
+        return new FirewallTLImpl<InetSocketAddress, ByteBuffer>(baseTl,5000,pn.getEnvironment());
+      }
+    }
+
+    return baseTl; 
   }
 }

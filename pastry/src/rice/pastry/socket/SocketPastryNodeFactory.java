@@ -134,8 +134,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   private int port;
   protected NodeIdFactory nidFactory;
-  protected RandomSource random;
-
 
   private InetAddress localAddress;
 

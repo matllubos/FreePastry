@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.nat;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -90,6 +91,8 @@ public class FirewallTLImpl<Identifier, MessageType> implements TransportLayer<I
     this.environment = env;
     this.timeSource = environment.getTimeSource();
     this.logger = env.getLogManager().getLogger(FirewallTLImpl.class, null);
+    this.udpTable = new HashMap<Identifier, Long>();
+    this.tl = tl;
     tl.setCallback(this);
     tl.acceptSockets(false);    
   }

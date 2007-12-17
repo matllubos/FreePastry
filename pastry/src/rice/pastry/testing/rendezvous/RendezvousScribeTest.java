@@ -70,6 +70,11 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
     Parameters p = env.getParameters();
 //    p.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
 //    p.setInt("org.mpisws.p2p.transport.wire_loglevel", Logger.FINE);
+    p.setInt("rice.pastry.socket.nat.rendezvous_loglevel", Logger.FINE);
+    
+    p.setBoolean("rendezvous_test_firewall", true);
+    p.setBoolean("rendezvous_test_makes_bootstrap", true);
+    p.setFloat("rendezvous_test_num_firewalled", 0.3f);
     
     RawScribeRegrTest scribeTest = new RawScribeRegrTest(env);
     
