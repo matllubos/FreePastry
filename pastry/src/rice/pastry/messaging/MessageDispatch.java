@@ -131,7 +131,7 @@ public class MessageDispatch implements Destructable {
           "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
       return false;
     }
-    // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
+    // NOTE: There is no safety issue with calling localNode.isReady() because this is on the 
     // PastryThread, and the only way to set a node ready is also on the ready thread.
     PastryAppl mr = (PastryAppl) addressBook.get(Integer.valueOf(msg.getDestination()));
 
@@ -155,7 +155,7 @@ public class MessageDispatch implements Destructable {
           "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
       return false;
     }
-    // NOTE: There is no saftey issue with calling localNode.isReady() because this is on the 
+    // NOTE: There is no safety issue with calling localNode.isReady() because this is on the 
     // PastryThread, and the only way to set a node ready is also on the ready thread.
     PastryAppl mr = (PastryAppl) addressBook.get(Integer.valueOf(msg.getAddress()));
 
