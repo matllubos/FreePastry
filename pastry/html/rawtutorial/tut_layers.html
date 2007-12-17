@@ -32,10 +32,18 @@ href="http://freepastry.org/">FreePastry</a> version @freepastry_version@.  Main
 <ul>
   <li><a href="#overview">Overview</a> of the how the transport layers work together.</li>
   <li><a href="#design">Design</a> of our example transport layer.</li>
-  <li>message:Limiting Message Bandwidth handle:The MessageRequestHandle callback:Implementing the MessageCallback to notify the user of success/failure.</li>
-  <li>socket:Limit Socket Bandwidth register:Override registration of read/write open:Intercept openSocket/incomingSocket incoming</li>
-  <li>finishing:Put the final touches on the transport layer and integrate it into the SocketPastryNodeFactory integration</li>
-  <li>run:Execute the code in an example.</li>
+  <li>Overriding <a href="#message">message</a> behavior.  
+    <ul>
+      <li>Constructing a <a href="#handle">MessageRequestHandle</a>.</li>
+      <li>Implementing the <a href="#m_callback">MessageCallback</a> to notify the user of success/failure.</li>
+    </ul></li>
+  <li>Overriding <a href="#socket">socket</a> behavior.
+    <ul>
+      <li>Override <a href="#register">registration</a> of read/write</li>
+      <li>Intercept <a href="#open">openSocket</a>/<a href="#incoming">incomingSocket</a></li>
+    </ul></li>
+  <li>finishing:Put the <a href="#finishing">final touches</a> on the transport layer and <a href="#integration">integrate it into the SocketPastryNodeFactory</a></li>
+  <li><a href="#run">Execute the code</a> in an example.</li>
 </ul>
 
 <p/><b>Warning:</b> This tutorial is more difficult than the previous tutorials and is intended for developers who wish to make low-level changes to the FreePastry network stack. 
@@ -334,7 +342,7 @@ When the user requests to send the message, it may be buffered or even fail.  Th
 
 <p/>Note how we call <code>returnMe.setSubCancellable()</code> with the call to the lower transportLayer.
 
-<a name="callback"><h3>MessageCallback</h3>
+<a name="m_callback"><h3>MessageCallback</h3>
 <p/>There is one more problem in the code.  Because we simply pass through the MessageCallback <code>deliverAckToMe</code>, when <code>deliverAckToMe.ack()</code> or <code>deliverAckToMe.sendFailed()</code> is called, it will have the wrong MessageRequestHandle, because the lower transport layer will notify it of success or failure.  Thus, we need to create our own MessageRequestHandle which wraps <code>deliverAckToMe</code>.  We'll use an Anonymous Inner Class of the MessageCallback interface.
 <p/>First, we need to declare <code>deliverAckToMe</code> and <code>returnMe</code> <i>final</i>.  
 <p/>Second, we will create an anonymous inner class of the <code>MessageCallback</code>.
