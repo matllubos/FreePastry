@@ -216,8 +216,9 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           // TODO: read the requested target, credentials, and route to it to establish a connection, which will respond as an ACCEPTOR
           InputBuffer sib = new SocketInputBuffer(socket,1024);
           HighIdentifier target = serializer.deserialize(sib);
-          byte[] credentials = serializer.readCredentials(sib);
-          rendezvousStrategy.openChannel(target, myRendezvousContact, credentials, null);
+          HighIdentifier opener = serializer.deserialize(sib);
+          int uid = sib.readInt();
+          rendezvousStrategy.openChannel(target, myRendezvousContact, opener, uid, null);
           // TODO: store credentials/target -> map
           // TODO: make a deliverResultToMe that closes the socket or returns some kind of error
           return;
@@ -292,6 +293,11 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   Map<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>> pilots = 
     new HashMap<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>>();
   
+  /**
+   * Only used by NATted node.
+   * 
+   * Opens a pilot socket to a "lifeline" node.  These are usuall nodes near the local node in the id space. 
+   */
   public SocketRequestHandle<HighIdentifier> openPilot(final HighIdentifier i, 
       final Continuation<SocketRequestHandle<HighIdentifier>, IOException> deliverAckToMe) {    
     if (logger.level <= Logger.INFO) logger.log("openPilot("+i+")");

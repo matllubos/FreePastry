@@ -46,6 +46,7 @@ import java.util.Map;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
+import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.nat.FirewallTLImpl;
@@ -60,6 +61,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
@@ -132,12 +134,29 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   
   protected void generatePilotStrategy(TLPastryNode pn, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousLayer) {
     //pilotStrategy = 
-    new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer);    
+    new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer, pn.getEnvironment());    
   }
 
-  protected ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle> getContactDeserializer(TLPastryNode pn) {
-    throw new RuntimeException("Not Implemented.");
-//    return null;
+  protected ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle> getContactDeserializer(final TLPastryNode pn) {
+    return new ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle>(){
+    
+      public Map<String, Object> getOptions(RendezvousSocketNodeHandle high) {
+//        Map<String, Object> options = new HashMap<String, Object>();
+//        options.put(IdentityImpl.NODE_HANDLE_FROM_INDEX,high);
+//        return options;
+        return null;
+      }
+    
+      public RendezvousSocketNodeHandle deserialize(InputBuffer sib) throws IOException {
+        return (RendezvousSocketNodeHandle)pn.readNodeHandle(sib);
+      }
+    
+      public InetSocketAddress convert(RendezvousSocketNodeHandle high) {
+        // TODO: is this the correct one?
+        return high.eaddress.getAddress(0);
+      }
+    
+    };
   }
 
   protected RendezvousGenerationStrategy<RendezvousSocketNodeHandle> getRendezvousGenerator(TLPastryNode pn) {
@@ -183,6 +202,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    */
   @Override
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+    // TODO: make this take place when the Handle is constructed, then make this code just look at that value
     TransportLayer<InetSocketAddress, ByteBuffer> baseTl = super.getWireTransportLayer(innermostAddress, pn);
     Parameters p = environment.getParameters();
     if (firstTime && p.getBoolean("rendezvous_test_makes_bootstrap")) {

@@ -98,7 +98,8 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
 
   public Cancellable openChannel(final RendezvousSocketNodeHandle target, 
       final RendezvousSocketNodeHandle rendezvous, 
-      final byte[] credentials, 
+      final RendezvousSocketNodeHandle source,
+      final int uid,
       final Continuation<Integer, Exception> deliverResultToMe) {
     
     // we don't want state changing, so this can only be called on the selector
@@ -106,7 +107,7 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       final AttachableCancellable ret = new AttachableCancellable();
       selectorManager.invoke(new Runnable() {
         public void run() {
-          ret.attach(openChannel(target, rendezvous, credentials, deliverResultToMe));
+          ret.attach(openChannel(target, rendezvous, source, uid, deliverResultToMe));
         }
       });
       return ret;

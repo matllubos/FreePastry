@@ -275,7 +275,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     
     SocketNodeHandle localhandle = (SocketNodeHandle)pn.getLocalHandle();
     final SocketNodeHandleFactory handleFactory = (SocketNodeHandleFactory)handleFactory2;
-    
     MultiInetSocketAddress localAddress = localhandle.eaddress;
     MultiInetSocketAddress proxyAddress = localAddress;
     MultiAddressSourceRouteFactory esrFactory = getMultiAddressSourceRouteFactory(pn);

@@ -514,7 +514,7 @@ public class TLPastryNode extends PastryNode implements
   protected JoinProtocol joiner;
   
   // The address (ip + port) of this pastry node
-  private NodeHandleFactory handleFactory;
+  protected NodeHandleFactory handleFactory;
   protected LivenessProvider<NodeHandle> livenessProvider;
 
   public void setSocketElements(NodeHandle localhandle,
@@ -668,6 +668,13 @@ public class TLPastryNode extends PastryNode implements
 
   @Override
   public void nodeIsReady() {
+    
     // nothing, used to cancel the joinEvent
+  }
+  
+//  protected NodeHandleFactory handleFactory;
+
+  public NodeHandleFactory getHandleFactroy() {
+    return handleFactory;
   }
 }

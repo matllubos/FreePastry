@@ -67,7 +67,7 @@ public interface RendezvousStrategy<Identifier> {
    * @param deliverResultToMe notify me when success/failure
    * @return a way to cancel the request
    */
-  public Cancellable openChannel(Identifier target, Identifier rendezvous, byte[] credentials, Continuation<Integer, Exception> deliverResultToMe);
+  public Cancellable openChannel(Identifier target, Identifier rendezvous, Identifier source, int uid, Continuation<Integer, Exception> deliverResultToMe);
   
   /**
    * Sends the message via an out-of-band channel.  Usually routing.

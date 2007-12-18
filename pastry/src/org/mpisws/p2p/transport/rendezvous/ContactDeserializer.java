@@ -36,15 +36,16 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.rendezvous;
 
+import java.io.IOException;
 import java.util.Map;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public interface ContactDeserializer<Identifier, HighIdentifier> {
 
-  HighIdentifier deserialize(InputBuffer sib);
+  HighIdentifier deserialize(InputBuffer sib) throws IOException;
 
-  byte[] readCredentials(InputBuffer sib);
+//  byte[] readCredentials(InputBuffer sib);
 
   Identifier convert(HighIdentifier high);
   
