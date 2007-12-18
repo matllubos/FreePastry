@@ -274,7 +274,9 @@ public class MagicNumberTransportLayer<Identity> implements
       // TODO: Make timeout/cancellable
       if (canWrite) throw new IOException("Never asked to write!");
       if (!canRead) throw new IOException("Can't read!");
-      socket.read(buf);
+      if (socket.read(buf) < 0) {
+        socket.close();
+      }
       if (buf.hasRemaining()) {
         socket.register(true, false, this); 
       } else {
@@ -293,6 +295,10 @@ public class MagicNumberTransportLayer<Identity> implements
     public void run() {
       socket.close();
       errorHandler.receivedException(socket.getIdentifier(), new StalledSocketException(socket.getIdentifier(), "Timeout on incoming socket expired."));
-    }    
+    }  
+    
+    public String toString() {
+      return MagicNumberTransportLayer.this+" VHR";
+    }
   }
 }

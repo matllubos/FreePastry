@@ -741,4 +741,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     return environment;
   }
 
+  public void setLogLevel(int level) {
+    logger.level = level;
+  }
+
 }
