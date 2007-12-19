@@ -387,4 +387,7 @@ fileLogManager_defaultFileName = main
 # false = append true = overwrite
 fileLogManager_overwrite_existing_log_file = false
 
+# the amount of time the LookupService tutorial app will wait before timing out
+# in milliseconds, default is 30 seconds
+lookup_service.timeout = 30000
 
