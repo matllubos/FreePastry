@@ -352,7 +352,7 @@ p2p_glacier_statisticsReportInterval = 60000
 p2p_glacier_maxActiveRestores = 3
 
 #transport layer testing params
-org.mpisws.p2p.testing.transportlayer.replay.Recorder_pringlog = true
+org.mpisws.p2p.testing.transportlayer.replay.Recorder_printlog = true
 
 # logging
 #default log level
