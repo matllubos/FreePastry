@@ -600,7 +600,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 //    if (logger.level <= Logger.FINE && task.scheduledExecutionTime() <= timeSource.currentTimeMillis()) {
 //      logger.logException("Scheduling task for now:"+task, new Exception());
 //    }
-    if (logger.level <= Logger.FINE) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
+    if (logger.level <= Logger.FINER) logger.log("addTask("+task+") scheduled for "+task.scheduledExecutionTime());
 //    synchronized (selector) {
       if (!timerQueue.add(task)) {
         if (logger.level <= Logger.WARNING) logger.log("ERROR: Got false while enqueueing task "+task+"!");
@@ -630,7 +630,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   }
   
   public synchronized void removeTask(TimerTask task) {
-    if (logger.level <= Logger.FINE) logger.log("removeTask("+task+") scheduled for "+task.scheduledExecutionTime());
+    if (logger.level <= Logger.FINER) logger.log("removeTask("+task+") scheduled for "+task.scheduledExecutionTime());
     timerQueue.remove(task);
   }
 
@@ -690,7 +690,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     while (i.hasNext()) {
       TimerTask next = i.next();
       try {
-        if (logger.level <= Logger.FINE) logger.log("executing task "+next);
+        if (logger.level <= Logger.FINER) logger.log("executing task "+next);
         if (next.execute(timeSource)) {
           addBack.add(next);
         }
