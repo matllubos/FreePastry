@@ -65,6 +65,13 @@ import rice.p2p.util.rawserialization.SimpleInputBuffer;
  * 
  * To find the size of the cache call size();
  * 
+ * 
+ * This works by reading from the socket to the writeBB (which is not cleared by reset()), 
+ * and then on each read, is temporarily read into readBB.  When you get an InsufficientBytesException then 
+ * typically, you call reset(), then register the socket for reading.
+ * 
+ * If you complete the object, but want to reuse the SIB, call clear.
+ * 
  * @author Jeff Hoye
  *
  */

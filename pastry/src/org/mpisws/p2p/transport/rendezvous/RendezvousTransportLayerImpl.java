@@ -51,6 +51,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.util.InsufficientBytesException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketInputBuffer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
@@ -213,17 +214,23 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           callback.incomingSocket(socket);
           return;
         case CONNECTOR_SOCKET:
-          // TODO: read the requested target, credentials, and route to it to establish a connection, which will respond as an ACCEPTOR
-          InputBuffer sib = new SocketInputBuffer(socket,1024);
+          // TODO: read the requested target, etc, and route to it to establish a connection, which will respond as an ACCEPTOR
+          // TODO: make this recover from errors when sib doesn't have enough data, needs to reset(), reregister to read, probably should just do this in its own class
+          InputBuffer sib;
+          sib = new SocketInputBuffer(socket,1024);         
           HighIdentifier target = serializer.deserialize(sib);
           HighIdentifier opener = serializer.deserialize(sib);
           int uid = sib.readInt();
           rendezvousStrategy.openChannel(target, myRendezvousContact, opener, uid, null);
-          // TODO: store credentials/target -> map
+          // TODO: store connection details in a map to this socket -> map
           // TODO: make a deliverResultToMe that closes the socket or returns some kind of error
           return;
         case ACCEPTOR_SOCKET:
-          // read the credentials and match to the CONNECTOR, or Self, or wait
+          // read the connection details and match to the CONNECTOR, or Self, or wait
+          return;
+        case PILOT_SOCKET:
+          new IncomingPilot(socket);
+          return;
         }
       }
       
@@ -233,7 +240,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       }
     });
   }
-
+  
   /**
    * What to do if firewalled?
    *   ConnectRequest UDP only?  For now always use UDP_AND_TCP
@@ -243,7 +250,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
 
     HighIdentifier high = getHighIdentifier(options);
     if (high == null || high.canContactDirect()) {
-      // passthrough, need to allow for null during boostrap, we assume passthrough works
+      // pass-through, need to allow for null during bootstrap, we assume pass-through works
       return tl.sendMessage(i, m, deliverAckToMe, options);
     } else {
       // rendezvous
@@ -290,18 +297,20 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     tl.destroy();
   }
 
-  Map<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>> pilots = 
+  // *************Pilot Sockets (used to connect leafset members) ******************
+  // *************** outgoing Pilots, only used by NATted nodes ********************
+  Map<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>> outgoingPilots = 
     new HashMap<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>>();
   
   /**
    * Only used by NATted node.
    * 
-   * Opens a pilot socket to a "lifeline" node.  These are usuall nodes near the local node in the id space. 
+   * Opens a pilot socket to a "lifeline" node.  These are usually nodes near the local node in the id space. 
    */
   public SocketRequestHandle<HighIdentifier> openPilot(final HighIdentifier i, 
       final Continuation<SocketRequestHandle<HighIdentifier>, IOException> deliverAckToMe) {    
     if (logger.level <= Logger.INFO) logger.log("openPilot("+i+")");
-    if (pilots.containsKey(i)) {
+    if (outgoingPilots.containsKey(i)) {
       return null; 
     }
 
@@ -312,6 +321,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     
     tuple.setA(tl.openSocket(serializer.convert(i), new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
+//        outgoingPilots.put(i,new OutgoingPilot(sock));
         tuple.setB(sock);
         if (deliverAckToMe != null) deliverAckToMe.receiveResult(ret);
       }
@@ -326,7 +336,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   
   public void closePilot(HighIdentifier i) {
     if (logger.level <= Logger.INFO) logger.log("closePilot("+i+")");
-    Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>> closeMe = pilots.remove(i);
+    Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>> closeMe = outgoingPilots.remove(i);
     if (closeMe != null) {
       SocketRequestHandle<Identifier> deadHandle = closeMe.a();
       P2PSocket<Identifier> deadSocket = closeMe.b();
@@ -338,5 +348,90 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       }
     }
   }
+  
+  class OutgoingPilot implements P2PSocketReceiver<Identifier> {
+    private P2PSocket<Identifier> socket;
+    /**
+     * Used to read in ping responses.
+     */
+    protected SocketInputBuffer sib;
 
+    public OutgoingPilot(P2PSocket<Identifier> socket) throws IOException {
+      this.socket = socket;
+      sib = new SocketInputBuffer(socket,1024);
+      receiveSelectResult(socket, true, false);
+    }
+
+    @Override
+    public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void receiveSelectResult(P2PSocket<Identifier> socket,
+        boolean canRead, boolean canWrite) throws IOException {
+      // TODO Auto-generated method stub
+      
+    }
+
+  }
+  
+  // ********* incoming Pilots, only used by non-NATted nodes *************
+  Map<HighIdentifier, IncomingPilot> incomingPilots = new HashMap<HighIdentifier, IncomingPilot>();
+  
+  class IncomingPilot implements P2PSocketReceiver<Identifier> {
+    P2PSocket<Identifier> socket;
+    /**
+     * Used to read the initial connection information, then re-constructed each time to read pings.
+     * Always ready to read the pings.
+     */
+    protected SocketInputBuffer sib;
+    HighIdentifier target;
+    
+    public IncomingPilot(P2PSocket<Identifier> socket) throws IOException {
+      this.socket = socket;
+      sib = new SocketInputBuffer(socket,1024);
+      receiveSelectResult(socket, true, false);
+    }
+
+    @Override
+    public void receiveSelectResult(P2PSocket<Identifier> socket,
+        boolean canRead, boolean canWrite) throws IOException {
+      if (target == null) {
+        // only do this the first time
+        try {
+          target = serializer.deserialize(sib);
+          if (logger.level <= Logger.INFO) logger.log("Received incoming Pilot from "+target);
+        } catch (InsufficientBytesException ibe) {
+          socket.register(true, false, this);
+          return;
+        }
+        sib.clear();
+        incomingPilots.put(target,this);                
+        
+        // NOTE, it's not important to put a return here, because maybe the node sent a ping while waiting for this step, 
+        // just rely on the recovery to properly re-register this
+      }
+
+      // TODO read a ping/re-register
+      try {
+        // read ping, respond to ping
+        sib.readByte();
+      } catch (InsufficientBytesException ibe) {
+        socket.register(true, false, this);
+        return;
+      } catch (IOException ioe) {
+        socket.close();
+      }
+      sib.clear();
+      socket.register(true, false, this);      
+    }
+    
+    @Override
+    public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
+      if (target != null) incomingPilots.remove(target);
+      socket.close();
+    }    
+  }
 }
