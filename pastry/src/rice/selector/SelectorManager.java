@@ -75,7 +75,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 //  protected TreeSet timerQueue = new TreeSet();
   protected Queue<TimerTask> timerQueue = new PriorityQueue<TimerTask>();
 
-  // the next time the selector is schedeled to wake up
+  // the next time the selector is scheduled to wake up
   protected long wakeupTime = 0;
 
   protected TimeSource timeSource;
@@ -139,7 +139,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   
   /**
    * Method which asks the Selector Manager to add the given key to the
-   * cancelled set. If noone calls register on this key during the rest of this
+   * cancelled set. If no one calls register on this key during the rest of this
    * select() operation, the key will be cancelled. Otherwise, it will be
    * returned as a result of the register operation.
    * 
@@ -295,6 +295,11 @@ public class SelectorManager extends Thread implements Timer, Destructable {
   
   @SuppressWarnings("deprecation")
   public void destroy() {
+    if (logger.level <= Logger.FINE) {
+      logger.logException("destroying SelectorManager", new Exception("Stack Trace"));
+    } else if (logger.level <= Logger.INFO) {
+      logger.log("destroying SelectorManager");
+    }
     running = false; 
   }
   

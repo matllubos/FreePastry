@@ -59,7 +59,7 @@ public class RendezvousSocketNodeHandle extends SocketNodeHandle implements Rend
   public static final byte CONTACT_DIRECT = 0;
   
   /**
-   * Not internet routable
+   * Not Internet routable
    */
   public static final byte CONTACT_FIREWALLED = 1;
 

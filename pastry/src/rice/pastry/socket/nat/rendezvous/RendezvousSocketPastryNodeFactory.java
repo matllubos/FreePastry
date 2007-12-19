@@ -67,6 +67,7 @@ import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.RoutingTable;
+import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.nat.NATHandler;
@@ -133,8 +134,9 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
   
   protected void generatePilotStrategy(TLPastryNode pn, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousLayer) {
-    //pilotStrategy = 
-    new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer, pn.getEnvironment());    
+    // only do this if firewalled
+    if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect())
+      new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer, pn.getEnvironment());    
   }
 
   protected ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle> getContactDeserializer(final TLPastryNode pn) {
@@ -186,36 +188,56 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return new RendezvousSNHFactory(pn);
   }
   
-  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
-    RendezvousSNHFactory pnhf = (RendezvousSNHFactory)nhf;
-    MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)localNodeInfo;
-    return pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId(), localContactState);
-  }
-
   /**
    * Used with getWireTL to make sure to return the bootstrap as not firewalled.
    */
-  boolean firstTime = true;
+  boolean firstNode = true;
   
+  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
+    byte contactState = localContactState;    
+    
+    // this code is for testing
+    Parameters p = environment.getParameters();    
+    if (firstNode && p.getBoolean("rendezvous_test_makes_bootstrap")) {
+      firstNode = false;
+      // this just guards the next part
+    } else if (p.getBoolean("rendezvous_test_firewall")) {
+      if (random.nextFloat() <= p.getFloat("rendezvous_test_num_firewalled")) {
+        contactState = RendezvousSocketNodeHandle.CONTACT_FIREWALLED;
+      }
+    }
+    
+    RendezvousSNHFactory pnhf = (RendezvousSNHFactory)nhf;
+    MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)localNodeInfo;
+    SocketNodeHandle ret = pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId(), contactState);
+    
+    // this code is for logging    
+    if (contactState != localContactState && logger.level <= Logger.INFO) {
+      switch(contactState) {
+      case RendezvousSocketNodeHandle.CONTACT_DIRECT:
+        logger.log(ret+" is not firewalled.");
+        break;
+      case RendezvousSocketNodeHandle.CONTACT_FIREWALLED:
+        logger.log(ret+" is firewalled.");
+        break;
+      }
+    }
+    
+    return ret;
+  }
+
   /**
    * For testing, may return a FirewallTL impl for testing.
    */
   @Override
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
-    // TODO: make this take place when the Handle is constructed, then make this code just look at that value
     TransportLayer<InetSocketAddress, ByteBuffer> baseTl = super.getWireTransportLayer(innermostAddress, pn);
-    Parameters p = environment.getParameters();
-    if (firstTime && p.getBoolean("rendezvous_test_makes_bootstrap")) {
-      firstTime = false;
-      return baseTl;
+    RendezvousSocketNodeHandle handle = (RendezvousSocketNodeHandle)pn.getLocalHandle();
+    if (!handle.canContactDirect()) {
+      return new FirewallTLImpl<InetSocketAddress, ByteBuffer>(baseTl,5000,pn.getEnvironment());
     }
-    if (p.getBoolean("rendezvous_test_firewall")) {
-      if (random.nextFloat() <= p.getFloat("rendezvous_test_num_firewalled")) {
-        if (logger.level <= Logger.INFO) logger.log(pn+" is firewalled.");
-        return new FirewallTLImpl<InetSocketAddress, ByteBuffer>(baseTl,5000,pn.getEnvironment());
-      }
-    }
-
+    
+    // do the normal thing
     return baseTl; 
   }
 }
