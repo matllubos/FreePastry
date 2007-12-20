@@ -40,6 +40,7 @@ advised of the possibility of such damage.
 package rice.p2p.util.rawserialization;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
@@ -73,6 +74,10 @@ public class SimpleOutputBuffer extends DataOutputStream implements OutputBuffer
   
   public byte[] getBytes() {
     return baos.toByteArray();    
+  }
+  
+  public ByteBuffer getByteBuffer() {
+    return ByteBuffer.wrap(getBytes());
   }
   
   /**

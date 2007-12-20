@@ -37,12 +37,14 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.rendezvous;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public interface ContactDeserializer<Identifier, HighIdentifier> {
 
+  ByteBuffer serialize(HighIdentifier i) throws IOException;
   HighIdentifier deserialize(InputBuffer sib) throws IOException;
 
 //  byte[] readCredentials(InputBuffer sib);

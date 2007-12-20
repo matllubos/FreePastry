@@ -139,7 +139,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
       deliverSocketToMe.receiveException(handle, ioe);
       return null;
     }
-    final ByteBuffer b = sendIdentifier ? ByteBuffer.wrap(sob.getBytes()) : null;
+    final ByteBuffer b = sendIdentifier ? sob.getByteBuffer() : null;
     
     InetSocketAddress addr = strategy.getAddress(i);
         

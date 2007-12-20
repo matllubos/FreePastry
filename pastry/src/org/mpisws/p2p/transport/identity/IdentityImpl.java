@@ -399,7 +399,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         serializer.serialize(sob, dest);
         sob.write(localIdentifier);
 //        logger.log("writing:"+Arrays.toString(sob.getBytes()));
-        buf = ByteBuffer.wrap(sob.getBytes());
+        buf = sob.getByteBuffer();
       } catch (IOException ioe) {
         deliverSocketToMe.receiveException(ret, ioe);
         return ret;

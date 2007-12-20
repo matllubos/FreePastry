@@ -39,6 +39,7 @@ package org.mpisws.p2p.transport.rendezvous;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
@@ -62,6 +63,8 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.tuples.MutableTuple;
 import rice.p2p.util.tuples.Tuple;
+import rice.selector.SelectorManager;
+import rice.selector.TimerTask;
 
 /**
  * The trick here is that this layer is at some level, say InetSocketAddress, but must pass around very High-Level
@@ -95,6 +98,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   HighIdentifier myRendezvousContact;
   Logger logger;
   ContactDeserializer<Identifier, HighIdentifier> serializer;
+  protected SelectorManager selectorManager;
   
   public RendezvousTransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -104,6 +108,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       RendezvousGenerationStrategy<HighIdentifier> rendezvousGenerator,
       RendezvousStrategy<HighIdentifier> rendezvousStrategy, 
       Environment env) {
+    this.selectorManager = env.getSelectorManager();
     this.tl = tl;
     this.myRendezvousContact = myRendezvousContact;
     this.serializer = deserializer;
@@ -299,8 +304,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
 
   // *************Pilot Sockets (used to connect leafset members) ******************
   // *************** outgoing Pilots, only used by NATted nodes ********************
-  Map<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>> outgoingPilots = 
-    new HashMap<HighIdentifier, Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>>();
+  Map<HighIdentifier, OutgoingPilot> outgoingPilots = 
+    new HashMap<HighIdentifier, OutgoingPilot>();
   
   /**
    * Only used by NATted node.
@@ -311,66 +316,174 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       final Continuation<SocketRequestHandle<HighIdentifier>, IOException> deliverAckToMe) {    
     if (logger.level <= Logger.INFO) logger.log("openPilot("+i+")");
     if (outgoingPilots.containsKey(i)) {
-      return null; 
+      return outgoingPilots.get(i); 
     }
 
-    final SocketRequestHandle<HighIdentifier> ret = new SocketRequestHandleImpl<HighIdentifier>(i,null,logger);
+    Map<String, Object> options = serializer.getOptions(i);
+    final OutgoingPilot o = new OutgoingPilot(i,options);
+    outgoingPilots.put(i, o);
     
-    final MutableTuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>> tuple = 
-      new MutableTuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>>();
-    
-    tuple.setA(tl.openSocket(serializer.convert(i), new SocketCallback<Identifier>(){
+    o.setCancellable(tl.openSocket(serializer.convert(i), new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
-//        outgoingPilots.put(i,new OutgoingPilot(sock));
-        tuple.setB(sock);
-        if (deliverAckToMe != null) deliverAckToMe.receiveResult(ret);
+        o.setSocket(sock);
+        if (deliverAckToMe != null) deliverAckToMe.receiveResult(o);
       }
     
       public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+        o.receiveException(ex);
         if (deliverAckToMe != null) deliverAckToMe.receiveException(ex);
       }
-    }, serializer.getOptions(i)));    
+    }, options));    
     
-    return ret;
+    return o;
   }  
   
   public void closePilot(HighIdentifier i) {
     if (logger.level <= Logger.INFO) logger.log("closePilot("+i+")");
-    Tuple<SocketRequestHandle<Identifier>, P2PSocket<Identifier>> closeMe = outgoingPilots.remove(i);
+    OutgoingPilot closeMe = outgoingPilots.remove(i);
     if (closeMe != null) {
-      SocketRequestHandle<Identifier> deadHandle = closeMe.a();
-      P2PSocket<Identifier> deadSocket = closeMe.b();
-      if (deadSocket == null) {
-        // the socket hasn't come back, so cancel the task
-        deadHandle.cancel();
-      } else {
-        deadSocket.close();
-      }
+      closeMe.cancel();
     }
   }
   
-  class OutgoingPilot implements P2PSocketReceiver<Identifier> {
+  public static final byte PILOT_PING = 1;
+  public static final byte PILOT_PONG = 2;
+  public static final byte PILOT_REQUEST = 3;
+
+  public static final byte[] PILOT_PING_BYTES = {PILOT_PING};
+
+  public static final int PILOT_PING_PERIOD = 60000;
+  
+  class OutgoingPilot extends TimerTask implements P2PSocketReceiver<Identifier>,SocketRequestHandle<HighIdentifier> {
+    
     private P2PSocket<Identifier> socket;
     /**
      * Used to read in ping responses.
      */
     protected SocketInputBuffer sib;
+    protected HighIdentifier i;
+    protected SocketRequestHandle<Identifier> cancellable;
+    
+    protected LinkedList<ByteBuffer> queue = new LinkedList<ByteBuffer>();
+    protected Map<String, Object> options;
+    
+    public OutgoingPilot(HighIdentifier i, Map<String, Object> options) {
+      this.i = i;
+      this.options = options;
+      selectorManager.schedule(this, PILOT_PING_PERIOD, PILOT_PING_PERIOD);
+    }
 
-    public OutgoingPilot(P2PSocket<Identifier> socket) throws IOException {
+    public void receiveException(IOException ex) {
+      cancel();
+    }
+
+    public void setCancellable(SocketRequestHandle<Identifier> cancellable) {
+      this.cancellable = cancellable;
+    }
+
+    public void setSocket(P2PSocket<Identifier> socket) {
+      if (cancelled) {
+        socket.close();
+        return;
+      }
+      this.cancellable = null;
       this.socket = socket;
-      sib = new SocketInputBuffer(socket,1024);
-      receiveSelectResult(socket, true, false);
+      try {
+        queue.add(serializer.serialize(i));
+        sib = new SocketInputBuffer(socket,1024);
+        receiveSelectResult(socket, true, true);
+      } catch (IOException ioe) {
+        cancel();
+      }
     }
-
+    
+    public boolean ping() {
+      if (socket == null) return false;
+      queue.addLast(ByteBuffer.wrap(PILOT_PING_BYTES));
+      socket.register(false, true, this);
+      return true;
+    }
+    
+    
     public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
-      // TODO Auto-generated method stub
-      
+      cancel();
     }
 
+    /**
+     * Can read a pong or request
+     * Can write the initiation or ping
+     */
     public void receiveSelectResult(P2PSocket<Identifier> socket,
         boolean canRead, boolean canWrite) throws IOException {
-      // TODO Auto-generated method stub
-      
+      // write the high identifier
+      if (canWrite) {
+        write();
+      }
+      if (canRead) {
+        read();
+      }
+    }
+    
+    protected void write() throws IOException {
+      if (queue.isEmpty()) return;
+      long ret = socket.write(queue.getFirst());
+      if (ret < 0) cancel();
+      if (queue.getFirst().hasRemaining()) {
+        socket.register(true, false, this);
+        return;
+      } else {
+        queue.removeFirst();
+        write();
+      }
+    }
+
+    protected void read() throws IOException {
+      try {
+        byte msgType = sib.readByte();
+        switch(msgType) {
+        case PILOT_PONG:
+          // TODO handle this
+          
+          sib.clear();
+          break;
+        case PILOT_REQUEST:
+          // TODO handle this
+          break;
+        }        
+      } catch (InsufficientBytesException ibe) {
+        socket.register(true, false, this);
+        return;
+      } catch (IOException ioe) {
+//      } catch (ClosedChannelException cce) {
+        cancel();
+      }
+    }
+    
+    public HighIdentifier getIdentifier() {
+      return i;
+    }
+
+    public Map<String, Object> getOptions() {
+      return options;
+    }
+
+    public boolean cancel() {
+      super.cancel();
+      if (socket == null) {
+        if (cancellable != null) {
+          cancellable.cancel();
+          cancellable = null;
+        }
+      } else {
+        socket.close();        
+      }
+      outgoingPilots.remove(i);
+      return true;
+    }
+
+    @Override
+    public void run() {
+      ping();
     }
 
   }

@@ -62,6 +62,7 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
@@ -156,6 +157,13 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
       public InetSocketAddress convert(RendezvousSocketNodeHandle high) {
         // TODO: is this the correct one?
         return high.eaddress.getAddress(0);
+      }
+
+      public ByteBuffer serialize(RendezvousSocketNodeHandle i)
+          throws IOException {
+        SimpleOutputBuffer sob = new SimpleOutputBuffer();
+        i.serialize(sob);
+        return sob.getByteBuffer();
       }
     
     };
