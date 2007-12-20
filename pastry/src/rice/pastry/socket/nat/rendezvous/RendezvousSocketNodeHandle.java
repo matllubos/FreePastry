@@ -96,4 +96,11 @@ public class RendezvousSocketNodeHandle extends SocketNodeHandle implements Rend
     return contactStatus;
   }
   
+  public String toString() {
+    String s = "[RSNH: " + nodeId + "/" + eaddress;
+    if (!canContactDirect()) s+="(NATTED)";
+    s+= "]";
+    return s;
+  }
+  
 }

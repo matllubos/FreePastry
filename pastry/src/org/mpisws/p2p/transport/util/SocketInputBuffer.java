@@ -72,14 +72,25 @@ import rice.p2p.util.rawserialization.SimpleInputBuffer;
  * 
  * If you complete the object, but want to reuse the SIB, call clear.
  * 
+ * Implementation notes: readBB/writeBB are operating on the same byte[] called cache
+ * 
  * @author Jeff Hoye
  *
  */
 public class SocketInputBuffer implements InputBuffer {
   P2PSocket socket;
+  /**
+   * readBB/writeBB are essentially pointers to the same array.  
+   * 
+   * writeBB points to where the cache data ends, and needs to be written to from the socket
+   * readBB points to where the read point begins, and is where we are reading in from the method call
+   * 
+   * we throw an InsufficientBytesException if the readBB would cross past the writeBB (after we read what we could from the socket)
+   * 
+   */
   ByteBuffer readBB, writeBB;  
   byte[] cache;
-  ByteBuffer one, two, four, eight; // to reduce object allocation, reuse common sizes.  Lazilly constructed
+  ByteBuffer one, two, four, eight; // to reduce object allocation, reuse common sizes.  Lazily constructed
   int initialSize;
   
   DataInputStream dis;
@@ -90,8 +101,24 @@ public class SocketInputBuffer implements InputBuffer {
     cache = new byte[size];
     readBB = ByteBuffer.wrap(cache);
     writeBB = ByteBuffer.wrap(cache);
+    resetDis();
+  }
+  
+  /**
+   * Handle the case if DataInputStream.markSupported() is false.
+   */
+  private void resetDis() {
+    if (dis != null && dis.markSupported()) {
+      try {
+        dis.reset();
+      } catch (IOException ioe) {
+        dis = null;
+        resetDis();        
+      }
+      return;
+    }
     dis = new DataInputStream(new InputStream() {
-    
+      
       @Override
       public int read(byte[] b) throws IOException {
         return readInternal(b);
@@ -106,7 +133,7 @@ public class SocketInputBuffer implements InputBuffer {
       public int read() throws IOException {
         return readInternal();
       }    
-    });
+    });    
   }
   
   public int bytesRemaining() {
@@ -121,18 +148,39 @@ public class SocketInputBuffer implements InputBuffer {
     return writeBB.position(); 
   }
 
+  /**
+   * 
+   * @param b
+   * @param off
+   * @param len
+   * @return the number of bytes read
+   * @throws IOException
+   */
   public int readInternal(byte[] b, int off, int len) throws IOException {
     int bytesToRead = needBytes(len, false);
     readBB.get(b, off, bytesToRead);
     return bytesToRead;
   }
 
+  /**
+   * Returns the number of bytes read.
+   * 
+   * @param b
+   * @return
+   * @throws IOException
+   */
   public int readInternal(byte[] b) throws IOException {
     int bytesToRead = needBytes(b.length, false);
     readBB.get(b, 0, bytesToRead);
     return bytesToRead;
   }
 
+  /**
+   * Returns the value of one byte.
+   * 
+   * @return
+   * @throws IOException
+   */
   public int readInternal() throws IOException {
     needBytes(1, true);
     return (readBB.get() & 0xFF);
@@ -189,7 +237,7 @@ public class SocketInputBuffer implements InputBuffer {
    * 
    * @param num the number of bytes you need
    * @param fail true if you want it to throw an exception if there aren't enough bytes
-   * @return
+   * @return the actual number of bytes read
    * @throws IOException
    */
   private int needBytes(int num, boolean fail) throws IOException {
@@ -197,7 +245,7 @@ public class SocketInputBuffer implements InputBuffer {
     if (bytesToReadIntoCache > 0) {
       readBytesIntoCache(bytesToReadIntoCache);
     }
-    int ret = readBB.remaining();
+    int ret = writeBB.position()-readBB.position();
     if (ret > num) ret = num;
     if (fail && ret < num) throw new InsufficientBytesException(num, ret);
     return ret;
@@ -205,6 +253,8 @@ public class SocketInputBuffer implements InputBuffer {
   
   /**
    * Reads this many bytes into the cache, grows the cache if needed
+   * 
+   * Increases the writeBB
    * 
    * @param num
    * @return
@@ -246,6 +296,7 @@ public class SocketInputBuffer implements InputBuffer {
       grow(); 
     }
     writeBB.put(in);
+    
     return ret;
   }
   
@@ -258,7 +309,7 @@ public class SocketInputBuffer implements InputBuffer {
       cache = new byte[initialSize];
     readBB = ByteBuffer.wrap(cache);
     writeBB = ByteBuffer.wrap(cache);
-    dis.reset();
+    resetDis();
   }  
   
   private void grow() {
