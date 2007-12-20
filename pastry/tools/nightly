@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/etc:/usr/ccs/bin:/usr/ucb:/usr/site/ssh/bin:/usr/local/bin:/usr/X11R6/bin:/DS/usr/jeffh/ant/apache-ant-1.6.0/bin
+export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/etc:/usr/ccs/bin:/usr/ucb:/usr/site/ssh/bin:/usr/local/bin:/usr/X11R6/bin:/home/jeffh/ant/apache-ant-1.6.0/bin
 
 AUTOBUILD_DIR=/DS/usr/jeffh/pastry/autobuild
 TODAY=`date +%Y%m%d`
@@ -8,15 +8,11 @@ LOGDIR="$AUTOBUILD_DIR/logs/$TODAY"
 
 cd $AUTOBUILD_DIR
 
-# offer an option to avoid the CVS step, for testing
-if [ "$1" != "--nosync" ]; then
-	echo "Checking out Pastry sources from SVN."
-	rm -rf pastry
-	svn co --username builder --password easy2guess https://svn.mpi-sws.mpg.de/svn/freepastry/trunk/pastry pastry	
-#	cvs -Q -d /net/madras/FreePastry/cvsroot/ co pastry
-fi
+echo "Checking out Pastry sources from SVN."
+rm -rf pastry
+svn co https://svn.mpi-sb.mpg.de/DS/freepastry/trunk/pastry pastry
 
-# Read the version number out of 'VERSION' in CVS
+# Read the version number out of 'VERSION' in SVN 
 VERSION=`cat pastry/VERSION`
 
 # Append the date to the version string to uniquely identify this
@@ -45,12 +41,20 @@ echo "Logging to $LOGFILE"
 declare -x ANT_OPTS=-Xmx1024m
 
 cd pastry
+#ant javadoc
 
 ./tools/verify-license.pl license/License.txt src/
 
+# the nightly doesn't javadoc, because it's a waste of time
+if [ $1 == "--snapshot" ]; then
+    $JAVADOC = ""
+else
+	$JAVADOC = "-Ddontjavadoc=1"
+fi
+
 ant/bin/ant freepastry-release \
-	-Ddontjavadoc=1 \
 	-Dfreepastry-version="$VERSION" \
+	$JAVADOC \
 	>$LOGFILE 2>&1
 
 # How did we do?
@@ -64,8 +68,15 @@ if [ "$build_result" != "0" ]; then
 else
 	# success
 	echo "Build succeeded."
+    if [ $1 == "--snapshot" ]; then
+		scp -i build.dsa FreePastry-$VERSION* build@svn.mpi-sws.mpg.de:/var/www/freepastry.org/FreePastry/snapshots/
+	fi
+	
+	# run regression tests
+	chmod a+x ./tools/run-regression-tests.pl
+	./tools/run-regression-tests.pl FreePastry-$VERSION.jar
 fi
 
-chmod a+x ./tools/run-regression-tests.pl
-./tools/run-regression-tests.pl FreePastry-$VERSION.jar
+
+
 
