@@ -362,13 +362,11 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       receiveSelectResult(socket, true, false);
     }
 
-    @Override
     public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
       // TODO Auto-generated method stub
       
     }
 
-    @Override
     public void receiveSelectResult(P2PSocket<Identifier> socket,
         boolean canRead, boolean canWrite) throws IOException {
       // TODO Auto-generated method stub
@@ -395,7 +393,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       receiveSelectResult(socket, true, false);
     }
 
-    @Override
     public void receiveSelectResult(P2PSocket<Identifier> socket,
         boolean canRead, boolean canWrite) throws IOException {
       if (target == null) {
@@ -428,7 +425,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       socket.register(true, false, this);      
     }
     
-    @Override
     public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
       if (target != null) incomingPilots.remove(target);
       socket.close();
