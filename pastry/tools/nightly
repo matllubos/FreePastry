@@ -46,7 +46,7 @@ cd pastry
 ./tools/verify-license.pl license/License.txt src/
 
 # the nightly doesn't javadoc, because it's a waste of time
-if [ $1 == "--snapshot" ]; then
+if [ "$1" == "--snapshot" ]; then
     $JAVADOC = ""
 else
 	$JAVADOC = "-Ddontjavadoc=1"
@@ -68,7 +68,7 @@ if [ "$build_result" != "0" ]; then
 else
 	# success
 	echo "Build succeeded."
-    if [ $1 == "--snapshot" ]; then
+    if [ "$1" == "--snapshot" ]; then
 		scp -i build.dsa FreePastry-$VERSION* build@svn.mpi-sws.mpg.de:/var/www/freepastry.org/FreePastry/snapshots/
 	fi
 	
