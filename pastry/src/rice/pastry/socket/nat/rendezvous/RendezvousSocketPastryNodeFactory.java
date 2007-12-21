@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,21 +58,25 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.pns.PNSApplication;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.nat.NATHandler;
+import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLPastryNode;
 
@@ -173,6 +178,23 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     // TODO Auto-generated method stub
     return null;
   }
+  
+  protected ProximityNeighborSelector getProximityNeighborSelector(TLPastryNode pn) {    
+    if (environment.getParameters().getBoolean("transport_use_pns")) {
+      RendezvousPNSApplication pns = new RendezvousPNSApplication(pn);
+      pns.register();
+      return pns;
+    }
+  
+    // do nothing
+    return new ProximityNeighborSelector(){    
+      public Cancellable getNearHandles(Collection<NodeHandle> bootHandles, Continuation<Collection<NodeHandle>, Exception> deliverResultToMe) {
+        deliverResultToMe.receiveResult(bootHandles);
+        return null;
+      }    
+    };
+  }
+
 
   /**
    * This is an annoying hack.  We can't register the RendezvousApp until registerApps(), but we need it here.

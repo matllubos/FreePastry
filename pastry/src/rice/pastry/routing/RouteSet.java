@@ -54,7 +54,7 @@ import java.io.*;
  */
 
 public class RouteSet implements NodeSetI, Serializable,
-    Observer {
+    Observer, Iterable<NodeHandle> {
   public static final short TYPE = 2;
 
   private static final long serialVersionUID = 8156336294555109590L;
@@ -578,6 +578,14 @@ public class RouteSet implements NodeSetI, Serializable,
       }
     }
     
+  }
+
+  public Iterator<NodeHandle> iterator() {
+    return Arrays.asList(nodes).iterator();
+  }
+
+  public boolean isEmpty() {
+    return theSize <= 0;
   }
   
 }

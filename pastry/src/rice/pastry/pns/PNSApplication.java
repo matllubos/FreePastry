@@ -83,7 +83,7 @@ import rice.selector.Timer;
 import rice.selector.TimerTask;
 
 /**
- * Can request LeafSet, RouteRow, Proximity of nodes, implemts the PNS algorithim.
+ * Can request LeafSet, RouteRow, Proximity of nodes, implements the PNS algorithm.
  * 
  * TODO: Make use the environment's clock for the wait() calls.
  * 
@@ -107,9 +107,12 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
 
   final short depth; // = (Id.IdBitLength / rtBase);
 
-  
   public PNSApplication(PastryNode pn) {
-    super(pn, null, 0, null, pn.getEnvironment().getLogManager().getLogger(PNSApplication.class, null));
+    this(pn, pn.getEnvironment().getLogManager().getLogger(PNSApplication.class, null));
+  }
+  
+  public PNSApplication(PastryNode pn, Logger logger) {
+    super(pn, null, 0, null, logger);
     setDeserializer(new PNSDeserializer());
     this.environment = pn.getEnvironment();
     rtBase = (byte)environment.getParameters().getInt("pastry_rtBaseBitLength");
@@ -260,44 +263,10 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
    * to the caller, in a protocol-dependent fashion.  Note that this method
    * may block while sending the message across the wire.
    *
-   * @param handle The node to connect to
-   * @return The leafset of the remote node
-   */
-//  public LeafSet getLeafSet(NodeHandle handle) throws IOException {
-//    if (logger.level <= Logger.FINER) logger.log("getLeafSet("+handle+")");
-//    final LeafSet[] container = new LeafSet[1];
-//    // 20 second timeout
-//    synchronized(container) {
-//      getLeafSet(handle, new Continuation<LeafSet, Exception>() {      
-//        public void receiveResult(LeafSet result) {
-//          synchronized (container) {
-//            container[0] = result;
-//            container.notify();
-//          }
-//        }      
-//        public void receiveException(Exception exception) {
-//          synchronized (container) {
-//            container.notify();
-//          }          
-//        }      
-//      });
-//      
-//      try {
-//        container.wait(20000);
-//      } catch (InterruptedException e) {
-//        // continue
-//      }
-//    }
-//    
-//    if (logger.level <= Logger.FINE) logger.log("getLeafSet("+handle+") returning "+container[0]);
-//    return container[0];
-//  }
-  
-  /**
    * Non-blocking version.
    * 
-   * @param handle
-   * @param c
+   * @param handle The node to connect to
+   * @param c Continuation to return the LeafSet to
    * @return
    * @throws IOException
    */
@@ -659,76 +628,76 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
 //    try {
     if (logger.level <= Logger.FINE) logger.log("getNearest("+seed+")");
       // if the seed is null, we can't do anything
-      if (seed == null) {
-        if (logger.level <= Logger.WARNING) logger.logException("getNearest("+seed+")", new Exception("Stack Trace"));
-        environment.getSelectorManager().invoke(new Runnable() {        
-          public void run() {
-            retToMe.receiveResult(null);
-          }        
-        });
-        return null;
-      }
-      
-      final AttachableCancellable ret = new AttachableCancellable();
-      
-      // get closest node in leafset
-      ret.attach(getLeafSet(seed, 
-        new Continuation<LeafSet, Exception>() {
-      
-          public void receiveResult(LeafSet result) {
-            // ping everyone in the leafset:
-            if (logger.level <= Logger.FINE) logger.log("getNearest("+seed+") got leafset"+result);
-            
-            // seed is the bootstrap node that we use to enter the pastry ring
-            NodeHandle nearNode = seed;
-            NodeHandle currentClosest = seed;
-            
-            ret.attach(closestToMe(nearNode, result, new Continuation<NodeHandle, Exception>() {
-            
-              /**
-               * Now we have the closest node in the leafset.
-               */
-              public void receiveResult(NodeHandle result) {
-                NodeHandle nearNode = result;
-                // get the number of rows in a routing table
-                // -- Here, we're going to be a little inefficient now.  It doesn't
-                // -- impact correctness, but we're going to walk up from the bottom
-                // -- of the routing table, even through some of the rows are probably
-                // -- unfilled.  We'll optimize this in a later iteration.
-                short i = 0;
-                
-                // make "ALL" work
-                if (!environment.getParameters().getString("pns_num_rows_to_use").equalsIgnoreCase("all")) {
-                  i = (short)(depth-(short)(environment.getParameters().getInt("pns_num_rows_to_use")));
-                }
-                
-                // fix it up to not throw an error if the number is too big
-                if (i < 0) i = 0;                                              
-                
-                ret.attach(seekThroughRouteRows(i,depth,nearNode,new Continuation<NodeHandle, Exception>(){
-                
-                  public void receiveResult(NodeHandle result) {
-                    NodeHandle nearNode = result;
-                    retToMe.receiveResult(sortedProximityCache());
-                  }
-                
-                  public void receiveException(Exception exception) {
-                    retToMe.receiveResult(sortedProximityCache());                    
-                  }                
-                }));                
+    if (seed == null) {
+      if (logger.level <= Logger.WARNING) logger.logException("getNearest("+seed+")", new Exception("Stack Trace"));
+      environment.getSelectorManager().invoke(new Runnable() {        
+        public void run() {
+          retToMe.receiveResult(null);
+        }        
+      });
+      return null;
+    }
+    
+    final AttachableCancellable ret = new AttachableCancellable();
+    
+    // get closest node in leafset
+    ret.attach(getLeafSet(seed, 
+      new Continuation<LeafSet, Exception>() {
+    
+        public void receiveResult(LeafSet result) {
+          // ping everyone in the leafset:
+          if (logger.level <= Logger.FINE) logger.log("getNearest("+seed+") got "+result);
+          
+          // seed is the bootstrap node that we use to enter the pastry ring
+          NodeHandle nearNode = seed;
+          NodeHandle currentClosest = seed;
+          
+          ret.attach(closestToMe(nearNode, result, new Continuation<NodeHandle, Exception>() {
+          
+            /**
+             * Now we have the closest node in the leafset.
+             */
+            public void receiveResult(NodeHandle result) {
+              NodeHandle nearNode = result;
+              // get the number of rows in a routing table
+              // -- Here, we're going to be a little inefficient now.  It doesn't
+              // -- impact correctness, but we're going to walk up from the bottom
+              // -- of the routing table, even through some of the rows are probably
+              // -- unfilled.  We'll optimize this in a later iteration.
+              short i = 0;
+              
+              // make "ALL" work
+              if (!environment.getParameters().getString("pns_num_rows_to_use").equalsIgnoreCase("all")) {
+                i = (short)(depth-(short)(environment.getParameters().getInt("pns_num_rows_to_use")));
               }
-            
-              public void receiveException(Exception exception) {
-                retToMe.receiveResult(sortedProximityCache());                    
-              }            
-            }));
-          }
-        
-          public void receiveException(Exception exception) {
-            retToMe.receiveException(exception);
-          }        
-        }));
+              
+              // fix it up to not throw an error if the number is too big
+              if (i < 0) i = 0;                                              
+              
+              ret.attach(seekThroughRouteRows(i,depth,nearNode,new Continuation<NodeHandle, Exception>(){
+              
+                public void receiveResult(NodeHandle result) {
+                  NodeHandle nearNode = result;
+                  retToMe.receiveResult(sortedProximityCache());
+                }
+              
+                public void receiveException(Exception exception) {
+                  retToMe.receiveResult(sortedProximityCache());                    
+                }                
+              }));                
+            }
+          
+            public void receiveException(Exception exception) {
+              retToMe.receiveResult(sortedProximityCache());                    
+            }            
+          }));
+        }
       
+        public void receiveException(Exception exception) {
+          retToMe.receiveException(exception);
+        }        
+      }));
+    
 //    } catch (IOException e) {
 //      if (logger.level <= Logger.WARNING) logger.logException(
 //        "ERROR occured while finding best bootstrap.", e);
@@ -736,7 +705,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
 //    } finally {
 //      purgeProximityCache(); 
 //    }
-      return ret;
+    return ret;
   }
 
   
