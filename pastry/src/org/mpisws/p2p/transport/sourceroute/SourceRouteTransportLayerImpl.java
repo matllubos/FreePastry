@@ -235,6 +235,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
             
             if (hopNum < 1) {
               // error, this is back to me!
+              sib.reset();
               byte[] dump = new byte[sib.size()];
               sib.read(dump);
               errorHandler.receivedUnexpectedData(sr, dump, 0, null);
