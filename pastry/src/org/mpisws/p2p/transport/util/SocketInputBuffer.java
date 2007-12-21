@@ -70,7 +70,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
  * 
  * SocketInputBuffer automatically grows.
  * 
- * Implementation notes: readBB/writePtr are operating on the same byte[] called cache
+ * Implementation notes: readPtr/writePtr are operating on the same byte[] called cache
  * 
  * @author Jeff Hoye
  *
@@ -83,7 +83,7 @@ public class SocketInputBuffer implements InputBuffer {
    * writePtr points to where we are writing data into the cache, from the socket
    * readPtr points to where the user is reading from, and is where we are reading in from the method call
    * 
-   * we throw an InsufficientBytesException if the readPtr would cross past the writeBB 
+   * we throw an InsufficientBytesException if the readPtr would cross past the writePtr 
    * (after we read what we could from the socket)
    */
   ByteBuffer readPtr, writePtr;  
@@ -145,11 +145,19 @@ public class SocketInputBuffer implements InputBuffer {
     readPtr.clear(); 
   }  
     
+  /**
+   * Note that this is not the number of bytes that can be read without throwing
+   * an exception, since some of these bytes may already have been consumed.  
+   * This is mostly useful for debugging.
+   * 
+   * @return the number of useful bytes in the cache
+   */
   public int size() {
     return writePtr.position(); 
   }
 
   /**
+   * 
    * 
    * @param b
    * @param off
@@ -164,10 +172,10 @@ public class SocketInputBuffer implements InputBuffer {
   }
 
   /**
-   * Returns the number of bytes read.
+   * 
    * 
    * @param b
-   * @return
+   * @return the number of bytes read
    * @throws IOException
    */
   public int readInternal(byte[] b) throws IOException {
@@ -177,9 +185,9 @@ public class SocketInputBuffer implements InputBuffer {
   }
 
   /**
-   * Returns the value of one byte.
    * 
-   * @return
+   * 
+   * @return the value of one byte
    * @throws IOException
    */
   public int readInternal() throws IOException {
