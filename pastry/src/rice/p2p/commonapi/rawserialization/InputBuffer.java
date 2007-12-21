@@ -57,7 +57,10 @@ public interface InputBuffer {
   String readUTF() throws IOException; // based on java's modified UTF format
   
   /**
+   * 
+   * How much data is left in the InputBuffer.
+   * 
    * May be UNKNOWN
    */
-  int bytesRemaining(); // how much space is left in the buffer
+  int bytesRemaining();
 }
