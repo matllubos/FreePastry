@@ -53,12 +53,20 @@ import java.util.*;
 /**
  * An implementation of a simple join protocol.
  * 
+ * Overview:
+ * initiateJoin() causes InitiateJoinMsg to be sent periodically on the joiner
+ * causes handleInitiateJoin() constructs a RouteMessage(JoinRequest) and sends it to the boostrap
+ * causes handleIntermediateHop() on each node along the route
+ * causes respondToJoiner() on last hop
+ * causes completeJoin() on joiner
+ * 
  * @version $Id$
  * 
  * @author Peter Druschel
  * @author Andrew Ladd
  * @author Rongmei Zhang
  * @author Y. Charlie Hu
+ * @author Jeff Hoye
  */
 
 public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
@@ -129,15 +137,6 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
     }
   }
 
-//  @Override
-//  public void nodeIsReady() {
-//    if (joinEvent != null) {
-//      joinEvent.cancel();
-//      joinEvent = null;
-//    }
-//    // cancel join retransmissions
-//  }
-
   /**
    * Receives a message from the outside world.
    * 
@@ -145,132 +144,140 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
    */
   public void receiveMessage(Message msg) {
     if (msg instanceof JoinRequest) {
-      final JoinRequest jr = (JoinRequest) msg;
-
-      NodeHandle nh = jr.getHandle();
-
-      // if (nh.isAlive() == true) // the handle is alive
-      if (jr.accepted() == false) {
-        // this is the terminal node on the request path
-        // leafSet.put(nh);
-        if (thePastryNode.isReady()) {
-          if (logger.level <= Logger.CONFIG) logger.log("acceptJoin "+jr);
-          jr.acceptJoin(localHandle, leafSet);
-          thePastryNode.send(nh,jr,new PMessageNotification(){          
-            public void sent(PMessageReceipt msg) {
-              if (logger.level <= Logger.CONFIG) logger.log("acceptJoin.sent("+msg+"):"+jr);
-            }          
-            public void sendFailed(PMessageReceipt msg, Exception reason2) {
-              Throwable reason = reason2;
-              if (logger.level <= Logger.CONFIG) {
-                logger.logException("acceptJoin.sendFailed("+msg+"):"+jr, reason);
-                while (reason.getCause() != null) {
-                  reason = reason.getCause();
-                  logger.logException("because", reason);
-                }
-              }
-            }
-          }, options);
-        } else {
-          if (logger.level <= Logger.INFO) logger.log(
-              "NOTE: Dropping incoming JoinRequest " + jr
-                  + " because local node is not ready!");
-        }
-      } else { // this is the node that initiated the join request in the first
-                // place
-        NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
-
-        if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
-          if (logger.level <= Logger.WARNING) logger.log(
-              "NodeId collision, unable to join: " + localHandle + ":" + jh);
-        } else if (jh.isAlive() == true) { // the join handle is alive
-          routeTable.put(jh);
-          // add the num. closest node to the routing table
-
-          // update local RT, then broadcast rows to our peers
-          broadcastRows(jr);
-
-          // now update the local leaf set
-          BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(),
-              BroadcastLeafSet.JoinInitial, 0);
-          thePastryNode.receiveMessage(bls);
-
-          // we have now successfully joined the ring, set the local node ready
-          setReady();
-        }
-      }
-    } else if (msg instanceof RouteMessage) {
-      // a join request message at an intermediate node
+      JoinRequest jr = (JoinRequest) msg;
+      handleJoinRequest(jr);
+    } else if (msg instanceof RouteMessage) { // a join request message at an intermediate node
       RouteMessage rm = (RouteMessage) msg;
-
-      try {
-        JoinRequest jr = (JoinRequest) rm.unwrap(deserializer);
-  
-        Id localId = localHandle.getNodeId();
-        NodeHandle jh = jr.getHandle();
-        Id nid = jh.getNodeId();
-  
-        if (!jh.equals(localHandle)) {
-          int base = thePastryNode.getRoutingTable().baseBitLength();
-    
-          int msdd = localId.indexOfMSDD(nid, base);
-          int last = jr.lastRow();
-    
-          for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
-            RouteSet[] row = routeTable.getRow(i);
-    
-            jr.pushRow(row);
-          }
-          
-          rm.setRouteMessageNotification(new RouteMessageNotification(){          
-            public void sendSuccess(RouteMessage message, NodeHandle nextHop) {
-              if (logger.level <= Logger.CONFIG) logger.log("sendSuccess("+message+"):"+nextHop);
-            }
-          
-            public void sendFailed(RouteMessage message, Exception e) {
-              if (logger.level <= Logger.CONFIG) logger.log("sendFailed("+message+")");
-            }          
-          });
-    
-          if (logger.level <= Logger.CONFIG) logger.log("Routing "+rm);
-          thePastryNode.getRouter().route(rm);
-        }      
-      } catch (IOException ioe) {
-        if (logger.level <= Logger.SEVERE) logger.logException("StandardJoinProtocol.receiveMessage()",ioe); 
-      }
-    } else if (msg instanceof InitiateJoin) { // request from the local node to
-                                              // join
+      handleIntermediateHop(rm);
+    } else if (msg instanceof InitiateJoin) { // request from the local node to join
       InitiateJoin ij = (InitiateJoin) msg;
-
-      NodeHandle nh = ij.getHandle();
-
-
-      if (nh == null) {
-        if (logger.level <= Logger.SEVERE) logger.log(
-            "ERROR: Cannot join ring.  All bootstraps are faulty."+ij); 
-        thePastryNode.joinFailed(new JoinFailedException("Cannot join ring.  All bootstraps are faulty."+ij));
-      } else {
-        if (logger.level <= Logger.INFO) logger.log("InitiateJoin attempting to join:"+nh+" liveness:"+nh.getLiveness());
-        if (nh.isAlive() == true) {
-          JoinRequest jr = new JoinRequest(localHandle, thePastryNode
-              .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());
-  
-          RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, null, null,
-              (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
-
-          rm.getOptions().setRerouteIfSuspected(false);
-          rm.setPrevNode(localHandle);
-          thePastryNode.send(nh, rm, null, options);
-//          try {
-//            nh.bootstrap(rm);
-//          } catch (IOException ioe) {
-//            if (logger.level <= Logger.SEVERE) logger.logException("Error bootstrapping.",ioe); 
-//          }
-        }
-      }
+      handleInitiateJoin(ij);
     }
   }
 
+  protected void handleInitiateJoin(InitiateJoin ij) {
+    NodeHandle nh = ij.getHandle();
+
+    if (nh == null) {
+      if (logger.level <= Logger.SEVERE) logger.log(
+          "ERROR: Cannot join ring.  All bootstraps are faulty."+ij); 
+      thePastryNode.joinFailed(new JoinFailedException("Cannot join ring.  All bootstraps are faulty."+ij));
+    } else {
+      if (logger.level <= Logger.INFO) logger.log("InitiateJoin attempting to join:"+nh+" liveness:"+nh.getLiveness());
+//      if (nh.isAlive() == true) { // this was already done in ij.getHandle()
+        JoinRequest jr = new JoinRequest(localHandle, thePastryNode
+            .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());
+
+        RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, null, null,
+            (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
+
+        rm.getOptions().setRerouteIfSuspected(false);
+        rm.setPrevNode(localHandle);
+        thePastryNode.send(nh, rm, null, options);
+//      }
+    }    
+  }
+
+  protected void handleIntermediateHop(RouteMessage rm) {
+    try {
+      JoinRequest jr = (JoinRequest) rm.unwrap(deserializer);
+
+      Id localId = localHandle.getNodeId();
+      NodeHandle jh = jr.getHandle();
+      Id nid = jh.getNodeId();
+
+      if (!jh.equals(localHandle)) {
+        int base = thePastryNode.getRoutingTable().baseBitLength();
+  
+        int msdd = localId.indexOfMSDD(nid, base);
+        int last = jr.lastRow();
+  
+        for (int i = last - 1; msdd > 0 && i >= msdd; i--) {
+          RouteSet[] row = routeTable.getRow(i);
+  
+          jr.pushRow(row);
+        }
+        
+        rm.setRouteMessageNotification(new RouteMessageNotification(){          
+          public void sendSuccess(RouteMessage message, NodeHandle nextHop) {
+            if (logger.level <= Logger.CONFIG) logger.log("sendSuccess("+message+"):"+nextHop);
+          }
+        
+          public void sendFailed(RouteMessage message, Exception e) {
+            if (logger.level <= Logger.CONFIG) logger.log("sendFailed("+message+")");
+          }          
+        });
+  
+        if (logger.level <= Logger.CONFIG) logger.log("Routing "+rm);
+        thePastryNode.getRouter().route(rm);
+      }      
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.SEVERE) logger.logException("StandardJoinProtocol.receiveMessage()",ioe); 
+    }        
+  }
+  
+  protected void handleJoinRequest(final JoinRequest jr) {
+    if (jr.accepted() == false) {
+      respondToJoiner(jr);
+    } else { // this is the node that initiated the join request in the first
+              // place
+      completeJoin(jr);
+    }
+  }
+
+  protected void respondToJoiner(final JoinRequest jr) {
+    NodeHandle joiner = jr.getHandle();
+
+    // this is the terminal node on the request path
+    // leafSet.put(joiner);
+    if (thePastryNode.isReady()) {
+      if (logger.level <= Logger.CONFIG) logger.log("acceptJoin "+jr);
+      jr.acceptJoin(localHandle, leafSet);
+      thePastryNode.send(joiner,jr,new PMessageNotification(){          
+        public void sent(PMessageReceipt msg) {
+          if (logger.level <= Logger.CONFIG) logger.log("acceptJoin.sent("+msg+"):"+jr);
+        }          
+        public void sendFailed(PMessageReceipt msg, Exception reason2) {
+          Throwable reason = reason2;
+          if (logger.level <= Logger.CONFIG) {
+            logger.logException("acceptJoin.sendFailed("+msg+"):"+jr, reason);
+            while (reason.getCause() != null) {
+              reason = reason.getCause();
+              logger.logException("because", reason);
+            }
+          }
+        }
+      }, options);
+    } else {
+      if (logger.level <= Logger.INFO) logger.log(
+          "NOTE: Dropping incoming JoinRequest " + jr
+              + " because local node is not ready!");
+    }
+  }
+  
+  protected void completeJoin(JoinRequest jr) {
+    NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
+
+    if (jh.getId().equals(localHandle.getId()) && !jh.equals(localHandle)) {
+      if (logger.level <= Logger.WARNING) logger.log(
+          "NodeId collision, unable to join: " + localHandle + ":" + jh);
+    } else if (jh.isAlive() == true) { // the join handle is alive
+      routeTable.put(jh);
+      // add the num. closest node to the routing table
+
+      // update local RT, then broadcast rows to our peers
+      broadcastRows(jr);
+
+      // now update the local leaf set
+      BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(),
+          BroadcastLeafSet.JoinInitial, 0);
+      thePastryNode.receiveMessage(bls);
+
+      // we have now successfully joined the ring, set the local node ready
+      setReady();
+    }
+  }
+  
   /**
    * Can be overloaded to do additional things before going ready. For example,
    * verifying that other nodes are aware of us, so that consistent routing is
