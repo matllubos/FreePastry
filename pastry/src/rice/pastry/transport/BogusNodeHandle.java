@@ -42,12 +42,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
+
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
+import rice.pastry.socket.TransportLayerNodeHandle;
 
-public class BogusNodeHandle extends NodeHandle<Collection<InetSocketAddress>> {
+public class BogusNodeHandle extends TransportLayerNodeHandle<Collection<InetSocketAddress>> {
   public Collection<InetSocketAddress> addresses;
   
   public BogusNodeHandle(InetSocketAddress address) {

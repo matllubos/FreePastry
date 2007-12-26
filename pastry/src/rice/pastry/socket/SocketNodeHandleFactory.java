@@ -41,7 +41,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
 import rice.environment.logging.Logger;

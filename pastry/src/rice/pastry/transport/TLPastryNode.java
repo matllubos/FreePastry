@@ -54,7 +54,6 @@ import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.RawMessageDeserializer;
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.PingListener;
@@ -97,6 +96,7 @@ import rice.pastry.routing.RouteSetProtocol;
 import rice.pastry.routing.Router;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.standard.StandardJoinProtocol;
 
 public class TLPastryNode extends PastryNode implements 

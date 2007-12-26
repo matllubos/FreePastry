@@ -60,7 +60,6 @@ import java.util.Random;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
@@ -96,6 +95,7 @@ import rice.pastry.leafset.LeafSet;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
@@ -862,7 +862,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         }      
       });      
       
-      System.out.println("node: "+node.getLocalHandle().getEpoch());
+      System.out.println("node: "+((TransportLayerNodeHandle)node.getLocalHandle()).getEpoch());
       
 //      if (isBootNode) {
 //        // go ahead and start a new ring
@@ -879,7 +879,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         HashMap<MultiInetSocketAddress, NodeHandle> up = new HashMap<MultiInetSocketAddress, NodeHandle>();
 
         Logger logger = node.getEnvironment().getLogManager().getLogger(LivenessListener.class, null);
-        public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
+        public void livenessChanged(NodeHandle i2, int val, Map<String, Object> options) {
+          TransportLayerNodeHandle i = (TransportLayerNodeHandle)i2;
 //          if (i.getId().toString().startsWith("<0x000")) {
 //            logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
 //          } else {

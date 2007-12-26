@@ -38,7 +38,6 @@ package rice.pastry.socket.nat.rendezvous;
 
 import java.io.IOException;
 
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -47,6 +46,7 @@ import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.socket.SPNFIdentitySerializer;
 import rice.pastry.socket.SocketNodeHandleFactory;
+import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.transport.TLPastryNode;
 
 public class RendezvousSPNFIdentitySerializer extends SPNFIdentitySerializer {

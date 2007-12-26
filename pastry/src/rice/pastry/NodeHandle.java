@@ -40,11 +40,11 @@ package rice.pastry;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.messaging.*;
+import rice.pastry.socket.TransportLayerNodeHandle;
 
 import java.io.*;
 import java.util.*;
 
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 
 /**
  * Interface for handles to remote nodes.
@@ -53,7 +53,7 @@ import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle<Identifier> extends TransportLayerNodeHandle<Identifier> 
+public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle 
 {
 
   public static final int LIVENESS_ALIVE = 1;

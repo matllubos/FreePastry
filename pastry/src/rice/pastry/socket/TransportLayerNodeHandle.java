@@ -34,7 +34,7 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.commonapi;
+package rice.pastry.socket;
 
 import java.io.IOException;
 
@@ -50,7 +50,7 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
  *
  * @param <Identifier> the underlieing layer
  */
-public abstract class TransportLayerNodeHandle<Identifier> extends NodeHandle {
+public abstract class TransportLayerNodeHandle<Identifier> extends rice.pastry.NodeHandle {
   public abstract Identifier getAddress();
 //  public Id getId();
 //  public void serialize(OutputBuffer sob) throws IOException;

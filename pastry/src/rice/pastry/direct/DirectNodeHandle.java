@@ -40,12 +40,12 @@ package rice.pastry.direct;
 import java.io.IOException;
 import java.util.*;
 
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
+import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.transport.TLPastryNode;
 
 /**
@@ -56,7 +56,7 @@ import rice.pastry.transport.TLPastryNode;
  * @author Rongmei Zhang/Y. Charlie Hu
  */
 
-public class DirectNodeHandle extends NodeHandle<NodeRecord> implements Observer {
+public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> implements Observer {
   private transient TLPastryNode remoteNode;
   public transient NetworkSimulator simulator;
 

@@ -46,7 +46,6 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
@@ -77,6 +76,7 @@ import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;

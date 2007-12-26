@@ -57,7 +57,6 @@ import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.commonapi.IdFactory;
-import org.mpisws.p2p.transport.commonapi.TransportLayerNodeHandle;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
@@ -637,7 +636,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
                 NodeIsFaultyException nife = (NodeIsFaultyException)error;
                 logger.log("Dropping message "+nife.getAttemptedMessage()+" to "+nife.getIdentifier()+" because it is faulty.");
                 if (i.isAlive()) {
-                  NodeHandle<MultiInetSocketAddress> nh = (NodeHandle<MultiInetSocketAddress>)i;
+                  TransportLayerNodeHandle<MultiInetSocketAddress> nh = (TransportLayerNodeHandle<MultiInetSocketAddress>)i;
                   logger.logException("NodeIsFaultyException thrown for non-dead node. "+i+" "+nh.getLiveness(),nife);
                 }
               }

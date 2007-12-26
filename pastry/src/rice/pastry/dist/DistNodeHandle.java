@@ -39,6 +39,7 @@ package rice.pastry.dist;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
+import rice.pastry.socket.TransportLayerNodeHandle;
 
 import java.io.*;
 import java.net.*;
@@ -53,7 +54,7 @@ import java.util.*;
  *
  * @author Alan Mislove
  */
-public abstract class DistNodeHandle<Identifier> extends NodeHandle<Identifier> implements Observer {
+public abstract class DistNodeHandle<Identifier> extends TransportLayerNodeHandle<Identifier> implements Observer {
     static final long serialVersionUID = 6030505652558872412L;
     // the nodeId of this node handle's remote node
     protected Id nodeId;

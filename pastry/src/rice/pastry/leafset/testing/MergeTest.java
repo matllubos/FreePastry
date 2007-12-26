@@ -314,18 +314,6 @@ public class MergeTest {
     public void serialize(OutputBuffer buf) throws IOException {
       throw new RuntimeException("not implemented.");        
     }
-
-    @Override
-    public Object getAddress() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public long getEpoch() {
-      // TODO Auto-generated method stub
-      return 0;
-    }
   }
 
 
