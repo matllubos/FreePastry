@@ -42,6 +42,8 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.PastryNode;
 import rice.pastry.ReadyStrategy;
+import rice.pastry.join.InitiateJoin;
+import rice.pastry.join.JoinRequest;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RoutingTable;
@@ -49,10 +51,21 @@ import rice.pastry.standard.ConsistentJoinMsg;
 import rice.pastry.standard.ConsistentJoinProtocol;
 
 /**
- * TODO: 
+ * The purpose of this class is to allow a NATted node to boot.  
+ * 
+ * Without this class, when the JoinRequest reaches the nearest neighbor of the joiner, 
+ * that node can't deliver the Request back to the joiner (because he is NATted).
+ * 
+ * The class opens a pilot to the bootstrap, then includes this node in the RendezvousJoinRequest.
+ * 
+ * Note that this class uses both JoinRequests and RendezvousJoinRequests.  The latter are only used for 
+ * a NATted Joiner.
+ * 
+ * Overview:
  * Extend CJPSerializer to also use RendezvousJoinRequest (include the bootstrap, and possibly additional credentials)
  *   pass in constructor
  *   
+ * TODO: 
  * Override handleInitiateJoin():
  *  If local node is NATted:
  *    open a pilot to the bootstrap (make sure to complete this before continuing)
@@ -77,6 +90,21 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
       LeafSet ls, ReadyStrategy nextReadyStrategy) {
     super(ln, lh, rt, ls, nextReadyStrategy, new RCJPDeserializer(ln));
   }
+
+  /**
+   * Use RendezvousJoinRequest if local node is NATted
+   */
+  protected JoinRequest getJoinRequest(NodeHandle bootstrap) {
+    if (((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) {
+      return super.getJoinRequest(bootstrap);
+    }
+    
+    RendezvousJoinRequest jr = new RendezvousJoinRequest(localHandle, thePastryNode
+        .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis(), bootstrap);                
+    return jr;
+  }
+
+
 
   
   static class RCJPDeserializer extends CJPDeserializer {

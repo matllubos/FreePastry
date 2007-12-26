@@ -165,8 +165,7 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
     } else {
       if (logger.level <= Logger.INFO) logger.log("InitiateJoin attempting to join:"+nh+" liveness:"+nh.getLiveness());
 //      if (nh.isAlive() == true) { // this was already done in ij.getHandle()
-        JoinRequest jr = new JoinRequest(localHandle, thePastryNode
-            .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());
+        JoinRequest jr = getJoinRequest(nh);
 
         RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, null, null,
             (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
@@ -176,6 +175,12 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
         thePastryNode.send(nh, rm, null, options);
 //      }
     }    
+  }
+  
+  protected JoinRequest getJoinRequest(NodeHandle bootstrap) {
+    JoinRequest jr = new JoinRequest(localHandle, thePastryNode
+        .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());    
+    return jr;
   }
 
   protected void handleIntermediateHop(RouteMessage rm) {
