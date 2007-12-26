@@ -65,9 +65,9 @@ public class JoinRequest extends PRawMessage {
   
   public static final short TYPE = 1;
   
-  private NodeHandle handle;
+  protected NodeHandle handle;
 
-  private NodeHandle joinHandle;
+  protected NodeHandle joinHandle;
 
   private short rowCount;
 
@@ -77,7 +77,7 @@ public class JoinRequest extends PRawMessage {
 
   private byte rtBaseBitLength;
   
-  long timestamp;
+  protected long timestamp;
   
   /**
    * Constructor.

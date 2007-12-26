@@ -75,7 +75,7 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
     
     p.setBoolean("rendezvous_test_firewall", true);
     p.setBoolean("rendezvous_test_makes_bootstrap", true);
-    p.setFloat("rendezvous_test_num_firewalled", 0.3f);
+    p.setFloat("rendezvous_test_num_firewalled", 0.0f);
     
     RawScribeRegrTest scribeTest = new RawScribeRegrTest(env);
     

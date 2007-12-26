@@ -89,16 +89,16 @@ public class StandardRouteSetProtocol extends PastryAppl implements RouteSetProt
    * @param sm the security manager
    * @param rt the routing table
    */
-  public StandardRouteSetProtocol(PastryNode ln, RoutingTable rt, Environment env) {
-    this(ln, rt, env, null);
+  public StandardRouteSetProtocol(PastryNode ln, RoutingTable rt) {
+    this(ln, rt, null);
   }
   
-  public StandardRouteSetProtocol(PastryNode ln, RoutingTable rt, Environment env, MessageDeserializer md) {
+  public StandardRouteSetProtocol(PastryNode ln, RoutingTable rt, MessageDeserializer md) {
     super(ln, null, RouteProtocolAddress.getCode(),  md == null ? new SRSPDeserializer(ln) : md);
-    this.environmet = env;
+    this.environmet = ln.getEnvironment();
     maxTrials = (1 << rt.baseBitLength()) / 2;
     routeTable = rt;
-    logger = env.getLogManager().getLogger(getClass(), null);
+    logger = environmet.getLogManager().getLogger(getClass(), null);
   }
 
   /**

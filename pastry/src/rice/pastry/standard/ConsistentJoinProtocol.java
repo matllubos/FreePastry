@@ -198,7 +198,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   public final int RETRY_INTERVAL;
   
-  static class CJPDeserializer extends SJPDeserializer {
+  public static class CJPDeserializer extends SJPDeserializer {
     public CJPDeserializer(PastryNode pn) {
       super(pn);
     }

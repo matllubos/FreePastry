@@ -52,10 +52,13 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.boot.Bootstrapper;
+import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocol;
 import rice.pastry.messaging.MessageDispatch;
 import rice.pastry.pns.PNSApplication;
 import rice.pastry.routing.RouteSet;
+import rice.pastry.routing.RouteSetProtocol;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;
@@ -125,29 +128,43 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
             
             router.register();
             
-            registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData, environment);
+            registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData);
     
     return pn;
   }
 
-  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData, Environment environment) {
+  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData) {
     ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
     
     Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns, localNodeData);          
 
-    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn,
-        routeTable, environment);
+    RouteSetProtocol rsProtocol = getRouteSetProtocol(pn, leafSet, routeTable, localNodeData);
+      
+    LeafSetProtocol lsProtocol = getLeafSetProtocol(pn, leafSet, routeTable, localNodeData);
     
-    rsProtocol.register();
-  
-    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-        pn.getLocalHandle(), leafSet, routeTable);
-    lsProtocol.register();
-    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-        pn.getLocalHandle(), routeTable, leafSet, lsProtocol);
-    jProtocol.register();
+    JoinProtocol jProtocol = getJoinProtocol(pn, leafSet, routeTable, localNodeData, lsProtocol);
     
     pn.setJoinProtocols(bootstrapper, jProtocol, lsProtocol, rsProtocol);    
+  }
+  
+  protected RouteSetProtocol getRouteSetProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, Object localNodeData) {
+    StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn, routeTable);    
+    rsProtocol.register();
+    return rsProtocol;
+  }
+  
+  protected LeafSetProtocol getLeafSetProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, Object localNodeData) {
+    PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
+        pn.getLocalHandle(), leafSet, routeTable);    
+    lsProtocol.register();
+    return lsProtocol;
+  }
+  
+  protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, Object localNodeData, LeafSetProtocol lsProtocol) {
+    ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
+        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol);
+    jProtocol.register();
+    return jProtocol;    
   }
   
   protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {

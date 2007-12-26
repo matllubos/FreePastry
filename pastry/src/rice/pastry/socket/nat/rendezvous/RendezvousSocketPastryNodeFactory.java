@@ -69,13 +69,17 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
+import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocol;
 import rice.pastry.pns.PNSApplication;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.nat.NATHandler;
+import rice.pastry.standard.ConsistentJoinProtocol;
+import rice.pastry.standard.PeriodicLeafSetProtocol;
 import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLPastryNode;
@@ -113,7 +117,17 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   private void init() {
     random = environment.getRandomSource();
   }
-  
+    
+  @Override
+  protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet,
+      RoutingTable routeTable, Object localNodeData, LeafSetProtocol lsProtocol) {
+    RendezvousJoinProtocol jProtocol = new RendezvousJoinProtocol(pn,
+        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol);
+    jProtocol.register();
+    return jProtocol;    
+  }
+
+
   @Override
   protected TransportLayer<InetSocketAddress, ByteBuffer> getMagicNumberTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
     TransportLayer<InetSocketAddress, ByteBuffer> mtl = super.getMagicNumberTransportLayer(wtl, pn);
@@ -179,6 +193,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return null;
   }
   
+  @Override
   protected ProximityNeighborSelector getProximityNeighborSelector(TLPastryNode pn) {    
     if (environment.getParameters().getBoolean("transport_use_pns")) {
       RendezvousPNSApplication pns = new RendezvousPNSApplication(pn);
@@ -208,12 +223,14 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return app;
   }
   
-  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData, Environment environment) {
-    super.registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData, environment);
+  @Override
+  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData) {
+    super.registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData);
     RendezvousApp app = rendezvousApps.remove(pn);
     app.register();
   }
   
+  @Override
   public NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) {
     return new RendezvousSNHFactory(pn);
   }
@@ -223,6 +240,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    */
   boolean firstNode = true;
   
+  @Override
   public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
     byte contactState = localContactState;    
     

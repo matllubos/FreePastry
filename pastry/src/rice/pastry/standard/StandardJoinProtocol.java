@@ -76,7 +76,7 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
 
   protected LeafSet leafSet;
   
-  static class SJPDeserializer extends PJavaSerializedDeserializer {
+  public static class SJPDeserializer extends PJavaSerializedDeserializer {
     public SJPDeserializer(PastryNode pn) {
       super(pn);
     }

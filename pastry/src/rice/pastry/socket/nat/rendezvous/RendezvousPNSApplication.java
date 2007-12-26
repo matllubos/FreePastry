@@ -64,8 +64,6 @@ public class RendezvousPNSApplication extends PNSApplication {
 
   public RendezvousPNSApplication(PastryNode pn) {
     super(pn, pn.getEnvironment().getLogManager().getLogger(RendezvousPNSApplication.class, null));
-    logger.log(pn+" here");
-    if (logger.level <= Logger.FINE) logger.log("here2");
   }
 
   /**

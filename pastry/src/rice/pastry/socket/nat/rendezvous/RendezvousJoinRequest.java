@@ -37,60 +37,53 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.rendezvous;
 
 import java.io.IOException;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.NodeHandle;
+import rice.pastry.NodeHandleFactory;
 import rice.pastry.PastryNode;
-import rice.pastry.ReadyStrategy;
+import rice.pastry.join.JoinAddress;
+import rice.pastry.join.JoinRequest;
 import rice.pastry.leafset.LeafSet;
-import rice.pastry.messaging.Message;
-import rice.pastry.routing.RoutingTable;
-import rice.pastry.standard.ConsistentJoinMsg;
-import rice.pastry.standard.ConsistentJoinProtocol;
 
 /**
- * TODO: 
- * Extend CJPSerializer to also use RendezvousJoinRequest (include the bootstrap, and possibly additional credentials)
- *   pass in constructor
- *   
- * Override handleInitiateJoin():
- *  If local node is NATted:
- *    open a pilot to the bootstrap (make sure to complete this before continuing)
- *    send the RendezvousJoinRequest
- *  else 
- *    super.handleInitiateJoin()
- *    
- * Override respondToJoiner():
- *   If joiner is NATted:
- *    use the pilot on the bootstrap:
- *      rendezvousLayer.requestSocket(joiner, bootstrap)
- *    
- * Override completeJoin() to close the pilot to the bootstrap before calling super.completeJoin() because that will cause pilots to open.
- *    may need a way to verify that it is closed, or else don't close it if it's in the leafset, b/c it may become busted
- *    
+ * Includes the bootstrap (or some other node who will have a pilot from the joiner.)
+ * 
  * @author Jeff Hoye
  *
  */
-public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
+public class RendezvousJoinRequest extends JoinRequest {
+  public static final short TYPE = 4;
 
-  public RendezvousJoinProtocol(PastryNode ln, NodeHandle lh, RoutingTable rt,
-      LeafSet ls, ReadyStrategy nextReadyStrategy) {
-    super(ln, lh, rt, ls, nextReadyStrategy, new RCJPDeserializer(ln));
+  protected NodeHandle bootstrap;
+  
+  public RendezvousJoinRequest(NodeHandle nh, byte rtBaseBitLength,
+      long timestamp, NodeHandle bootstrap) {
+    super(nh, rtBaseBitLength, timestamp);
+    this.bootstrap = bootstrap;
   }
 
+  public String toString() {
+    return "RendezvousJoinRequest(" + (handle != null ? handle.getNodeId() : null) + ","
+    + (joinHandle != null ? joinHandle.getNodeId() : null) +","+timestamp+ " pilot:"+bootstrap+")";
+  }
   
-  static class RCJPDeserializer extends CJPDeserializer {
-    public RCJPDeserializer(PastryNode pn) {
-      super(pn);
-    }
-
-    @Override
-    public Message deserialize(InputBuffer buf, short type, int priority, NodeHandle sender) throws IOException {
-      switch(type) {
-        case RendezvousJoinRequest.TYPE:
-          return new RendezvousJoinRequest(buf,pn, (NodeHandle)sender, pn);
-      }      
-      return super.deserialize(buf, type, priority, sender);
-    }
+  /***************** Raw Serialization ***************************************/
+  public short getType() {
+    return TYPE; 
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {    
+    super.serialize(buf);
+    bootstrap.serialize(buf);
+  }
+  
+  public RendezvousJoinRequest(InputBuffer buf, NodeHandleFactory nhf, NodeHandle sender, PastryNode localNode) throws IOException {
+    super(buf, nhf, sender, localNode);
+    bootstrap = nhf.readNodeHandle(buf);
   }
 }
