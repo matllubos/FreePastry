@@ -37,6 +37,10 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.rendezvous;
 
 import java.io.IOException;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.NodeHandle;
@@ -65,7 +69,6 @@ import rice.pastry.standard.ConsistentJoinProtocol;
  * Extend CJPSerializer to also use RendezvousJoinRequest (include the bootstrap, and possibly additional credentials)
  *   pass in constructor
  *   
- * TODO: 
  * Override handleInitiateJoin():
  *  If local node is NATted:
  *    open a pilot to the bootstrap (make sure to complete this before continuing)
@@ -73,6 +76,7 @@ import rice.pastry.standard.ConsistentJoinProtocol;
  *  else 
  *    super.handleInitiateJoin()
  *    
+ * TODO: 
  * Override respondToJoiner():
  *   If joiner is NATted:
  *    use the pilot on the bootstrap:
@@ -94,6 +98,7 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
   /**
    * Use RendezvousJoinRequest if local node is NATted
    */
+  @Override
   protected JoinRequest getJoinRequest(NodeHandle bootstrap) {
     if (((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) {
       return super.getJoinRequest(bootstrap);
@@ -104,8 +109,21 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
     return jr;
   }
 
-
-
+  /**
+   * This is called from respondToJoiner() and other places, we need to set the OPTION_USE_PILOT
+   * to the intermediate node, so that will queue the RendezvousTL to use the pilot.
+   * 
+   */
+  @Override
+  protected Map<String, Object> getOptions(JoinRequest jr, Map<String, Object> existing) {
+    if (jr.accepted()) {
+      if (jr instanceof RendezvousJoinRequest) {
+        RendezvousJoinRequest rjr = (RendezvousJoinRequest)jr;
+        return OptionsFactory.addOption(existing, RendezvousTransportLayerImpl.OPTION_USE_PILOT, rjr.getBootstrap());
+      }
+    }
+    return existing;
+  }
   
   static class RCJPDeserializer extends CJPDeserializer {
     public RCJPDeserializer(PastryNode pn) {

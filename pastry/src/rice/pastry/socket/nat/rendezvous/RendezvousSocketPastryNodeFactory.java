@@ -51,7 +51,9 @@ import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.nat.FirewallTLImpl;
 import org.mpisws.p2p.transport.rendezvous.ContactDeserializer;
+import org.mpisws.p2p.transport.rendezvous.PilotFinder;
 import org.mpisws.p2p.transport.rendezvous.PilotManager;
+import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
@@ -147,6 +149,11 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         (RendezvousSocketNodeHandle)pn.getLocalHandle(), 
         getContactDeserializer(pn),
         getRendezvousGenerator(pn), 
+        new PilotFinder() {        
+          public RendezvousContact findPilot(RendezvousContact i) {
+            return null;
+          }        
+        }, // todo, add this later
         getRendezvousStrategy(pn), 
         pn.getEnvironment());
     generatePilotStrategy(pn, ret);

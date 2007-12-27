@@ -86,4 +86,8 @@ public class RendezvousJoinRequest extends JoinRequest {
     super(buf, nhf, sender, localNode);
     bootstrap = nhf.readNodeHandle(buf);
   }
+
+  public NodeHandle getBootstrap() {
+    return bootstrap;
+  }
 }

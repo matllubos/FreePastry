@@ -172,7 +172,7 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
 
         rm.getOptions().setRerouteIfSuspected(false);
         rm.setPrevNode(localHandle);
-        thePastryNode.send(nh, rm, null, options);
+        thePastryNode.send(nh, rm, null, getOptions(jr, options));
 //      }
     }    
   }
@@ -212,6 +212,8 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
             if (logger.level <= Logger.CONFIG) logger.log("sendFailed("+message+")");
           }          
         });
+        
+        rm.setTLOptions(getOptions(jr, rm.getTLOptions()));
   
         if (logger.level <= Logger.CONFIG) logger.log("Routing "+rm);
         thePastryNode.getRouter().route(rm);
@@ -252,12 +254,16 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
             }
           }
         }
-      }, options);
+      }, getOptions(jr, options));
     } else {
       if (logger.level <= Logger.INFO) logger.log(
           "NOTE: Dropping incoming JoinRequest " + jr
               + " because local node is not ready!");
     }
+  }
+  
+  protected Map<String, Object> getOptions(JoinRequest jr, Map<String, Object> existing) {
+    return existing;
   }
   
   protected void completeJoin(JoinRequest jr) {

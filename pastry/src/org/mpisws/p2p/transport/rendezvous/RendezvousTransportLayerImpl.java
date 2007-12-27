@@ -87,6 +87,11 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   boolean canContactDirect = true;
   
   /**
+   * Value should be a HighIdentifier
+   */
+  public static final String OPTION_USE_PILOT = "USE_PILOT";
+  
+  /**
    * options.get(RENDEZVOUS_CONTACT_STRING) returns a RendezvousContact
    */
   public String RENDEZVOUS_CONTACT_STRING;  // usually: commonapi_destination_identity 
@@ -94,6 +99,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   TransportLayer<Identifier, ByteBuffer> tl;
   TransportLayerCallback<Identifier, ByteBuffer> callback;
   RendezvousGenerationStrategy<HighIdentifier> rendezvousGenerator;
+  PilotFinder pilotFinder;
   RendezvousStrategy<HighIdentifier> rendezvousStrategy;
   HighIdentifier localNodeHandle;
   Logger logger;
@@ -106,6 +112,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       HighIdentifier myRendezvousContact,
       ContactDeserializer<Identifier, HighIdentifier> deserializer,
       RendezvousGenerationStrategy<HighIdentifier> rendezvousGenerator,
+      PilotFinder pilotFinder,
       RendezvousStrategy<HighIdentifier> rendezvousStrategy, 
       Environment env) {
     this.selectorManager = env.getSelectorManager();
@@ -114,6 +121,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     this.serializer = deserializer;
     this.RENDEZVOUS_CONTACT_STRING = RENDEZVOUS_CONTACT_STRING;
     this.rendezvousGenerator = rendezvousGenerator;
+    this.pilotFinder = pilotFinder;
     this.rendezvousStrategy = rendezvousStrategy;
     
     this.logger = env.getLogManager().getLogger(RendezvousTransportLayerImpl.class, null);
@@ -171,17 +179,48 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         }
       }, options);
     } else {
-      if (canContactDirect) {
-        // request openChannel to me
+      if (options.containsKey(OPTION_USE_PILOT)) {
+        HighIdentifier middleMan = (HighIdentifier)options.get(OPTION_USE_PILOT);
+        // this is normally used when a node is joining, wo you can't route to
+        logger.log("OPTION_USE_PILOT->"+middleMan);        
+        openSocketViaPilot(middleMan);
       } else {
-        // find rendezvous point (RP)
-        // request openChannel to RP
-        // open channel to the RP
+        if (canContactDirect) {
+          // see if I have a pilot to the node already
+          HighIdentifier middleMan = (HighIdentifier)pilotFinder.findPilot(contact);          
+          if (middleMan == null) {
+            // request openChannel to me
+            logger.log("I need to contact "+contact+" via routing");
+            // use rendezvousStrategy
+          } else {
+            // use middleman
+            logger.log("I need to open a socket via "+middleMan); 
+            openSocketViaPilot(middleMan);
+          }
+        } else {
+          logger.log("I need to open a socket to "+contact+", but we're both firewalled!");
+          // choose rendezvous point (RP)
+          // request openChannel to RP
+          // open channel to the RP
+        }
       }
     }
 
     return handle;
   }
+  
+  protected void openSocketUsingPilotToMe() {
+    
+  }
+  
+  protected void openSocketViaPilot(HighIdentifier middleMan) {
+        
+  }
+  
+  protected void routeForSocket() {
+    
+  }
+  
   protected HighIdentifier getHighIdentifier(Map<String, Object> options) {
     if (options == null) return null;
     return (HighIdentifier)options.get(RENDEZVOUS_CONTACT_STRING);
