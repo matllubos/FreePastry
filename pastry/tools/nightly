@@ -47,9 +47,9 @@ cd pastry
 
 # the nightly doesn't javadoc, because it's a waste of time
 if [ "$1" == "--snapshot" ]; then
-    $JAVADOC = ""
+    JAVADOC=""
 else
-	$JAVADOC = "-Ddontjavadoc=1"
+	JAVADOC="-Ddontjavadoc=1"
 fi
 
 ant/bin/ant freepastry-release \
