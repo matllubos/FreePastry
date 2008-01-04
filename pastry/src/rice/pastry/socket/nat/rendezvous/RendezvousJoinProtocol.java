@@ -119,7 +119,7 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
     if (jr.accepted()) {
       if (jr instanceof RendezvousJoinRequest) {
         RendezvousJoinRequest rjr = (RendezvousJoinRequest)jr;
-        return OptionsFactory.addOption(existing, RendezvousTransportLayerImpl.OPTION_USE_PILOT, rjr.getBootstrap());
+        return OptionsFactory.addOption(existing, RendezvousTransportLayerImpl.OPTION_USE_PILOT, rjr.getPilot());
       }
     }
     return existing;

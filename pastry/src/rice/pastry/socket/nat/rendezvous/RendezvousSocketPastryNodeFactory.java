@@ -66,6 +66,7 @@ import rice.environment.params.Parameters;
 import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
@@ -153,7 +154,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
           public RendezvousContact findPilot(RendezvousContact i) {
             return null;
           }        
-        }, // todo, add this later
+        }, // TODO, add this later
         getRendezvousStrategy(pn), 
         pn.getEnvironment());
     generatePilotStrategy(pn, ret);
@@ -185,10 +186,14 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         return high.eaddress.getAddress(0);
       }
 
+      public void serialize(RendezvousSocketNodeHandle i, OutputBuffer buf) throws IOException {
+        i.serialize(buf);
+      }
+      
       public ByteBuffer serialize(RendezvousSocketNodeHandle i)
           throws IOException {
         SimpleOutputBuffer sob = new SimpleOutputBuffer();
-        i.serialize(sob);
+        serialize(i,sob);
         return sob.getByteBuffer();
       }
     

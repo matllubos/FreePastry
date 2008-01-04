@@ -41,8 +41,12 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.pastry.socket.nat.rendezvous.RendezvousSocketNodeHandle;
 
 public interface ContactDeserializer<Identifier, HighIdentifier> {
+
+  void serialize(HighIdentifier i, OutputBuffer buf) throws IOException;
 
   ByteBuffer serialize(HighIdentifier i) throws IOException;
   HighIdentifier deserialize(InputBuffer sib) throws IOException;

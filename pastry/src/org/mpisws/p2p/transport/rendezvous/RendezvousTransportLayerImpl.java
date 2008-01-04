@@ -61,6 +61,7 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.MutableTuple;
 import rice.p2p.util.tuples.Tuple;
 import rice.selector.SelectorManager;
@@ -69,6 +70,13 @@ import rice.selector.TimerTask;
 /**
  * The trick here is that this layer is at some level, say InetSocketAddress, but must pass around very High-Level
  * Identifiers, such as a NodeHandle for the rendezvous strategy to do its job, but maybe this can just be the RendezvousContact, and it can be casted.
+ * 
+ * protocol:
+ * byte CONNECTOR_SOCKET
+ *   HighIdentifier target = serializer.deserialize(sib);
+ *   HighIdentifier opener = serializer.deserialize(sib);
+ *   int uid = sib.readInt();
+ * 
  * @author Jeff Hoye
  *
  * @param <Identifier>
@@ -79,7 +87,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   public static final byte NORMAL_SOCKET = 0; // used when normally opening a channel (bypassing rendezvous)
   public static final byte CONNECTOR_SOCKET = 1; // sent to the rendezvous server
   public static final byte ACCEPTOR_SOCKET = 2; // used when openChannel() is called
-  public static final byte PILOT_SOCKET = 3; // used when openChannel() is called
+  public static final byte PILOT_SOCKET = 3; // forms a pilot connection 
   
   /**
    * TRUE if not Firewalled
@@ -143,7 +151,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     final SocketRequestHandle<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options,logger);
     
     // TODO: throw proper exception if options == null, or !contains(R_C_S)
-    final RendezvousContact contact = getHighIdentifier(options);
+    final HighIdentifier contact = getHighIdentifier(options);
 
     if (contact == null || contact.canContactDirect()) {
       // write NORMAL_SOCKET and continue
@@ -183,7 +191,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         HighIdentifier middleMan = (HighIdentifier)options.get(OPTION_USE_PILOT);
         // this is normally used when a node is joining, wo you can't route to
         logger.log("OPTION_USE_PILOT->"+middleMan);        
-        openSocketViaPilot(middleMan);
+        openSocketViaPilot(contact, middleMan, handle, deliverSocketToMe, options);
+        return handle;
       } else {
         if (canContactDirect) {
           // see if I have a pilot to the node already
@@ -195,7 +204,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           } else {
             // use middleman
             logger.log("I need to open a socket via "+middleMan); 
-            openSocketViaPilot(middleMan);
+            openSocketViaPilot(contact, middleMan, handle, deliverSocketToMe, options);
+            return handle;
           }
         } else {
           logger.log("I need to open a socket to "+contact+", but we're both firewalled!");
@@ -210,15 +220,71 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   }
   
   protected void openSocketUsingPilotToMe() {
-    
+    throw new RuntimeException("Not implemented.");    
   }
   
-  protected void openSocketViaPilot(HighIdentifier middleMan) {
-        
+  protected void openSocketViaPilot(
+      final HighIdentifier dest, 
+      HighIdentifier middleMan, 
+      final SocketRequestHandle<Identifier> handle, 
+      final SocketCallback<Identifier> deliverSocketToMe, 
+      Map<String, Object> options) {
+
+    // build header
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    try {
+      sob.writeByte(CONNECTOR_SOCKET);
+      serializer.serialize(dest, sob);
+      serializer.serialize(localNodeHandle, sob);
+    } catch (IOException ioe) {
+      deliverSocketToMe.receiveException(handle, ioe);
+    }
+
+    final ByteBuffer buf = sob.getByteBuffer();
+
+    // open the socket
+    tl.openSocket(serializer.convert(middleMan), new SocketCallback<Identifier>() {
+      public void receiveResult(SocketRequestHandle<Identifier> cancellable,
+          P2PSocket<Identifier> sock) {
+
+        try {
+          new P2PSocketReceiver<Identifier>() {
+  
+            public void receiveSelectResult(P2PSocket<Identifier> socket,
+                boolean canRead, boolean canWrite) throws IOException {
+              long bytesWritten = socket.write(buf); 
+              if (bytesWritten < 0) {
+                deliverSocketToMe.receiveException(handle, new ClosedChannelException("Channel closed detected in "+RendezvousTransportLayerImpl.this));
+                return;
+              }
+              if (buf.hasRemaining()) {
+                socket.register(false, true, this);
+                return;
+              }
+              
+              deliverSocketToMe.receiveResult(handle, socket);
+            }
+          
+            public void receiveException(P2PSocket<Identifier> socket,
+                IOException ioe) {
+              deliverSocketToMe.receiveException(handle, ioe);
+            }
+          }.receiveSelectResult(sock, false, true);
+        } catch (IOException ioe) {
+          deliverSocketToMe.receiveException(handle, ioe);
+        }
+      }
+      public void receiveException(SocketRequestHandle<Identifier> s,
+          IOException ex) {
+        deliverSocketToMe.receiveException(handle, ex);
+      }
+    }, options);
+    
+    throw new RuntimeException("Not implemented.");
   }
   
   protected void routeForSocket() {
-    
+    throw new RuntimeException("Not implemented.");    
   }
   
   protected HighIdentifier getHighIdentifier(Map<String, Object> options) {
@@ -481,7 +547,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     }
     
     public boolean ping() {
-      logger.log(this+".ping "+socket);
+      if (logger.level <= Logger.FINEST) logger.log(this+".ping "+socket);
       if (socket == null) return false;
       enqueue(ByteBuffer.wrap(PILOT_PING_BYTES));
       return true;
@@ -501,7 +567,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         byte msgType = sib.readByte();
         switch(msgType) {
         case PILOT_PONG:
-          if (logger.level <= Logger.FINER) logger.log(this+" received pong");          
+          if (logger.level <= Logger.FINEST) logger.log(this+" received pong");          
           sib.clear();
           read(); // read the next thing, or re-register if there isn't enough to read
           break;

@@ -59,17 +59,20 @@ import rice.pastry.leafset.LeafSet;
 public class RendezvousJoinRequest extends JoinRequest {
   public static final short TYPE = 4;
 
-  protected NodeHandle bootstrap;
+  /**
+   * The joiner has created a pilot connection to the pilot node.
+   */
+  protected NodeHandle pilot;
   
   public RendezvousJoinRequest(NodeHandle nh, byte rtBaseBitLength,
-      long timestamp, NodeHandle bootstrap) {
+      long timestamp, NodeHandle pilot) {
     super(nh, rtBaseBitLength, timestamp);
-    this.bootstrap = bootstrap;
+    this.pilot = pilot;
   }
 
   public String toString() {
     return "RendezvousJoinRequest(" + (handle != null ? handle.getNodeId() : null) + ","
-    + (joinHandle != null ? joinHandle.getNodeId() : null) +","+timestamp+ " pilot:"+bootstrap+")";
+    + (joinHandle != null ? joinHandle.getNodeId() : null) +","+timestamp+ " pilot:"+pilot+")";
   }
   
   /***************** Raw Serialization ***************************************/
@@ -79,15 +82,15 @@ public class RendezvousJoinRequest extends JoinRequest {
   
   public void serialize(OutputBuffer buf) throws IOException {    
     super.serialize(buf);
-    bootstrap.serialize(buf);
+    pilot.serialize(buf);
   }
   
   public RendezvousJoinRequest(InputBuffer buf, NodeHandleFactory nhf, NodeHandle sender, PastryNode localNode) throws IOException {
     super(buf, nhf, sender, localNode);
-    bootstrap = nhf.readNodeHandle(buf);
+    pilot = nhf.readNodeHandle(buf);
   }
 
-  public NodeHandle getBootstrap() {
-    return bootstrap;
+  public NodeHandle getPilot() {
+    return pilot;
   }
 }

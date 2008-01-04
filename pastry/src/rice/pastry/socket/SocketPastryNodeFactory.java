@@ -930,7 +930,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * Method which creates a Pastry node from the next port with the specified nodeId 
    * (or one generated from the NodeIdFactory if not specified)
    * 
-   * @param bootstrap Node handle to bootstrap from.
+   * @param pilot Node handle to bootstrap from.
    * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
    * @return A node with a random ID and next port number.
    */
@@ -949,7 +949,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * Method which creates a Pastry node from the next port with the specified nodeId 
    * (or one generated from the NodeIdFactory if not specified)
    * 
-   * @param bootstrap Node handle to bootstrap from.
+   * @param pilot Node handle to bootstrap from.
    * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
    * @param pAddress The address to claim that this node is at - used for proxies
    *          behind NATs
