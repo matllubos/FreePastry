@@ -37,21 +37,22 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.rendezvous;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
 
+import rice.Continuation;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.PastryNode;
 import rice.pastry.ReadyStrategy;
-import rice.pastry.join.InitiateJoin;
 import rice.pastry.join.JoinRequest;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RoutingTable;
-import rice.pastry.standard.ConsistentJoinMsg;
 import rice.pastry.standard.ConsistentJoinProtocol;
 
 /**
@@ -90,23 +91,41 @@ import rice.pastry.standard.ConsistentJoinProtocol;
  */
 public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
 
+  RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousTL;
+  
   public RendezvousJoinProtocol(PastryNode ln, NodeHandle lh, RoutingTable rt,
-      LeafSet ls, ReadyStrategy nextReadyStrategy) {
+      LeafSet ls, ReadyStrategy nextReadyStrategy, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousTL) {
     super(ln, lh, rt, ls, nextReadyStrategy, new RCJPDeserializer(ln));
+    this.rendezvousTL = rendezvousTL;
   }
 
   /**
    * Use RendezvousJoinRequest if local node is NATted
    */
   @Override
-  protected JoinRequest getJoinRequest(NodeHandle bootstrap) {
+  protected void getJoinRequest(NodeHandle b, final Continuation<JoinRequest, Exception> deliverJRToMe) {
+    final RendezvousSocketNodeHandle bootstrap = (RendezvousSocketNodeHandle)b;
     if (((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) {
-      return super.getJoinRequest(bootstrap);
+      super.getJoinRequest(bootstrap, deliverJRToMe);
     }
     
-    RendezvousJoinRequest jr = new RendezvousJoinRequest(localHandle, thePastryNode
-        .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis(), bootstrap);                
-    return jr;
+    // TODO: Throw exception if can't directly contact the bootstrap
+    
+    // open the pilot before sending the JoinRequest.
+    rendezvousTL.openPilot((RendezvousSocketNodeHandle)bootstrap, 
+        new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, IOException>(){
+
+      public void receiveException(IOException exception) {
+        deliverJRToMe.receiveException(exception);
+      }
+
+      public void receiveResult(
+          SocketRequestHandle<RendezvousSocketNodeHandle> result) {
+        RendezvousJoinRequest jr = new RendezvousJoinRequest(localHandle, thePastryNode
+            .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis(), bootstrap);                
+        deliverJRToMe.receiveResult(jr);
+      }
+    });
   }
 
   /**

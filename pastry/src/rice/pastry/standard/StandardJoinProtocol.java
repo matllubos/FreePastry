@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.standard;
 
+import rice.Continuation;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.*;
 import rice.pastry.*;
@@ -156,7 +157,7 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
   }
 
   protected void handleInitiateJoin(InitiateJoin ij) {
-    NodeHandle nh = ij.getHandle();
+    final NodeHandle nh = ij.getHandle();
 
     if (nh == null) {
       if (logger.level <= Logger.SEVERE) logger.log(
@@ -165,22 +166,32 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
     } else {
       if (logger.level <= Logger.INFO) logger.log("InitiateJoin attempting to join:"+nh+" liveness:"+nh.getLiveness());
 //      if (nh.isAlive() == true) { // this was already done in ij.getHandle()
-        JoinRequest jr = getJoinRequest(nh);
+        getJoinRequest(nh, new Continuation<JoinRequest, Exception>() {
+        
+          public void receiveResult(JoinRequest jr) {
+            RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, null, null,
+                (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
 
-        RouteMessage rm = new RouteMessage(localHandle.getNodeId(), jr, null, null,
-            (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));
+            rm.getOptions().setRerouteIfSuspected(false);
+            rm.setPrevNode(localHandle);
+            thePastryNode.send(nh, rm, null, getOptions(jr, options));
+          }
+        
+          public void receiveException(Exception exception) {
+            // TODO Auto-generated method stub
+        
+          }
+        
+        });
 
-        rm.getOptions().setRerouteIfSuspected(false);
-        rm.setPrevNode(localHandle);
-        thePastryNode.send(nh, rm, null, getOptions(jr, options));
 //      }
     }    
   }
   
-  protected JoinRequest getJoinRequest(NodeHandle bootstrap) {
+  protected void getJoinRequest(NodeHandle bootstrap, Continuation<JoinRequest, Exception> deliverJRToMe) {
     JoinRequest jr = new JoinRequest(localHandle, thePastryNode
         .getRoutingTable().baseBitLength(), thePastryNode.getEnvironment().getTimeSource().currentTimeMillis());    
-    return jr;
+    deliverJRToMe.receiveResult(jr); 
   }
 
   protected void handleIntermediateHop(RouteMessage rm) {

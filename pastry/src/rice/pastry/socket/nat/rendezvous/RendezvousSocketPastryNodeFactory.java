@@ -68,6 +68,8 @@ import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+import rice.p2p.util.tuples.MutableTuple;
+import rice.p2p.util.tuples.Tuple;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
@@ -125,7 +127,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet,
       RoutingTable routeTable, Object localNodeData, LeafSetProtocol lsProtocol) {
     RendezvousJoinProtocol jProtocol = new RendezvousJoinProtocol(pn,
-        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol);
+        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol, rendezvousApps.get(pn).b());
     jProtocol.register();
     return jProtocol;    
   }
@@ -157,6 +159,9 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         }, // TODO, add this later
         getRendezvousStrategy(pn), 
         pn.getEnvironment());
+    
+    rendezvousApps.get(pn).setB(ret);
+    
     generatePilotStrategy(pn, ret);
     return ret;
   }
@@ -228,17 +233,18 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    * 
    * This table temporarily holds the rendezvousApps until they are needed, then it is deleted.
    */
-  Map<TLPastryNode, RendezvousApp> rendezvousApps = new HashMap<TLPastryNode, RendezvousApp>();
+  Map<TLPastryNode, MutableTuple<RendezvousApp, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>> rendezvousApps = 
+    new HashMap<TLPastryNode, MutableTuple<RendezvousApp, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>>();
   protected RendezvousStrategy<RendezvousSocketNodeHandle> getRendezvousStrategy(TLPastryNode pn) {
     RendezvousApp app = new RendezvousApp(pn);
-    rendezvousApps.put(pn,app);
+    rendezvousApps.put(pn,new MutableTuple<RendezvousApp, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>(app,null));
     return app;
   }
   
   @Override
   protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData) {
     super.registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData);
-    RendezvousApp app = rendezvousApps.remove(pn);
+    RendezvousApp app = rendezvousApps.remove(pn).a();
     app.register();
   }
   

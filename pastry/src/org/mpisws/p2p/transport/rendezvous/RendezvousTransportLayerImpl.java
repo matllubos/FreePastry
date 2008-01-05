@@ -60,6 +60,7 @@ import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.MutableTuple;
@@ -104,15 +105,16 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
    */
   public String RENDEZVOUS_CONTACT_STRING;  // usually: commonapi_destination_identity 
   
-  TransportLayer<Identifier, ByteBuffer> tl;
-  TransportLayerCallback<Identifier, ByteBuffer> callback;
-  RendezvousGenerationStrategy<HighIdentifier> rendezvousGenerator;
-  PilotFinder pilotFinder;
-  RendezvousStrategy<HighIdentifier> rendezvousStrategy;
-  HighIdentifier localNodeHandle;
-  Logger logger;
-  ContactDeserializer<Identifier, HighIdentifier> serializer;
+  protected TransportLayer<Identifier, ByteBuffer> tl;
+  protected TransportLayerCallback<Identifier, ByteBuffer> callback;
+  protected RendezvousGenerationStrategy<HighIdentifier> rendezvousGenerator;
+  protected PilotFinder pilotFinder;
+  protected RendezvousStrategy<HighIdentifier> rendezvousStrategy;
+  protected HighIdentifier localNodeHandle;
+  protected Logger logger;
+  protected ContactDeserializer<Identifier, HighIdentifier> serializer;
   protected SelectorManager selectorManager;
+  protected RandomSource random;
   
   public RendezvousTransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -123,6 +125,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       PilotFinder pilotFinder,
       RendezvousStrategy<HighIdentifier> rendezvousStrategy, 
       Environment env) {
+    this.random = env.getRandomSource();
     this.selectorManager = env.getSelectorManager();
     this.tl = tl;
     this.localNodeHandle = myRendezvousContact;
@@ -236,6 +239,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       sob.writeByte(CONNECTOR_SOCKET);
       serializer.serialize(dest, sob);
       serializer.serialize(localNodeHandle, sob);
+      sob.writeInt(random.nextInt());
     } catch (IOException ioe) {
       deliverSocketToMe.receiveException(handle, ioe);
     }
@@ -279,8 +283,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         deliverSocketToMe.receiveException(handle, ex);
       }
     }, options);
-    
-    throw new RuntimeException("Not implemented.");
   }
   
   protected void routeForSocket() {
@@ -331,7 +333,13 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           HighIdentifier target = serializer.deserialize(sib);
           HighIdentifier opener = serializer.deserialize(sib);
           int uid = sib.readInt();
-          rendezvousStrategy.openChannel(target, localNodeHandle, opener, uid, null);
+          
+          if (incomingPilots.containsKey(target)) {
+            if (logger.level <= Logger.INFO) logger.log("I'm the rendezevous for "+opener+" to "+target+" and I have a pilot.");            
+          } else {          
+            if (logger.level <= Logger.INFO) logger.log("I'm the rendezevous for "+opener+" to "+target+" and I don't have a pilot.");            
+            rendezvousStrategy.openChannel(target, localNodeHandle, opener, uid, null);
+          }
           // TODO: store connection details in a map to this socket -> map
           // TODO: make a deliverResultToMe that closes the socket or returns some kind of error
           return;
