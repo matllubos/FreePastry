@@ -90,6 +90,9 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   public static final byte ACCEPTOR_SOCKET = 2; // used when openChannel() is called
   public static final byte PILOT_SOCKET = 3; // forms a pilot connection 
   
+
+  public static final byte CONNECTION_RESPONSE_SUCCESS = 1; // forms a pilot connection 
+
   /**
    * TRUE if not Firewalled
    */
@@ -228,7 +231,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   
   protected void openSocketViaPilot(
       final HighIdentifier dest, 
-      HighIdentifier middleMan, 
+      final HighIdentifier middleMan, 
       final SocketRequestHandle<Identifier> handle, 
       final SocketCallback<Identifier> deliverSocketToMe, 
       Map<String, Object> options) {
@@ -244,8 +247,9 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       deliverSocketToMe.receiveException(handle, ioe);
     }
 
-    final ByteBuffer buf = sob.getByteBuffer();
-
+    final ByteBuffer writeBuffer = sob.getByteBuffer(); // to write all the connection info
+    final ByteBuffer readBuffer = ByteBuffer.allocate(1);  // to read success
+    
     // open the socket
     tl.openSocket(serializer.convert(middleMan), new SocketCallback<Identifier>() {
       public void receiveResult(SocketRequestHandle<Identifier> cancellable,
@@ -256,17 +260,44 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   
             public void receiveSelectResult(P2PSocket<Identifier> socket,
                 boolean canRead, boolean canWrite) throws IOException {
-              long bytesWritten = socket.write(buf); 
-              if (bytesWritten < 0) {
-                deliverSocketToMe.receiveException(handle, new ClosedChannelException("Channel closed detected in "+RendezvousTransportLayerImpl.this));
-                return;
+              if (writeBuffer.hasRemaining()) {
+                // write the header
+                long bytesWritten = socket.write(writeBuffer); 
+                if (bytesWritten < 0) {
+                  deliverSocketToMe.receiveException(handle, new ClosedChannelException("Channel closed detected to "+dest+" via "+middleMan+" in "+RendezvousTransportLayerImpl.this));
+                  return;
+                }
+                if (writeBuffer.hasRemaining()) {
+                  socket.register(false, true, this);
+                  return;
+                }
               }
-              if (buf.hasRemaining()) {
-                socket.register(false, true, this);
-                return;
-              }
-              
-              deliverSocketToMe.receiveResult(handle, socket);
+              if (!writeBuffer.hasRemaining()) {
+                // read for the response
+                if (readBuffer.hasRemaining()) {
+                  long bytesRead = socket.read(readBuffer);                  
+                  if (bytesRead < 0) {
+                    deliverSocketToMe.receiveException(handle, new ClosedChannelException("Channel closed detected to "+dest+" via "+middleMan+" in "+RendezvousTransportLayerImpl.this));
+                    return;
+                  }
+                  if (readBuffer.hasRemaining()) {
+                    socket.register(true, false, this);
+                    return;
+                  }
+                }
+                
+                // interpret the response
+                readBuffer.flip();
+                byte response = readBuffer.get();
+                switch(response) {
+                case CONNECTION_RESPONSE_SUCCESS:
+                  deliverSocketToMe.receiveResult(handle, socket);                    
+                  return;
+                default:
+                  deliverSocketToMe.receiveException(handle, new ClosedChannelException("Failed to connect to "+dest+" via "+middleMan+" in "+RendezvousTransportLayerImpl.this+" response:"+response));
+                  return;  
+                }
+              }              
             }
           
             public void receiveException(P2PSocket<Identifier> socket,
@@ -326,25 +357,11 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           callback.incomingSocket(socket);
           return;
         case CONNECTOR_SOCKET:
-          // TODO: read the requested target, etc, and route to it to establish a connection, which will respond as an ACCEPTOR
-          // TODO: make this recover from errors when sib doesn't have enough data, needs to reset(), reregister to read, probably should just do this in its own class
-          InputBuffer sib;
-          sib = new SocketInputBuffer(socket,1024);         
-          HighIdentifier target = serializer.deserialize(sib);
-          HighIdentifier opener = serializer.deserialize(sib);
-          int uid = sib.readInt();
-          
-          if (incomingPilots.containsKey(target)) {
-            if (logger.level <= Logger.INFO) logger.log("I'm the rendezevous for "+opener+" to "+target+" and I have a pilot.");            
-          } else {          
-            if (logger.level <= Logger.INFO) logger.log("I'm the rendezevous for "+opener+" to "+target+" and I don't have a pilot.");            
-            rendezvousStrategy.openChannel(target, localNodeHandle, opener, uid, null);
-          }
-          // TODO: store connection details in a map to this socket -> map
-          // TODO: make a deliverResultToMe that closes the socket or returns some kind of error
+          readConnectHeader(socket);
           return;
         case ACCEPTOR_SOCKET:
           // read the connection details and match to the CONNECTOR, or Self, or wait
+          
           return;
         case PILOT_SOCKET:
           new IncomingPilot(socket);
@@ -358,6 +375,144 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       }
     });
   }
+
+  protected void readConnectHeader(P2PSocket<Identifier> socket) throws IOException {
+    final InputBuffer sib = new SocketInputBuffer(socket,1024);                   
+    P2PSocketReceiver<Identifier> receiver = new P2PSocketReceiver<Identifier>() {
+
+      public void receiveSelectResult(P2PSocket<Identifier> socket,
+          boolean canRead, boolean canWrite) throws IOException {
+        // TODO: read the requested target, etc, and route to it to establish a connection, which will respond as an ACCEPTOR
+        // TODO: make this recover from errors when sib doesn't have enough data, needs to reset(), reregister to read, probably should just do this in its own class
+        
+        try {
+          HighIdentifier target = serializer.deserialize(sib);
+          HighIdentifier opener = serializer.deserialize(sib);
+          int uid = sib.readInt();
+          
+          // TODO: make a timeout for this structure...
+          putConnectSocket(opener, target, uid, socket);
+          
+          if (incomingPilots.containsKey(target)) {
+            if (logger.level <= Logger.INFO) logger.log("I'm the rendezevous for "+opener+" to "+target+" and I have a pilot.");            
+            // TODO: send connect-request down pilot,, including uid, wait for incoming socket, then send SUCCESS down this socket
+            IncomingPilot pilot = incomingPilots.get(target);
+            pilot.requestSocket(opener,uid);
+          } else {          
+            if (logger.level <= Logger.INFO) logger.log("I'm the rendezevous for "+opener+" to "+target+" and I don't have a pilot.");            
+            rendezvousStrategy.openChannel(target, localNodeHandle, opener, uid, null);
+          }
+        } catch (InsufficientBytesException ibe) {
+          socket.register(true, false, this);
+        }
+      }
+    
+      public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
+        // what to do here?  close the socket?
+        if (logger.level <= Logger.WARNING) logger.logException("error in readConnectHeader("+socket+") closing.",ioe);
+        socket.close();
+      }
+    };
+    
+    receiver.receiveSelectResult(socket, true, false);
+  }
+  
+  
+  /**
+   * requestor, target, uid -> socket
+   */ 
+  Map<HighIdentifier, Map<HighIdentifier, Map<Integer, P2PSocket<Identifier>>>> connectSockets = 
+    new HashMap<HighIdentifier, Map<HighIdentifier, Map<Integer, P2PSocket<Identifier>>>>();
+  
+  /**
+   * This map stores the connect socket until the corresponding accept socket arrives
+   * 
+   * @param socket
+   * @param requestor
+   * @param target
+   * @param uid
+   */
+  public void putConnectSocket(HighIdentifier requestor, HighIdentifier target, int uid, P2PSocket<Identifier> socket) {        
+    Map<HighIdentifier, Map<Integer, P2PSocket<Identifier>>> one = connectSockets.get(requestor);
+    if (one == null) {
+      one = new HashMap<HighIdentifier, Map<Integer, P2PSocket<Identifier>>>();
+      connectSockets.put(requestor, one);
+    }
+    
+    Map<Integer, P2PSocket<Identifier>> two = one.get(target);
+    if (two == null) {
+      two = new HashMap<Integer, P2PSocket<Identifier>>();
+      one.put(target, two);
+    }
+    
+    P2PSocket<Identifier> three = two.get(uid);
+    if (three != null) {
+      // error, we have a problem, because there is already a socket registered here with the same uid!!!
+      if (logger.level <= Logger.WARNING) logger.log("error in storeConnectSocket() there is already a connector with the same UID!!!, dropping the new one.  Old:"+three+" new:"+socket);
+      socket.close();
+      return;
+    }
+    
+    two.put(uid, socket);
+        
+    // TODO: make a timeout to clear up this structure
+  }
+  
+  public P2PSocket<Identifier> removeConnectorSocket(HighIdentifier requestor, HighIdentifier target, int uid) {
+    Map<HighIdentifier, Map<Integer, P2PSocket<Identifier>>> one = connectSockets.get(requestor);
+    if (one == null) {
+      return null;
+    }
+    
+    Map<Integer, P2PSocket<Identifier>> two = one.get(target);
+    if (two == null) {
+      return null;
+    }
+    
+    // clean this up
+    P2PSocket<Identifier> three = two.remove(uid);
+    if (two.isEmpty()) one.remove(target);
+    if (one.isEmpty()) connectSockets.remove(requestor);
+    
+    return three; 
+  }
+
+  /**
+   * We are a firewalled node and got a connect request, now time to respond to it
+   * 
+   * @param requestor
+   * @param i
+   * @param sib
+   */
+  public void openAcceptSocket(final HighIdentifier requestor, final HighIdentifier middleMan, final int uid) {
+    
+    // TODO: there is a case where the requestor can be contacted directly, in this case, just do that, but may have to chage
+    // some other parts of the code:
+      // 1) Send message to middleman, rather than open socket
+      // 2) Change Pilot Request to include the middleman and requestor, or, better yet, make PILOT_CONNECT_DIRECT
+      // 3) Set accept the socket directly
+//    if (requestor.canContactDirect() && requestor != middleMan) {
+//      
+//    }
+    
+    if (!middleMan.canContactDirect()) {
+      throw new IllegalArgumentException("openAcceptSocket("+requestor+","+middleMan+","+uid+") middleMan is firewalled.");      
+    }
+
+    tl.openSocket(serializer.convert(middleMan), new SocketCallback<Identifier>() {
+      public void receiveResult(SocketRequestHandle<Identifier> cancellable,
+          P2PSocket<Identifier> sock) {
+        throw new RuntimeException("TODO: Implement.");
+      }
+    
+      public void receiveException(SocketRequestHandle<Identifier> s,
+          IOException ex) {
+        if (logger.level <= Logger.WARNING) logger.logException("Failure opening socket in openAcceptSocket("+requestor+","+middleMan+","+uid+")", ex);
+      }
+    }, null);
+    
+  }
+
   
   /**
    * What to do if firewalled?
@@ -580,7 +735,11 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           read(); // read the next thing, or re-register if there isn't enough to read
           break;
         case PILOT_REQUEST:
-          // TODO handle this
+          HighIdentifier requestor = serializer.deserialize(sib);
+          int uid = sib.readInt();
+          openAcceptSocket(requestor, i, uid);
+          sib.clear();
+          read();
           break;
         }        
       } catch (InsufficientBytesException ibe) {
@@ -635,6 +794,15 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       receiveSelectResult(socket, true, true);
     }
 
+    protected void requestSocket(HighIdentifier requestor, int uid) throws IOException {
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();      
+      sob.writeByte(PILOT_REQUEST);
+      serializer.serialize(requestor,sob);
+      sob.writeInt(uid);
+      
+      enqueue(sob.getByteBuffer());
+    }
+    
     protected void read() throws IOException {
 //      logger.log(this+".read()");
       if (i == null) {
