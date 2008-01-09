@@ -107,6 +107,7 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
     final RendezvousSocketNodeHandle bootstrap = (RendezvousSocketNodeHandle)b;
     if (((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) {
       super.getJoinRequest(bootstrap, deliverJRToMe);
+      return;
     }
     
     // TODO: Throw exception if can't directly contact the bootstrap
