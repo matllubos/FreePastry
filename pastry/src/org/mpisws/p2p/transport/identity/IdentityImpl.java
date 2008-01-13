@@ -716,7 +716,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
               if (deliverAckToMe != null) deliverAckToMe.ack(ret);
             }
 
-            public void sendFailed(MessageRequestHandle<LowerIdentifier, ByteBuffer> msg, IOException ex) {
+            public void sendFailed(MessageRequestHandle<LowerIdentifier, ByteBuffer> msg, Exception ex) {
               if (ret.getSubCancellable() != null && msg != ret.getSubCancellable()) 
                 throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+
                     msg+" sub:"+ret.getSubCancellable());
@@ -1231,7 +1231,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       if (deliverAckToMe != null) deliverAckToMe.ack(this);
     }
 
-    public void sendFailed(MessageRequestHandle<MiddleIdentifier, UpperMsgType> msg, IOException reason) {
+    public void sendFailed(MessageRequestHandle<MiddleIdentifier, UpperMsgType> msg, Exception reason) {
       removePendingMessage(identifier, this);
       if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, reason);
     }

@@ -450,17 +450,15 @@ public class TLPastryNode extends PastryNode implements
     if (deliverAckToMe == null) {
       callback = null;
     } else {
-      callback = new MessageCallback<NodeHandle, RawMessage>(){
-        
-        public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, IOException reason) {        
-          if (ret.internal == null) ret.setInternal(msg);
-          deliverAckToMe.sendFailed(ret, reason);
-        }
-      
+      callback = new MessageCallback<NodeHandle, RawMessage>(){        
         public void ack(MessageRequestHandle<NodeHandle, RawMessage> msg) {
           if (ret.internal == null) ret.setInternal(msg);
           deliverAckToMe.sent(ret);
         }      
+        public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, Exception reason) {        
+          if (ret.internal == null) ret.setInternal(msg);
+          deliverAckToMe.sendFailed(ret, reason);
+        }     
       };      
     }
     if (getEnvironment().getSelectorManager().isSelectorThread()) {              

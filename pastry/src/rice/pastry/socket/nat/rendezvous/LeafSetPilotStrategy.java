@@ -68,7 +68,7 @@ public class LeafSetPilotStrategy<Identifier extends RendezvousContact> implemen
   }
 
   public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
-    logger.log("nodeSetUpdate("+handle+")");
+    if (logger.level <= Logger.FINER) logger.log("nodeSetUpdate("+handle+")");
 //    if (logger.level <= Logger.FINE) logger.log("nodeSetUpdate("+handle+")");
     Identifier nh = (Identifier)handle;
     if (nh.canContactDirect()) {

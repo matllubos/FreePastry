@@ -364,7 +364,7 @@ public abstract class TLTest<Identifier> {
             }        
           }    
           
-          public void sendFailed(MessageRequestHandle msg, IOException ex) {
+          public void sendFailed(MessageRequestHandle msg, Exception ex) {
             synchronized(lock) {
               ex.printStackTrace();
               exceptionList.add(ex);
@@ -421,7 +421,7 @@ public abstract class TLTest<Identifier> {
               lock.notify();
             }        
           }    
-          public void sendFailed(MessageRequestHandle msg, IOException exception) {
+          public void sendFailed(MessageRequestHandle msg, Exception exception) {
             synchronized(lock) {
               failedList.add(msg);
 //              logger.logException("foo", exception);

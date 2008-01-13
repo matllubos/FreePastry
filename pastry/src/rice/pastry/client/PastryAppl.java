@@ -222,7 +222,7 @@ public abstract class PastryAppl /*implements Observer*/
             thePastryNode.isReady() || 
             rm.getPrevNode() == thePastryNode.getLocalHandle() ||
             (destinationHandle != null && destinationHandle == thePastryNode.getLocalHandle())) {
-          // continue to receiveMessage()
+          // continue to enrouteMessage()
         } else {
           if (rm.sendFailed(new NodeIsNotReadyException(thePastryNode.getLocalHandle()))) {
             if (logger.level <= Logger.CONFIG) logger.log("Dropping "+msg+" because node is not ready.");            
@@ -240,16 +240,15 @@ public abstract class PastryAppl /*implements Observer*/
 //      } // synchronized    
 
       try {
-        if (enrouteMessage(rm.unwrap(deserializer), rm.getTarget(), rm.getNextHop(), rm.getOptions())) {
-          // if getDestHandle() == me, rm destHandle()
-          // this message was directed just to me, but now we've decided to forward it, so, 
-          // make it generally routable now
+        Message innerMessage = rm.unwrap(deserializer);
+        if (enrouteMessage(innerMessage, rm.getTarget(), rm.getNextHop(), rm.getOptions())) {
           if (rm.getDestinationHandle() == thePastryNode.getLocalHandle()) {
-            if (logger.level <= Logger.WARNING) logger.log("Warning, removing destNodeHandle: "+rm.getDestinationHandle()+" from "+rm);
-            rm.setDestinationHandle(null);
+            messageForAppl(innerMessage);
+//            if (logger.level <= Logger.WARNING) logger.log("Warning, removing destNodeHandle: "+rm.getDestinationHandle()+" from "+rm);
+//            rm.setDestinationHandle(null);
+          } else {
+            thePastryNode.getRouter().route(rm);
           }
-
-          thePastryNode.getRouter().route(rm);
         }
       } catch (IOException ioe) {
         throw new RuntimeException("Error deserializing message "+rm,ioe); 

@@ -287,13 +287,13 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
       routeTable.put(jh);
       // add the num. closest node to the routing table
 
-      // update local RT, then broadcast rows to our peers
-      broadcastRows(jr);
-
       // now update the local leaf set
       BroadcastLeafSet bls = new BroadcastLeafSet(jh, jr.getLeafSet(),
           BroadcastLeafSet.JoinInitial, 0);
       thePastryNode.receiveMessage(bls);
+
+      // update local RT, then broadcast rows to our peers
+      broadcastRows(jr);
 
       // we have now successfully joined the ring, set the local node ready
       setReady();

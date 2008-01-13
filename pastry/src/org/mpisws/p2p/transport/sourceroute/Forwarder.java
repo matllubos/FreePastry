@@ -50,6 +50,16 @@ public class Forwarder<Identifier> {
   P2PSocket<Identifier> sockb;
   Logger logger;
   
+  public Forwarder(SourceRoute<Identifier> sr, P2PSocket<Identifier> socka, P2PSocket<Identifier> sockb, Logger logger) {
+    this.sr = sr;
+    this.socka = socka;
+    this.sockb = sockb;
+    this.logger = logger;
+    
+    new HalfPipe(socka,sockb);
+    new HalfPipe(sockb,socka);
+  }
+    
   private class HalfPipe implements P2PSocketReceiver {
     P2PSocket from;
     P2PSocket to;
@@ -115,15 +125,4 @@ public class Forwarder<Identifier> {
       }
     }
   }
-
-  public Forwarder(SourceRoute<Identifier> sr, P2PSocket<Identifier> socka, P2PSocket<Identifier> sockb, Logger logger) {
-    this.sr = sr;
-    this.socka = socka;
-    this.sockb = sockb;
-    this.logger = logger;
-    
-    new HalfPipe(socka,sockb);
-    new HalfPipe(sockb,socka);
-  }
-  
 }

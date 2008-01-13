@@ -145,25 +145,29 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return new RendezvousSPNFIdentitySerializer(pn, handleFactory);
   }
 
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getRendezvousTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> mtl, TLPastryNode pn) {
-    RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> ret = new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getRendezvousTransportLayer(
+      TransportLayer<InetSocketAddress, ByteBuffer> mtl, TLPastryNode pn) {
+    
+    RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> ret = 
+      new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
         mtl, 
         CommonAPITransportLayerImpl.DESTINATION_IDENTITY, 
         (RendezvousSocketNodeHandle)pn.getLocalHandle(), 
         getContactDeserializer(pn),
         getRendezvousGenerator(pn), 
-        new PilotFinder() {        
-          public RendezvousContact findPilot(RendezvousContact i) {
-            return null;
-          }        
-        }, // TODO, add this later
-        getRendezvousStrategy(pn), 
+        getPilotFinder(pn),
+        getRendezvousStrategyHelper(pn), 
         pn.getEnvironment());
     
     rendezvousApps.get(pn).setB(ret);
+    rendezvousApps.get(pn).a().setTransportLayer(ret);
     
     generatePilotStrategy(pn, ret);
     return ret;
+  }
+  
+  protected PilotFinder<RendezvousSocketNodeHandle> getPilotFinder(TLPastryNode pn) {
+    return new LeafSetPilotFinder(pn);
   }
   
   protected void generatePilotStrategy(TLPastryNode pn, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousLayer) {
@@ -233,19 +237,26 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    * 
    * This table temporarily holds the rendezvousApps until they are needed, then it is deleted.
    */
-  Map<TLPastryNode, MutableTuple<RendezvousApp, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>> rendezvousApps = 
-    new HashMap<TLPastryNode, MutableTuple<RendezvousApp, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>>();
-  protected RendezvousStrategy<RendezvousSocketNodeHandle> getRendezvousStrategy(TLPastryNode pn) {
-    RendezvousApp app = new RendezvousApp(pn);
-    rendezvousApps.put(pn,new MutableTuple<RendezvousApp, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>(app,null));
+  Map<TLPastryNode, MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>> rendezvousApps = 
+    new HashMap<TLPastryNode, MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>>();
+  protected RendezvousStrategy<RendezvousSocketNodeHandle> getRendezvousStrategyHelper(TLPastryNode pn) {
+    RendezvousStrategy<RendezvousSocketNodeHandle>  app = getRendezvousStrategy(pn);
+    rendezvousApps.put(pn,new MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>(app,null));
     return app;
   }
-  
+
+  protected RendezvousStrategy<RendezvousSocketNodeHandle> getRendezvousStrategy(TLPastryNode pn) {
+    RendezvousApp app = new RendezvousApp(pn);
+    return app;
+  }
+
   @Override
   protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData) {
     super.registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData);
-    RendezvousApp app = rendezvousApps.remove(pn).a();
-    app.register();
+    RendezvousStrategy<RendezvousSocketNodeHandle> app = rendezvousApps.remove(pn).a();
+    if (app instanceof RendezvousApp) {
+      ((RendezvousApp)app).register();
+    }
   }
   
   @Override

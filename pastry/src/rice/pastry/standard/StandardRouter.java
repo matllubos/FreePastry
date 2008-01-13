@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package rice.pastry.standard;
 
 import java.io.IOException;
+import java.net.NoRouteToHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -134,6 +135,13 @@ public class StandardRouter extends PastryAppl implements Router {
     rm.setPrevNode(thePastryNode.getLocalHandle());
     
     if (thePastryNode.getLocalHandle().equals(handle)) {
+      // the local node is the closest node to the id
+      if (rm.getDestinationHandle() != null && !rm.getDestinationHandle().equals(thePastryNode.getLocalHandle())) {
+        // no idea how to contact the destination, drop
+        if (logger.level <= Logger.WARNING) logger.log("Message "+rm+" has destination "+rm.getDestinationHandle()+" but I'm the root of the id.  Dropping.");
+        rm.sendFailed(new NoRouteToHostException(rm.getDestinationHandle().toString()));
+        return true;
+      }
       thePastryNode.receiveMessage(rm.internalMsg);
       rm.sendSuccess(thePastryNode.getLocalHandle());
     } else {

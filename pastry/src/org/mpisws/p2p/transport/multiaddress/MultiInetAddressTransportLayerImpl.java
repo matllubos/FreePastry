@@ -270,7 +270,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
             if (deliverAckToMe != null) deliverAckToMe.ack(handle);
           }
         
-          public void sendFailed(MessageRequestHandle<InetSocketAddress, ByteBuffer> msg, IOException ex) {
+          public void sendFailed(MessageRequestHandle<InetSocketAddress, ByteBuffer> msg, Exception ex) {
             if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
             if (deliverAckToMe == null) {
               if (ex instanceof NodeIsFaultyException) return;
@@ -284,6 +284,10 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
     return handle;
   }
 
+  public String toString() {
+    return "MultiInetAddrTL{"+localAddress+"}";
+  }
+  
   public void messageReceived(InetSocketAddress i, ByteBuffer m, Map<String, Object> options) throws IOException {
     if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+")");
     // read numAddresses

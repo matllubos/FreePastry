@@ -520,7 +520,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           if (logger.level <= Logger.FINE) logger.log("got socket:"+s+" clearing pendingSocket:"+pendingSocket);
           pendingSocket = null;  // this is the one we requested
         } else {
-          logger.log("receipt != pendingSocket!!! receipt:"+receipt+" pendingSocket:"+pendingSocket);
+          // why would this ever be equal? -Jeff 01.11.08
+//          logger.log("receipt != pendingSocket!!! receipt:"+receipt+" pendingSocket:"+pendingSocket);
         } 
       }
       

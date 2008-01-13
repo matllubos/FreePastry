@@ -447,7 +447,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         deliverAckToMe.ack(this);
       }
 
-      public void sendFailed(MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> msg, IOException reason) {
+      public void sendFailed(MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> msg, Exception reason) {
         deliverAckToMe.sendFailed(this, reason);        
       }
     }
@@ -523,21 +523,19 @@ public class SourceRouteManagerImpl<Identifier> implements
       final MessageRequestHandleImpl<Identifier, ByteBuffer> handle 
         = new MessageRequestHandleImpl<Identifier, ByteBuffer>(address, message, options);
       handle.setSubCancellable(tl.sendMessage(best, message, new MessageCallback<SourceRoute<Identifier>, ByteBuffer>(){
-      
-        public void sendFailed(MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> msg, IOException ex) {
+        public void ack(MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> msg) {
+          if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
+          if (deliverAckToMe != null) deliverAckToMe.ack(handle);
+        }
+            
+        public void sendFailed(MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> msg, Exception ex) {
           if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
           if (deliverAckToMe == null) {
             errorHandler.receivedException(address, ex);
           } else {
             deliverAckToMe.sendFailed(handle, ex);
           }
-        }
-      
-        public void ack(MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> msg) {
-          if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
-          if (deliverAckToMe != null) deliverAckToMe.ack(handle);
-        }
-      
+        }      
       }, options));      
       return handle;
     }    

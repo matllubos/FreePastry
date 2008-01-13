@@ -47,12 +47,12 @@ package org.mpisws.p2p.transport.rendezvous;
  * @author Jeff Hoye
  *
  */
-public interface PilotFinder {
+public interface PilotFinder<HighIdentifier> {
   /**
    * Return null if there isn't one.
    * 
    * @param i
    * @return
    */
-  public RendezvousContact findPilot(RendezvousContact i);
+  public HighIdentifier findPilot(HighIdentifier i);
 }

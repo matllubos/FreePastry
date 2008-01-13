@@ -306,7 +306,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != handle.getSubCancelable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
         if (deliverAckToMe != null) deliverAckToMe.ack(handle);
       }    
-      public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException ex) {
+      public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, Exception ex) {
         if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != handle.getSubCancelable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
         if (deliverAckToMe == null) {
           errorHandler.receivedException(i, ex);
@@ -356,6 +356,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
 
+  public String toString() {
+    return "LivenessTL{"+getLocalIdentifier()+"}";
+  }
+  
   /**
    * Send the ping.
    * 
@@ -372,7 +376,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       tl.sendMessage(i, ByteBuffer.wrap(sob.getBytes()), new MessageCallback<Identifier, ByteBuffer>(){
         public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
         }
-        public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException reason) {
+        public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, Exception reason) {
           if (logger.level <= Logger.FINER) {
             logger.logException("ping("+i+","+now+","+options+") failed", reason);
           } else {
@@ -403,7 +407,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       tl.sendMessage(i, ByteBuffer.wrap(sob.getBytes()), new MessageCallback<Identifier, ByteBuffer>(){
         public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
         }
-        public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException reason) {
+        public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, Exception reason) {
           if (logger.level <= Logger.FINER) {
             logger.logException("pong("+i+","+senderTime+","+options+") failed", reason);
           } else {
@@ -687,6 +691,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
       sockets = new HashSet<LSocket>();
     }
     
+//    public String toString() {
+//      return "LivenessTLi.EM{"+identifier.get()+"}:"+liveness;
+//    }
+    
     public P2PSocket<Identifier> getLSocket(P2PSocket<Identifier> s) {
       LSocket sock = new LSocket(this, s, identifier.get());
       synchronized(sockets) {
@@ -768,6 +776,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     protected void markDead(Map<String, Object> options) {
       boolean notify = false;
       if (liveness < LIVENESS_DEAD) notify = true;
+      if (notify) logger.log(this+".markDead()");
       if (logger.level <= Logger.FINER) logger.log(this+".markDead() notify:"+notify);
       markDeadHelper(LIVENESS_DEAD, options, notify);
     }
@@ -920,6 +929,10 @@ public class LivenessTransportLayerImpl<Identifier> implements
             if (temp != null) {
               ping(temp, options);
             }
+          }
+          
+          public String toString() {
+            return EntityManager.this.toString();
           }
         };
         if (environment.getSelectorManager().isSelectorThread()) {

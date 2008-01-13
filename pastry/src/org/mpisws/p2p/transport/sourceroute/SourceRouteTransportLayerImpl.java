@@ -354,7 +354,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
             if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != handle.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
             if (deliverAckToMe != null) deliverAckToMe.ack(handle);
           }
-          public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException ex) {
+          public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, Exception ex) {
             if (handle.getSubCancellable() != null && msg != handle.getSubCancellable()) throw new RuntimeException("msg != handle.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+handle.getSubCancellable());
             if (deliverAckToMe == null) {
               errorHandler.receivedException(i, ex);

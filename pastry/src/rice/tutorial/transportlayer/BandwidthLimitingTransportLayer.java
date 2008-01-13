@@ -158,7 +158,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
         if (deliverAckToMe != null) deliverAckToMe.ack(returnMe);
       }
 
-      public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException reason) {
+      public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, Exception reason) {
         if (deliverAckToMe != null) deliverAckToMe.sendFailed(returnMe, reason);
       }    
     },options));

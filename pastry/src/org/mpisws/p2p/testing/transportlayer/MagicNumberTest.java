@@ -354,7 +354,7 @@ public class MagicNumberTest extends WireTest {
           lock.notify();
         }        
       }
-      public void sendFailed(MessageRequestHandle<InetSocketAddress, ByteBuffer> msg, IOException reason) {
+      public void sendFailed(MessageRequestHandle<InetSocketAddress, ByteBuffer> msg, Exception reason) {
         synchronized(lock) {
           exceptionList.add(reason);
           lock.notify();

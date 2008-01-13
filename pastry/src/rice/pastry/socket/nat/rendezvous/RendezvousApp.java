@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.rendezvous;
 
 import java.net.InetSocketAddress;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Map;
@@ -47,16 +48,25 @@ import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.rendezvous.ChannelOpener;
 import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
+import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayer;
+import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.Continuation;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.MessageReceipt;
 import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
 import rice.p2p.util.AttachableCancellable;
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
+import rice.pastry.routing.RouteMessageNotification;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.selector.SelectorManager;
 
@@ -67,11 +77,27 @@ import rice.selector.SelectorManager;
  *
  */
 public class RendezvousApp extends PastryAppl implements RendezvousStrategy<RendezvousSocketNodeHandle> {
-  LeafSet leafSet;
-  SelectorManager selectorManager;
+  protected LeafSet leafSet;
+  protected SelectorManager selectorManager;
+  protected RendezvousTransportLayer<RendezvousSocketNodeHandle> tl;
+  
   
   public RendezvousApp(PastryNode pn) {
-    super(pn,null,0,null); // this constructor doesn't auto-register
+    super(pn,null,0,null);
+    setDeserializer(new MessageDeserializer() {
+    
+      public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type,
+          int priority, NodeHandle sender) throws IOException {
+        switch (type) {
+        case ByteBufferMsg.TYPE:
+          byte[] msg = new byte[buf.bytesRemaining()];
+          buf.read(msg);
+          return new ByteBufferMsg(ByteBuffer.wrap(msg),(RendezvousSocketNodeHandle)sender,priority,getAddress());
+        default:
+          throw new IllegalArgumentException("Unknown type: "+type);            
+        }
+      }    
+    }); // this constructor doesn't auto-register
     leafSet = pn.getLeafSet();
     selectorManager = pn.getEnvironment().getSelectorManager();
   }
@@ -92,8 +118,17 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
 
   @Override
   public void messageForAppl(Message msg) {
-    // TODO Auto-generated method stub
+    ByteBufferMsg bbm = (ByteBufferMsg)msg;
+    try {
+      tl.messageReceivedFromOverlay((RendezvousSocketNodeHandle)bbm.getSender(), bbm.buffer, null);
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("dropping "+bbm, ioe);
+    }
+    // TODO: Get a reference to the TL... is this an interface?  Should it be?
+    // TODO: Deliver this to the TL.
     
+//    tl.messageReceived();
+//    throw new RuntimeException("Not implemented.");
   }
 
   public Cancellable openChannel(final RendezvousSocketNodeHandle target, 
@@ -150,23 +185,91 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
   }
 
   public MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer> sendMessage(
-      RendezvousSocketNodeHandle i, 
-      ByteBuffer m, 
-      MessageCallback<RendezvousSocketNodeHandle, ByteBuffer> deliverAckToMe, 
-      Map<String, Object> options) {
-    
+      final RendezvousSocketNodeHandle i, 
+      final ByteBuffer m, 
+      final MessageCallback<RendezvousSocketNodeHandle, ByteBuffer> deliverAckToMe, 
+      final Map<String, Object> options) {
+    if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
     // TODO: use the new method in PastryAppl
     
-    Message msg = new ByteBufferMsg(m, ((Integer)options.get(PriorityTransportLayer.OPTION_PRIORITY)), getAddress());
+    Message msg = new ByteBufferMsg(m, thePastryNode.getLocalHandle(), ((Integer)options.get(PriorityTransportLayer.OPTION_PRIORITY)), getAddress());
     
-    RouteMessage rm = 
-      new RouteMessage(
-          i.getNodeId(),
-          msg,
-        (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));    
-    rm.setPrevNode(thePastryNode.getLocalHandle());                                                                              
-    
-    return null;
+    if (options.containsKey(RendezvousTransportLayerImpl.OPTION_USE_PILOT)) {
+      RendezvousSocketNodeHandle firstHop = (RendezvousSocketNodeHandle)options.get(RendezvousTransportLayerImpl.OPTION_USE_PILOT);
+      logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+") sending to "+firstHop);
+      
+      throw new RuntimeException("TODO Implement.");
+    } else {
+      
+      final RouteMessage rm = 
+        new RouteMessage(
+            i.getNodeId(),
+            msg,
+          (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));    
+  //    rm.setPrevNode(thePastryNode.getLocalHandle());
+      rm.setDestinationHandle(i);
+  
+      rm.setTLOptions(options);
+      
+      // TODO: make PastryNode have a router that does this properly, rather than receiveMessage
+      final MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer> ret = new MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer>() {
+        
+        public boolean cancel() {
+          if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+").cancel()");
+          return rm.cancel();
+        }
+      
+        public ByteBuffer getMessage() {
+          return m;
+        }
+      
+        public RendezvousSocketNodeHandle getIdentifier() {
+          return i;
+        }
+  
+        public Map<String, Object> getOptions() {
+          return options;
+        }    
+      };
+      
+      // NOTE: Installing this anyway if the LogLevel is high enough is kind of wild, but really useful for debugging
+      if ((deliverAckToMe != null) || (logger.level <= Logger.FINE)) {
+        rm.setRouteMessageNotification(new RouteMessageNotification() {
+          public void sendSuccess(rice.pastry.routing.RouteMessage message, rice.pastry.NodeHandle nextHop) {
+            if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+").sendSuccess():"+nextHop);
+            if (deliverAckToMe != null) deliverAckToMe.ack(ret);
+          }    
+          public void sendFailed(rice.pastry.routing.RouteMessage message, Exception e) {
+            if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+").sendFailed("+e+")");
+            if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, e);
+          }
+        });
+      }
+      
+  //    Map<String, Object> rOptions;
+  //    if (options == null) {
+  //      rOptions = new HashMap<String, Object>(); 
+  //    } else {
+  //      rOptions = new HashMap<String, Object>(options);
+  //    }
+  //    rOptions.put(PriorityTransportLayer.OPTION_PRIORITY, pm.getPriority());
+  ////    logger.log("NumOptions = "+rOptions.size());
+      
+      rm.setTLOptions(options);
+      
+      thePastryNode.getRouter().route(rm);
+      
+      return ret;
+    }
+  }
+
+  public String toString() {
+    return "RendezvousApp{"+thePastryNode+"}";
+  }
+  
+  public void setTransportLayer(
+      RendezvousTransportLayer<RendezvousSocketNodeHandle> tl) {
+    this.tl = tl;
   }
 
 

@@ -214,7 +214,7 @@ public class MagicNumberTransportLayer<Identity> implements
             if (deliverAckToMe != null) deliverAckToMe.ack(cancellable);
           }
         
-          public void sendFailed(MessageRequestHandle<Identity, ByteBuffer> msg, IOException ex) {
+          public void sendFailed(MessageRequestHandle<Identity, ByteBuffer> msg, Exception ex) {
             if (cancellable.getSubCancellable() != null && msg != cancellable.getSubCancellable()) throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+msg+" sub:"+cancellable.getSubCancellable());
             if (deliverAckToMe == null) {
               errorHandler.receivedException(i, ex);

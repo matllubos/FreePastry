@@ -36,8 +36,6 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport;
 
-import java.io.IOException;
-
 /**
  * The callback when a Message is sent from a transport layer.
  * 
@@ -59,5 +57,5 @@ public interface MessageCallback<Identifier, MessageType> {
    * @param msg the message that can't be sent.
    * @param reason the reason it can't be sent (layer specific)
    */
-  void sendFailed(MessageRequestHandle<Identifier, MessageType> msg, IOException reason);
+  void sendFailed(MessageRequestHandle<Identifier, MessageType> msg, Exception reason);
 }

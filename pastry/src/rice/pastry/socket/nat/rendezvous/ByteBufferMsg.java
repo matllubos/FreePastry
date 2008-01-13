@@ -41,17 +41,24 @@ import java.nio.ByteBuffer;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
+import rice.pastry.NodeHandle;
 import rice.pastry.messaging.Message;
+import rice.pastry.messaging.PRawMessage;
 
-public class ByteBufferMsg extends Message implements RawMessage {
+public class ByteBufferMsg extends PRawMessage {
   public static final short TYPE = 1;
   
   ByteBuffer buffer;
   
-  public ByteBufferMsg(ByteBuffer buf, int priority, int dest) {
+  public ByteBufferMsg(ByteBuffer buf, NodeHandle sender, int priority, int dest) {
     super(dest);
     this.buffer = buf;
     setPriority(priority);
+    setSender(sender);
+  }
+  
+  public String toString() {
+    return "BBM["+buffer+"] from "+getSender();
   }
   
   public short getType() {

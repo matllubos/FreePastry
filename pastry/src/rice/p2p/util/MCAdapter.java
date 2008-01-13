@@ -59,7 +59,7 @@ public class MCAdapter implements MessageCallback<NodeHandle, RawMessage> {
     internal.ack(handle);
   }
 
-  public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, IOException reason) {
+  public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, Exception reason) {
     internal.sendFailed(handle, reason);    
   }
 

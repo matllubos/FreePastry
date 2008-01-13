@@ -197,7 +197,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
             if (deliverAckToMe != null) deliverAckToMe.ack(handle);
           }
         
-          public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, IOException ex) {            
+          public void sendFailed(MessageRequestHandle<Identifier, ByteBuffer> msg, Exception ex) {            
             if (ex instanceof NodeIsFaultyException) {
               ex = new NodeIsFaultyException(i, m, ex); 
             }
