@@ -53,7 +53,6 @@ public class PilotForwardMsg extends PRawMessage {
     super(address);
     this.msg = msg;
     this.target = target;
-    setSender(msg.getSender());  // we inherit the sender from the sub message
   }
 
   public short getType() {

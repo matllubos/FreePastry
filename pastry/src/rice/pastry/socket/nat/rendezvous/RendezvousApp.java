@@ -96,10 +96,11 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
         case ByteBufferMsg.TYPE:
           version = buf.readByte();
           if (version == 0) { // version 0
+            NodeHandle originalSender = thePastryNode.readNodeHandle(buf);
             int length = buf.readInt();
             byte[] msg = new byte[length];
             buf.read(msg);
-            return new ByteBufferMsg(ByteBuffer.wrap(msg),(RendezvousSocketNodeHandle)sender,priority,getAddress());
+            return new ByteBufferMsg(ByteBuffer.wrap(msg),originalSender,priority,getAddress());
           } else {
             throw new IllegalArgumentException("Unknown version for ByteBufferMsg: "+version);
           }
@@ -139,8 +140,9 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
   public void messageForAppl(Message msg) {
     if (msg instanceof ByteBufferMsg) {
       ByteBufferMsg bbm = (ByteBufferMsg)msg;
+      if (logger.level <= Logger.FINER) logger.log("receiveMessage("+bbm+")");
       try {
-        tl.messageReceivedFromOverlay((RendezvousSocketNodeHandle)bbm.getSender(), bbm.buffer, null);
+        tl.messageReceivedFromOverlay((RendezvousSocketNodeHandle)bbm.getOriginalSender(), bbm.buffer, null);
       } catch (IOException ioe) {
         if (logger.level <= Logger.WARNING) logger.logException("dropping "+bbm, ioe);
       }
@@ -229,10 +231,10 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
         new MessageRequestHandleImpl<RendezvousSocketNodeHandle, ByteBuffer>(i,m,options);
       ret.setSubCancellable(thePastryNode.send(pilot, new PilotForwardMsg(getAddress(),msg,i), new PMessageNotification(){      
         public void sent(PMessageReceipt msg) {
-          deliverAckToMe.ack(ret);
+          if (deliverAckToMe != null) deliverAckToMe.ack(ret);
         }
         public void sendFailed(PMessageReceipt msg, Exception reason) {
-          deliverAckToMe.sendFailed(ret, reason);
+          if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, reason);
         }      
       }, null));
       return ret;

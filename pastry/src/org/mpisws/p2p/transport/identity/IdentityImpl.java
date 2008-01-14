@@ -104,7 +104,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * 
    * If these are unrelated nodes (different ID/credentials) we need to 
    * make sure to expire the node first.  If they are the same node, and 
-   * just a new epoch, then we can exprie them right away.
+   * just a new epoch, then we can expire them right away.
    * 
    * Note, that it's possible to have the UpperIdentifier in multiple places if it
    * has multiple paths (such as source routing)

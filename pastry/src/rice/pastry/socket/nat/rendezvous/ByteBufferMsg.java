@@ -39,22 +39,21 @@ package rice.pastry.socket.nat.rendezvous;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
-import rice.p2p.commonapi.rawserialization.RawMessage;
-import rice.pastry.NodeHandle;
-import rice.pastry.messaging.Message;
 import rice.pastry.messaging.PRawMessage;
 
 public class ByteBufferMsg extends PRawMessage {
   public static final short TYPE = 1;
   
+  NodeHandle originalSender;
   ByteBuffer buffer;
   
   public ByteBufferMsg(ByteBuffer buf, NodeHandle sender, int priority, int dest) {
     super(dest);
     this.buffer = buf;
     setPriority(priority);
-    setSender(sender);
+    originalSender = sender;
   }
   
   public String toString() {
@@ -67,8 +66,13 @@ public class ByteBufferMsg extends PRawMessage {
 
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeByte((byte)0); // version
+    originalSender.serialize(buf);
     buf.writeInt(buffer.remaining());
     buf.write(buffer.array(), buffer.position(), buffer.remaining());
+  }
+
+  public NodeHandle getOriginalSender() {
+    return originalSender;
   }
 
 }
