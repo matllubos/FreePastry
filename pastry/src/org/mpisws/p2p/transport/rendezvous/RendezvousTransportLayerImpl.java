@@ -783,12 +783,12 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
    * @throws IOException
    */
   public void messageReceivedFromOverlay(HighIdentifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
-    if (logger.level <= Logger.INFO) logger.log("messageReceivedFromOverlay("+i+","+m+","+options+")");
+    if (logger.level <= Logger.FINER) logger.log("messageReceivedFromOverlay("+i+","+m+","+options+")");
     messageReceived(serializer.convert(i),m,options);
   }
   
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
-    if (logger.level <= Logger.FINEST) logger.log("messageReceived("+i+","+m+","+options+")");
+    if (logger.level <= Logger.FINE) logger.log("messageReceived("+i+","+m+","+options+")");
     callback.messageReceived(i, m, options);
   }
   

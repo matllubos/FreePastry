@@ -37,38 +37,45 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.rendezvous;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
-import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
-import rice.pastry.messaging.Message;
 import rice.pastry.messaging.PRawMessage;
 
-public class ByteBufferMsg extends PRawMessage {
-  public static final short TYPE = 1;
+public class PilotForwardMsg extends PRawMessage {
+
+  public static final short TYPE = 2;
   
-  ByteBuffer buffer;
-  
-  public ByteBufferMsg(ByteBuffer buf, NodeHandle sender, int priority, int dest) {
-    super(dest);
-    this.buffer = buf;
-    setPriority(priority);
-    setSender(sender);
+  protected ByteBufferMsg msg;
+  protected RendezvousSocketNodeHandle target;
+
+  public PilotForwardMsg(int address, ByteBufferMsg msg, RendezvousSocketNodeHandle target) {
+    super(address);
+    this.msg = msg;
+    this.target = target;
+    setSender(msg.getSender());  // we inherit the sender from the sub message
   }
-  
-  public String toString() {
-    return "BBM["+buffer+"] from "+getSender();
-  }
-  
+
   public short getType() {
     return TYPE;
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeByte((byte)0); // version
-    buf.writeInt(buffer.remaining());
-    buf.write(buffer.array(), buffer.position(), buffer.remaining());
+    target.serialize(buf);
+    msg.serialize(buf);
+  }
+
+  public ByteBufferMsg getBBMsg() {
+    return msg;
+  }
+
+  public RendezvousSocketNodeHandle getTarget() {
+    return target;
+  }
+  
+  public String toString() {
+    return "PFM{"+msg+"->"+target+"}";
   }
 
 }

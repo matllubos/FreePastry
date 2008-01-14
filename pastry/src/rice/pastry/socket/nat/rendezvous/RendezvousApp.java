@@ -50,6 +50,7 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayer;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.Continuation;
@@ -68,6 +69,8 @@ import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.routing.RouteMessageNotification;
 import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.transport.PMessageNotification;
+import rice.pastry.transport.PMessageReceipt;
 import rice.selector.SelectorManager;
 
 /**
@@ -88,11 +91,27 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
     
       public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type,
           int priority, NodeHandle sender) throws IOException {
+        byte version;
         switch (type) {
         case ByteBufferMsg.TYPE:
-          byte[] msg = new byte[buf.bytesRemaining()];
-          buf.read(msg);
-          return new ByteBufferMsg(ByteBuffer.wrap(msg),(RendezvousSocketNodeHandle)sender,priority,getAddress());
+          version = buf.readByte();
+          if (version == 0) { // version 0
+            int length = buf.readInt();
+            byte[] msg = new byte[length];
+            buf.read(msg);
+            return new ByteBufferMsg(ByteBuffer.wrap(msg),(RendezvousSocketNodeHandle)sender,priority,getAddress());
+          } else {
+            throw new IllegalArgumentException("Unknown version for ByteBufferMsg: "+version);
+          }
+        case PilotForwardMsg.TYPE:
+          version = buf.readByte();
+          if (version == 0) { // version 0            
+            RendezvousSocketNodeHandle target = (RendezvousSocketNodeHandle)thePastryNode.readNodeHandle(buf);
+            ByteBufferMsg subMsg = (ByteBufferMsg)deserialize(buf, ByteBufferMsg.TYPE, priority, sender);
+            return new PilotForwardMsg(getAddress(), subMsg, target);
+          } else {
+            throw new IllegalArgumentException("Unknown version for PilotForwardMsg: "+version);
+          }
         default:
           throw new IllegalArgumentException("Unknown type: "+type);            
         }
@@ -118,17 +137,25 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
 
   @Override
   public void messageForAppl(Message msg) {
-    ByteBufferMsg bbm = (ByteBufferMsg)msg;
-    try {
-      tl.messageReceivedFromOverlay((RendezvousSocketNodeHandle)bbm.getSender(), bbm.buffer, null);
-    } catch (IOException ioe) {
-      if (logger.level <= Logger.WARNING) logger.logException("dropping "+bbm, ioe);
+    if (msg instanceof ByteBufferMsg) {
+      ByteBufferMsg bbm = (ByteBufferMsg)msg;
+      try {
+        tl.messageReceivedFromOverlay((RendezvousSocketNodeHandle)bbm.getSender(), bbm.buffer, null);
+      } catch (IOException ioe) {
+        if (logger.level <= Logger.WARNING) logger.logException("dropping "+bbm, ioe);
+      }
+      // TODO: Get a reference to the TL... is this an interface?  Should it be?
+      // TODO: Deliver this to the TL.
+      
+  //    tl.messageReceived();
+  //    throw new RuntimeException("Not implemented.");
+      return;
     }
-    // TODO: Get a reference to the TL... is this an interface?  Should it be?
-    // TODO: Deliver this to the TL.
-    
-//    tl.messageReceived();
-//    throw new RuntimeException("Not implemented.");
+    if (msg instanceof PilotForwardMsg) {
+      PilotForwardMsg pfm = (PilotForwardMsg)msg;
+      if (logger.level <= Logger.FINER) logger.log("Forwarding message "+pfm);
+      thePastryNode.send(pfm.getTarget(), pfm.getBBMsg(), null, null);
+    }
   }
 
   public Cancellable openChannel(final RendezvousSocketNodeHandle target, 
@@ -192,13 +219,23 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
     // TODO: use the new method in PastryAppl
     
-    Message msg = new ByteBufferMsg(m, thePastryNode.getLocalHandle(), ((Integer)options.get(PriorityTransportLayer.OPTION_PRIORITY)), getAddress());
+    ByteBufferMsg msg = new ByteBufferMsg(m, thePastryNode.getLocalHandle(), ((Integer)options.get(PriorityTransportLayer.OPTION_PRIORITY)), getAddress());
     
     if (options.containsKey(RendezvousTransportLayerImpl.OPTION_USE_PILOT)) {
-      RendezvousSocketNodeHandle firstHop = (RendezvousSocketNodeHandle)options.get(RendezvousTransportLayerImpl.OPTION_USE_PILOT);
-      logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+") sending to "+firstHop);
-      
-      throw new RuntimeException("TODO Implement.");
+//      if (true) throw new RuntimeException("Not Implemented.");
+      RendezvousSocketNodeHandle pilot = (RendezvousSocketNodeHandle)options.get(RendezvousTransportLayerImpl.OPTION_USE_PILOT);
+      if (logger.level <= Logger.FINER) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+") sending via "+pilot);      
+      final MessageRequestHandleImpl<RendezvousSocketNodeHandle, ByteBuffer> ret = 
+        new MessageRequestHandleImpl<RendezvousSocketNodeHandle, ByteBuffer>(i,m,options);
+      ret.setSubCancellable(thePastryNode.send(pilot, new PilotForwardMsg(getAddress(),msg,i), new PMessageNotification(){      
+        public void sent(PMessageReceipt msg) {
+          deliverAckToMe.ack(ret);
+        }
+        public void sendFailed(PMessageReceipt msg, Exception reason) {
+          deliverAckToMe.sendFailed(ret, reason);
+        }      
+      }, null));
+      return ret;
     } else {
       
       final RouteMessage rm = 
