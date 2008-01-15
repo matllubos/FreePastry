@@ -113,6 +113,8 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
           } else {
             throw new IllegalArgumentException("Unknown version for PilotForwardMsg: "+version);
           }
+        case OpenChannelMsg.TYPE:
+          return new OpenChannelMsg(getAddress());
         default:
           throw new IllegalArgumentException("Unknown type: "+type);            
         }
@@ -177,40 +179,14 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       return ret;
     }
 
-    if (target.isConnected()) {
-      // TODO: route directly there 
-      return null;
+    if (target.canContactDirect()) {
+      // this is a bug
+      throw new IllegalArgumentException("Target must be firewalled.  Target:"+target);
     }
-    
-    // What if he is my nearest neighbor?  This fails an invariant.  Better at least track this...
-    // also, there can be dead nodes in the leafset, due to the lease...  Better find that there is a live node between us and the leafset.
-    if (leafSet.contains(target)) {
-      // it's in the leafset, make sure there is a guy between us
-      // find the nearest alive guy to target that is between us to send-direct the request to
-      
-      // this is the index of target
-      int targetIndex = leafSet.getIndex(target);      
-      
-      // this is the nearest neighbor on the side of target
-      int nearestNeighborIndex = 1;      
-      if (targetIndex < 0) nearestNeighborIndex = -1;
-      
-      // this is the direction we count from target to nearestNeighbor
-      int direction = -nearestNeighborIndex;
-
-      for (int i = targetIndex+direction; i != nearestNeighborIndex; i++) {
-        RendezvousSocketNodeHandle nh = (RendezvousSocketNodeHandle)leafSet.get(i);
         
-        // we can send a message to nh
-        if (nh.isConnected()) {
-          // TODO: send the message to this node, if it fails, call this.openChannel() again...
-        }
-      }
-    }
     
     
-    // TODO Auto-generated method stub
-    return null;
+    throw new RuntimeException("Not Implemented.");
   }
 
   public MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer> sendMessage(
@@ -221,7 +197,11 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
     // TODO: use the new method in PastryAppl
     
-    ByteBufferMsg msg = new ByteBufferMsg(m, thePastryNode.getLocalHandle(), ((Integer)options.get(PriorityTransportLayer.OPTION_PRIORITY)), getAddress());
+    int priority = 0;
+    if (options.containsKey(PriorityTransportLayer.OPTION_PRIORITY)) {
+      priority = ((Integer)options.get(PriorityTransportLayer.OPTION_PRIORITY));
+    }
+    ByteBufferMsg msg = new ByteBufferMsg(m, thePastryNode.getLocalHandle(), priority, getAddress());
     
     if (options.containsKey(RendezvousTransportLayerImpl.OPTION_USE_PILOT)) {
 //      if (true) throw new RuntimeException("Not Implemented.");
@@ -250,6 +230,8 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
   
       rm.setTLOptions(options);
       
+      if (logger.level <= Logger.FINER) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+") sending via "+rm);      
+      
       // TODO: make PastryNode have a router that does this properly, rather than receiveMessage
       final MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer> ret = new MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer>() {
         
@@ -275,7 +257,7 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       if ((deliverAckToMe != null) || (logger.level <= Logger.FINE)) {
         rm.setRouteMessageNotification(new RouteMessageNotification() {
           public void sendSuccess(rice.pastry.routing.RouteMessage message, rice.pastry.NodeHandle nextHop) {
-            if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+").sendSuccess():"+nextHop);
+            if (logger.level <= Logger.FINER) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+").sendSuccess():"+nextHop);
             if (deliverAckToMe != null) deliverAckToMe.ack(ret);
           }    
           public void sendFailed(rice.pastry.routing.RouteMessage message, Exception e) {

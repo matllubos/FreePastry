@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 
 package rice.pastry.testing.rendezvous;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -65,6 +66,9 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
+//    System.setOut(new PrintStream("delme.txt"));
+//    System.setErr(System.out);
+    
     Environment env = RawScribeRegrTest.parseArgs(args);
     
     Parameters p = env.getParameters();

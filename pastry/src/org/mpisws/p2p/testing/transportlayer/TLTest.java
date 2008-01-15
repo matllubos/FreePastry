@@ -145,7 +145,7 @@ public abstract class TLTest<Identifier> {
         }
       }
     
-      public void receiveException(SocketRequestHandle<Identifier> s, IOException exception) {
+      public void receiveException(SocketRequestHandle<Identifier> s, Exception exception) {
         synchronized(lock) {
           exceptionList.add(exception);
           lock.notify();
@@ -187,7 +187,7 @@ public abstract class TLTest<Identifier> {
         }
       }
     
-      public void receiveException(P2PSocket<Identifier> socket, IOException e) {
+      public void receiveException(P2PSocket<Identifier> socket, Exception e) {
         synchronized(lock) {
           exceptionList.add(e);
           lock.notify(); 
@@ -210,7 +210,7 @@ public abstract class TLTest<Identifier> {
         }
       }
     
-      public void receiveException(P2PSocket socket, IOException e) {
+      public void receiveException(P2PSocket socket, Exception e) {
         synchronized(lock) {
           exceptionList.add(e);
           lock.notify(); 
@@ -255,7 +255,7 @@ public abstract class TLTest<Identifier> {
         }        
       }
     
-      public void receiveException(P2PSocket<Identifier> socket, IOException e) {
+      public void receiveException(P2PSocket<Identifier> socket, Exception e) {
         synchronized(lock) {
           exceptionList.add(e);
           lock.notify(); 
@@ -282,7 +282,7 @@ public abstract class TLTest<Identifier> {
         }        
       }
     
-      public void receiveException(P2PSocket<Identifier> socket, IOException e) {
+      public void receiveException(P2PSocket<Identifier> socket, Exception e) {
         synchronized(lock) {
           exceptionList.add(e);
           lock.notify(); 

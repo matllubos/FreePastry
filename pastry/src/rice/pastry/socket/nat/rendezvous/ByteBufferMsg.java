@@ -53,11 +53,12 @@ public class ByteBufferMsg extends PRawMessage {
     super(dest);
     this.buffer = buf;
     setPriority(priority);
+    if (sender == null) throw new IllegalArgumentException("Sender == null");
     originalSender = sender;
   }
   
   public String toString() {
-    return "BBM["+buffer+"] from "+getSender();
+    return "BBM["+buffer+"] from "+originalSender;
   }
   
   public short getType() {

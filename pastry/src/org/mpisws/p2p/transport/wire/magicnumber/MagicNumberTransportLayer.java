@@ -173,12 +173,12 @@ public class MagicNumberTransportLayer<Identity> implements
               deliverSocketToMe.receiveResult(cancellable, socket);
             }
           }        
-          public void receiveException(P2PSocket<Identity> socket, IOException e) {
+          public void receiveException(P2PSocket<Identity> socket, Exception e) {
             deliverSocketToMe.receiveException(cancellable, e);
           }
         });
       }    
-      public void receiveException(SocketRequestHandle<Identity> c, IOException exception) {
+      public void receiveException(SocketRequestHandle<Identity> c, Exception exception) {
         if (cancellable.getSubCancellable() != null && c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
         deliverSocketToMe.receiveException(cancellable, exception);
 //        errorHandler.receivedException(i, exception);
@@ -264,7 +264,7 @@ public class MagicNumberTransportLayer<Identity> implements
       environment.getSelectorManager().getTimer().schedule(this,SOCKET_TIMEOUT);      
     }
     
-    public void receiveException(P2PSocket<Identity> socket, IOException ioe) {
+    public void receiveException(P2PSocket<Identity> socket, Exception ioe) {
       errorHandler.receivedException(socket.getIdentifier(), ioe);
       // TODO Auto-generated method stub      
     }

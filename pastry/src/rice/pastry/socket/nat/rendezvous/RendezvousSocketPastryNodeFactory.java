@@ -57,6 +57,8 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
+import org.mpisws.p2p.transport.rendezvous.ResponseStrategy;
+import org.mpisws.p2p.transport.rendezvous.TimeoutResponseStrategy;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
 import rice.Continuation;
@@ -151,12 +153,14 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> ret = 
       new RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>(
         mtl, 
-        CommonAPITransportLayerImpl.DESTINATION_IDENTITY, 
+        IdentityImpl.NODE_HANDLE_FROM_INDEX,
+//        CommonAPITransportLayerImpl.DESTINATION_IDENTITY, 
         (RendezvousSocketNodeHandle)pn.getLocalHandle(), 
         getContactDeserializer(pn),
         getRendezvousGenerator(pn), 
         getPilotFinder(pn),
-        getRendezvousStrategyHelper(pn), 
+        getRendezvousStrategyHelper(pn),
+        getResponseStrategy(pn),
         pn.getEnvironment());
     
     rendezvousApps.get(pn).setB(ret);
@@ -164,6 +168,10 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     
     generatePilotStrategy(pn, ret);
     return ret;
+  }
+
+  protected ResponseStrategy<InetSocketAddress> getResponseStrategy(TLPastryNode pn) {
+    return new TimeoutResponseStrategy<InetSocketAddress>(3000, pn.getEnvironment());
   }
   
   protected PilotFinder<RendezvousSocketNodeHandle> getPilotFinder(TLPastryNode pn) {

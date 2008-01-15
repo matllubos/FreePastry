@@ -138,7 +138,7 @@ public class StandardRouter extends PastryAppl implements Router {
       // the local node is the closest node to the id
       if (rm.getDestinationHandle() != null && !rm.getDestinationHandle().equals(thePastryNode.getLocalHandle())) {
         // no idea how to contact the destination, drop
-        if (logger.level <= Logger.WARNING) logger.log("Message "+rm+" has destination "+rm.getDestinationHandle()+" but I'm the root of the id.  Dropping.");
+        if (logger.level <= Logger.FINE) logger.log("Message "+rm+" has destination "+rm.getDestinationHandle()+" but I'm the root of the id.  Dropping.  This could happen if the destination has died while the route message was in transit, or if the local node does not yet have logging state because it is boostrapping.");
         rm.sendFailed(new NoRouteToHostException(rm.getDestinationHandle().toString()));
         return true;
       }

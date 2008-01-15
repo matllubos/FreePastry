@@ -207,7 +207,7 @@ public class TLPastryNode extends PastryNode implements
                     }                    
                   }
                 
-                  public void receiveException(P2PSocket<NodeHandle> socket, IOException ioe) {
+                  public void receiveException(P2PSocket<NodeHandle> socket, Exception ioe) {
                     deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), ioe);
                   }                
                 });
@@ -215,13 +215,13 @@ public class TLPastryNode extends PastryNode implements
             }
           
             public void receiveException(P2PSocket<NodeHandle> socket,
-                IOException e) {
+                Exception e) {
               deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), e);
             }        
           }); 
         }    
     
-        public void receiveException(SocketRequestHandle<NodeHandle> s, IOException ex) {
+        public void receiveException(SocketRequestHandle<NodeHandle> s, Exception ex) {
           // TODO: return something with a proper toString()
           deliverSocketToMe.receiveException(null, ex);
         }    
@@ -304,7 +304,7 @@ public class TLPastryNode extends PastryNode implements
               } // if (acceptorAppl!=null)              
             } // rSR()
           
-            public void receiveException(P2PSocket<NodeHandle> socket, IOException ioe) {
+            public void receiveException(P2PSocket<NodeHandle> socket, Exception ioe) {
               if (logger.level <= Logger.WARNING) logger.logException("incomingSocket("+socket+")", ioe);
               return;
             }          
@@ -314,7 +314,7 @@ public class TLPastryNode extends PastryNode implements
     
       public void receiveException(
           P2PSocket<NodeHandle> socket,
-          IOException ioe) {
+          Exception ioe) {
         if (logger.level <= Logger.WARNING) logger.logException("incomingSocket("+socket+")",ioe);
       }
     

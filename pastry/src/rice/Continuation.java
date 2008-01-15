@@ -58,14 +58,14 @@ import rice.selector.SelectorManager;
 public interface Continuation<R, E extends Exception> {
 
   /**
-   * Called when a previously requested result is now availble.
+   * Called when a previously requested result is now available.
    *
    * @param result The result of the command.
    */
   public void receiveResult(R result);
 
   /**
-   * Called when an execption occured as a result of the
+   * Called when an exception occurred as a result of the
    * previous command.
    *
    * @param result The exception which was caused.

@@ -265,7 +265,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         deliverSocketToMe.receiveResult(cancellable, getManager(i).getLSocket(sock));
       }    
       
-      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
         // the upper layer is probably going to retry, so mark this dead first
         if (connectionExceptionMeansFaulty) {
           if (ex instanceof java.nio.channels.ClosedChannelException) {
@@ -776,7 +776,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
     protected void markDead(Map<String, Object> options) {
       boolean notify = false;
       if (liveness < LIVENESS_DEAD) notify = true;
-      if (notify) logger.log(this+".markDead()");
+      if (notify) {
+        logger.log(this+".markDead()");
+      }
       if (logger.level <= Logger.FINER) logger.log(this+".markDead() notify:"+notify);
       markDeadHelper(LIVENESS_DEAD, options, notify);
     }

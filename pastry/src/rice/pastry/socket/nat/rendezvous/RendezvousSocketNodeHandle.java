@@ -80,10 +80,6 @@ public class RendezvousSocketNodeHandle extends SocketNodeHandle implements Rend
     return contactStatus != CONTACT_FIREWALLED;
   }
 
-  public boolean isConnected() {
-    throw new RuntimeException("Not implemented.");
-//    return false;
-  }
   static SocketNodeHandle build(InputBuffer buf, TLPastryNode local) throws IOException {
     MultiInetSocketAddress eaddr = MultiInetSocketAddress.build(buf);
     long epoch = buf.readLong();

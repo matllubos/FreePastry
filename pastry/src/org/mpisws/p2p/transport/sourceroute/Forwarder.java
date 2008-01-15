@@ -77,7 +77,7 @@ public class Forwarder<Identifier> {
       return "HalfPipe "+from+"=>"+to;    
     }
 
-    public void receiveException(P2PSocket socket, IOException e) {
+    public void receiveException(P2PSocket socket, Exception e) {
       if (logger.level <= Logger.FINE) logger.logException(this+" "+socket, e);
       from.close();
       to.close();

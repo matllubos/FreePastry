@@ -192,7 +192,7 @@ public class RecordSocket<Identifier> extends SocketWrapperSocket<Identifier, Id
         receiver.receiveSelectResult(RecordSocket.this, canRead, canWrite);
       }
     
-      public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
+      public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
         try {
           socketIdBuffer.clear();
 //          logger.logException(this+".register()", ioe);

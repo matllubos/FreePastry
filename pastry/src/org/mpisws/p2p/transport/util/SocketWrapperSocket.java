@@ -150,7 +150,7 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
 //    receiver.receiveSelectResult(SocketWrapperSocket.this, canRead, canWrite);
   }
 
-  public void receiveException(P2PSocket<SubIdentifier> socket, IOException e) {
+  public void receiveException(P2PSocket<SubIdentifier> socket, Exception e) {
 //    logger.log(this+".receiveException("+e+")");
     if (writer != null) {
       if (writer == reader) {

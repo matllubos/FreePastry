@@ -430,7 +430,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                     socket.register(true, false, new P2PSocketReceiver<LowerIdentifier>() {
                       ByteBuffer responseBuffer = ByteBuffer.allocate(1);
 
-                      public void receiveException(P2PSocket<LowerIdentifier> socket, IOException ioe) {
+                      public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
                         deliverSocketToMe.receiveException(ret, ioe);                        
                       }
 
@@ -481,13 +481,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                   }
                 }        
 
-                public void receiveException(P2PSocket<LowerIdentifier> socket, IOException ioe) {
+                public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
                   deliverSocketToMe.receiveException(ret, ioe);                  
                 }              
               });
             }
 
-            public void receiveException(SocketRequestHandle<LowerIdentifier> s, IOException ex) {
+            public void receiveException(SocketRequestHandle<LowerIdentifier> s, Exception ex) {
               deliverSocketToMe.receiveException(ret, ex);
             }
 
@@ -501,7 +501,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       s.register(true, false, new P2PSocketReceiver<LowerIdentifier>() {
         ByteBuffer buf = ByteBuffer.allocate(localIdentifier.length);
 
-        public void receiveException(P2PSocket<LowerIdentifier> socket, IOException ioe) {
+        public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
           handler.receivedException(socket.getIdentifier(), ioe);
         }
 
@@ -526,7 +526,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
             // the TO was me, now read the FROM, and add the proper index into the options
             final SocketInputBuffer sib = new SocketInputBuffer(socket, 1024);
             new P2PSocketReceiver<LowerIdentifier>() {
-              public void receiveException(P2PSocket<LowerIdentifier> socket, IOException ioe) {
+              public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
                 handler.receivedException(socket.getIdentifier(), ioe);
               }
 
@@ -563,7 +563,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 byte[] result = {SUCCESS};
                 final ByteBuffer writeMe = ByteBuffer.wrap(result);
                 socket.register(false, true, new P2PSocketReceiver<LowerIdentifier>() {
-                  public void receiveException(P2PSocket<LowerIdentifier> socket, IOException ioe) {
+                  public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
                     if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), ioe);                
                   }
 
@@ -604,7 +604,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
             System.arraycopy(localIdentifier, 0, result, 1, localIdentifier.length);
             final ByteBuffer writeMe = ByteBuffer.wrap(result);
             socket.register(false, true, new P2PSocketReceiver<LowerIdentifier>() {
-              public void receiveException(P2PSocket<LowerIdentifier> socket, IOException ioe) {
+              public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
                 handler.receivedException(socket.getIdentifier(), ioe);                
               }
 
@@ -915,7 +915,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 
 
       handle.setSubCancellable(tl.openSocket(middle, new SocketCallback<MiddleIdentifier>(){
-        public void receiveException(SocketRequestHandle<MiddleIdentifier> s, IOException ex) {
+        public void receiveException(SocketRequestHandle<MiddleIdentifier> s, Exception ex) {
           deliverSocketToMe.receiveException(handle, ex);
         }
         public void receiveResult(SocketRequestHandle<MiddleIdentifier> cancellable, P2PSocket<MiddleIdentifier> sock) {

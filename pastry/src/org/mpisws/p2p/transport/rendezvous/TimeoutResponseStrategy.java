@@ -34,10 +34,51 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport;
+package org.mpisws.p2p.transport.rendezvous;
 
+import java.nio.ByteBuffer;
+import java.util.Map;
 
-public interface SocketCallback<Identifier> {
-  public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock);
-  public void receiveException(SocketRequestHandle<Identifier> s, Exception ex);
+import rice.environment.Environment;
+import rice.environment.time.TimeSource;
+import rice.p2p.util.TimerWeakHashMap;
+
+/**
+ * This impl allows responses up to timeout millis later.
+ * 
+ * @author Jeff Hoye
+ *
+ * @param <Identifier>
+ */
+public class TimeoutResponseStrategy<Identifier> implements ResponseStrategy<Identifier> {
+
+  Map<Identifier, Long> lastTimeReceived;
+  
+  int timeout;
+  
+  TimeSource time;
+  
+  public TimeoutResponseStrategy(int timeout, Environment env) {
+    this.timeout = timeout;
+    this.lastTimeReceived = new TimerWeakHashMap<Identifier, Long>(env.getSelectorManager(), 60000+timeout);
+    this.time = env.getTimeSource();
+  }
+  
+  public void messageReceived(Identifier i, ByteBuffer msg, Map<String,Object> options) {
+    lastTimeReceived.put(i, time.currentTimeMillis());
+  }
+
+  public void messageSent(Identifier i, ByteBuffer msg, Map<String,Object> options) {
+    // TODO Auto-generated method stub
+
+  }
+
+  public boolean sendDirect(Identifier i, ByteBuffer msg, Map<String,Object> options) {
+    long lastTime = 0;
+    if (lastTimeReceived.containsKey(i)) {
+      lastTime = lastTimeReceived.get(i);
+    }
+    return time.currentTimeMillis() <= (lastTime+timeout);
+  }
+
 }

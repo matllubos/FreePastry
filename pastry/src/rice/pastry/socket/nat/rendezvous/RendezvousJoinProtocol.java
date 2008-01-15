@@ -114,9 +114,9 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
     
     // open the pilot before sending the JoinRequest.
     rendezvousTL.openPilot((RendezvousSocketNodeHandle)bootstrap, 
-        new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, IOException>(){
+        new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, Exception>(){
 
-      public void receiveException(IOException exception) {
+      public void receiveException(Exception exception) {
         deliverJRToMe.receiveException(exception);
       }
 

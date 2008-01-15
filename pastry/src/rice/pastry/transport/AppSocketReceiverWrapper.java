@@ -61,7 +61,7 @@ public class AppSocketReceiverWrapper implements
     this.logger = env.getLogManager().getLogger(AppSocketReceiverWrapper.class, null);    
   }
 
-  public void receiveException(P2PSocket<NodeHandle> s, IOException ioe) {
+  public void receiveException(P2PSocket<NodeHandle> s, Exception ioe) {
     receiver.receiveException(socket, ioe);
   }
 

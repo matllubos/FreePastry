@@ -180,7 +180,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
         socketIdBuffer.clear();
         deliverSocketToMe.receiveResult(ret, new RecordSocket<Identifier>(i, sock, logger, options, socketId, socketIdBuffer, RecordLayer.this));
       }
-      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
         socketIdBuffer.clear();
         try {
 //          logger.logException("socket "+socketId+" .register()", ex);
@@ -321,7 +321,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     return ret;
   }
   
-  public void logSocketException(ByteBuffer socketId, IOException ioe) throws IOException {
+  public void logSocketException(ByteBuffer socketId, Exception ioe) throws IOException {
     if (logger.level <= Logger.CONFIG) logger.logException("logSocketException("+ioe+")", ioe);
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     String className = ioe.getClass().getName();

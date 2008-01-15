@@ -48,5 +48,5 @@ public interface P2PSocketReceiver<Identifier> {
   /**
    * Called when there is an error
    */
-  void receiveException(P2PSocket<Identifier> socket, IOException ioe); 
+  void receiveException(P2PSocket<Identifier> socket, Exception ioe); 
 }

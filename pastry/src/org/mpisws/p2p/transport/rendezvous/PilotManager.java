@@ -59,7 +59,7 @@ public interface PilotManager<Identifier> {
    * @param deliverAckToMe optional
    * @return
    */
-  SocketRequestHandle<Identifier> openPilot(Identifier i, Continuation<SocketRequestHandle<Identifier>, IOException> deliverAckToMe);
+  SocketRequestHandle<Identifier> openPilot(Identifier i, Continuation<SocketRequestHandle<Identifier>, Exception> deliverAckToMe);
   
   /**
    * Tells the manager that the pilot to the Identifier is no longer useful

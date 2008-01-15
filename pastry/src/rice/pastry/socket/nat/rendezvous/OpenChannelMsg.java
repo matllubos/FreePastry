@@ -34,10 +34,29 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport;
+package rice.pastry.socket.nat.rendezvous;
 
+import java.io.IOException;
 
-public interface SocketCallback<Identifier> {
-  public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock);
-  public void receiveException(SocketRequestHandle<Identifier> s, Exception ex);
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.pastry.messaging.PRawMessage;
+
+public class OpenChannelMsg extends PRawMessage {
+
+  public OpenChannelMsg(int address) {
+    super(address);
+    // TODO Auto-generated constructor stub
+  }
+
+  public static final short TYPE = 3;
+
+  public short getType() {
+    return TYPE;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    // TODO Auto-generated method stub
+
+  }
+
 }

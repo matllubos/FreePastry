@@ -97,7 +97,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
         if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveResult()");
         deliverSocketToMe.receiveResult(ret, getLSSock(sock));
       }
-      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
         if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveException()");
         deliverSocketToMe.receiveException(ret, ex);
       }

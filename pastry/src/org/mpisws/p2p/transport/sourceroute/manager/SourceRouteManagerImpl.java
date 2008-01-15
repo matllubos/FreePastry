@@ -392,7 +392,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         deliverSocketToMe.receiveResult(this, new SourceRouteManagerP2PSocket<Identifier>(sock, environment));
       }
       
-      public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, IOException ex) {
+      public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, Exception ex) {
         deliverSocketToMe.receiveException(this, ex);
       }        
 
@@ -574,7 +574,7 @@ public class SourceRouteManagerImpl<Identifier> implements
               P2PSocket<SourceRoute<Identifier>> sock) {
             deliverSocketToMe.receiveResult(handle, new SourceRouteManagerP2PSocket<Identifier>(sock, environment));
           }        
-          public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, IOException ex) {
+          public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, Exception ex) {
             deliverSocketToMe.receiveException(handle, ex);
           }
         }, options));

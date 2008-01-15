@@ -173,7 +173,7 @@ public class MagicNumberTest extends WireTest {
         }
       }
     
-      public void receiveException(SocketRequestHandle<InetSocketAddress> s, IOException exception) {
+      public void receiveException(SocketRequestHandle<InetSocketAddress> s, Exception exception) {
         synchronized(lock) {
           exceptionList.add(exception);
           lock.notify();
@@ -262,7 +262,7 @@ public class MagicNumberTest extends WireTest {
         }
       }
     
-      public void receiveException(SocketRequestHandle<InetSocketAddress> s, IOException exception) {
+      public void receiveException(SocketRequestHandle<InetSocketAddress> s, Exception exception) {
         synchronized(lock) {
           exceptionList.add(exception);
           lock.notify();

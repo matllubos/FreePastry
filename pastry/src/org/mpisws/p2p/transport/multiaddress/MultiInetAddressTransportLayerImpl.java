@@ -178,7 +178,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
             }
           
             public void receiveException(P2PSocket<InetSocketAddress> socket,
-                IOException e) {
+                Exception e) {
               deliverSocketToMe.receiveException(handle, e);
             }        
           }); 
@@ -187,7 +187,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
           deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(i, result, logger, result.getOptions()));            
         }
       }    
-      public void receiveException(SocketRequestHandle<InetSocketAddress> c, IOException exception) {
+      public void receiveException(SocketRequestHandle<InetSocketAddress> c, Exception exception) {
         if (handle.getSubCancellable() != null && c != handle.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
         deliverSocketToMe.receiveException(handle, exception);
       }
@@ -217,7 +217,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
           }
         }
       
-        public void receiveException(P2PSocket<InetSocketAddress> socket,IOException e) {
+        public void receiveException(P2PSocket<InetSocketAddress> socket,Exception e) {
           errorHandler.receivedException(new MultiInetSocketAddress(socket.getIdentifier()), e);
         }          
       });

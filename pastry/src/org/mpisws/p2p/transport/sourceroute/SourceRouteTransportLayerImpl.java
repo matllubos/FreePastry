@@ -178,12 +178,12 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
           }
         
           public void receiveException(P2PSocket<Identifier> socket,
-              IOException e) {
+              Exception e) {
             deliverSocketToMe.receiveException(handle, e);
           }        
         }); 
       }    
-      public void receiveException(SocketRequestHandle<Identifier> c, IOException exception) {
+      public void receiveException(SocketRequestHandle<Identifier> c, Exception exception) {
         deliverSocketToMe.receiveException(handle, exception);
       }    
     }, options));      
@@ -274,7 +274,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
                   }
                 
                   public void receiveException(P2PSocket<Identifier> socket,
-                      IOException e) {
+                      Exception e) {
                     errorHandler.receivedException(sr, e);
                     socka.close();
                     sockb.close();
@@ -286,7 +286,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
               /**
                * Couldn't open the socket, the next hop was dead.
                */
-              public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+              public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
                 // may be nice to send some kind of error message to the opener
 //                errorHandler.receivedException(sr, ex);
                 socka.close();
@@ -304,7 +304,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
         }
       }
     
-      public void receiveException(P2PSocket<Identifier> socket,IOException e) {
+      public void receiveException(P2PSocket<Identifier> socket,Exception e) {
         errorHandler.receivedException(srFactory.getSourceRoute(etl.getLocalIdentifier(), socket.getIdentifier()), e);
       }          
     });

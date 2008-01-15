@@ -194,7 +194,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         }
       }
       
-      public void receiveException(P2PSocket<Identifier> socket, IOException e) {
+      public void receiveException(P2PSocket<Identifier> socket, Exception e) {
         errorHandler.receivedException(socket.getIdentifier(), e);
       }      
     });
@@ -222,12 +222,12 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             if (deliverSocketToMe != null) deliverSocketToMe.receiveResult(handle, socket);
           }        
           
-          public void receiveException(P2PSocket<Identifier> socket, IOException e) {
+          public void receiveException(P2PSocket<Identifier> socket, Exception e) {
             if (deliverSocketToMe != null) deliverSocketToMe.receiveException(handle, e);
           }
         });
       } // receiveResult()
-      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
         if (handle.getSubCancellable() != null && s != handle.getSubCancellable()) throw new IllegalArgumentException("s != handle.getSubCancellable() must be a bug. s:"+s+" sub:"+handle.getSubCancellable());
         if (deliverSocketToMe != null) deliverSocketToMe.receiveException(handle, ex);
       }
@@ -361,7 +361,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             }
           }        
           
-          public void receiveException(P2PSocket<Identifier> socket, IOException e) {
+          public void receiveException(P2PSocket<Identifier> socket, Exception e) {
             cancelLivenessChecker(i);
             getEntityManager(socket.getIdentifier()).receiveSocketException(handle, e);
           }
@@ -371,7 +371,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           }
         });
       } // receiveResult()
-      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
         if (handle.getSubCancellable() != null && s != handle.getSubCancellable()) throw new IllegalArgumentException(
             "s != handle.getSubCancellable() must be a bug. s:"+
             s+" sub:"+handle.getSubCancellable());
@@ -663,7 +663,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     /**
      * This is called when the socket has an exception but was already opened.
      */
-    public void receiveException(P2PSocket<Identifier> socket, IOException ioe) {
+    public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
 //      if (ioe instanceof NodeIsFaultyException) {
 //        if (livenessProvider.getLiveness(identifier, )
 //            
@@ -718,7 +718,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      * @param handle
      * @param ex
      */
-    public void receiveSocketException(SocketRequestHandleImpl<Identifier> handle, IOException ex) {      
+    public void receiveSocketException(SocketRequestHandleImpl<Identifier> handle, Exception ex) {      
 //      if (ex instanceof NodeIsFaultyException) {
 //        markDead();
 //        return; 
@@ -1110,7 +1110,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         }        
       }
       
-      public void receiveException(P2PSocket<Identifier> socket, IOException e) {
+      public void receiveException(P2PSocket<Identifier> socket, Exception e) {
 //        if (e instanceof NodeIsFaultyException) {
 //          markDead();
 //          return; 

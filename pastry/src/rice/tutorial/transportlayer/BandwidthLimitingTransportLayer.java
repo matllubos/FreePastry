@@ -172,7 +172,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
         deliverSocketToMe.receiveResult(returnMe, new BandwidthLimitingSocket(sock));
       }
     
-      public void receiveException(SocketRequestHandle<Identifier> s, IOException ex) {
+      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
         deliverSocketToMe.receiveException(returnMe, ex);
       }
     }, options));
