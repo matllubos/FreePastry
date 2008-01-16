@@ -171,7 +171,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
    * @param msg the wrapped message.
    * @param firstHop the nodeHandle of the first hop destination
    * @param opts the send options for the message.
-   * @param aux an auxilary address which the message after each hop.
+   * @param aux an auxiliary address which the message after each hop.
    */
   public RouteMessage(Id target, Message msg, NodeHandle firstHop, SendOptions opts, byte serializeVersion) {
     super(RouterAddress.getCode());
@@ -211,6 +211,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
 
   public void setNextHop(NodeHandle nh) {
+    new Exception(this+".setNextHop("+nh+"):"+nh.getLiveness()).printStackTrace();
     nextHop = nh;
   }
 

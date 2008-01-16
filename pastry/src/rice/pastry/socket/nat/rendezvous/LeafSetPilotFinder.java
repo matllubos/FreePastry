@@ -77,15 +77,20 @@ public class LeafSetPilotFinder implements
         int maxDist = leafSet.maxSize()/2; 
 
         for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-          if (Math.abs(index-i) <= maxDist) {
-            RendezvousSocketNodeHandle nh = (RendezvousSocketNodeHandle)leafSet.get(i);
-            if (nh.canContactDirect()) possibleIntermediates.add(nh);
+          if (i != 0) { // don't select self
+            if (Math.abs(index-i) <= maxDist) {
+              RendezvousSocketNodeHandle nh = (RendezvousSocketNodeHandle)leafSet.get(i);
+              if (nh.canContactDirect()) possibleIntermediates.add(nh);
+            }
           }
         }
       }
       
       // return random one
       ArrayList<RendezvousSocketNodeHandle> list = new ArrayList<RendezvousSocketNodeHandle>(possibleIntermediates);
+      
+      // this is scary...
+      if (list.isEmpty()) return null;
       
       return list.get(random.nextInt(list.size()));
     } else {

@@ -213,7 +213,7 @@ public class StandardRouter extends PastryAppl implements Router {
       // get the closest alive node
       if (rs == null
           || ((handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE)) == null)) {
-        // no live routing table entry matching the next digit
+        // no live (not suspected) routing table entry matching the next digit
         
         
         // cull out dead nodes (this is mostly for the simulator -- I hope --, the listener interface should make this work normally)

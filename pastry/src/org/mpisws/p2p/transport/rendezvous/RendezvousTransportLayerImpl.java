@@ -104,11 +104,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   public static final byte CONNECTION_RESPONSE_SUCCESS = 1; // forms a pilot connection 
   
   /**
-   * TRUE if not Firewalled
-   */
-  boolean canContactDirect = true;
-  
-  /**
    * Value should be a HighIdentifier
    */
   public static final String OPTION_USE_PILOT = "USE_PILOT";
@@ -155,15 +150,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     tl.setCallback(this);
   }
   
-  /**
-   * We may not be able to determine this from the get-go.
-   * 
-   * @param b
-   */
-  public void canContactDirect(boolean b) {
-    canContactDirect = b; 
-  }
-  
   public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
     if (logger.level <= Logger.FINEST) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
 
@@ -201,7 +187,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         openSocketViaPilot(contact, middleMan, handle, deliverSocketToMe, options);
         return handle;
       } else {
-        if (canContactDirect) {
+        if (localNodeHandle.canContactDirect()) {
           // see if the node already has a pilot to me
           if (openSocketUsingPilotToMe(contact, handle, deliverSocketToMe, options)) return handle;
           // see if the node should have a pilot to a node I know
@@ -239,7 +225,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         logger.logException("openSocket("+contact+","+deliverSocketToMe+","+options+")", exception);
         deliverSocketToMe.receiveException(handle, exception);
       }          
-    });
+    }, options);
   }
 
   private boolean openSocketUsingPilotFinder(HighIdentifier contact,
@@ -250,8 +236,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       return false;
     } else {
       // use middleman
-      logger.log("I need to open a socket via "+middleMan); 
-      if (logger.level <= Logger.FINER) logger.log("I need to open a socket via "+middleMan); 
+      if (logger.level <= Logger.FINER) logger.log("opening a socket to "+contact+" via "+middleMan); 
       openSocketViaPilot(contact, middleMan, handle, deliverSocketToMe, options);
       return true;
     }
@@ -291,6 +276,10 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       final SocketRequestHandle<Identifier> handle, 
       final SocketCallback<Identifier> deliverSocketToMe, 
       final Map<String, Object> options) {
+    
+    if (middleMan.equals(localNodeHandle)) {
+      throw new IllegalArgumentException("openSocketViaPilot("+dest+","+middleMan+","+handle+","+deliverSocketToMe+","+options+") can't use self as rendezvous.");
+    }
     
     final int uid = random.nextInt();
     if (logger.level <= Logger.FINE) logger.log("openSocketViaPilot<"+uid+">("+dest+","+middleMan+","+handle+","+deliverSocketToMe+","+options+")");
@@ -461,9 +450,9 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
             IncomingPilot pilot = incomingPilots.get(target);
             pilot.requestSocket(opener,uid);
           } else {          
-            logger.log("I'm the rendezevous for "+opener+" to "+target+" and I don't have a pilot.");            
+//            logger.log("I'm the rendezevous for "+opener+" to "+target+" and I don't have a pilot.");            
             if (logger.level <= Logger.INFO) logger.log("I'm the rendezevous for "+opener+" to "+target+" and I don't have a pilot.");            
-            rendezvousStrategy.openChannel(target, localNodeHandle, opener, uid, null);
+            rendezvousStrategy.openChannel(target, localNodeHandle, opener, uid, null, socket.getOptions());
           }
         } catch (InsufficientBytesException ibe) {
           sib.reset();
@@ -700,7 +689,13 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     
     return three; 
   }
-
+  
+  public void openChannel(HighIdentifier requestor, HighIdentifier middleMan, int uid) {
+    logger.log("openChannel("+requestor+","+middleMan+","+uid+")");
+//    if (logger.level <= Logger.INFO) logger.log("openChannel("+requestor+","+middleMan+","+uid+")");
+    openAcceptSocket(requestor, middleMan, uid);
+  }
+  
   /**
    * We are a firewalled node and got a connect request, now time to respond to it
    * 
@@ -708,7 +703,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
    * @param i
    * @param sib
    */
-  public void openAcceptSocket(final HighIdentifier requestor, final HighIdentifier middleMan, final int uid) {
+  protected void openAcceptSocket(final HighIdentifier requestor, final HighIdentifier middleMan, final int uid) {
     if (logger.level <= Logger.FINER) logger.log("openAcceptSocket("+requestor+","+middleMan+","+uid+")");
     // TODO: there is a case where the requestor can be contacted directly, in this case, just do that, but may have to chage
     // some other parts of the code:
@@ -902,6 +897,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
    */
   public SocketRequestHandle<HighIdentifier> openPilot(final HighIdentifier i, 
       final Continuation<SocketRequestHandle<HighIdentifier>, Exception> deliverAckToMe) {    
+    logger.log("openPilot("+i+")");
     if (logger.level <= Logger.FINE) logger.log("openPilot("+i+")");
     if (outgoingPilots.containsKey(i)) {
       return outgoingPilots.get(i); 

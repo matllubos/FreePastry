@@ -66,8 +66,8 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-//    System.setOut(new PrintStream("delme.txt"));
-//    System.setErr(System.out);
+    System.setOut(new PrintStream("delme.txt"));
+    System.setErr(System.out);
     
     Environment env = RawScribeRegrTest.parseArgs(args);
     

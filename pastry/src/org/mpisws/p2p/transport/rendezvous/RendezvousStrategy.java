@@ -63,6 +63,14 @@ public interface RendezvousStrategy<Identifier> {
    * Possible exceptions to deliverResultToMe:
    *   NodeIsFaultyException if target is faulty
    *   UnableToConnectException if dest is faulty
+   * 
+   * Called by:
+   *   1) Rendezvous if the target and source are NATted
+   *   2) Source if target is NATted, but source isn't
+   *   
+   *   
+   * Not called if the pilotFinder found a pilot for the target (in FreePastry this means that this will not be called
+   * if the target is in the leafSet).
    *   
    * @param target call ChannelOpener.openChannel() on this Identifier
    * @param rendezvous pass this to ChannelOpener.openChannel(), it's who the ChannelOpener will connect to
@@ -70,7 +78,7 @@ public interface RendezvousStrategy<Identifier> {
    * @param deliverResultToMe notify me when success/failure
    * @return a way to cancel the request
    */
-  public Cancellable openChannel(Identifier target, Identifier rendezvous, Identifier source, int uid, Continuation<Integer, Exception> deliverResultToMe);
+  public Cancellable openChannel(Identifier target, Identifier rendezvous, Identifier source, int uid, Continuation<Integer, Exception> deliverResultToMe, Map<String, Object> options);
   
   /**
    * Sends the message via an out-of-band channel.  Usually routing.

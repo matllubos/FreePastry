@@ -45,7 +45,6 @@ import java.util.Map;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
-import org.mpisws.p2p.transport.rendezvous.ChannelOpener;
 import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayer;
@@ -114,7 +113,15 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
             throw new IllegalArgumentException("Unknown version for PilotForwardMsg: "+version);
           }
         case OpenChannelMsg.TYPE:
-          return new OpenChannelMsg(getAddress());
+          version = buf.readByte();
+          if (version == 0) { // version 0            
+            RendezvousSocketNodeHandle rendezvous = (RendezvousSocketNodeHandle)thePastryNode.readNodeHandle(buf);
+            RendezvousSocketNodeHandle source = (RendezvousSocketNodeHandle)thePastryNode.readNodeHandle(buf);
+            int uid = buf.readInt();
+            return new OpenChannelMsg(getAddress(), rendezvous, source, uid);
+          } else {
+            throw new IllegalArgumentException("Unknown version for PilotForwardMsg: "+version);
+          }
         default:
           throw new IllegalArgumentException("Unknown type: "+type);            
         }
@@ -138,11 +145,46 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
     
   }
 
+  /**
+   * If this is going to cause an infinite loop, just drop the message.
+   * 
+   * The infinite loop is caused when the next hop is the destination of the message, and is NATted.
+   * 
+   * ... and we're not connected?
+   * 
+   */
+  @Override
+  public void receiveMessage(Message msg) {
+    if (msg instanceof RouteMessage) {
+      RouteMessage rm = (RouteMessage)msg;
+      try {
+        Message internalMsg = (Message)rm.getMessage(getDeserializer());
+      if (internalMsg instanceof OpenChannelMsg) {
+        OpenChannelMsg ocm = (OpenChannelMsg)internalMsg;
+        if (rm.getNextHop().equals(rm.getDestinationHandle())) {
+          // this isn't going to work, we are routing to open a connection, but directly to the node in question
+          throw new IllegalStateException("Routing "+rm+", next hop and destination are "+rm.getNextHop());
+          
+          // there could also be some kind of oscillation between 2+ routes, which this wouldn't cover
+        }
+      }
+      // if the next hop is no good..., drop it
+//      if (rm.getNextHop() )
+//        rm.sendFailed(e);
+        super.receiveMessage(msg);
+      } catch (IOException ioe) {
+        // couldn't deserialize the internal message
+      }
+    } else {
+      super.receiveMessage(msg);
+    }
+  }
+  
   @Override
   public void messageForAppl(Message msg) {
     if (msg instanceof ByteBufferMsg) {
       ByteBufferMsg bbm = (ByteBufferMsg)msg;
-      if (logger.level <= Logger.FINER) logger.log("receiveMessage("+bbm+")");
+      if (logger.level <= Logger.FINER) logger.log("messageForAppl("+bbm+")");
       try {
         tl.messageReceivedFromOverlay((RendezvousSocketNodeHandle)bbm.getOriginalSender(), bbm.buffer, null);
       } catch (IOException ioe) {
@@ -159,6 +201,13 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       PilotForwardMsg pfm = (PilotForwardMsg)msg;
       if (logger.level <= Logger.FINER) logger.log("Forwarding message "+pfm);
       thePastryNode.send(pfm.getTarget(), pfm.getBBMsg(), null, null);
+      return;
+    }
+    if (msg instanceof OpenChannelMsg) {
+      OpenChannelMsg ocm = (OpenChannelMsg)msg;
+      // we're a NATted node who needs to open a channel
+      tl.openChannel(ocm.getSource(),  ocm.getRendezvous(), ocm.getUid());
+      return;
     }
   }
 
@@ -166,27 +215,78 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       final RendezvousSocketNodeHandle rendezvous, 
       final RendezvousSocketNodeHandle source,
       final int uid,
-      final Continuation<Integer, Exception> deliverResultToMe) {
+      final Continuation<Integer, Exception> deliverAckToMe,
+      final Map<String, Object> options) {
+
+    if (logger.level <= Logger.INFO) logger.log("openChannel()"+source+"->"+target+" via "+rendezvous+" uid:"+uid+","+deliverAckToMe+","+options);
     
+    if (target.canContactDirect()) {
+      // this is a bug
+      throw new IllegalArgumentException("Target must be firewalled.  Target:"+target);
+    }
+
     // we don't want state changing, so this can only be called on the selector
     if (!selectorManager.isSelectorThread()) {
       final AttachableCancellable ret = new AttachableCancellable();
       selectorManager.invoke(new Runnable() {
         public void run() {
-          ret.attach(openChannel(target, rendezvous, source, uid, deliverResultToMe));
+          ret.attach(openChannel(target, rendezvous, source, uid, deliverAckToMe, options));
         }
       });
       return ret;
     }
 
-    if (target.canContactDirect()) {
-      // this is a bug
-      throw new IllegalArgumentException("Target must be firewalled.  Target:"+target);
+    OpenChannelMsg msg = new OpenChannelMsg(getAddress(), rendezvous, source, uid);
+    
+    final RouteMessage rm = 
+      new RouteMessage(
+          target.getNodeId(),
+          msg,
+        (byte)thePastryNode.getEnvironment().getParameters().getInt("pastry_protocol_router_routeMsgVersion"));    
+    rm.setDestinationHandle(target);
+
+    // don't reuse the incoming options, it will confuse things
+//    rm.setTLOptions(null);
+    
+    if (logger.level <= Logger.FINER) logger.log("openChannel("+target+","+rendezvous+","+source+","+uid+","+deliverAckToMe+","+options+") sending via "+rm);      
+    
+    // TODO: make PastryNode have a router that does this properly, rather than receiveMessage
+    final Cancellable ret = new Cancellable() {
+      
+      public boolean cancel() {
+        if (logger.level <= Logger.FINE) logger.log("openChannel("+target+","+rendezvous+","+source+","+uid+","+deliverAckToMe+","+options+").cancel()");
+        return rm.cancel();
+      }
+    };
+    
+    // NOTE: Installing this anyway if the LogLevel is high enough is kind of wild, but really useful for debugging
+    if ((deliverAckToMe != null) || (logger.level <= Logger.INFO)) {
+      rm.setRouteMessageNotification(new RouteMessageNotification() {
+        public void sendSuccess(rice.pastry.routing.RouteMessage message, rice.pastry.NodeHandle nextHop) {
+          if (logger.level <= Logger.FINER) logger.log("openChannel("+target+","+rendezvous+","+source+","+uid+","+deliverAckToMe+","+options+").sendSuccess():"+nextHop);
+          if (deliverAckToMe != null) deliverAckToMe.receiveResult(uid);
+        }    
+        public void sendFailed(rice.pastry.routing.RouteMessage message, Exception e) {
+          if (logger.level <= Logger.FINE) logger.log("openChannel("+target+","+rendezvous+","+source+","+uid+","+deliverAckToMe+","+options+").sendFailed("+e+")");
+          if (deliverAckToMe != null) deliverAckToMe.receiveException(e);
+        }
+      });
     }
-        
     
+//    Map<String, Object> rOptions;
+//    if (options == null) {
+//      rOptions = new HashMap<String, Object>(); 
+//    } else {
+//      rOptions = new HashMap<String, Object>(options);
+//    }
+//    rOptions.put(PriorityTransportLayer.OPTION_PRIORITY, pm.getPriority());
+////    logger.log("NumOptions = "+rOptions.size());
     
-    throw new RuntimeException("Not Implemented.");
+    rm.setTLOptions(options);
+    
+    thePastryNode.getRouter().route(rm);
+    
+    return ret;
   }
 
   public MessageRequestHandle<RendezvousSocketNodeHandle, ByteBuffer> sendMessage(

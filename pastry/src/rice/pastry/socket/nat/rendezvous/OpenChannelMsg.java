@@ -39,24 +39,47 @@ package rice.pastry.socket.nat.rendezvous;
 import java.io.IOException;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.pastry.NodeHandle;
 import rice.pastry.messaging.PRawMessage;
 
 public class OpenChannelMsg extends PRawMessage {
-
-  public OpenChannelMsg(int address) {
-    super(address);
-    // TODO Auto-generated constructor stub
-  }
-
+  
   public static final short TYPE = 3;
 
+  RendezvousSocketNodeHandle rendezvous;
+  RendezvousSocketNodeHandle source;
+  int uid;
+  
+  public OpenChannelMsg(int address, RendezvousSocketNodeHandle rendezvous, RendezvousSocketNodeHandle source, int uid) {
+    super(address);
+    this.rendezvous = rendezvous;
+    this.source = source;
+    this.uid = uid;
+  }
+
+  public RendezvousSocketNodeHandle getRendezvous() {
+    return rendezvous;
+  }
+
+  public RendezvousSocketNodeHandle getSource() {
+    return source;
+  }
+
+  public int getUid() {
+    return uid;
+  }
+
+  /************** Serialization **************/
+  
   public short getType() {
     return TYPE;
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
-    // TODO Auto-generated method stub
-
+    buf.writeByte((byte)0); // version
+    rendezvous.serialize(buf);
+    source.serialize(buf);
+    buf.writeInt(uid);
   }
 
 }

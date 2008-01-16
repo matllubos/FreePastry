@@ -276,7 +276,7 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
   protected Map<String, Object> getOptions(JoinRequest jr, Map<String, Object> existing) {
     return existing;
   }
-  
+  /** called on the joiner */
   protected void completeJoin(JoinRequest jr) {
     NodeHandle jh = jr.getJoinHandle(); // the node we joined to.
 

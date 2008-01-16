@@ -371,6 +371,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           }
         });
       } // receiveResult()
+      
       public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
         if (handle.getSubCancellable() != null && s != handle.getSubCancellable()) throw new IllegalArgumentException(
             "s != handle.getSubCancellable() must be a bug. s:"+
