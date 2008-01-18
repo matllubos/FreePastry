@@ -211,7 +211,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
   }
 
   public void setNextHop(NodeHandle nh) {
-    new Exception(this+".setNextHop("+nh+"):"+nh.getLiveness()).printStackTrace();
+//    new Exception(this+".setNextHop("+nh+"):"+nh.getLiveness()).printStackTrace();
     nextHop = nh;
   }
 
