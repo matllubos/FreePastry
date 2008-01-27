@@ -34,38 +34,26 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-/*
- * Created on Dec 18, 2006
- */
 package rice.pastry.direct;
 
-import rice.p2p.commonapi.*;
-
-/**
- * Notified for every message that is sent over the network.
- * 
- * to install this, call NetworkSimulator.addSimulatorListener().
- * 
- * @author Jeff Hoye
- */
-public interface SimulatorListener extends GenericSimulatorListener<NodeHandle, Message> {
+public interface GenericSimulatorListener<Identifier, MessageType> {
+  /**
+   * Called for every message sent over the network.
+   * 
+   * @param m the Message that was sent.
+   * @param from the source.
+   * @param to the destination
+   * @param delay when the message will be delivered (in millis)
+   */
+  public void messageSent(MessageType m, Identifier from, Identifier to, int delay);
   
-//  /**
-//   * Called for every message sent over the network.
-//   * 
-//   * @param m the Message that was sent.
-//   * @param from the source.
-//   * @param to the destination
-//   * @param delay when the message will be delivered (in millis)
-//   */
-//  public void messageSent(Message m, NodeHandle from, NodeHandle to, int delay);
-//  
-//  /**
-//   * Called for every message received over the network.
-//   * 
-//   * @param m the Message that was sent.
-//   * @param from the source.
-//   * @param to the destination
-//   */
-//  public void messageReceived(Message m, NodeHandle from, NodeHandle to);
+  /**
+   * Called for every message received over the network.
+   * 
+   * @param m the Message that was sent.
+   * @param from the source.
+   * @param to the destination
+   */
+  public void messageReceived(MessageType m, Identifier from, Identifier to);
+
 }

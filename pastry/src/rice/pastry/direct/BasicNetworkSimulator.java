@@ -85,13 +85,17 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
     new HashMap<Identifier, Tupel>();
 
 
+  // to notify of send/receive
+  NetworkSimulator<Identifier, MessageType> sim; 
+  
   protected int MIN_DELAY = 1;
     
   protected final int maxDiameter;
   protected final int minDelay;
   
-  public BasicNetworkSimulator(Environment env, RandomSource random) {
+  public BasicNetworkSimulator(Environment env, RandomSource random, NetworkSimulator<Identifier, MessageType> sim) {
     super(env, random, env.getLogManager().getLogger(BasicNetworkSimulator.class, null));
+    this.sim = sim;
     manager.useLoopListeners(false);
     Parameters params = env.getParameters();
     maxDiameter = params.getInt("pastry_direct_max_diameter");
@@ -129,7 +133,14 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
 
   public Cancellable deliverMessage(MessageType msg, Identifier node, Identifier from,
       int delay) {
+    if (delay > 0) {
+      sim.notifySimulatorListenersSent(msg, from, node, delay);
+    }
     return deliverMessage(msg, node, from, delay, 0);
+  }
+
+  void notifySimulatorListenersReceived(MessageType m, Identifier from, Identifier to) {
+    sim.notifySimulatorListenersReceived(m, from, to);    
   }
 
   public Cancellable deliverMessageFixedRate(MessageType msg,
@@ -140,6 +151,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
   public Cancellable deliverMessage(MessageType msg, Identifier node, Identifier from, int delay, int period) {
     if (logger.level <= Logger.FINE)
       logger.log("BNS: deliver " + msg + " to " + node);
+    
     DirectTimerTask dtt = null;
     
     if (from == null || isAlive(from)) {

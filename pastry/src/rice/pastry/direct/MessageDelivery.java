@@ -58,14 +58,14 @@ import rice.pastry.messaging.Message;
     protected Identifier node;    
     protected Logger logger;
     protected int seq;
-    GenericNetworkSimulator<Identifier, MessageType> networkSimulator;
+    BasicNetworkSimulator<Identifier, MessageType> networkSimulator;
     Identifier from;
     protected Map<String, Object> options;
     
     /**
      * Constructor for MessageDelivery.
      */
-    public MessageDelivery(MessageType m, Identifier to, Identifier from, Map<String, Object> options, GenericNetworkSimulator<Identifier, MessageType> sim) {
+    public MessageDelivery(MessageType m, Identifier to, Identifier from, Map<String, Object> options, BasicNetworkSimulator<Identifier, MessageType> sim) {
       logger = ((DirectTransportLayer)sim.getTL(to)).getLogger();
 //      if (m instanceof rice.pastry.routing.RouteMessage) {
 //        rice.pastry.routing.RouteMessage m1 = (rice.pastry.routing.RouteMessage)m;
@@ -100,6 +100,7 @@ import rice.pastry.messaging.Message;
       try {
         DirectTransportLayer<Identifier, MessageType> tl = networkSimulator.getTL(node);
         if (tl != null) {
+          networkSimulator.notifySimulatorListenersReceived(msg, from, node);
           tl.incomingMessage(from, msg, options);
         } else {
           if (logger.level <= Logger.WARNING) logger.log("Message "+msg+" dropped because destination "+node+" is dead.");

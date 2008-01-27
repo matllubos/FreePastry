@@ -52,11 +52,14 @@ import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.NodeHandle;
 
 import rice.pastry.*;
 import rice.pastry.commonapi.*;
 import rice.pastry.direct.*;
 import rice.pastry.dist.*;
+import rice.pastry.leafset.BroadcastLeafSet;
+import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.*;
 import rice.selector.SelectorManager;
@@ -90,7 +93,7 @@ public abstract class CommonAPITest {
   protected NodeIdFactory idFactory;
 
   // the simulator, in case of direct
-  protected NetworkSimulator simulator;
+  protected NetworkSimulator<NodeHandle, Message> simulator;
   
   // the environment
   protected Environment environment;
@@ -165,12 +168,22 @@ public abstract class CommonAPITest {
 
     if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
       if (SIMULATOR.equalsIgnoreCase(SIMULATOR_SPHERE)) {
-        simulator = new SphereNetwork(env);
+        simulator = new SphereNetwork<NodeHandle, Message>(env);
       } else if (SIMULATOR.equalsIgnoreCase(SIMULATOR_GT_ITM)){
-        simulator = new GenericNetwork(env);        
+        simulator = new GenericNetwork<NodeHandle, Message>(env);        
       } else {
-        simulator = new EuclideanNetwork(env);
+        simulator = new EuclideanNetwork<NodeHandle, Message>(env);
       }
+//      simulator.addSimulatorListener(new SimulatorListener() {      
+//        public void messageSent(Message m, NodeHandle from, NodeHandle to, int delay) {
+//          if (!(m instanceof BroadcastLeafSet) && !(m instanceof RequestLeafSet))
+//            System.out.println("messageSent("+m+","+from+","+to+","+delay+")");
+//        }      
+//        public void messageReceived(Message m, NodeHandle from, NodeHandle to) {
+//          if (!(m instanceof BroadcastLeafSet) && !(m instanceof RequestLeafSet))
+//            System.out.println("messageReceived("+m+","+from+","+to+")");
+//        }      
+//      });
       
       factory = new DirectPastryNodeFactory(idFactory, simulator, env);
     } else if (PROTOCOL.equalsIgnoreCase(PROTOCOL_SOCKET)) {

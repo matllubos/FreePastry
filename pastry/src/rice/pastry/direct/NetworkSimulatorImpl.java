@@ -87,7 +87,7 @@ public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSim
     }
     generator.setRandom(random);
     this.generator = generator;
-    simulator = new BasicNetworkSimulator<Identifier, MessageType>(env, random);
+    simulator = new BasicNetworkSimulator<Identifier, MessageType>(env, random, this);
     livenessProvider = simulator;
   }
 
@@ -165,8 +165,8 @@ public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSim
 
   
   /************** SimulatorListeners handling *******************/
-  List<SimulatorListener> listeners = new ArrayList<SimulatorListener>();  
-  public boolean addSimulatorListener(SimulatorListener sl) {
+  List<GenericSimulatorListener<Identifier, MessageType>> listeners = new ArrayList<GenericSimulatorListener<Identifier, MessageType>>();  
+  public boolean addSimulatorListener(GenericSimulatorListener<Identifier, MessageType> sl) {
     synchronized(listeners) {
       if (listeners.contains(sl)) return false;
       listeners.add(sl);
@@ -174,34 +174,34 @@ public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSim
     }
   }
 
-  public boolean removeSimulatorListener(SimulatorListener sl) {
+  public boolean removeSimulatorListener(GenericSimulatorListener<Identifier, MessageType> sl) {
     synchronized(listeners) {
       return listeners.remove(sl);
     }
   }
 
-  public void notifySimulatorListenersSent(Message m, NodeHandle from, NodeHandle to, int delay) {
-    List<SimulatorListener> temp;
+  public void notifySimulatorListenersSent(MessageType m, Identifier from, Identifier to, int delay) {
+    List<GenericSimulatorListener<Identifier, MessageType>> temp;
     
     // so we aren't holding a lock while iterating/calling
     synchronized(listeners) {
-       temp = new ArrayList<SimulatorListener>(listeners);
+       temp = new ArrayList<GenericSimulatorListener<Identifier, MessageType>>(listeners);
     }
   
-    for(SimulatorListener listener : temp) {
+    for(GenericSimulatorListener<Identifier, MessageType> listener : temp) {
       listener.messageSent(m, from, to, delay);
     }
   }
 
-  public void notifySimulatorListenersReceived(Message m, NodeHandle from, NodeHandle to) {
-    List<SimulatorListener> temp;
+  public void notifySimulatorListenersReceived(MessageType m, Identifier from, Identifier to) {
+    List<GenericSimulatorListener<Identifier, MessageType>> temp;
     
     // so we aren't holding a lock while iterating/calling
     synchronized(listeners) {
-       temp = new ArrayList<SimulatorListener>(listeners);
+       temp = new ArrayList<GenericSimulatorListener<Identifier, MessageType>>(listeners);
     }
   
-    for(SimulatorListener listener : temp) {
+    for(GenericSimulatorListener<Identifier, MessageType> listener : temp) {
       listener.messageReceived(m, from, to);
     }
   }

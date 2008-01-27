@@ -212,7 +212,7 @@ public interface NetworkSimulator<Identifier, MessageType> {
    * @param to the destination 
    * @param delay the network proximity (when the message will be received)
    */
-  public void notifySimulatorListenersSent(Message m, NodeHandle from, NodeHandle to, int delay);
+  public void notifySimulatorListenersSent(MessageType m, Identifier from, Identifier to, int delay);
   
   /**
    * Call this when a message is received.
@@ -220,21 +220,21 @@ public interface NetworkSimulator<Identifier, MessageType> {
    * @param from the source
    * @param to the destination 
    */
-  public void notifySimulatorListenersReceived(Message m, NodeHandle from, NodeHandle to);
+  public void notifySimulatorListenersReceived(MessageType m, Identifier from, Identifier to);
   
   /**
    * 
    * @param sl
    * @return true if added, false if already a listener
    */
-  public boolean addSimulatorListener(SimulatorListener sl);
+  public boolean addSimulatorListener(GenericSimulatorListener<Identifier, MessageType> sl);
   
   /**
    * 
    * @param sl
    * @return true if removed, false if not already a listener
    */
-  public boolean removeSimulatorListener(SimulatorListener sl);
+  public boolean removeSimulatorListener(GenericSimulatorListener<Identifier, MessageType> sl);
 
   public NodeRecord getNodeRecord(DirectNodeHandle handle);
   

@@ -44,6 +44,7 @@ import java.util.Vector;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.Message;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
