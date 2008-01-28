@@ -69,7 +69,7 @@ else
 	# success
 	echo "Build succeeded."
     if [ "$1" == "--snapshot" ]; then
-		scp -i build.dsa FreePastry-$VERSION* build@svn.mpi-sws.mpg.de:/var/www/freepastry.org/FreePastry/snapshots/
+		scp -i ../build.dsa FreePastry-$VERSION* build@svn.mpi-sws.mpg.de:/var/www/freepastry.org/FreePastry/snapshots/
 	fi
 	
 	# run regression tests
