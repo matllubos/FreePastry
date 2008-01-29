@@ -162,11 +162,12 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
          */
         public void connect(SelectionKey key) {
           try {
-            // deregister interest in connecting to this socket
+            // unregister interest in connecting to this socket
             if (channel.finishConnect()) {
               key = tcp.wire.environment.getSelectorManager().register(channel, SocketManager.this, key.interestOps() & ~SelectionKey.OP_CONNECT);
               delivered = true;
               if (logger.level <= Logger.FINE) logger.log("delivering2 "+SocketManager.this);
+              tcp.wire.broadcastChannelOpened(addr, SocketManager.this.options, true);
               c.receiveResult(SocketManager.this, SocketManager.this);
             }
           } catch (IOException e) {
@@ -213,7 +214,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * Method which closes down this socket manager, by closing the socket,
    * cancelling the key and setting the key to be interested in nothing
    */
-  Exception closeEx;
+//  Exception closeEx;
   public void close() {
 //    logger.log("Closing " + this);
 //    if (logger.level <= Logger.FINE) logger.log("close()");
@@ -224,7 +225,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       
       if (key != null) {
-        closeEx = new Exception("Stack Trace");
+//        closeEx = new Exception("Stack Trace");
         key.cancel();
         key.attach(null);
         key = null;
@@ -233,8 +234,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         return;
       }
       
-      if (channel != null) 
+      if (channel != null) {
         channel.close();
+      }
       tcp.socketClosed(this);
       
       
@@ -400,27 +402,27 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * shutdownOutput().  This has the effect of removing the manager from
    * the open list.
    */
-  Exception shutEx;
+//  Exception shutEx;
   public void shutdownOutput() {    
 //    logger.logException(this+".shutdownOutput()", new Exception());
     boolean closeMe = false;
     synchronized(this) {
       if (key == null) {
-        logger.logException("Socket already closed.",closeEx);
+//        logger.logException("Socket already closed.",closeEx);
         throw new IllegalStateException("Socket already closed.");
       }
       
       if (channel.socket().isClosed()) {
-        logger.logException("Socket already closed2.",closeEx);        
+//        logger.logException("Socket already closed2.",closeEx);        
       }
 
-      if (channel.socket().isOutputShutdown()) {
-        logger.logException("Socket already shutdown.",shutEx);        
-      }
+//      if (channel.socket().isOutputShutdown()) {
+//        logger.logException("Socket already shutdown.",shutEx);        
+//      }
       
       try {
         if (logger.level <= Logger.FINE) logger.log("Shutting down output on app connection " + this);
-        shutEx = new Exception("shutdownOutput Stack Trace");
+//        shutEx = new Exception("shutdownOutput Stack Trace");
         
         // do we need to do this?  or does this happen twice now?
 //        manager.appSocketClosed(this);

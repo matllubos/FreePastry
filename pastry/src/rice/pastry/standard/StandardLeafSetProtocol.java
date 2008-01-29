@@ -54,7 +54,7 @@ import java.util.*;
  * @author Andrew Ladd
  */
 
-public class StandardLeafSetProtocol extends PastryAppl implements Observer {
+public class StandardLeafSetProtocol extends PastryAppl implements LeafSetProtocol, Observer {
   protected final boolean failstop = true;
 
   // nodes are assumed to fail silently

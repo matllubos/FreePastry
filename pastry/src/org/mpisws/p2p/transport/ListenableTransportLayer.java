@@ -36,13 +36,30 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport;
 
-import java.util.Map;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
 
-public interface TransportLayerListener<Identifier, MessageType>{
-  // message sent
-  // message received
-  // etc, make an adapter to the FP one
+public interface ListenableTransportLayer<Identifier, MessageType> {
+  public void addTransportLayerListener(TransportLayerListener<Identifier, MessageType> listener); 
+  public void removeTransportLayerListener(TransportLayerListener<Identifier, MessageType> listener); 
   
-  public void socketOpened(Identifier i, Map<String, Object> options, boolean outgoing);
-  public void socketClosed(Identifier i, Map<String, Object> options);
+//  Collection<TransportLayerListener<Identifier, ByteBuffer>> listeners = new ArrayList<TransportLayerListener<Identifier,ByteBuffer>>();
+//  public void addTransportLayerListener(
+//      TransportLayerListener<Identifier, ByteBuffer> listener) {
+//    synchronized(listeners) {
+//      listeners.add(listener);
+//    }
+//  }
+//
+//  public void removeTransportLayerListener(
+//      TransportLayerListener<Identifier, ByteBuffer> listener) {
+//    synchronized(listeners) {
+//      listeners.remove(listener);
+//    }
+//  }  
+//  
+//  notifyTLListenersWrite(ret,this,PASSTHROUGH);
+  
+
 }

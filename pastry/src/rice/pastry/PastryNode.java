@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry;
 
+import java.net.InetSocketAddress;
 import java.util.*;
 
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -640,14 +641,52 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     return router;
   }
   
-  public void addNetworkListener(NetworkListener nl) {
-    // TODO: implement 
-  }
-  
   public String printRouteState() {
     String ret = leafSet.toString()+"\n";
     ret+=routeSet.toString();
     return ret;
   }
+  
+  /******************* network listeners *********************/
+  // the list of network listeners
+  private ArrayList<NetworkListener> networkListeners = new ArrayList<NetworkListener>();
+
+  public void addNetworkListener(NetworkListener listener) {
+    synchronized(networkListeners) {
+      networkListeners.add(listener);
+    }
+  }
+  
+  public void removeNetworkListener(NetworkListener listener) {
+    synchronized(networkListeners) {
+      networkListeners.remove(listener);
+    }
+  }
+  
+  protected Iterable<NetworkListener> getNetworkListeners() {
+    synchronized(networkListeners) {
+      return new ArrayList<NetworkListener>(networkListeners);
+    }
+  }
+  
+  public void broadcastChannelClosed(InetSocketAddress addr) {
+    for (NetworkListener listener : getNetworkListeners())
+      listener.channelClosed(addr);
+  }
+  
+  public void broadcastChannelOpened(InetSocketAddress addr, int reason) {
+    for (NetworkListener listener : getNetworkListeners())
+      listener.channelOpened(addr, reason);
+  }
+  
+  public void broadcastSentListeners(int address, short msgType, InetSocketAddress dest, int size, int wireType) {
+    for (NetworkListener listener : getNetworkListeners())
+      listener.dataSent(address, msgType, dest, size, wireType);
+  }
+  
+  public void broadcastReceivedListeners(int address, short msgType, InetSocketAddress from, int size, int wireType) {
+    for (NetworkListener listener : getNetworkListeners())
+      listener.dataReceived(address, msgType, from, size, wireType);
+  }  
 }
 

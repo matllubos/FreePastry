@@ -52,6 +52,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.TransportLayerListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
@@ -246,7 +247,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     }
 
     /**
-     * Store the write requestor.  If this variable is not null 
+     * Store the write requester.  If this variable is not null 
      * it means that the storedWriter wants to write, but there
      * wasn't enough bandwidth.
      */
@@ -314,6 +315,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
   }
 
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
+    // notify listeners
     callback.messageReceived(i, m, options);
   }
   
@@ -379,5 +381,5 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
       }
     };
     return factory;    
-  }  
+  }
 }

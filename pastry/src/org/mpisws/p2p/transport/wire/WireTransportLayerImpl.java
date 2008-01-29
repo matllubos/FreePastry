@@ -39,9 +39,12 @@ package org.mpisws.p2p.transport.wire;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ListenableTransportLayer;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -49,6 +52,7 @@ import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.TransportLayerListener;
 import org.mpisws.p2p.transport.util.DefaultCallback;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 
@@ -58,9 +62,10 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+import rice.pastry.NetworkListener;
 import rice.pastry.messaging.Message;
 
-public class WireTransportLayerImpl implements WireTransportLayer {
+public class WireTransportLayerImpl implements WireTransportLayer, ListenableTransportLayer<InetSocketAddress, ByteBuffer> {
   // state
   protected InetSocketAddress bindAddress;
   
@@ -183,7 +188,40 @@ public class WireTransportLayerImpl implements WireTransportLayer {
     callback.messageReceived(address, buffer, udp.OPTIONS);
   }
 
-  protected void incomingSocket(P2PSocket<InetSocketAddress> sm) throws IOException {
+  protected void incomingSocket(P2PSocket<InetSocketAddress> sm) throws IOException {    
+    broadcastChannelOpened(sm.getIdentifier(), sm.getOptions(), false);
     callback.incomingSocket(sm);
+  }
+  
+  Collection<TransportLayerListener<InetSocketAddress, ByteBuffer>> listeners = 
+    new ArrayList<TransportLayerListener<InetSocketAddress,ByteBuffer>>();
+  public void addTransportLayerListener(
+      TransportLayerListener<InetSocketAddress, ByteBuffer> listener) {
+    synchronized(listeners) {
+      listeners.add(listener);
+    }
+  }
+  
+  public void removeTransportLayerListener(
+      TransportLayerListener<InetSocketAddress, ByteBuffer> listener) {
+    synchronized(listeners) {
+      listeners.remove(listener);
+    }
+  }
+  
+  protected Iterable<TransportLayerListener<InetSocketAddress, ByteBuffer>> getTLlisteners() {
+    synchronized(listeners) {
+      return new ArrayList<TransportLayerListener<InetSocketAddress, ByteBuffer>>(listeners);
+    }
+  }
+  
+  public void broadcastChannelOpened(InetSocketAddress addr, Map<String, Object> options, boolean outgoing) {
+    for (TransportLayerListener<InetSocketAddress, ByteBuffer> listener : getTLlisteners())
+      listener.socketOpened(addr, options, outgoing);
+  }
+  
+  public void broadcastChannelClosed(InetSocketAddress addr, Map<String, Object> options) {
+    for (TransportLayerListener<InetSocketAddress, ByteBuffer> listener : getTLlisteners())
+      listener.socketClosed(addr, options);
   }
 }

@@ -64,6 +64,8 @@ import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;
 import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.standard.RapidRerouter;
+import rice.pastry.standard.StandardJoinProtocol;
+import rice.pastry.standard.StandardLeafSetProtocol;
 import rice.pastry.standard.StandardRouteSetProtocol;
 import rice.pastry.standard.StandardRouter;
 
@@ -156,13 +158,16 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
   protected LeafSetProtocol getLeafSetProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, Object localNodeData) {
     PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
         pn.getLocalHandle(), leafSet, routeTable);    
+//    StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn,pn.getLocalHandle(),leafSet,routeTable);
     lsProtocol.register();
     return lsProtocol;
+    
   }
   
   protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, Object localNodeData, LeafSetProtocol lsProtocol) {
     ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
         pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol);
+//    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn,pn.getLocalHandle(), routeTable, leafSet);
     jProtocol.register();
     return jProtocol;    
   }

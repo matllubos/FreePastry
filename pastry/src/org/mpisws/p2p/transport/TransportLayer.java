@@ -70,8 +70,8 @@ public interface TransportLayer<Identifier, MessageType> extends Destructable {
    * @param i the destination
    * @param m the message
    * @param options delivery options (don't source route, encrypt etc) (may not be respected if layer cannot provide service)
-   * @param deliverAckToMe layer dependent notification when the message is sent (can indicate placed on the wire, point-to-point acknowledgement, or end-to-end acknowledgement)
-   * @return ability to cancel the message if no longer relevent
+   * @param deliverAckToMe layer dependent notification when the message is sent (can indicate placed on the wire, point-to-point acknowledgment, or end-to-end acknowledgement)
+   * @return ability to cancel the message if no longer relevant
    */
   public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Object> options);
   

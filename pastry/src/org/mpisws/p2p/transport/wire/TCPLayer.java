@@ -136,6 +136,8 @@ public class TCPLayer extends SelectionKeyHandler {
     }
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
     try {
+      wire.broadcastChannelOpened(destination, options, true);
+
       synchronized (sockets) {
         SocketManager sm = new SocketManager(this, destination, deliverSocketToMe, options); 
         sockets.add(sm);
@@ -152,6 +154,7 @@ public class TCPLayer extends SelectionKeyHandler {
   Collection<SocketManager> sockets = new HashSet<SocketManager>();
   
   protected void socketClosed(SocketManager sm) {
+    wire.broadcastChannelClosed(sm.addr, sm.options);
     sockets.remove(sm);
   }
 

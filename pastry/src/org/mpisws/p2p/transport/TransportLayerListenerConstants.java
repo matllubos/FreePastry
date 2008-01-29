@@ -36,13 +36,22 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport;
 
-import java.util.Map;
-
-public interface TransportLayerListener<Identifier, MessageType>{
-  // message sent
-  // message received
-  // etc, make an adapter to the FP one
+public interface TransportLayerListenerConstants {
+  /**
+   * Transport type
+   */
+  public int UNKNOWN = -1;
+  public int UDP = 0;
+  public int TCP = 1;
+  public int ENCRYPTED = 2;
+  public int AUTHENTICATED = 4;
   
-  public void socketOpened(Identifier i, Map<String, Object> options, boolean outgoing);
-  public void socketClosed(Identifier i, Map<String, Object> options);
+  /**
+   * Traffic due to this layer.
+   */
+  public int OVERHEAD = 0;
+  /**
+   * Traffic due to another layer.
+   */
+  public int PASSTHROUGH = 1;
 }

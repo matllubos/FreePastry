@@ -54,6 +54,7 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.TransportLayerListener;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.commonapi.IdFactory;
@@ -388,9 +389,20 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return new MultiAddressSourceRouteFactory();
   }
   
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
-    Environment environment = pn.getEnvironment();
-    WireTransportLayer wtl = new WireTransportLayerImpl(innermostAddress,environment, null);    
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, final TLPastryNode pn) throws IOException {
+    Environment environment = pn.getEnvironment();    
+    WireTransportLayerImpl wtl = new WireTransportLayerImpl(innermostAddress,environment, null);    
+    wtl.addTransportLayerListener(new TransportLayerListener<InetSocketAddress, ByteBuffer>() {
+      public void socketOpened(InetSocketAddress i,
+          Map<String, Object> options, boolean outgoing) {
+        pn.broadcastChannelOpened(i, 0);
+      }      
+      public void socketClosed(InetSocketAddress i,
+          Map<String, Object> options) {
+        pn.broadcastChannelClosed(i);
+      }
+    });
+    
     return wtl;
   }
 

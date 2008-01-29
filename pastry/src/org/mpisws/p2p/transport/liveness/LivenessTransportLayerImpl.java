@@ -776,9 +776,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
     protected void markDead(Map<String, Object> options) {
       boolean notify = false;
       if (liveness < LIVENESS_DEAD) notify = true;
-      if (notify) {
-        logger.log(this+".markDead()");
-      }
+//      if (notify) {
+//        logger.log(this+".markDead()");
+//      }
       if (logger.level <= Logger.FINER) logger.log(this+".markDead() notify:"+notify);
       markDeadHelper(LIVENESS_DEAD, options, notify);
     }
