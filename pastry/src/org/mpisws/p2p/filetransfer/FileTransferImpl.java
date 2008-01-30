@@ -42,11 +42,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
+import org.mpisws.p2p.filetransfer.messages.MsgTypes;
+
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocket;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.util.MathUtils;
 import rice.p2p.util.SortedLinkedList;
 import rice.selector.SelectorManager;
 
@@ -108,6 +111,20 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   SortedLinkedList<MessageWrapper> queue; // messages we want to send
   MessageWrapper messageThatIsBeingWritten = null;
   boolean registered = false;
+  
+  private void enqueue(MessageWrapper ret) {
+//  logger.log("enqueue("+ret+")");
+    synchronized(queue) {
+      queue.add(ret);       
+      
+      // drop the lowest priority message if the queue is overflowing        
+      while (queue.size() > MAX_QUEUE_SIZE) {
+        MessageWrapper w = queue.removeLast();
+        if (logger.level <= Logger.CONFIG) logger.log("Dropping "+w+" because queue is full. MAX_QUEUE_SIZE:"+MAX_QUEUE_SIZE);
+        w.drop();
+      }
+    }
+  }
   
   /**
    * Must be called on selectorManager.
@@ -178,10 +195,6 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     return true;
   }
 
-
-  
-  
-  
   ArrayList<FileTransferListener> listeners = new ArrayList<FileTransferListener>();
   public void addListener(FileTransferListener listener) {
     synchronized(listeners) {
@@ -225,8 +238,11 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     int seq;
     byte priority;
     
-    boolean cancelled = false;
-    
+    boolean cancelled = false;    
+    public boolean cancel() {
+      cancelled = true;
+      return true;
+    }    
     public boolean isCancelled() {
       return cancelled;
     }
@@ -242,11 +258,23 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    * TODO: make not abstract, this is just so it compiles
    */
   abstract class BBReceiptImpl extends ReceiptImpl implements BBReceipt {
-    ArrayList<ByteBuffer> msg;
+    ByteBuffer msg;
+    ArrayList<ByteBuffer> msgAndHeader;
     MessageWrapper outstanding; // = new MessageWrapper
     
-    public BBReceiptImpl(ByteBuffer bb) {
+    public BBReceiptImpl(ByteBuffer bb, int uid) {
       // construct header, first chunk
+      // byte MSG_BB_HEADER, int UID, int length
+
+      ByteBuffer header = ByteBuffer.allocate(9);
+      header.put(MsgTypes.MSG_BB_HEADER);
+      header.put(MathUtils.intToByteArray(uid));
+      header.put(MathUtils.intToByteArray(bb.remaining()));
+      
+      LinkedList<ByteBuffer> msgList = new LinkedList<ByteBuffer>(); 
+      
+      outstanding = new MessageWrapper(this,0,msgList);
+      
     }
     
     void complete(MessageWrapper wrapper) {
@@ -257,10 +285,15 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       //   notify listeners
     }
     
+    @Override
+    public boolean cancel() {
+      super.cancel();
+      return outstanding.cancel();
+    }
   }
   
   /**
-   * Keep some number of chunks scheduled, and every time one finishes, read some more to schedule more.
+   * Keep up to FILE_CACHE of chunks scheduled, and every time one finishes, read some more to schedule more.
    * @author Jeff Hoye
    * 
    * TODO: make not abstract, this is just so it compiles
@@ -281,10 +314,37 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       this.message = message;
     }
     
-    public void clear(LinkedList<ByteBuffer> message) {
+    /**
+     * Called due to a queue overflow.
+     */
+    public void drop() {
+      throw new RuntimeException("Implement.");
+    }
+
+    public boolean cancel() {
+      if (this.equals(messageThatIsBeingWritten)) {
+        if (!started) {
+          // TODO: can still cancel the message, but have to have special behavior when the socket calls us back 
+          return true;
+        } else {
+          return false;
+        }
+      }
+      synchronized(queue) {
+        return queue.remove(this);
+      }
+    }
+
+    /**
+     * To make this reusable
+     * @param message
+     * @param seq
+     */
+    public void clear(LinkedList<ByteBuffer> message, long seq) {
       if (!message.isEmpty()) throw new IllegalStateException(this+".clear() message is not empty!");
       started = false;
       this.message = message;
+      this.seq = seq;
     }
     
     /**
