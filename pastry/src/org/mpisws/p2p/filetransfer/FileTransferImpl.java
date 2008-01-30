@@ -40,9 +40,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
-
-import org.mpisws.p2p.filetransfer.messages.MsgTypes;
+import java.util.Map;
 
 import rice.Continuation;
 import rice.environment.Environment;
@@ -60,6 +60,32 @@ import rice.selector.SelectorManager;
  *
  */
 public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
+  /**
+   * Contains int UID, long length, short name_length, String name
+   */
+  public static final byte MSG_FILE_HEADER = 1;
+  
+  /**
+   * Contains int UID, int length
+   */
+  public static final byte MSG_BB_HEADER = 2;
+  
+  /**
+   * Contains int UID, int chunk_length, byte[chunk_length] msg
+   */
+  public static final byte MSG_CHUNK = 3;
+  
+  /**
+   * Contains int UID
+   */
+  public static final byte MSG_CANCEL = 4;
+  
+  /**
+   * Contains int UID
+   */
+  public static final byte MSG_CANCEL_REQUEST = 5;  
+
+  
   protected FileAllocationStrategy tempFileStrategy;
   protected AppSocket socket;
   protected FileTransferCallback callback;
@@ -221,8 +247,13 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
 
   public BBReceipt sendMsg(ByteBuffer bb, byte priority,
       Continuation<BBReceipt, Exception> c) {
+    BBReceiptImpl ret = new BBReceiptImpl(bb,priority,getUid());
     // TODO Auto-generated method stub
     return null;
+  }
+  
+  protected synchronized int getUid() {
+    return seq++;
   }
   
   /**
@@ -235,10 +266,24 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    *
    */
   abstract class ReceiptImpl implements Receipt {
-    int seq;
     byte priority;
-    
+    int uid;
     boolean cancelled = false;    
+    
+    public ReceiptImpl(byte priority, int uid) {
+      this.priority = priority;
+      this.uid = uid;
+    }
+    
+    public byte getPriority() {
+      return priority;
+    }
+
+    public int getUID() {
+      return uid;
+    }
+
+    
     public boolean cancel() {
       cancelled = true;
       return true;
@@ -257,17 +302,18 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    * 
    * TODO: make not abstract, this is just so it compiles
    */
-  abstract class BBReceiptImpl extends ReceiptImpl implements BBReceipt {
+  class BBReceiptImpl extends ReceiptImpl implements BBReceipt {
     ByteBuffer msg;
     ArrayList<ByteBuffer> msgAndHeader;
     MessageWrapper outstanding; // = new MessageWrapper
     
-    public BBReceiptImpl(ByteBuffer bb, int uid) {
+    public BBReceiptImpl(ByteBuffer bb, byte priority, int uid) {
+      super(priority, uid);
       // construct header, first chunk
       // byte MSG_BB_HEADER, int UID, int length
 
       ByteBuffer header = ByteBuffer.allocate(9);
-      header.put(MsgTypes.MSG_BB_HEADER);
+      header.put(MSG_BB_HEADER);
       header.put(MathUtils.intToByteArray(uid));
       header.put(MathUtils.intToByteArray(bb.remaining()));
       
@@ -290,6 +336,22 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       super.cancel();
       return outstanding.cancel();
     }
+
+    public byte[] getBytes() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+
+    public long getSize() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    public int compareTo(Receipt o) {
+      // TODO Auto-generated method stub
+      return 0;
+    }
   }
   
   /**
@@ -299,6 +361,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    * TODO: make not abstract, this is just so it compiles
    */
   abstract class FileReceiptImpl extends ReceiptImpl {
+
+    public FileReceiptImpl(byte priority, int uid) {
+      super(priority, uid);
+    }
     
   }
   
@@ -352,10 +418,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
      */
     public int compareTo(MessageWrapper that) {
       if (this.receipt.priority == that.receipt.priority) {
-        if (this.receipt.seq == that.receipt.seq) {
+        if (this.receipt.uid == that.receipt.uid) {
           return (int)(this.seq-that.seq);
         }
-        return this.receipt.seq-that.receipt.seq;
+        return this.receipt.uid-that.receipt.uid;
       }
       return this.receipt.priority-that.receipt.priority;
     }
@@ -377,6 +443,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         if ((bytesWritten = socket.write(message.getFirst())) == -1) {
           // socket was closed, panic
           socketClosed();
+          return false;
         }
 //        if (logger.level <= Logger.FINER) logger.log(this+" wrote "+bytesWritten+" bytes of "+message.capacity()+" remaining:"+message.remaining());
 
@@ -415,10 +482,184 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         // note, clearAndEnqueue() gets called later by the writer when the stack unravels again
         if (logger.level <= Logger.FINEST) logger.logException(this+".rsr("+socket+")", ioe);
         receiveException(socket, ioe);
+        return;
       }
     }
     if (canRead) {
-      // read
+      try {
+        // keep reading
+        while(reader.read(socket));
+        // always be reading
+        socket.register(true, false, -1, this);
+      } catch (IOException ioe) {
+        receiveException(socket, ioe);
+      }
+    }
+  }
+  
+  final MsgTypeReader msgTypeReader = new MsgTypeReader();
+  final BBHeaderReader bbHeaderReader = new BBHeaderReader();
+  final ChunkReader chunkReader = new ChunkReader();
+
+  Reader reader = msgTypeReader;
+  
+  // Reading.
+  interface Reader {
+
+    /**
+     * @param socket
+     * @return true if should keep reading
+     */
+    boolean read(AppSocket socket) throws IOException;
+  }
+  
+  class MsgTypeReader implements Reader {
+    byte[] bytes = new byte[5];
+    ByteBuffer buf = ByteBuffer.wrap(bytes);
+    
+    public boolean read(AppSocket socket) throws IOException {
+      // read the 
+      long bytesRead = socket.read(buf);
+      if (bytesRead < 0) {
+        socketClosed();
+        return false;
+      }
+      if (buf.hasRemaining()) return false;
+      
+      
+      buf.reset();      
+      byte msgType = bytes[0];
+      int uid = MathUtils.byteArrayToInt(bytes,1);
+      buf.clear();
+      
+      switch(msgType) {
+      case MSG_BB_HEADER:
+        bbHeaderReader.setUID(uid);
+        reader = bbHeaderReader;
+        break;
+      case MSG_CHUNK:
+        chunkReader.setUID(uid);
+        reader = chunkReader;
+        break;
+      }
+      return true;      
+    }
+  }
+
+  class BBHeaderReader implements Reader {
+    byte[] bytes = new byte[4];
+    ByteBuffer buf = ByteBuffer.wrap(bytes);
+    int uid;
+    
+    public void setUID(int uid) {
+      this.uid = uid;
+    }
+    
+    public boolean read(AppSocket socket) throws IOException {
+      // read the 
+      long bytesRead = socket.read(buf);
+      if (bytesRead < 0) {
+        socketClosed();
+        return false;
+      }
+      if (buf.hasRemaining()) return false;
+            
+      buf.reset();      
+      int size = MathUtils.byteArrayToInt(bytes);
+      buf.clear();
+      
+      addIncomingMessage(uid,size);
+      
+      reader = msgTypeReader;
+      return true;      
+    }
+  }
+
+  class ChunkReader implements Reader {
+    byte[] bytes = new byte[4];
+    ByteBuffer buf = ByteBuffer.wrap(bytes);
+    int uid;
+    
+    public void setUID(int uid) {
+      this.uid = uid;
+    }
+    
+    public boolean read(AppSocket socket) throws IOException {
+      // read the 
+      long bytesRead = socket.read(buf);
+      if (bytesRead < 0) {
+        socketClosed();
+        return false;
+      }
+      if (buf.hasRemaining()) return false;
+            
+      buf.reset();      
+      int size = MathUtils.byteArrayToInt(bytes);
+      buf.clear();
+      
+      DataReader dataReader = incomingData.get(uid);
+      if (dataReader ==  null) throw new IllegalStateException("No record of uid "+uid);
+      return dataReader.read(socket, size);
+    }
+  }
+
+  
+  Map<Integer, DataReader> incomingData = new HashMap<Integer, DataReader>();
+  public void addIncomingMessage(int uid, int size) {
+    if (incomingData.containsKey(uid)) throw new IllegalArgumentException("DataReader with uid "+uid+" already exists! "+incomingData.get(uid)+" "+size);
+    incomingData.put(uid,new BBDataReader(uid, size));
+  }
+
+  interface DataReader extends Reader {
+    public boolean read(AppSocket socket, int size) throws IOException;
+  }
+  
+  class BBDataReader implements DataReader {
+    int uid;
+    byte[] bytes;
+    ByteBuffer curReader;
+        
+    public BBDataReader(int uid, int size) {
+      this.uid = uid;
+      bytes = new byte[size];
+      curReader.wrap(bytes);      
+    }
+
+    public boolean read(AppSocket socket, int numToRead) throws IOException {
+      if (curReader.hasRemaining()) throw new IllegalStateException("curReader has "+curReader.remaining()+" bytes remaining. "+numToRead);
+      curReader.limit(curReader.position()+numToRead);
+      reader = this;
+      return read(socket);
+    }
+
+    public boolean read(AppSocket socket) throws IOException {
+      long ret = socket.read(curReader);
+      if (ret < 0) {
+        socketClosed();
+        return false;
+      }
+      if (curReader.hasRemaining()) {
+        return false;
+      }
+      completeChunk();
+      return true;
+    }
+    
+    public void completeChunk() {
+      // notify listeners
+      System.out.println(FileTransferImpl.this+" read chunk.");
+      
+      if (curReader.position() == bytes.length) {
+        complete();
+      }
+      reader = msgTypeReader;
+    }
+    
+    public void complete() {
+      incomingData.remove(uid);
+      
+      // notify callback
+      System.out.println(FileTransferImpl.this+" read msg. "+bytes);
     }
   }
   

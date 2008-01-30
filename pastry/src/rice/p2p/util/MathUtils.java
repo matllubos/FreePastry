@@ -216,13 +216,17 @@ public class MathUtils {
    * @return a int representation
    */
   public static int byteArrayToInt(byte[] input) {
+    return byteArrayToInt(input,0);
+  }
+  
+  public static int byteArrayToInt(byte[] input, int offset) {
     input = correctLength(input, 4);
 
     int result;
-    result  = (input[0] & 0xFF) << 24;
-    result |= (input[1] & 0xFF) << 16;
-    result |= (input[2] & 0xFF) << 8;
-    result |= (input[3] & 0xFF);
+    result  = (input[offset] & 0xFF) << 24;
+    result |= (input[offset+1] & 0xFF) << 16;
+    result |= (input[offset+2] & 0xFF) << 8;
+    result |= (input[offset+3] & 0xFF);
 
     return result;
   }
@@ -288,6 +292,10 @@ public class MathUtils {
    * @return A correct-length array
    */
   private static byte[] correctLength(byte[] data, int length) {
+    return correctLength(data, 0, length);
+  }
+  
+  private static byte[] correctLength(byte[] data, int offset, int length) {
     if (data.length >= length)
       return data;
     

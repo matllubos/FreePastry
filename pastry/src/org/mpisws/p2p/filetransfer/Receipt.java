@@ -41,6 +41,7 @@ import rice.p2p.commonapi.Cancellable;
 public interface Receipt extends Cancellable, Comparable<Receipt> {
   /**
    * Unique on a simplex connection.
+   * Also used to disambiguate the priority of 2 items of the same priority
    * @return
    */
   public int getUID();
@@ -50,13 +51,5 @@ public interface Receipt extends Cancellable, Comparable<Receipt> {
    * Unknown on receiver.
    * @return
    */
-  public byte getPriority();
-  
-  /**
-   * Used to disambiguate the priority of 2 items of the same priority
-   * 
-   * Unknown on receiver.
-   * @return
-   */
-  public int getSeq();  
+  public byte getPriority();  
 }
