@@ -49,11 +49,11 @@ import rice.selector.SelectorManager;
  * 
  * @author Jeff Hoye
  */
-public abstract class WorkRequest implements Runnable {
-  private Continuation c;
+public abstract class WorkRequest<R> implements Runnable {
+  private Continuation<R, Exception> c;
   private SelectorManager selectorManager;
   
-  public WorkRequest(Continuation c, SelectorManager sm){
+  public WorkRequest(Continuation<R, Exception> c, SelectorManager sm){
     this.c = c;
     this.selectorManager = sm;
   }
@@ -62,7 +62,7 @@ public abstract class WorkRequest implements Runnable {
     /* do nothing */
   }
   
-  public void returnResult(Object o) {
+  public void returnResult(R o) {
     c.receiveResult(o); 
   }
   
@@ -73,7 +73,7 @@ public abstract class WorkRequest implements Runnable {
   public void run() {
     try {
      // long start = environment.getTimeSource().currentTimeMillis();
-      final Object result = doWork();
+      final R result = doWork();
      // System.outt.println("PT: " + (environment.getTimeSource().currentTimeMillis() - start) + " " + toString());
       selectorManager.invoke(new Runnable() {
         public void run() {
@@ -97,5 +97,5 @@ public abstract class WorkRequest implements Runnable {
     }
   }
   
-  public abstract Object doWork() throws Exception;
+  public abstract R doWork() throws Exception;
 }

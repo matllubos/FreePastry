@@ -220,10 +220,10 @@ public class MathUtils {
   }
   
   public static int byteArrayToInt(byte[] input, int offset) {
-    input = correctLength(input, 4);
+    input = correctLength(input, offset+4);
 
     int result;
-    result  = (input[offset] & 0xFF) << 24;
+    result  = (input[offset+0] & 0xFF) << 24;
     result |= (input[offset+1] & 0xFF) << 16;
     result |= (input[offset+2] & 0xFF) << 8;
     result |= (input[offset+3] & 0xFF);
@@ -267,17 +267,21 @@ public class MathUtils {
    * @return a long representation
    */
   public static long byteArrayToLong(byte[] input) {
-    input = correctLength(input, 8);
+    return byteArrayToLong(input, 0);
+  }
+  public static long byteArrayToLong(byte[] input, int offset) {
+
+    input = correctLength(input, offset+8);
  
     long result;
-    result  = ((long)(input[0] & 0xFF)) << 56;
-    result |= ((long)(input[1] & 0xFF)) << 48;
-    result |= ((long)(input[2] & 0xFF)) << 40;
-    result |= ((long)(input[3] & 0xFF)) << 32;
-    result |= ((long)(input[4] & 0xFF)) << 24;
-    result |= ((long)(input[5] & 0xFF)) << 16;
-    result |= ((long)(input[6] & 0xFF)) << 8;
-    result |= ((long)(input[7] & 0xFF));
+    result  = ((long)(input[offset+0] & 0xFF)) << 56;
+    result |= ((long)(input[offset+1] & 0xFF)) << 48;
+    result |= ((long)(input[offset+2] & 0xFF)) << 40;
+    result |= ((long)(input[offset+3] & 0xFF)) << 32;
+    result |= ((long)(input[offset+4] & 0xFF)) << 24;
+    result |= ((long)(input[offset+5] & 0xFF)) << 16;
+    result |= ((long)(input[offset+6] & 0xFF)) << 8;
+    result |= ((long)(input[offset+7] & 0xFF));
 
     return result;
   }

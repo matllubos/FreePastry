@@ -42,6 +42,7 @@ advised of the possibility of such damage.
  */
 package rice.tutorial.sendfile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -142,7 +143,7 @@ public class MyApp implements Application {
        * Called when the socket comes available.
        */
       public void receiveSocket(AppSocket socket) {        
-        FileTransfer sender = new FileTransferImpl(socket, null, node.getEnvironment());
+        FileTransfer sender = new FileTransferImpl(socket, null, node.getEnvironment());        
         ByteBuffer sendMe = ByteBuffer.allocate(4);
         sendMe.put((byte)1);
         sendMe.put((byte)2);
@@ -151,6 +152,14 @@ public class MyApp implements Application {
         sendMe.flip();
         System.out.println("Sending "+sendMe);
         sender.sendMsg(sendMe, (byte)1, null);
+        
+        try {
+          File f = new File("delme.txt");
+          System.out.println(f.getCanonicalPath());
+          sender.sendFile(f,"foo",(byte)2,null);
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
       }    
 
       /**

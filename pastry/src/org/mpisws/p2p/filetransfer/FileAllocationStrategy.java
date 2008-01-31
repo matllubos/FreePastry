@@ -54,5 +54,5 @@ public interface FileAllocationStrategy {
    * @return
    * @throws IOException
    */
-  public File getFile(String s, long size, long offset, long length) throws IOException;
+  public File getFile(String s, long offset, long length) throws IOException;
 }

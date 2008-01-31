@@ -37,13 +37,24 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.filetransfer;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import rice.Continuation;
 
 public interface FileTransfer {
-  public FileReceipt sendFile(File f, String s, byte priority, Continuation<FileReceipt, Exception> c);
-  public FileReceipt sendFile(File f, String s, byte priority, long offset, long length, Continuation<FileReceipt, Exception> c);
+  public FileReceipt sendFile(File f, String s, byte priority, Continuation<FileReceipt, Exception> c) throws IOException;
+  /**
+   * 
+   * @param f the file to send
+   * @param s the "name" of the file (application dependent)
+   * @param priority the priority of sending
+   * @param offset where to start in the file
+   * @param length how many bytes to send (must be <= fileLength-offset)
+   * @param c who to notify when it is done
+   * @return
+   */
+  public FileReceipt sendFile(File f, String s, byte priority, long offset, long length, Continuation<FileReceipt, Exception> c) throws IOException;
   public BBReceipt sendMsg(ByteBuffer bb, byte priority, Continuation<BBReceipt, Exception> c);
   public void addListener(FileTransferListener listener);
   public void removeListener(FileTransferListener listener);

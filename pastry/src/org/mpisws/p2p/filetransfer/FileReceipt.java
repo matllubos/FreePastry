@@ -43,4 +43,6 @@ import rice.p2p.commonapi.Cancellable;
 public interface FileReceipt extends Receipt {
   public File getFile();
   public String getName();
+  public long getOffset();
+  public long getLength();
 }

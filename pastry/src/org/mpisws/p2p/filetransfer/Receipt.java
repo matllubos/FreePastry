@@ -38,7 +38,7 @@ package org.mpisws.p2p.filetransfer;
 
 import rice.p2p.commonapi.Cancellable;
 
-public interface Receipt extends Cancellable, Comparable<Receipt> {
+public interface Receipt extends Cancellable {
   /**
    * Unique on a simplex connection.
    * Also used to disambiguate the priority of 2 items of the same priority

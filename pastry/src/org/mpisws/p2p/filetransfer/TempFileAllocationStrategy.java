@@ -57,8 +57,10 @@ public class TempFileAllocationStrategy implements FileAllocationStrategy {
     this.suffix = suffix;
   }
   
-  public synchronized File getFile(String s, long size, long offset, long length) throws IOException {
-    return File.createTempFile(prefix, suffix);
+  public synchronized File getFile(String s, long offset, long length) throws IOException {
+    File temp = File.createTempFile(prefix, suffix);
+    temp.deleteOnExit();
+    return temp;
   }
 
 }
