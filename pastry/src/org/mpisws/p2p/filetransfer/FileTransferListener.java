@@ -41,12 +41,22 @@ public interface FileTransferListener {
    * @param receipt description of what is being transferred
    * @param bytesTransferred the bytes that have been transferred so far
    * @param total bytes that will be transferred
+   * @param incoming true if downloding, false if uploading
    */
-  public void fileTransferred(FileReceipt receipt, long bytesTransferred, long total);
+  public void fileTransferred(FileReceipt receipt, long bytesTransferred, long total, boolean incoming);
   /**
    * @param receipt description of what is being transferred
    * @param bytesTransferred the bytes that have been transferred so far
    * @param total bytes that will be transferred
+   * @param incoming true if downloding, false if uploading
    */
-  public void msgTransferred(BBReceipt receipt, int bytesTransferred, int total);
+  public void msgTransferred(BBReceipt receipt, int bytesTransferred, int total, boolean incoming);
+  
+  /**
+   * 
+   * @param receipt the item that was cancelled
+   * @param incoming true if it's a download that was cancelled, false if it was an upload that was cancelled
+   */
+  public void transferCancelled(Receipt receipt, boolean incoming);
+  
 }

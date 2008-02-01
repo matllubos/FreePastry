@@ -140,7 +140,7 @@ public class Tutorial {
     
     // for each app
     Iterator appIterator = apps.iterator();
-    while(appIterator.hasNext()) {
+//    while(appIterator.hasNext()) {
       MyApp app = (MyApp)appIterator.next();
       PastryNode node = (PastryNode)app.getNode();
       
@@ -149,7 +149,9 @@ public class Tutorial {
       
       // this is a typical loop to cover your leafset.  Note that if the leafset
       // overlaps, then duplicate nodes will be sent to twice
-      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
+//      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
+      int i=-leafSet.ccwSize();
+      
         // select the item
         NodeHandle nh = leafSet.get(i);
         
@@ -158,8 +160,8 @@ public class Tutorial {
         
         // wait a bit
         env.getTimeSource().sleep(100);
-      }
-    }    
+//      }
+//    }    
   }
 
   /**

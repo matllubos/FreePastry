@@ -36,12 +36,16 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.filetransfer;
 
-import java.io.File;
+import java.io.IOException;
 
-import rice.p2p.commonapi.Cancellable;
+public class OperationCancelledException extends IOException {
+  Receipt receipt;
+  
+  public OperationCancelledException(Receipt receipt) {
+    super("Remote connection cancelled transfer of "+receipt);
+  }
 
-public interface FileReceipt extends Receipt {
-  public File getFile();
-  public String getName();
-  public long getOffset();
+  public Receipt getReceipt() {
+    return receipt;
+  }
 }

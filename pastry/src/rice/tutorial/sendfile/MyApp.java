@@ -46,9 +46,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.mpisws.p2p.filetransfer.BBReceipt;
+import org.mpisws.p2p.filetransfer.FileReceipt;
 import org.mpisws.p2p.filetransfer.FileTransfer;
+import org.mpisws.p2p.filetransfer.FileTransferCallback;
 import org.mpisws.p2p.filetransfer.FileTransferImpl;
+import org.mpisws.p2p.filetransfer.FileTransferListener;
+import org.mpisws.p2p.filetransfer.Receipt;
 
+import rice.Continuation;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.*;
 
@@ -100,7 +106,33 @@ public class MyApp implements Application {
        * When we accept a new socket.
        */
       public void receiveSocket(AppSocket socket) {
-        fileTransfer = new FileTransferImpl(socket,null,MyApp.this.node.getEnvironment());
+        fileTransfer = new FileTransferImpl(socket,new FileTransferCallback() {
+        
+          public void messageReceived(ByteBuffer bb) {
+            System.out.println("Message received: "+bb);
+          }
+        
+          public void fileReceived(File f, String s) {
+            File dest = new File("delme2.txt");
+            System.out.println("Renaming "+f+" to "+dest);
+            System.out.println(f.renameTo(dest));
+          }
+        
+        },MyApp.this.node.getEnvironment());
+        
+        fileTransfer.addListener(new MyFileListener() {
+
+        @Override
+        public void fileTransferred(FileReceipt receipt,
+            long bytesTransferred, long total, boolean incoming) {
+          super.fileTransferred(receipt, bytesTransferred, total, incoming);
+          if (1.0*bytesTransferred/total > 0.5) {
+            System.out.println(MyApp.this+" cancelling transfer of "+receipt);
+            receipt.cancel();
+          }
+        }
+        
+      });
         
         // it's critical to call this to be able to accept multiple times
         endpoint.accept(this);
@@ -125,6 +157,42 @@ public class MyApp implements Application {
     endpoint.register();
   }
 
+  class MyFileListener implements FileTransferListener {
+    public void fileTransferred(FileReceipt receipt,
+        long bytesTransferred, long total, boolean incoming) {
+      String s;
+      if (incoming) {
+        s = " Downloaded ";
+      } else {
+        s = " Uploaded ";              
+      }
+      double percent = 100.0*bytesTransferred/total;
+      System.out.println(MyApp.this+s+percent+"% of "+receipt);
+    }
+
+    public void msgTransferred(BBReceipt receipt, int bytesTransferred,
+        int total, boolean incoming) {
+      String s;
+      if (incoming) {
+        s = " Downloaded ";
+      } else {
+        s = " Uploaded ";              
+      }
+      double percent = 100.0*bytesTransferred/total;
+      System.out.println(MyApp.this+s+percent+"% of "+receipt);
+    }
+
+    public void transferCancelled(Receipt receipt, boolean incoming) {
+      String s;
+      if (incoming) {
+        s = "download";
+      } else {
+        s = "upload";              
+      }
+      System.out.println(MyApp.this+": Cancelled "+s+" of "+receipt);
+    }
+  }
+  
   /**
    * Getter for the node.
    */
@@ -143,7 +211,21 @@ public class MyApp implements Application {
        * Called when the socket comes available.
        */
       public void receiveSocket(AppSocket socket) {        
-        FileTransfer sender = new FileTransferImpl(socket, null, node.getEnvironment());        
+        FileTransfer sender = new FileTransferImpl(socket, null, node.getEnvironment());         
+        sender.addListener(new MyFileListener() {
+
+//          @Override
+//          public void fileTransferred(FileReceipt receipt,
+//              long bytesTransferred, long total, boolean incoming) {
+//            super.fileTransferred(receipt, bytesTransferred, total, incoming);
+//            if (1.0*bytesTransferred/total > 0.5) {
+//              System.out.println(MyApp.this+" cancelling transfer of "+receipt);
+//              receipt.cancel();
+//            }
+//          }
+          
+        });
+       
         ByteBuffer sendMe = ByteBuffer.allocate(4);
         sendMe.put((byte)1);
         sendMe.put((byte)2);
@@ -154,9 +236,18 @@ public class MyApp implements Application {
         sender.sendMsg(sendMe, (byte)1, null);
         
         try {
-          File f = new File("delme.txt");
+          final File f = new File("delme.txt");
           System.out.println(f.getCanonicalPath());
-          sender.sendFile(f,"foo",(byte)2,null);
+          sender.sendFile(f,"foo",(byte)2,new Continuation<FileReceipt, Exception>() {
+
+            public void receiveException(Exception exception) {
+              System.out.println("Error sending: "+f+" "+exception);
+            }
+
+            public void receiveResult(FileReceipt result) {
+              System.out.println("Send complete: "+result);
+            }
+          });
         } catch (IOException ioe) {
           ioe.printStackTrace();
         }
