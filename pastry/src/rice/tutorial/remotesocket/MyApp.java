@@ -40,21 +40,11 @@ advised of the possibility of such damage.
  * TODO To change the template for this generated file go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-package rice.tutorial.sendfile;
+package rice.tutorial.remotesocket;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.filetransfer.BBReceipt;
-import org.mpisws.p2p.filetransfer.FileReceipt;
-import org.mpisws.p2p.filetransfer.FileTransfer;
-import org.mpisws.p2p.filetransfer.FileTransferCallback;
-import org.mpisws.p2p.filetransfer.FileTransferImpl;
-import org.mpisws.p2p.filetransfer.FileTransferListener;
-import org.mpisws.p2p.filetransfer.Receipt;
-
-import rice.Continuation;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.*;
 
@@ -76,29 +66,27 @@ public class MyApp implements Application {
    */
   protected Node node;
 
-  protected FileTransfer fileTransfer;
+  ByteBuffer[] outs;
+  ByteBuffer out;
   
-//  ByteBuffer[] outs;
-//  ByteBuffer out;
-//  
-//  ByteBuffer[] ins;
-//  ByteBuffer in;
-//  
-//  int MSG_LENGTH;
+  ByteBuffer[] ins;
+  ByteBuffer in;
+  
+  int MSG_LENGTH;
   
   public MyApp(Node node, final IdFactory factory) {
     // register the endpoint
     this.endpoint = node.buildEndpoint(this, "myinstance");
     this.node = node;
     
-//    MSG_LENGTH = node.getLocalNodeHandle().getId().toByteArray().length;
-//    outs = new ByteBuffer[1];    
-//    out = ByteBuffer.wrap(node.getLocalNodeHandle().getId().toByteArray());
-//    outs[0] = out;
-//    
-//    ins = new ByteBuffer[1];
-//    in = ByteBuffer.allocate(MSG_LENGTH);
-//    ins[0] = in;
+    MSG_LENGTH = node.getLocalNodeHandle().getId().toByteArray().length;
+    outs = new ByteBuffer[1];    
+    out = ByteBuffer.wrap(node.getLocalNodeHandle().getId().toByteArray());
+    outs[0] = out;
+    
+    ins = new ByteBuffer[1];
+    in = ByteBuffer.allocate(MSG_LENGTH);
+    ins[0] = in;
     
     // example receiver interface
     endpoint.accept(new AppSocketReceiver() {
@@ -106,33 +94,8 @@ public class MyApp implements Application {
        * When we accept a new socket.
        */
       public void receiveSocket(AppSocket socket) {
-        fileTransfer = new FileTransferImpl(socket,new FileTransferCallback() {
-        
-          public void messageReceived(ByteBuffer bb) {
-            System.out.println("Message received: "+bb);
-          }
-        
-          public void fileReceived(File f, String s) {
-            File dest = new File("delme2.txt");
-            System.out.println("Renaming "+f+" to "+dest);
-            System.out.println(f.renameTo(dest));
-          }
-        
-        },MyApp.this.node.getEnvironment());
-        
-        fileTransfer.addListener(new MyFileListener() {
-
-        @Override
-        public void fileTransferred(FileReceipt receipt,
-            long bytesTransferred, long total, boolean incoming) {
-          super.fileTransferred(receipt, bytesTransferred, total, incoming);
-          if (1.0*bytesTransferred/total > 0.5) {
-            System.out.println(MyApp.this+" cancelling transfer of "+receipt);
-            receipt.cancel();
-          }
-        }
-        
-      });
+        // this code reuses "this" AppSocketReceiver, and registers for reading only, and a timeout of 30000. 
+        socket.register(true, false, 30000, this);
         
         // it's critical to call this to be able to accept multiple times
         endpoint.accept(this);
@@ -142,7 +105,23 @@ public class MyApp implements Application {
        * Called when the socket is ready for reading or writing.
        */
       public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {
-        throw new RuntimeException("Shouldn't be called.");
+        in.clear();
+        try {
+          // read from the socket into ins
+          long ret = socket.read(ins, 0, ins.length);    
+          
+          if (ret != MSG_LENGTH) {
+            // if you sent any kind of long message, you would need to handle this case better
+            System.out.println("Error, we only received part of a message."+ret+" from "+socket);
+            return;
+          }
+            
+          System.out.println(MyApp.this.node.getLocalNodeHandle()+" Received message from "+factory.buildId(in.array()));        
+        } catch (IOException ioe) {
+          ioe.printStackTrace(); 
+        }
+        // only need to do this if expecting more messages
+//        socket.register(true, false, 3000, this);        
       }
     
       /**
@@ -157,42 +136,6 @@ public class MyApp implements Application {
     endpoint.register();
   }
 
-  class MyFileListener implements FileTransferListener {
-    public void fileTransferred(FileReceipt receipt,
-        long bytesTransferred, long total, boolean incoming) {
-      String s;
-      if (incoming) {
-        s = " Downloaded ";
-      } else {
-        s = " Uploaded ";              
-      }
-      double percent = 100.0*bytesTransferred/total;
-      System.out.println(MyApp.this+s+percent+"% of "+receipt);
-    }
-
-    public void msgTransferred(BBReceipt receipt, int bytesTransferred,
-        int total, boolean incoming) {
-      String s;
-      if (incoming) {
-        s = " Downloaded ";
-      } else {
-        s = " Uploaded ";              
-      }
-      double percent = 100.0*bytesTransferred/total;
-      System.out.println(MyApp.this+s+percent+"% of "+receipt);
-    }
-
-    public void transferCancelled(Receipt receipt, boolean incoming) {
-      String s;
-      if (incoming) {
-        s = "download";
-      } else {
-        s = "upload";              
-      }
-      System.out.println(MyApp.this+": Cancelled "+s+" of "+receipt);
-    }
-  }
-  
   /**
    * Getter for the node.
    */
@@ -210,47 +153,9 @@ public class MyApp implements Application {
       /**
        * Called when the socket comes available.
        */
-      public void receiveSocket(AppSocket socket) {        
-        FileTransfer sender = new FileTransferImpl(socket, null, node.getEnvironment());         
-        sender.addListener(new MyFileListener() {
-
-//          @Override
-//          public void fileTransferred(FileReceipt receipt,
-//              long bytesTransferred, long total, boolean incoming) {
-//            super.fileTransferred(receipt, bytesTransferred, total, incoming);
-//            if (1.0*bytesTransferred/total > 0.5) {
-//              System.out.println(MyApp.this+" cancelling transfer of "+receipt);
-//              receipt.cancel();
-//            }
-//          }
-          
-        });
-       
-        ByteBuffer sendMe = ByteBuffer.allocate(4);
-        sendMe.put((byte)1);
-        sendMe.put((byte)2);
-        sendMe.put((byte)3);
-        sendMe.put((byte)4);
-        sendMe.flip();
-        System.out.println("Sending "+sendMe);
-        sender.sendMsg(sendMe, (byte)1, null);
-        
-        try {
-          final File f = new File("delme.txt");
-//          System.out.println(f.getCanonicalPath());
-          sender.sendFile(f,"foo",(byte)2,new Continuation<FileReceipt, Exception>() {
-
-            public void receiveException(Exception exception) {
-              System.out.println("Error sending: "+f+" "+exception);
-            }
-
-            public void receiveResult(FileReceipt result) {
-              System.out.println("Send complete: "+result);
-            }
-          });
-        } catch (IOException ioe) {
-          ioe.printStackTrace();
-        }
+      public void receiveSocket(AppSocket socket) {
+        // register for writing
+        socket.register(false, true, 30000, this);
       }    
 
       /**
@@ -264,7 +169,19 @@ public class MyApp implements Application {
        * Example of how to write some bytes
        */
       public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {   
-        throw new RuntimeException("Shouldn't be called.");
+        try {
+          long ret = socket.write(outs,0,outs.length);        
+          // see if we are done
+          if (!out.hasRemaining()) {
+            socket.close();           
+            out.clear();
+          } else {
+            // keep writing
+            socket.register(false, true, 30000, this); 
+          }
+        } catch (IOException ioe) {
+          ioe.printStackTrace(); 
+        }
       }
     }, 30000);
   }

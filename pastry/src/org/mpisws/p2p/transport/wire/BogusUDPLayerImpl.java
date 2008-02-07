@@ -34,41 +34,34 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.transport;
+package org.mpisws.p2p.transport.wire;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
-import org.mpisws.p2p.transport.P2PSocket;
-import org.mpisws.p2p.transport.P2PSocketReceiver;
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 
-import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.p2p.commonapi.appsocket.AppSocketReceiver;
-import rice.pastry.NodeHandle;
-import rice.pastry.socket.TransportLayerNodeHandle;
+public class BogusUDPLayerImpl implements UDPLayer {
 
-public class AppSocketReceiverWrapper<Identifier> implements
-    P2PSocketReceiver<Identifier> {
-
-  private AppSocketReceiver receiver;
-  private SocketAdapter<Identifier> socket;
-  private Logger logger;
-
-  public AppSocketReceiverWrapper(AppSocketReceiver receiver, SocketAdapter<Identifier> socket, Environment env) {
-    this.receiver = receiver;
-    this.socket = socket;
-    this.logger = env.getLogManager().getLogger(AppSocketReceiverWrapper.class, null);    
+  public MessageRequestHandle<InetSocketAddress, ByteBuffer> sendMessage(
+      InetSocketAddress destination, ByteBuffer m,
+      MessageCallback<InetSocketAddress, ByteBuffer> deliverAckToMe,
+      Map<String, Object> options) {
+    MessageRequestHandle<InetSocketAddress, ByteBuffer> ret = 
+      new MessageRequestHandleImpl<InetSocketAddress, ByteBuffer>(destination, m, options);
+    if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, new IOException("This transport layer is bogus."));
+    return ret;
   }
 
-  public void receiveException(P2PSocket<Identifier> s, Exception ioe) {
-    receiver.receiveException(socket, ioe);
+  public void destroy() {
+    // TODO Auto-generated method stub
   }
-
-  public void receiveSelectResult(P2PSocket<Identifier> s,
-      boolean canRead, boolean canWrite) throws IOException {
-//    logger.log("rSR("+canRead+","+canWrite+")");
-    receiver.receiveSelectResult(socket, canRead, canWrite);
+  
+  public void acceptMessages(boolean b) {
+    // TODO Auto-generated method stub
   }
-
 }

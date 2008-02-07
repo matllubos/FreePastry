@@ -561,7 +561,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     
     public FileReceiptImpl(File f, String name, byte priority, long offset, long length, int uid, Continuation<FileReceipt, Exception> c) throws IOException {
       super(priority, uid);
-      if (offset+length > f.getTotalSpace()) throw new IllegalArgumentException("File is only "+f.getTotalSpace()+" but you are trying to send "+length+" bytes starting at "+offset);
+      if (offset+length > f.length()) throw new IllegalArgumentException("File is only "+f.length()+" but you are trying to send "+length+" bytes starting at "+offset);
       this.f = f;
       this.name = name;
       this.file = new FileInputStream(f);

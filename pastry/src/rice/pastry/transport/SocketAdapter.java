@@ -50,12 +50,12 @@ import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.pastry.NodeHandle;
 import rice.pastry.socket.TransportLayerNodeHandle;
 
-public class SocketAdapter implements AppSocket {
-  P2PSocket<NodeHandle> internal;
+public class SocketAdapter<Identifier> implements AppSocket {
+  P2PSocket<Identifier> internal;
   Logger logger;
   Environment environment;
   
-  public SocketAdapter(P2PSocket<NodeHandle> socket, Environment env) {
+  public SocketAdapter(P2PSocket<Identifier> socket, Environment env) {
     this.internal = socket;
     this.logger = env.getLogManager().getLogger(SocketAdapter.class, null);
     this.environment = env;

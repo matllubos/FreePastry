@@ -101,7 +101,7 @@ public class TCPLayer extends SelectionKeyHandler {
    */
 //  LinkedHashMap<SocketManager, SocketManager> sockets;
 
-  public TCPLayer(WireTransportLayerImpl wire) throws IOException {
+  public TCPLayer(WireTransportLayerImpl wire, boolean enableServer) throws IOException {
     this.wire = wire;
     this.logger = wire.environment.getLogManager().getLogger(TCPLayer.class, null);
   
@@ -114,14 +114,16 @@ public class TCPLayer extends SelectionKeyHandler {
 //    pending = new HashSet<SocketAcceptor>();
     
     // bind to port
-    final ServerSocketChannel channel = ServerSocketChannel.open();
-    temp = channel;
-    channel.configureBlocking(false);
-    channel.socket().setReuseAddress(true);
-    channel.socket().bind(wire.bindAddress);
-    if (logger.level <= Logger.INFO) logger.log("TCPLayer bound to "+wire.bindAddress);
-    
-    this.key = wire.environment.getSelectorManager().register(channel, this, SelectionKey.OP_ACCEPT);
+    if (enableServer) {
+      final ServerSocketChannel channel = ServerSocketChannel.open();
+      temp = channel;
+      channel.configureBlocking(false);
+      channel.socket().setReuseAddress(true);
+      channel.socket().bind(wire.bindAddress);
+      if (logger.level <= Logger.INFO) logger.log("TCPLayer bound to "+wire.bindAddress);
+      
+      this.key = wire.environment.getSelectorManager().register(channel, this, SelectionKey.OP_ACCEPT);
+    }
   }
 
   public SocketRequestHandle<InetSocketAddress> openSocket(
@@ -145,7 +147,7 @@ public class TCPLayer extends SelectionKeyHandler {
       }
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.logException("GOT ERROR " + e + " OPENING PATH - MARKING PATH " + destination + " AS DEAD!",e);
-      SocketRequestHandle can = new SocketRequestHandleImpl<InetSocketAddress>(destination, options, logger);
+      SocketRequestHandle<InetSocketAddress> can = new SocketRequestHandleImpl<InetSocketAddress>(destination, options, logger);
       deliverSocketToMe.receiveException(can, e);
       return can;
     }

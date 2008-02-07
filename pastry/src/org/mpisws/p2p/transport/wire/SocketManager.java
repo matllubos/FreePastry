@@ -541,6 +541,10 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     return options;
   }
 
+  public SocketChannel getSocketChannel() {
+    return channel;
+  }
+
 //  TreeSet<Envelope> pendingMessages;  
 //  private int envSeq = Integer.MIN_VALUE;
 //  class Envelope implements Comparable<Envelope>, Cancellable {

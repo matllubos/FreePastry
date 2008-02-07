@@ -34,41 +34,17 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.transport;
+package rice.pastry.socket.appsocket;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
 
-import org.mpisws.p2p.transport.P2PSocket;
-import org.mpisws.p2p.transport.P2PSocketReceiver;
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import rice.Continuation;
+import rice.p2p.commonapi.Cancellable;
+import rice.p2p.commonapi.appsocket.AppSocket;
 
-import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.p2p.commonapi.appsocket.AppSocketReceiver;
-import rice.pastry.NodeHandle;
-import rice.pastry.socket.TransportLayerNodeHandle;
-
-public class AppSocketReceiverWrapper<Identifier> implements
-    P2PSocketReceiver<Identifier> {
-
-  private AppSocketReceiver receiver;
-  private SocketAdapter<Identifier> socket;
-  private Logger logger;
-
-  public AppSocketReceiverWrapper(AppSocketReceiver receiver, SocketAdapter<Identifier> socket, Environment env) {
-    this.receiver = receiver;
-    this.socket = socket;
-    this.logger = env.getLogManager().getLogger(AppSocketReceiverWrapper.class, null);    
-  }
-
-  public void receiveException(P2PSocket<Identifier> s, Exception ioe) {
-    receiver.receiveException(socket, ioe);
-  }
-
-  public void receiveSelectResult(P2PSocket<Identifier> s,
-      boolean canRead, boolean canWrite) throws IOException {
-//    logger.log("rSR("+canRead+","+canWrite+")");
-    receiver.receiveSelectResult(socket, canRead, canWrite);
-  }
-
+public interface SocketFactory {
+  public Cancellable getAppSocket(InetSocketAddress addr, int appid, Continuation<AppSocket, IOException> c);
+  public Cancellable getSocketChannel(InetSocketAddress addr, int appid, Continuation<SocketChannel, IOException> c);
 }

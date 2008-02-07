@@ -34,41 +34,54 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.transport;
+package org.mpisws.p2p.filetransfer;
 
-import java.io.IOException;
+import rice.tutorial.sendfile.MyApp;
 
-import org.mpisws.p2p.transport.P2PSocket;
-import org.mpisws.p2p.transport.P2PSocketReceiver;
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-
-import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.p2p.commonapi.appsocket.AppSocketReceiver;
-import rice.pastry.NodeHandle;
-import rice.pastry.socket.TransportLayerNodeHandle;
-
-public class AppSocketReceiverWrapper<Identifier> implements
-    P2PSocketReceiver<Identifier> {
-
-  private AppSocketReceiver receiver;
-  private SocketAdapter<Identifier> socket;
-  private Logger logger;
-
-  public AppSocketReceiverWrapper(AppSocketReceiver receiver, SocketAdapter<Identifier> socket, Environment env) {
-    this.receiver = receiver;
-    this.socket = socket;
-    this.logger = env.getLogManager().getLogger(AppSocketReceiverWrapper.class, null);    
+/**
+ * Prints out the progress of the FileTransfer
+ * 
+ * @author Jeff Hoye
+ *
+ */
+public class SimpleFileTransferListener implements FileTransferListener {
+  String prefix;
+  
+  public SimpleFileTransferListener(String prefix) {
+    this.prefix = prefix;
+  }
+  
+  public void fileTransferred(FileReceipt receipt,
+      long bytesTransferred, long total, boolean incoming) {
+    String s;
+    if (incoming) {
+      s = " Downloaded ";
+    } else {
+      s = " Uploaded ";              
+    }
+    double percent = 100.0*bytesTransferred/total;
+    System.out.println(prefix+s+percent+"% of "+receipt);
   }
 
-  public void receiveException(P2PSocket<Identifier> s, Exception ioe) {
-    receiver.receiveException(socket, ioe);
+  public void msgTransferred(BBReceipt receipt, int bytesTransferred,
+      int total, boolean incoming) {
+    String s;
+    if (incoming) {
+      s = " Downloaded ";
+    } else {
+      s = " Uploaded ";              
+    }
+    double percent = 100.0*bytesTransferred/total;
+    System.out.println(prefix+s+percent+"% of "+receipt);
   }
 
-  public void receiveSelectResult(P2PSocket<Identifier> s,
-      boolean canRead, boolean canWrite) throws IOException {
-//    logger.log("rSR("+canRead+","+canWrite+")");
-    receiver.receiveSelectResult(socket, canRead, canWrite);
+  public void transferCancelled(Receipt receipt, boolean incoming) {
+    String s;
+    if (incoming) {
+      s = "download";
+    } else {
+      s = "upload";              
+    }
+    System.out.println(prefix+": Cancelled "+s+" of "+receipt);
   }
-
 }

@@ -135,7 +135,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   private int port;
   protected NodeIdFactory nidFactory;
 
-  private InetAddress localAddress;
+  protected InetAddress localAddress;
 
   // the ordered list of InetAddresses, from External to internal
   InetAddress[] addressList;

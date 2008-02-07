@@ -91,6 +91,12 @@ public class WireTransportLayerImpl implements WireTransportLayer, ListenableTra
       InetSocketAddress bindAddress, 
       Environment env, 
       ErrorHandler<InetSocketAddress> errorHandler) throws IOException {
+    this(bindAddress, env, errorHandler, false);
+  }
+  public WireTransportLayerImpl(
+      InetSocketAddress bindAddress, 
+      Environment env, 
+      ErrorHandler<InetSocketAddress> errorHandler, boolean disableServer) throws IOException {
     this.logger = env.getLogManager().getLogger(WireTransportLayer.class, null);
     this.bindAddress = bindAddress;
     this.environment = env;
@@ -102,14 +108,17 @@ public class WireTransportLayerImpl implements WireTransportLayer, ListenableTra
       this.errorHandler = new DefaultErrorHandler<InetSocketAddress>(logger); 
     }
     
-    udp = new UDPLayer(this);
+    if (disableServer) {
+      udp = new BogusUDPLayerImpl();
+    } else {
+      udp = new UDPLayerImpl(this);      
+    }
     try {
-      tcp = new TCPLayer(this);
+      tcp = new TCPLayer(this, !disableServer);
     } catch (IOException ioe) {
       udp.destroy();
       throw ioe;
-    }
-    
+    }    
   }
   
   public void setCallback(TransportLayerCallback<InetSocketAddress, ByteBuffer> callback) {
@@ -184,8 +193,8 @@ public class WireTransportLayerImpl implements WireTransportLayer, ListenableTra
     tcp.acceptSockets(b);
   }
 
-  protected void messageReceived(InetSocketAddress address, ByteBuffer buffer) throws IOException {
-    callback.messageReceived(address, buffer, udp.OPTIONS);
+  protected void messageReceived(InetSocketAddress address, ByteBuffer buffer, Map<String, Object> options) throws IOException {
+    callback.messageReceived(address, buffer, options);
   }
 
   protected void incomingSocket(P2PSocket<InetSocketAddress> sm) throws IOException {    
