@@ -77,28 +77,11 @@ public class MyApp implements Application {
   protected Node node;
 
   protected FileTransfer fileTransfer;
-  
-//  ByteBuffer[] outs;
-//  ByteBuffer out;
-//  
-//  ByteBuffer[] ins;
-//  ByteBuffer in;
-//  
-//  int MSG_LENGTH;
-  
+    
   public MyApp(Node node, final IdFactory factory) {
     // register the endpoint
     this.endpoint = node.buildEndpoint(this, "myinstance");
     this.node = node;
-    
-//    MSG_LENGTH = node.getLocalNodeHandle().getId().toByteArray().length;
-//    outs = new ByteBuffer[1];    
-//    out = ByteBuffer.wrap(node.getLocalNodeHandle().getId().toByteArray());
-//    outs[0] = out;
-//    
-//    ins = new ByteBuffer[1];
-//    in = ByteBuffer.allocate(MSG_LENGTH);
-//    ins[0] = in;
     
     // example receiver interface
     endpoint.accept(new AppSocketReceiver() {
@@ -118,6 +101,9 @@ public class MyApp implements Application {
             System.out.println(f.renameTo(dest));
           }
         
+          public void receiveException(Exception ioe) {
+            System.out.println("FTC.receiveException() "+ioe);
+          }
         },MyApp.this.node.getEnvironment());
         
         fileTransfer.addListener(new MyFileListener() {
@@ -190,6 +176,16 @@ public class MyApp implements Application {
         s = "upload";              
       }
       System.out.println(MyApp.this+": Cancelled "+s+" of "+receipt);
+    }
+    
+    public void transferFailed(Receipt receipt, boolean incoming) {
+      String s;
+      if (incoming) {
+        s = "download";
+      } else {
+        s = "upload";              
+      }
+      System.out.println(MyApp.this+": Transfer Failed "+s+" of "+receipt);
     }
   }
   

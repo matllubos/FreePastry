@@ -36,34 +36,17 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.filetransfer;
 
-public interface FileTransferListener {
-  /**
-   * @param receipt description of what is being transferred
-   * @param bytesTransferred the bytes that have been transferred so far
-   * @param total bytes that will be transferred
-   * @param incoming true if downloding, false if uploading
-   */
-  public void fileTransferred(FileReceipt receipt, long bytesTransferred, long total, boolean incoming);
-  /**
-   * @param receipt description of what is being transferred
-   * @param bytesTransferred the bytes that have been transferred so far
-   * @param total bytes that will be transferred
-   * @param incoming true if downloding, false if uploading
-   */
-  public void msgTransferred(BBReceipt receipt, int bytesTransferred, int total, boolean incoming);
+import java.io.IOException;
+
+public class TransferFailedException extends IOException {
+  Receipt receipt;
   
-  /**
-   * 
-   * @param receipt the item that was cancelled
-   * @param incoming true if it's a download that was cancelled, false if it was an upload that was cancelled
-   */
-  public void transferCancelled(Receipt receipt, boolean incoming);
+  public TransferFailedException(Receipt receipt) {
+    this.receipt = receipt;
+  }
   
-  /**
-   * 
-   * @param receipt the item that failed
-   * @param incoming true if it's a download that was cancelled, false if it was an upload that was cancelled
-   */
-  public void transferFailed(Receipt receipt, boolean incoming);
-  
+  public Receipt getReceipt() {
+    return receipt;
+  }
+
 }

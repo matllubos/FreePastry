@@ -95,7 +95,10 @@ public class WireFileTest {
           public void fileReceived(File f, String s) {
             logger.log("file received "+f+" named:"+s+" size:"+f.length());
           }
-        
+          public void receiveException(Exception ioe) {
+            logger.logException("FTC.receiveException()", ioe);
+          }
+
         },env);
       }
     
@@ -124,6 +127,9 @@ public class WireFileTest {
           public void fileReceived(File f, String s) {
             // TODO Auto-generated method stub
         
+          }
+          public void receiveException(Exception ioe) {
+            logger.logException("FTC.receiveException()", ioe);
           }
         
         }, env);       

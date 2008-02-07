@@ -49,6 +49,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
+
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -131,6 +133,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   public static final byte LOWEST_PRIORITY = 15;
   public static final byte DEFAULT_PRIORITY = MEDIUM_PRIORITY;
   public static final byte CANCEL_PRIORITY = -20;
+
+  boolean failed = false;
   
   public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy tempFileStrategy, Environment env) {
     this.socket = socket;
@@ -149,14 +153,34 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     this(socket, callback, new TempFileAllocationStrategy(), env);      
   }
 
+  protected void socketClosed() {    
+    receiveException(socket,new ClosedChannelException("Underlieing socket was closed."));
+  }
+  
   public void receiveException(AppSocket socket, Exception e) {
     // warn user
-    throw new RuntimeException("Not Implemented "+e);
+    synchronized(queue) {
+      if (failed) return;
+    }
+    callback.receiveException(e);
+    purge();
   }
 
-  protected void socketClosed() {
-    // warn user
-    throw new RuntimeException("Todo: implement.");
+  protected void purge() {
+    Iterable<MessageWrapper> dropMe;
+    synchronized(queue) {
+      failed = true;
+      dropMe = new ArrayList(queue);
+    }    
+    for (MessageWrapper foo : dropMe) {
+      foo.drop();
+    }
+    for (DataReader r : incomingData.values()) {
+      notifyListenersTransferFailed(r, true);
+    }
+    for (ReceiptImpl r : outgoingData.values()) {
+      r.failed();
+    }
   }
   
   int seq = Integer.MIN_VALUE;
@@ -164,9 +188,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   MessageWrapper messageThatIsBeingWritten = null;
   boolean registered = false;
   
-  private void enqueue(MessageWrapper ret) {
+  private void enqueue(MessageWrapper ret) {    
 //  logger.log("enqueue("+ret+")");
     synchronized(queue) {
+      if (failed) return;
       queue.add(ret);       
       
       // drop the lowest priority message if the queue is overflowing        
@@ -280,13 +305,6 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
   }
 
-  protected void notifyListenersSendMsgComplete(BBReceipt receipt) {
-    if (logger.level <= Logger.FINE) logger.log("notifyListenersSendMsgComplete("+receipt+")");
-    for (FileTransferListener l : getListeners()) {
-      l.msgTransferred(receipt, (int)receipt.getSize(), (int)receipt.getSize(), false);
-    }
-  }
-
   protected void notifyListenersReceiveMsgProgress(BBReceipt receipt,
       int bytesReceived, int bytesTotal) {
     if (logger.level <= Logger.FINE) logger.log("notifyListenersReceiveMsgProgress("+receipt+","+bytesReceived+","+bytesTotal+")");
@@ -295,13 +313,12 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
   }
 
-  protected void notifyListenersReceiveMsgComplete(BBReceipt receipt) {
-    if (logger.level <= Logger.FINE) logger.log("notifyListenersReceiveMsgComplete("+receipt+")");
-    callback.messageReceived(ByteBuffer.wrap(receipt.getBytes()));
-    for (FileTransferListener l : getListeners()) {
-      l.msgTransferred(receipt, (int)receipt.getSize(), (int)receipt.getSize(), true);
-    }
-  }
+//  protected void notifyListenersReceiveMsgComplete(BBReceipt receipt) {
+//    if (logger.level <= Logger.FINE) logger.log("notifyListenersReceiveMsgComplete("+receipt+")");
+//    for (FileTransferListener l : getListeners()) {
+//      l.msgTransferred(receipt, (int)receipt.getSize(), (int)receipt.getSize(), true);
+//    }
+//  }
 
   protected void notifyListenersSendFileProgress(FileReceipt receipt,
       long bytesSent, long bytesTotal) {
@@ -311,13 +328,6 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
   }
   
-  protected void notifyListenersSendFileComplete(FileReceipt receipt) {
-    if (logger.level <= Logger.FINE) logger.log("notifyListenersSendFileComplete("+receipt+")");
-    for (FileTransferListener l : getListeners()) {
-      l.fileTransferred(receipt, receipt.getSize(), receipt.getSize(), false);
-    }
-  }
-
   protected void notifyListenersReceiveFileProgress(FileReceipt receipt,
       long bytesReceived, long bytesTotal) {
     if (logger.level <= Logger.FINE) logger.log("notifyListenersReceiveFileProgress("+receipt+","+bytesReceived+","+bytesTotal+")");
@@ -326,13 +336,12 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
   }
 
-  protected void notifyListenersReceiveFileComplete(FileReceipt receipt) {
-    if (logger.level <= Logger.FINE) logger.log("notifyListenersReceiveFileComplete("+receipt+"):"+receipt.getFile());    
-    callback.fileReceived(receipt.getFile(), receipt.getName());
-    for (FileTransferListener l : getListeners()) {
-      l.fileTransferred(receipt, receipt.getSize(), receipt.getSize(), true);
-    }
-  }
+//  protected void notifyListenersReceiveFileComplete(FileReceipt receipt) {
+//    if (logger.level <= Logger.FINE) logger.log("notifyListenersReceiveFileComplete("+receipt+"):"+receipt.getFile());    
+//    for (FileTransferListener l : getListeners()) {
+//      l.fileTransferred(receipt, receipt.getSize(), receipt.getSize(), true);
+//    }
+//  }
 
   protected void notifyListenersSenderCancelled(DataReader receipt) {
     if (logger.level <= Logger.FINE) logger.log("notifyListenersSenderCancelled("+receipt+")");    
@@ -341,12 +350,20 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
   }
 
-  protected void notifyListenersReceiverCancelled(ReceiptImpl receipt) {
+  protected void notifyListenersReceiverCancelled(Receipt receipt) {
     if (logger.level <= Logger.FINE) logger.log("notifyListenersReceiverCancelled("+receipt+")");    
     for (FileTransferListener l : getListeners()) {
       l.transferCancelled(receipt, false);
     }
   }
+  
+  protected void notifyListenersTransferFailed(Receipt receipt, boolean incoming) {
+    if (logger.level <= Logger.FINE) logger.log("notifyListenersTransferFailed("+receipt+")");    
+    for (FileTransferListener l : getListeners()) {
+      l.transferFailed(receipt, incoming);
+    }
+  }
+
   public FileReceipt sendFile(File f, String s, byte priority,
       Continuation<FileReceipt, Exception> c) throws IOException  {
     return sendFile(f,s,priority,0,f.length(),c);
@@ -397,7 +414,12 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       return uid;
     }
 
-    
+    void failed() {
+      notifyListenersTransferFailed(this, false);
+      cancelled = true;
+      outgoingData.remove(uid);
+    }
+        
     public boolean isCancelled() {
       return cancelled;
     }
@@ -468,6 +490,12 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       return "Outgoing msg<"+uid+"> size:"+getSize()+" priority:"+priority;
     }
     
+    @Override
+    void failed() {
+      if (deliverAckToMe != null) deliverAckToMe.receiveException(new TransferFailedException(this));
+      super.failed();
+    }
+    
     void complete(MessageWrapper wrapper) {
       // advance msg's pointer as necessary
       msg.position(msg.position()+chunkBuffer.position());
@@ -506,7 +534,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       // we've sent the whole message
       if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);
       completed = true;
-      notifyListenersSendMsgComplete(this);
+//      notifyListenersSendMsgComplete(this);
     }
     
     public byte[] getBytes() {
@@ -603,8 +631,14 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       enqueue(outstanding);
     }
     
+    @Override
+    void failed() {
+      if (deliverAckToMe != null) deliverAckToMe.receiveException(new TransferFailedException(this));
+      super.failed();
+    }
+
     public String toString() {
-      return "Outgoing file<"+uid+"> "+name+" size:"+getSize()+" priority:"+priority+" "+file;
+      return "Outgoing file<"+uid+"> "+name+" size:"+getSize()+" priority:"+priority+" "+f;
     }
 
     void complete(MessageWrapper wrapper) {
@@ -652,7 +686,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         logger.logException("Error closing file <"+uid+"> "+file+" "+name, ioe);
       }
       if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);
-      notifyListenersSendFileComplete(this);
+//      notifyListenersSendFileComplete(this);
     }
     
     public long getSize() {
@@ -723,7 +757,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
      * Called due to a queue overflow.
      */
     public void drop() {
-      throw new RuntimeException("Implement.");
+      receipt.failed();
     }
 
     public boolean cancel() {
@@ -1131,7 +1165,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       incomingData.remove(uid);
       
       // notify callback
-      notifyListenersReceiveMsgComplete(this);
+//      notifyListenersReceiveMsgComplete(this);
+      callback.messageReceived(ByteBuffer.wrap(getBytes()));
     }
 
     public byte[] getBytes() {
@@ -1262,7 +1297,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       }
         
       // notify callback
-      notifyListenersReceiveFileComplete(this);
+//      notifyListenersReceiveFileComplete(this);
+      callback.fileReceived(getFile(), getName());
     }
 
     public byte[] getBytes() {

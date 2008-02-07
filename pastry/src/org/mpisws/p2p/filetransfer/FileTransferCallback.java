@@ -42,4 +42,9 @@ import java.nio.ByteBuffer;
 public interface FileTransferCallback {
   public void messageReceived(ByteBuffer bb);
   public void fileReceived(File f, String s);
+  /**
+   * Called when the FileTransfer fails.
+   * @param ioe
+   */
+  public void receiveException(Exception ioe);
 }

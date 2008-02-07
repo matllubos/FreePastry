@@ -43,6 +43,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.filetransfer.FileReceipt;
 import org.mpisws.p2p.filetransfer.FileTransfer;
 import org.mpisws.p2p.filetransfer.FileTransferCallback;
 import org.mpisws.p2p.filetransfer.FileTransferImpl;
@@ -50,6 +51,7 @@ import org.mpisws.p2p.filetransfer.SimpleFileTransferListener;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
@@ -58,7 +60,9 @@ import org.mpisws.p2p.transport.rc4.RC4TransportLayer;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.wire.WireTransportLayer;
 import org.mpisws.p2p.transport.wire.WireTransportLayerImpl;
+import org.mpisws.p2p.transport.wire.magicnumber.MagicNumberTransportLayer;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocket;
@@ -90,6 +94,7 @@ public class EncryptedFileTest {
     });
     
     RC4TransportLayer<InetSocketAddress, ByteBuffer> etl1 = new RC4TransportLayer<InetSocketAddress, ByteBuffer>(ltl1,env,"badpassword");
+//    TransportLayer<InetSocketAddress, ByteBuffer> mtl1 = new MagicNumberTransportLayer<InetSocketAddress>(etl1,env,errorHandler,"blah".getBytes(),30000);
 
     etl1.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {
     
@@ -102,7 +107,7 @@ public class EncryptedFileTest {
       public void incomingSocket(P2PSocket<InetSocketAddress> s) throws IOException {
         // we got a socket, convert it to an AppSocket, then a FileTransfer
         logger.log("incomingSocket("+s+")");    
-        AppSocket sock = new SocketAdapter<InetSocketAddress>(s, env);
+        final AppSocket sock = new SocketAdapter<InetSocketAddress>(s, env);
         FileTransfer ft = new FileTransferImpl(sock,new FileTransferCallback() {
         
           public void messageReceived(ByteBuffer bb) {
@@ -113,10 +118,27 @@ public class EncryptedFileTest {
           public void fileReceived(File f, String s) {
             logger.log("file received "+f+" named:"+s+" size:"+f.length());
           }
+
+          public void receiveException(Exception ioe) {
+            logger.logException("Receiver FTC.receiveException()", ioe);
+          }
         
         },env);
         
-        ft.addListener(new SimpleFileTransferListener("Receiver"));        
+        ft.addListener(new SimpleFileTransferListener("Receiver") {
+
+          @Override
+          public void fileTransferred(FileReceipt receipt,
+              long bytesTransferred, long total, boolean incoming) {
+            super.fileTransferred(receipt, bytesTransferred, total, incoming);
+            
+//            if (bytesTransferred > total/2) {
+//              System.out.println("Closing connection");
+//              sock.close();
+//            }
+          }
+          
+        });        
       }
     
     });
@@ -137,6 +159,7 @@ public class EncryptedFileTest {
     ltl2.checkLiveness(addr1, null);
     
     RC4TransportLayer<InetSocketAddress, ByteBuffer> etl2 = new RC4TransportLayer<InetSocketAddress, ByteBuffer>(ltl2,env,"badpassword");
+//    TransportLayer<InetSocketAddress, ByteBuffer> mtl2 = new MagicNumberTransportLayer<InetSocketAddress>(etl2,env,errorHandler,"blah".getBytes(),30000);
 
     etl2.openSocket(addr1, new SocketCallback<InetSocketAddress>() {
     
@@ -145,7 +168,7 @@ public class EncryptedFileTest {
         logger.log("opened Socket "+s);
         
         // we got the socket we requested, convert it to an AppSocket, then a FileTransfer
-        AppSocket sock = new SocketAdapter<InetSocketAddress>(s, env);
+        final AppSocket sock = new SocketAdapter<InetSocketAddress>(s, env);
         FileTransfer ft = new FileTransferImpl(sock, new FileTransferCallback() {
         
           public void messageReceived(ByteBuffer bb) {
@@ -158,12 +181,38 @@ public class EncryptedFileTest {
         
           }
         
+          public void receiveException(Exception ioe) {
+            logger.logException("Sender FTC.receiveException()", ioe);
+          }
         }, env);       
-        ft.addListener(new SimpleFileTransferListener("Sender"));
+        ft.addListener(new SimpleFileTransferListener("Sender") {
+
+          @Override
+          public void fileTransferred(FileReceipt receipt,
+              long bytesTransferred, long total, boolean incoming) {
+            super.fileTransferred(receipt, bytesTransferred, total, incoming);
+            
+//            if (bytesTransferred > total/2) {
+//              System.out.println("Closing connection");
+//              sock.close();
+//            }
+          }
+          
+        });
 
         // send a file normal priority, don't worry about notification of completion
         try {
-          ft.sendFile(new File("delme.txt"), "foo", (byte)0, null);
+          ft.sendFile(new File("delme.txt"), "foo", (byte)0, new Continuation<FileReceipt, Exception>() {
+          
+            public void receiveResult(FileReceipt result) {
+              System.out.println("Send success "+result);
+            }
+          
+            public void receiveException(Exception exception) {
+              System.out.println("Send Failed");
+            }
+          
+          });
         } catch (IOException ioe) {
           logger.logException("Error sending file.", ioe);
         }
@@ -172,8 +221,7 @@ public class EncryptedFileTest {
     
       public void receiveException(SocketRequestHandle<InetSocketAddress> s,
           Exception ex) {
-        // TODO Auto-generated method stub
-    
+        logger.logException("receiveException("+s+")", ex);
       }    
     }, null);
     

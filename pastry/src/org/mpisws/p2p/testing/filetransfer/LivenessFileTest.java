@@ -110,6 +110,9 @@ public class LivenessFileTest {
             logger.log("file received "+f+" named:"+s+" size:"+f.length());
           }
         
+          public void receiveException(Exception ioe) {
+            logger.logException("FTC.receiveException()", ioe);
+          }
         },env);
       }
     
@@ -148,6 +151,9 @@ public class LivenessFileTest {
           public void fileReceived(File f, String s) {
             // TODO Auto-generated method stub
         
+          }
+          public void receiveException(Exception ioe) {
+            logger.logException("FTC.receiveException()", ioe);
           }
         
         }, env);       

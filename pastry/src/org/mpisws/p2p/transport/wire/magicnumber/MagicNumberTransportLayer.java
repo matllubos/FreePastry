@@ -276,6 +276,7 @@ public class MagicNumberTransportLayer<Identity> implements
       if (!canRead) throw new IOException("Can't read!");
       if (socket.read(buf) < 0) {
         socket.close();
+        return;
       }
       if (buf.hasRemaining()) {
         socket.register(true, false, this); 

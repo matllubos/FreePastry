@@ -84,4 +84,14 @@ public class SimpleFileTransferListener implements FileTransferListener {
     }
     System.out.println(prefix+": Cancelled "+s+" of "+receipt);
   }
+  
+  public void transferFailed(Receipt receipt, boolean incoming) {
+    String s;
+    if (incoming) {
+      s = "download";
+    } else {
+      s = "upload";              
+    }
+    System.out.println(prefix+": Failed "+s+" of "+receipt);
+  }
 }

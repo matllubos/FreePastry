@@ -37,20 +37,16 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.rc4;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
-import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Map;
 
 import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import javax.naming.AuthenticationException;
+import javax.security.sasl.AuthenticationException;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -427,32 +423,4 @@ public class RC4TransportLayer<Identifier, MsgType> implements TransportLayer<Id
   }
 
   private static final String ALGORITHM = "RC4";
-
-  public static void maine(String[] args) throws Exception {
-    Environment env = new Environment();
-    
-    // build the 16 byte keyBytes from a hash of the password
-    String password = "foo";
-    byte[] keyBytes = new byte[16];
-    IdFactory idFactory = new PastryIdFactory(env);
-    byte[] hash = idFactory.buildId(password).toByteArray();
-    System.arraycopy(hash, 0, keyBytes, 0, keyBytes.length);
-        
-    SecretKey key = new SecretKeySpec(keyBytes, ALGORITHM);
-//    try{
-    Cipher encryptCipher = Cipher.getInstance(ALGORITHM);
-    encryptCipher.init(Cipher.ENCRYPT_MODE, key);
-
-    System.out.println(encryptCipher.getIV());
-
-//      this.decryptCipher = Cipher.getInstance(ALGORITHM);
-//      this.decryptCipher.init(Cipher.DECRYPT_MODE, key);
-//      if(SystemUtils.logLevel <= Logger.FINE) SystemUtils.log(" Decrypt Ciper Initialized");
-//    }
-//    catch(InvalidKeyException ike){SystemUtils.getUtils().logException(ike);}
-//    catch(NoSuchAlgorithmException nsae){SystemUtils.getUtils().logException(nsae);}
-//    catch(NoSuchPaddingException nspe){SystemUtils.getUtils().logException(nspe);}
-//    catch(Exception e){ SystemUtils.getUtils().logException(e);}
-
-  }
 }
