@@ -167,6 +167,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   }
 
   protected void purge() {
+//    logger.log("purging "+socket);
     Iterable<MessageWrapper> dropMe;
     synchronized(queue) {
       failed = true;
@@ -377,6 +378,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
 
   public BBReceipt sendMsg(ByteBuffer bb, byte priority,
       Continuation<BBReceipt, Exception> c) {
+//    logger.log("sendMsg("+bb+")");
     BBReceiptImpl ret = new BBReceiptImpl(bb,priority,getUid(),c);
     return ret;
   }
@@ -460,6 +462,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     ByteBuffer header;
     MessageWrapperImpl outstanding; // = new MessageWrapper
     int wrapperSeq = Integer.MIN_VALUE+10; // to give cancel priority    
+    /**
+     * The purpose of chunkBuffer is to limit the amount of data being sent
+     * for a single message.  So this is an 8K window that slides along the message
+     */
     final ByteBuffer chunkBuffer;
     int initialPosition;
     Continuation<BBReceipt, Exception> deliverAckToMe;
@@ -472,6 +478,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       this.msgBytes = bb.array();
       msgList = new LinkedList<ByteBuffer>(); 
       chunkBuffer = ByteBuffer.wrap(msgBytes);
+      chunkBuffer.position(msg.position());
+      chunkBuffer.limit(msg.limit());
       
       // construct header
       // byte MSG_BB_HEADER, int UID, int length      
@@ -487,7 +495,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
     
     public String toString() {
-      return "Outgoing msg<"+uid+"> size:"+getSize()+" priority:"+priority;
+      return "Outgoing msg<"+uid+"> size:"+getSize()+" priority:"+priority+" msg:"+msg;
     }
     
     @Override
@@ -498,8 +506,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     
     void complete(MessageWrapper wrapper) {
       // advance msg's pointer as necessary
-      msg.position(msg.position()+chunkBuffer.position());
-      chunkBuffer.clear();
+//      logger.log("complete part "+this);
+        msg.position(chunkBuffer.position());
       
       // notify listener
       notifyListenersSendMsgProgress(this,msg.position()-initialPosition, msg.limit()-initialPosition);
@@ -507,22 +515,22 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       // if need to send more:
       if (msg.hasRemaining()) {
         // Construct a chunk (note that we reuse all the objects...)
-        ByteBuffer chunk = msg;
         // Construct a BB of the right size
         if (msg.remaining() > CHUNK_SIZE) {
           // don't send the whole message
-          chunk = chunkBuffer;
-          chunk.position(msg.position());
-          chunk.limit(msg.position()+CHUNK_SIZE);          
+          chunkBuffer.limit(msg.position()+CHUNK_SIZE);          
+        } else {
+          // send the whole message
+          chunkBuffer.limit(msg.limit());
         }
         
         header.clear();
         header.put(MSG_CHUNK);
         header.put(MathUtils.intToByteArray(uid));
-        header.put(MathUtils.intToByteArray(chunk.remaining()));
+        header.put(MathUtils.intToByteArray(chunkBuffer.remaining()));
         header.clear();
         msgList.add(header);
-        msgList.add(chunk);
+        msgList.add(chunkBuffer);
 
         outstanding.clear(msgList, wrapperSeq++);
         
@@ -830,6 +838,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         }
       }
               
+      // notify that this MsgWrapper is complete
       return FileTransferImpl.this.complete(this); 
     }
     
