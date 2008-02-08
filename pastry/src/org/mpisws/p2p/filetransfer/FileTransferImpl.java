@@ -175,10 +175,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     for (MessageWrapper foo : dropMe) {
       foo.drop();
     }
-    for (DataReader r : incomingData.values()) {
+    for (DataReader r : new ArrayList<DataReader>(incomingData.values())) {
       notifyListenersTransferFailed(r, true);
     }
-    for (ReceiptImpl r : outgoingData.values()) {
+    for (ReceiptImpl r : new ArrayList<ReceiptImpl>(outgoingData.values())) {
       r.failed();
     }
   }
