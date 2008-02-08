@@ -86,7 +86,7 @@ pastry_socket_repeater_buffer_size = 65536
 pastry_socket_pingmanager_smallPings=true
 pastry_socket_pingmanager_datagram_receive_buffer_size = 131072
 pastry_socket_pingmanager_datagram_send_buffer_size = 65536
-# the time before it will retry a route
+# the time before it will retry a route that was already found dead
 pastry_socket_srm_check_dead_throttle = 300000
 pastry_socket_srm_proximity_timeout = 3600000
 pastry_socket_srm_ping_throttle = 30000
@@ -104,8 +104,11 @@ pastry_socket_scm_max_open_source_routes = 30
 # determination, however, is more likely to lead to congestion collapse
 pastry_socket_srm_num_source_route_attempts = 8
 pastry_socket_scm_socket_buffer_size = 32768
+# this parameter is multiplied by the exponential backoff when doing a liveness check so the first will be 800, then 1600, then 3200 etc...
 pastry_socket_scm_ping_delay = 800
+# adds some fuzziness to the pings to help prevent congestion collapse, so this will make the ping be advanced or delayed by this factor
 pastry_socket_scm_ping_jitter = 0.1
+# how many pings until we call the node faulty
 pastry_socket_scm_num_ping_tries = 5
 pastry_socket_scm_write_wait_time = 30000
 pastry_socket_scm_backoff_initial = 250

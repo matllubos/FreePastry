@@ -225,6 +225,26 @@
     </jar>
   </target>
 
+  <!-- freepastry-core-jar: creates ./pastry-core.jar which excludes Glacier
+       and SplitStream, as well as rice.pastry.testing.* -->
+  <target name="freepastry-minimal-jar" depends="compile">
+    <jar destfile="pastry-minimal.jar" compress="true">
+      <fileset dir="${build.dir}">
+        <include name="org/mpisws/p2p/**/*.class"/>
+        <include name="rice/*.class"/>
+        <include name="rice/environment/**/*.class"/>
+        <include name="rice/p2p/commonapi/**/*.class"/>
+        <include name="rice/p2p/multiring/**/*.class"/>
+        <include name="rice/p2p/util/**/*.class"/> 
+        <include name="rice/pastry/**/*.class"/>
+        <exclude name="rice/pastry/socket/testing/*.class"/>
+        <include name="rice/selector/**/*.class"/>
+        <exclude name="**/testing/*.class"/>
+      </fileset>
+      <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
+    </jar>
+  </target>
+
   <target name="freepastry-pl-test" depends="compile">
     <jar destfile="pastry.jar" compress="true">
       <fileset dir="${build.dir}">
