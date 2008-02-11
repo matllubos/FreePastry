@@ -540,6 +540,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       }
   
       // we've sent the whole message
+      outgoingData.remove(uid);
       if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);
       completed = true;
 //      notifyListenersSendMsgComplete(this);
@@ -693,6 +694,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       } catch (IOException ioe) {
         logger.logException("Error closing file <"+uid+"> "+file+" "+name, ioe);
       }
+      outgoingData.remove(uid);
       if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);
 //      notifyListenersSendFileComplete(this);
     }
