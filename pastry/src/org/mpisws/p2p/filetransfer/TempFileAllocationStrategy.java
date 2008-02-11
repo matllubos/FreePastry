@@ -63,4 +63,11 @@ public class TempFileAllocationStrategy implements FileAllocationStrategy {
     return temp;
   }
 
+  public void fileCancelled(String name, File f, long offset,
+      long downloadedLength, long requestedLength, Exception reason) {
+    f.delete();
+  }
+  
+  
+
 }

@@ -97,7 +97,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   public static final byte MSG_CANCEL_REQUEST = 5;  
 
   
-  protected FileAllocationStrategy tempFileStrategy;
+  protected FileAllocationStrategy fileAllocater;
   protected AppSocket socket;
   protected FileTransferCallback callback;
   
@@ -136,10 +136,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
 
   boolean failed = false;
   
-  public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy tempFileStrategy, Environment env) {
+  public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy fileAllocater, Environment env) {
     this.socket = socket;
     this.callback = callback;
-    this.tempFileStrategy = tempFileStrategy;
+    this.fileAllocater = fileAllocater;
     this.queue = new SortedLinkedList<MessageWrapper>();
     this.selectorManager = env.getSelectorManager();
     this.logger = env.getLogManager().getLogger(FileTransferImpl.class, null);
@@ -965,8 +965,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   protected void senderCancelled(int uid) {
     DataReader reader = incomingData.remove(uid);
     if (reader != null) {
-      reader.cancelled();
-      notifyListenersSenderCancelled(reader);
+      reader.cancelled(reader);
     } else {
       logger.log("senderCanclled("+uid+") no record of the uid.");
     }
@@ -1110,7 +1109,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   }
 
   public void addIncomingFile(int uid, String name, long offset, long length) throws IOException {
-    File f = tempFileStrategy.getFile(name, offset, length);
+    File f = fileAllocater.getFile(name, offset, length);
     if (incomingData.containsKey(uid)) throw new IllegalArgumentException("DataReader with uid "+uid+" already exists! "+incomingData.get(uid)+" "+name);
     FileDataReader fdr = new FileDataReader(uid, name, f, offset, length);
     incomingData.put(uid,fdr);
@@ -1119,7 +1118,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
 
   interface DataReader extends Reader, Receipt {
     public boolean read(AppSocket socket, int size) throws IOException;
-    public void cancelled();
+    public void cancelled(DataReader reader);
   }
   
   class BBDataReader implements DataReader, BBReceipt {
@@ -1201,8 +1200,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
     
     // called when actually cancelled
-    public void cancelled() {
-      
+    public void cancelled(DataReader reader) {
+      notifyListenersSenderCancelled(reader);
     }
   }
   
@@ -1221,6 +1220,11 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     
     boolean requestedCancel = false;
     boolean cancelled = false;
+    
+    /**
+     * Null if there is no problem, set if there is a problem.
+     */
+    Exception exception = null;
     
     public FileDataReader(int uid, String name, File f, long offset, long length) throws IOException {
       this.uid = uid;
@@ -1274,14 +1278,18 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       
         public void receiveResult(FileDataReader result) {
           if (cancelled) return;
-          ptr+=writeMe.length;
           // notify listeners
-          notifyListenersReceiveFileProgress(result, ptr-offset, length);
-          if (ptr == offset+length) FileDataReader.this.complete();
+          long myPtr;
+          synchronized(FileDataReader.this) {
+            myPtr = ptr;
+          }
+          notifyListenersReceiveFileProgress(result, myPtr-offset, length);
+          if (myPtr == offset+length) FileDataReader.this.complete();
         }
       
         public void receiveException(Exception exception) {
-          logger.logException("Error writing file "+f+" "+name, exception);
+          if (logger.level <= Logger.WARNING) logger.logException("Error writing file "+f+" "+name, exception);
+          exception = exception;
           FileDataReader.this.cancel();
         }      
       },environment.getSelectorManager()) {
@@ -1289,7 +1297,11 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         @Override
         public FileDataReader doWork() throws Exception {
           if (cancelled) return FileDataReader.this;
+//          if (1.0*ptr>length*0.8) throw new IOException("Test no disk space left.");
           file.write(writeMe);
+          synchronized(FileDataReader.this) {
+            ptr+=writeMe.length;
+          }
           return FileDataReader.this;
         }      
       };        
@@ -1328,7 +1340,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
 
     public boolean cancel() {
       if (requestedCancel) return false;
-      requestedCancel = true;
+      requestedCancel = true;      
       return requestCancel(uid);
     }
 
@@ -1349,13 +1361,16 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
     
     // called when actually cancelled
-    public void cancelled() {
+    public void cancelled(final DataReader reader) {
       cancelled = true;
       
       // Don't close the file on the wrong thread.
       WorkRequest<RandomAccessFile> wr = new WorkRequest<RandomAccessFile>(new Continuation<RandomAccessFile, Exception>() {
       
         public void receiveResult(RandomAccessFile result) {
+          if (logger.level <= Logger.INFO) logger.log("File Cancelled "+name+","+f+","+offset+","+(ptr-offset)+","+length);
+          fileAllocater.fileCancelled(name, f, offset, ptr-offset, length, exception);
+          notifyListenersSenderCancelled(reader);
         }
       
         public void receiveException(Exception exception) {
@@ -1367,7 +1382,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         public RandomAccessFile doWork() throws Exception {
           file.close();
           return file;
-        }      
+        }
       };        
       processor.processBlockingIO(wr);      
 

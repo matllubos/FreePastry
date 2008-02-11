@@ -47,12 +47,23 @@ import java.io.IOException;
 public interface FileAllocationStrategy {
   /**
    * 
-   * @param s the file name (application specific)
+   * @param name the file name (application specific)
    * @param size the total file size
    * @param start the first byte intended to transfer
    * @param finish the last byte intended to transfer
    * @return
    * @throws IOException
    */
-  public File getFile(String s, long offset, long length) throws IOException;
+  public File getFile(String name, long offset, long length) throws IOException;
+  
+  /**
+   * Notification of a cancelled transfer.   
+   * 
+   * @param name the name of the file provided by the uploader
+   * @param f the file that was given by this strategy before
+   * @param offset the beginning point in the file of this file transfer
+   * @param downloadedLength the actual "valid" downloaded length
+   * @param requestedLength the length of the original file transfer request
+   */
+  public void fileCancelled(String name, File f, long offset, long downloadedLength, long requestedLength, Exception reason);
 }
