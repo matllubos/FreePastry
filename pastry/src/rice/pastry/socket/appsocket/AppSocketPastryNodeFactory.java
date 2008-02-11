@@ -44,15 +44,18 @@ import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.TransportLayerListener;
+import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.OverrideLiveness;
@@ -60,6 +63,8 @@ import org.mpisws.p2p.transport.liveness.PingListener;
 import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.util.OptionsFactory;
+import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 import org.mpisws.p2p.transport.wire.SocketManager;
 import org.mpisws.p2p.transport.wire.WireTransportLayerImpl;
 
@@ -68,6 +73,7 @@ import rice.environment.Environment;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.appsocket.AppSocket;
 import rice.p2p.commonapi.rawserialization.RawMessage;
+import rice.p2p.util.MathUtils;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
@@ -76,6 +82,7 @@ import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.transport.NodeHandleAdapter;
+import rice.pastry.transport.SocketAdapter;
 import rice.pastry.transport.TLDeserializer;
 import rice.pastry.transport.TLPastryNode;
 
@@ -203,6 +210,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
   
   SocketFactory sf;
+  public static final String SOCKET_FACTORY_UID = "appSocketFactory.uid";
   
   public synchronized SocketFactory getSocketFactory() throws IOException {
     if (sf != null) return sf;
@@ -221,17 +229,90 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
     final NodeHandleAdapter nha = getNodeHanldeAdapter(pn, handleFactory, deserializer);
     
     sf = new SocketFactory() {
+      int uid = Integer.MIN_VALUE;
+      public Cancellable getAppSocket(InetSocketAddress addr, int appid, final Continuation<AppSocket, Exception> c, Map<String, Object> options) {
+        return getSocket(addr, appid, 
+            new Continuation<P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>>, Exception>(){
 
-      public Cancellable getAppSocket(InetSocketAddress addr, int appid, final Continuation<AppSocket, IOException> c) {
+              public void receiveException(Exception exception) {
+                c.receiveException(exception);
+              }
+
+              public void receiveResult(
+                  P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> result) {
+                c.receiveResult(new SocketAdapter<TransportLayerNodeHandle<MultiInetSocketAddress>>(result, environment));
+              }          
+            }, options);
+      }
+      
+      public Cancellable getSocketChannel(InetSocketAddress addr, int appid, Continuation<SocketChannel, Exception> c, Map<String, Object> options) {
+        // increment the uid
+        final int myUid;
+        synchronized(this) {
+          myUid = uid++;
+        }
+        // add a UID in the options
+        options = OptionsFactory.addOption(options, SOCKET_FACTORY_UID, myUid);          
+
+        // open the socket
+        // intercept the SocketAdapter from the wtl using the UID
+        // return the socket
+
+        return null;
+      } 
+      
+      
+      protected Cancellable getSocket(InetSocketAddress addr, final int appid, final Continuation<P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>>, Exception> c, Map<String, Object> options) {
+        TransportLayerNodeHandle<MultiInetSocketAddress> handle = getHandle(addr);
+        final SocketRequestHandleImpl<TransportLayerNodeHandle<MultiInetSocketAddress>> ret = 
+          new SocketRequestHandleImpl<TransportLayerNodeHandle<MultiInetSocketAddress>>(handle, options, logger);
+        
+        options = OptionsFactory.addOption(options, IdentityImpl.DONT_VERIFY, true);
         // open the socket
         // send the id
-        // wrap the socket with an AppSocket
-        getTL().openSocket(getHandle(addr), new SocketCallback<TransportLayerNodeHandle<MultiInetSocketAddress>>() {
+        ret.setSubCancellable(getTL().openSocket(handle, new SocketCallback<TransportLayerNodeHandle<MultiInetSocketAddress>>() {
         
           public void receiveResult(
               SocketRequestHandle<TransportLayerNodeHandle<MultiInetSocketAddress>> cancellable,
-              P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> sock) {
-            System.out.println("AppSocketPastryNodeFactory.SocketFactory.receiveResult("+sock+")");
+              final P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> sock) {
+            ret.setSubCancellable(new Cancellable() {              
+              public boolean cancel() {
+                sock.close();
+                return true;
+              }
+            });
+
+            try {
+              new P2PSocketReceiver<TransportLayerNodeHandle<MultiInetSocketAddress>>() {
+                ByteBuffer buf;
+                {
+                  byte[] idBytes = MathUtils.intToByteArray(appid);
+                  buf = ByteBuffer.wrap(idBytes);
+                }
+                
+                public void receiveSelectResult(
+                    P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> socket,
+                    boolean canRead, boolean canWrite) throws IOException {
+                  // send the id
+                  if (socket.write(buf) < 0) {
+                    c.receiveException(new ClosedChannelException("Socket was closed by remote host. "+socket));
+                    return;
+                  }
+                  if (buf.hasRemaining()) {
+                    socket.register(false, true, this);
+                    return;
+                  }
+                  c.receiveResult(socket);
+                }
+                public void receiveException(
+                    P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> socket,
+                    Exception ioe) {
+                  c.receiveException(ioe);
+                }                
+              }.receiveSelectResult(sock, false, true);
+            } catch (IOException ioe) {
+              c.receiveException(ioe);
+            }
           }
         
           public void receiveException(
@@ -241,19 +322,10 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
         
           }
         
-        }, null);
-        return null;
+        }, options));
+        return ret;
       }
 
-      public Cancellable getSocketChannel(InetSocketAddress addr, int appid, Continuation<SocketChannel, IOException> c) {
-        // open the socket
-        // intercept the SocketAdapter from the wtl
-        // send the id
-        // return the socket
-
-        return null;
-      } 
-      
       public TransportLayerNodeHandle<MultiInetSocketAddress> getHandle(InetSocketAddress addr) {
         return handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build());
       }

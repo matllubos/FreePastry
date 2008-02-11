@@ -127,6 +127,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_to_index";
   public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_to_index";
 //  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_from_index";
+  public static final String DONT_VERIFY = "identity.dont_verify_dest";
   
   public IdentityImpl(
       byte[] localIdentifier, 
@@ -375,35 +376,40 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       // what happens if they cancel after the socket has been received by a lower layer, but is still reading the header?  
       // May need to re-think this SRHI at all the layers
       final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options, logger);
-      final UpperIdentifier dest = getIntendedDest(options);
-      
-      if (dest == null) {
-        deliverSocketToMe.receiveException(ret, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+options.get(NODE_HANDLE_FROM_INDEX))); 
-        return ret;
-      }
-
-      if (logger.level <= Logger.FINE) logger.log("openSocket1("+i+") dest:"+dest);
-
-      if (addBinding(dest, i, options)) {
-        // no problem, sending message
-      } else {
-        deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
-        return ret;
-      }
-
-      if (logger.level <= Logger.FINE) logger.log("openSocket2("+i+") dest:"+dest);
-      
-      final ByteBuffer buf;
-      try {
-        SimpleOutputBuffer sob = new SimpleOutputBuffer((int)(localIdentifier.length*2.5)); // good estimate
-        serializer.serialize(sob, dest);
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      try {      
+        if (options.containsKey(DONT_VERIFY) && ((Boolean)options.get(DONT_VERIFY)).booleanValue()) {
+          // don't send TO
+          sob.writeByte(0);          
+        } else {      
+          // send TO
+          sob.writeByte(1);
+          final UpperIdentifier dest = getIntendedDest(options);
+          
+          if (dest == null) {
+            deliverSocketToMe.receiveException(ret, new MemoryExpiredException("No record of the upper identifier for "+i+" index="+options.get(NODE_HANDLE_FROM_INDEX))); 
+            return ret;
+          }
+    
+          if (addBinding(dest, i, options)) {
+            // no problem, sending message
+          } else {
+            deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
+            return ret;
+          }
+    
+          serializer.serialize(sob, dest);
+        }
+        
+        // write FROM
         sob.write(localIdentifier);
 //        logger.log("writing:"+Arrays.toString(sob.getBytes()));
-        buf = sob.getByteBuffer();
       } catch (IOException ioe) {
         deliverSocketToMe.receiveException(ret, ioe);
         return ret;
       }
+      final ByteBuffer buf;
+      buf = sob.getByteBuffer();
       ret.setSubCancellable(tl.openSocket(i, 
           new SocketCallback<LowerIdentifier>(){
 
@@ -414,77 +420,81 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                   return true;
                 }              
               });
-              sock.register(false, true, new P2PSocketReceiver<LowerIdentifier>() {
-
-                public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
-                  if (canRead) throw new IOException("Never asked to read!");
-                  if (!canWrite) throw new IOException("Can't write!");
-                  if (socket.write(buf) < 0)  {
-                    deliverSocketToMe.receiveException(ret, new ClosedChannelException("Remote node closed socket while opening.  Try again."));
-                    return;
-                  }
-                  if (buf.hasRemaining()) {
-                    socket.register(false, true, this);
-                  } else {
-                    // wait for the response
-                    socket.register(true, false, new P2PSocketReceiver<LowerIdentifier>() {
-                      ByteBuffer responseBuffer = ByteBuffer.allocate(1);
-
-                      public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                        deliverSocketToMe.receiveException(ret, ioe);                        
-                      }
-
-                      public void receiveSelectResult(final P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
-                        if (!canRead) throw new IOException("Can't read!");
-                        if (canWrite) throw new IOException("Never asked to write!");
-                        if (socket.read(responseBuffer) == -1) {
-                          // socket unexpectedly closed
-                          socket.close();
-                          deliverSocketToMe.receiveException(ret, new ClosedChannelException("Remote node closed socket while opening.  Try again."));                           
-                          return;
+              try {
+                new P2PSocketReceiver<LowerIdentifier>() {
+  
+                  public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+                    if (canRead) throw new IOException("Never asked to read!");
+                    if (!canWrite) throw new IOException("Can't write!");
+                    if (socket.write(buf) < 0)  {
+                      deliverSocketToMe.receiveException(ret, new ClosedChannelException("Remote node closed socket while opening.  Try again."));
+                      return;
+                    }
+                    if (buf.hasRemaining()) {
+                      socket.register(false, true, this);
+                    } else {
+                      // wait for the response
+                      socket.register(true, false, new P2PSocketReceiver<LowerIdentifier>() {
+                        ByteBuffer responseBuffer = ByteBuffer.allocate(1);
+  
+                        public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
+                          deliverSocketToMe.receiveException(ret, ioe);                        
                         }
-                        
-                        if (responseBuffer.remaining() > 0) {
-                          socket.register(true, false, this);
-                        } else {
-                          byte answer = responseBuffer.array()[0];
-                          if (answer == FAILURE) {
-                            // wrong address, read more 
-                            if (logger.level <= Logger.INFO) logger.log("openSocket("+i+","+deliverSocketToMe+") answer = FAILURE");
-//                            setDeadForever(dest);
-                            UpperIdentifier newDest = serializer.deserialize(new SocketInputBuffer(socket, localIdentifier.length), i);
-                            
-                            if (addBinding(newDest, i, options)) {
-//                              overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u)); 
-                            } else {
-                              // This is really bad if we get here, because someone responded to us who is dead, maybe a big network lag could cause this?
-                              socket.close();
-                              deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
-                            }
-                            
-                            // need to do this so the boostrapper knows the proper identity
-                            // done in addBinding now
-//                            upper.setLiveness(newDest, LIVENESS_ALIVE, options);
-                            deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
-                          } else {
-                            ret.setSubCancellable(new Cancellable() {
-                              public boolean cancel() {
-                                throw new IllegalStateException("Can't cancel, already delivered. ret:"+ret+" sock:"+socket);
-//                                return false;
-                              }
-                            }); // can't cancel any more
-                            deliverSocketToMe.receiveResult(ret, socket);
+  
+                        public void receiveSelectResult(final P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+                          if (!canRead) throw new IOException("Can't read!");
+                          if (canWrite) throw new IOException("Never asked to write!");
+                          if (socket.read(responseBuffer) == -1) {
+                            // socket unexpectedly closed
+                            socket.close();
+                            deliverSocketToMe.receiveException(ret, new ClosedChannelException("Remote node closed socket while opening.  Try again."));                           
+                            return;
                           }
-                        }                      
-                      }                    
-                    });
-                  }
-                }        
-
-                public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                  deliverSocketToMe.receiveException(ret, ioe);                  
-                }              
-              });
+                          
+                          if (responseBuffer.remaining() > 0) {
+                            socket.register(true, false, this);
+                          } else {
+                            byte answer = responseBuffer.array()[0];
+                            if (answer == FAILURE) {
+                              // wrong address, read more 
+                              if (logger.level <= Logger.INFO) logger.log("openSocket("+i+","+deliverSocketToMe+") answer = FAILURE");
+  //                            setDeadForever(dest);
+                              UpperIdentifier newDest = serializer.deserialize(new SocketInputBuffer(socket, localIdentifier.length), i);
+                              
+                              if (addBinding(newDest, i, options)) {
+  //                              overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u)); 
+                              } else {
+                                // This is really bad if we get here, because someone responded to us who is dead, maybe a big network lag could cause this?
+                                socket.close();
+                                deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
+                              }
+                              
+                              // need to do this so the boostrapper knows the proper identity
+                              // done in addBinding now
+  //                            upper.setLiveness(newDest, LIVENESS_ALIVE, options);
+                              deliverSocketToMe.receiveException(ret, new NodeIsFaultyException(i));
+                            } else {
+                              ret.setSubCancellable(new Cancellable() {
+                                public boolean cancel() {
+                                  throw new IllegalStateException("Can't cancel, already delivered. ret:"+ret+" sock:"+socket);
+  //                                return false;
+                                }
+                              }); // can't cancel any more
+                              deliverSocketToMe.receiveResult(ret, socket);
+                            }
+                          }                      
+                        }                    
+                      });
+                    }
+                  }        
+  
+                  public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
+                    deliverSocketToMe.receiveException(ret, ioe);                  
+                  }              
+                }.receiveSelectResult(sock, false, true);
+              } catch (IOException ioe) {
+                deliverSocketToMe.receiveException(ret, ioe);
+              }
             }
 
             public void receiveException(SocketRequestHandle<LowerIdentifier> s, Exception ex) {
@@ -498,136 +508,170 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 
     public void incomingSocket(P2PSocket<LowerIdentifier> s) throws IOException {
       if (logger.level <= Logger.FINE) logger.log("incomingSocket("+s+")");
-      s.register(true, false, new P2PSocketReceiver<LowerIdentifier>() {
-        ByteBuffer buf = ByteBuffer.allocate(localIdentifier.length);
-
+      
+      // see if it wants to verify us
+      new P2PSocketReceiver<LowerIdentifier>() {        
+        ByteBuffer buf = ByteBuffer.allocate(1);
+        
         public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
           handler.receivedException(socket.getIdentifier(), ioe);
         }
-
-        public void receiveSelectResult(final P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
-          if (canWrite) throw new IOException("Never asked to write!");
-          if (!canRead) throw new IOException("Can't read!");
-          
-          // read the TO field
-          if (socket.read(buf) == -1) {
+        
+        public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+          if (socket.read(buf) < 0) {
             // socket closed
             if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new IOException("Socket closed while incoming."));
             return;
-          }
-          
+          }          
           if (buf.hasRemaining()) {
             // need to read more
             socket.register(true, false, this);
             return;
           }
           
-          if (Arrays.equals(buf.array(), localIdentifier)) {
-            // the TO was me, now read the FROM, and add the proper index into the options
-            final SocketInputBuffer sib = new SocketInputBuffer(socket, 1024);
-            new P2PSocketReceiver<LowerIdentifier>() {
-              public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                handler.receivedException(socket.getIdentifier(), ioe);
-              }
+          buf.clear();
+          byte wantsToVerifyB = buf.get();
+          final boolean wantsToVerify = (wantsToVerifyB == (byte)1);
+          
+          new P2PSocketReceiver<LowerIdentifier>() {
+            ByteBuffer buf = ByteBuffer.allocate(localIdentifier.length);
 
-              public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
-                if (canWrite) throw new IOException("Never asked to write!");
-                if (!canRead) throw new IOException("Can't read!");
-                
-                final Map<String, Object> newOptions = OptionsFactory.copyOptions(socket.getOptions());
-                
-                UpperIdentifier from;
-                try {
-                  // add to intendedDest, add option index                  
-                  from = serializer.deserialize(sib, socket.getIdentifier());                  
-                  newOptions.put(NODE_HANDLE_FROM_INDEX, from);
-                } catch (InsufficientBytesException ibe) {
-                  socket.register(true, false, this); 
-                  return;
-                }
-                
-                // once we are here, we have succeeded in deserializing the NodeHanlde, and added it to the new options
-                if (addBinding(from, socket.getIdentifier(), socket.getOptions())) {
-                  // no problem, sending message
-                } else {
-                  // this is bad, a previous instance is trying to open a socket
-                  if (logger.level <= Logger.WARNING) 
-                    logger.log("Serious error.  There was an attempt to open a socket from a supposedly stale identifier:"+
-                        from+". Current identifier is "+bindings.get(serializer.translateUp(socket.getIdentifier()))+" lower:"+socket.getIdentifier());
-                  socket.close();
-                  return;
-                }
+            public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
+              handler.receivedException(socket.getIdentifier(), ioe);
+            }
 
+            public void receiveSelectResult(final P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+              if (canWrite) throw new IOException("Never asked to write!");
+              if (!canRead) throw new IOException("Can't read!");
+              if (wantsToVerify) {
+                  // the node is sending who he thinks he is talking to
                 
-                // now write Success
-                byte[] result = {SUCCESS};
-                final ByteBuffer writeMe = ByteBuffer.wrap(result);
-                socket.register(false, true, new P2PSocketReceiver<LowerIdentifier>() {
-                  public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                    if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), ioe);                
-                  }
-
-                  public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
-                    if (canRead) throw new IOException("Not expecting to read.");
-                    if (!canWrite) throw new IOException("Expecting to write.");
-                    
-                    if (socket.write(writeMe) == -1) {
-                      // socket closed
-                      if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
-                      return;                  
-                    }
-                    
-                    if (writeMe.hasRemaining()) {
-                      // need to read more
-                      socket.register(false, true, this);
-                      return;
-                    }
-
-                    // done writing pass up socket with the newOptions
-                    final P2PSocket<LowerIdentifier> returnMe = new SocketWrapperSocket<LowerIdentifier, LowerIdentifier>(
-                        socket.getIdentifier(), socket, logger, newOptions);
-                    callback.incomingSocket(returnMe);
-                  }
-                });
-              }              
-            }.receiveSelectResult(socket, canRead, canWrite);
-            
-          } else {
-            if (logger.level <= Logger.INFO) 
-              logger.log("incomingSocket() FAILURE expected "+
-                  Arrays.toString(buf.array())+" me:"+
-                  Arrays.toString(localIdentifier));
-            
-            // not expecting me, send failure
-            byte[] result = new byte[1+localIdentifier.length];
-            result[0] = FAILURE;
-            System.arraycopy(localIdentifier, 0, result, 1, localIdentifier.length);
-            final ByteBuffer writeMe = ByteBuffer.wrap(result);
-            socket.register(false, true, new P2PSocketReceiver<LowerIdentifier>() {
-              public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                handler.receivedException(socket.getIdentifier(), ioe);                
-              }
-
-              public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
-                if (canRead) throw new IOException("Not expecting to read.");
-                if (!canWrite) throw new IOException("Expecting to write.");
-                
-                if (socket.write(writeMe) == -1) {
+                // read the TO field
+                if (socket.read(buf) < 0) {
                   // socket closed
-                  if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
-                  return;                  
+                  if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new IOException("Socket closed while incoming."));
+                  return;
                 }
                 
                 if (buf.hasRemaining()) {
                   // need to read more
-                  socket.register(false, true, this);
+                  socket.register(true, false, this);
                   return;
                 }
+                
+                if (!Arrays.equals(buf.array(), localIdentifier)) {
+                  if (logger.level <= Logger.INFO) 
+                    logger.log("incomingSocket() FAILURE expected "+
+                        Arrays.toString(buf.array())+" me:"+
+                        Arrays.toString(localIdentifier));
+                  
+                  // not expecting me, send failure
+                  byte[] result = new byte[1+localIdentifier.length];
+                  result[0] = FAILURE;
+                  System.arraycopy(localIdentifier, 0, result, 1, localIdentifier.length);
+                  final ByteBuffer writeMe = ByteBuffer.wrap(result);
+                  new P2PSocketReceiver<LowerIdentifier>() {
+                    public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
+                      handler.receivedException(socket.getIdentifier(), ioe);                
+                    }
+
+                    public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+                      if (canRead) throw new IOException("Not expecting to read.");
+                      if (!canWrite) throw new IOException("Expecting to write.");
+                      
+                      if (socket.write(writeMe) == -1) {
+                        // socket closed
+                        if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
+                        return;                  
+                      }
+                      
+                      if (buf.hasRemaining()) {
+                        // need to read more
+                        socket.register(false, true, this);
+                        return;
+                      }
+                    }
+                  }.receiveSelectResult(socket, false, true); // write failure
+                  return;
+                }
+              } else {
+                // doesn't want to verify
+                if (logger.level <= Logger.INFO) logger.log("Connection from "+socket.getIdentifier()+" didn't want to verify our identity.");
               }
-            });
-          }
+              // either he doesn't want to verify, or the TO was me, 
+              // now read the FROM, and add the proper index into the options
+              final SocketInputBuffer sib = new SocketInputBuffer(socket, 1024);
+              new P2PSocketReceiver<LowerIdentifier>() {
+                public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
+                  handler.receivedException(socket.getIdentifier(), ioe);
+                }
+
+                public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+                  if (canWrite) throw new IOException("Never asked to write!");
+                  if (!canRead) throw new IOException("Can't read!");
+                  
+                  final Map<String, Object> newOptions = OptionsFactory.copyOptions(socket.getOptions());
+                  
+                  UpperIdentifier from;
+                  try {
+                    // add to intendedDest, add option index                  
+                    from = serializer.deserialize(sib, socket.getIdentifier());                  
+                    newOptions.put(NODE_HANDLE_FROM_INDEX, from);
+                  } catch (InsufficientBytesException ibe) {
+                    socket.register(true, false, this); 
+                    return;
+                  }
+                  
+                  // once we are here, we have succeeded in deserializing the NodeHanlde, and added it to the new options
+                  if (addBinding(from, socket.getIdentifier(), socket.getOptions())) {
+                    // no problem, sending message
+                  } else {
+                    // this is bad, a previous instance is trying to open a socket
+                    if (logger.level <= Logger.WARNING) 
+                      logger.log("Serious error.  There was an attempt to open a socket from a supposedly stale identifier:"+
+                          from+". Current identifier is "+bindings.get(serializer.translateUp(socket.getIdentifier()))+" lower:"+socket.getIdentifier());
+                    socket.close();
+                    return;
+                  }
+
+                  
+                  // now write Success
+                  byte[] result = {SUCCESS};
+                  final ByteBuffer writeMe = ByteBuffer.wrap(result);
+                  new P2PSocketReceiver<LowerIdentifier>() {
+                    public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
+                      if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), ioe);                
+                    }
+
+                    public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
+                      if (canRead) throw new IOException("Not expecting to read.");
+                      if (!canWrite) throw new IOException("Expecting to write.");
+                      
+                      if (socket.write(writeMe) == -1) {
+                        // socket closed
+                        if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
+                        return;                  
+                      }
+                      
+                      if (writeMe.hasRemaining()) {
+                        // need to read more
+                        socket.register(false, true, this);
+                        return;
+                      }
+
+                      // done writing pass up socket with the newOptions
+                      final P2PSocket<LowerIdentifier> returnMe = new SocketWrapperSocket<LowerIdentifier, LowerIdentifier>(
+                          socket.getIdentifier(), socket, logger, newOptions);
+                      callback.incomingSocket(returnMe);
+                    }                    
+                  }.receiveSelectResult(socket, false, true); // write SUCCESS
+
+                }              
+              }.receiveSelectResult(socket, true, false);  // read the FROM              
+            }        
+          }.receiveSelectResult(socket, true, false); // read the TO (if wantsToVerify)                      
         }        
-      });
+      }.receiveSelectResult(s, true, false); // read wantsToVerify
     }
 
     /**

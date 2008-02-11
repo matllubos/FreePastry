@@ -39,6 +39,7 @@ package rice.tutorial.remotesocket;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -47,6 +48,7 @@ import rice.environment.Environment;
 import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.AppSocket;
+import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
@@ -139,16 +141,56 @@ public class Tutorial {
     env.getTimeSource().sleep(1000);
 
     SocketFactory sFactory = factory.getSocketFactory();
-    sFactory.getAppSocket(bootaddress, StandardAddress.getAddress(MyApp.class,"myinstance",env), new Continuation<AppSocket, IOException>() {
+    sFactory.getAppSocket(bootaddress, StandardAddress.getAddress(MyApp.class,"myinstance",env), new Continuation<AppSocket, Exception>() {
 
-      public void receiveException(IOException exception) {
+      public void receiveException(Exception exception) {
         exception.printStackTrace();
         throw new RuntimeException("Not implemented. ");        
       }
 
       public void receiveResult(AppSocket result) {
-        throw new RuntimeException("Not implemented. "+result);        
-      }});
+        System.out.println("Opened AppSocket "+result);
+        final ByteBuffer out = ByteBuffer.wrap(rice.pastry.Id.build().toByteArray());
+
+        result.register(false, true, -1, new AppSocketReceiver() {
+          
+          /**
+           * Called when the socket comes available.
+           */
+          public void receiveSocket(AppSocket socket) {
+            // register for writing
+            socket.register(false, true, 30000, this);
+          }    
+
+          /**
+           * Called if there is a problem.
+           */
+          public void receiveException(AppSocket socket, Exception e) {
+            e.printStackTrace();
+          }
+          
+          /**
+           * Example of how to write some bytes
+           */
+          public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {   
+            try {
+              long ret = socket.write(out);    
+              System.out.println("Wrote "+ret+" bytes.");
+              // see if we are done
+              if (out.hasRemaining()) {
+                // keep writing
+                socket.register(false, true, 30000, this); 
+              } else {
+                socket.shutdownOutput();           
+                out.clear();
+              }
+            } catch (IOException ioe) {
+              ioe.printStackTrace(); 
+            }
+          }
+        });
+
+      }}, null);
     
     
 //    

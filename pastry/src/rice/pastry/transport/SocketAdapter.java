@@ -97,4 +97,8 @@ public class SocketAdapter<Identifier> implements AppSocket {
   public long write(ByteBuffer src) throws IOException {
     return internal.write(src);
   }
+  
+  public String toString() {
+    return "SA["+internal+"]";
+  }
 }

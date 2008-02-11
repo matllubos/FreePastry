@@ -94,6 +94,7 @@ public class MyApp implements Application {
        * When we accept a new socket.
        */
       public void receiveSocket(AppSocket socket) {
+        System.out.println("Incoming Socket "+socket);
         // this code reuses "this" AppSocketReceiver, and registers for reading only, and a timeout of 30000. 
         socket.register(true, false, 30000, this);
         
@@ -109,7 +110,7 @@ public class MyApp implements Application {
         try {
           // read from the socket into ins
           long ret = socket.read(ins, 0, ins.length);    
-          
+          System.out.println("Read "+ret+" bytes.");
           if (ret != MSG_LENGTH) {
             // if you sent any kind of long message, you would need to handle this case better
             System.out.println("Error, we only received part of a message."+ret+" from "+socket);
@@ -121,7 +122,7 @@ public class MyApp implements Application {
           ioe.printStackTrace(); 
         }
         // only need to do this if expecting more messages
-//        socket.register(true, false, 3000, this);        
+        socket.register(true, false, 3000, this);        
       }
     
       /**

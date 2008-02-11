@@ -39,12 +39,13 @@ package rice.pastry.socket.appsocket;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.Map;
 
 import rice.Continuation;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.appsocket.AppSocket;
 
 public interface SocketFactory {
-  public Cancellable getAppSocket(InetSocketAddress addr, int appid, Continuation<AppSocket, IOException> c);
-  public Cancellable getSocketChannel(InetSocketAddress addr, int appid, Continuation<SocketChannel, IOException> c);
+  public Cancellable getAppSocket(InetSocketAddress addr, int appid, Continuation<AppSocket, Exception> c, Map<String, Object> options);
+  public Cancellable getSocketChannel(InetSocketAddress addr, int appid, Continuation<SocketChannel, Exception> c, Map<String, Object> options);
 }
