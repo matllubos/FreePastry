@@ -66,6 +66,8 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocket;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.transport.SocketAdapter;
 
 public class EncryptedFileTest {
@@ -115,8 +117,13 @@ public class EncryptedFileTest {
         
           }
         
-          public void fileReceived(File f, String s) {
-            logger.log("file received "+f+" named:"+s+" size:"+f.length());
+          public void fileReceived(File f, ByteBuffer metadata) {
+            try {
+              String name = new SimpleInputBuffer(metadata).readUTF();            
+              logger.log("file received "+f+" named:"+name+" size:"+f.length());
+            } catch (IOException ioe) {
+              logger.logException("Error interpreting filename ", ioe);
+            }
           }
 
           public void receiveException(Exception ioe) {
@@ -176,7 +183,7 @@ public class EncryptedFileTest {
         
           }
         
-          public void fileReceived(File f, String s) {
+          public void fileReceived(File f, ByteBuffer metadata) {
             // TODO Auto-generated method stub
         
           }
@@ -202,7 +209,9 @@ public class EncryptedFileTest {
 
         // send a file normal priority, don't worry about notification of completion
         try {
-          ft.sendFile(new File("delme.txt"), "foo", (byte)0, new Continuation<FileReceipt, Exception>() {
+          SimpleOutputBuffer sob = new SimpleOutputBuffer();
+          sob.writeUTF("foo");
+          ft.sendFile(new File("delme.txt"), sob.getByteBuffer(), (byte)0, new Continuation<FileReceipt, Exception>() {
           
             public void receiveResult(FileReceipt result) {
               System.out.println("Send success "+result);

@@ -38,6 +38,7 @@ package org.mpisws.p2p.filetransfer;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Just creates a temp file, ignoring the filename/size
@@ -57,13 +58,13 @@ public class TempFileAllocationStrategy implements FileAllocationStrategy {
     this.suffix = suffix;
   }
   
-  public synchronized File getFile(String s, long offset, long length) throws IOException {
+  public synchronized File getFile(ByteBuffer metadata, long offset, long length) throws IOException {
     File temp = File.createTempFile(prefix, suffix);
     temp.deleteOnExit();
     return temp;
   }
 
-  public void fileCancelled(String name, File f, long offset,
+  public void fileCancelled(ByteBuffer metadata, File f, long offset,
       long downloadedLength, long requestedLength, Exception reason) {
     f.delete();
   }

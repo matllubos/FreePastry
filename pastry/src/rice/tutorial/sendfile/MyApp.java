@@ -57,6 +57,8 @@ import org.mpisws.p2p.filetransfer.Receipt;
 import rice.Continuation;
 import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.*;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 /**
  * A very simple application.
@@ -95,10 +97,15 @@ public class MyApp implements Application {
             System.out.println("Message received: "+bb);
           }
         
-          public void fileReceived(File f, String s) {
-            File dest = new File("delme2.txt");
-            System.out.println("Renaming "+f+" to "+dest);
-            System.out.println(f.renameTo(dest));
+          public void fileReceived(File f, ByteBuffer metadata) {
+            try {
+              String originalFileName = new SimpleInputBuffer(metadata).readUTF();
+              File dest = new File("delme2.txt");
+              System.out.println("Renaming "+f+" to "+dest+" original:"+originalFileName);
+              System.out.println(f.renameTo(dest));
+            } catch (IOException ioe) {
+              System.out.println("Error deserializing file name. "+ioe);
+            }
           }
         
           public void receiveException(Exception ioe) {
@@ -234,7 +241,9 @@ public class MyApp implements Application {
         try {
           final File f = new File("delme.txt");
 //          System.out.println(f.getCanonicalPath());
-          sender.sendFile(f,"foo",(byte)2,new Continuation<FileReceipt, Exception>() {
+          SimpleOutputBuffer sob = new SimpleOutputBuffer();
+          sob.writeUTF("foo");
+          sender.sendFile(f,sob.getByteBuffer(),(byte)2,new Continuation<FileReceipt, Exception>() {
 
             public void receiveException(Exception exception) {
               System.out.println("Error sending: "+f+" "+exception);

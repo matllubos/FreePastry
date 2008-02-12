@@ -40,19 +40,25 @@ advised of the possibility of such damage.
 package rice.p2p.util.rawserialization;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public class SimpleInputBuffer extends DataInputStream implements InputBuffer {
   ByteArrayInputStream bais;
   
-  public SimpleInputBuffer(byte[] bytes) {
-    this(bytes,0); 
+  public SimpleInputBuffer(ByteBuffer bb) {
+    this(bb.array(),bb.position(),bb.remaining()); 
   }
-  public SimpleInputBuffer(byte[] bytes, int skip) {
-    super(new ByteArrayInputStream(bytes));
+  public SimpleInputBuffer(byte[] bytes) {
+    this(bytes,0,bytes.length); 
+  }
+  public SimpleInputBuffer(byte[] bytes, int offset) {
+    this(bytes,offset,bytes.length-offset); 
+  }
+  public SimpleInputBuffer(byte[] bytes, int offset, int length) {
+    super(new ByteArrayInputStream(bytes, offset, length));
     bais = (ByteArrayInputStream)this.in;
-    bais.skip(skip);
   }
   
 //  public short peakShort() throws IOException {

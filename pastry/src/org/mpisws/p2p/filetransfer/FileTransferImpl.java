@@ -190,8 +190,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   boolean registered = false;
   
   private void enqueue(MessageWrapper ret) {    
-//  logger.log("enqueue("+ret+")");
     synchronized(queue) {
+      logger.log("enqueue("+ret+"): queue.size() "+queue.size());
       if (failed) return;
       queue.add(ret);       
       
@@ -365,21 +365,23 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
   }
 
-  public FileReceipt sendFile(File f, String s, byte priority,
+  public FileReceipt sendFile(File f, ByteBuffer metadata, byte priority,
       Continuation<FileReceipt, Exception> c) throws IOException  {
-    return sendFile(f,s,priority,0,f.length(),c);
+    return sendFile(f,metadata,priority,0,f.length(),c);
   }
 
-  public FileReceipt sendFile(File f, String s, byte priority, long offset, long length,
+  public FileReceipt sendFile(File f, ByteBuffer metadataBB, byte priority, long offset, long length,
       Continuation<FileReceipt, Exception> c) throws IOException {
-    FileReceiptImpl ret = new FileReceiptImpl(f,s,priority,offset,length,getUid(),c);
+    byte[] metadata = new byte[metadataBB.remaining()];
+    metadataBB.get(metadata);
+    FileReceiptImpl ret = new FileReceiptImpl(f,metadata,priority,offset,length,getUid(),c);
     return ret;
   }
 
   public BBReceipt sendMsg(ByteBuffer bb, byte priority,
       Continuation<BBReceipt, Exception> c) {
-//    logger.log("sendMsg("+bb+")");
     BBReceiptImpl ret = new BBReceiptImpl(bb,priority,getUid(),c);
+    logger.log("sendMsg("+ret+")");
     return ret;
   }
   
@@ -582,7 +584,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     FileInputStream file;
     
     File f;
-    String name;
+    byte[] metadata;
     Continuation<FileReceipt, Exception> deliverAckToMe;
     
     LinkedList<ByteBuffer> msgList; 
@@ -596,11 +598,11 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     long initialPosition;
     ByteBuffer header;
     
-    public FileReceiptImpl(File f, String name, byte priority, long offset, long length, int uid, Continuation<FileReceipt, Exception> c) throws IOException {
+    public FileReceiptImpl(File f, byte[] metadata, byte priority, long offset, long length, int uid, Continuation<FileReceipt, Exception> c) throws IOException {
       super(priority, uid);
       if (offset+length > f.length()) throw new IllegalArgumentException("File is only "+f.length()+" but you are trying to send "+length+" bytes starting at "+offset);
       this.f = f;
-      this.name = name;
+      this.metadata = metadata;
       this.file = new FileInputStream(f);
       file.skip(offset);
       lastByte = offset+length;
@@ -619,11 +621,6 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       // used to send the chunks
       header = ByteBuffer.allocate(9);
       
-      // serialize string
-      SimpleOutputBuffer sob = new SimpleOutputBuffer();
-      sob.writeUTF(name);      
-      byte[] serializedString = sob.getBytes();
-      
       // construct header
       // byte MSG_BB_HEADER, int UID, long offset, long length, int nameLength, UTF name
       ByteBuffer hdr = ByteBuffer.allocate(25);
@@ -631,10 +628,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       hdr.put(MathUtils.intToByteArray(uid));
       hdr.put(MathUtils.longToByteArray(offset));
       hdr.put(MathUtils.longToByteArray(length));
-      hdr.put(MathUtils.intToByteArray(serializedString.length));
+      hdr.put(MathUtils.intToByteArray(metadata.length));
       hdr.clear();
       msgList.add(hdr);
-      msgList.add(ByteBuffer.wrap(serializedString));
+      msgList.add(ByteBuffer.wrap(metadata));
       
       outstanding = new MessageWrapperImpl(this,wrapperSeq++,msgList);
       enqueue(outstanding);
@@ -647,7 +644,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
 
     public String toString() {
-      return "Outgoing file<"+uid+"> "+name+" size:"+getSize()+" priority:"+priority+" "+f;
+      return "Outgoing file<"+uid+"> "+metadata.length+" size:"+getSize()+" priority:"+priority+" "+f;
     }
 
     void complete(MessageWrapper wrapper) {
@@ -662,7 +659,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         try {
           long ret = file.read(chunkBytes);
           if (ret < 0) {
-            throw new EOFException("Unexpected EOF... cancelling "+name+" "+f+".");
+            throw new EOFException("Unexpected EOF... cancelling "+uid+" "+f+".");
           }
           ptr += ret;
           chunk.clear();
@@ -692,7 +689,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       try {
         file.close();
       } catch (IOException ioe) {
-        logger.logException("Error closing file <"+uid+"> "+file+" "+name, ioe);
+        logger.logException("Error closing file <"+uid+"> "+file+" "+metadata.length, ioe);
       }
       outgoingData.remove(uid);
       if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);
@@ -711,8 +708,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       return length;
     }
 
-    public String getName() {
-      return name;
+    public ByteBuffer getMetadata() {
+      return ByteBuffer.wrap(metadata);
     }
 
     public long getOffset() {
@@ -724,7 +721,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       try {
         file.close();
       } catch (IOException ioe) {
-        logger.logException("Error closing file <"+uid+"> "+file+" "+name, ioe);
+        logger.logException("Error closing file <"+uid+"> "+file, ioe);
       }
       outstanding.cancel();
       return super.cancel();
@@ -1061,11 +1058,9 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       }
       if (buf.hasRemaining()) return false;
 
-      SimpleInputBuffer sib = new SimpleInputBuffer(bytes);
-      String name = sib.readUTF();      
       buf.clear();
       
-      addIncomingFile(uid,name,offset,length);
+      addIncomingFile(uid,bytes,offset,length);
       
       reader = msgTypeReader;
       return true;      
@@ -1110,10 +1105,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     notifyListenersReceiveMsgProgress(bbdr, 0, size);
   }
 
-  public void addIncomingFile(int uid, String name, long offset, long length) throws IOException {
-    File f = fileAllocater.getFile(name, offset, length);
-    if (incomingData.containsKey(uid)) throw new IllegalArgumentException("DataReader with uid "+uid+" already exists! "+incomingData.get(uid)+" "+name);
-    FileDataReader fdr = new FileDataReader(uid, name, f, offset, length);
+  public void addIncomingFile(int uid, byte[] metadata, long offset, long length) throws IOException {
+    File f = fileAllocater.getFile(ByteBuffer.wrap(metadata), offset, length);
+    if (incomingData.containsKey(uid)) throw new IllegalArgumentException("DataReader with uid "+uid+" already exists! "+incomingData.get(uid)+" "+metadata.length);
+    FileDataReader fdr = new FileDataReader(uid, metadata, f, offset, length);
     incomingData.put(uid,fdr);
     notifyListenersReceiveFileProgress(fdr, 0, length);
   }
@@ -1176,6 +1171,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       
       // notify callback
 //      notifyListenersReceiveMsgComplete(this);
+      logger.log("BBDataReader.complete() "+this);
       callback.messageReceived(ByteBuffer.wrap(getBytes()));
     }
 
@@ -1214,7 +1210,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     RandomAccessFile file;
     
     File f;    
-    String name;
+    byte[] metadata;
     long offset;
     long length;
     
@@ -1228,21 +1224,21 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
      */
     Exception exception = null;
     
-    public FileDataReader(int uid, String name, File f, long offset, long length) throws IOException {
+    public FileDataReader(int uid, byte[] metadata, File f, long offset, long length) throws IOException {
       this.uid = uid;
       this.f = f;
       this.ptr = offset;
       this.offset = offset;
       this.length = length;
       file = new RandomAccessFile(f, "rw");
-      this.name = name;
+      this.metadata = metadata;
       file.seek(offset);
       bytes = new byte[CHUNK_SIZE];
       curReader = ByteBuffer.wrap(bytes);   
     }
 
     public String toString() {
-      return "Incoming file<"+uid+"> "+name+" off:"+offset+" length:"+length+" "+f;
+      return "Incoming file<"+uid+"> "+metadata.length+" off:"+offset+" length:"+length+" "+f;
     }
     
     public boolean read(AppSocket socket, int numToRead) throws IOException {
@@ -1290,7 +1286,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         }
       
         public void receiveException(Exception exception) {
-          if (logger.level <= Logger.WARNING) logger.logException("Error writing file "+f+" "+name, exception);
+          if (logger.level <= Logger.WARNING) logger.logException("Error writing file "+f+" "+metadata.length, exception);
           exception = exception;
           FileDataReader.this.cancel();
         }      
@@ -1321,7 +1317,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         
       // notify callback
 //      notifyListenersReceiveFileComplete(this);
-      callback.fileReceived(getFile(), getName());
+      logger.log("Complete "+this);
+      callback.fileReceived(getFile(), getMetadata());
     }
 
     public byte[] getBytes() {
@@ -1354,8 +1351,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       return length;
     }
 
-    public String getName() {
-      return name;
+    public ByteBuffer getMetadata() {
+      return ByteBuffer.wrap(metadata);
     }
 
     public long getOffset() {
@@ -1370,8 +1367,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       WorkRequest<RandomAccessFile> wr = new WorkRequest<RandomAccessFile>(new Continuation<RandomAccessFile, Exception>() {
       
         public void receiveResult(RandomAccessFile result) {
-          if (logger.level <= Logger.INFO) logger.log("File Cancelled "+name+","+f+","+offset+","+(ptr-offset)+","+length);
-          fileAllocater.fileCancelled(name, f, offset, ptr-offset, length, exception);
+          if (logger.level <= Logger.INFO) logger.log("File Cancelled<"+uid+"> "+f+","+offset+","+(ptr-offset)+","+length);
+          fileAllocater.fileCancelled(ByteBuffer.wrap(metadata), f, offset, ptr-offset, length, exception);
           notifyListenersSenderCancelled(reader);
         }
       

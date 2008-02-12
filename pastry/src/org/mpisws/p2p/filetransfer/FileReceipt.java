@@ -37,11 +37,21 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.filetransfer;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 
 import rice.p2p.commonapi.Cancellable;
 
 public interface FileReceipt extends Receipt {
   public File getFile();
-  public String getName();
+  
+  /**
+   * Note that the ByteBuffer will be constructed every time it is requested.  Thus you can always read the metadata from the beginning, but 
+   * you can't continue reading the ByteBuffer, or call equals()/==, so you must cache it if you can't read it in 1 pass.
+   * 
+   * Note the data is not cleared, only the pointers on the ByteBuffer.
+   * 
+   * @return A ByteBuffer wrapping the metadata
+   */
+  public ByteBuffer getMetadata();
   public long getOffset();
 }

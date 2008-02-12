@@ -38,6 +38,7 @@ package org.mpisws.p2p.filetransfer;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Tells FileTransfer where to store the bytes of a file, usually a temp file.
@@ -47,23 +48,23 @@ import java.io.IOException;
 public interface FileAllocationStrategy {
   /**
    * 
-   * @param name the file name (application specific)
+   * @param metadata application specific, often the file name  
    * @param size the total file size
    * @param start the first byte intended to transfer
    * @param finish the last byte intended to transfer
    * @return
    * @throws IOException
    */
-  public File getFile(String name, long offset, long length) throws IOException;
+  public File getFile(ByteBuffer metadata, long offset, long length) throws IOException;
   
   /**
    * Notification of a cancelled transfer.   
    * 
-   * @param name the name of the file provided by the uploader
+   * @param metadata application specific, often the file name  
    * @param f the file that was given by this strategy before
    * @param offset the beginning point in the file of this file transfer
    * @param downloadedLength the actual "valid" downloaded length
    * @param requestedLength the length of the original file transfer request
    */
-  public void fileCancelled(String name, File f, long offset, long downloadedLength, long requestedLength, Exception reason);
+  public void fileCancelled(ByteBuffer metadata, File f, long offset, long downloadedLength, long requestedLength, Exception reason);
 }
