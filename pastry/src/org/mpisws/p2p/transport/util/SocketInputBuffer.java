@@ -92,6 +92,9 @@ public class SocketInputBuffer implements InputBuffer {
   int initialSize;
   
   DataInputStream dis;
+  public SocketInputBuffer(P2PSocket socket) {
+    this(socket,1024);
+  }
   
   public SocketInputBuffer(P2PSocket socket, int size) {
     this.socket = socket;

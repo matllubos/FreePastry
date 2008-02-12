@@ -34,47 +34,14 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.filetransfer;
+package org.mpisws.p2p.transport.simpleidentity;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
-/**
- * Just creates a temp file, ignoring the filename/size
- * @author Jeff Hoye
- *
- */
-public class TempFileAllocationStrategy implements FileAllocationStrategy {
-  protected String prefix;
-  protected String suffix;
-  protected File dir;
-  
-  public TempFileAllocationStrategy() {
-    this("FreePastry",null);
-  }
-  
-  public TempFileAllocationStrategy(String prefix, String suffix) {
-    this(prefix, suffix, null);
-  }
-  
-  public TempFileAllocationStrategy(String prefix, String suffix, File directory) {
-    this.prefix = prefix;
-    this.suffix = suffix;
-    this.dir = directory;
-  }
-  
-  public synchronized File getFile(ByteBuffer metadata, long offset, long length) throws IOException {
-    File temp = File.createTempFile(prefix, suffix, dir);
-    temp.deleteOnExit();
-    return temp;
-  }
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
-  public void fileCancelled(ByteBuffer metadata, File f, long offset,
-      long downloadedLength, long requestedLength, Exception reason) {
-    f.delete();
-  }
-  
-  
-
+public interface Serializer<Identifier> {
+  public void serialize(Identifier i, OutputBuffer b) throws IOException;
+  public Identifier deserialize(InputBuffer b) throws IOException;
 }

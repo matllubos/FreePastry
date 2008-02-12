@@ -64,12 +64,12 @@ public class AnycastMessage extends ScribeMessage {
   /**
    * the list of nodes which we have visited
    */
-  protected Vector visited;
+  protected ArrayList<NodeHandle> visited;
 
   /**
    * the list of nodes which we are going to visit
    */
-  protected LinkedList toVisit;
+  protected LinkedList<NodeHandle> toVisit;
   
   protected NodeHandle initialRequestor;
   
@@ -89,8 +89,8 @@ public class AnycastMessage extends ScribeMessage {
     this.initialRequestor = source;
 //    if (content == null) throw new IllegalArgumentException
     this.content = content;
-    this.visited = new Vector();
-    this.toVisit = new LinkedList();
+    this.visited = new ArrayList<NodeHandle>();
+    this.toVisit = new LinkedList<NodeHandle>();
 
     addVisited(source);
   }
@@ -152,6 +152,10 @@ public class AnycastMessage extends ScribeMessage {
     }
     
     return (NodeHandle) toVisit.removeFirst();
+  }
+  
+  public NodeHandle peekLastToVisit() {
+    return toVisit.getLast();
   }
 
   /**
@@ -220,7 +224,7 @@ public class AnycastMessage extends ScribeMessage {
     if (visited.size() == 0) {
       return null;
     } else {
-      return (NodeHandle) visited.lastElement();
+      return visited.get(visited.size()-1);
     }
   }
   
@@ -248,6 +252,9 @@ public class AnycastMessage extends ScribeMessage {
     return toVisit.size();
   }
   
+  public boolean hasVisited(NodeHandle handle) {
+    return visited.contains(handle);
+  }
   
   /** *************** Raw Serialization ************************************** */
   public short getType() {
@@ -318,7 +325,7 @@ public class AnycastMessage extends ScribeMessage {
     }
     
     int visitedLength = buf.readInt();
-    visited = new Vector(visitedLength);
+    visited = new ArrayList<NodeHandle>(visitedLength);
     for (int i = 0; i < visitedLength; i++) {
       visited.add(endpoint.readNodeHandle(buf)); 
     }

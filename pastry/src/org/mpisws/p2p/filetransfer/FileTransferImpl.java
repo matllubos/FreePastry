@@ -1058,9 +1058,12 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       }
       if (buf.hasRemaining()) return false;
 
+      buf.flip();
+      byte[] returnBytes = new byte[buf.remaining()];
+      buf.get(returnBytes);
       buf.clear();
       
-      addIncomingFile(uid,bytes,offset,length);
+      addIncomingFile(uid,returnBytes,offset,length);
       
       reader = msgTypeReader;
       return true;      
@@ -1272,16 +1275,14 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       // schedule them to be written, then notified on the blockingIOThread
       
       // note, that it is required that these are in order
-      WorkRequest<FileDataReader> wr = new WorkRequest<FileDataReader>(new Continuation<FileDataReader, Exception>() {
+      WorkRequest<Long> wr = new WorkRequest<Long>(new Continuation<Long, Exception>() {
       
-        public void receiveResult(FileDataReader result) {
+        public void receiveResult(Long myPtrL) {
           if (cancelled) return;
           // notify listeners
-          long myPtr;
-          synchronized(FileDataReader.this) {
-            myPtr = ptr;
-          }
-          notifyListenersReceiveFileProgress(result, myPtr-offset, length);
+          long myPtr = myPtrL.longValue();
+          notifyListenersReceiveFileProgress(FileDataReader.this, myPtr-offset, length);
+//          logger.logException("Stack trace "+this, new Exception("Stack Trace"));
           if (myPtr == offset+length) FileDataReader.this.complete();
         }
       
@@ -1293,14 +1294,14 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       },environment.getSelectorManager()) {
       
         @Override
-        public FileDataReader doWork() throws Exception {
-          if (cancelled) return FileDataReader.this;
+        public Long doWork() throws Exception {
+          if (cancelled) return -1L;
 //          if (1.0*ptr>length*0.8) throw new IOException("Test no disk space left.");
           file.write(writeMe);
           synchronized(FileDataReader.this) {
             ptr+=writeMe.length;
           }
-          return FileDataReader.this;
+          return ptr;
         }      
       };        
       processor.processBlockingIO(wr);      

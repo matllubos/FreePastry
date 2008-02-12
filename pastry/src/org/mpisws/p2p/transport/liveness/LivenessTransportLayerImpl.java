@@ -164,7 +164,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   public LivenessTransportLayerImpl(TransportLayer<Identifier, ByteBuffer> tl, Environment env, ErrorHandler<Identifier> errorHandler, int checkDeadThrottle) {
     this.tl = tl;
     this.environment = env;
-    this.logger = env.getLogManager().getLogger(LivenessTransportLayerImpl.class, null);
+    this.logger = env.getLogManager().getLogger(LivenessTransportLayerImpl.class, tl.getLocalIdentifier().toString());
     this.time = env.getTimeSource();
     this.timer = env.getSelectorManager().getTimer();
     random = new Random();
@@ -366,6 +366,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
    * @param i
    */
   public boolean ping(final Identifier i, final Map<String, Object> options) {
+    logger.log("ping("+i+")");
     if (logger.level <= Logger.FINER) logger.log("ping("+i+")");
     if (i.equals(tl.getLocalIdentifier())) return false;
     try {
@@ -399,6 +400,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
    * @param senderTime
    */
   public void pong(final Identifier i, final long senderTime, final Map<String, Object> options) {
+    logger.log("pong("+i+","+senderTime+")");
     if (logger.level <= Logger.FINEST) logger.log("pong("+i+","+senderTime+")");
     try {
       SimpleOutputBuffer sob = new SimpleOutputBuffer(1024);

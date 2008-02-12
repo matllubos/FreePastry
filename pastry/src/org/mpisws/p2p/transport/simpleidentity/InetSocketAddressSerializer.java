@@ -34,47 +34,66 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.filetransfer;
+package org.mpisws.p2p.transport.simpleidentity;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 /**
- * Just creates a temp file, ignoring the filename/size
+ * 
+ * Serialized version
+ * byte IPversion (4 or 6)
+ * byte[] address (4 or 16 bytes)
+ * short port
+ * 
  * @author Jeff Hoye
  *
  */
-public class TempFileAllocationStrategy implements FileAllocationStrategy {
-  protected String prefix;
-  protected String suffix;
-  protected File dir;
+public class InetSocketAddressSerializer implements Serializer<InetSocketAddress>{
+  public static final byte IPV4 = 4;
+  public static final byte IPV6 = 6;
+  public static final int IPV4_BYTES = 4;
+  public static final int IPV6_BYTES = 16;
   
-  public TempFileAllocationStrategy() {
-    this("FreePastry",null);
-  }
-  
-  public TempFileAllocationStrategy(String prefix, String suffix) {
-    this(prefix, suffix, null);
-  }
-  
-  public TempFileAllocationStrategy(String prefix, String suffix, File directory) {
-    this.prefix = prefix;
-    this.suffix = suffix;
-    this.dir = directory;
-  }
-  
-  public synchronized File getFile(ByteBuffer metadata, long offset, long length) throws IOException {
-    File temp = File.createTempFile(prefix, suffix, dir);
-    temp.deleteOnExit();
-    return temp;
+  public InetSocketAddress deserialize(InputBuffer b) throws IOException {
+    byte version = b.readByte();
+    byte[] addr;
+    
+    switch(version) {
+    case IPV4:
+      addr = new byte[IPV4_BYTES];
+      break;
+    case IPV6:
+      addr = new byte[IPV6_BYTES];
+      break;      
+    default:
+      throw new IOException("Incorrect IP version, expecting 4 or 6, got "+version);
+    }
+    b.read(addr);
+    short port = b.readShort();    
+    return new InetSocketAddress(InetAddress.getByAddress(addr),port);
   }
 
-  public void fileCancelled(ByteBuffer metadata, File f, long offset,
-      long downloadedLength, long requestedLength, Exception reason) {
-    f.delete();
+  public void serialize(InetSocketAddress i, OutputBuffer b) throws IOException {
+    byte[] addr = i.getAddress().getAddress();
+    // write version
+    switch (addr.length) {
+    case IPV4_BYTES:
+      b.writeByte(IPV4);
+      break;
+    case IPV6_BYTES:
+      b.writeByte(IPV6);
+      break;
+    default:
+      throw new IOException("Incorrect number of bytes for IPaddress, expecting 4 or 16, got "+addr.length);
+    }
+    // write addr
+    b.write(addr,0,addr.length);
+    b.writeShort((short)i.getPort());    
   }
-  
-  
 
 }
