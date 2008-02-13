@@ -42,6 +42,7 @@ import java.util.*;
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
 import rice.p2p.scribe.messaging.*;
+import rice.p2p.util.TimerWeakHashMap;
 
 /**
  * @(#) ScribePolicy.java This interface represents a policy for Scribe, which is asked whenever a
@@ -301,5 +302,55 @@ public interface ScribePolicy {
       return (children.length < (maxChildren - 1));
     }
   }
+  
+  /**
+   * Nicely departs.
+   * 
+   * You must notify this policy when you depart, or when a node nicely departs.
+   * 
+   * @author Jeff Hoye
+   *
+   */
+//  public class NiceDeparturePolicy extends DefaultScribePolicy {
+//    /**
+//     * These nodes have been marked dead by the application.  Avoid them in Anycasts.
+//     */
+//    TimerWeakHashMap<NodeHandle, Object> markedDead;
+//    
+//    /**
+//     * Dummy to hold in markedDead.
+//     */
+//    public static final Object OBJECT = new Object();
+//
+//    public NiceDeparturePolicy(Environment env) {
+//      super(env);
+//      markedDead = new TimerWeakHashMap<NodeHandle, Object>(env.getSelectorManager().getTimer(),300000);
+//    }
+//
+//    /**
+//     * Call this when you know a neighbor has nicely left, so we won't 
+//     * route messags to it any more.
+//     * @param neighbor
+//     */
+//    public void markDead(NodeHandle neighbor) {
+//      markedDead.put(neighbor, OBJECT);
+//    }
+//  public static final int REPLICAS_TO_NOTIFY = 24;
+//  /**
+//   * endpoint is supposed to fail if we ask for too many replicas... so just try to get as many as possible
+//   * @return
+//   */
+//  protected Iterable<NodeHandle> getReplicaSet() {
+//    for (int numReplicas = REPLICAS_TO_NOTIFY; numReplicas > 0; numReplicas--) {
+//      try {
+//        return endpoint.replicaSet(endpoint.getId(), numReplicas);         
+//      } catch (Exception e) {
+//        // try again
+//      }
+//    }
+//    return Collections.emptyList();
+//  }
+//
+//  }
 }
 

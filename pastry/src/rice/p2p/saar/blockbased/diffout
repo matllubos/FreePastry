@@ -1,0 +1,36 @@
+258a259
+> 	    if(SaarTest.logLevel <= 880) myPrint("blockbased: " +"Hybrid newly set PUBLISHPERIOD: " + PUBLISHPERIOD + " , HYBRIDBLOCKBASEDLAG: " + HYBRIDBLOCKBASEDLAG + " , NEIGHBORDEADTHRESHOLD: " + NEIGHBORDEADTHRESHOLD, 880);
+261,265d261
+< 
+< 	HYBRIDBLOCKBASEDLAG = 2;  // Updated on Sep23-2007 to check the difference between dtype3 $ dtype4-hybriddebug
+< 	
+< 	if(SaarTest.logLevel <= 880) myPrint("blockbased: " +"Hybrid newly set PUBLISHPERIOD: " + PUBLISHPERIOD + " , HYBRIDBLOCKBASEDLAG: " + HYBRIDBLOCKBASEDLAG + " , NEIGHBORDEADTHRESHOLD: " + NEIGHBORDEADTHRESHOLD, 880);
+< 
+267,268c263,264
+< 	    BWCONSUMPTIONPERIOD = M* PUBLISHPERIOD; // 3 * M * PUBLISHPERIOD;  // Updated on Sep22-2007 to make the dtype4-hybriddebug == dtype3  
+< 	    MESHDEPTHESTIMATIONPERIOD = M * PUBLISHPERIOD; // 3 * M * PUBLISHPERIOD; // Updated on Sep22-2007 to make the dtype4-hybriddebug == dtype3  
+---
+> 	    BWCONSUMPTIONPERIOD = 3 * M * PUBLISHPERIOD;  
+> 	    MESHDEPTHESTIMATIONPERIOD = 3 * M * PUBLISHPERIOD;
+392,393c388
+< 	//if((currtime - lastSwarmingInvokationTime) < (PUBLISHPERIOD/2)) { // this is to enable finegrained requestblocks
+< 	if((currtime - lastSwarmingInvokationTime) < (PUBLISHPERIOD/2)) { // this is to enable finegrained requestblocks Updated on Sep22-2007
+---
+> 	if((currtime - lastSwarmingInvokationTime) < (PUBLISHPERIOD/2)) { // this is to enable finegrained requestblocks
+1025c1020
+< 	    if((saarClient.DATAPLANETYPE == 3) || ((saarClient.DATAPLANETYPE!=3) && SaarClient.HYBRIDDEBUG)) {
+---
+> 	    if(saarClient.DATAPLANETYPE == 3) {
+1326c1321
+< 	if((saarClient.DATAPLANETYPE !=3) || (saarClient.DATAPLANETYPE == 3)) {  // Updated on Sep22-2007, since it seems to be something which we should always do
+---
+> 	if(saarClient.DATAPLANETYPE !=3) {
+1410c1405
+< 	    if((saarClient.DATAPLANETYPE == 3) || ((saarClient.DATAPLANETYPE !=3) && SaarClient.HYBRIDDEBUG)) {
+---
+> 	    if(saarClient.DATAPLANETYPE == 3) {
+2200,2201c2195
+< 	//if(saarClient.DATAPLANETYPE != 3) {
+< 	if((saarClient.DATAPLANETYPE != 3) || (saarClient.DATAPLANETYPE == 3)) {
+---
+> 	if(saarClient.DATAPLANETYPE != 3) {

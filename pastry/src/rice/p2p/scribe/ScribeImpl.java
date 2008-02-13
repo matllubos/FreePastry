@@ -804,6 +804,12 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
   public void unsubscribe(Topic topic, ScribeMultiClient client) {
     unsubscribe(Collections.singletonList(topic), client);
   }
+  /**
+   * This code:
+   * for each Topic:
+   *   1) removes the client from the TopicManager
+   *   2) 
+   */
   public void unsubscribe(Collection<Topic> topicsToUnsubscribe, ScribeMultiClient client) {
     if (logger.level <= Logger.FINER) logger.log("Unsubscribing client " + client + " from topic " + topicManagers);
     HashMap<NodeHandle, List<Topic>> needToUnsubscribe = new HashMap<NodeHandle, List<Topic>>();
@@ -2365,10 +2371,8 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
     }
 
     /**
-     * DESCRIBE THE METHOD
-     *
-     * @param client DESCRIBE THE PARAMETER
-     * @return DESCRIBE THE RETURN VALUE
+     * @param client the client to remove
+     * @return true if there are no children/clients remaining (you can unsubscribe from the parent)
      */
     public boolean removeClient(ScribeMultiClient client) {
       clients.remove(client);

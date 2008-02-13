@@ -114,6 +114,7 @@
         <include name="rice/p2p/multiring/**/*.java"/>
         <include name="rice/p2p/past/**/*.java"/>
         <include name="rice/p2p/replication/**/*.java"/>
+        <exclude name="rice/p2p/saar/**/*.java"/>
         <include name="rice/p2p/scribe/**/*.java"/>
         <include name="rice/p2p/splitstream/**/*.java"/>
         <include name="rice/p2p/util/**/*.java"/> 
@@ -146,6 +147,7 @@
 	        <include name="rice/p2p/multiring/**/*.java"/>
 	        <include name="rice/p2p/past/**/*.java"/>
 	        <include name="rice/p2p/replication/**/*.java"/>
+	        <exclude name="rice/p2p/saar/**/*.java"/>
 	        <include name="rice/p2p/scribe/**/*.java"/>
 	        <include name="rice/p2p/splitstream/**/*.java"/>
 	        <include name="rice/p2p/util/**/*.java"/> 
@@ -201,6 +203,34 @@
       <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
     </jar>
   </target>
+
+	  <target name="freepastry-saar-jar" depends="compile-epost">
+	    <jar destfile="pastry.jar" compress="true">
+	      <fileset dir="${build.dir}">
+	        <include name="org/mpisws/p2p/**/*.class"/>
+	        <include name="rice/*.class"/>
+	        <include name="rice/environment/**/*.class"/>
+	        <include name="rice/p2p/commonapi/**/*.class"/>
+	        <include name="rice/p2p/glacier/*.class"/>
+	        <include name="rice/p2p/glacier/v2/**/*.class"/>
+	        <include name="rice/p2p/aggregation/**/*.class"/>
+	        <include name="rice/p2p/multiring/**/*.class"/>
+	        <include name="rice/p2p/past/**/*.class"/>
+	        <include name="rice/p2p/replication/**/*.class"/>
+	        <include name="rice/p2p/saar/**/*.class"/>
+	        <include name="rice/p2p/scribe/**/*.class"/>
+	        <include name="rice/p2p/splitstream/**/*.class"/>
+	        <include name="rice/p2p/util/**/*.class"/> 
+	        <include name="rice/pastry/**/*.class"/>
+	        <exclude name="rice/pastry/socket/testing/*.class"/>
+	        <include name="rice/persistence/**/*.class"/>
+	        <include name="rice/selector/**/*.class"/>
+	        <include name="rice/tutorial/**/*.class"/>
+	      </fileset>
+	      <fileset dir="${jar.dir}/freepastry" includes="freepastry.params"/>
+	    </jar>
+	  </target>
+
 
   <!-- freepastry-core-jar: creates ./pastry-core.jar which excludes Glacier
        and SplitStream, as well as rice.pastry.testing.* -->
