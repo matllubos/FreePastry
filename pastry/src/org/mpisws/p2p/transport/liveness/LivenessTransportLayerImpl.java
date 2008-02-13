@@ -162,11 +162,11 @@ public class LivenessTransportLayerImpl<Identifier> implements
   
   private ErrorHandler<Identifier> errorHandler;
   
-  public LivenessTransportLayerImpl(TransportLayer<Identifier, ByteBuffer> tl, Environment env, ErrorHandler<Identifier> errorHandler, int checkDeadThrottle) {
-    this(tl,env,errorHandler,checkDeadThrottle,false);
-  }
+//  public LivenessTransportLayerImpl(TransportLayer<Identifier, ByteBuffer> tl, Environment env, ErrorHandler<Identifier> errorHandler, int checkDeadThrottle) {
+//    this(tl,env,errorHandler,checkDeadThrottle,false);
+//  }
   
-  public LivenessTransportLayerImpl(TransportLayer<Identifier, ByteBuffer> tl, Environment env, ErrorHandler<Identifier> errorHandler, int checkDeadThrottle, boolean cleanMemory) {
+  public LivenessTransportLayerImpl(TransportLayer<Identifier, ByteBuffer> tl, Environment env, ErrorHandler<Identifier> errorHandler, int checkDeadThrottle) {
     this.tl = tl;
     this.environment = env;
     this.logger = env.getLogManager().getLogger(LivenessTransportLayerImpl.class, tl.getLocalIdentifier().toString());
@@ -177,11 +177,11 @@ public class LivenessTransportLayerImpl<Identifier> implements
     this.livenessListeners = new ArrayList<LivenessListener<Identifier>>();
     this.pingListeners = new ArrayList<PingListener<Identifier>>();
 //    this.managers = new HashMap<Identifier, EntityManager>();
-    if (cleanMemory) {
+//    if (cleanMemory) {
       this.managers = new TimerWeakHashMap<Identifier, EntityManager>(env.getSelectorManager(), 300000);
-    } else {
-      this.managers = new HashMap<Identifier, EntityManager>();      
-    }
+//    } else {
+//      this.managers = new HashMap<Identifier, EntityManager>();      
+//    }
     Parameters p = env.getParameters();
     PING_DELAY = p.getInt("pastry_socket_scm_ping_delay");
     PING_JITTER = p.getFloat("pastry_socket_scm_ping_jitter");
@@ -209,6 +209,14 @@ public class LivenessTransportLayerImpl<Identifier> implements
 
   public boolean checkLiveness(Identifier i, Map<String, Object> options) {
     return getManager(i).checkLiveness(options);
+  }
+  
+  public P2PSocket<Identifier> getLSocket(P2PSocket<Identifier> s, EntityManager manager) {
+    LSocket sock = new LSocket(manager, s, manager.identifier.get());
+    synchronized(manager.sockets) {
+      manager.sockets.add(sock);
+    }
+    return sock;
   }
   
   public EntityManager getManager(Identifier i) {
@@ -270,12 +278,9 @@ public class LivenessTransportLayerImpl<Identifier> implements
     // this code marks the Identifier faulty if there is an error connecting the socket.  It's possible that this
     // should be moved to the source route manager, but there needs to be a way to cancel the liveness
     // checks, or maybe the higher layer can ignore them.
-    if (i.toString().startsWith("/0.0.0.0")) {
-      logger.log("openSocket("+i+")");        
-    }
     return tl.openSocket(i, new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
-        deliverSocketToMe.receiveResult(cancellable, getManager(i).getLSocket(sock));
+        deliverSocketToMe.receiveResult(cancellable, getLSocket(sock,getManager(i)));
       }    
       
       public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
@@ -354,14 +359,17 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (rtt >= 0) {
 //        logger.log(this+"PONG1");
         manager.updateRTO(rtt);
+        boolean markAlive = false;
         synchronized(manager) {
           if (manager.getPending() != null) {
 //            logger.log(this+"PONG2");
             manager.getPending().pingResponse(sendTime, options);
+            markAlive = true;
           } else {
             logger.log("Got pong from "+i+", but there is no DeadChecker for "+manager+"@"+System.identityHashCode(manager));            
           }
         }
+        manager.markAlive(options); // do this outside of the synchronized block
         notifyPingListenersPong(i,rtt, options);
       } else {
         if (logger.level <= Logger.WARNING) logger.log("I think the clock is fishy, rtt must be >= 0, was:"+rtt);
@@ -373,6 +381,33 @@ public class LivenessTransportLayerImpl<Identifier> implements
     }
   }
 
+  /**
+   * True if there was a pending liveness check.
+   * 
+   * @param i
+   * @param options
+   * @return
+   */
+  public boolean cancelLivenessCheck(Identifier i, Map<String, Object> options) {
+    EntityManager manager = getManager(i);
+    if (manager == null) {
+      return false;
+    } 
+    return cancelLivenessCheck(manager, options);
+  }
+  
+  public boolean cancelLivenessCheck(EntityManager manager, Map<String, Object> options) {
+    synchronized(manager) {
+      if (manager.getPending() != null) {
+//          logger.log(this+"PONG2");
+        manager.getPending().cancel();
+        return true;
+      }
+    }
+    manager.markAlive(options);
+    return false;
+  }
+  
   public String toString() {
     return "LivenessTL{"+getLocalIdentifier()+"}";
   }
@@ -472,7 +507,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       m.updated = 0L;
       m.checkLiveness(s.getOptions());
     }
-    callback.incomingSocket(getManager(s.getIdentifier()).getLSocket(s));    
+    callback.incomingSocket(getLSocket(s, getManager(s.getIdentifier())));    
   }
 
   List<LivenessListener<Identifier>> livenessListeners;
@@ -598,7 +633,6 @@ public class LivenessTransportLayerImpl<Identifier> implements
         }
       }      
       if (logger.level <= Logger.FINE) logger.log("Terminated DeadChecker@"+System.identityHashCode(this)+"(" + manager.identifier.get() + ") due to ping.");
-      manager.markAlive(options);
       cancel();
     }
 
@@ -723,14 +757,6 @@ public class LivenessTransportLayerImpl<Identifier> implements
 //      return "LivenessTLi.EM{"+identifier.get()+"}:"+liveness;
 //    }
     
-    public P2PSocket<Identifier> getLSocket(P2PSocket<Identifier> s) {
-      LSocket sock = new LSocket(this, s, identifier.get());
-      synchronized(sockets) {
-        sockets.add(sock);
-      }
-      return sock;
-    }
-
     public void removeSocket(LSocket socket) {
       synchronized(sockets) {
         sockets.remove(socket);

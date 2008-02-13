@@ -39,6 +39,7 @@ package org.mpisws.p2p.transport.simpleidentity;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Map;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -59,7 +60,8 @@ public class InetSocketAddressSerializer implements Serializer<InetSocketAddress
   public static final int IPV4_BYTES = 4;
   public static final int IPV6_BYTES = 16;
   
-  public InetSocketAddress deserialize(InputBuffer b) throws IOException {
+  public InetSocketAddress deserialize(InputBuffer b, InetSocketAddress i,
+      Map<String, Object> options) throws IOException {
     byte version = b.readByte();
     byte[] addr;
     

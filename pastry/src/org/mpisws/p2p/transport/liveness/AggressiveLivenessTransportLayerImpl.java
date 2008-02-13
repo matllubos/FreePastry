@@ -34,15 +34,63 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.simpleidentity;
+package org.mpisws.p2p.transport.liveness;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
-import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import org.mpisws.p2p.transport.ErrorHandler;
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl.EntityManager;
+import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl.LSocket;
 
-public interface Serializer<Identifier> {
-  public void serialize(Identifier i, OutputBuffer b) throws IOException;
-  public Identifier deserialize(InputBuffer b, Identifier i, Map<String, Object> options) throws IOException;
+import rice.environment.Environment;
+
+/**
+ * Cancels liveness check if you read/write to TCP or read UDP from the node.
+ * 
+ * @author Jeff Hoye
+ *
+ * @param <Identifier>
+ */
+public class AggressiveLivenessTransportLayerImpl<Identifier> extends
+    LivenessTransportLayerImpl<Identifier> {
+
+  public AggressiveLivenessTransportLayerImpl(
+      TransportLayer<Identifier, ByteBuffer> tl, Environment env,
+      ErrorHandler<Identifier> errorHandler, int checkDeadThrottle) {
+    super(tl, env, errorHandler, checkDeadThrottle);
+  }
+
+  public P2PSocket<Identifier> getLSocket(P2PSocket<Identifier> s, EntityManager manager) {
+    ALSocket sock = new ALSocket(manager, s, manager.identifier.get());
+    synchronized(manager.sockets) {
+      manager.sockets.add(sock);
+    }
+    return sock;
+  }
+  
+  class ALSocket extends LSocket {
+
+    public ALSocket(EntityManager manager, P2PSocket<Identifier> socket,
+        Identifier hardRef) {
+      super(manager, socket, hardRef);
+    }
+    
+    public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
+      super.receiveSelectResult(socket, canRead, canWrite);
+      cancelLivenessCheck(manager, socket.getOptions());
+    }
+  }
+  
+  @Override
+  public void messageReceived(Identifier i, ByteBuffer m,
+      Map<String, Object> options) throws IOException {
+    super.messageReceived(i, m, options);
+    cancelLivenessCheck(i, options);
+  }
 }

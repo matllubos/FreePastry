@@ -188,7 +188,7 @@ public class SimpleIdentityTransportLayer<Identifier, MessageType> implements
       public void receiveSelectResult(P2PSocket<Identifier> socket,
           boolean canRead, boolean canWrite) throws IOException {
         try {
-          Identifier remoteIdentifier = serializer.deserialize(sib);
+          Identifier remoteIdentifier = serializer.deserialize(sib, socket.getIdentifier(), socket.getOptions());
           callback.incomingSocket(new SocketWrapperSocket<Identifier, Identifier>(remoteIdentifier,socket,logger,socket.getOptions()));
         } catch (InsufficientBytesException ibe) {
           socket.register(true, false, this);          

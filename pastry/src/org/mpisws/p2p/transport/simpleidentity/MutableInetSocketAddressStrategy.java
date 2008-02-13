@@ -37,12 +37,54 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.simpleidentity;
 
 import java.io.IOException;
-import java.util.Map;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 
-import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public interface Serializer<Identifier> {
-  public void serialize(Identifier i, OutputBuffer b) throws IOException;
-  public Identifier deserialize(InputBuffer b, Identifier i, Map<String, Object> options) throws IOException;
+/**
+ * This is used if you are binding to 0.0.0.0
+ * It will see if your local address changed before returning the serialized version.
+ * 
+ * @author Jeff Hoye
+ *
+ * @param <InetSocketAddress>
+ */
+public class MutableInetSocketAddressStrategy implements LocalIdentifierStrategy<InetSocketAddress> {
+  int port;  
+  Serializer<InetSocketAddress> serializer;
+  
+  InetAddress lastLocalAddress;
+  byte[] lastBytes;
+    
+  public MutableInetSocketAddressStrategy(int port, Serializer<InetSocketAddress> serializer) {
+    this.serializer = serializer;
+    this.port = port;
+  }
+  
+  public synchronized byte[] getLocalIdentifierBytes() throws IOException {
+    InetAddress newAddr = getLocalAddress();
+    if (lastLocalAddress == null || newAddr.equals(lastLocalAddress)) {      
+      lastLocalAddress = newAddr;
+      lastBytes = serializeAddress(new InetSocketAddress(newAddr, port));
+    }
+    return lastBytes;
+  }
+
+  protected byte[] serializeAddress(InetSocketAddress addr) throws IOException {    
+    System.out.println("Address changed to "+addr);
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    serializer.serialize(addr, sob);
+    return sob.getBytes();      
+  }
+  
+  /**
+   * Can be overridden to do something special in the case of having multiple NICs
+   * 
+   * @return the current address to advertise
+   */
+  protected InetAddress getLocalAddress() throws IOException {
+    return InetAddress.getLocalHost();
+  }
 }
