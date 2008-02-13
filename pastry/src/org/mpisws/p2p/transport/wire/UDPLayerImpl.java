@@ -146,7 +146,7 @@ public class UDPLayerImpl extends SelectionKeyHandler implements UDPLayer {
       // bind to the appropriate port
       channel = DatagramChannel.open();
       channel.configureBlocking(false);
-      channel.socket().setReuseAddress(true);
+//      channel.socket().setReuseAddress(true);
       channel.socket().bind(wire.bindAddress);
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);

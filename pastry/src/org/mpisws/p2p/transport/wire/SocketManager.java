@@ -216,7 +216,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    */
 //  Exception closeEx;
   public void close() {
-    logger.logException("Closing " + this, new Exception("Stack Trace"));
+//    logger.logException("Closing " + this, new Exception("Stack Trace"));
 //    if (logger.level <= Logger.FINE) logger.log("close()");
     try {
       if (logger.level <= Logger.FINE) {

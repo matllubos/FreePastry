@@ -191,7 +191,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   
   private void enqueue(MessageWrapper ret) {    
     synchronized(queue) {
-      logger.log("enqueue("+ret+"): queue.size() "+queue.size());
+//      logger.log("enqueue("+ret+"): queue.size() "+queue.size());
       if (failed) return;
       queue.add(ret);       
       
@@ -381,7 +381,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   public BBReceipt sendMsg(ByteBuffer bb, byte priority,
       Continuation<BBReceipt, Exception> c) {
     BBReceiptImpl ret = new BBReceiptImpl(bb,priority,getUid(),c);
-    logger.log("sendMsg("+ret+")");
+//    logger.log("sendMsg("+ret+")");
     return ret;
   }
   
@@ -689,7 +689,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       try {
         file.close();
       } catch (IOException ioe) {
-        logger.logException("Error closing file <"+uid+"> "+file+" "+metadata.length, ioe);
+        if (logger.level <= Logger.WARNING) logger.logException("Error closing file <"+uid+"> "+file+" "+metadata.length, ioe);
       }
       outgoingData.remove(uid);
       if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);
@@ -721,7 +721,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       try {
         file.close();
       } catch (IOException ioe) {
-        logger.logException("Error closing file <"+uid+"> "+file, ioe);
+        if (logger.level <= Logger.WARNING) logger.logException("Error closing file <"+uid+"> "+file, ioe);
       }
       outstanding.cancel();
       return super.cancel();
@@ -957,7 +957,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       writer.notifyReceiverCancelled();
       notifyListenersReceiverCancelled(writer);
     } else {
-      logger.log("receiverCanclled("+uid+") no record of the uid.");
+      if (logger.level <= Logger.WARNING) logger.log("receiverCanclled("+uid+") no record of the uid.");
     }
   }
 
@@ -966,7 +966,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     if (reader != null) {
       reader.cancelled(reader);
     } else {
-      logger.log("senderCanclled("+uid+") no record of the uid.");
+      if (logger.level <= Logger.WARNING) logger.log("senderCanclled("+uid+") no record of the uid.");
     }
   }
 
@@ -1174,7 +1174,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       
       // notify callback
 //      notifyListenersReceiveMsgComplete(this);
-      logger.log("BBDataReader.complete() "+this);
+//      logger.log("BBDataReader.complete() "+this);
       callback.messageReceived(ByteBuffer.wrap(getBytes()));
     }
 
@@ -1313,12 +1313,12 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       try {
         file.close();
       } catch (IOException ioe) {
-        logger.logException("Error closing file "+file, ioe);
+        if (logger.level <= Logger.WARNING) logger.logException("Error closing file "+file, ioe);
       }
         
       // notify callback
 //      notifyListenersReceiveFileComplete(this);
-      logger.log("Complete "+this);
+//      logger.log("Complete "+this);
       callback.fileReceived(getFile(), getMetadata());
     }
 
@@ -1374,7 +1374,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         }
       
         public void receiveException(Exception exception) {
-          logger.logException("Error closing file "+file, exception);
+          if (logger.level <= Logger.WARNING) logger.logException("Error closing file "+file, exception);
         }      
       },environment.getSelectorManager()) {
       

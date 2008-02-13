@@ -89,7 +89,7 @@ public class EncryptedFileTest {
     // this node will receive a file
     InetSocketAddress addr1 = new InetSocketAddress(local, 9001);
     WireTransportLayer wtl1 = new WireTransportLayerImpl(addr1,env,errorHandler);
-    SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer> idtl1 = new SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer>(wtl1,new InetSocketAddressSerializer(),env,errorHandler);
+    SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer> idtl1 = new SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer>(wtl1,new InetSocketAddressSerializer(), null ,env,errorHandler);
     LivenessTransportLayer<InetSocketAddress, ByteBuffer> ltl1 = new LivenessTransportLayerImpl<InetSocketAddress>(idtl1,env,errorHandler,300000);
     ltl1.addLivenessListener(new LivenessListener<InetSocketAddress>() {    
       public void livenessChanged(InetSocketAddress i, int val,
@@ -157,7 +157,7 @@ public class EncryptedFileTest {
     // this node will send a file
     InetSocketAddress addr2 = new InetSocketAddress(local, 9002);
     WireTransportLayer wtl2 = new WireTransportLayerImpl(addr2,env,errorHandler);
-    SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer> idtl2 = new SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer>(wtl2,new InetSocketAddressSerializer(),env,errorHandler);
+    SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer> idtl2 = new SimpleIdentityTransportLayer<InetSocketAddress, ByteBuffer>(wtl2,new InetSocketAddressSerializer(), null ,env,errorHandler);
     LivenessTransportLayer<InetSocketAddress, ByteBuffer> ltl2 = new LivenessTransportLayerImpl<InetSocketAddress>(idtl2,env,errorHandler,300000);
 
     // check liveness on addr1

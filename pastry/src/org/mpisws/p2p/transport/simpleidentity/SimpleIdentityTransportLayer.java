@@ -73,20 +73,39 @@ public class SimpleIdentityTransportLayer<Identifier, MessageType> implements
 
   protected TransportLayer<Identifier, MessageType> tl;
   protected Logger logger;
-  byte[] localIdentifierBytes;
   private TransportLayerCallback<Identifier, MessageType> callback;
   protected ErrorHandler<Identifier> errorHandler;
-  protected Serializer<Identifier> serializer;
+  protected Serializer<Identifier> serializer;  
+  LocalIdentifierStrategy<Identifier> localIdStrategy; 
   
-  public SimpleIdentityTransportLayer(TransportLayer<Identifier, MessageType> tl, Serializer<Identifier> serializer, Environment env, ErrorHandler<Identifier> handler) throws IOException {
+  /**
+   * Sends the same identifier every time.
+   * @author Jeff Hoye
+   *
+   * @param <Identifier>
+   */
+  class DefaultLocalIdentifierStrategy<Identifier> implements LocalIdentifierStrategy<Identifier> {
+    byte[] localIdentifierBytes;
+    public DefaultLocalIdentifierStrategy(Identifier i) throws IOException {
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      serializer.serialize(tl.getLocalIdentifier(), sob);
+      localIdentifierBytes = sob.getBytes();      
+    }
+    public byte[] getLocalIdentifierBytes() {
+      return localIdentifierBytes;
+    }
+  }
+  
+  public SimpleIdentityTransportLayer(TransportLayer<Identifier, MessageType> tl, Serializer<Identifier> serializer, LocalIdentifierStrategy<Identifier> localIdStrategy, Environment env, ErrorHandler<Identifier> handler) throws IOException {
     this.tl = tl;
     this.tl.setCallback(this);
     this.errorHandler = handler;
     this.logger = env.getLogManager().getLogger(getClass(), null);
     this.serializer = serializer;
-    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    serializer.serialize(tl.getLocalIdentifier(), sob);
-    localIdentifierBytes = sob.getBytes();
+    this.localIdStrategy = localIdStrategy;
+    if (this.localIdStrategy == null) {
+      this.localIdStrategy = new DefaultLocalIdentifierStrategy<Identifier>(tl.getLocalIdentifier());
+    }
   }
   
   public void acceptMessages(boolean b) {
@@ -108,8 +127,8 @@ public class SimpleIdentityTransportLayer<Identifier, MessageType> implements
       public void receiveResult(SocketRequestHandle<Identifier> cancellable,
           P2PSocket<Identifier> sock) {
         // write the local identifier
-        final ByteBuffer writeMe = ByteBuffer.wrap(localIdentifierBytes);
         try {
+          final ByteBuffer writeMe = ByteBuffer.wrap(localIdStrategy.getLocalIdentifierBytes());
           new P2PSocketReceiver<Identifier>() {
             public void receiveSelectResult(P2PSocket<Identifier> socket,
                 boolean canRead, boolean canWrite) throws IOException {
