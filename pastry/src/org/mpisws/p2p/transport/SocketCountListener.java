@@ -36,30 +36,9 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Map;
 
-public interface ListenableTransportLayer<Identifier> {
-  public void addTransportLayerListener(TransportLayerListener<Identifier> listener); 
-  public void removeTransportLayerListener(TransportLayerListener<Identifier> listener); 
-  
-//  Collection<TransportLayerListener<Identifier, ByteBuffer>> listeners = new ArrayList<TransportLayerListener<Identifier,ByteBuffer>>();
-//  public void addTransportLayerListener(
-//      TransportLayerListener<Identifier, ByteBuffer> listener) {
-//    synchronized(listeners) {
-//      listeners.add(listener);
-//    }
-//  }
-//
-//  public void removeTransportLayerListener(
-//      TransportLayerListener<Identifier, ByteBuffer> listener) {
-//    synchronized(listeners) {
-//      listeners.remove(listener);
-//    }
-//  }  
-//  
-//  notifyTLListenersWrite(ret,this,PASSTHROUGH);
-  
-
+public interface SocketCountListener<Identifier> {
+  public void socketOpened(Identifier i, Map<String, Object> options, boolean outgoing);
+  public void socketClosed(Identifier i, Map<String, Object> options);
 }

@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
+import org.mpisws.p2p.transport.SocketCountListener;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerListener;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
@@ -392,7 +393,13 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, final TLPastryNode pn) throws IOException {
     Environment environment = pn.getEnvironment();    
     WireTransportLayerImpl wtl = new WireTransportLayerImpl(innermostAddress,environment, null);    
-    wtl.addTransportLayerListener(new TransportLayerListener<InetSocketAddress, ByteBuffer>() {
+    wtl.addSocketCountListener(getSocketCountListener(pn));
+    
+    return wtl;
+  }
+
+  protected SocketCountListener<InetSocketAddress> getSocketCountListener(final TLPastryNode pn) {
+    return new SocketCountListener<InetSocketAddress>() {
       public void socketOpened(InetSocketAddress i,
           Map<String, Object> options, boolean outgoing) {
         pn.broadcastChannelOpened(i, 0);
@@ -401,11 +408,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           Map<String, Object> options) {
         pn.broadcastChannelClosed(i);
       }
-    });
-    
-    return wtl;
+    };
   }
-
+  
   protected TransportLayer<InetSocketAddress, ByteBuffer> getMagicNumberTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     MagicNumberTransportLayer<InetSocketAddress> mntl = 

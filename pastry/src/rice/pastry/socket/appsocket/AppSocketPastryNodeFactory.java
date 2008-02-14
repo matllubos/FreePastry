@@ -362,16 +362,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, final TLPastryNode pn) throws IOException {
     Environment environment = pn.getEnvironment();    
     WireTransportLayerImpl wtl = new WireTransportLayerImpl(innermostAddress,environment, null, (pn instanceof BogusTLPastryNode));    
-    wtl.addTransportLayerListener(new TransportLayerListener<InetSocketAddress, ByteBuffer>() {
-      public void socketOpened(InetSocketAddress i,
-          Map<String, Object> options, boolean outgoing) {
-        pn.broadcastChannelOpened(i, 0);
-      }      
-      public void socketClosed(InetSocketAddress i,
-          Map<String, Object> options) {
-        pn.broadcastChannelClosed(i);
-      }
-    });
+    wtl.addSocketCountListener(getSocketCountListener(pn));
     
     if (pn instanceof BogusTLPastryNode) {
       return ((BogusTLPastryNode)pn).getWireTransportLayer(wtl);

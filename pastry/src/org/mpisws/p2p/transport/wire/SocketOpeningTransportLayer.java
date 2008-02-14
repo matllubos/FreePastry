@@ -34,32 +34,11 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport;
+package org.mpisws.p2p.transport.wire;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
+import org.mpisws.p2p.transport.SocketCountListener;
 
-public interface ListenableTransportLayer<Identifier> {
-  public void addTransportLayerListener(TransportLayerListener<Identifier> listener); 
-  public void removeTransportLayerListener(TransportLayerListener<Identifier> listener); 
-  
-//  Collection<TransportLayerListener<Identifier, ByteBuffer>> listeners = new ArrayList<TransportLayerListener<Identifier,ByteBuffer>>();
-//  public void addTransportLayerListener(
-//      TransportLayerListener<Identifier, ByteBuffer> listener) {
-//    synchronized(listeners) {
-//      listeners.add(listener);
-//    }
-//  }
-//
-//  public void removeTransportLayerListener(
-//      TransportLayerListener<Identifier, ByteBuffer> listener) {
-//    synchronized(listeners) {
-//      listeners.remove(listener);
-//    }
-//  }  
-//  
-//  notifyTLListenersWrite(ret,this,PASSTHROUGH);
-  
-
+public interface SocketOpeningTransportLayer<Identifier> {
+  public void addSocketCountListener(SocketCountListener<Identifier> listener); 
+  public void removeSocketCountListener(SocketCountListener<Identifier> listener); 
 }
