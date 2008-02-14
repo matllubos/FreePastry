@@ -542,6 +542,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   }
 
   public SocketChannel getSocketChannel() {
+    tcp.wire.environment.getSelectorManager().cancel(key);
+//    tcp.wire.environment.getSelectorManager().register(channel, this, 0);
+//    channel.register(sel, 0);
     return channel;
   }
 

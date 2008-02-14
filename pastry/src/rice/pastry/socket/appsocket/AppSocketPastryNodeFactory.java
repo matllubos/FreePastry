@@ -88,6 +88,12 @@ import rice.pastry.transport.TLPastryNode;
 
 public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
 
+  /**
+   * Used for getSocketChannel.  The AppSocketFactroyLayer stores the channel here, 
+   * and then it is retrieved when the channel is opened.
+   */
+  protected Map<Integer, SocketManager> socketTable = new HashMap<Integer, SocketManager>();
+
   public AppSocketPastryNodeFactory(NodeIdFactory nf, int startPort,
       Environment env) throws IOException {
     super(nf, startPort, env);
@@ -110,7 +116,6 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
     /**
      * Indexed by the option "STORE_SOCKET"
      */
-    protected Map<Integer, SocketChannel> socketTable = new HashMap<Integer, SocketChannel>();
     private TransportLayerCallback<InetSocketAddress, ByteBuffer> callback;
     
     public AppSocketFactoryLayer(WireTransportLayerImpl wtl) {
@@ -144,7 +149,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
 
           SocketManager sa = (SocketManager)sock;
           if (options.containsKey(STORE_SOCKET)) {
-            socketTable.put((Integer)options.get(STORE_SOCKET), sa.getSocketChannel());
+            socketTable.put((Integer)options.get(STORE_SOCKET), sa);
           }
           deliverSocketToMe.receiveResult(cancellable, sock);
         }
@@ -245,20 +250,35 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
             }, options);
       }
       
-      public Cancellable getSocketChannel(InetSocketAddress addr, int appid, Continuation<SocketChannel, Exception> c, Map<String, Object> options) {
+      public Cancellable getSocketChannel(InetSocketAddress addr, int appid, final Continuation<SocketChannel, Exception> c, Map<String, Object> options) {
         // increment the uid
         final int myUid;
         synchronized(this) {
           myUid = uid++;
         }
         // add a UID in the options
-        options = OptionsFactory.addOption(options, SOCKET_FACTORY_UID, myUid);          
+        options = OptionsFactory.addOption(options, STORE_SOCKET, myUid);          
 
         // open the socket
-        // intercept the SocketAdapter from the wtl using the UID
-        // return the socket
+        // the AppSocketFactoryLayer will intercept the SocketManager from the wtl using the UID
 
-        return null;
+        return getSocket(addr, appid, 
+            new Continuation<P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>>, Exception>(){
+
+              public void receiveException(Exception exception) {
+                c.receiveException(exception);
+              }
+
+              public void receiveResult(
+                  P2PSocket<TransportLayerNodeHandle<MultiInetSocketAddress>> result) {
+                // return the socket
+                SocketManager sm = socketTable.remove(myUid); 
+                SocketChannel ret = sm.getSocketChannel();
+                System.out.println(ret+" "+ret.isRegistered()+" "+ret.validOps());
+                c.receiveResult(ret);
+              }          
+            }, options);
+
       } 
       
       
