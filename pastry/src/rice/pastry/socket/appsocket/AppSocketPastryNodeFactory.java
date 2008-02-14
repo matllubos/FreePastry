@@ -139,13 +139,13 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
         final InetSocketAddress i,
         final SocketCallback<InetSocketAddress> deliverSocketToMe,
         final Map<String, Object> options) {
-      logger.log("openSocket("+i+","+options+")");
+//      logger.log("openSocket("+i+","+options+")");
 
       return wtl.openSocket(i, new SocketCallback<InetSocketAddress>() {
       
         public void receiveResult(SocketRequestHandle<InetSocketAddress> cancellable,
             P2PSocket<InetSocketAddress> sock) {
-          logger.log("openSocket2("+i+","+options+")");
+//          logger.log("openSocket2("+i+","+options+")");
 
           SocketManager sa = (SocketManager)sock;
           if (options.containsKey(STORE_SOCKET)) {
@@ -156,7 +156,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
       
         public void receiveException(SocketRequestHandle<InetSocketAddress> s,
             Exception ex) {
-          logger.logException("receiveException("+s+")",ex);
+//          logger.logException("receiveException("+s+")",ex);
           deliverSocketToMe.receiveException(s,ex);
         }
       
@@ -167,7 +167,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
         InetSocketAddress i, ByteBuffer m,
         MessageCallback<InetSocketAddress, ByteBuffer> deliverAckToMe,
         Map<String, Object> options) {
-      logger.log("sendMessage("+m+","+options+")");
+      //logger.log("sendMessage("+m+","+options+")");
       return wtl.sendMessage(i, m, deliverAckToMe, options);
     }
 
