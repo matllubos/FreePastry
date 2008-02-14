@@ -274,7 +274,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
                 // return the socket
                 SocketManager sm = socketTable.remove(myUid); 
                 SocketChannel ret = sm.getSocketChannel();
-                System.out.println(ret+" "+ret.isRegistered()+" "+ret.validOps());
+//                System.out.println(ret+" "+ret.isRegistered()+" "+ret.validOps());
                 c.receiveResult(ret);
               }          
             }, options);
