@@ -365,8 +365,8 @@ public class LivenessTransportLayerImpl<Identifier> implements
 //            logger.log(this+"PONG2");
             manager.getPending().pingResponse(sendTime, options);
             markAlive = true;
-          } else {
-            logger.log("Got pong from "+i+", but there is no DeadChecker for "+manager+"@"+System.identityHashCode(manager));            
+//          } else {
+//            logger.log("Got pong from "+i+", but there is no DeadChecker for "+manager+"@"+System.identityHashCode(manager));            
           }
         }
         manager.markAlive(options); // do this outside of the synchronized block
