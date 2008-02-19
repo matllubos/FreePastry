@@ -41,7 +41,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * Just creates a temp file, ignoring the filename/size
+ * Just creates a temp file, ignoring the filename/size.  Does not delete on exit, as this is not memory safe.
+ * 
  * @author Jeff Hoye
  *
  */
@@ -66,7 +67,7 @@ public class TempFileAllocationStrategy implements FileAllocationStrategy {
   
   public synchronized File getFile(ByteBuffer metadata, long offset, long length) throws IOException {
     File temp = File.createTempFile(prefix, suffix, dir);
-    temp.deleteOnExit();
+    //temp.deleteOnExit();
     return temp;
   }
 
