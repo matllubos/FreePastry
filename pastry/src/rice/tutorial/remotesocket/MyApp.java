@@ -34,12 +34,6 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-/*
- * Created on Feb 15, 2005
- *
- * TODO To change the template for this generated file go to
- * Window - Preferences - Java - Code Style - Code Templates
- */
 package rice.tutorial.remotesocket;
 
 import java.io.IOException;
@@ -49,7 +43,7 @@ import rice.p2p.commonapi.*;
 import rice.p2p.commonapi.appsocket.*;
 
 /**
- * A very simple application.
+ * By calling sendMyMsgDirect(NodeHandle nh), this Application opens a socket to MyApp on the requested node, and sends it's Id. 
  * 
  * @author Jeff Hoye
  */
@@ -66,10 +60,9 @@ public class MyApp implements Application {
    */
   protected Node node;
 
-  ByteBuffer[] outs;
-  ByteBuffer out;
-  
-  ByteBuffer[] ins;
+  /**
+   * The message to receive.
+   */
   ByteBuffer in;
   
   int MSG_LENGTH;
@@ -79,14 +72,11 @@ public class MyApp implements Application {
     this.endpoint = node.buildEndpoint(this, "myinstance");
     this.node = node;
     
+    // create the output message
     MSG_LENGTH = node.getLocalNodeHandle().getId().toByteArray().length;
-    outs = new ByteBuffer[1];    
-    out = ByteBuffer.wrap(node.getLocalNodeHandle().getId().toByteArray());
-    outs[0] = out;
     
-    ins = new ByteBuffer[1];
+    // create a buffer for the input message
     in = ByteBuffer.allocate(MSG_LENGTH);
-    ins[0] = in;
     
     // example receiver interface
     endpoint.accept(new AppSocketReceiver() {
@@ -94,7 +84,6 @@ public class MyApp implements Application {
        * When we accept a new socket.
        */
       public void receiveSocket(AppSocket socket) {
-        System.out.println("Incoming Socket "+socket);
         // this code reuses "this" AppSocketReceiver, and registers for reading only, and a timeout of 30000. 
         socket.register(true, false, 30000, this);
         
@@ -109,8 +98,8 @@ public class MyApp implements Application {
         in.clear();
         try {
           // read from the socket into ins
-          long ret = socket.read(ins, 0, ins.length);    
-          System.out.println("Read "+ret+" bytes.");
+          long ret = socket.read(in);    
+          
           if (ret != MSG_LENGTH) {
             // if you sent any kind of long message, you would need to handle this case better
             System.out.println("Error, we only received part of a message."+ret+" from "+socket);
@@ -122,7 +111,7 @@ public class MyApp implements Application {
           ioe.printStackTrace(); 
         }
         // only need to do this if expecting more messages
-        socket.register(true, false, 3000, this);        
+//        socket.register(true, false, 3000, this);        
       }
     
       /**
@@ -144,49 +133,6 @@ public class MyApp implements Application {
     return node;
   }
   
-  /**
-   * Called to directly send a message to the nh
-   */
-  public void sendMyMsgDirect(NodeHandle nh) {
-    System.out.println(this+" opening to "+nh);    
-    endpoint.connect(nh, new AppSocketReceiver() {
-      
-      /**
-       * Called when the socket comes available.
-       */
-      public void receiveSocket(AppSocket socket) {
-        // register for writing
-        socket.register(false, true, 30000, this);
-      }    
-
-      /**
-       * Called if there is a problem.
-       */
-      public void receiveException(AppSocket socket, Exception e) {
-        e.printStackTrace();
-      }
-      
-      /**
-       * Example of how to write some bytes
-       */
-      public void receiveSelectResult(AppSocket socket, boolean canRead, boolean canWrite) {   
-        try {
-          long ret = socket.write(outs,0,outs.length);        
-          // see if we are done
-          if (!out.hasRemaining()) {
-            socket.close();           
-            out.clear();
-          } else {
-            // keep writing
-            socket.register(false, true, 30000, this); 
-          }
-        } catch (IOException ioe) {
-          ioe.printStackTrace(); 
-        }
-      }
-    }, 30000);
-  }
-    
   /**
    * Called when we receive a message.
    */
@@ -212,5 +158,4 @@ public class MyApp implements Application {
   public String toString() {
     return "MyApp "+endpoint.getId();
   }
-
 }
