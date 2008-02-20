@@ -126,11 +126,11 @@ public class RC4TransportLayer<Identifier, MsgType> implements TransportLayer<Id
   int WRITE_BUFFER_SIZE = 1024;
   RandomSource random;
 
-  public RC4TransportLayer(TransportLayer<Identifier,MsgType> tl, Environment env, String password) throws NoSuchAlgorithmException {
-    this(tl,env,password,KEY_LENGTH,env.getRandomSource());
+  public RC4TransportLayer(TransportLayer<Identifier,MsgType> tl, Environment env, String password, ErrorHandler<Identifier> errorHandler) throws NoSuchAlgorithmException {
+    this(tl,env,password,KEY_LENGTH,env.getRandomSource(), errorHandler);
   }
 
-  public RC4TransportLayer(TransportLayer<Identifier,MsgType> tl, Environment env, String password, int pwSeedLength, RandomSource random) throws NoSuchAlgorithmException {
+  public RC4TransportLayer(TransportLayer<Identifier,MsgType> tl, Environment env, String password, int pwSeedLength, RandomSource random, ErrorHandler<Identifier> errorHandler) throws NoSuchAlgorithmException {
     this.tl = tl;
     this.tl.setCallback(this);
     this.env=env; 
@@ -138,6 +138,7 @@ public class RC4TransportLayer<Identifier, MsgType> implements TransportLayer<Id
     this.PW_SEED_LENGTH = pwSeedLength;
     this.logger=env.getLogManager().getLogger(RC4TransportLayer.class, null);
     this.random = random;
+    this.errorHandler = errorHandler;
 //    try {
       md = MessageDigest.getInstance("SHA");
 //    } catch ( NoSuchAlgorithmException e ) {

@@ -108,7 +108,7 @@ public class ProfileFileTest {
       }    
     });
     
-    RC4TransportLayer<InetSocketAddress, ByteBuffer> etl1 = new RC4TransportLayer<InetSocketAddress, ByteBuffer>(ltl1,env,"badpassword");
+    RC4TransportLayer<InetSocketAddress, ByteBuffer> etl1 = new RC4TransportLayer<InetSocketAddress, ByteBuffer>(ltl1,env,"badpassword", errorHandler);
 //    TransportLayer<InetSocketAddress, ByteBuffer> mtl1 = new MagicNumberTransportLayer<InetSocketAddress>(etl1,env,errorHandler,"blah".getBytes(),30000);
 
     etl1.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {
@@ -206,7 +206,7 @@ public class ProfileFileTest {
     });    
     ltl2.checkLiveness(addr1, null);
     
-    RC4TransportLayer<InetSocketAddress, ByteBuffer> etl2 = new RC4TransportLayer<InetSocketAddress, ByteBuffer>(ltl2,env,"badpassword");
+    RC4TransportLayer<InetSocketAddress, ByteBuffer> etl2 = new RC4TransportLayer<InetSocketAddress, ByteBuffer>(ltl2,env,"badpassword", errorHandler);
 //    TransportLayer<InetSocketAddress, ByteBuffer> mtl2 = new MagicNumberTransportLayer<InetSocketAddress>(etl2,env,errorHandler,"blah".getBytes(),30000);
 
     etl2.openSocket(addr1, new SocketCallback<InetSocketAddress>() {
