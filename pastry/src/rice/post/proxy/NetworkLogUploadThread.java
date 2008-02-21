@@ -216,9 +216,14 @@ public class NetworkLogUploadThread extends Thread {
     try {
       in = new FileInputStream(file);
 
-      socket.connect(host);      
-      out = new GZIPOutputStream(new EncryptedOutputStream(key, socket.getOutputStream(),
-          params.getInt("p2p_util_encryptedOutputStream_buffer")));
+      socket.connect(host);
+
+      if (key != null) {
+        out = new GZIPOutputStream(new EncryptedOutputStream(key, socket.getOutputStream(),
+            params.getInt("p2p_util_encryptedOutputStream_buffer"))); 
+      } else {
+        out = new GZIPOutputStream(socket.getOutputStream());
+      }
       
       byte[] header = getHeader(file);
       

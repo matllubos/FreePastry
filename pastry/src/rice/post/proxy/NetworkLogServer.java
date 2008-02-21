@@ -92,9 +92,13 @@ public class NetworkLogServer {
     String pass = args[1];
    
 //    System.out.println("Starting "+new Date());
-    KeyPair pair = RingCertificate.readKeyPair(ring.toLowerCase(), pass);
-//    System.out.println("Got keypair "+new Date());
-    new NetworkLogServer(pair.getPrivate(), Integer.parseInt(args[2])).start();
+    try {
+      KeyPair pair = RingCertificate.readKeyPair(ring.toLowerCase(), pass);
+  //    System.out.println("Got keypair "+new Date());
+      new NetworkLogServer(pair.getPrivate(), Integer.parseInt(args[2])).start();
+    } catch (FileNotFoundException ioe) {
+      new NetworkLogServer(null, Integer.parseInt(args[2])).start();
+    }
   }
     
   protected class NetworkLogClient extends Thread {
@@ -147,7 +151,11 @@ public class NetworkLogServer {
       DataInputStream in = null;
       
       try {
-        in = new DataInputStream(new GZIPInputStream(new EncryptedInputStream(key, socket.getInputStream())));
+        if (key != null) {
+          in = new DataInputStream(new GZIPInputStream(new EncryptedInputStream(key, socket.getInputStream())));
+        } else {
+          in = new DataInputStream(new GZIPInputStream(socket.getInputStream()));
+        }
         readHeader(in);
         
         int total = 0;
