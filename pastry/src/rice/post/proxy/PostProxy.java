@@ -81,6 +81,7 @@ import rice.post.rawserialization.JavaSerializedErasureCodec;
 import rice.post.security.PostCertificate;
 import rice.post.security.ca.*;
 import rice.post.storage.*;
+import rice.proxy.NetworkLogUploadThread;
 import rice.selector.*;
 import rice.visualization.LocalVisualization;
 

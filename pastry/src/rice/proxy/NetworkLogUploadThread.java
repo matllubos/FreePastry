@@ -40,18 +40,10 @@ advised of the possibility of such damage.
  * TODO To change the template for this generated file go to
  * Window - Preferences - Java - Code Style - Code Templates
  */
-package rice.post.proxy;
+package rice.proxy;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.io.*;
+import java.net.*;
 import java.security.PublicKey;
 import java.util.zip.GZIPOutputStream;
 
@@ -60,7 +52,6 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.util.EncryptedOutputStream;
 import rice.p2p.util.MathUtils;
-import rice.selector.TimerTask;
 
 /**
  * @author jstewart

@@ -34,14 +34,12 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.post.proxy;
+package rice.proxy;
 
 import java.io.*;
 import java.net.*;
 import java.util.Date;
 import java.util.zip.*;
-import rice.proxy.*;
-import rice.post.security.*;
 import java.security.*;
 import rice.p2p.util.*;
 import rice.p2p.multiring.*;
