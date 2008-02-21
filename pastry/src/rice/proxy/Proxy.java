@@ -121,6 +121,9 @@ public class Proxy {
         if (count < parameters.getInt("restart_max")) {
           if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Waiting for " + parameters.getInt("restart_delay") + " milliseconds");   
           Thread.sleep(parameters.getInt("restart_delay"));
+        } else {
+          if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Child process exited with value " + exit + " - exiting loader");   
+          break;
         }
       } else {
         if (logger.level <= Logger.INFO) logger.log("[Loader       ]: Child process exited with value " + exit + " - exiting loader");   
