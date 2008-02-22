@@ -62,6 +62,8 @@ import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
 /**
+ * The file name is 
+ * 
  * @author jstewart
  * 
  */
@@ -77,7 +79,7 @@ public class RotatingLogManager extends AbstractLogManager {
   /**
    * @param timeSource
    * @param params
-   * @param prefix
+   * @param prefix appears in the file, not the file-name
    */
   public RotatingLogManager(TimeSource timeSource, Parameters params,
       String prefix, String dateFormat) {
