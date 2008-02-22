@@ -140,6 +140,7 @@ proxy_show_dialog=true
 proxy_sleep_monitor_enable=true
 proxy_sleep_monitor_sleep=1000
 proxy_sleep_monitor_timeout=10000
+proxy_doc_image=lib/epost.png
 restart_delay=30000
 restart_max=1000
 restart_return_value_max=1000000

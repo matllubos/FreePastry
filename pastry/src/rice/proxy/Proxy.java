@@ -51,12 +51,25 @@ import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.util.*;
 
 /**
- * This class represents a generic Java process launching program which reads in
+ * This class represents a generic Java process launching program (wrapper process) which reads in
  * preferences from a preferences file and then invokes another JVM using those
  * prefs.  If the launched JVM dies, this process can be configured to restart
  * the JVM any number of times before giving up.  This process can also be configured
  * to launch the second JVM with a specified memory allocation, etc...
  *
+ * To use with your own configuration (ePost is the default), create a main() method as follows:
+ * 
+ *  public static final String[] MY_PARAM_FILES = {"freepastry","myapp"};
+ *  public static final String MY_USER_PARAM = "proxy";
+ *  
+ *  public static void main(String[] args) throws IOException, InterruptedException {    
+ *    Proxy proxy = new Proxy(new Environment(MY_PARAM_FILES,MY_USER_PARAM),"My Application");
+ *    proxy.run();
+ *  }
+ *  
+ *  parameters: (TODO: fill these in)
+ *    proxy_doc_image: a png to show up in the macos doc
+ *  
  * @author Alan Mislove
  */
 public class Proxy {
@@ -72,9 +85,22 @@ public class Proxy {
   protected Environment environment;
   
   protected Logger logger;
+
+  protected String appString;
   
   public Proxy(Environment env) {
+    this(env,"ePOST");
+  }
+
+  /**
+   * The name of the enclosed application.
+   * 
+   * @param env
+   * @param appString
+   */
+  public Proxy(Environment env, String appString) {
     environment = env;
+    this.appString = appString;
     logger = environment.getLogManager().getLogger(Proxy.class, null);
   }
   
@@ -219,7 +245,11 @@ public class Proxy {
     }
     
     if (System.getProperty("os.name").toLowerCase().indexOf("mac os x") >= 0) {
-      result.append(" -Xdock:name=ePOST -Xdock:icon=lib/epost.png");
+      if (parameters.contains("proxy_doc_image")) {
+        result.append(" -Xdock:name="+appString+" -Xdock:icon="+parameters.getString("proxy_doc_image"));
+      } else {
+        result.append(" -Xdock:name="+appString);        
+      }
     }
     
     if (parameters.getBoolean("java_debug_enable")) {
@@ -481,7 +511,7 @@ public class Proxy {
             
             if (! new File(".", filename).exists()) {              
               if (parameters.getBoolean("proxy_show_dialog") && parameters.getBoolean("proxy_automatic_update_ask_user")) {
-                String message = "A new version of the ePOST software has been detected.\n\n" +
+                String message = "A new version of the "+appString+" software has been detected.\n\n" +
                 "Would you like to automatically upgrade to '" + filename + "' and restart your proxy?";
                 int i = JOptionPane.showOptionDialog(null, message, "Updated Software Detected", 
                                                      0, JOptionPane.INFORMATION_MESSAGE, null, 
@@ -515,7 +545,7 @@ public class Proxy {
                   } else {
                     System.err.println("ERROR - Corrupted download detected on file " + filename + " - hash " + MathUtils.toHex(bytes) + " required " + md5);
 
-                    JOptionPane.showMessageDialog(null, "It appears that your update download was corrupted - ePOST will try \n" + 
+                    JOptionPane.showMessageDialog(null, "It appears that your update download was corrupted - "+appString+" will try \n" + 
                                                         "again at the next update interval.\n\n" +
                                                   "Hash: " + MathUtils.toHex(bytes) + " Required: " + md5,
                                                   "Corrupted Download Detected", JOptionPane.WARNING_MESSAGE, null);
@@ -633,7 +663,7 @@ public class Proxy {
           Thread.sleep(sleep);
           
           if (environment.getTimeSource().currentTimeMillis() - last > timeout) {
-            if (logger.level <= Logger.INFO) logger.log( "INFO: Sleep detected - " + (environment.getTimeSource().currentTimeMillis() - last) + " millis elapsed - restarting ePOST!");
+            if (logger.level <= Logger.INFO) logger.log( "INFO: Sleep detected - " + (environment.getTimeSource().currentTimeMillis() - last) + " millis elapsed - restarting "+appString+"!");
             restart();
           }
           
