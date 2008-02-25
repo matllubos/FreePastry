@@ -158,21 +158,31 @@ public class ProfileFileTest {
               }
             }
             if (bytesTransferred == total) {
+              String s;
+              if (incoming) {
+                s = "download";
+              } else {
+                s = "upload";
+              }
               long finTime = time.currentTimeMillis();
               long startTime = startTimes.get(receipt);
               double kbps = (1.0*total)/(1.0*(finTime-startTime));
-              System.out.println("Took "+(finTime-startTime)+" to transfer "+total+" bytes. "+kbps+" kbps.");
+              startTimes.remove(receipt);
+              System.out.println("Took "+(finTime-startTime)+" to "+s+" "+total+" bytes. "+kbps+" kbps. Started at "+startTime);
             }
-//            if (bytesTransferred > total/2) {
-//              System.out.println("Closing connection");
-//              sock.close();
-//            }
           }
 
           public void msgTransferred(BBReceipt receipt, int bytesTransferred,
               int total, boolean incoming) {
-            // TODO Auto-generated method stub
-            
+            if (bytesTransferred == total) {
+              String s;
+              if (incoming) {
+                s = "Downloaded";
+              } else {
+                s = "Uploaded";
+              }
+              System.out.println(s+" msg of size "+total);              
+            }            
           }
 
           public void transferCancelled(Receipt receipt, boolean incoming) {
