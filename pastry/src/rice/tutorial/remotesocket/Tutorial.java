@@ -89,13 +89,7 @@ public class Tutorial {
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory
-    AppSocketPastryNodeFactory factory;
-//    if (useDirect) {
-//      NetworkSimulator sim = new EuclideanNetwork(env);
-//      factory = new DirectPastryNodeFactory(nidFactory, sim, env);
-//    } else {
-      factory = new AppSocketPastryNodeFactory(nidFactory, bindport, env);
-//    }
+    AppSocketPastryNodeFactory factory = new AppSocketPastryNodeFactory(nidFactory, bindport, env);
     
     IdFactory idFactory = new PastryIdFactory(env);
     
@@ -140,34 +134,21 @@ public class Tutorial {
     // wait 1 second
     env.getTimeSource().sleep(1000);
 
+    // get the SocketFactory
     SocketFactory sFactory = factory.getSocketFactory();
+    
+    // open the AppSocket
     sFactory.getAppSocket(bootaddress, StandardAddress.getAddress(MyApp.class,"myinstance",env), new Continuation<AppSocket, Exception>() {
 
-      public void receiveException(Exception exception) {
-        exception.printStackTrace();
-        throw new RuntimeException("Not implemented. ");        
-      }
-
+      /**
+       * Receive the new AppSocket.
+       * @param result
+       */
       public void receiveResult(AppSocket result) {
         System.out.println("Opened AppSocket "+result);
         final ByteBuffer out = ByteBuffer.wrap(rice.pastry.Id.build().toByteArray());
 
         result.register(false, true, -1, new AppSocketReceiver() {
-          
-          /**
-           * Called when the socket comes available.
-           */
-          public void receiveSocket(AppSocket socket) {
-            // register for writing
-            socket.register(false, true, 30000, this);
-          }    
-
-          /**
-           * Called if there is a problem.
-           */
-          public void receiveException(AppSocket socket, Exception e) {
-            e.printStackTrace();
-          }
           
           /**
            * Example of how to write some bytes
@@ -188,38 +169,34 @@ public class Tutorial {
               ioe.printStackTrace(); 
             }
           }
+          
+          /**
+           * Called if there is a problem.
+           */
+          public void receiveException(AppSocket socket, Exception e) {
+            e.printStackTrace();
+          }
+          
+          /**
+           * Called when the socket comes available.
+           */
+          public void receiveSocket(AppSocket socket) {
+            // register for writing
+            throw new RuntimeException("Should never be called.");                    
+          }              
         });
 
-      }}, null);
-    
-    
-//    
-//    MyApp tempApp = (MyApp)apps.get(0);
-//    tempApp.sendMyMsgDirect(((PastryNode)tempApp.getNode()).getLeafSet().get(-1));
-//    if (true) return;
-    
-    // for each app
-//    Iterator appIterator = apps.iterator();
-//    while(appIterator.hasNext()) {
-//      MyApp app = (MyApp)appIterator.next();
-//      PastryNode node = (PastryNode)app.getNode();
-//      
-//      // send directly to my leafset (including myself)
-//      LeafSet leafSet = node.getLeafSet();
-//      
-//      // this is a typical loop to cover your leafset.  Note that if the leafset
-//      // overlaps, then duplicate nodes will be sent to twice
-//      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-//        // select the item
-//        NodeHandle nh = leafSet.get(i);
-//        
-//        // send the message directly to the node
-//        app.sendMyMsgDirect(nh);   
-//        
-//        // wait a bit
-//        env.getTimeSource().sleep(100);
-//      }
-//    }    
+      }
+      
+      /**
+       * Handle a problem connecting.
+       * @param exception
+       */
+      public void receiveException(Exception exception) {
+        exception.printStackTrace();
+        throw new RuntimeException("Not implemented. ");        
+      }      
+    }, null);    
   }
 
   /**

@@ -90,13 +90,7 @@ public class Tutorial2 {
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory
-    AppSocketPastryNodeFactory factory;
-//    if (useDirect) {
-//      NetworkSimulator sim = new EuclideanNetwork(env);
-//      factory = new DirectPastryNodeFactory(nidFactory, sim, env);
-//    } else {
-      factory = new AppSocketPastryNodeFactory(nidFactory, bindport, env);
-//    }
+    AppSocketPastryNodeFactory factory = new AppSocketPastryNodeFactory(nidFactory, bindport, env);
     
     IdFactory idFactory = new PastryIdFactory(env);
     
@@ -144,22 +138,27 @@ public class Tutorial2 {
     SocketFactory sFactory = factory.getSocketFactory();
     sFactory.getSocketChannel(bootaddress, StandardAddress.getAddress(MyApp.class,"myinstance",env), new Continuation<SocketChannel, Exception>() {
 
-      public void receiveException(Exception exception) {
-        exception.printStackTrace();
-        throw new RuntimeException("Not implemented. ");        
-      }
-
-      public void receiveResult(final SocketChannel result) {
-        System.out.println("Opened AppSocket "+result);
+      /**
+       * Receive the new SocketChannel.
+       * @param result
+       */
+      public void receiveResult(final SocketChannel socket) {
+        System.out.println("Opened SocketChannel "+socket);
         // we're going to write in a blocking mode, so make sure to do this on another thread
         new Thread(new Runnable() {
         
           public void run() {
+            // create the message
             final ByteBuffer out = ByteBuffer.wrap(rice.pastry.Id.build().toByteArray());
+            
             try {
-              result.configureBlocking(true);
+              // set blocking mode
+              socket.configureBlocking(true);
+              
               System.out.println("Writing");
-              result.write(out);
+              
+              // write the message
+              socket.write(out);
               System.out.println("Done writing");
             } catch (IOException ioe) {
               ioe.printStackTrace();
@@ -167,36 +166,18 @@ public class Tutorial2 {
           }
         
         }).start();
-      }}, null);
+      }      
+      
+      /**
+       * Handle a problem connecting.
+       * @param exception
+       */
+      public void receiveException(Exception exception) {
+        exception.printStackTrace();
+        throw new RuntimeException("Not implemented. ");        
+      }      
+    }, null);    
     
-    
-//    
-//    MyApp tempApp = (MyApp)apps.get(0);
-//    tempApp.sendMyMsgDirect(((PastryNode)tempApp.getNode()).getLeafSet().get(-1));
-//    if (true) return;
-    
-    // for each app
-//    Iterator appIterator = apps.iterator();
-//    while(appIterator.hasNext()) {
-//      MyApp app = (MyApp)appIterator.next();
-//      PastryNode node = (PastryNode)app.getNode();
-//      
-//      // send directly to my leafset (including myself)
-//      LeafSet leafSet = node.getLeafSet();
-//      
-//      // this is a typical loop to cover your leafset.  Note that if the leafset
-//      // overlaps, then duplicate nodes will be sent to twice
-//      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-//        // select the item
-//        NodeHandle nh = leafSet.get(i);
-//        
-//        // send the message directly to the node
-//        app.sendMyMsgDirect(nh);   
-//        
-//        // wait a bit
-//        env.getTimeSource().sleep(100);
-//      }
-//    }    
   }
 
   /**

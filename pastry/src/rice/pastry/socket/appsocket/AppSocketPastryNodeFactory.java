@@ -86,6 +86,13 @@ import rice.pastry.transport.SocketAdapter;
 import rice.pastry.transport.TLDeserializer;
 import rice.pastry.transport.TLPastryNode;
 
+/**
+ * Extends SocketPastryNodeFactory and adds getSocketFactory() to allow access to
+ * a FreePastry application w/o joining the Ring.
+ * 
+ * @author Jeff Hoye
+ *
+ */
 public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
 
   /**
@@ -217,6 +224,10 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
   SocketFactory sf;
   public static final String SOCKET_FACTORY_UID = "appSocketFactory.uid";
   
+  /**
+   * @return used to open sockets to the remote node
+   * @throws IOException
+   */
   public synchronized SocketFactory getSocketFactory() throws IOException {
     if (sf != null) return sf;
     
