@@ -122,7 +122,7 @@ sub run_commonapi_tests {
 
 # process args
 my $TODAY = `date +%Y%m%d`;
-my $date = `date`;
+my $date = `date -R`;
 chomp $TODAY;
 chomp $date;
 $logdir = "$autobuild_dir/logs/$TODAY";
