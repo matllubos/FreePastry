@@ -63,7 +63,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
 public class Tutorial {
   
   // this will keep track of our applications
-  Vector apps = new Vector();
+  Vector<MyApp> apps = new Vector<MyApp>();
   
   /**
    * This constructor launches numNodes PastryNodes.  They will bootstrap 
@@ -130,38 +130,27 @@ public class Tutorial {
       apps.add(app);
     }
       
-    // wait 10 seconds
+    // wait 1 second
     env.getTimeSource().sleep(1000);
-
-//    
-//    MyApp tempApp = (MyApp)apps.get(0);
-//    tempApp.sendMyMsgDirect(((PastryNode)tempApp.getNode()).getLeafSet().get(-1));
-//    if (true) return;
     
-    // for each app
-    Iterator appIterator = apps.iterator();
-//    while(appIterator.hasNext()) {
-      MyApp app = (MyApp)appIterator.next();
-      PastryNode node = (PastryNode)app.getNode();
-      
-      // send directly to my leafset (including myself)
-      LeafSet leafSet = node.getLeafSet();
-      
-      // this is a typical loop to cover your leafset.  Note that if the leafset
-      // overlaps, then duplicate nodes will be sent to twice
-//      for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-      int i=-leafSet.ccwSize();
-      
-        // select the item
-        NodeHandle nh = leafSet.get(i);
-        
-        // send the message directly to the node
-        app.sendMyMsgDirect(nh);   
-        
-        // wait a bit
-        env.getTimeSource().sleep(100);
-//      }
-//    }    
+    // pick a node
+    MyApp app = apps.get(numNodes/2);
+    PastryNode node = (PastryNode)app.getNode();
+    
+    // send directly to my leafset (including myself)
+    LeafSet leafSet = node.getLeafSet();
+
+    // pick some node in the leafset
+    int i=-leafSet.ccwSize();
+    
+    // select the item
+    NodeHandle nh = leafSet.get(i);
+    
+    // send the message directly to the node
+    app.sendMyMsgDirect(nh);   
+    
+    // wait a bit
+    env.getTimeSource().sleep(100);
   }
 
   /**

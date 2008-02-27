@@ -101,7 +101,7 @@ public class MyApp implements Application {
             try {
               String originalFileName = new SimpleInputBuffer(metadata).readUTF();
               File dest = new File("delme2.txt");
-              System.out.println("Renaming "+f+" to "+dest+" original:"+originalFileName);
+              System.out.println("Moving "+f+" to "+dest+" original:"+originalFileName);
               System.out.println(f.renameTo(dest));
             } catch (IOException ioe) {
               System.out.println("Error deserializing file name. "+ioe);
@@ -113,19 +113,7 @@ public class MyApp implements Application {
           }
         },MyApp.this.node.getEnvironment());
         
-        fileTransfer.addListener(new MyFileListener() {
-
-        @Override
-        public void fileTransferred(FileReceipt receipt,
-            long bytesTransferred, long total, boolean incoming) {
-          super.fileTransferred(receipt, bytesTransferred, total, incoming);
-          if (1.0*bytesTransferred/total > 0.5) {
-            System.out.println(MyApp.this+" cancelling transfer of "+receipt);
-            receipt.cancel();
-          }
-        }
-        
-      });
+        fileTransfer.addListener(new MyFileListener());
         
         // it's critical to call this to be able to accept multiple times
         endpoint.accept(this);
@@ -150,6 +138,13 @@ public class MyApp implements Application {
     endpoint.register();
   }
 
+  /**
+   * This listener just prints every time a method is called.  It uses the incoming
+   * flag to specify Downloaded/Uploaded.
+   * 
+   * @author Jeff Hoye
+   *
+   */
   class MyFileListener implements FileTransferListener {
     public void fileTransferred(FileReceipt receipt,
         long bytesTransferred, long total, boolean incoming) {
@@ -214,35 +209,41 @@ public class MyApp implements Application {
        * Called when the socket comes available.
        */
       public void receiveSocket(AppSocket socket) {        
+        // create the FileTransfer object
         FileTransfer sender = new FileTransferImpl(socket, null, node.getEnvironment());         
-        sender.addListener(new MyFileListener() {
-
-//          @Override
-//          public void fileTransferred(FileReceipt receipt,
-//              long bytesTransferred, long total, boolean incoming) {
-//            super.fileTransferred(receipt, bytesTransferred, total, incoming);
-//            if (1.0*bytesTransferred/total > 0.5) {
-//              System.out.println(MyApp.this+" cancelling transfer of "+receipt);
-//              receipt.cancel();
-//            }
-//          }
-          
-        });
+        
+        // add the listener
+        sender.addListener(new MyFileListener());
        
+        // Create a simple 4 byte message
         ByteBuffer sendMe = ByteBuffer.allocate(4);
         sendMe.put((byte)1);
         sendMe.put((byte)2);
         sendMe.put((byte)3);
         sendMe.put((byte)4);
+        
+        // required when using a byteBuffer to both read and write
         sendMe.flip();
-        System.out.println("Sending "+sendMe);
+        
+        // Send the message
+        System.out.println("Sending "+sendMe);        
         sender.sendMsg(sendMe, (byte)1, null);
         
         try {
+          // get the file
           final File f = new File("delme.txt");
-//          System.out.println(f.getCanonicalPath());
+          
+          // make sure it exists
+          if (!f.exists()) {
+            System.err.println("File "+f+" does not exist.  Please create a file called "+f+" and run the tutorial again.");
+            System.exit(1);
+          }
+          
+          // serialize the filename
           SimpleOutputBuffer sob = new SimpleOutputBuffer();
-          sob.writeUTF("foo");
+          sob.writeUTF(f.getName());
+          
+          // request transfer of the file with priority 2
           sender.sendFile(f,sob.getByteBuffer(),(byte)2,new Continuation<FileReceipt, Exception>() {
 
             public void receiveException(Exception exception) {
@@ -253,6 +254,7 @@ public class MyApp implements Application {
               System.out.println("Send complete: "+result);
             }
           });
+          
         } catch (IOException ioe) {
           ioe.printStackTrace();
         }
