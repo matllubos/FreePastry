@@ -38,28 +38,10 @@ package rice.pastry.routing;
 
 import java.util.Iterator;
 
-import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 
-/**
- * Router is no longer just an application.  It is privileged.
- * 
- * @author Jeff Hoye
- *
- */
-public interface Router {
+public interface RouterStrategy {
 
-  void route(RouteMessage rm);
-
-  /**
-   * Returns an ordered list of the best candidates for the next to the key.  Always starts with
-   * a node that matches an additional prefix, if it is available.
-   * 
-   * @param key
-   * @return
-   */
-  Iterator<NodeHandle> getBestRoutingCandidates(Id key);
-
-//  boolean routeMessage(RouteMessage rm);
+  NodeHandle pickNextHop(RouteMessage msg, Iterator<NodeHandle> i);
 
 }

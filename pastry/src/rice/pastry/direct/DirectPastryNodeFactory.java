@@ -113,19 +113,36 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   public PastryNode newNode(NodeHandle bootstrap) {
     return newNode(bootstrap, nidFactory.generateNodeId());
   }
+  public PastryNode newNode() throws IOException {
+    return newNode(nidFactory.generateNodeId());
+  }
 
   HashMap<Id, NodeRecord> recordTable = new HashMap<Id, NodeRecord>();
+
+  public PastryNode newNode(NodeHandle bootstrap, Id nodeId) {
+    try {
+      if (bootstrap == null)
+        if (logger.level <= Logger.WARNING) logger.log(
+            "No bootstrap node provided, starting a new ring...");
+      PastryNode pn = newNode(nodeId);
+      if (bootstrap == null) {
+        pn.getBootstrapper().boot(Collections.EMPTY_LIST);
+      } else {
+        pn.getBootstrapper().boot(Collections.singleton(bootstrap));
+      }
+      return pn;
+    } catch (IOException ioe) {
+      logger.logException("Couldn't construct node.", ioe);
+      return null;
+    }
+  }
   
   /**
    * Manufacture a new Pastry node.
    *
    * @return a new PastryNode
    */
-  public PastryNode newNode(NodeHandle bootstrap, Id nodeId) {
-    try {
-      if (bootstrap == null)
-        if (logger.level <= Logger.WARNING) logger.log(
-            "No bootstrap node provided, starting a new ring...");
+  public PastryNode newNode(Id nodeId) throws IOException {
       
       // this code builds a different environment for each PastryNode
       Environment environment = this.environment;
@@ -143,56 +160,9 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
       }    
   
       TLPastryNode pn = nodeHandleHelper(nodeId, environment, null);
-  //    
-  //    DirectPastryNode pn = new DirectPastryNode(nodeId, simulator, environment, nr);
-  //
-  //    DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
-  //    simulator.registerNode(pn);
-  //
-  //    MessageDispatch msgDisp = new MessageDispatch(pn);
-  // 
-  //    RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase, pn);
-  //    LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
-  //
-  //    StandardRouter router =
-  //      new StandardRouter(pn, msgDisp);
-  //    StandardRouteSetProtocol rsProtocol =
-  //      new StandardRouteSetProtocol(pn, routeTable, environment);
-  //
-  //    pn.setElements(localhandle, msgDisp, leafSet, routeTable, router);
-  //    router.register();
-  //    rsProtocol.register();
-  //
-  //    if (guaranteeConsistency) {    
-  //        PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
-  //            localhandle, leafSet, routeTable);
-  //        lsProtocol.register();
-  //        ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-  //            localhandle, routeTable, leafSet, lsProtocol);
-  //        jProtocol.register();
-  //    } else {
-  //      StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn,
-  //          localhandle, leafSet, routeTable);
-  //      lsProtocol.register();
-  //      StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn,
-  //          localhandle, routeTable, leafSet);
-  //      jProtocol.register();      
-  //    }
-      
-      // pn.doneNode(bootstrap);
-      //pn.doneNode( simulator.getClosest(localhandle) );    
-      if (bootstrap == null) {
-        pn.getBootstrapper().boot(Collections.EMPTY_LIST);
-      } else {
-        pn.getBootstrapper().boot(Collections.singleton(bootstrap));
-      }
 //      ((DirectPastryNode)pn).doneNode(getNearest(pn.getLocalHandle(), bootstrap));
         
       return pn;
-    } catch (IOException ioe) {
-      logger.logException("Couldn't construct node.", ioe);
-      return null;
-    }
   }
 
   /**

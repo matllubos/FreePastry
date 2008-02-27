@@ -38,8 +38,13 @@ package rice.pastry.standard;
 
 import java.io.IOException;
 import java.net.NoRouteToHostException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 
@@ -67,6 +72,38 @@ import rice.pastry.client.PastryAppl;
 public class StandardRouter extends PastryAppl implements Router {
 
   MessageDispatch dispatch;
+  protected RouterStrategy routerStrategy;
+  
+  /**
+   * Try to return someone who isn't suspected.  If they're all suspected, 
+   * choose the first candidate, but set the rerouteIfSuspected option to false.
+   * 
+   * @author Jeff Hoye
+   *
+   */
+  static class AliveRouterStrategy implements RouterStrategy {
+    public NodeHandle pickNextHop(RouteMessage msg, Iterator<NodeHandle> i) {
+      NodeHandle first = i.next();
+      if (first.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
+        return first;
+      }
+      while(i.hasNext()) {
+        NodeHandle nh = i.next();
+        if (nh.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
+          return nh;
+        }
+        // do this in case first is dead, and we find a suspected node to pass it to
+        if (first.getLiveness() > nh.getLiveness()) first = nh;
+      }
+      if (first.getLiveness() >= NodeHandle.LIVENESS_DEAD) {
+        // drop the message, this would happen if we gave a lease to this node
+        // but found him faulty.
+        return null;
+      }
+      msg.getOptions().setRerouteIfSuspected(false);
+      return first; // always want to return someone...
+    }    
+  }
   
   /**
    * Constructor.
@@ -74,8 +111,11 @@ public class StandardRouter extends PastryAppl implements Router {
    * @param rt the routing table.
    * @param ls the leaf set.
    */
-
   public StandardRouter(final PastryNode thePastryNode, MessageDispatch dispatch) {
+    this(thePastryNode, dispatch, new AliveRouterStrategy());
+  }
+
+  public StandardRouter(final PastryNode thePastryNode, MessageDispatch dispatch, RouterStrategy strategy) {
     super(thePastryNode, null, RouterAddress.getCode(), new MessageDeserializer() {
     
       public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type, int priority,
@@ -87,6 +127,7 @@ public class StandardRouter extends PastryAppl implements Router {
       }    
     });
     this.dispatch = dispatch;
+    this.routerStrategy = strategy;
   }
 
   /**
@@ -193,71 +234,17 @@ public class StandardRouter extends PastryAppl implements Router {
       msg.setNextHop(thePastryNode.getLocalHandle());
       
       // don't return, we want to check for routing table hole
-    } else if ((lsPos > 0 &&  (lsPos < cwSize || !thePastryNode.getLeafSet().get(lsPos).getNodeId().clockwise(target)))
-            || (lsPos < 0 && (-lsPos < ccwSize || thePastryNode.getLeafSet().get(lsPos).getNodeId().clockwise(target)))) {
-      if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):1"); 
-      
-      // the target is within range of the leafset, deliver it directly          
-      msg.setNextHop(getBestHandleFromLeafset(msg, lsPos));
-      if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
-      thePastryNode.getRoutingTable().put(msg.getNextHop());        
     } else {
-      // use the routing table     
-      
-      // enable rapid rerouting
       msg.getOptions().setRerouteIfSuspected(true);
-      if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):2");  
-      RouteSet rs = thePastryNode.getRoutingTable().getBestEntry(target);
-      NodeHandle handle = null;
-
-      // get the closest alive node
-      if (rs == null
-          || ((handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE)) == null)) {
-        // no live (not suspected) routing table entry matching the next digit
-        
-        
-        // cull out dead nodes (this is mostly for the simulator -- I hope --, the listener interface should make this work normally)
-        if (rs != null) {
-          for (int index = 0; index < rs.size(); index++) {
-            NodeHandle nh = rs.get(index);
-            if (!nh.isAlive()) {
-              rs.remove(nh);
-              index--;
-            }
-          }
-        }
-        
-        // get best alternate RT entry
-        handle = thePastryNode.getRoutingTable().bestAlternateRoute(NodeHandle.LIVENESS_ALIVE,
-            target);
-
-        if (handle != null) {
-          // found alternate route, make sure that the leafset isn't better
-          if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):3");  
-          Id.Distance altDist = handle.getNodeId().distance(target);
-          Id.Distance lsDist = thePastryNode.getLeafSet().get(lsPos).getNodeId().distance(
-              target);
-
-          if (lsDist.compareTo(altDist) < 0) {
-            // the leaf set member on the edge of the leafset is closer
-            handle = getBestHandleFromLeafset(msg, lsPos);
-            msg.setNextHop(handle);
-            if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
-            thePastryNode.getRoutingTable().put(msg.getNextHop());        
-          } 
-        } else {
-          // no alternate in RT, take node at the edge of the leafset
-          handle = getBestHandleFromLeafset(msg, lsPos);
-          msg.setNextHop(handle);
-          if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
-          thePastryNode.getRoutingTable().put(msg.getNextHop());        
-        }
-      } //else {
-        // we found an appropriate RT entry, check for RT holes at previous node
-//      checkForRouteTableHole(msg, handle);
-//      }
-
-      msg.setNextHop(handle);
+      Iterator<NodeHandle> i = getBestRoutingCandidates(target);
+      
+      // the next hop
+      NodeHandle nextHop = routerStrategy.pickNextHop(msg, i);
+      if (nextHop == null) {
+        msg.sendFailed(new NoLegalRouteToMakeProgressException(target));
+        return;
+      }
+      msg.setNextHop(nextHop);      
     }
     
     // this wasn't being called often enough in its previous location, moved here Aug 11, 2006
@@ -267,7 +254,195 @@ public class StandardRouter extends PastryAppl implements Router {
     // here, we need to deliver the msg to the proper app
     deliverToApplication(msg);
   }
+  
+//  private void receiveRouteMessage2(RouteMessage msg) {
+//    if (logger.level <= Logger.FINER) logger.log("receiveRouteMessage("+msg+")");  
+//    Id target = msg.getTarget();
+//
+//    if (target == null)
+//      target = thePastryNode.getNodeId();
+//
+//    int cwSize = thePastryNode.getLeafSet().cwSize();
+//    int ccwSize = thePastryNode.getLeafSet().ccwSize();
+//
+//    int lsPos = thePastryNode.getLeafSet().mostSimilar(target);
+//
+//    if (lsPos == 0) {
+//      // message is for the local node so deliver it
+//      msg.setNextHop(thePastryNode.getLocalHandle());
+//      
+//      // don't return, we want to check for routing table hole
+//    } else if ((lsPos > 0 &&  (lsPos < cwSize || !thePastryNode.getLeafSet().get(lsPos).getNodeId().clockwise(target)))
+//            || (lsPos < 0 && (-lsPos < ccwSize || thePastryNode.getLeafSet().get(lsPos).getNodeId().clockwise(target)))) {
+//      if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):1"); 
+//      
+//      // the target is within range of the leafset, deliver it directly          
+//      msg.setNextHop(getBestHandleFromLeafset(msg, lsPos));
+//      if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
+//      thePastryNode.getRoutingTable().put(msg.getNextHop());        
+//    } else {
+//      // use the routing table     
+//      findNextHopFromRoutingTable(msg, target, lsPos);
+//      
+//    }
+//    
+//    // this wasn't being called often enough in its previous location, moved here Aug 11, 2006
+//    checkForRouteTableHole(msg, msg.getNextHop());
+//    msg.setPrevNode(thePastryNode.getLocalHandle());
+//
+//    // here, we need to deliver the msg to the proper app
+//    deliverToApplication(msg);
+//  }
 
+  /**
+   * 
+   * @param msg the message to setNextHop() on 
+   * @param target the destination Id
+   * @param lsPos the best leafSet candidate
+   */
+//  protected void findNextHopFromRoutingTable(RouteMessage msg, Id target, int lsPos) {
+//    // enable rapid rerouting
+//    msg.getOptions().setRerouteIfSuspected(true);
+//    if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):2");  
+//    RouteSet rs = thePastryNode.getRoutingTable().getBestEntry(target);
+//    NodeHandle handle = null;
+//
+//    // get the closest alive node
+//    if (rs == null
+//        || ((handle = rs.closestNode(NodeHandle.LIVENESS_ALIVE)) == null)) {
+//      // no live (not suspected) routing table entry matching the next digit
+//      
+//      
+//      // cull out dead nodes (this is mostly for the simulator -- I hope --, the listener interface should make this work normally)
+//      if (rs != null) {
+//        for (int index = 0; index < rs.size(); index++) {
+//          NodeHandle nh = rs.get(index);
+//          if (!nh.isAlive()) {
+//            rs.remove(nh);
+//            index--;
+//          }
+//        }
+//      }
+//      
+//      // get best alternate RT entry
+//      handle = thePastryNode.getRoutingTable().bestAlternateRoute(NodeHandle.LIVENESS_ALIVE,
+//          target);
+//
+//      if (handle != null) {
+//        // found alternate route, make sure that the leafset isn't better
+//        if (logger.level <= Logger.FINEST) logger.log("receiveRouteMessage("+msg+"):3");  
+//        Id.Distance altDist = handle.getNodeId().distance(target);
+//        Id.Distance lsDist = thePastryNode.getLeafSet().get(lsPos).getNodeId().distance(
+//            target);
+//
+//        if (lsDist.compareTo(altDist) < 0) {
+//          // the leaf set member on the edge of the leafset is closer
+//          handle = getBestHandleFromLeafset(msg, lsPos);
+//          msg.setNextHop(handle);
+//          if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
+//          thePastryNode.getRoutingTable().put(msg.getNextHop());        
+//        } 
+//      } else {
+//        // no alternate in RT, take node at the edge of the leafset
+//        handle = getBestHandleFromLeafset(msg, lsPos);
+//        msg.setNextHop(handle);
+//        if (msg.getNextHop() == null) return; // we are dropping this message to maintain consistency
+//        thePastryNode.getRoutingTable().put(msg.getNextHop());        
+//      }
+//    } //else {
+//    // we found an appropriate RT entry, check for RT holes at previous node
+////  checkForRouteTableHole(msg, handle);
+////  }
+//
+//    msg.setNextHop(handle);
+//  }
+
+  public Iterator<NodeHandle> getBestRoutingCandidates(final Id target) {
+    int cwSize = thePastryNode.getLeafSet().cwSize();
+    int ccwSize = thePastryNode.getLeafSet().ccwSize();
+
+    int lsPos = thePastryNode.getLeafSet().mostSimilar(target);
+
+    if (lsPos == 0) {
+      // message is for the local node so deliver it
+      return Collections.singleton(thePastryNode.getLocalHandle()).iterator();
+    } 
+
+    boolean leafSetOnly = false;
+    if ((lsPos > 0 &&  (lsPos < cwSize || !thePastryNode.getLeafSet().get(lsPos).getNodeId().clockwise(target)))
+     || (lsPos < 0 && (-lsPos < ccwSize || thePastryNode.getLeafSet().get(lsPos).getNodeId().clockwise(target)))) {
+      leafSetOnly = true;
+    }
+    return getBestRoutingCandidates(target, lsPos, leafSetOnly);
+  }
+  
+  protected Iterator<NodeHandle> getBestRoutingCandidates(final Id target, int lsPos, boolean leafSetOnly) {
+    // these are the leafset entries between me and the closest known node
+    final ArrayList<NodeHandle> lsCollection = new ArrayList<NodeHandle>();
+    if (lsPos > 0) {
+      // search for someone between us who is alive
+      for (int i = lsPos; i > 0; i--) {
+        NodeHandle temp = thePastryNode.getLeafSet().get(i);
+        lsCollection.add(temp);
+      }
+    } else { // lsPos < 0
+      for (int i = lsPos; i < 0; i++) {
+        NodeHandle temp = thePastryNode.getLeafSet().get(i);
+        lsCollection.add(temp);
+      }            
+    }
+    if (leafSetOnly) {
+      return lsCollection.iterator();
+    }
+    
+    // try the routing table first    
+    return new Iterator<NodeHandle>() {
+      Iterator<NodeHandle> rtIterator = thePastryNode.getRoutingTable().alternateRoutesIterator((rice.pastry.Id)target);
+      Iterator<NodeHandle> iterator = rtIterator;
+      NodeHandle next = getNext();      
+      
+      public boolean hasNext() {
+        if (next == null) next = getNext();
+        return (next != null);
+      }
+
+      public NodeHandle getNext() {
+        // try the routing table
+        if (iterator.hasNext()) {
+          NodeHandle ret = iterator.next();
+          
+          // if this goes into the leafset, then stop using the rtIterator
+          if (iterator == rtIterator && lsCollection.contains(ret)) {
+            iterator = lsCollection.iterator();
+            return iterator.next(); // this will always succeed, since it contains the old version of next, even though it's unguarded by hasNext()
+          } else {
+            return ret;
+          }
+        } else {
+          // switch to the leafset iterator if possible
+          if (iterator == rtIterator) {
+            iterator = lsCollection.iterator();
+            return getNext();
+          }
+        }
+        return null;      
+      }
+      
+      public NodeHandle next() {
+        if (hasNext()) {
+          NodeHandle ret = next;
+          next = null;
+          return ret;
+        }
+        throw new NoSuchElementException();
+      }
+
+      public void remove() {
+        throw new RuntimeException("Operation not allowed.");
+      }      
+    };
+  }
+  
   public void deliverToApplication(RouteMessage msg) {
     PastryAppl appl = dispatch.getDestinationByAddress(msg.getAuxAddress());
     if (appl == null) {
@@ -303,70 +478,70 @@ public class StandardRouter extends PastryAppl implements Router {
    * @param lsPos the best candidate not considering liveness
    * @return the best candidtate from the leafset.  If null, drop the message.
    */
-  private NodeHandle getBestHandleFromLeafset(RouteMessage msg, int lsPos) {
-    NodeHandle handle = thePastryNode.getLeafSet().get(lsPos);
-
-    switch (handle.getLiveness()) {
-      case NodeHandle.LIVENESS_ALIVE:
-        // go ahead and leave rapid rerouting on, even if this is our
-        // next door neighbor, it is possible that someone new will
-        // come into the leafset between us
-        msg.getOptions().setRerouteIfSuspected(true);
-        break;
-      case NodeHandle.LIVENESS_SUSPECTED:
-        // you have more accurate information about liveness in your leafset
-        // closer to you.  Thus, just try to get it closer because they 
-        // may have already found the node faulty
-        // if there is someone between us who is alive, deliver it to them
-        if (lsPos > 0) {
-          // search for someone between us who is alive
-          for (int i = lsPos-1; i > 0; i--) {
-            NodeHandle temp = thePastryNode.getLeafSet().get(i);
-            if (temp.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
-              handle = temp;
-              break; // the for loop
-            }
-          }
-        } else { // lsPos < 0
-          for (int i = lsPos; i < 0; i++) {
-            NodeHandle temp = thePastryNode.getLeafSet().get(i);
-            if (temp.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
-              handle = temp;
-              break; // the for loop
-            }
-          }            
-        }
-        if (handle.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
-          // we found someone closer, turn on rapid rerouting
-          msg.getOptions().setRerouteIfSuspected(true);
-        } else {
-          // we didn't find anyone better, don't reroute if suspected, 
-          // cause everyone is suspected
-          msg.getOptions().setRerouteIfSuspected(false);            
-        }
-        break;
-      default: // if (!handle.isAlive()) {
-        // node is dead but still in the leafset 
-        // we must have given him a lease
-        // drop the message
-        
-        // generally, there shouldn't be anyone between us (handle and localHandle) in the leafset, and if
-        // there is, he is probably not ready, or if he is, he shouldn't be, so drop the message          
-        if (msg.sendFailed(new NodeIsFaultyException(handle))) {
-          if (logger.level <= Logger.CONFIG) {
-            logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
-//            logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
-          }          
-        } else {
-          if (logger.level <= Logger.WARNING) {
-            logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
-//            logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
-          }                    
-        }
-        return null;
-    }
-    return handle;
-  }
+//  private NodeHandle getBestHandleFromLeafset(RouteMessage msg, int lsPos) {
+//    NodeHandle handle = thePastryNode.getLeafSet().get(lsPos);
+//
+//    switch (handle.getLiveness()) {
+//      case NodeHandle.LIVENESS_ALIVE:
+//        // go ahead and leave rapid rerouting on, even if this is our
+//        // next door neighbor, it is possible that someone new will
+//        // come into the leafset between us
+//        msg.getOptions().setRerouteIfSuspected(true);
+//        break;
+//      case NodeHandle.LIVENESS_SUSPECTED:
+//        // you have more accurate information about liveness in your leafset
+//        // closer to you.  Thus, just try to get it closer because they 
+//        // may have already found the node faulty
+//        // if there is someone between us who is alive, deliver it to them
+//        if (lsPos > 0) {
+//          // search for someone between us who is alive
+//          for (int i = lsPos; i > 0; i--) {
+//            NodeHandle temp = thePastryNode.getLeafSet().get(i);
+//            if (temp.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
+//              handle = temp;
+//              break; // the for loop
+//            }
+//          }
+//        } else { // lsPos < 0
+//          for (int i = lsPos; i < 0; i++) {
+//            NodeHandle temp = thePastryNode.getLeafSet().get(i);
+//            if (temp.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
+//              handle = temp;
+//              break; // the for loop
+//            }
+//          }            
+//        }
+//        if (handle.getLiveness() < NodeHandle.LIVENESS_SUSPECTED) {
+//          // we found someone closer, turn on rapid rerouting
+//          msg.getOptions().setRerouteIfSuspected(true);
+//        } else {
+//          // we didn't find anyone better, don't reroute if suspected, 
+//          // cause everyone is suspected
+//          msg.getOptions().setRerouteIfSuspected(false);            
+//        }
+//        break;
+//      default: // if (!handle.isAlive()) {
+//        // node is dead but still in the leafset 
+//        // we must have given him a lease
+//        // drop the message
+//        
+//        // generally, there shouldn't be anyone between us (handle and localHandle) in the leafset, and if
+//        // there is, he is probably not ready, or if he is, he shouldn't be, so drop the message          
+//        if (msg.sendFailed(new NodeIsFaultyException(handle))) {
+//          if (logger.level <= Logger.CONFIG) {
+//            logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
+////            logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
+//          }          
+//        } else {
+//          if (logger.level <= Logger.WARNING) {
+//            logger.log("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.");
+////            logger.logException("Dropping "+msg+" because next hop: "+handle+" is dead but has lease.", new Exception("Stack Trace"));
+//          }                    
+//        }
+//        return null;
+//    }
+//    return handle;
+//  }
 
   /**
    * checks to see if the previous node along the path was missing a RT entry if
@@ -439,7 +614,7 @@ public class StandardRouter extends PastryAppl implements Router {
 
   protected int ROUTE_TABLE_PATCH_THROTTLE = 5000;
   /**
-   * We can end up causing a nasty feeback if we blast too many BRRs, so we're 
+   * We can end up causing a nasty feedback if we blast too many BRRs, so we're 
    * going to throttle.
    */
   protected Map<NodeHandle, Long> lastTimeSentRouteTablePatch = new HashMap<NodeHandle, Long>();

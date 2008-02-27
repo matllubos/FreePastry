@@ -38,7 +38,9 @@ package rice.pastry.routing;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.util.tuples.Tuple;
 import rice.pastry.*;
+import rice.pastry.Id.Distance;
 
 import java.util.*;
 
@@ -90,6 +92,8 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
   Logger logger;
   
+  final int cols, rows;
+  
   /**
    * Constructor.
    * 
@@ -105,8 +109,8 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     myNodeHandle = me;
     maxEntries = max;
 
-    int cols = 1 << idBaseBitLength;
-    int rows = Id.IdBitLength / idBaseBitLength;
+    cols = 1 << idBaseBitLength;
+    rows = Id.IdBitLength / idBaseBitLength;
 
     routingTable = new RouteSet[rows][cols];
 
@@ -171,7 +175,6 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    */
 
   public NodeHandle bestAlternateRoute(int minLiveness, Id key) {
-    final int cols = 1 << idBaseBitLength;
     int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
     if (diffDigit < 0)
       return null;
@@ -217,7 +220,6 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    */
   public NodeSet alternateRoutes(Id key, int max) {
     NodeSet set = new NodeSet();
-    final int cols = 1 << idBaseBitLength;
     int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
     if (diffDigit < 0)
       return set;
@@ -260,6 +262,177 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
     return set;
   }
+
+  /**
+   * Starting with the diffDigit, get everyone in the table that is closer to the key than me
+   * 
+   * This can easily be sped up by building the iterator at each row as needed.
+   * 
+   * Always return the prefix-match first
+   * 
+   * @param key
+   * @return
+   */
+//  public Iterator<NodeHandle> alternateRoutesIterator(final Id key) {
+//    int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
+//    if (diffDigit < 0)
+//      return Collections.EMPTY_LIST.iterator(); // return an empty iterator
+//
+//    int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
+//    final Id.Distance myDistance = myNodeId.distance(key);
+//
+//    
+//    Tuple<NodeHandle, Id.Distance> prefixMatch = null;
+//    
+//    final ArrayList<Tuple<NodeHandle, Id.Distance>> ret = new ArrayList<Tuple<NodeHandle, Id.Distance>>();
+//    for (int row = diffDigit; row >= 0; row--) {
+//      int numInRow = 0;
+//      for (int col = 0; col < cols; col++) {
+//        RouteSet rs = routingTable[row][col];
+//        if (rs != null) {
+//          for (int k = 0; k < rs.size(); k++) {
+//            NodeHandle nh = rs.get(k);
+//            if (!nh.equals(myNodeHandle)) {
+//              numInRow++;            
+//              Id.Distance nDist = nh.getNodeId().distance(key);
+//              if () {
+//                
+//              }
+//              if (myDistance.compareTo(nDist) > 0) {
+//                ret.add(new Tuple<NodeHandle, Id.Distance>(nh,nDist));
+//              }
+//            }
+//          }
+//        }
+//      }
+//      if (numInRow == 0) break;
+//    }
+//    
+//    Collections.sort(ret, new Comparator<Tuple<NodeHandle, Id.Distance>>(){
+//
+//      public int compare(Tuple<NodeHandle, Id.Distance> o1,
+//          Tuple<NodeHandle, Id.Distance> o2) {
+//        return o1.b().compareTo(o2.b());
+//      }});
+//    
+//    final Iterator<Tuple<NodeHandle, Id.Distance>> itr = ret.iterator();
+//    
+//    return new Iterator<NodeHandle>() {
+//    
+//      public void remove() {
+//        
+//      }
+//    
+//      public NodeHandle next() {
+//        return itr.next().a();
+//      }
+//    
+//      public boolean hasNext() {
+//        return itr.hasNext();
+//      }    
+//    };
+//  }
+  
+  /**
+   * More efficient implementation, but less accurate, doesn't include lower levels of rt.
+   * @param key
+   * @return
+   */
+  public Iterator<NodeHandle> alternateRoutesIterator(final Id key) {
+    final int diffDigit = myNodeId.indexOfMSDD(key, idBaseBitLength);
+    if (diffDigit < 0)
+      return Collections.EMPTY_LIST.iterator(); // return an empty iterator
+    final Id.Distance myDistance = myNodeId.distance(key);
+     
+    return new Iterator<NodeHandle>() { 
+      int keyDigit = key.getDigit(diffDigit, idBaseBitLength);
+      int myDigit = myNodeId.getDigit(diffDigit, idBaseBitLength);
+      // the distance from keyDigit
+      int i = 0; 
+      // alternates between 0 and 1
+      int j = 1; // no need to alternate when i = 0
+      int k = 0;
+      NodeHandle next = null;
+      RouteSet rs = null;
+      int digit;
+      {
+        // initialize rs
+        digit = (j == 0) ? 
+            (keyDigit + i) & (cols - 1) // & (cols-1) effects the overflow, making cols => 0, so it makes the algorithm wrap around
+          : (keyDigit + cols - i) & (cols - 1);
+
+        rs = getRouteSet(diffDigit, digit);
+      }
+      
+      protected NodeHandle findNext() {
+              
+              // start, assume good initialized state
+              if (rs != null && k < rs.size()) {
+                NodeHandle n = rs.get(k);
+      
+                if (n.isAlive()) {
+                  Id.Distance nDist = n.getNodeId().distance(key);
+      
+                  k++;
+                  if (myDistance.compareTo(nDist) > 0) {
+                    return n;
+                  } else {
+                    return findNext();
+                  }
+                } else {
+                  RoutingTable.this.remove(n); // should only be called in the simulator, when liveness info isn't properly published
+                }
+              } else {
+                k = 0;
+                j++;
+                if (j < 2) {
+                  digit = (j == 0) ? 
+                      (keyDigit + i) & (cols - 1) // & (cols-1) effects the overflow, making cols => 0, so it makes the algorithm wrap around
+                    : (keyDigit + cols - i) & (cols - 1);
+                  if (digit == myDigit)
+                    return null; 
+                  rs = getRouteSet(diffDigit, digit);
+                  return findNext();
+                } else {
+                  i++;
+                  j = 0;
+                  int digit = (j == 0) ? 
+                      (keyDigit + i) & (cols - 1) // & (cols-1) effects the overflow, making cols => 0, so it makes the algorithm wrap around
+                    : (keyDigit + cols - i) & (cols - 1);
+
+                  rs = getRouteSet(diffDigit, digit);
+
+                  k = 0;
+                  return findNext();
+                }
+              }
+            
+    
+    
+        return null;
+      }
+
+      
+      public boolean hasNext() {
+        if (next == null) next = findNext();
+        return (next != null);
+      }
+
+      public NodeHandle next() {
+        if (hasNext()) { // make sure next != null
+          NodeHandle temp = next;
+          next = null;
+          return temp;
+        }
+        return null; // is this what the iterator is supposed to do?  Maybe it's supposed to throw an exception
+      }
+
+      public void remove() {
+        throw new RuntimeException("Not implemented.");
+      }
+    };
+  }
+
 
   /**
    * Gets the set of handles at a particular entry in the table.
@@ -491,7 +664,49 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
 
     return s;
   }
+
+  public String printSelf() {
+    String s = "routing table for "+this.myNodeId+"\n";
+
+    // don't print the bottom rows, they are uninteresting
+    
+    // find depth to print
+    int depthToPrint = 0;
+    for (int i = 0; i < routingTable.length; i++) {
+      int sum = 0;
+      for (int j = 0; j < routingTable[i].length; j++) {
+        if (routingTable[i][j] != null) sum++;
+      }
+      if (sum > 1) {
+        depthToPrint = i;
+        break;
+      }
+    }
+    
+    for (int i = routingTable.length - 1; i >= depthToPrint; i--) {
+      for (int j = 0; j < routingTable[i].length; j++) {
+        RouteSet rs = routingTable[i][j];
+        NodeHandle nh = null;
+        if (routingTable[i][j] != null) {
+          nh = rs.get(0);
+        }
+        if (nh != null) {
+          s += ("" + ((rice.pastry.Id)(nh.getId())).toStringBare());
+          if (nh.equals(myNodeHandle)) {
+            s += "*";
+          }
+        } else {
+          s += ("" + 0);
+        }
+        s+="\t";
+      }
+      s += ("\n");
+    }
+
+    return s;
+  }
   
+
   public int numEntries() {
     int count = 0;
     int maxr = numRows();

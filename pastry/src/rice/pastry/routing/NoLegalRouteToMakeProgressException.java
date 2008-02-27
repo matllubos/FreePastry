@@ -36,30 +36,21 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.routing;
 
-import java.util.Iterator;
+import java.io.IOException;
 
 import rice.pastry.Id;
-import rice.pastry.NodeHandle;
 
-/**
- * Router is no longer just an application.  It is privileged.
- * 
- * @author Jeff Hoye
- *
- */
-public interface Router {
+public class NoLegalRouteToMakeProgressException extends IOException {
 
-  void route(RouteMessage rm);
+  protected Id target;
 
-  /**
-   * Returns an ordered list of the best candidates for the next to the key.  Always starts with
-   * a node that matches an additional prefix, if it is available.
-   * 
-   * @param key
-   * @return
-   */
-  Iterator<NodeHandle> getBestRoutingCandidates(Id key);
+  public NoLegalRouteToMakeProgressException(Id target) {
+    super("No legal route to the target "+target);
+    this.target = target;
+  }
 
-//  boolean routeMessage(RouteMessage rm);
+  public Id getTarget() {
+    return target;
+  }
 
 }

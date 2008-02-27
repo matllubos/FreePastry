@@ -942,6 +942,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   public PastryNode newNode() {
     return newNode(nidFactory.generateNodeId(), null);
   }
+  public PastryNode newNode(Id id) {
+    return newNode(id, null);
+  }
   
   /**
    * Method which creates a Pastry node from the next port with the specified nodeId 

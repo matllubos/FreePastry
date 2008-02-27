@@ -106,6 +106,18 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     logger = e.getLogManager().getLogger(getClass(), null);
     e.addDestructable(this);
   }
+
+  public void boot(Object o) {
+    if (o == null) {
+      getBootstrapper().boot(Collections.EMPTY_LIST);      
+    } else {
+      getBootstrapper().boot(Collections.singleton(o));
+    }
+  }
+  
+  public void boot(Collection o) {
+    getBootstrapper().boot(o);
+  }
   
   /**
    * Simple Ready Strategy

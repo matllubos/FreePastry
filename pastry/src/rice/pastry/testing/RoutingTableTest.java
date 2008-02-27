@@ -70,7 +70,7 @@ public class RoutingTableTest {
   boolean printLeafSets = false;
   
   // this will keep track of our nodes
-  Vector nodes = new Vector();
+  Vector<PastryNode> nodes = new Vector<PastryNode>();
   
   HashMap apps = new HashMap();
   
@@ -144,8 +144,9 @@ public class RoutingTableTest {
 //    env.getParameters().setString("pastry_direct_gtitm_matrix_file","sample_2k");
 //    }  
     // construct the PastryNodeFactory, this is how we use rice.pastry.direct, with a Euclidean Network
-    factory = new DirectPastryNodeFactory(nidFactory, new GenericNetwork(env), env);
-
+//    factory = new DirectPastryNodeFactory(nidFactory, new GenericNetwork(env), env);
+    factory = new DirectPastryNodeFactory(nidFactory, new EuclideanNetwork(env), env);
+    
     // loop to construct the nodes/apps
     createNodes();    
   }
@@ -173,7 +174,7 @@ public class RoutingTableTest {
     public void run() {
       try {
         createNode();
-      } catch (InterruptedException ie) {
+      } catch (Exception ie) {
         ie.printStackTrace(); 
       }
       synchronized(this) {
@@ -293,7 +294,7 @@ public class RoutingTableTest {
   }
 
 
-  public PastryNode createNode() throws InterruptedException {
+  public PastryNode createNode() throws InterruptedException, IOException {
     NodeHandle bootHandle = null;
     if (nodes.size() > 0) {
       PastryNode bootNode = null;
@@ -303,8 +304,15 @@ public class RoutingTableTest {
       }
     }
     // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-    final PastryNode node = factory.newNode(bootHandle);
+    final PastryNode node = factory.newNode();
 
+    node.addObserver(new Observer() {
+    
+      public void update(Observable o, Object arg) {
+        System.out.println("Observing "+o+" "+arg);
+      }    
+    });
+        
     // this will add "magic" to the node such that if it is destroyed, then it will automatically create its replacement
     node.addDestructable(new Destructable() {          
       public void destroy() {
@@ -314,12 +322,14 @@ public class RoutingTableTest {
         try {
           createNode(); // create a new node every time we
                                 // destroy one
-        } catch (InterruptedException ie) {
+        } catch (Exception ie) {
           ie.printStackTrace();
         }              
       }          
     });
 
+    node.boot(bootHandle);
+    
     if (printLiveness) 
       System.out.println("Creating "+node);
     
@@ -457,11 +467,24 @@ public class RoutingTableTest {
       holes = testRoutingTables2a();      
     }
     System.out.println(round+","+streatch+","+holes+" numNodes:"+nodes.size());
+    if (round%50 == 0) {
+      PastryNode pn = nodes.get(nodes.size()/2);
+      System.out.println(pn.getRoutingTable().printSelf());
+      System.out.println(pn.getLeafSet());
+      byte[] randomMaterial = new byte[20];
+      pn.getEnvironment().getRandomSource().nextBytes(randomMaterial);
+      rice.pastry.Id key = rice.pastry.Id.build(randomMaterial);
+      System.out.println("Key "+key.toStringBare());
+      Iterator<NodeHandle> i = pn.getRouter().getBestRoutingCandidates(key);
+      while(i.hasNext()) {
+        System.out.println(i.next());
+      }
+    }
   }
   
   /**
    * 
-   * @return delay streatch
+   * @return delay stretch
    */
   private double testRoutingTables1() {
     
@@ -881,15 +904,19 @@ public class RoutingTableTest {
     
   
     int numNodes = 100;
-    int meanSessionTime = 1;
+    int meanSessionTime = 0;
     int useScribeIndex = 1;
     int rtMaintIndex = 0;
     int msgSendRateIndex = 0;
     int numNodesIndex = -1;
     
+    if (args.length > 0) {
       numNodes = Integer.parseInt(args[0]);  
+    }
     
+    if (args.length > 1) {
       meanSessionTime = Integer.parseInt(args[1]);  
+    }
     
     int[] rtMaintVals = {0,60,15,1};
     int[] msgSendVals = {0,10000,1000,100};
@@ -925,7 +952,7 @@ public class RoutingTableTest {
 
             // launch our node!
 //            public RoutingTableTest(int numNodes, int meanSessionTime, int msgSendRate, int rtMaintTime, final Environment env) throws Exception {
-            RoutingTableTest dt = new RoutingTableTest(numNodes, meanSessionTime == 1 ? 0 : meanSessionTime, useScribe, msgSendVals[msgSendRateIndex], rtMaintVals[rtMaintIndex], tries, env);
+            RoutingTableTest dt = new RoutingTableTest(numNodes, meanSessionTime, useScribe, msgSendVals[msgSendRateIndex], rtMaintVals[rtMaintIndex], tries, env);
             synchronized(lock) {
               lock.wait(); // will be notified when the environment is destroyed
             }
