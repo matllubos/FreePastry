@@ -376,40 +376,61 @@ public class StandardRouter extends PastryAppl implements Router {
     return getBestRoutingCandidates(target, lsPos, leafSetOnly);
   }
   
-  protected Iterator<NodeHandle> getBestRoutingCandidates(final Id target, int lsPos, boolean leafSetOnly) {
+  protected Iterator<NodeHandle> getBestRoutingCandidates(final Id target, final int lsPos, boolean leafSetOnly) {
     // these are the leafset entries between me and the closest known node
-    final ArrayList<NodeHandle> lsCollection = new ArrayList<NodeHandle>();
-    if (lsPos > 0) {
-      // search for someone between us who is alive
-      for (int i = lsPos; i > 0; i--) {
-        NodeHandle temp = thePastryNode.getLeafSet().get(i);
-        lsCollection.add(temp);
-      }
-    } else { // lsPos < 0
-      for (int i = lsPos; i < 0; i++) {
-        NodeHandle temp = thePastryNode.getLeafSet().get(i);
-        lsCollection.add(temp);
-      }            
-    }
     if (leafSetOnly) {
-      return lsCollection.iterator();
+      return getLSCollection(lsPos).iterator();
     }
     
     // try the routing table first    
     return new Iterator<NodeHandle>() {
-      Iterator<NodeHandle> rtIterator = thePastryNode.getRoutingTable().alternateRoutesIterator((rice.pastry.Id)target);
-      Iterator<NodeHandle> iterator = rtIterator;
-      NodeHandle next = getNext();      
+      Iterator<NodeHandle> rtIterator = null;
+      Iterator<NodeHandle> iterator = null;
+      ArrayList<NodeHandle> lsCollection = null;
+      NodeHandle next;
+      RouteSet best;
+      int k = 0; // used to iterate over best
       
-      public boolean hasNext() {
+      // set the first candidates, if there is no best, then go with the rest
+      {
+        best = thePastryNode.getRoutingTable().getBestEntry(target);
+        if (best == null || best.isEmpty()) {
+          rtIterator = thePastryNode.getRoutingTable().alternateRoutesIterator((rice.pastry.Id)target);
+          lsCollection = getLSCollection(lsPos);
+          iterator = rtIterator;          
+          //System.out.println("Best is null or empty "+rtIterator);
+        }
+        next = getNext();      
+      }
+
+      
+      public boolean hasNext() {        
         if (next == null) next = getNext();
         return (next != null);
       }
 
       public NodeHandle getNext() {
+        // return best candidate first
+        if (iterator == null && best != null) {
+          NodeHandle ret = best.get(k);
+          k++;
+          if (k >= best.size()) {
+            // done with best, now use the rtIterator
+            rtIterator = thePastryNode.getRoutingTable().alternateRoutesIterator((rice.pastry.Id)target);
+            lsCollection = getLSCollection(lsPos);
+            iterator = rtIterator;
+          }
+          return ret;
+        }
+        
         // try the routing table
         if (iterator.hasNext()) {
           NodeHandle ret = iterator.next();
+          
+          // don't return nodes from best
+          if (best != null && best.getIndex(ret) != -1) {
+            return getNext();
+          }
           
           // if this goes into the leafset, then stop using the rtIterator
           if (iterator == rtIterator && lsCollection.contains(ret)) {
@@ -441,6 +462,23 @@ public class StandardRouter extends PastryAppl implements Router {
         throw new RuntimeException("Operation not allowed.");
       }      
     };
+  }
+  
+  protected ArrayList<NodeHandle> getLSCollection(int lsPos) {
+    ArrayList<NodeHandle> lsCollection = new ArrayList<NodeHandle>();
+    if (lsPos > 0) {
+      // search for someone between us who is alive
+      for (int i = lsPos; i > 0; i--) {
+        NodeHandle temp = thePastryNode.getLeafSet().get(i);
+        lsCollection.add(temp);
+      }
+    } else { // lsPos < 0
+      for (int i = lsPos; i < 0; i++) {
+        NodeHandle temp = thePastryNode.getLeafSet().get(i);
+        lsCollection.add(temp);
+      }            
+    }
+    return lsCollection;
   }
   
   public void deliverToApplication(RouteMessage msg) {
