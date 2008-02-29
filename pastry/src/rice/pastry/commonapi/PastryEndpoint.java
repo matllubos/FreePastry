@@ -705,7 +705,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
 
   public boolean routingConsistentFor(Id id) {
     if (!thePastryNode.isReady()) return false;
-    NodeHandleSet set = replicaSet(id, 0);
+    NodeHandleSet set = replicaSet(id, 1);
     if (set.size() == 0) return false;
     return set.getHandle(0).equals(thePastryNode.getLocalHandle());
   }
