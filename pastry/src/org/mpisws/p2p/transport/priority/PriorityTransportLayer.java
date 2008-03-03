@@ -38,9 +38,13 @@ package org.mpisws.p2p.transport.priority;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+
+import rice.Continuation;
 
 /**
  * Does 3 things:
@@ -62,5 +66,42 @@ public interface PriorityTransportLayer<Identifier> extends TransportLayer<Ident
   public static final byte LOW_PRIORITY = 10;
   public static final byte LOWEST_PRIORITY = 15;
   public static final byte DEFAULT_PRIORITY = MEDIUM_PRIORITY;
+
+  public static final int STATUS_NOT_CONNECTED = 0;
+  public static final int STATUS_CONNECTING = 1;
+  public static final int STATUS_CONNECTED = 2;
+  
+  /**
+   * Returns if there is a primary connection to the identifier
+   * 
+   * @param i
+   * @return STATUS_NOT_CONNECTED, STATUS_CONNECTING, STATUS_CONNECTED
+   */
+  public int connectionStatus(Identifier i);
+  
+  /**
+   * Returns the options on the primary connection
+   * @param i
+   * @return
+   */
+  public Map<String, Object> connectionOptions(Identifier i);
+  
+  /**
+   * Returns the number of messages pending to be sent
+   * @param i
+   * @return
+   */
+  public int queueLength(Identifier i);
+  
+  public long bytesPending(Identifier i);
+  
+  public Collection<Identifier> nodesWithPendingMessages(); 
+  
+  /**
+   * open a primary connection
+   * @param i
+   * @param notifyMe when it is open
+   */
+  public void openPrimaryConnection(Identifier i, Map<String, Object> options); 
 
 }
