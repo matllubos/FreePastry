@@ -115,15 +115,15 @@ public class Replayer implements MyEvents, EventCallback {
       }    
     },addr.getPort(),env) {
   
-      @Override
-      protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
-        // get rid of the priorityLayer
-        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
-          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
-        } else {
-          return trans;
-        }
-      }
+//      @Override
+//      protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
+//        // get rid of the priorityLayer
+//        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
+//          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
+//        } else {
+//          return trans;
+//        }
+//      }
 
       @Override
       public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {

@@ -307,26 +307,26 @@ public abstract class CommonAPITest {
     } else {
       ret = factory.newNode(getBootstrap());
     }
-    ret.addNetworkListener(new NetworkListener() {
-    
-      public void dataSent(int msgAddress, short msgType,
-          InetSocketAddress socketAddress, int size, int wireType) {
-        System.out.println("dataSent("+msgAddress+","+msgType+","+socketAddress+","+size+","+wireType+")");
-      }
-    
-      public void dataReceived(int msgAddress, short msgType,
-          InetSocketAddress socketAddress, int size, int wireType) {
-        System.out.println("dataReceived("+msgAddress+","+msgType+","+socketAddress+","+size+","+wireType+")");
-      }
-    
-      public void channelOpened(InetSocketAddress addr, int reason) {
-        System.out.println("channelOpened("+addr+","+reason+")");
-      }
-    
-      public void channelClosed(InetSocketAddress addr) {
-        System.out.println("channelClosed("+addr+")");
-      }    
-    });
+//    ret.addNetworkListener(new NetworkListener() {
+//    
+//      public void dataSent(int msgAddress, short msgType,
+//          InetSocketAddress socketAddress, int size, int wireType) {
+//        System.out.println("dataSent("+msgAddress+","+msgType+","+socketAddress+","+size+","+wireType+")");
+//      }
+//    
+//      public void dataReceived(int msgAddress, short msgType,
+//          InetSocketAddress socketAddress, int size, int wireType) {
+//        System.out.println("dataReceived("+msgAddress+","+msgType+","+socketAddress+","+size+","+wireType+")");
+//      }
+//    
+//      public void channelOpened(InetSocketAddress addr, int reason) {
+//        System.out.println("channelOpened("+addr+","+reason+")");
+//      }
+//    
+//      public void channelClosed(InetSocketAddress addr) {
+//        System.out.println("channelClosed("+addr+")");
+//      }    
+//    });
     synchronized(ret) {
       while(!ret.isReady()) {
         try {

@@ -68,6 +68,10 @@ public class OpenChannelMsg extends PRawMessage {
   public int getUid() {
     return uid;
   }
+  
+  public String toString() {
+    return "OpenChannelMsg<"+uid+"> source:"+source+" rendezvous:"+rendezvous;
+  }
 
   /************** Serialization **************/
   

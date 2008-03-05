@@ -37,11 +37,15 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.rendezvous;
 
 import java.util.Iterator;
+import java.util.Map;
 
+import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.pastry.NodeHandle;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.routing.RouterStrategy;
@@ -50,21 +54,26 @@ public class RendezvousRouterStrategy implements RouterStrategy {
 
   PriorityTransportLayer<MultiInetSocketAddress> priority;
   Environment environment;
+  Logger logger;
   
   public RendezvousRouterStrategy(PriorityTransportLayer<MultiInetSocketAddress> priority, Environment env) {
     this.priority = priority;
     this.environment = env;
+    this.logger = env.getLogManager().getLogger(RendezvousRouterStrategy.class, null);
   }
   
   public NodeHandle pickNextHop(RouteMessage msg, Iterator<NodeHandle> i) {
     if (!i.hasNext()) return null;
     NodeHandle best = i.next();
     int bestRating = routingQuality(best);
+    if (logger.level <= Logger.FINEST) logger.log("Routing "+msg+"(0) "+best+":"+bestRating);
     if (bestRating == 0) return best;
 
+    int ctr = 1;
     while (i.hasNext()) {
       NodeHandle next = i.next();
       int nextRating = routingQuality(next);
+      if (logger.level <= Logger.FINEST) logger.log("Routing "+msg+"("+(ctr++)+") "+next+":"+nextRating);
       
       // found a perfect node?
       if (nextRating == 0) return next;
@@ -77,6 +86,7 @@ public class RendezvousRouterStrategy implements RouterStrategy {
       
     }
 
+    if (logger.level <= Logger.FINEST) logger.log("Routing "+msg+"returning "+best+":"+bestRating);
     return best;
   }
 
@@ -111,7 +121,7 @@ public class RendezvousRouterStrategy implements RouterStrategy {
       if (connectionStatus == PriorityTransportLayer.STATUS_CONNECTED) {
         ret--;
       } else {
-        priority.openPrimaryConnection(rnh.eaddress, null); // TODO: make proper options        
+        priority.openPrimaryConnection(rnh.eaddress, getOptions(rnh)); // TODO: make proper options        
       }
       return ret;
 
@@ -120,7 +130,7 @@ public class RendezvousRouterStrategy implements RouterStrategy {
     // !contactDirect
     if (connectionStatus > PriorityTransportLayer.STATUS_CONNECTING) {
       // connect if we can
-      priority.openPrimaryConnection(rnh.eaddress, null); // TODO: make proper options
+      priority.openPrimaryConnection(rnh.eaddress, getOptions(rnh)); // TODO: make proper options
     }
     
     if (connectionStatus == PriorityTransportLayer.STATUS_CONNECTED) {
@@ -130,6 +140,10 @@ public class RendezvousRouterStrategy implements RouterStrategy {
     
     // !contactDirect, !connected, don't really care about suspected or not
     return 5;
+  }
+  
+  protected Map<String, Object> getOptions(NodeHandle nh) {
+    return OptionsFactory.addOption(null, IdentityImpl.NODE_HANDLE_FROM_INDEX, nh);
   }
   
 }

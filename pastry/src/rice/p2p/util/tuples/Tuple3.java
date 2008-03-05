@@ -34,42 +34,79 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.util;
+package rice.p2p.util.tuples;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class OptionsFactory {
-  public static Map<String, Object> addOption(Map<String, Object> existing, String s, Object i) {
-    Map<String, Object> ret = copyOptions(existing);
-    ret.put(s,i);
-    return ret;
+public class Tuple3<A,B,C> {
+  protected A a;
+  protected B b;
+  protected C c;
+  
+  public Tuple3(A a, B b, C c) {
+    this.a = a;
+    this.b = b;
+    this.c = c;
   }
-  public static Map<String, Object> addOption(Map<String, Object> existing, String s1, Object i1, String s2, Object i2) {
-    Map<String, Object> ret = copyOptions(existing);
-    ret.put(s1,i2);
-    ret.put(s2,i2);
-    return ret;
+  
+  public A a() {
+    return a;
   }
-  public static Map<String, Object> copyOptions(Map<String, Object> existing) {
-    if (existing == null) return new HashMap<String, Object>();
-    return new HashMap<String, Object>(existing);
+  
+  public B b() {
+    return b;
+  }
+  
+  public C c() {
+    return c;
   }
   
   /**
-   * Merge 2 options, keeping the first if there is a conflict
-   * 
-   * @param options
-   * @param options2
-   * @return
+   * Gotta handle null values
    */
-  public static Map<String, Object> merge(Map<String, Object> options,
-      Map<String, Object> options2) {
-    Map<String, Object> ret = copyOptions(options2);
-    if (options == null) return ret;
-    for (String k : options.keySet()) {
-      ret.put(k, options.get(k));
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof Tuple3) {  
+      Tuple3<A,B,C> that = (Tuple3<A,B,C>)obj;
+      if (this.a == null) { 
+        if (that.a != null) return false;        
+      } else {
+        if (that.a == null) return false;
+        // we know this.a && that.a != null
+        if (!this.a.equals(that.a)) return false;
+      }
+      
+      if (this.b == null) { 
+        if (that.b != null) return false;        
+      } else {
+        if (that.b == null) return false;
+        // we know this.a && that.a != null
+        if (!this.b.equals(that.b)) return false;
+      }
+      
+      if (this.c == null) { 
+        if (that.c != null) return false;        
+      } else {
+        if (that.c == null) return false;
+        // we know this.a && that.a != null
+        if (!this.c.equals(that.c)) return false;
+      }
+      
+      return true;
     }
-    return ret;
+    return false;
   }
+
+  /**
+   * Gotta handle null values.
+   */
+  @Override
+  public int hashCode() {
+    int hashA = 0;
+    if (a != null) hashA = a.hashCode();
+    int hashB = 0;
+    if (b != null) hashB = b.hashCode();
+    int hashC = 0;
+    if (b != null) hashC = c.hashCode();
+    return hashA^hashB^hashC;
+  }  
+
 }

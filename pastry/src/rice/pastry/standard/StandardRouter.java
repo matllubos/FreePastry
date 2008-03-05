@@ -128,6 +128,13 @@ public class StandardRouter extends PastryAppl implements Router {
     });
     this.dispatch = dispatch;
     this.routerStrategy = strategy;
+    if (routerStrategy == null) {
+      routerStrategy = new AliveRouterStrategy();
+    }
+  }
+  
+  public void setRouterStrategy(RouterStrategy strategy) {
+    this.routerStrategy = strategy;
   }
 
   /**

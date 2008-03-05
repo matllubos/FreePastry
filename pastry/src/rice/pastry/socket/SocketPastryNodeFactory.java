@@ -310,7 +310,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         ltl.getTransportLayer(), ltl.getLivenessProvider(), ltl.getPinger(), pn, proxyAddress, esrFactory);
     
     // Priority
-    TransportLayer<MultiInetSocketAddress, ByteBuffer> priorityTL = getPriorityTransportLayer(
+    PriorityTransportLayer<MultiInetSocketAddress> priorityTL = getPriorityTransportLayer(
         srm.getTransportLayer(), srm.getLivenessProvider(), srm.getProximityProvider(), pn);
 
     // UpperIdentiy
@@ -571,7 +571,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     };
   }
 
-  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
+  protected PriorityTransportLayer<MultiInetSocketAddress> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 
       new PriorityTransportLayerImpl<MultiInetSocketAddress>(

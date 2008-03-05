@@ -123,6 +123,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     this.tcp = tcp;
     this.options = options;
     logger = tcp.logger;
+    if (options == null) {
+      logger.logException("Options is null to "+addr, new Exception("Stack Trace"));
+    }
     this.addr = addr;
 //    if (tcp.logger.level <= Logger.FINE) tcp.logger.log("Opening connection to " + addr);
     

@@ -53,6 +53,7 @@ import rice.pastry.PastryNode;
 import rice.pastry.messaging.Message;
 import rice.pastry.messaging.MessageDispatch;
 import rice.pastry.routing.RouteMessage;
+import rice.pastry.routing.RouterStrategy;
 import rice.pastry.routing.SendOptions;
 import rice.pastry.transport.PMessageNotification;
 import rice.pastry.transport.PMessageReceipt;
@@ -75,8 +76,8 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
    */
   Map<NodeHandle, Collection<RouterNotification>> pending;
   
-  public RapidRerouter(PastryNode thePastryNode, MessageDispatch dispatch) {
-    super(thePastryNode, dispatch);
+  public RapidRerouter(PastryNode thePastryNode, MessageDispatch dispatch, RouterStrategy strategy) {
+    super(thePastryNode, dispatch, strategy);
     pending = new HashMap<NodeHandle, Collection<RouterNotification>>();
     
     thePastryNode.addLivenessListener(this);

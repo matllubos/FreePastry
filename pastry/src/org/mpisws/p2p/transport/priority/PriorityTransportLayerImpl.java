@@ -321,68 +321,68 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
    * @param options
    * @return
    */
-  protected SocketRequestHandle<Identifier> openPrimarySocket(final Identifier i, Map<String, Object> options) {
-//    if (livenessProvider.getLiveness(i, options) >= LIVENESS_DEAD) {
-//      if (logger.level <= Logger.WARNING) logger.log("Not opening primary socket to "+i+" because it is dead.");  
-//      return null;
-//    }     
-    if (logger.level <= Logger.FINE) logger.log("Opening Primary Socket to "+i);
-    
-    final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
-      public boolean cancel() {
-        cancelLivenessChecker(i);
-        return super.cancel();
-      }
-    };
-    
-    handle.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>() {
-      public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sock) {
-        handle.setSubCancellable(new Cancellable(){        
-          public boolean cancel() {
-            sock.close();
-            return true;
-          }        
-        });
-        sock.register(false, true, new P2PSocketReceiver<Identifier>() {
-          ByteBuffer writeMe = ByteBuffer.wrap(PRIMARY_SOCKET);
-          public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
-            if (canRead || !canWrite) throw new IllegalArgumentException("expected to write!  canRead:"+canRead+" canWrite:"+canWrite);
-            if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
+//  protected void openPrimarySocket(final Identifier i, Map<String, Object> options) {
+////    if (livenessProvider.getLiveness(i, options) >= LIVENESS_DEAD) {
+////      if (logger.level <= Logger.WARNING) logger.log("Not opening primary socket to "+i+" because it is dead.");  
+////      return null;
+////    }     
+//    if (logger.level <= Logger.FINE) logger.log("Opening Primary Socket to "+i);
+//    
+//    final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
+//      public boolean cancel() {
+//        cancelLivenessChecker(i);
+//        return super.cancel();
+//      }
+//    };
+//    
+//    handle.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>() {
+//      public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sock) {
+//        handle.setSubCancellable(new Cancellable(){        
+//          public boolean cancel() {
+//            sock.close();
+//            return true;
+//          }        
+//        });
+//        sock.register(false, true, new P2PSocketReceiver<Identifier>() {
+//          ByteBuffer writeMe = ByteBuffer.wrap(PRIMARY_SOCKET);
+//          public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
+//            if (canRead || !canWrite) throw new IllegalArgumentException("expected to write!  canRead:"+canRead+" canWrite:"+canWrite);
 //            if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
-            cancelLivenessChecker(i);
-            if (socket.write(writeMe) == -1) {
-              cancelLivenessChecker(i);
-              getEntityManager(socket.getIdentifier()).receiveSocketException(handle, new org.mpisws.p2p.transport.ClosedChannelException("Channel closed while writing."));
-              return;
-            }
-            if (writeMe.hasRemaining()) {
-              socket.register(false, true, this);
-            } else {
-              getEntityManager(socket.getIdentifier()).incomingSocket(socket, handle);
-            }
-          }        
-          
-          public void receiveException(P2PSocket<Identifier> socket, Exception e) {
-            cancelLivenessChecker(i);
-            getEntityManager(socket.getIdentifier()).receiveSocketException(handle, e);
-          }
-          
-          public String toString() {
-            return "PriorityTLi: Primary Socket shim to "+i;
-          }
-        });
-      } // receiveResult()
-      
-      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
-        if (handle.getSubCancellable() != null && s != handle.getSubCancellable()) throw new IllegalArgumentException(
-            "s != handle.getSubCancellable() must be a bug. s:"+
-            s+" sub:"+handle.getSubCancellable());
-        getEntityManager(s.getIdentifier()).receiveSocketException(handle, ex);
-      }
-    }, options));
-    
-    return handle;
-  }
+////            if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
+//            cancelLivenessChecker(i);
+//            if (socket.write(writeMe) == -1) {
+//              cancelLivenessChecker(i);
+//              getEntityManager(socket.getIdentifier()).receiveSocketException(handle, new org.mpisws.p2p.transport.ClosedChannelException("Channel closed while writing."));
+//              return;
+//            }
+//            if (writeMe.hasRemaining()) {
+//              socket.register(false, true, this);
+//            } else {
+//              getEntityManager(socket.getIdentifier()).incomingSocket(socket, handle);
+//            }
+//          }        
+//          
+//          public void receiveException(P2PSocket<Identifier> socket, Exception e) {
+//            cancelLivenessChecker(i);
+//            getEntityManager(socket.getIdentifier()).receiveSocketException(handle, e);
+//          }
+//          
+//          public String toString() {
+//            return "PriorityTLi: Primary Socket shim to "+i;
+//          }
+//        });
+//      } // receiveResult()
+//      
+//      public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
+//        if (handle.getSubCancellable() != null && s != handle.getSubCancellable()) throw new IllegalArgumentException(
+//            "s != handle.getSubCancellable() must be a bug. s:"+
+//            s+" sub:"+handle.getSubCancellable());
+//        getEntityManager(s.getIdentifier()).receiveSocketException(handle, ex);
+//      }
+//    }, options));
+//    
+////    return handle;
+//  }
   
   public void printMemStats(int logLevel) {
     if (logLevel <= Logger.FINE) {
@@ -591,17 +591,76 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }      
     }
     
-    public void openPrimarySocketHelper(Identifier temp, Map<String, Object> options) {
+    public void openPrimarySocketHelper(final Identifier i, Map<String, Object> options) {
       synchronized(this) {
         if (pendingSocket != null) return;
-        pendingSocket = openPrimarySocket(temp, options);
-        startLivenessChecker(temp, options);
+        if (logger.level <= Logger.FINE) logger.log("Opening Primary Socket to "+i);
+        
+        final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
+          public boolean cancel() {
+            cancelLivenessChecker(i);
+            return super.cancel();
+          }
+        };
+
+        pendingSocket = handle;
+        
+        handle.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>() {
+          public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sock) {
+            handle.setSubCancellable(new Cancellable(){        
+              public boolean cancel() {
+                sock.close();
+                return true;
+              }        
+            });
+            sock.register(false, true, new P2PSocketReceiver<Identifier>() {
+              ByteBuffer writeMe = ByteBuffer.wrap(PRIMARY_SOCKET);
+              public void receiveSelectResult(P2PSocket<Identifier> socket, boolean canRead, boolean canWrite) throws IOException {
+                if (canRead || !canWrite) throw new IllegalArgumentException("expected to write!  canRead:"+canRead+" canWrite:"+canWrite);
+                if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
+//                if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
+                cancelLivenessChecker(i);
+                if (socket.write(writeMe) == -1) {
+                  cancelLivenessChecker(i);
+                  getEntityManager(socket.getIdentifier()).receiveSocketException(handle, new org.mpisws.p2p.transport.ClosedChannelException("Channel closed while writing."));
+                  return;
+                }
+                if (writeMe.hasRemaining()) {
+                  socket.register(false, true, this);
+                } else {
+                  getEntityManager(socket.getIdentifier()).incomingSocket(socket, handle);
+                }
+              }        
+              
+              public void receiveException(P2PSocket<Identifier> socket, Exception e) {
+                cancelLivenessChecker(i);
+                getEntityManager(socket.getIdentifier()).receiveSocketException(handle, e);
+              }
+              
+              public String toString() {
+                return "PriorityTLi: Primary Socket shim to "+i;
+              }
+            });
+          } // receiveResult()
+          
+          public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
+            if (handle.getSubCancellable() != null && s != handle.getSubCancellable()) throw new IllegalArgumentException(
+                "s != handle.getSubCancellable() must be a bug. s:"+
+                s+" sub:"+handle.getSubCancellable());
+            getEntityManager(s.getIdentifier()).receiveSocketException(handle, ex);
+          }
+        }, options));
+
+        startLivenessChecker(i, options);
       }
     }
     
     
     TimerTask livenessChecker = null;
     public void startLivenessChecker(final Identifier temp, final Map<String, Object> options) {
+      if (options == null) {
+        throw new IllegalArgumentException("Options is null");
+      }
       if (livenessChecker == null) {
         if (logger.level <= Logger.FINER) logger.log("startLivenessChecker("+temp+","+options+") pend:"+pendingSocket+" writingS:"+writingSocket+" theQueue:"+queue.size());
         livenessChecker = new TimerTask() {        

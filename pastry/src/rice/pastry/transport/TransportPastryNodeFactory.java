@@ -50,6 +50,7 @@ import rice.p2p.commonapi.CancellableTask;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
+import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.join.JoinProtocol;
@@ -59,6 +60,7 @@ import rice.pastry.messaging.MessageDispatch;
 import rice.pastry.pns.PNSApplication;
 import rice.pastry.routing.RouteSet;
 import rice.pastry.routing.RouteSetProtocol;
+import rice.pastry.routing.RouterStrategy;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;
@@ -119,7 +121,8 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
             RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
                 pn);
             LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
-            StandardRouter router = new RapidRerouter(pn, msgDisp);
+//            StandardRouter router = new RapidRerouter(pn, msgDisp);
+            StandardRouter router = new RapidRerouter(pn, msgDisp, getRouterStrategy(pn));
             pn.setElements(localhandle, msgDisp, leafSet, routeTable, router);
           
             
@@ -135,6 +138,10 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     return pn;
   }
 
+  protected RouterStrategy getRouterStrategy(PastryNode pn) {
+    return null; // use the default one
+  }
+  
   protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData) {
     ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
     

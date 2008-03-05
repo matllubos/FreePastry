@@ -56,6 +56,7 @@ import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 
 import rice.environment.Environment;
@@ -140,15 +141,15 @@ public class Recorder implements MyEvents {
         return new SimpleRandomSource(randSeed, lman);    
       }
 
-      @Override
-      protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
-        // get rid of the priorityLayer
-        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
-          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
-        } else {
-          return trans;
-        }
-      }
+//      @Override
+//      protected PriorityTransportLayer<MultiInetSocketAddress> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
+//        // get rid of the priorityLayer
+//        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
+//          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
+//        } else {
+//          return trans;
+//        }
+//      }
 
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {

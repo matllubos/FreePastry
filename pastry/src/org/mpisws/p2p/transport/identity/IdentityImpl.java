@@ -238,7 +238,9 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   }
   
   protected UpperIdentifier getIntendedDest(Map<String,Object> options) {
-    if (options == null) throw new IllegalArgumentException("options is null");
+    if (options == null) {
+      throw new IllegalArgumentException("options is null");    
+    }
     if (!options.containsKey(NODE_HANDLE_FROM_INDEX)) throw new IllegalArgumentException("options doesn't have NODE_HANDLE_FROM_INDEX "+options);
     
     return (UpperIdentifier)options.get(NODE_HANDLE_FROM_INDEX);
@@ -268,7 +270,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         return true;
       } else {
         if (old.equals(u)) {          
-          if (logger.level <= Logger.FINE) logger.log("addBinding("+u+","+l+") old is equal");
+          if (logger.level <= Logger.FINEST) logger.log("addBinding("+u+","+l+") old is equal");
           if (l != null) {
             overrideLiveness.setLiveness(l, LIVENESS_ALIVE, OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, u));
           } else {
@@ -378,7 +380,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       final SocketRequestHandleImpl<LowerIdentifier> ret = new SocketRequestHandleImpl<LowerIdentifier>(i, options, logger);
       SimpleOutputBuffer sob = new SimpleOutputBuffer();
       try {      
-        if (options.containsKey(DONT_VERIFY) && ((Boolean)options.get(DONT_VERIFY)).booleanValue()) {
+        if ((options == null) || options.containsKey(DONT_VERIFY) && ((Boolean)options.get(DONT_VERIFY)).booleanValue()) {
           // don't send TO
           sob.writeByte(0);          
         } else {      
@@ -1162,7 +1164,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
     
     public int proximity(UpperIdentifier i, Map<String, Object> options) {
-      if (logger.level <= Logger.FINE) logger.log("proximity("+i+")");
+      if (logger.level <= Logger.FINEST) logger.log("proximity("+i+")");
       if (deadForever.contains(i)) return Integer.MAX_VALUE;
       return prox.proximity(serializer.translateDown(i), OptionsFactory.addOption(options, NODE_HANDLE_FROM_INDEX, i));
     }

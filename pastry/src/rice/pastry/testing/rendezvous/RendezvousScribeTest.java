@@ -66,8 +66,13 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
    * @param args DESCRIBE THE PARAMETER
    */
   public static void main(String args[]) throws IOException {
-    System.setOut(new PrintStream("delme.txt"));
-    System.setErr(System.out);
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-tofile")) {
+        System.setOut(new PrintStream("delme.txt"));
+        System.setErr(System.out);
+        break;
+      }
+    }
     
     Environment env = RawScribeRegrTest.parseArgs(args);
     
@@ -76,6 +81,10 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
 //    p.setInt("org.mpisws.p2p.transport.wire_loglevel", Logger.FINE);
 //    p.setInt("rice.pastry.socket.nat.rendezvous_loglevel", Logger.FINE);
     
+//    p.setInt("org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl_loglevel", Logger.FINEST);
+//    p.setInt("rice.pastry.socket.nat.rendezvous.RendezvousRouterStrategy_loglevel", Logger.FINEST);
+//    p.setInt("rice.pastry.socket.nat.rendezvous.RendezvousApp_loglevel", Logger.FINE);    
+//    p.setInt("loglevel", Logger.FINE);
     
     p.setBoolean("rendezvous_test_firewall", true);
     p.setBoolean("rendezvous_test_makes_bootstrap", true);

@@ -48,8 +48,11 @@ import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.nat.FirewallTLImpl;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.rendezvous.ContactDeserializer;
 import org.mpisws.p2p.transport.rendezvous.PilotFinder;
 import org.mpisws.p2p.transport.rendezvous.PilotManager;
@@ -60,6 +63,7 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.rendezvous.ResponseStrategy;
 import org.mpisws.p2p.transport.rendezvous.TimeoutResponseStrategy;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.Continuation;
 import rice.environment.Environment;
@@ -75,10 +79,12 @@ import rice.p2p.util.tuples.Tuple;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
 import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.leafset.LeafSetProtocol;
 import rice.pastry.pns.PNSApplication;
+import rice.pastry.routing.RouterStrategy;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
@@ -88,6 +94,7 @@ import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;
 import rice.pastry.standard.ProximityNeighborSelector;
+import rice.pastry.standard.StandardRouter;
 import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLPastryNode;
 
@@ -188,10 +195,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return new ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle>(){
     
       public Map<String, Object> getOptions(RendezvousSocketNodeHandle high) {
-//        Map<String, Object> options = new HashMap<String, Object>();
-//        options.put(IdentityImpl.NODE_HANDLE_FROM_INDEX,high);
-//        return options;
-        return null;
+        return OptionsFactory.addOption(null, IdentityImpl.NODE_HANDLE_FROM_INDEX, high);
       }
     
       public RendezvousSocketNodeHandle deserialize(InputBuffer sib) throws IOException {
@@ -324,5 +328,15 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     
     // do the normal thing
     return baseTl; 
+  }
+  
+  @Override
+  protected PriorityTransportLayer<MultiInetSocketAddress> getPriorityTransportLayer(
+      TransportLayer<MultiInetSocketAddress, ByteBuffer> trans,
+      LivenessProvider<MultiInetSocketAddress> liveness,
+      ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
+    PriorityTransportLayer<MultiInetSocketAddress> ret = super.getPriorityTransportLayer(trans, liveness, prox, pn);
+    ((StandardRouter)pn.getRouter()).setRouterStrategy(new RendezvousRouterStrategy(ret, pn.getEnvironment()));
+    return ret;
   }
 }

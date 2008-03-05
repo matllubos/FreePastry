@@ -153,32 +153,32 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
    * ... and we're not connected?
    * 
    */
-  @Override
-  public void receiveMessage(Message msg) {
-    if (msg instanceof RouteMessage) {
-      RouteMessage rm = (RouteMessage)msg;
-      try {
-        Message internalMsg = (Message)rm.getMessage(getDeserializer());
-      if (internalMsg instanceof OpenChannelMsg) {
-        OpenChannelMsg ocm = (OpenChannelMsg)internalMsg;
-        if (rm.getNextHop().equals(rm.getDestinationHandle())) {
-          // this isn't going to work, we are routing to open a connection, but directly to the node in question
-          throw new IllegalStateException("Routing "+rm+", next hop and destination are "+rm.getNextHop());
-          
-          // there could also be some kind of oscillation between 2+ routes, which this wouldn't cover
-        }
-      }
-      // if the next hop is no good..., drop it
-//      if (rm.getNextHop() )
-//        rm.sendFailed(e);
-        super.receiveMessage(msg);
-      } catch (IOException ioe) {
-        // couldn't deserialize the internal message
-      }
-    } else {
-      super.receiveMessage(msg);
-    }
-  }
+//  @Override
+//  public void receiveMessage(Message msg) {
+//    if (msg instanceof RouteMessage) {
+//      RouteMessage rm = (RouteMessage)msg;
+//      try {
+////        Message internalMsg = (Message)rm.unwrap(getDeserializer());
+////      if (internalMsg instanceof OpenChannelMsg) {
+////        OpenChannelMsg ocm = (OpenChannelMsg)internalMsg;
+////        if (rm.getNextHop().equals(rm.getDestinationHandle())) {
+////          // this isn't going to work, we are routing to open a connection, but directly to the node in question
+////          throw new IllegalStateException("Routing "+rm+", next hop and destination are "+rm.getNextHop()+" "+thePastryNode);
+////          
+////          // there could also be some kind of oscillation between 2+ routes, which this wouldn't cover
+////        }
+////      }
+//      // if the next hop is no good..., drop it
+////      if (rm.getNextHop() )
+////        rm.sendFailed(e);
+//        super.receiveMessage(msg);
+//      } catch (IOException ioe) {
+//        // couldn't deserialize the internal message
+//      }
+//    } else {
+//      super.receiveMessage(msg);
+//    }
+//  }
   
   @Override
   public void messageForAppl(Message msg) {
@@ -237,7 +237,7 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
     }
 
     OpenChannelMsg msg = new OpenChannelMsg(getAddress(), rendezvous, source, uid);
-    
+    if (logger.level <= Logger.FINE) logger.log("routing "+msg+" to "+target);
     final RouteMessage rm = 
       new RouteMessage(
           target.getNodeId(),
