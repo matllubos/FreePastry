@@ -63,6 +63,11 @@ public class RouteRowRequest extends PRawMessage {
     throw new IllegalStateException("Unknown version:"+version);
   }
 
+  
+  public String toString() {
+    return "RRReq["+index+"]";
+  }
+  
   public short getType() {
     return TYPE;
   }

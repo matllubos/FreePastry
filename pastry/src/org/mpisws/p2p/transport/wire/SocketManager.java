@@ -111,7 +111,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
    * Constructor which creates an outgoing connection to the given node
    * handle using the provided address as a source route intermediate node. 
    * This creates the connection by building the socket and sending
-   * accross the greeting message. Once the response greeting message is
+   * across the greeting message. Once the response greeting message is
    * received, everything proceeds as normal.
    * @param manager TODO
    *
@@ -123,9 +123,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     this.tcp = tcp;
     this.options = options;
     logger = tcp.logger;
-    if (options == null) {
-      logger.logException("Options is null to "+addr, new Exception("Stack Trace"));
-    }
+//    if (options == null) {
+//      logger.logException("Options is null to "+addr, new Exception("Stack Trace"));
+//    }
     this.addr = addr;
 //    if (tcp.logger.level <= Logger.FINE) tcp.logger.log("Opening connection to " + addr);
     

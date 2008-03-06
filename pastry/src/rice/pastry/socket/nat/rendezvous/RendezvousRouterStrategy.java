@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.socket.nat.rendezvous;
 
+import java.net.NoRouteToHostException;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -84,6 +85,22 @@ public class RendezvousRouterStrategy implements RouterStrategy {
         bestRating = nextRating;
       }
       
+    }
+    
+    if (bestRating > 3) {
+      if (logger.level <= Logger.INFO) logger.log("Can't find route for "+msg);
+      
+      // delme
+      if (msg.internalMsg != null && (! (msg.internalMsg instanceof rice.pastry.socket.nat.rendezvous.ByteBufferMsg))) {
+        logger.log("NoRoute2 "+msg);
+      }
+      // \delme
+      
+      /*
+         This is needed to prevent problems before the leafset is built, or in the case that the entire leafset is not connectable.
+         Just fail if there is no chance.
+       */
+      return null; // fail if node is unreachable
     }
 
     if (logger.level <= Logger.FINEST) logger.log("Routing "+msg+"returning "+best+":"+bestRating);

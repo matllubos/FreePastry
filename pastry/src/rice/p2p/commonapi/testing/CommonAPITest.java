@@ -283,8 +283,16 @@ public abstract class CommonAPITest {
    * simulates the message passing.
    */
   protected void simulate() {
+    simulate(1);
+  }
+
+  /**
+   * 
+   * @param numOps the approximage number of operations that will occur during this time, an operation is a network hop for example
+   */
+  protected void simulate(int numOps) {
     if (environment.getSelectorManager().isSelectorThread()) return;
-    synchronized(this) {try { wait(300); } catch (InterruptedException e) {}}
+    synchronized(this) {try { wait(500*numOps); } catch (InterruptedException e) {}}
     
 //    if (PROTOCOL.equalsIgnoreCase(PROTOCOL_DIRECT)) {
 //      while (simulator.simulate()) {}
@@ -293,6 +301,8 @@ public abstract class CommonAPITest {
 //    }
   }
 
+  
+  
   /**
    * Method which creates a single node, given it's node
    * number

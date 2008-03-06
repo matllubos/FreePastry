@@ -605,7 +605,18 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       if (offset+length > f.length()) throw new IllegalArgumentException("File is only "+f.length()+" but you are trying to send "+length+" bytes starting at "+offset);
       this.f = f;
       this.metadata = metadata;
-      this.file = new FileInputStream(f);
+      try {
+        this.file = new FileInputStream(f);
+      } catch (IOException ioe) {
+        failed();
+        throw ioe;
+      } catch (RuntimeException re) {
+        failed();
+        throw re;
+      } catch (Throwable t) {
+        failed();
+        throw new RuntimeException(t);
+      }
       file.skip(offset);
       lastByte = offset+length;
       

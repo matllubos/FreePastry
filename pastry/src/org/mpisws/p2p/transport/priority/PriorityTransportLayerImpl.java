@@ -184,7 +184,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             break;
           case PRIMARY_SOCKET_B:
             if (logger.level <= Logger.FINE) logger.log("Opened Primary Socket from "+s.getIdentifier());
-            getEntityManager(s.getIdentifier()).incomingSocket(s, null);
+            getEntityManager(s.getIdentifier()).primarySocketAvailable(s, null);
             break;
           }
           break;
@@ -490,7 +490,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      * @return true if we did it now
      */
     public boolean closeMe(P2PSocket<Identifier> socket) {
-      if (logger.level <= Logger.FINE) logger.logException("closeMe("+socket+"):"+(socket == writingSocket)+","+messageThatIsBeingWritten, new Exception("Stack Trace"));
+      if (logger.level <= Logger.FINER) logger.logException("closeMe("+socket+"):"+(socket == writingSocket)+","+messageThatIsBeingWritten, new Exception("Stack Trace"));
       if (socket == writingSocket) {
         if (messageThatIsBeingWritten == null) {
           sockets.remove(socket);
@@ -513,11 +513,11 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
      * @param s
      * @param receipt null if a remote node opened the socket
      */
-    public void incomingSocket(P2PSocket<Identifier> s, SocketRequestHandle<Identifier> receipt) {
+    public void primarySocketAvailable(P2PSocket<Identifier> s, SocketRequestHandle<Identifier> receipt) {
       // make sure we're on the selector thread so synchronization of writingSocket is simple
       if (!selectorManager.isSelectorThread()) throw new IllegalStateException("Must be called on the selector");
 
-      if (logger.level <= Logger.FINE) logger.log("incomingSocket("+s+","+receipt+")");
+      if (logger.level <= Logger.FINE) logger.log("primarySocketAvailable("+s+","+receipt+")");
       
       // set pendingSocket to null if possible
       synchronized(this) {
@@ -628,7 +628,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
                 if (writeMe.hasRemaining()) {
                   socket.register(false, true, this);
                 } else {
-                  getEntityManager(socket.getIdentifier()).incomingSocket(socket, handle);
+                  getEntityManager(socket.getIdentifier()).primarySocketAvailable(socket, handle);
                 }
               }        
               
@@ -946,7 +946,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
 
     protected boolean complete(MessageWrapper wrapper) {
-      if (logger.level <= Logger.FINEST) logger.log(this+".complete("+wrapper+")");
+      if (logger.level <= Logger.FINE) logger.log(this+".complete("+wrapper+")");
       if (wrapper != messageThatIsBeingWritten) throw new IllegalArgumentException("Wrapper:"+wrapper+" messageThatIsBeingWritten:"+messageThatIsBeingWritten);
       
       synchronized(queue) {
@@ -1216,7 +1216,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }                    
       
       public void done(P2PSocket<Identifier> socket) throws IOException {
-        if (logger.level <= Logger.FINER) logger.log(EntityManager.this+" read message of size "+buf.capacity()+" from "+socket);        
+        if (logger.level <= Logger.FINE) logger.log(EntityManager.this+" read message of size "+buf.capacity()+" from "+socket);        
         callback.messageReceived(socket.getIdentifier(), buf, socket.getOptions()); 
         new SizeReader(socket);
       }

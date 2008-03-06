@@ -49,6 +49,7 @@ import rice.p2p.commonapi.rawserialization.*;
 import rice.p2p.commonapi.testing.CommonAPITest;
 import rice.p2p.scribe.*;
 import rice.p2p.scribe.messaging.SubscribeMessage;
+import rice.p2p.util.tuples.Tuple;
 import rice.pastry.PastryNode;
 
 /**
@@ -209,6 +210,7 @@ public class ScribeRegrTest extends CommonAPITest {
       scribes[i].subscribe(topic, clients[i]);
       simulate();
     }
+    simulate(NUM_NODES/SKIP);
 
     int numWithParent = 0;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
@@ -243,8 +245,8 @@ public class ScribeRegrTest extends CommonAPITest {
     stepStart(name + " Anycast - No Accept");
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
-    local.anycast(topic, buildTestScribeContent(topic, 59));
-    simulate();
+    local.anycast(topic, buildTestScribeContent(topic, 59));    
+    simulate(NUM_NODES);
 
     failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
@@ -257,19 +259,27 @@ public class ScribeRegrTest extends CommonAPITest {
     if (! failed)
       stepDone(SUCCESS);
 
+    /**
+     * This test sends an anycast ... (write more)
+     */
     stepStart(name + " Anycast - 1 Accept");
     TestScribeClient client = clients[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
     client.acceptAnycast(true);
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
-    local.anycast(topic, buildTestScribeContent(topic, 59));
-    simulate();
+    local.anycast(topic, buildTestScribeContent(topic, 60));
+    simulate(NUM_NODES);
 
     failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       if (clients[i].equals(client)) {
         if (clients[i].getAnycastMessages().size() != 1) {
-          stepDone(FAILURE, "Expected node "+client.scribe+" to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local);
+          String s = "";
+          for (ScribeContent item : clients[i].getAnycastMessages()) {
+            s+=" "+item;
+          }
+
+          stepDone(FAILURE, "Expected node "+client.scribe+" to accept anycast at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local+" "+s);
           failed = true;
         }
       } else {
@@ -290,19 +300,29 @@ public class ScribeRegrTest extends CommonAPITest {
 
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
 
-    local.anycast(topic, buildTestScribeContent(topic, 59));
-    simulate();
+    local.anycast(topic, buildTestScribeContent(topic, 61));
+    simulate(NUM_NODES);
 
     int total = 0;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       total += clients[i].getAnycastMessages().size();
     }
 
-    if (total != 2)
-      stepDone(FAILURE, "Expected 2 anycast messages to be found, found " + total);
-    else
+    if (total != 2) {
+      String str = "";
+      for (int i=0; i < NUM_NODES/SKIP; i++) {
+        if (clients[i].getAnycastMessages().size() != 0) {
+          for (ScribeContent sc : clients[i].getAnycastMessages()) {
+            str+="\n"+clients[i]+" "+sc;
+          }
+        }
+      }
+    
+      stepDone(FAILURE, "Expected 2 anycast messages to be found, found "+total+" l:"+str);
+    } else {
       stepDone(SUCCESS);
-
+    }
+    
     stepStart(name + " Unsubscribe");
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       scribes[i].unsubscribe(topic, clients[i]);
@@ -311,7 +331,7 @@ public class ScribeRegrTest extends CommonAPITest {
 
     local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
     local.publish(topic, buildTestScribeContent(topic, 100));
-    simulate();
+    simulate(NUM_NODES);
 
     failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
@@ -362,7 +382,7 @@ public class ScribeRegrTest extends CommonAPITest {
       // build antipodal topics so they are guaranteed to have different parents   
       // TODO: Randomize this
       TestScribeClient[] clients = new TestScribeClient[NUM_NODES];
-      List<Topic> topics = new ArrayList<Topic>(2);
+      List<Topic> topics = new ArrayList<Topic>(NUM_TOPICS);
       int[] id1 = {0, 0, 0, 0, 0x80000000};
       int[] id2 = {0, 0, 0, 0, 0};
       topics.add(new Topic(FACTORY.buildId(id1)));
@@ -409,8 +429,8 @@ public class ScribeRegrTest extends CommonAPITest {
       local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
       for (Topic topic : topics) 
-        local.anycast(topic, buildTestScribeContent(topic, 59));
-      simulate();
+        local.anycast(topic, buildTestScribeContent(topic, 62));
+      simulate(NUM_NODES*NUM_TOPICS);
 
       failed = false;
       for (int i=0; i < NUM_NODES/SKIP; i++) {
@@ -423,20 +443,27 @@ public class ScribeRegrTest extends CommonAPITest {
       if (! failed)
         stepDone(SUCCESS);
 
+      /**
+       * This test sends an anycast on each topic, but only 1 client is allowed to accept the message
+       */
       stepStart(name + " Anycast - 1 Accept");
       TestScribeClient client = clients[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
       client.acceptAnycast(true);
       local = scribes[environment.getRandomSource().nextInt(NUM_NODES)];
 
       for (Topic topic : topics) 
-        local.anycast(topic, buildTestScribeContent(topic, 59));
-      simulate();
+        local.anycast(topic, buildTestScribeContent(topic, 63));
+      simulate(NUM_NODES*NUM_TOPICS);
 
       failed = false;
       for (int i=0; i < NUM_NODES/SKIP; i++) {
         if (clients[i].equals(client)) {
           if (clients[i].getAnycastMessages().size() != NUM_TOPICS) {
-            stepDone(FAILURE, "Expected node to accept "+NUM_TOPICS+" anycasts at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local);
+            String s = "";
+            for (ScribeContent item : clients[i].getAnycastMessages()) {
+              s+=" "+item;
+            }
+            stepDone(FAILURE, "Expected node to accept "+NUM_TOPICS+" anycasts at " + client+" accepted "+clients[i].getAnycastMessages().size()+" local "+local+" "+s);
             failed = true;
           }
         } else {
@@ -458,19 +485,29 @@ public class ScribeRegrTest extends CommonAPITest {
       local = scribes[environment.getRandomSource().nextInt(NUM_NODES/SKIP)];
 
       for (Topic topic : topics) 
-        local.anycast(topic, buildTestScribeContent(topic, 59));
-      simulate();
+        local.anycast(topic, buildTestScribeContent(topic, 64));
+      simulate(NUM_TOPICS);
 
       int total = 0;
       for (int i=0; i < NUM_NODES/SKIP; i++) {
         total += clients[i].getAnycastMessages().size();
       }
 
-      if (total != NUM_TOPICS*2)
-        stepDone(FAILURE, "Expected "+(NUM_TOPICS*2)+" anycast messages to be found, found " + total);
-      else
+      if (total != NUM_TOPICS*2) {
+        String str = "";
+        for (int i=0; i < NUM_NODES/SKIP; i++) {
+          if (clients[i].getAnycastMessages().size() != 0) {
+            for (ScribeContent sc : clients[i].getAnycastMessages()) {
+              str+="\n"+clients[i]+" "+sc;
+            }
+          }
+        }
+      
+        stepDone(FAILURE, "Expected "+(NUM_TOPICS*2)+" anycast messages to be found, found "+total+" l:"+str);
+      } else {
         stepDone(SUCCESS);
-
+      }
+      
       stepStart(name + " Unsubscribe");
       for (int i=0; i < NUM_NODES/SKIP; i++) {
         for (Topic topic : topics) {
@@ -541,6 +578,7 @@ public class ScribeRegrTest extends CommonAPITest {
       scribes[i].subscribe(topic, clients[i]);
       simulate();
     }
+    simulate(NUM_NODES);
 
     int numWithParent = 0;
     for (int i=0; i < NUM_NODES; i++) {
@@ -548,9 +586,16 @@ public class ScribeRegrTest extends CommonAPITest {
         numWithParent++;
     }
 
-    if (numWithParent < (NUM_NODES/2) - 1)
-      stepDone(FAILURE, "Expected at least " + (NUM_NODES/2 - 1) + " nodes with parents, found " + numWithParent);
-    else
+    if (numWithParent < (NUM_NODES/2) - 1) {
+      String s = "";
+      for (int i=0; i < NUM_NODES; i++) {
+        if (scribes[i].getParent(topic) == null) {
+          s+=" "+scribes[i];
+        }
+      }
+      
+      stepDone(FAILURE, "Expected at least " + (NUM_NODES/2 - 1) + " nodes with parents, found " + numWithParent+" "+s);
+    } else
       if (numWithParent > (NUM_NODES/2))
         stepDone(FAILURE, "Expected no more than " + (NUM_NODES/2) + " nodes with parents, due to policy, found " + numWithParent);
       else 
@@ -725,6 +770,7 @@ public class ScribeRegrTest extends CommonAPITest {
       scribes[i].subscribe(topic, clients[i]);
       simulate();
     }
+    simulate(NUM_NODES);
 
     int numWithParent = 0;
     for (int i=0; i < NUM_NODES; i++) {

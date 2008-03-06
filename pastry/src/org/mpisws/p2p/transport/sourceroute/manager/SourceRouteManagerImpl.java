@@ -638,11 +638,12 @@ public class SourceRouteManagerImpl<Identifier> implements
           return ret;
         } 
         default:
-          if (best != null) {
+          SourceRoute<Identifier> temp = best;
+          if (temp != null) {
             boolean ret = livenessProvider.checkLiveness(best, options);
 
             // check to see if the direct route is available
-            if (! best.isDirect()) 
+            if (! temp.isDirect()) 
               livenessProvider.checkLiveness(srFactory.getSourceRoute(getLocalIdentifier(), address), options);
             return ret;
           }          

@@ -80,7 +80,9 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
   Logger logger;
   
   public static final String MSG_STRING = "commonapi_msg_string";
-  public static final String DESTINATION_IDENTITY = "commonapi_destination_identity";
+  public static final String MSG_TYPE = "commonapi_msg_type";
+  public static final String MSG_ADDR = "commonapi_msg_addr";
+//  public static final String DESTINATION_IDENTITY = "commonapi_destination_identity";
 
   public CommonAPITransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -213,7 +215,8 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
             }
           }
         }, 
-        OptionsFactory.addOption(options, MSG_STRING, m.toString(), DESTINATION_IDENTITY, i)));
+//        OptionsFactory.addOption(options, MSG_STRING, m.toString(), DESTINATION_IDENTITY, i)));
+        OptionsFactory.addOption(options, MSG_STRING, m.toString(), MSG_TYPE, m.getType())));
     return handle;
   }
 
@@ -306,7 +309,8 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
 //      new SocketRequestHandleImpl<TransportLayerNodeHandle<Identifier>>(i, options);
     
     if (logger.level <= Logger.FINE) logger.log("openSocket("+i+")");
-    return tl.openSocket(i, deliverSocketToMe, OptionsFactory.addOption(options, DESTINATION_IDENTITY, i));
+//    return tl.openSocket(i, deliverSocketToMe, OptionsFactory.addOption(options, DESTINATION_IDENTITY, i));
+    return tl.openSocket(i, deliverSocketToMe, options);
     
     // we only serialize the Id, we assume the underlieing layer got the address of the NodeHandle correct
 //    SimpleOutputBuffer sob = new SimpleOutputBuffer(8+localAddress.getId().getByteArrayLength());

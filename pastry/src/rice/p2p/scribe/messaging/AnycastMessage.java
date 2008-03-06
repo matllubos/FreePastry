@@ -213,7 +213,7 @@ public class AnycastMessage extends ScribeMessage {
   }
 
   public String toString() {
-    return "Anycast["+getTopic()+"]";
+    return "Anycast["+getTopic()+" "+content+"]";
   }
   
   public NodeHandle getInitialRequestor() {

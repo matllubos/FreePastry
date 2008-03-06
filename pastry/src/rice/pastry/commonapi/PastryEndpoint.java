@@ -176,6 +176,19 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     return routeHelper(key, pm, hint, deliverAckToMe);
   }
   
+  /**
+   * This method:
+   * a) constructs the RouteMessage 
+   * b) adds a MessageReceipt to the RouteMessage
+   * c) sets the priority option
+   * d) calls router.route(rm);
+   * 
+   * @param key
+   * @param pm
+   * @param hint
+   * @param deliverAckToMe
+   * @return
+   */
   private MessageReceipt routeHelper(Id key, final PastryEndpointMessage pm, final NodeHandle hint, final DeliveryNotification deliverAckToMe) { 
     if (logger.level <= Logger.FINE) logger.log("routeHelper("+key+","+pm+","+hint+","+deliverAckToMe+").init()");
     if ((key == null) && (hint == null)) {

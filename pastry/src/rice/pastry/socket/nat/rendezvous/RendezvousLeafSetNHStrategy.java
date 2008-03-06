@@ -34,7 +34,7 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.transport;
+package rice.pastry.socket.nat.rendezvous;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -48,10 +48,10 @@ import rice.pastry.NodeHandle;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketNodeHandle;
 
-public class LeafSetNHStrategy implements NextHopStrategy<MultiInetSocketAddress>{
+public class RendezvousLeafSetNHStrategy implements NextHopStrategy<MultiInetSocketAddress>{
   LeafSet ls;
   
-  public LeafSetNHStrategy(LeafSet leafSet) {
+  public RendezvousLeafSetNHStrategy(LeafSet leafSet) {
     this.ls = leafSet;
   }
 
@@ -73,13 +73,13 @@ public class LeafSetNHStrategy implements NextHopStrategy<MultiInetSocketAddress
     Collection<MultiInetSocketAddress> result = new HashSet<MultiInetSocketAddress>();
     LeafSet leafset = ls;
     for (int i = 1; i < leafset.maxSize()/2; i++) {      
-      SocketNodeHandle snh = (SocketNodeHandle)leafset.get(-i);
-      if (snh != null && !snh.eaddress.equals(destination)) {
+      RendezvousSocketNodeHandle snh = (RendezvousSocketNodeHandle)leafset.get(-i);
+      if (snh != null && !snh.eaddress.equals(destination) && snh.canContactDirect()) {
         result.add(snh.eaddress);
         if (result.size() >= numRequested) return result;
       }
-      snh = (SocketNodeHandle)leafset.get(i);
-      if (snh != null && !snh.eaddress.equals(destination)) {
+      snh = (RendezvousSocketNodeHandle)leafset.get(i);
+      if (snh != null && !snh.eaddress.equals(destination) && snh.canContactDirect()) {
         result.add(snh.eaddress);
         if (result.size() >= numRequested) return result;
       }

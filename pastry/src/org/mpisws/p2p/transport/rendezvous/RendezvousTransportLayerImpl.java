@@ -225,7 +225,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       }          
       
       public void receiveException(Exception exception) {
-        logger.logException("openSocket("+contact+","+deliverSocketToMe+","+options+")", exception);
+        if (logger.level <= Logger.INFO) logger.logException("openSocket("+contact+","+deliverSocketToMe+","+options+")", exception);
         deliverSocketToMe.receiveException(handle, exception);
       }          
     }, options);

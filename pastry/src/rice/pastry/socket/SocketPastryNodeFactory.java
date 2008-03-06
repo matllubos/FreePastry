@@ -86,6 +86,8 @@ import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayerImpl;
 import org.mpisws.p2p.transport.sourceroute.factory.MultiAddressSourceRouteFactory;
 import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteManager;
 import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteManagerImpl;
+import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteStrategy;
+import org.mpisws.p2p.transport.sourceroute.manager.simple.NextHopStrategy;
 import org.mpisws.p2p.transport.sourceroute.manager.simple.SimpleSourceRouteStrategy;
 import org.mpisws.p2p.transport.wire.WireTransportLayer;
 import org.mpisws.p2p.transport.wire.WireTransportLayerImpl;
@@ -548,11 +550,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       MultiInetSocketAddress proxyAddress, 
       MultiAddressSourceRouteFactory esrFactory) throws IOException {
     Environment environment = pn.getEnvironment();
-    LeafSetNHStrategy nhStrategy = new LeafSetNHStrategy();
-    nhStrategy.setLeafSet(pn.getLeafSet());
 
-    SimpleSourceRouteStrategy<MultiInetSocketAddress> srStrategy = 
-      new SimpleSourceRouteStrategy<MultiInetSocketAddress>(proxyAddress,esrFactory,nhStrategy,environment);
+    SourceRouteStrategy<MultiInetSocketAddress> srStrategy = getSourceRouteStrategy(ltl, livenessProvider, pinger, pn, proxyAddress, esrFactory);
 //    TransportLayer<EpochInetSocketAddress, ByteBuffer> srm = 
     MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>> prox = 
       new MinRTTProximityProvider<SourceRoute<MultiInetSocketAddress>>(pinger, environment);
@@ -570,7 +569,30 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         }    
     };
   }
+  
+  protected SourceRouteStrategy<MultiInetSocketAddress> getSourceRouteStrategy(
+      TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl, 
+      LivenessProvider<SourceRoute<MultiInetSocketAddress>> livenessProvider, 
+      Pinger<SourceRoute<MultiInetSocketAddress>> pinger, 
+      TLPastryNode pn, 
+      MultiInetSocketAddress proxyAddress, 
+      MultiAddressSourceRouteFactory esrFactory) throws IOException {
 
+    NextHopStrategy<MultiInetSocketAddress> nhStrategy = getNextHopStrategy(ltl, livenessProvider, pinger, pn, proxyAddress, esrFactory); 
+    return new SimpleSourceRouteStrategy<MultiInetSocketAddress>(proxyAddress,esrFactory,nhStrategy,environment);    
+  }
+
+  protected NextHopStrategy<MultiInetSocketAddress> getNextHopStrategy(      
+      TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl, 
+      LivenessProvider<SourceRoute<MultiInetSocketAddress>> livenessProvider, 
+      Pinger<SourceRoute<MultiInetSocketAddress>> pinger, 
+      TLPastryNode pn, 
+      MultiInetSocketAddress proxyAddress, 
+      MultiAddressSourceRouteFactory esrFactory) throws IOException {
+
+    return new LeafSetNHStrategy(pn.getLeafSet());    
+  }
+  
   protected PriorityTransportLayer<MultiInetSocketAddress> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     PriorityTransportLayer<MultiInetSocketAddress> priorityTL = 

@@ -49,6 +49,7 @@ import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
+import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.nat.FirewallTLImpl;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
@@ -63,6 +64,8 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.rendezvous.ResponseStrategy;
 import org.mpisws.p2p.transport.rendezvous.TimeoutResponseStrategy;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.sourceroute.factory.MultiAddressSourceRouteFactory;
+import org.mpisws.p2p.transport.sourceroute.manager.simple.NextHopStrategy;
 import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.Continuation;
@@ -95,6 +98,7 @@ import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;
 import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.standard.StandardRouter;
+import rice.pastry.transport.LeafSetNHStrategy;
 import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLPastryNode;
 
@@ -177,6 +181,18 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return ret;
   }
 
+  @Override
+  protected NextHopStrategy<MultiInetSocketAddress> getNextHopStrategy(      
+      TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl, 
+      LivenessProvider<SourceRoute<MultiInetSocketAddress>> livenessProvider, 
+      Pinger<SourceRoute<MultiInetSocketAddress>> pinger, 
+      TLPastryNode pn, 
+      MultiInetSocketAddress proxyAddress, 
+      MultiAddressSourceRouteFactory esrFactory) throws IOException {
+
+    return new RendezvousLeafSetNHStrategy(pn.getLeafSet());    
+  }
+  
   protected ResponseStrategy<InetSocketAddress> getResponseStrategy(TLPastryNode pn) {
     return new TimeoutResponseStrategy<InetSocketAddress>(3000, pn.getEnvironment());
   }
