@@ -280,8 +280,17 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 
   protected boolean destroyed = false;
   public void destroy() {
-    destroyed = true;
-    tl.destroy();    
+    if (destroyed) return;
+    if (environment.getSelectorManager().isSelectorThread()) {
+      destroyed = true;    
+      tl.destroy();    
+    } else {
+      environment.getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          destroy();
+        }        
+      });
+    }
   }
   
   protected EntityManager getEntityManager(Identifier i) {
