@@ -485,7 +485,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }    
       return ret;
     } catch (IOException ioe) {
-      if (logger.level <= Logger.INFO) {
+      if (logger.level <= Logger.FINE) {
         logger.logException(this+" error reading", ioe);
       } else if (logger.level <= Logger.WARNING) logger.log(this+" error reading");
       close();
