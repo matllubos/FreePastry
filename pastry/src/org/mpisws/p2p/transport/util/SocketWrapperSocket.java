@@ -129,21 +129,23 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
     }
 
     if (canRead) {      
-      if (reader == null) {
-        if (logger.level <= Logger.WARNING) logger.log("no reader in "+this+".rsr("+socket+","+canRead+","+canWrite+")");        
-      }
       P2PSocketReceiver<Identifier> temp = reader;
-      reader = null;
-      temp.receiveSelectResult(this, true, false);
+      if (temp== null) {
+        if (logger.level <= Logger.WARNING) logger.log("no reader in "+this+".rsr("+socket+","+canRead+","+canWrite+")");         
+      } else {
+        reader = null;
+        temp.receiveSelectResult(this, true, false);
+      }
     }
 
     if (canWrite) {      
-      if (writer == null) {
-        if (logger.level <= Logger.WARNING) logger.log("no writer in "+this+".rsr("+socket+","+canRead+","+canWrite+")");        
-      }
       P2PSocketReceiver<Identifier> temp = writer;
-      writer = null;
-      temp.receiveSelectResult(this, false, true);
+      if (temp == null) {
+        if (logger.level <= Logger.WARNING) logger.log("no writer in "+this+".rsr("+socket+","+canRead+","+canWrite+")");        
+      } else {
+        writer = null;
+        temp.receiveSelectResult(this, false, true);
+      }
     }
 
     

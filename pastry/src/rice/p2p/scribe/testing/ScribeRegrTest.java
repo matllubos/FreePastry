@@ -234,7 +234,7 @@ public class ScribeRegrTest extends CommonAPITest {
     boolean failed = false;
     for (int i=0; i < NUM_NODES/SKIP; i++) {
       if (clients[i].getPublishMessages().size() != NUM_MESSAGES) {
-        stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().size());
+        stepDone(FAILURE, "Expected client " + clients[i] + " to receive all "+NUM_MESSAGES+" messages, received " + clients[i].getPublishMessages().size());
         failed = true;
       }
     }
@@ -417,7 +417,7 @@ public class ScribeRegrTest extends CommonAPITest {
       boolean failed = false;
       for (int i=0; i < NUM_NODES/SKIP; i++) {
         if (clients[i].getPublishMessages().size() != NUM_MESSAGES*NUM_TOPICS) {
-          stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().size());
+          stepDone(FAILURE, "Expected client " + clients[i] + " to receive all "+NUM_MESSAGES*NUM_TOPICS+" messages, received " + clients[i].getPublishMessages().size());
           failed = true;
         }
       }
@@ -637,7 +637,7 @@ public class ScribeRegrTest extends CommonAPITest {
       boolean failed = false;
       for (int i=0; i < NUM_NODES/2; i++) {
         if (clients[i].getPublishMessages().size() != NUM_MESSAGES) {
-          stepDone(FAILURE, "Expected client " + clients[i] + " to receive all messages, received " + clients[i].getPublishMessages().size());
+          stepDone(FAILURE, "Expected client " + clients[i] + " to receive all "+NUM_MESSAGES+" messages, received " + clients[i].getPublishMessages().size());
           failed = true;
         }
       }
@@ -792,7 +792,7 @@ public class ScribeRegrTest extends CommonAPITest {
       if (logger.level <= Logger.INFO) logger.log("Killing " + nodes[i]);
       scribes[i].destroy();
       kill(i);
-      simulate();
+      simulate(5);
     }
 
     waitToRecoverFromKilling(scribes[0].MESSAGE_TIMEOUT);    
@@ -807,13 +807,13 @@ public class ScribeRegrTest extends CommonAPITest {
     
     for (int i = 0; i < NUM_MESSAGES; i++) {
       local.publish(topic, buildTestScribeContent(topic, i));
-      simulate();
+      simulate(5);
     }
 
     boolean failed = false;
     for (int i=NUM_NODES/2; i < NUM_NODES; i++) {
       if (clients[i].getPublishMessages().size() != NUM_MESSAGES) {
-        stepDone(FAILURE, "Expected client " + nodes[i] +":"+clients[i]+ " to receive all messages, received " + clients[i].getPublishMessages().size());
+        stepDone(FAILURE, "Expected client " + nodes[i] +":"+clients[i]+ " to receive all "+NUM_MESSAGES+" messages, received " + clients[i].getPublishMessages().size());
         failed = true;
       }
     }

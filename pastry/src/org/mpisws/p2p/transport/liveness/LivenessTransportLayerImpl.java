@@ -512,18 +512,21 @@ public class LivenessTransportLayerImpl<Identifier> implements
 
   List<LivenessListener<Identifier>> livenessListeners;
   public void addLivenessListener(LivenessListener<Identifier> name) {
+    if (destroyed) return;
     synchronized(livenessListeners) {
       livenessListeners.add(name);
     }
   }
 
   public boolean removeLivenessListener(LivenessListener<Identifier> name) {
+    if (destroyed) return true;
     synchronized(livenessListeners) {
       return livenessListeners.remove(name);
     }
   }
   
   private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Object> options) {
+    if (destroyed) return;
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+")");
     List<LivenessListener<Identifier>> temp;
 
