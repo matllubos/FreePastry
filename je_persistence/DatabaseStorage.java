@@ -35,6 +35,22 @@ advised of the possibility of such damage.
 
 *******************************************************************************/ 
 
+/*******************************************************************************
+
+This file depends on Oracle Berkeley DB Java Edition, formerly SleepyCat
+Berkeley DB Java Edition.
+
+You can download je.jar from 
+
+http://www.oracle.com/database/berkeley-db/je/index.html
+
+Oracle Berkeley DB Java Edition is licensed under the following terms:
+
+http://www.oracle.com/technology/software/products/berkeley-db/htdocs/jeoslicense.html
+
+*******************************************************************************/
+
+
 package rice.persistence;
 
 import java.io.BufferedInputStream;
