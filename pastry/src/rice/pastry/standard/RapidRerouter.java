@@ -224,7 +224,7 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
           if (logger.level <= Logger.FINE) {
             logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
           } else {
-            if (logger.level <= Logger.WARNING) {
+            if (logger.level <= Logger.INFO) {
               if (msg.getIdentifier() == null) {
                 logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier()+" "+reason+" identifier was null!!!", new Exception("Stack Trace"));
               } else {
@@ -246,13 +246,13 @@ public class RapidRerouter extends StandardRouter implements LivenessListener<No
       }
       
       if (removeFromPending(this, dest)) {
-        if (logger.level <= Logger.WARNING) logger.logException("Send failed on message "+rm+" to "+dest+" rerouting."+msg, reason);
+        if (logger.level <= Logger.INFO) logger.logException("Send failed on message "+rm+" to "+dest+" rerouting."+msg, reason);
         rerouteMe(rm, dest, reason);
       } else {        
         if (rm.sendFailed(reason)) {
           if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);
         } else {
-          if (logger.level <= Logger.WARNING) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);          
+          if (logger.level <= Logger.INFO) logger.logException("sendFailed("+msg.getMessage()+")=>"+msg.getIdentifier(), reason);          
         }
       }
     }

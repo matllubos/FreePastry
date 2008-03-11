@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.rendezvous;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -822,6 +823,11 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     
       public void receiveException(SocketRequestHandle<Identifier> s,
           Exception ex) {
+        if (ex instanceof BindException) {
+          // Address already in use: no further information
+          openAcceptSocket(requestor, middleMan, uid);
+          return;
+        }
         if (logger.level <= Logger.WARNING) logger.logException("Failure opening socket in openAcceptSocket("+requestor+","+middleMan+","+uid+")", ex);
       }
     }, OptionsFactory.addOption(null, RENDEZVOUS_CONTACT_STRING, requestor));

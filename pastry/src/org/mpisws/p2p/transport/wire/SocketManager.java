@@ -487,7 +487,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     } catch (IOException ioe) {
       if (logger.level <= Logger.FINE) {
         logger.logException(this+" error reading", ioe);
-      } else if (logger.level <= Logger.WARNING) logger.log(this+" error reading");
+      } else if (logger.level <= Logger.INFO) logger.log(this+" error reading");
       close();
       throw ioe;
     }
@@ -511,9 +511,9 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       return ret;
     } catch (IOException ioe) {
-      if (logger.level <= Logger.FINE) {
+      if (logger.level <= Logger.FINER) {
         logger.logException(this+" error writing", ioe);        
-      } else if (logger.level <= Logger.WARNING) logger.log(this+" error writing");
+      } else if (logger.level <= Logger.FINE) logger.log(this+" error writing");
       close();
       throw ioe;
     }      

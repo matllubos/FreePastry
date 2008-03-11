@@ -89,13 +89,7 @@ public class RendezvousRouterStrategy implements RouterStrategy {
     
     if (bestRating > 3) {
       if (logger.level <= Logger.INFO) logger.log("Can't find route for "+msg);
-      
-      // delme
-      if (msg.internalMsg != null && (! (msg.internalMsg instanceof rice.pastry.socket.nat.rendezvous.ByteBufferMsg))) {
-        logger.log("NoRoute2 "+msg);
-      }
-      // \delme
-      
+            
       /*
          This is needed to prevent problems before the leafset is built, or in the case that the entire leafset is not connectable.
          Just fail if there is no chance.

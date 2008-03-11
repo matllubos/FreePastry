@@ -62,7 +62,7 @@ public class DefaultErrorHandler<Identifier> implements
   }
   
   public void receivedUnexpectedData(Identifier id, byte[] bytes, int pos, Map<String, Object> options) {
-    if (logger.level <= Logger.WARNING) {
+    if (logger.level <= Logger.INFO) {
       // make this pretty
       String s = "";
       int numBytes = NUM_BYTES_TO_PRINT;
@@ -75,7 +75,7 @@ public class DefaultErrorHandler<Identifier> implements
   }
 
   public void receivedException(Identifier i, Throwable error) {
-    if (logger.level <= Logger.WARNING) {      
+    if (logger.level <= Logger.INFO) {      
       logger.logException(i == null ? null : i.toString(), error);
 //      logger.logException("here I am", new Exception("ErrorHandlerCall"));
     }

@@ -481,7 +481,9 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         queue.clear();
         messageThatIsBeingWritten = null;
       }
-      synchronized(this) {  
+      synchronized(EntityManager.this) {  
+        if (logger.level <= logger.INFO) logger.log(EntityManager.this+".clearState() setting pendingSocket to null "+pendingSocket);
+
         if (pendingSocket != null) {
           pendingSocket.cancel();
           stopLivenessChecker();
@@ -529,9 +531,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       if (logger.level <= Logger.FINE) logger.log("primarySocketAvailable("+s+","+receipt+")");
       
       // set pendingSocket to null if possible
-      synchronized(this) {
+      synchronized(EntityManager.this) {
         if (receipt != null) {
           if (receipt == pendingSocket) {
+            if (logger.level <= logger.INFO) logger.log(EntityManager.this+".primarySocketAvailable setting pendingSocket to null "+pendingSocket);
             stopLivenessChecker();
             if (logger.level <= Logger.FINE) logger.log("got socket:"+s+" clearing pendingSocket:"+pendingSocket);
             pendingSocket = null;  // this is the one we requested
@@ -607,12 +610,14 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         
         final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
           public boolean cancel() {
-            cancelLivenessChecker(i);
+            getEntityManager(i).receiveSocketException(this, new org.mpisws.p2p.transport.ClosedChannelException("Channel cancelled."));
             return super.cancel();
           }
         };
 
+        if (logger.level <= Logger.INFO) logger.log(EntityManager.this+".openPrimarySocketHelper() setting pendingSocket to "+handle);
         pendingSocket = handle;
+        startLivenessChecker(i, options);
         
         handle.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>() {
           public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sock) {
@@ -628,7 +633,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
                 if (canRead || !canWrite) throw new IllegalArgumentException("expected to write!  canRead:"+canRead+" canWrite:"+canWrite);
                 if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
 //                if (logger.level <= Logger.FINE) logger.log("Opened Primary socket "+socket+" to "+i);
-                cancelLivenessChecker(i);
+//                cancelLivenessChecker(i);
                 if (socket.write(writeMe) == -1) {
                   cancelLivenessChecker(i);
                   getEntityManager(socket.getIdentifier()).receiveSocketException(handle, new org.mpisws.p2p.transport.ClosedChannelException("Channel closed while writing."));
@@ -642,7 +647,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
               }        
               
               public void receiveException(P2PSocket<Identifier> socket, Exception e) {
-                cancelLivenessChecker(i);
+//                cancelLivenessChecker(i);
                 getEntityManager(socket.getIdentifier()).receiveSocketException(handle, e);
               }
               
@@ -660,7 +665,6 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           }
         }, options));
 
-        startLivenessChecker(i, options);
       }
     }
     
@@ -675,8 +679,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         livenessChecker = new TimerTask() {        
           @Override
           public void run() {            
-            stopLivenessChecker(); // sets livenssChecker back to null
-            if (destroyed) return;
+            synchronized(EntityManager.this) {
+              if (cancelled) return;
+              stopLivenessChecker(); // sets livenssChecker back to null
+              if (destroyed) return;
 //            Map<String, Object> options;
 //            MessageWrapper peek = peek();
 //            if (peek != null) {
@@ -684,10 +690,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //            } else {
 //              options = this.options;
 //            }
-            livenessProvider.checkLiveness(temp, options);        
+              livenessProvider.checkLiveness(temp, options);        
 
             // if this throws a NPE, there is a bug, cause this should have been cancelled if pendingSocket == null
-            synchronized(this) {
+              if (logger.level <= logger.INFO) logger.log(EntityManager.this+".liveness checker setting pendingSocket to null "+pendingSocket);
               pendingSocket.cancel();  
               pendingSocket = null;
             }
@@ -813,10 +819,12 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //        markDead();
 //        return; 
 //      }
-      synchronized(this) {
+      synchronized(EntityManager.this) {
         if (handle == pendingSocket) {        
-          pendingSocket = null; 
+          if (logger.level <= logger.INFO) logger.log(EntityManager.this+".receiveSocketException setting pendingSocket to null "+pendingSocket);
+
           stopLivenessChecker();
+          pendingSocket = null; 
         }
       }
       scheduleToWriteIfNeeded();
@@ -886,12 +894,14 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         sockets.clear();
       }
       setWritingSocket(null/*, "purge"*/);
-      synchronized(this) {
+      synchronized(EntityManager.this) {
+        if (logger.level <= logger.INFO) logger.log(EntityManager.this+".purge setting pendingSocket to null "+pendingSocket);
         if (pendingSocket != null) {
           stopLivenessChecker();
   //        logger.log("cancelling "+pendingSocket);
           pendingSocket.cancel();
         }
+
         pendingSocket = null;
       }
     }
@@ -1218,7 +1228,19 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           return;
         }
         
-        if (!(e instanceof NodeIsFaultyException)) {
+        boolean printError = true;
+        
+        if (e instanceof NodeIsFaultyException) {
+          printError = false;
+        }
+        
+        if (e instanceof IOException) {
+          if (e.getMessage().equals("An established connection was aborted by the software in your host machine")) {
+            printError = false;
+          }
+        }
+        
+        if (printError) {
           errorHandler.receivedException(socket.getIdentifier(), e);
         }
         closeMe(socket);

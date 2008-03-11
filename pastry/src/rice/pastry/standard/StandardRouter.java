@@ -188,12 +188,6 @@ public class StandardRouter extends PastryAppl implements Router {
         // no idea how to contact the destination, drop
         if (logger.level <= Logger.FINE) logger.log("Message "+rm+" has destination "+rm.getDestinationHandle()+" but I'm the root of the id.  Dropping.  This could happen if the destination has died while the route message was in transit, or if the local node does not yet have logging state because it is boostrapping.");
 
-        // delme
-        if (rm.internalMsg != null && (! (rm.internalMsg instanceof rice.pastry.socket.nat.rendezvous.ByteBufferMsg))) {
-          logger.log("NoRoute "+rm);
-        }
-        // \delme
-        
         rm.sendFailed(new NoRouteToHostException(rm.getDestinationHandle().toString()));
         return true;
       }
@@ -218,7 +212,7 @@ public class StandardRouter extends PastryAppl implements Router {
           if (logger.level <= Logger.FINE) {
             logger.logException("sendFailed("+rm+")=>"+handle, reason);                      
           } else {
-            if (logger.level <= Logger.WARNING) logger.log("sendFailed("+rm+")=>"+handle+" "+reason);          
+            if (logger.level <= Logger.INFO) logger.log("sendFailed("+rm+")=>"+handle+" "+reason);          
           }
         }
       }    
