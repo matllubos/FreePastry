@@ -46,7 +46,7 @@ import java.util.*;
  */
 public class ProcessingQueue {
   
-  List q = new LinkedList();
+  List<ProcessingRequest> q = new LinkedList<ProcessingRequest>();
   int capacity = -1;
   volatile boolean running = true;
   
@@ -90,6 +90,23 @@ public class ProcessingQueue {
   }
   
   public class ProcessingQueueOverflowException extends Exception {
+  }
+  
+  public String toString() {
+    synchronized(this) {
+      Map<Class,Integer> count = new HashMap<Class, Integer>();
+      for (ProcessingRequest pr : q) {
+        if (!count.containsKey(pr.r.getClass())) {
+          count.put(pr.r.getClass(), 0);
+        }
+        count.put(pr.r.getClass(), count.get(pr.r.getClass())+1);        
+      }
+      String s = "";
+      for(Class c : count.keySet()) {
+        s+=c.getName()+":"+count.get(c)+" ";
+      }
+      return s;
+    }
   }
 }
 

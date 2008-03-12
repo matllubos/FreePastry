@@ -96,6 +96,7 @@ import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
+import rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
@@ -124,7 +125,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
 //    params.setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
 //    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
-    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
+//    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINEST);
@@ -414,7 +415,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         env = new Environment();
       }
 
-      setupParams(env.getParameters());
+      Parameters p = env.getParameters(); 
+      setupParams(p);
+
+      p.setBoolean("rendezvous_test_firewall", true);
+      // should require boot node to not be firewalled
+      p.setBoolean("rendezvous_test_makes_bootstrap", isBootNode);
+      p.setFloat("rendezvous_test_num_firewalled", 0.3f);
       
       // Generate the NodeIds Randomly
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -422,7 +429,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       final ArrayList<RecordLayer<InetSocketAddress>> historyHolder = new ArrayList<RecordLayer<InetSocketAddress>>();
 
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-      SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
+      SocketPastryNodeFactory factory = new RendezvousSocketPastryNodeFactory(nidFactory, bindport, env)
+//      SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
       {
         @Override
         protected RandomSource cloneRandomSource(Environment rootEnvironment, Id nodeId, LogManager lman) {
@@ -896,7 +904,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
           }
           if ((up.containsKey(i.getAddress()) && !up.get(i.getAddress()).equals(i))) {
             System.out.println("livenessChanged different node:"+up.get(i.getAddress()));
-            new Exception("Stack Trace").printStackTrace();
+//            new Exception("Stack Trace").printStackTrace();
         }
           up.put((MultiInetSocketAddress)i.getAddress(), i);
           lastVal.put(i, val);

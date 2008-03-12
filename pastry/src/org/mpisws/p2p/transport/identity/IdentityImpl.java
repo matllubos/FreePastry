@@ -211,7 +211,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    */
   public void setDeadForever(LowerIdentifier l, UpperIdentifier i, Map<String, Object> options) {
     if (deadForever.contains(i)) return;
-    if (logger.level <= Logger.INFO) logger.logException("setDeadForever("+l+","+i+","+options+")",new Exception("Stack Trace"));
+    if (logger.level <= Logger.FINER) logger.logException("setDeadForever("+l+","+i+","+options+")",new Exception("Stack Trace"));
     deadForever.add(i);
 //    try {
 //      logger.log("setDeadForever("+l+","+i+","+(options == null)+"):overL:"+overrideLiveness);
