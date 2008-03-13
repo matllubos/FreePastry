@@ -39,15 +39,18 @@ advised of the possibility of such damage.
  */
 package rice.environment.processing.simple;
 
+import java.util.concurrent.PriorityBlockingQueue;
+
 /**
  * @author Jeff Hoye
  */
 public class ProcessingThread extends Thread {
-  ProcessingQueue queue;
-   
+  
+   PriorityBlockingQueue<ProcessingRequest> queue;
+		   
   volatile boolean running = false;
   
-   public ProcessingThread(String name, ProcessingQueue queue){
+   public ProcessingThread(String name, PriorityBlockingQueue<ProcessingRequest> queue){
      super(name);
      this.queue = queue;
    }
@@ -55,8 +58,11 @@ public class ProcessingThread extends Thread {
    public void run() {
      running = true;
      while (running) {
-       ProcessingRequest e = queue.dequeue(); 
-       if (e != null) e.run();
+		try{
+		   ProcessingRequest e = queue.take(); 
+		   if (e != null) e.run();
+		}
+		catch(java.lang.InterruptedException ie){;}
      }
    }
    

@@ -46,12 +46,15 @@ import rice.environment.processing.Processor;
 import rice.environment.time.TimeSource;
 import rice.selector.SelectorManager;
 
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.Queue;
+
 /**
  * @author Jeff Hoye
  */
 public class SimpleProcessor implements Processor {
   // the queue used for processing requests
-  private ProcessingQueue QUEUE;
+  private PriorityBlockingQueue<ProcessingRequest> QUEUE;
   private ProcessingThread THREAD;
 
   // for blocking IO WorkRequests
@@ -59,7 +62,7 @@ public class SimpleProcessor implements Processor {
   private BlockingIOThread bioThread;
   
   public SimpleProcessor(String name) {
-    QUEUE = new ProcessingQueue();
+    QUEUE = new PriorityBlockingQueue<ProcessingRequest>();
     THREAD = new ProcessingThread(name+".ProcessingThread",QUEUE);
     THREAD.start();
     THREAD.setPriority(Thread.MIN_PRIORITY);    
@@ -77,21 +80,26 @@ public class SimpleProcessor implements Processor {
    * @param command The command to return the result to once it's done
    */
   public void process(Executable task, Continuation command, SelectorManager selector, TimeSource ts, LogManager log) {
-    QUEUE.enqueue(new ProcessingRequest(task, command, log, ts, selector));
+	process(task,command, 0, selector, ts,log);
   }
+  
+  public void process(Executable task, Continuation command, int priority, SelectorManager selector, TimeSource ts, LogManager log) {
+    QUEUE.offer(new ProcessingRequest(task, command, priority, log, ts, selector));
+  }
+
 
   public void processBlockingIO(WorkRequest workRequest) {
     workQueue.enqueue(workRequest);
   }
   
   
-  public ProcessingQueue getQueue() {
+  public Queue<ProcessingRequest> getQueue() {
     return QUEUE;
   }
   
   public void destroy() {
     THREAD.destroy();
-    QUEUE.destroy();
+    QUEUE.clear();
     bioThread.destroy();
     workQueue.destroy();
   }

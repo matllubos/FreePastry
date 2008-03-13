@@ -47,21 +47,23 @@ import rice.selector.SelectorManager;
 /**
  * @author Jeff Hoye
  */
-public class ProcessingRequest implements Runnable {
+public class ProcessingRequest implements Runnable, Comparable<ProcessingRequest> {
   Continuation c;
   Executable r;
   
   TimeSource timeSource;
   SelectorManager selectorManager;
   Logger logger;
+  int priority=0;
   
-  public ProcessingRequest(Executable r, Continuation c, LogManager logging, TimeSource timeSource, SelectorManager selectorManager ){
+  public ProcessingRequest(Executable r, Continuation c, int priority, LogManager logging, TimeSource timeSource, SelectorManager selectorManager ){
     this.r = r;
     this.c = c;
     
     logger = logging.getLogger(getClass(), null);
     this.timeSource = timeSource;
     this.selectorManager = selectorManager;
+	this.priority = priority;
   }
   
   public void returnResult(Object o) {
@@ -70,6 +72,14 @@ public class ProcessingRequest implements Runnable {
   
   public void returnError(Exception e) {
     c.receiveException(e); 
+  }
+  
+  public int getPriority(){
+	  return priority;
+  }
+  
+  public int compareTo(ProcessingRequest request){
+	  return priority - request.getPriority();
   }
   
   public void run() {
