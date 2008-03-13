@@ -70,6 +70,7 @@ public interface Processor extends Destructable {
    * of the underlying node's thread, and should only be done via this method.  The continuation will
    * be called on the Selector thread. Passes a priority that will be respected if possible.  
    *
+   * @param priority higher number is higher priority, 0 is default priority, and negative numbers are low priority
    * @param task The task to run on the processing thread
    * @param command The command to return the result to once it's done
    */

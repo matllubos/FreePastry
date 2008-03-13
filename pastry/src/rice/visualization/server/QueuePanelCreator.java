@@ -36,7 +36,9 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.visualization.server;
 
+import java.util.Queue;
 import java.util.Vector;
+import java.util.concurrent.PriorityBlockingQueue;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -53,17 +55,17 @@ public class QueuePanelCreator implements PanelCreator {
   Vector invocations = new Vector();
   Vector times = new Vector();
   
-  protected ProcessingQueue processingQ;
+  protected Queue<ProcessingRequest> processingQ;
   protected WorkQueue persistenceQ;
   
   protected Environment environment;
   
   /**
-   * Lazilly constructed.
+   * Lazily constructed.
    */
   protected Logger logger;  
   
-  public QueuePanelCreator(Environment env, ProcessingQueue processingQ, WorkQueue persistenceQ) {
+  public QueuePanelCreator(Environment env, Queue<ProcessingRequest> processingQ, WorkQueue persistenceQ) {
     this.processingQ = processingQ;
     this.persistenceQ = persistenceQ;
     this.environment = env;
@@ -158,7 +160,7 @@ public class QueuePanelCreator implements PanelCreator {
   
   protected synchronized void updateData() {
     try {
-      processing.add(new Double((double) processingQ.getLength()));
+      processing.add(new Double((double) processingQ.size()));
       persistence.add(new Double((double) persistenceQ.getLength()));
       invocations.add(new Double((double) environment.getSelectorManager().getNumInvocations()));
       times.add(new Long(environment.getTimeSource().currentTimeMillis()));

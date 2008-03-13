@@ -87,18 +87,18 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
       @Override
       public boolean cancel() {
-        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+this+".cancel()");
+        if (logger.level <= Logger.FINER) logger.log(this+".openSocket("+i+","+deliverSocketToMe+"):"+this+".cancel()");
         return super.cancel();
       }      
     };
     
     ret.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
-        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveResult()");
+        if (logger.level <= Logger.FINER) logger.log(this+".openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveResult()");
         deliverSocketToMe.receiveResult(ret, getLSSock(sock));
       }
       public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
-        if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveException()");
+        if (logger.level <= Logger.FINER) logger.log(this+".openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveException()");
         deliverSocketToMe.receiveException(ret, ex);
       }
     }, options));
@@ -191,7 +191,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
 
     @Override
     public String toString() {
-      return "LSSocket<"+identifier+">["+(closed?"closed":"open")+"]@"+System.identityHashCode(this);
+      return LimitSocketsTransportLayer.this.toString()+"$LSSocket<"+identifier+">["+(closed?"closed":"open")+"]@"+System.identityHashCode(this);
     }
   }
   
@@ -204,6 +204,10 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     }
   }
 
+  public String toString() {
+    return "LimitSocks<"+cache.size()+">";
+  }
+  
   public void acceptMessages(boolean b) {
     tl.acceptMessages(b);
   }

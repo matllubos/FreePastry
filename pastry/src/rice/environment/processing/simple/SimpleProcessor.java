@@ -80,7 +80,7 @@ public class SimpleProcessor implements Processor {
    * @param command The command to return the result to once it's done
    */
   public void process(Executable task, Continuation command, SelectorManager selector, TimeSource ts, LogManager log) {
-	process(task,command, 0, selector, ts,log);
+	  process(task,command, 0, selector, ts,log);
   }
   
   public void process(Executable task, Continuation command, int priority, SelectorManager selector, TimeSource ts, LogManager log) {

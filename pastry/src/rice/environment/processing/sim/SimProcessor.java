@@ -58,7 +58,7 @@ public class SimProcessor implements Processor {
   }
   
   public void process(Executable task, Continuation command, int priority, SelectorManager selector, TimeSource ts, LogManager log) {
-    selector.invoke(new ProcessingRequest(task, command, log, ts, selector));
+    selector.invoke(new ProcessingRequest(task, command,0, log, ts, selector));
   }
 
 
