@@ -630,7 +630,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
       if (!cancelled) {
         if (tries > 1) {
           long delay = time.currentTimeMillis()-startTime;
-          if (logger.level <= Logger.INFO) logger.log(
+          if (logger.level <= Logger.FINE) logger.log(
               "DeadChecker.pingResponse("+manager.identifier.get()+") tries="+tries+
               " estimated="+initialDelay+" totalDelay="+delay);        
         }
