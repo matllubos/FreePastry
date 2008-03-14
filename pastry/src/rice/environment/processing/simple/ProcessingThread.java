@@ -33,7 +33,7 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
-*******************************************************************************/ 
+ *******************************************************************************/
 /*
  * Created on Aug 9, 2005
  */
@@ -45,17 +45,18 @@ import java.util.concurrent.PriorityBlockingQueue;
  * @author Jeff Hoye
  */
 public class ProcessingThread extends Thread {
-  
-   PriorityBlockingQueue<ProcessingRequest> queue;
-		   
-   volatile boolean running = false;
-  
-   public ProcessingThread(String name, PriorityBlockingQueue<ProcessingRequest> queue){
-     super(name);
-     this.queue = queue;
-   }
-   
-   public void run() {
+
+  PriorityBlockingQueue<ProcessingRequest> queue;
+
+  volatile boolean running = false;
+
+  public ProcessingThread(String name,
+      PriorityBlockingQueue<ProcessingRequest> queue) {
+    super(name);
+    this.queue = queue;
+  }
+
+  public void run() {
     running = true;
     while (running) {
       try {
@@ -67,10 +68,9 @@ public class ProcessingThread extends Thread {
       }
     }
   }
-   
-   @SuppressWarnings("deprecation")
-   public void destroy() {
-     running = false;
-   }
-} 
 
+  @SuppressWarnings("deprecation")
+  public void destroy() {
+    running = false;
+  }
+}

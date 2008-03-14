@@ -40,6 +40,8 @@ advised of the possibility of such damage.
 package rice.selector;
 
 /**
+ * This is normally installed 
+ * 
  * @author Jeff Hoye
  */
 public interface LoopObserver {

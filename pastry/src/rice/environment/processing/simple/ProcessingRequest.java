@@ -33,7 +33,7 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
-*******************************************************************************/ 
+ *******************************************************************************/
 /*
  * Created on Aug 9, 2005
  */
@@ -47,53 +47,59 @@ import rice.selector.SelectorManager;
 /**
  * @author Jeff Hoye
  */
-public class ProcessingRequest implements Runnable, Comparable<ProcessingRequest> {
+public class ProcessingRequest implements Runnable,
+    Comparable<ProcessingRequest> {
   Continuation c;
   Executable r;
-  
+
   TimeSource timeSource;
   SelectorManager selectorManager;
   Logger logger;
-  int priority=0;
-  
-  public ProcessingRequest(Executable r, Continuation c, int priority, LogManager logging, TimeSource timeSource, SelectorManager selectorManager ){
+  int priority = 0;
+
+  public ProcessingRequest(Executable r, Continuation c, int priority,
+      LogManager logging, TimeSource timeSource, SelectorManager selectorManager) {
     this.r = r;
     this.c = c;
-    
+
     logger = logging.getLogger(getClass(), null);
     this.timeSource = timeSource;
     this.selectorManager = selectorManager;
-	this.priority = priority;
+    this.priority = priority;
   }
-  
+
   public void returnResult(Object o) {
-    c.receiveResult(o); 
+    c.receiveResult(o);
   }
-  
+
   public void returnError(Exception e) {
-    c.receiveException(e); 
+    c.receiveException(e);
   }
-  
-  public int getPriority(){
-	  return priority;
+
+  public int getPriority() {
+    return priority;
   }
-  
-  public int compareTo(ProcessingRequest request){
-	  return priority - request.getPriority();
+
+  public int compareTo(ProcessingRequest request) {
+    return priority - request.getPriority();
   }
-  
+
   public void run() {
-    if (logger.level <= Logger.FINER) logger.log("COUNT: Starting execution of " + this);
+    if (logger.level <= Logger.FINER)
+      logger.log("COUNT: Starting execution of " + this);
     try {
-    long start = timeSource.currentTimeMillis();
+      long start = timeSource.currentTimeMillis();
       final Object result = r.execute();
-      if (logger.level <= Logger.FINEST) logger.log("QT: " + (timeSource.currentTimeMillis() - start) + " " + r.toString());
+      if (logger.level <= Logger.FINEST)
+        logger.log("QT: " + (timeSource.currentTimeMillis() - start) + " "
+            + r.toString());
 
       selectorManager.invoke(new Runnable() {
         public void run() {
           returnResult(result);
         }
-        public String toString(){
+
+        public String toString() {
           return "return ProcessingRequest for " + r + " to " + c;
         }
       });
@@ -102,12 +108,13 @@ public class ProcessingRequest implements Runnable, Comparable<ProcessingRequest
         public void run() {
           returnError(e);
         }
-        public String toString(){
+
+        public String toString() {
           return "return ProcessingRequest for " + r + " to " + c;
         }
       });
     }
-    if (logger.level <= Logger.FINER) logger.log("COUNT: Done execution of " + this);      
+    if (logger.level <= Logger.FINER)
+      logger.log("COUNT: Done execution of " + this);
   }
 }
-

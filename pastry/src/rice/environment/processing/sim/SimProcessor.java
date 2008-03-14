@@ -33,7 +33,7 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
-*******************************************************************************/ 
+ *******************************************************************************/
 /*
  * Created on Feb 6, 2006
  */
@@ -48,19 +48,20 @@ import rice.selector.SelectorManager;
 
 public class SimProcessor implements Processor {
   SelectorManager selector;
-  
+
   public SimProcessor(SelectorManager selector) {
     this.selector = selector;
   }
 
-  public void process(Executable task, Continuation command, SelectorManager selector, TimeSource ts, LogManager log) {
-	   process(task, command,0, selector, ts, log);
-  }
-  
-  public void process(Executable task, Continuation command, int priority, SelectorManager selector, TimeSource ts, LogManager log) {
-    selector.invoke(new ProcessingRequest(task, command,0, log, ts, selector));
+  public void process(Executable task, Continuation command,
+      SelectorManager selector, TimeSource ts, LogManager log) {
+    process(task, command, 0, selector, ts, log);
   }
 
+  public void process(Executable task, Continuation command, int priority,
+      SelectorManager selector, TimeSource ts, LogManager log) {
+    selector.invoke(new ProcessingRequest(task, command, 0, log, ts, selector));
+  }
 
   public void processBlockingIO(WorkRequest request) {
     selector.invoke(request);
