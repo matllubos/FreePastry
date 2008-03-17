@@ -51,6 +51,7 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayer;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
+import org.mpisws.p2p.transport.wire.WireTransportLayer;
 
 import rice.Continuation;
 import rice.environment.logging.Logger;
@@ -293,9 +294,12 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       final RendezvousSocketNodeHandle i, 
       final ByteBuffer m, 
       final MessageCallback<RendezvousSocketNodeHandle, ByteBuffer> deliverAckToMe, 
-      final Map<String, Object> options) {
+      Map<String, Object> ops) {
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
     // TODO: use the new method in PastryAppl
+    
+    // pull USE_UDP, because that's not going to happen
+    final Map<String, Object> options = OptionsFactory.removeOption(ops, WireTransportLayer.OPTION_TRANSPORT_TYPE);
     
     int priority = 0;
     if (options.containsKey(PriorityTransportLayer.OPTION_PRIORITY)) {

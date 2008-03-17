@@ -60,6 +60,8 @@ public class SimpleProcessor implements Processor {
   // for blocking IO WorkRequests
   private WorkQueue workQueue;
   private BlockingIOThread bioThread;
+  
+  long seq = Long.MIN_VALUE;
 
   public SimpleProcessor(String name) {
     QUEUE = new PriorityBlockingQueue<ProcessingRequest>();
@@ -89,7 +91,11 @@ public class SimpleProcessor implements Processor {
 
   public void process(Executable task, Continuation command, int priority,
       SelectorManager selector, TimeSource ts, LogManager log) {
-    QUEUE.offer(new ProcessingRequest(task, command, priority, log, ts,
+    long nextSeq;
+    synchronized(SimpleProcessor.this) {
+      nextSeq = seq++;
+    }
+    QUEUE.offer(new ProcessingRequest(task, command, priority, nextSeq, log, ts,
         selector));
   }
 

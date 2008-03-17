@@ -56,8 +56,9 @@ public class ProcessingRequest implements Runnable,
   SelectorManager selectorManager;
   Logger logger;
   int priority = 0;
+  long seq;
 
-  public ProcessingRequest(Executable r, Continuation c, int priority,
+  public ProcessingRequest(Executable r, Continuation c, int priority, long seq,
       LogManager logging, TimeSource timeSource, SelectorManager selectorManager) {
     this.r = r;
     this.c = c;
@@ -66,6 +67,7 @@ public class ProcessingRequest implements Runnable,
     this.timeSource = timeSource;
     this.selectorManager = selectorManager;
     this.priority = priority;
+    this.seq = seq;
   }
 
   public void returnResult(Object o) {
@@ -81,6 +83,9 @@ public class ProcessingRequest implements Runnable,
   }
 
   public int compareTo(ProcessingRequest request) {
+    if (priority == request.getPriority()) {
+      return (int)(seq-request.seq);
+    }
     return priority - request.getPriority();
   }
 

@@ -72,4 +72,11 @@ public class OptionsFactory {
     }
     return ret;
   }
+  
+  public static Map<String, Object> removeOption(Map<String, Object> options,
+      String option) {
+    Map<String, Object> ret = copyOptions(options);
+    ret.remove(option);
+    return ret;
+  }
 }
