@@ -45,6 +45,8 @@ import rice.environment.time.TimeSource;
 import rice.selector.SelectorManager;
 
 /**
+ * Scheduling with a lower priority number will be executed first (is higher Priority)
+ * 
  * @author Jeff Hoye
  */
 public class ProcessingRequest implements Runnable,
@@ -122,4 +124,5 @@ public class ProcessingRequest implements Runnable,
     if (logger.level <= Logger.FINER)
       logger.log("COUNT: Done execution of " + this);
   }
+  
 }

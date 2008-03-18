@@ -40,9 +40,9 @@ advised of the possibility of such damage.
 package rice.environment.processing.simple;
 
 import rice.*;
+import rice.environment.Environment;
 import rice.environment.logging.LogManager;
 import rice.environment.processing.*;
-import rice.environment.processing.Processor;
 import rice.environment.time.TimeSource;
 import rice.selector.SelectorManager;
 
@@ -116,5 +116,52 @@ public class SimpleProcessor implements Processor {
 
   public WorkQueue getIOQueue() {
     return workQueue;
+  }
+  
+  /**
+   * This is a test to make sure the order is correct.
+   */
+  public static void main(String[] args) throws Exception {
+    Environment env = new Environment();
+    Processor p = env.getProcessor();
+    // block the processor for 1 second while we schedule some more stuff
+    p.process(new Executable() {    
+      public Object execute() {
+        try { Thread.sleep(1000); } catch (InterruptedException ie) {}
+        return null;
+      }
+    
+    }, new Continuation() {
+    
+      public void receiveResult(Object result) {
+        System.out.println("Done blocking.");
+      }
+    
+      public void receiveException(Exception exception) {
+        exception.printStackTrace();
+      }
+    
+    }, env.getSelectorManager(), env.getTimeSource(), env.getLogManager());
+    
+    for (int seq = 0; seq < 10; seq++) {
+      final int mySeq = seq;
+      p.process(new Executable() {    
+        public Object execute() {
+          System.out.println("Executed Seq: "+mySeq);
+          return null;
+        }
+      
+      }, new Continuation() {      
+        public void receiveResult(Object result) {
+          System.out.println("Received Seq: "+mySeq);
+        }
+      
+        public void receiveException(Exception exception) {
+          exception.printStackTrace();
+        }
+      
+      }, env.getSelectorManager(), env.getTimeSource(), env.getLogManager());      
+      System.out.println("Done scheduling "+mySeq);    
+    }
   }
 }
