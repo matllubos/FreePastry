@@ -136,6 +136,13 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
 
   boolean failed = false;
   
+  public static final int MAX_FILE_CHUNKS_IN_MEMORY = 100;
+  /**
+   * Synchronized by only being mutated/checked on selector thread
+   * can be reading when < MAX_PENDING_CHUNKS, allowed to be greater
+   */
+  public int fileChunksInMemory = 0;
+  
   public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy fileAllocater, Environment env) {
     this.socket = socket;
     this.callback = callback;
@@ -895,10 +902,35 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
         // keep reading
         while(reader.read(socket));
         // always be reading
-        socket.register(true, false, -1, this);
+        registerToReadIfPossible();
       } catch (IOException ioe) {
         receiveException(socket, ioe);
       }
+    }
+  }
+
+  protected void incrementFileChunksInMemory() {
+    if (!environment.getSelectorManager().isSelectorThread()) throw new IllegalStateException("Must be called on selector thread to maintain sync.");
+    fileChunksInMemory++;
+  }
+  protected void decrementFileChunksInMemory() {
+    if (!environment.getSelectorManager().isSelectorThread()) throw new IllegalStateException("Must be called on selector thread to maintain sync.");
+    fileChunksInMemory--;
+    registerToReadIfPossible();
+  }
+  
+//  boolean readRegister = true;
+  public void registerToReadIfPossible() {
+    if (!environment.getSelectorManager().isSelectorThread()) throw new IllegalStateException("Must be called on selector thread to maintain sync.");
+    if (fileChunksInMemory < MAX_FILE_CHUNKS_IN_MEMORY) {
+//      if (!readRegister) {
+//        logger.log("registering to read "+fileChunksInMemory);
+//      }
+      socket.register(true, false, -1, this);
+//      readRegister = true;
+    } else {
+//      logger.log("not registering to read "+fileChunksInMemory);
+//      readRegister = false;
     }
   }
   
@@ -1272,11 +1304,13 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       }
       if (curReader.hasRemaining()) {
         return false;
-      }
+      }      
       completeChunk();
+      
+      // if there are too many workRequests, turn off read interest (don't schedule another reader)
       return true;
     }
-    
+
     public void completeChunk() {
       curReader.flip();
       
@@ -1284,13 +1318,14 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       final byte[] writeMe = new byte[curReader.remaining()];
       curReader.get(writeMe);
       curReader.clear();
-      
+      incrementFileChunksInMemory();
       // schedule them to be written, then notified on the blockingIOThread
       
       // note, that it is required that these are in order
       WorkRequest<Long> wr = new WorkRequest<Long>(new Continuation<Long, Exception>() {
       
         public void receiveResult(Long myPtrL) {
+          decrementFileChunksInMemory();
           if (cancelled) return;
           // notify listeners
           long myPtr = myPtrL.longValue();
@@ -1301,8 +1336,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       
         public void receiveException(Exception exception) {
           if (logger.level <= Logger.WARNING) logger.logException("Error writing file "+f+" "+metadata.length, exception);
-          exception = exception;
           FileDataReader.this.cancel();
+          decrementFileChunksInMemory();
         }      
       },environment.getSelectorManager()) {
       
