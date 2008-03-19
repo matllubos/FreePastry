@@ -50,7 +50,7 @@ import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.pastry.NodeHandle;
 import rice.pastry.socket.TransportLayerNodeHandle;
 
-public class SocketAdapter<Identifier> implements AppSocket {
+public class SocketAdapter<Identifier> implements AppSocket, P2PSocketReceiver<Identifier> {
   P2PSocket<Identifier> internal;
   Logger logger;
   Environment environment;
@@ -73,9 +73,73 @@ public class SocketAdapter<Identifier> implements AppSocket {
     return ret;
   }
 
+  AppSocketReceiver reader = null;
+  AppSocketReceiver writer = null;
   public void register(boolean wantToRead, boolean wantToWrite, int timeout, AppSocketReceiver receiver) {
+    if (wantToRead) {
+      if (reader != null && reader != receiver) throw new IllegalStateException("Already registered "+reader+" for reading. Can't register "+receiver);
+      reader = receiver;
+    }
+    if (wantToWrite) {
+      if (writer != null && writer != receiver) throw new IllegalStateException("Already registered "+reader+" for writing. Can't register "+receiver);
+      writer = receiver;
+    }
 //    logger.log("register("+wantToRead+","+wantToWrite+","+receiver+")");
-    internal.register(wantToRead, wantToWrite, new AppSocketReceiverWrapper(receiver, this, environment));
+//    internal.register(wantToRead, wantToWrite, new AppSocketReceiverWrapper(receiver, this, environment));
+    internal.register(wantToRead, wantToWrite, this);
+  }
+
+  public void receiveException(P2PSocket<Identifier> s, Exception e) {
+    if (writer != null) {
+      if (writer == reader) {
+        AppSocketReceiver temp = writer;
+        writer = null;
+        reader = null;
+        temp.receiveException(this, e);
+      } else {
+        AppSocketReceiver temp = writer;
+        writer = null;
+        temp.receiveException(this, e);
+      }
+    }
+    
+    if (reader != null) {
+      AppSocketReceiver temp = reader;
+      reader = null;
+      temp.receiveException(this, e);
+    }
+  }
+
+  public void receiveSelectResult(P2PSocket<Identifier> s,
+      boolean canRead, boolean canWrite) throws IOException {
+    if (logger.level <= Logger.FINEST) logger.log(this+"rsr("+internal+","+canRead+","+canWrite+")");
+    if (canRead && canWrite && (reader == writer)) {      
+      AppSocketReceiver temp = reader;
+      reader = null;
+      writer = null;
+      temp.receiveSelectResult(this, canRead, canWrite);
+      return;
+    }
+
+    if (canRead) {      
+      AppSocketReceiver temp = reader;
+      if (temp== null) {
+        if (logger.level <= Logger.WARNING) logger.log("no reader in "+this+".rsr("+internal+","+canRead+","+canWrite+")");         
+      } else {
+        reader = null;
+        temp.receiveSelectResult(this, true, false);
+      }
+    }
+
+    if (canWrite) {      
+      AppSocketReceiver temp = writer;
+      if (temp == null) {
+        if (logger.level <= Logger.WARNING) logger.log("no writer in "+this+".rsr("+internal+","+canRead+","+canWrite+")");        
+      } else {
+        writer = null;
+        temp.receiveSelectResult(this, false, true);
+      }
+    }
   }
 
   public void shutdownOutput() {

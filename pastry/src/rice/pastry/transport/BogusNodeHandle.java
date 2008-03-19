@@ -76,6 +76,12 @@ public class BogusNodeHandle extends TransportLayerNodeHandle<Collection<InetSoc
   }
 
   @Override
+  public String toString() {
+    return "BogusNodeHandle "+addresses;
+  }
+
+  
+  @Override
   public int hashCode() {
     throw new IllegalStateException("This NodeHandle is Bogus, don't use it.");
   }

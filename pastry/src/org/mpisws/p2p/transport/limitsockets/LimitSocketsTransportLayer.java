@@ -83,13 +83,19 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     tl.setCallback(this);
   }
 
-  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
+  public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
+    if (logger.level <= Logger.FINER) logger.logException(LimitSocketsTransportLayer.this+".openSocket("+i+","+deliverSocketToMe+","+options+")",new Exception("Stack Trace"));
+    
     final SocketRequestHandleImpl<Identifier> ret = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
       @Override
       public boolean cancel() {
         if (logger.level <= Logger.FINER) logger.log(this+".openSocket("+i+","+deliverSocketToMe+"):"+this+".cancel()");
         return super.cancel();
       }      
+      
+      public String toString() {
+        return LimitSocketsTransportLayer.this+"RequestHandle.openSocket("+i+","+deliverSocketToMe+","+options+")";
+      }
     };
     
     ret.setSubCancellable(tl.openSocket(i, new SocketCallback<Identifier>(){
@@ -101,6 +107,10 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
         if (logger.level <= Logger.FINER) logger.log(this+".openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveException()");
         deliverSocketToMe.receiveException(ret, ex);
       }
+      public String toString() {
+        return LimitSocketsTransportLayer.this+"SocketCallback .openSocket("+i+","+deliverSocketToMe+","+options+")";
+      }
+
     }, options));
 
     return ret;

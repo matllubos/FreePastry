@@ -117,7 +117,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     // ******** we overrode SPNF make sure to alos override routeconsistent *******
     params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
     params.setInt("rice.testing.routeconsistent_loglevel", Logger.INFO);
-//    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.ALL);
+    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINE);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);

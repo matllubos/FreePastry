@@ -605,7 +605,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     
     public void openPrimarySocketHelper(final Identifier i, Map<String, Object> options) {
       synchronized(this) {
-        if (pendingSocket != null) return;
+        if (pendingSocket != null || writingSocket != null) return;
         if (logger.level <= Logger.FINE) logger.log("Opening Primary Socket to "+i);
         
         final SocketRequestHandleImpl<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i, options, logger) {
