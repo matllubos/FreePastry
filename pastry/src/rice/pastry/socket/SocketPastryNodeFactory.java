@@ -968,6 +968,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return newNode(id, null);
   }
   
+  public PastryNode newNode(InetSocketAddress proxyAddress) {
+    return newNode(nidFactory.generateNodeId(), proxyAddress);
+  }
+  
   /**
    * Method which creates a Pastry node from the next port with the specified nodeId 
    * (or one generated from the NodeIdFactory if not specified)
