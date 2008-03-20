@@ -1009,7 +1009,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
      */
     final ArrayList<PastryNode> pn = new ArrayList<PastryNode>(1);
     final ArrayList<RuntimeException> re = new ArrayList<RuntimeException>(1);
-    environment.getSelectorManager().invoke(new Runnable() {
+    Runnable r = new Runnable() {
     
       public void run() {
         synchronized(pn) {
@@ -1022,7 +1022,12 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           }
         }
       }    
-    });
+    };
+    if (environment.getSelectorManager().isSelectorThread()) {
+      r.run();
+    } else {
+      environment.getSelectorManager().invoke(r);
+    }
     synchronized(pn) {
       if (pn.isEmpty() && re.isEmpty()) {
         try { pn.wait(); } catch (InterruptedException ie) { throw new RuntimeException(ie); }
