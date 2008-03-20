@@ -1001,10 +1001,48 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    *          behind NATs
    * @return A node with a random ID and next port number.
    */
-  public synchronized PastryNode newNode(Id nodeId,
-      InetSocketAddress pAddress) {
+  public synchronized PastryNode newNode(final Id nodeId, final InetSocketAddress pAddress) {
+    /**
+     * This code fixes a bug on some combinations of linux/java that causes binding to the socket
+     * to deadlock.  By putting this on the selector thread, we make sure the selector is not
+     * selecting. 
+     */
+    final ArrayList<PastryNode> pn = new ArrayList<PastryNode>(1);
+    final ArrayList<RuntimeException> re = new ArrayList<RuntimeException>(1);
+    environment.getSelectorManager().invoke(new Runnable() {
+    
+      public void run() {
+        synchronized(pn) {
+          try {
+            pn.add(newNodeSelector(nodeId, pAddress));
+          } catch (RuntimeException e2) {
+            re.add(e2);
+          } finally {
+            pn.notify();
+          }
+        }
+      }    
+    });
+    synchronized(pn) {
+      if (pn.isEmpty() && re.isEmpty()) {
+        try { pn.wait(); } catch (InterruptedException ie) { throw new RuntimeException(ie); }
+      }
+    }
+    if (pn.isEmpty()) {
+      throw re.get(0);
+    }
+    return pn.get(0);
+  }
+  
+  /**
+   * Only call this on the selector thread.
+   * @param nodeId
+   * @param pAddress
+   * @return
+   */
+  public PastryNode newNodeSelector(Id nodeId, InetSocketAddress pAddress) {
     try {
-      return newNode(nodeId, pAddress, true); // fix the method just
+      return newNodeSelector(nodeId, pAddress, true); // fix the method just
                                                           // below if you change
                                                           // this
     } catch (BindException e) {
@@ -1016,7 +1054,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           "pastry_socket_increment_port_after_construction")) {
         port++;
         try {
-          return newNode(nodeId, pAddress); // recursion, this will
+          return newNodeSelector(nodeId, pAddress); // recursion, this will
                                                         // prevent from things
                                                         // getting too out of
                                                         // hand in
@@ -1045,10 +1083,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     }
   }
 
-  protected synchronized PastryNode newNode(Id nodeId,
+  protected PastryNode newNodeSelector(Id nodeId,
       InetSocketAddress pAddress, boolean throwException) throws IOException {
+    final ArrayList<PastryNode> ret = new ArrayList<PastryNode>(1); 
+//    environment.getSelectorManager().invoke(new Runnable() {
+//    
+//      public void run() {
+//        // TODO Auto-generated method stub
+    
+    
     if (!throwException)
-      return newNode(nodeId, pAddress); // yes, this is sort of
+      return newNodeSelector(nodeId, pAddress); // yes, this is sort of
                                                     // bizarre
     // the idea is that we can't throw an exception by default because it will
     // break reverse compatibility
@@ -1079,7 +1124,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
               // because the
 
     TLPastryNode pn = nodeHandleHelper(nodeId, environment, proxyAddress);
-        
+
+//      }
+      
+//    });
+
     return pn;
   }
   
