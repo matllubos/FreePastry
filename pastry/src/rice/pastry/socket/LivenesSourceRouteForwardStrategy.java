@@ -34,47 +34,42 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-/**
- * 
- */
-package org.mpisws.p2p.transport.liveness;
+package rice.pastry.socket;
 
 import java.util.Map;
 
-import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.sourceroute.SourceRouteFactory;
+import org.mpisws.p2p.transport.sourceroute.SourceRouteForwardStrategy;
 
-/**
- * Expands the Transport Layer to include pings and liveness checks.
- * 
- * @author Jeff Hoye
- *
- */
-public interface LivenessProvider<Identifier> extends LivenessTypes {
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+
+public class LivenesSourceRouteForwardStrategy<Identifier> implements
+    SourceRouteForwardStrategy<Identifier> {
+
+  Logger logger;
+  LivenessProvider<SourceRoute<Identifier>> liveness;
+  private SourceRouteFactory<Identifier> factory;
   
-  public int getLiveness(Identifier i, Map<String, Object> options);
+  public LivenesSourceRouteForwardStrategy(
+      SourceRouteFactory<Identifier> factory, Environment env) {
+    this.factory = factory;
+    this.logger = env.getLogManager().getLogger(LivenesSourceRouteForwardStrategy.class, null);
+  }
+
+  public void setLivenessProvider(LivenessProvider<SourceRoute<Identifier>> liveness) {
+    this.liveness = liveness;
+  }
   
-  /**
-   * Returns whether a new notification will occur.
-   * 
-   * Will return false if a liveness check has recently completed.
-   * 
-   * Will return true if a new liveness check starts, or an existing one is in progress.
-   * 
-   * @param i the node to check
-   * @return true if there will be an update (either a ping, or a change in liveness)
-   * false if there won't be an update due to bandwidth concerns
-   */
-  public boolean checkLiveness(Identifier i, Map<String, Object> options);
-  
-  public void addLivenessListener(LivenessListener<Identifier> name);
-  public boolean removeLivenessListener(LivenessListener<Identifier> name);
-  
-  /**
-   * Force layer to clear the existing state related to the Identifier.  Usually 
-   * if there is reason to believe a node has returned.
-   * 
-   * @param i
-   */
-  public void clearState(Identifier i);
+  public boolean forward(Identifier nextHop, SourceRoute<Identifier> sr, boolean socket,
+      Map<String, Object> options) {
+    if (!socket) return true;
+    SourceRoute<Identifier> i = factory.getSourceRoute(nextHop);
+    boolean ret = (liveness.getLiveness(i, options) < LivenessProvider.LIVENESS_DEAD);
+    if (!ret) if (logger.level <= Logger.WARNING) logger.log("Not forwarding socket to "+nextHop+" sr:"+sr+" because I believe it is dead.");
+	  return ret;
+  }
+
 }

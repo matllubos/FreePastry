@@ -92,13 +92,15 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
   TransportLayer<Identifier, ByteBuffer> etl;
   Environment environment;
   Logger logger;
-  SourceRoute localIdentifier;
+  SourceRoute<Identifier> localIdentifier;
   Collection<SourceRouteTap> taps;
   SourceRouteFactory<Identifier> srFactory;
+  SourceRouteForwardStrategy<Identifier> forwardSourceRouteStrategy;
   
   public SourceRouteTransportLayerImpl(
       SourceRouteFactory<Identifier> srFactory,
       TransportLayer<Identifier, ByteBuffer> etl, 
+      SourceRouteForwardStrategy<Identifier> fSRs,
       Environment env,
       ErrorHandler<SourceRoute<Identifier>> errorHandler) {
     this.etl = etl;
@@ -110,8 +112,13 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
     taps = new ArrayList<SourceRouteTap>();    
     MAX_NUM_HOPS = env.getParameters().getInt("transport_sr_max_num_hops");
     
-    this.callback = new DefaultCallback<SourceRoute<Identifier>, ByteBuffer>(env);
+//    this.callback = new DefaultCallback<SourceRoute<Identifier>, ByteBuffer>(env);
+    this.forwardSourceRouteStrategy = fSRs;
 
+    if (this.forwardSourceRouteStrategy == null) {
+      this.forwardSourceRouteStrategy = new DefaultForwardSourceRouteStrategy<Identifier>();
+    }
+    
     if (this.errorHandler == null) {
       this.errorHandler = new DefaultErrorHandler<SourceRoute<Identifier>>(logger); 
     }
@@ -201,7 +208,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
   }
   
   /**
-   * To override this behaviour if needed.
+   * To override this behavior if needed.
    * 
    * @param socket
    * @param sr
@@ -250,48 +257,57 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
                 
             if (logger.level <= Logger.FINER) logger.log("I'm hop "+hopNum+" in "+sr);
             // we're an intermediate node, open next socket
-            etl.openSocket(sr.getHop(hopNum+1), new SocketCallback<Identifier>(){
-            
-              public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sockb) {
-                sockb.register(false, true, new P2PSocketReceiver<Identifier>() {
-                
-                  public void receiveSelectResult(P2PSocket<Identifier> socket,
-                      boolean canRead, boolean canWrite) throws IOException {
-                    if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
-                    
-                    // do the work
-                    socket.write(b);
-                    
-                    // keep working or pass up the new socket
-                    if (b.hasRemaining()) {
-                      socket.register(false, true, this); 
-                    } else {
-                      for (SourceRouteTap tap : taps) {
-                        tap.socketOpened(sr, socka, sockb);
+            Identifier nextHop = sr.getHop(hopNum+1);
+            if (forwardSourceRouteStrategy.forward(nextHop, sr, true, socka.getOptions())) {
+              if (logger.level <= Logger.FINEST) logger.log("Attempting to open next hop "+nextHop+" <"+hopNum+"> in "+sr);
+              
+              etl.openSocket(nextHop, new SocketCallback<Identifier>() {
+              
+                public void receiveResult(SocketRequestHandle<Identifier> cancellable, final P2PSocket<Identifier> sockb) {
+                  sockb.register(false, true, new P2PSocketReceiver<Identifier>() {
+                  
+                    public void receiveSelectResult(P2PSocket<Identifier> socket,
+                        boolean canRead, boolean canWrite) throws IOException {
+                      if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
+                      
+                      // do the work
+                      socket.write(b);
+                      
+                      // keep working or pass up the new socket
+                      if (b.hasRemaining()) {
+                        socket.register(false, true, this); 
+                      } else {
+                        for (SourceRouteTap tap : taps) {
+                          tap.socketOpened(sr, socka, sockb);
+                        }
+                        new Forwarder(sr, socka, sockb, logger);
                       }
-                      new Forwarder(sr, socka, sockb, logger);
                     }
-                  }
-                
-                  public void receiveException(P2PSocket<Identifier> socket,
-                      Exception e) {
-                    errorHandler.receivedException(sr, e);
-                    socka.close();
-                    sockb.close();
-                  }                
-                });
-                
-              }
-            
-              /**
-               * Couldn't open the socket, the next hop was dead.
-               */
-              public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
-                // may be nice to send some kind of error message to the opener
-//                errorHandler.receivedException(sr, ex);
-                socka.close();
-              }
-            }, null);
+                  
+                    public void receiveException(P2PSocket<Identifier> socket,
+                        Exception e) {
+                      errorHandler.receivedException(sr, e);
+                      socka.close();
+                      sockb.close();
+                    }                
+                  });
+                  
+                }
+              
+                /**
+                 * Couldn't open the socket, the next hop was dead.
+                 */
+                public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
+                  // may be nice to send some kind of error message to the opener
+  //                errorHandler.receivedException(sr, ex);
+                  socka.close();
+                }
+              }, null);
+            } else {
+              // don't even bother opening to the next hop
+              if (logger.level <= Logger.INFO) logger.log("Rejecting opening next hop "+nextHop+" <"+hopNum+"> in "+sr);
+              socka.close();
+            }            
           }
 
 //          if (sr.

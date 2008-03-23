@@ -122,20 +122,25 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    */
   byte localContactState = RendezvousSocketNodeHandle.CONTACT_DIRECT;
   
-  public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler) throws IOException {
+  public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler, boolean firewalled) throws IOException {
     super(nf, bindAddress, startPort, env, handler);
-    init();
+    init(firewalled);
   }
 
-  public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env) throws IOException {
+  public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env, boolean firewalled) throws IOException {
     super(nf, startPort, env);
-    init();
+    init(firewalled);
   }
   
-  private void init() {
+  private void init(boolean firewalled) {
     random = environment.getRandomSource();
+    if (firewalled) setContactState(RendezvousSocketNodeHandle.CONTACT_FIREWALLED);
   }
-    
+  
+  public void setContactState(byte contactState) {
+    this.localContactState = contactState;
+  }
+  
   @Override
   protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet,
       RoutingTable routeTable, Object localNodeData, LeafSetProtocol lsProtocol) {

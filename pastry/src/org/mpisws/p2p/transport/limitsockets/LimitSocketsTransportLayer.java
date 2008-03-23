@@ -104,11 +104,11 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
         deliverSocketToMe.receiveResult(ret, getLSSock(sock));
       }
       public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
-        if (logger.level <= Logger.FINER) logger.log(this+".openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveException()");
+        if (logger.level <= Logger.FINER) logger.log(this+".openSocket("+i+","+deliverSocketToMe+"):"+ret+".receiveException("+ex+")");
         deliverSocketToMe.receiveException(ret, ex);
       }
       public String toString() {
-        return LimitSocketsTransportLayer.this+"SocketCallback .openSocket("+i+","+deliverSocketToMe+","+options+")";
+        return LimitSocketsTransportLayer.this+"SocketCallback.openSocket("+i+","+deliverSocketToMe+","+options+")";
       }
 
     }, options));

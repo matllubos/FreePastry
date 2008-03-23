@@ -34,47 +34,23 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-/**
- * 
- */
-package org.mpisws.p2p.transport.liveness;
+package org.mpisws.p2p.transport.sourceroute;
 
 import java.util.Map;
 
-import org.mpisws.p2p.transport.TransportLayer;
-import org.mpisws.p2p.transport.sourceroute.SourceRoute;
-
 /**
- * Expands the Transport Layer to include pings and liveness checks.
+ * Always accepts.
  * 
  * @author Jeff Hoye
  *
+ * @param <Identifier>
  */
-public interface LivenessProvider<Identifier> extends LivenessTypes {
-  
-  public int getLiveness(Identifier i, Map<String, Object> options);
-  
-  /**
-   * Returns whether a new notification will occur.
-   * 
-   * Will return false if a liveness check has recently completed.
-   * 
-   * Will return true if a new liveness check starts, or an existing one is in progress.
-   * 
-   * @param i the node to check
-   * @return true if there will be an update (either a ping, or a change in liveness)
-   * false if there won't be an update due to bandwidth concerns
-   */
-  public boolean checkLiveness(Identifier i, Map<String, Object> options);
-  
-  public void addLivenessListener(LivenessListener<Identifier> name);
-  public boolean removeLivenessListener(LivenessListener<Identifier> name);
-  
-  /**
-   * Force layer to clear the existing state related to the Identifier.  Usually 
-   * if there is reason to believe a node has returned.
-   * 
-   * @param i
-   */
-  public void clearState(Identifier i);
+public class DefaultForwardSourceRouteStrategy<Identifier> implements
+    SourceRouteForwardStrategy<Identifier> {
+
+  public boolean forward(Identifier nextHop, SourceRoute<Identifier> sr,
+      boolean socket, Map<String, Object> options) {
+    return true;
+  }
+
 }

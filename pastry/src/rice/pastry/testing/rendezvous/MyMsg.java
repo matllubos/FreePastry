@@ -34,47 +34,45 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-/**
- * 
+/*
+ * Created on Feb 15, 2005
  */
-package org.mpisws.p2p.transport.liveness;
+package rice.pastry.testing.rendezvous;
 
-import java.util.Map;
-
-import org.mpisws.p2p.transport.TransportLayer;
-import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.Message;
 
 /**
- * Expands the Transport Layer to include pings and liveness checks.
+ * An example message.
  * 
  * @author Jeff Hoye
- *
  */
-public interface LivenessProvider<Identifier> extends LivenessTypes {
-  
-  public int getLiveness(Identifier i, Map<String, Object> options);
+public class MyMsg implements Message {
+  /**
+   * Where the Message came from.
+   */
+  Id from;
+  /**
+   * Where the Message is going.
+   */
+  Id to;
   
   /**
-   * Returns whether a new notification will occur.
-   * 
-   * Will return false if a liveness check has recently completed.
-   * 
-   * Will return true if a new liveness check starts, or an existing one is in progress.
-   * 
-   * @param i the node to check
-   * @return true if there will be an update (either a ping, or a change in liveness)
-   * false if there won't be an update due to bandwidth concerns
+   * Constructor.
    */
-  public boolean checkLiveness(Identifier i, Map<String, Object> options);
+  public MyMsg(Id from, Id to) {
+    this.from = from;
+    this.to = to;
+  }
   
-  public void addLivenessListener(LivenessListener<Identifier> name);
-  public boolean removeLivenessListener(LivenessListener<Identifier> name);
-  
+  public String toString() {
+    return "MyMsg from "+from+" to "+to;
+  }
+
   /**
-   * Force layer to clear the existing state related to the Identifier.  Usually 
-   * if there is reason to believe a node has returned.
-   * 
-   * @param i
+   * Use low priority to prevent interference with overlay maintenance traffic.
    */
-  public void clearState(Identifier i);
+  public int getPriority() {
+    return Message.LOW_PRIORITY;
+  }
 }

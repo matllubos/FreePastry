@@ -431,7 +431,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       final ArrayList<RecordLayer<InetSocketAddress>> historyHolder = new ArrayList<RecordLayer<InetSocketAddress>>();
 
       // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-      SocketPastryNodeFactory factory = new RendezvousSocketPastryNodeFactory(nidFactory, bindport, env)
+      SocketPastryNodeFactory factory = new RendezvousSocketPastryNodeFactory(nidFactory, bindport, env, false)
 //      SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env)
       {
         @Override

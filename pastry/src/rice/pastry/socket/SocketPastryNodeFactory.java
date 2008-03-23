@@ -48,6 +48,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,7 @@ import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
 import org.mpisws.p2p.transport.proximity.MinRTTProximityProvider;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.sourceroute.SourceRouteForwardStrategy;
 import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayer;
 import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayerImpl;
 import org.mpisws.p2p.transport.sourceroute.factory.MultiAddressSourceRouteFactory;
@@ -306,7 +308,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     
     // Liveness
     TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = getLivenessTransportLayer(lowerIdentityLayer, pn);
-
+    notifyLivenessTransportLayerConstructed(pn, ltl);
+    
     // Source Route Manager
     TransLivenessProximity<MultiInetSocketAddress, ByteBuffer> srm = getSourceRouteManagerLayer(
         ltl.getTransportLayer(), ltl.getLivenessProvider(), ltl.getPinger(), pn, proxyAddress, esrFactory);
@@ -442,9 +445,28 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       MultiAddressSourceRouteFactory esrFactory) {
     Environment environment = pn.getEnvironment();
     SourceRouteTransportLayer<MultiInetSocketAddress> srl = 
-      new SourceRouteTransportLayerImpl<MultiInetSocketAddress>(esrFactory,etl,environment, null);
+      new SourceRouteTransportLayerImpl<MultiInetSocketAddress>(esrFactory,etl,getSourceRouteForwardStrategy(pn, esrFactory),environment, null);
     return srl;
   }
+
+  Map<TLPastryNode, LivenesSourceRouteForwardStrategy<MultiInetSocketAddress>> livenesSourceRouteForwardStrategy = 
+    new HashMap<TLPastryNode, LivenesSourceRouteForwardStrategy<MultiInetSocketAddress>>();
+  protected SourceRouteForwardStrategy<MultiInetSocketAddress> getSourceRouteForwardStrategy(
+      TLPastryNode pn, MultiAddressSourceRouteFactory esrFactory) {
+    LivenesSourceRouteForwardStrategy<MultiInetSocketAddress> ret = new LivenesSourceRouteForwardStrategy<MultiInetSocketAddress>(esrFactory, pn.getEnvironment());
+    livenesSourceRouteForwardStrategy.put(pn, ret);
+    return ret;
+  }
+  
+  private void notifyLivenessTransportLayerConstructed(TLPastryNode pn,
+      TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl) {
+    LivenesSourceRouteForwardStrategy<MultiInetSocketAddress> srFs = livenesSourceRouteForwardStrategy.remove(pn);
+    if (srFs != null) {
+      srFs.setLivenessProvider(ltl.getLivenessProvider());
+    }
+  }
+
+
 
   protected IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> getIdentiySerializer(TLPastryNode pn, SocketNodeHandleFactory handleFactory) {
     return new SPNFIdentitySerializer(pn, handleFactory);

@@ -821,7 +821,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //      }
       synchronized(EntityManager.this) {
         if (handle == pendingSocket) {        
-          if (logger.level <= logger.INFO) logger.log(EntityManager.this+".receiveSocketException setting pendingSocket to null "+pendingSocket);
+          if (logger.level <= logger.INFO) logger.log(EntityManager.this+".receiveSocketException("+ex+") setting pendingSocket to null "+pendingSocket);
 
           stopLivenessChecker();
           pendingSocket = null; 

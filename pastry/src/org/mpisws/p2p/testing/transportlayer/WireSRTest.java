@@ -119,7 +119,7 @@ public class WireSRTest extends TLTest<SourceRoute<InetSocketAddress>> {
         new MagicNumberTransportLayer(
           new WireTransportLayerImpl(addr_a,env_a, null),
         env_a, null,GOOD_HDR, 2000),
-      env_a, null);    
+      null, env_a, null);    
   }
   
   static class Triplet {

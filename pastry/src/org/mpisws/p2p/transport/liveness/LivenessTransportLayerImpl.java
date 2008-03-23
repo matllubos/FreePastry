@@ -169,7 +169,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
   public LivenessTransportLayerImpl(TransportLayer<Identifier, ByteBuffer> tl, Environment env, ErrorHandler<Identifier> errorHandler, int checkDeadThrottle) {
     this.tl = tl;
     this.environment = env;
-    this.logger = env.getLogManager().getLogger(LivenessTransportLayerImpl.class, tl.getLocalIdentifier().toString());
+    this.logger = env.getLogManager().getLogger(LivenessTransportLayerImpl.class, null);
 //    logger.logException("LivenessTransportLayerImpl@"+System.identityHashCode(this),new Exception("Stack Trace"));
     this.time = env.getTimeSource();
     this.timer = env.getSelectorManager().getTimer();

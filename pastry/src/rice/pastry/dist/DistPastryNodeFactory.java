@@ -323,7 +323,7 @@ public abstract class DistPastryNodeFactory extends PastryNodeFactory {
       return new SocketPastryNodeFactory(nf, port, env);
     }
     if (protocol == PROTOCOL_RENDEZVOUS) {
-      return new RendezvousSocketPastryNodeFactory(nf, port, env);
+      return new RendezvousSocketPastryNodeFactory(nf, port, env, false);
     }
     
     throw new IllegalArgumentException("Unsupported Protocol " + protocol);

@@ -156,7 +156,7 @@ public class LivenessTest extends SRTest {
               new WireTransportLayerImpl(addr_a,env_a, null),
             env_a, null,GOOD_HDR, 2000),
           env_a, null, null),
-        env_a, null);
+        null, env_a, null);
     if (name.equals("carol")) carol_tap = srtl;
     return new TestLivenessTransportLayerImpl(srtl,env_a, null);
   }
