@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
@@ -83,6 +84,7 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
+import rice.pastry.boot.Bootstrapper;
 import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.leafset.LeafSetProtocol;
@@ -93,6 +95,7 @@ import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
+import rice.pastry.socket.SocketPastryNodeFactory.TLBootstrapper;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.PeriodicLeafSetProtocol;
@@ -199,7 +202,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
   
   protected ResponseStrategy<InetSocketAddress> getResponseStrategy(TLPastryNode pn) {
-    return new TimeoutResponseStrategy<InetSocketAddress>(3000, pn.getEnvironment());
+    return new NeverResponseStrategy<InetSocketAddress>();
+//    return new TimeoutResponseStrategy<InetSocketAddress>(3000, pn.getEnvironment());
   }
   
   protected PilotFinder<RendezvousSocketNodeHandle> getPilotFinder(TLPastryNode pn) {
@@ -360,4 +364,33 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     ((StandardRouter)pn.getRouter()).setRouterStrategy(new RendezvousRouterStrategy(ret, pn.getEnvironment()));
     return ret;
   }
+  
+  protected Bootstrapper getBootstrapper(final TLPastryNode pn, 
+      NodeHandleAdapter tl, 
+      NodeHandleFactory handleFactory,
+      ProximityNeighborSelector pns, Object localNodeData) {
+    final PilotManager<RendezvousSocketNodeHandle> manager = rendezvousApps.get(pn).b();
+    
+    TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns, localNodeData) {
+      @Override
+      protected void checkLiveness(final SocketNodeHandle h, Map<String, Object> options) {
+        // open pilot first, then call checkliveness, but it's gonna fail the first time, because the NH is bogus.
+        // so, open it the first time and watch it fail, then open it again
+        manager.openPilot((RendezvousSocketNodeHandle)h, new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, Exception>() {
+        
+          public void receiveResult(
+              SocketRequestHandle<RendezvousSocketNodeHandle> result) {
+            pn.getLivenessProvider().checkLiveness(h, null);
+          }
+        
+          public void receiveException(Exception exception) {
+            // TODO Auto-generated method stub
+            logger.logException("In Rendezvous Bootstrapper.checkLiveness("+h+")", exception);
+          }        
+        });        
+      }      
+    };
+    return bootstrapper;
+  }
+
 }

@@ -531,11 +531,16 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     numSquares++;
     Node n = (Node)nodes.get(s.nodeName);  
     if (n == null) {
-      n = new Node(s.nodeName, s.fileName); 
+      try {
+        n = new Node(s.nodeName, s.fileName); 
+      } catch (NumberFormatException nfe) {
+        System.out.println("NodeName: "+s.nodeName+" "+s);
+        throw nfe;
+      }
       nodes.put(s.nodeName,n);
       addToNodesByFileName(n);
     } else if (n.empty) {
-      // replace crappy old node with the new good one
+      // replace old node with the new good one
       Node n1 = new Node(s.nodeName, s.fileName); 
       n1.ip = n.ip;
       n = n1;

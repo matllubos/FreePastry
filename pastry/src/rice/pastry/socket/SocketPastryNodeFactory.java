@@ -717,7 +717,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return bootstrapper;
   }
 
-  class TLBootstrapper implements Bootstrapper<InetSocketAddress>
+  public class TLBootstrapper implements Bootstrapper<InetSocketAddress>
   {
     InetSocketAddress localAddr;
     TLPastryNode pn;
@@ -872,7 +872,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       if (logger.level <= Logger.FINE) logger.log("boot() checking liveness");
       // check liveness on the bogus nodes
       for (SocketNodeHandle h : tempBootHandles) {
-        pn.getLivenessProvider().checkLiveness(h, null);
+        checkLiveness(h, null);
       }
 
       // need to synchronize, because this can be called on any thread
@@ -923,6 +923,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 //        tl.removeLivenessListener(this);
 //      }
 //    }    
+    
+    protected void checkLiveness(SocketNodeHandle h, Map<String, Object> options) {
+      pn.getLivenessProvider().checkLiveness(h, null);
+    }
   }
   
   public NodeHandle getNodeHandle(InetSocketAddress bootstrap, int i) {

@@ -864,6 +864,12 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           }
         };
       }
+      
+      // check to see if we have a pilot to the node, if so, use it
+      if (incomingPilots.containsKey(high)) {
+        options = OptionsFactory.addOption(options, OPTION_USE_PILOT, high);
+      }
+      
       ret.setSubCancellable(rendezvousStrategy.sendMessage(high, m, ack, options));
       return ret;
     }
