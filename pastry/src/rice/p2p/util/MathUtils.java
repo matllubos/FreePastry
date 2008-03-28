@@ -144,6 +144,26 @@ public class MathUtils {
   }
   
   /**
+   * Utility method which converts a byte[] to a base64 string of characters, in lower case
+   *
+   * @param text The array to convert
+   * @return A string representation
+   */
+  public static String toBase64(byte[] text) {
+    return Base64.encodeBytes(text);
+  }
+  
+  /**
+   * Utility method which converts a base64 string to a byte[]
+   *
+   * @param text The text to convert
+   * @return The bytes
+   */
+  public static byte[] fromBase64(String text) {
+    return Base64.decode(text);
+  }
+  
+  /**
    * A simple and fast hash function for hashing an arbitirary length
    * byte array into an int.  Not for crypto.  Not to be trusted.  
    * 

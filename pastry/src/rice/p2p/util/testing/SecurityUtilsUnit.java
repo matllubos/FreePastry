@@ -42,6 +42,7 @@ import java.math.*;
 
 import java.security.*;
 import java.security.cert.*;
+import java.security.interfaces.*;
 import java.security.spec.*;
 import java.util.*;
 import java.util.zip.*;
@@ -213,6 +214,47 @@ public class SecurityUtilsUnit {
       System.out.println("    Output 2: \t" + MathUtils.toHex(SecurityUtils.encryptAsymmetric(keySym, pair2.getPublic())));
     } else {
       System.out.println("[ PASSED ]");
+    }
+
+    System.out.print("    Testing asymmetic public writing\t\t\t");
+
+    PublicKey k = SecurityUtils.decodePublicKey(SecurityUtils.encodePublicKey(pair.getPublic()));
+
+    if (! Arrays.equals(k.getEncoded(), pair.getPublic().getEncoded())) {
+      System.out.println("[ FAILED ]");
+      System.out.println("  Output 1: \t" + MathUtils.toHex(SecurityUtils.encryptAsymmetric(keySym, k)));
+      System.out.println("     Res 1: \t" + MathUtils.toHex(SecurityUtils.decryptAsymmetric(SecurityUtils.encryptAsymmetric(keySym, k), pair.getPrivate())));
+      System.out.println("  Output 2: \t" + MathUtils.toHex(SecurityUtils.encryptAsymmetric(keySym, pair.getPublic())));
+      System.out.println("     Res 2: \t" + MathUtils.toHex(SecurityUtils.decryptAsymmetric(SecurityUtils.encryptAsymmetric(keySym, pair.getPublic()), pair.getPrivate())));
+    } else {
+      System.out.println("[ PASSED ]");
+    }
+
+    System.out.print("    Testing asymmetic private writing\t\t\t");
+
+    PrivateKey k2 = SecurityUtils.decodePrivateKey(SecurityUtils.encodePrivateKey(pair.getPrivate()));
+
+    if (! Arrays.equals(SecurityUtils.sign(keySym, k2), SecurityUtils.sign(keySym, pair.getPrivate()))) {
+      System.out.println("[ FAILED ]");
+      System.out.println("  Output 1: \t" + MathUtils.toHex(k2.getEncoded()));
+      System.out.println("  Output 2: \t" + MathUtils.toHex(pair.getPrivate().getEncoded()));
+    } else {
+      System.out.println("[ PASSED ]");
+    }
+
+    System.out.print("    Testing asymmetic serialized writing\t\t");
+
+    testStringEncrypted = SecurityUtils.encryptAsymmetric(testStringByte, k);
+    testStringDecrypted = SecurityUtils.decryptAsymmetric(testStringEncrypted, pair.getPrivate());
+    
+    if (Arrays.equals(testStringByte, testStringDecrypted)) {
+      System.out.println("[ PASSED ]");
+    } else {
+      System.out.println("[ FAILED ]");
+      System.out.println("    Input: \t" + testString);
+      System.out.println("    Length:\t" + testStringByte.length);
+      System.out.println("    Enc Len:\t" + testStringEncrypted.length);
+      System.out.println("    Dec Len:\t" + testStringDecrypted.length);
     }
 
     System.out.println("-------------------------------------------------------------");

@@ -259,6 +259,9 @@ public class SimpleParameters implements Parameters {
 
   public InetSocketAddress[] getInetSocketAddressArray(String name)
       throws UnknownHostException {
+    if (getString(name).length() == 0)
+      return new InetSocketAddress[0];
+      
     String[] addresses = getString(name).split(ARRAY_SPACER);
     List result = new LinkedList();
 

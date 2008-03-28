@@ -41,6 +41,7 @@ import java.math.*;
 
 import java.security.*;
 import java.security.cert.*;
+import java.security.interfaces.*;
 import java.security.spec.*;
 import java.util.*;
 import java.util.zip.*;
@@ -88,6 +89,11 @@ public class SecurityUtils {
    * The length of the symmetric keys
    */
   public final static int SYMMETRIC_KEY_LENGTH = 56;
+
+  /**
+   * The length of the symmetric keys
+   */
+  public final static int SYMMETRIC_IV_LENGTH = 64;
   
   /**
    * The name of the hash function.
@@ -181,9 +187,19 @@ public class SecurityUtils {
   private static KeyPairGenerator generatorAsymmetric;
 
   /**
+   * The generator used to decode RSA keys
+   */
+  private static KeyFactory factoryAsymmetric;
+
+  /**
    * The signature used for verification and signing data.
    */
   private static Signature signature;
+
+  /**
+   * The RNG for generating DES IVs
+   */
+  private static Random random;
 
   // ----- STATIC BLOCK TO INITIALIZE THE KEY GENERATORS -----
 
@@ -192,11 +208,13 @@ public class SecurityUtils {
     Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 2);
     
     try {
+      random = new Random();
       cipherSymmetric = Cipher.getInstance(SYMMETRIC_ALGORITHM);
       cipherAsymmetric = Cipher.getInstance(ASYMMETRIC_ALGORITHM, "BC");
       deprecatedCipherAsymmetric = Cipher.getInstance(DEPRECATED_ASYMMETRIC_ALGORITHM);
       generatorSymmetric = KeyGenerator.getInstance(SYMMETRIC_GENERATOR);
       generatorAsymmetric = KeyPairGenerator.getInstance(ASYMMETRIC_GENERATOR);
+      factoryAsymmetric = KeyFactory.getInstance(ASYMMETRIC_GENERATOR);
       signature = Signature.getInstance(SIGNATURE_ALGORITHM);
       hash = MessageDigest.getInstance(HASH_ALGORITHM);
       apop = MessageDigest.getInstance(APOP_ALGORITHM);
@@ -314,7 +332,35 @@ public class SecurityUtils {
    * @exception SecurityException If the encryption does not happen properly
    */
   public static byte[] encryptSymmetric(byte[] data, byte[] key) throws SecurityException {
-    return encryptSymmetric(data, key, 0, data.length);
+    return encryptSymmetric(data, key, new byte[SYMMETRIC_IV_LENGTH]);
+  }
+ 
+  /**
+   * Utility method for encrypting a block of data with symmetric encryption.
+   *
+   * @param data The data
+   * @param key The key
+   * @param iv The initialization vector
+   * @return The ciphertext
+   * @exception SecurityException If the encryption does not happen properly
+   */
+  public static byte[] encryptSymmetric(byte[] data, byte[] key, byte[] iv) throws SecurityException {
+    return encryptSymmetric(data, key, 0, data.length, iv);
+  }
+
+  /**
+   * Utility method for encrypting a block of data with symmetric encryption.
+   *
+   * @param data The data
+   * @param key The key
+   * @param offset The offset into the data
+   * @param length The length of data to write
+   * @param iv The initialization vector
+   * @return The ciphertext
+   * @exception SecurityException If the encryption does not happen properly
+   */
+  public static byte[] encryptSymmetric(byte[] data, byte[] key, int offset, int length) throws SecurityException {
+    return encryptSymmetric(data, key, offset, length, new byte[SYMMETRIC_IV_LENGTH]);
   }
   
   /**
@@ -324,24 +370,29 @@ public class SecurityUtils {
    * @param key The key
    * @param offset The offset into the data
    * @param length The length of data to write
+   * @param iv The initialization vector
    * @return The ciphertext
    * @exception SecurityException If the encryption does not happen properly
    */
-  public static byte[] encryptSymmetric(byte[] data, byte[] key, int offset, int length) throws SecurityException {
+  public static byte[] encryptSymmetric(byte[] data, byte[] key, int offset, int length, byte[] iv) throws SecurityException {
     try {
+      iv = correctLength(iv, SYMMETRIC_IV_LENGTH/8);
+      IvParameterSpec ivSpec = new IvParameterSpec(iv);
+      SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
+
       synchronized (cipherSymmetric) {
-        key = correctLength(key, SYMMETRIC_KEY_LENGTH);
-        SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
-        cipherSymmetric.init(Cipher.ENCRYPT_MODE, secretKey);
+        cipherSymmetric.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
 
         return cipherSymmetric.doFinal(data, offset, length);
       }
     } catch (InvalidKeyException e) {
-      throw new SecurityException("InvalidKeyException encrypting object: " + e);
+      throw new SecurityException("InvalidKeyException (" + iv.length + "," + key.length + ") encrypting object: " + e);
     } catch (IllegalBlockSizeException e) {
       throw new SecurityException("IllegalBlockSizeException encrypting object: " + e);
     } catch (BadPaddingException e) {
       throw new SecurityException("BadPaddingException encrypting object: " + e);
+    } catch (InvalidAlgorithmParameterException e) {
+      throw new SecurityException("InvalidAlgorithmParameterException encrypting object: " + e);    
     }
   }
 
@@ -354,12 +405,26 @@ public class SecurityUtils {
    * @exception SecurityException If the decryption does not happen properly
    */
   public static byte[] decryptSymmetric(byte[] data, byte[] key) throws SecurityException {
+    return decryptSymmetric(data, key, new byte[SYMMETRIC_IV_LENGTH]);
+  }
+  
+ /**
+   * Utility method for decrypting some data with symmetric encryption.
+   *
+   * @param data The data to decrypt
+   * @param key The key
+   * @param iv The initialization vector
+   * @return The decrypted data
+   * @exception SecurityException If the decryption does not happen properly
+   */
+  public static byte[] decryptSymmetric(byte[] data, byte[] key, byte[] iv) throws SecurityException {
     try {
-      key = correctLength(key, SYMMETRIC_KEY_LENGTH);
+      iv = correctLength(iv, SYMMETRIC_IV_LENGTH/8);
+      IvParameterSpec ivSpec = new IvParameterSpec(iv);
+      SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
 
       synchronized (cipherSymmetric) {
-        SecretKeySpec secretKey = new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
-        cipherSymmetric.init(Cipher.DECRYPT_MODE, secretKey);
+        cipherSymmetric.init(Cipher.DECRYPT_MODE, secretKey, ivSpec);
         
         return cipherSymmetric.doFinal(data);
       }
@@ -369,6 +434,8 @@ public class SecurityUtils {
       throw new SecurityException("IllegalBlockSizeException decrypting object: " + e);
     } catch (BadPaddingException e) {
       throw new SecurityException("BadPaddingException decrypting object: " + e);
+    } catch (InvalidAlgorithmParameterException e) {
+      throw new SecurityException("InvalidAlgorithmParameterException decrypting object: " + e);    
     } 
   }
 
@@ -489,6 +556,115 @@ public class SecurityUtils {
     synchronized (generatorSymmetric) {
       return generatorSymmetric.generateKey().getEncoded();
     }
+  }
+
+  /**
+   * Utility method which will encode a public key
+   *
+   * @param key The key to encode
+   * @return An encoded public key
+   */
+  public static byte[] encodePublicKey(PublicKey key) {
+    RSAPublicKey rkey = (RSAPublicKey) key;
+
+    byte[] modulus = rkey.getModulus().toByteArray();
+    byte[] exponent = rkey.getPublicExponent().toByteArray();
+    byte[] length = MathUtils.intToByteArray(modulus.length);
+
+    byte[] result = new byte[length.length + modulus.length + exponent.length];
+    System.arraycopy(length, 0, result, 0, length.length);
+    System.arraycopy(modulus, 0, result, length.length, modulus.length);
+    System.arraycopy(exponent, 0, result, length.length + modulus.length, exponent.length);
+
+    return result;
+  }
+
+  /**
+   * Utility method which will decode a previously encoded public key
+   *
+   * @param data The previously encoded key
+   * @return The key
+   */
+  public static PublicKey decodePublicKey(byte[] data) throws SecurityException {
+    byte[] len = new byte[4];
+    System.arraycopy(data, 0, len, 0, len.length);
+    int length = MathUtils.byteArrayToInt(len);
+
+    byte[] modulus = new byte[length];
+    System.arraycopy(data, len.length, modulus, 0, length);
+    byte[] exponent = new byte[data.length - length - 4];
+    System.arraycopy(data, len.length + length, exponent, 0, exponent.length);
+
+    RSAPublicKeySpec rpks = new RSAPublicKeySpec(new BigInteger(modulus), new BigInteger(exponent));
+    
+    try {
+      synchronized (factoryAsymmetric) {
+        return factoryAsymmetric.generatePublic(rpks);
+      }
+    } catch (InvalidKeySpecException e) {
+      throw new SecurityException("InvalidKeySpecException while decoding key: " + e);
+    }
+  }
+
+  /**
+   * Utility method which will encode a private key
+   *
+   * @param key The key to encode
+   * @return An encoded public key
+   */
+  public static byte[] encodePrivateKey(PrivateKey key) {
+    RSAPrivateKey rkey = (RSAPrivateKey) key;
+
+    byte[] modulus = rkey.getModulus().toByteArray();
+    byte[] exponent = rkey.getPrivateExponent().toByteArray();
+    byte[] length = MathUtils.intToByteArray(modulus.length);
+
+    byte[] result = new byte[length.length + modulus.length + exponent.length];
+    System.arraycopy(length, 0, result, 0, length.length);
+    System.arraycopy(modulus, 0, result, length.length, modulus.length);
+    System.arraycopy(exponent, 0, result, length.length + modulus.length, exponent.length);
+
+    return result;
+  }
+
+  /**
+   * Utility method which will decode a previously encoded private key
+   *
+   * @param data The previously encoded key
+   * @return The key
+   */
+  public static PrivateKey decodePrivateKey(byte[] data) throws SecurityException {
+    byte[] len = new byte[4];
+    System.arraycopy(data, 0, len, 0, len.length);
+    int length = MathUtils.byteArrayToInt(len);
+
+    byte[] modulus = new byte[length];
+    System.arraycopy(data, len.length, modulus, 0, length);
+    byte[] exponent = new byte[data.length - length - 4];
+    System.arraycopy(data, len.length + length, exponent, 0, exponent.length);
+
+    RSAPrivateKeySpec rpks = new RSAPrivateKeySpec(new BigInteger(modulus), new BigInteger(exponent));
+    
+    try {
+      synchronized (factoryAsymmetric) {
+        return factoryAsymmetric.generatePrivate(rpks);
+      }
+    } catch (InvalidKeySpecException e) {
+      throw new SecurityException("InvalidKeySpecException while decoding key: " + e);
+    }
+  }
+
+  /**
+   * Utility method which will generate a random intialization vector for
+   * applications to use.
+   *
+   * @return A new, random DES initialization vector
+   */
+  public static byte[] generateIVSymmetric() {
+    byte[] result = new byte[SYMMETRIC_IV_LENGTH];
+    random.nextBytes(result);
+    
+    return result;
   }
 
   /**
