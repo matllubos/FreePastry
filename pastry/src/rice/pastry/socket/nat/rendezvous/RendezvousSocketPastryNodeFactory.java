@@ -365,11 +365,19 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return ret;
   }
   
+  /**
+   * This code opens a pilot to our bootstrap node before proceeding.  This is necessary to allow the liveness
+   * checks to be sent back to me without the bootstrap node remembering the address that I sent the liveness
+   * check on.
+   */
   protected Bootstrapper getBootstrapper(final TLPastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
       ProximityNeighborSelector pns, Object localNodeData) {
     final PilotManager<RendezvousSocketNodeHandle> manager = rendezvousApps.get(pn).b();
+    
+    // only do the special step if we're NATted
+    if (((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) return super.getBootstrapper(pn, tl, handleFactory, pns, localNodeData);
     
     TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns, localNodeData) {
       @Override
