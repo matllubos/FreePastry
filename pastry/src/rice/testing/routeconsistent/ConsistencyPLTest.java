@@ -115,9 +115,9 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     
 //  params.setInt("rice.pastry_loglevel", Logger.INFO);
     // ******** we overrode SPNF make sure to alos override routeconsistent *******
-    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
-    params.setInt("rice.testing.routeconsistent_loglevel", Logger.INFO);
-    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINE);
+//    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
+//    params.setInt("rice.testing.routeconsistent_loglevel", Logger.INFO);
+//    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINE);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
@@ -126,9 +126,9 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
 //    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
-    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
-    params.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
-    params.setInt("org.mpisws.p2p.transport.limitsockets_loglevel", Logger.FINER);
+//    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
+//    params.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
+//    params.setInt("org.mpisws.p2p.transport.limitsockets_loglevel", Logger.FINER);
 //    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINEST);
     
@@ -136,8 +136,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.pastry.pns.PNSApplication_loglevel", Logger.INFO);
     
     // turn on consistent join protocol's logger to make sure this is correct for consistency
-    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
-    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
+//    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
+//    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
     
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);

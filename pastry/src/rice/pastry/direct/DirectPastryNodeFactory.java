@@ -158,8 +158,8 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
             this.environment.getExceptionStrategy());
         }
       }    
-  
-      TLPastryNode pn = nodeHandleHelper(nodeId, environment, null);
+      TLPastryNode pn = new TLPastryNode(nodeId, environment);
+      nodeHandleHelper(pn);
 //      ((DirectPastryNode)pn).doneNode(getNearest(pn.getLocalHandle(), bootstrap));
         
       return pn;
@@ -238,7 +238,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
-  protected NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory handleFactory, Object localNodeData) throws IOException {
+  protected NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory handleFactory) throws IOException {
     DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
     return localhandle;
   }
@@ -293,7 +293,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
-  protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, final ProximityNeighborSelector pns, Object localNodeData) {
+  protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, final ProximityNeighborSelector pns) {
     return new Bootstrapper<NodeHandle>() {
     
       public void boot(Collection<NodeHandle> bootaddresses) {

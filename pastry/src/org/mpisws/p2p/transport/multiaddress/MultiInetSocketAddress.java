@@ -40,6 +40,8 @@ package org.mpisws.p2p.transport.multiaddress;
 import java.io.*;
 import java.net.*;
 
+import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
+
 import rice.p2p.commonapi.rawserialization.*;
 
 /**
@@ -49,6 +51,7 @@ import rice.p2p.commonapi.rawserialization.*;
  * @author Jeff Hoye
  */
 public class MultiInetSocketAddress implements Serializable {
+  static InetSocketAddressSerializer serializer = new InetSocketAddressSerializer();
   
   // the address list, most external first
   protected InetSocketAddress address[];
@@ -63,7 +66,7 @@ public class MultiInetSocketAddress implements Serializable {
     this(new InetSocketAddress[]{address});
   }  
 
-  private MultiInetSocketAddress(InetSocketAddress[] addressList) {
+  public MultiInetSocketAddress(InetSocketAddress[] addressList) {
     this.address = addressList;
   }
   
@@ -199,18 +202,18 @@ public class MultiInetSocketAddress implements Serializable {
   
   /**
    *   EpochInetSocketAddress: (IPV4):
-   *   +-+-+-+-+-+-+-+-+
-   *   +   numAddrs    +
+   *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   *   +   numAddrs    +  IPVersion 0  +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   internet address 0                                          +
+   *   +   internet address 0          ...                                
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   port 0                      +
+   *   +   port 0                      +  IPVersion 1  +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   internet address 1                                          +
+   *   +   internet address 1          ...                                
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   port 1                      +
+   *   +   port 1                      +  IPVersion k  +
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   *   +   internet address k                                          +
+   *   +   internet address k          ...                                
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    *   +   port k                      +       ...
    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -223,11 +226,7 @@ public class MultiInetSocketAddress implements Serializable {
     byte numAddresses = buf.readByte();
     InetSocketAddress[] saddr = new InetSocketAddress[numAddresses];
     for (int ctr = 0; ctr < numAddresses; ctr++) {
-      byte[] addrBytes = new byte[4];
-      buf.read(addrBytes);
-      InetAddress addr = InetAddress.getByAddress(addrBytes);
-      short port = buf.readShort();
-      saddr[ctr] = new InetSocketAddress(addr, 0xFFFF & port);
+      saddr[ctr] = serializer.deserialize(buf, null, null);
     }
     return new MultiInetSocketAddress(saddr);
   }
@@ -259,13 +258,16 @@ public class MultiInetSocketAddress implements Serializable {
 //    System.out.println("EISA.serialize():numAddresses:"+address.length);
     buf.writeByte((byte)address.length);
     for (int ctr = 0; ctr < address.length; ctr++) {
-      buf.write(address[ctr].getAddress().getAddress(),0,4);
-      buf.writeShort((short)address[ctr].getPort());
+      serializer.serialize(address[ctr], buf);
     }
   }
 
   public short getSerializedLength() {
-    return (short)(8+1+(address.length*6)); // epoch+numAddresses+(numAddresses*(address.length+port.length)
+    int ret = 1; // num addresses
+    for (int ctr = 0; ctr < address.length; ctr++) {
+      ret += serializer.getSerializedLength(address[ctr]);
+    }
+    return (short)ret; 
   }
 
 }

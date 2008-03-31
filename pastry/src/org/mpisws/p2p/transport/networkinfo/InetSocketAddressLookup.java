@@ -34,72 +34,24 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.simpleidentity;
+package org.mpisws.p2p.transport.networkinfo;
 
-import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.Continuation;
+import rice.p2p.commonapi.Cancellable;
 
-/**
- * 
- * Serialized version
- * byte IPversion (4 or 6)
- * byte[] address (4 or 16 bytes)
- * short port
- * 
- * @author Jeff Hoye
- *
- */
-public class InetSocketAddressSerializer implements Serializer<InetSocketAddress>{
-  public static final byte IPV4 = 4;
-  public static final byte IPV6 = 6;
-  public static final int IPV4_BYTES = 4;
-  public static final int IPV6_BYTES = 16;
-  
-  public InetSocketAddress deserialize(InputBuffer b, InetSocketAddress i,
-      Map<String, Object> options) throws IOException {
-    byte version = b.readByte();
-    byte[] addr;
-    
-    switch(version) {
-    case IPV4:
-      addr = new byte[IPV4_BYTES];
-      break;
-    case IPV6:
-      addr = new byte[IPV6_BYTES];
-      break;      
-    default:
-      throw new IOException("Incorrect IP version, expecting 4 or 6, got "+version);
-    }
-    b.read(addr);
-    short port = b.readShort();    
-    return new InetSocketAddress(InetAddress.getByAddress(addr),0xFFFF & port);
-  }
-
-  public void serialize(InetSocketAddress i, OutputBuffer b) throws IOException {
-    byte[] addr = i.getAddress().getAddress();
-    // write version
-    switch (addr.length) {
-    case IPV4_BYTES:
-      b.writeByte(IPV4);
-      break;
-    case IPV6_BYTES:
-      b.writeByte(IPV6);
-      break;
-    default:
-      throw new IOException("Incorrect number of bytes for IPaddress, expecting 4 or 16, got "+addr.length);
-    }
-    // write addr
-    b.write(addr,0,addr.length);
-    b.writeShort((short)i.getPort());    
-  }
-  
-  public int getSerializedLength(InetSocketAddress i) {
-    return i.getAddress().getAddress().length+2+1;  // address+port+header
-  }
+public interface InetSocketAddressLookup {
+  /**
+   * Returns the local node's InetSocketAddress
+   * 
+   * @param bootstrap who to ask
+   * @param c where the return value is delivered
+   * @param options can be null
+   * @return you can cancel the operation
+   */
+  public Cancellable getMyInetAddress(InetSocketAddress bootstrap, 
+      final Continuation<InetSocketAddress, Exception> c, Map<String, Object> options);
 
 }

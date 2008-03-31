@@ -125,8 +125,8 @@ public class Recorder implements MyEvents {
     final SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
       
       @Override
-      public rice.pastry.NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
-        SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf, localNodeInfo);
+      public rice.pastry.NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {
+        SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf);
         if (logger.level <= Logger.FINE) logger.log("getLocalHandle():"+ret.toStringFull());
         return ret;
       }
@@ -161,8 +161,8 @@ public class Recorder implements MyEvents {
       }
       
       @Override
-      protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns, Object localNodeData) {
-        final Bootstrapper internal = super.getBootstrapper(pn, tl, handleFactory, pns, localNodeData);
+      protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns) {
+        final Bootstrapper internal = super.getBootstrapper(pn, tl, handleFactory, pns);
         Bootstrapper ret = new Bootstrapper() {        
           public void boot(Collection bootaddresses) {
             try {

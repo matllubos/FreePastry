@@ -236,7 +236,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
     final BogusTLPastryNode pn = new BogusTLPastryNode(nodeId, environment);    
 
     final SocketNodeHandleFactory handleFactory = (SocketNodeHandleFactory)getNodeHandleFactory(pn);    
-    final NodeHandle localhandle = getLocalHandle(pn, handleFactory, new MultiInetSocketAddress(new InetSocketAddress(localAddress, 0)));    
+    final NodeHandle localhandle = getLocalHandle(pn, handleFactory);    
 
     pn.setLocalHandle(localhandle);
     

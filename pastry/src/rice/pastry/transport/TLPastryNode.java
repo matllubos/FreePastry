@@ -675,4 +675,9 @@ public class TLPastryNode extends PastryNode implements
   public NodeHandleFactory getHandleFactroy() {
     return handleFactory;
   }
+
+  Map<String, Object> vars = new HashMap<String, Object>();
+  public Map<String, Object> getVars() {
+    return vars;
+  }
 }

@@ -146,7 +146,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   
   @Override
   protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet,
-      RoutingTable routeTable, Object localNodeData, LeafSetProtocol lsProtocol) {
+      RoutingTable routeTable, LeafSetProtocol lsProtocol) {
     RendezvousJoinProtocol jProtocol = new RendezvousJoinProtocol(pn,
         pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol, rendezvousApps.get(pn).b());
     jProtocol.register();
@@ -288,8 +288,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
 
   @Override
-  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory, Object localNodeData) {
-    super.registerApps(pn, leafSet, routeTable, nha, handleFactory, localNodeData);
+  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory) {
+    super.registerApps(pn, leafSet, routeTable, nha, handleFactory);
     RendezvousStrategy<RendezvousSocketNodeHandle> app = rendezvousApps.remove(pn).a();
     if (app instanceof RendezvousApp) {
       ((RendezvousApp)app).register();
@@ -307,7 +307,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   boolean firstNode = true;
   
   @Override
-  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
+  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {
     byte contactState = localContactState;    
     
     // this code is for testing
@@ -322,7 +322,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     }
     
     RendezvousSNHFactory pnhf = (RendezvousSNHFactory)nhf;
-    MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)localNodeInfo;
+    MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)pn.getVars().get(PROXY_ADDRESS);
     SocketNodeHandle ret = pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId(), contactState);
     
     // this code is for logging    
@@ -377,9 +377,9 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     final PilotManager<RendezvousSocketNodeHandle> manager = rendezvousApps.get(pn).b();
     
     // only do the special step if we're NATted
-    if (((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) return super.getBootstrapper(pn, tl, handleFactory, pns, localNodeData);
+    if (((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) return super.getBootstrapper(pn, tl, handleFactory, pns);
     
-    TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns, localNodeData) {
+    TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns) {
       @Override
       protected void checkLiveness(final SocketNodeHandle h, Map<String, Object> options) {
         // open pilot first, then call checkliveness, but it's gonna fail the first time, because the NH is bogus.
