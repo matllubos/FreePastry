@@ -104,6 +104,7 @@ public class RendezvousPNSApplication extends PNSApplication {
   public Cancellable getNearHandles(Collection<NodeHandle> bootHandles,
       Continuation<Collection<NodeHandle>, Exception> deliverResultToMe) {
     ArrayList<NodeHandle> newBootHandles = new ArrayList<NodeHandle>();
+    if (logger.level <= Logger.INFO) logger.log("Booting off of "+bootHandles.size()+" nodes. "+bootHandles);
     for (NodeHandle handle : bootHandles) {
       if (useHandle(handle)) {
         newBootHandles.add(handle);

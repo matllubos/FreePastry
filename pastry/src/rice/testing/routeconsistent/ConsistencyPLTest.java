@@ -109,7 +109,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
   
   static void setupParams(Parameters params) {
     params.setBoolean("logging_packageOnly",false);
-//    params.setInt("loglevel", Logger.FINER);
+    params.setInt("loglevel", Logger.INFO);
     
 //    params.setInt("rice.environment.time.simulated_loglevel", Logger.WARNING);
     
@@ -1033,6 +1033,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       if (!running || node.joinFailed()) {
         Runtime.getRuntime().removeShutdownHook(shutdownHook);
         System.out.println("Join failed. "+env.getTimeSource().currentTimeMillis()+":"+node+":"+ls);
+        node.joinFailedReason().printStackTrace();
         System.out.println("SHUTDOWN "+env.getTimeSource().currentTimeMillis()+" "+node);
         //              System.exit(25);
 //        node.destroy(); // done in env.destroy()

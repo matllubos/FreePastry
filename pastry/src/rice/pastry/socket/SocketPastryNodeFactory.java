@@ -308,7 +308,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return new SocketNodeHandleFactory(pn);
   }
 
-  public TransportLayer<InetSocketAddress, ByteBuffer> getNodeHandleAdapterEarly(InetSocketAddress bindAddr, TLPastryNode pn) throws IOException {
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getNodeHandleAdapterEarly(InetSocketAddress bindAddr, TLPastryNode pn) throws IOException {
     // wire layer
     TransportLayer<InetSocketAddress, ByteBuffer> wtl = getWireTransportLayer(bindAddr, pn);
 
@@ -338,7 +338,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     TransportLayer<InetSocketAddress, ByteBuffer> lstl = (TransportLayer<InetSocketAddress, ByteBuffer>)pn.getVars().get(HIGHEST_INET_LAYER); 
     
     // MultiInet layer
-    TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteFactory(lstl, pn, localAddress);
+    TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteTransportLayer(lstl, pn, localAddress);
 
     // SourceRoute<MultiInet> layer
     TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> srl = getSourceRouteTransportLayer(etl, pn, esrFactory);
@@ -482,7 +482,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return ipTL;
   }
 
-  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getMultiAddressSourceRouteFactory(
+  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getMultiAddressSourceRouteTransportLayer(
       TransportLayer<InetSocketAddress, ByteBuffer> mntl, 
       TLPastryNode pn, 
       MultiInetSocketAddress localAddress) {
