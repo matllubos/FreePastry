@@ -259,7 +259,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       if (logger.level <= Logger.FINEST) logger.log(this+".poll() set messageThatIsBeingWritten = "+messageThatIsBeingWritten);
     }
     if (queue.size() >= (MAX_QUEUE_SIZE-1) && logger.level <= Logger.INFO) {
-      logger.log(this+"polling from full queue (this is a good thing) "+messageThatIsBeingWritten);
+      logger.log(this+"polling from full queue ("+queue.size()+") (this is a good thing) "+messageThatIsBeingWritten);
     }      
     return messageThatIsBeingWritten;
   }
@@ -834,7 +834,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       
       if (receipt.isCancelled() && !started) {
         if (logger.level <= Logger.FINEST) logger.log(this+".rsr("+socket+") cancelled"); 
-        // cancel, don't do anything
+        messageThatIsBeingWritten = null;
         return true;
       } else {
         started = true;
