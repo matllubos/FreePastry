@@ -249,6 +249,26 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   public NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) {
     return new SocketNodeHandleFactory(pn);
   }
+
+  /**
+   * This is split off so we can get the IpServiceLayer easily.
+   * @return
+   */
+  public TransportLayer<InetSocketAddress, ByteBuffer> getBottomLayers(TLPastryNode pn, MultiInetSocketAddress proxyAddress) throws IOException {
+    // wire layer
+    TransportLayer<InetSocketAddress, ByteBuffer> wtl = getWireTransportLayer(proxyAddress.getInnermostAddress(), pn);
+
+    // magic number layer
+    TransportLayer<InetSocketAddress, ByteBuffer> mntl = getMagicNumberTransportLayer(wtl,pn);
+
+    // Limited sockets layer
+    TransportLayer<InetSocketAddress, ByteBuffer> lstl = getLimitSocketsTransportLayer(mntl,pn);
+       
+    // Network Info layer
+    TransportLayer<InetSocketAddress, ByteBuffer> iptl = getIpServiceTransportLayer(lstl, pn);
+
+    return iptl;
+  }
   
   public NodeHandleAdapter getNodeHanldeAdapter(
       final TLPastryNode pn, 
@@ -259,21 +279,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     
     SocketNodeHandle localhandle = (SocketNodeHandle)pn.getLocalHandle();
     final SocketNodeHandleFactory handleFactory = (SocketNodeHandleFactory)handleFactory2;
-    MultiInetSocketAddress localAddress = localhandle.eaddress;
-    MultiInetSocketAddress proxyAddress = localAddress;
+    MultiInetSocketAddress proxyAddress = localhandle.eaddress;
     MultiAddressSourceRouteFactory esrFactory = getMultiAddressSourceRouteFactory(pn);
-
-    // wire layer
-    TransportLayer<InetSocketAddress, ByteBuffer> wtl = getWireTransportLayer(localAddress.getInnermostAddress(), pn);
-
-    // magic number layer
-    TransportLayer<InetSocketAddress, ByteBuffer> mntl = getMagicNumberTransportLayer(wtl,pn);
-
-    // Limited sockets layer
-    TransportLayer<InetSocketAddress, ByteBuffer> lstl = getLimitSocketsTransportLayer(mntl,pn);
-       
+    
     // Network Info layer
-    TransportLayer<InetSocketAddress, ByteBuffer> iptl = getIpServiceTransportLayer(lstl, pn);
+    TransportLayer<InetSocketAddress, ByteBuffer> iptl = getBottomLayers(pn, proxyAddress);
        
     // MultiInet layer
     TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteTransportLayer(iptl, pn, proxyAddress);
