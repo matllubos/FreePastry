@@ -126,7 +126,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   byte localContactState = RendezvousSocketNodeHandle.CONTACT_DIRECT;
   
   public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler, boolean firewalled) throws IOException {
-    super(nf, bindAddress, startPort, env, handler);
+    super(nf, bindAddress, startPort, env);
     init(firewalled);
   }
 

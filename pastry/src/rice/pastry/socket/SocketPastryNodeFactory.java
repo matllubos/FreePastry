@@ -159,16 +159,15 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 
   protected int findFireWallPolicy;
   
-  NATHandler natHandler;
   String firewallAppName;
   int firewallSearchTries;
 
 
   public SocketPastryNodeFactory(NodeIdFactory nf, int startPort, Environment env) throws IOException {
-    this(nf, null, startPort, env, null);
+    this(nf, null, startPort, env);
   }
 
-  public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler) throws IOException {
+  public SocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env) throws IOException {
     super(env);
 //    if (env.getTimeSource() instanceof DirectTimeSource) {
 //      throw new IllegalArgumentException("SocketPastryNodeFactory is not compatible with the DirectTimeSource in the environment.  Please use the SimpleTimeSource or an equivalent.");
@@ -181,7 +180,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     
     firewallSearchTries = params.getInt("nat_find_port_max_tries");
     firewallAppName = params.getString("nat_app_name");
-    this.natHandler = handler;
     localAddress = bindAddress;
     if (localAddress == null) {
       if (params.contains("socket_bindAddress")) {
@@ -238,36 +236,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       }
       }
     }
-
-    // see if there is a firewall
-    if (natHandler == null) {
-      if (params.contains("nat_handler_class")) {
-        try {
-          Class natHandlerClass = Class.forName(params.getString("nat_handler_class"));
-          Class[] args = {Environment.class, InetAddress.class};
-  //        Class[] args = new Class[2];
-  //        args[0] = environment.getClass();
-  //        args[1] = InetAddress.class;
-          Constructor constructor = natHandlerClass.getConstructor(args);
-          Object[] foo = {environment, this.localAddress};
-          natHandler = (NATHandler)constructor.newInstance(foo);
-        } catch (ClassNotFoundException e) {
-          if (logger.level <= Logger.INFO) logger.log("Didn't find UPnP libs, skipping UPnP");
-          natHandler = new StubNATHandler(environment, this.localAddress);
-//          natHandler = new SocketNatHandler(environment, new InetSocketAddress(localAddress,port), pAddress);
-        } catch (NoClassDefFoundError e) {
-          if (logger.level <= Logger.INFO) logger.log("Didn't find UPnP libs, skipping UPnP");
-          natHandler = new StubNATHandler(environment, this.localAddress);
-//          natHandler = new SocketNatHandler(environment, new InetSocketAddress(localAddress,port), pAddress);
-        } catch (Exception e) {
-          if (logger.level <= Logger.WARNING) logger.logException("Error constructing NATHandler.",e);
-          throw new RuntimeException(e);
-        }
-      } else {
-        natHandler = new StubNATHandler(environment, this.localAddress);
-//      natHandler = new SBBINatHandler(environment, this.localAddress);
-      }
-    }    
   }
 
   // ********************** abstract methods **********************

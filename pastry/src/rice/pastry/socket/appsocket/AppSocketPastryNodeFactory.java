@@ -108,8 +108,8 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
 
   public AppSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress,
-      int startPort, Environment env, NATHandler handler) throws IOException {
-    super(nf, bindAddress, startPort, env, handler);
+      int startPort, Environment env) throws IOException {
+    super(nf, bindAddress, startPort, env);
     // TODO Auto-generated constructor stub
   }
 

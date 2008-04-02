@@ -103,7 +103,7 @@ public class MemoryTest {
     //InetAddress localAddress = InetAddress.getByName("139.19.64.79");
     InetAddress localAddress = InetAddress.getLocalHost();
     
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, localAddress, startPort, env, null);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, localAddress, startPort, env);
 
     InetSocketAddress bootaddress = new InetSocketAddress(localAddress, startPort);
     
