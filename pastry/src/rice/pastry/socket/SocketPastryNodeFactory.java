@@ -77,7 +77,6 @@ import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-import org.mpisws.p2p.transport.networkinfo.InetSocketAddressLookup;
 import org.mpisws.p2p.transport.networkinfo.NetworkInfoTransportLayer;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
@@ -143,32 +142,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    */
   public static final String PROXY_ADDRESS = "SocketPastryNodeFactory.proxyAddress";
   /**
-   * Maps to an InetSocketAddress
+   * Maps to a InetSocketAddressLookup
    */
-  public static final String BIND_ADDRESS = "SocketPastryNodeFactory.bindAddress";
-  
-  /**
-   * Highest TransportLayer<InetSocketAddress, ByteBuffer>
-   */
-  public static final String HIGHEST_INET_LAYER = "SocketPastryNodeFactory.highestInetLayer";
-  
-  /**
-   * Can ask for your local Ip Address -> InetSocketAddressLookup
-   */
-  public static final String IP_ADDR_SERVICE = "SocketPastryNodeFactory.ip_addr_service";
-  
-  public static final int ALWAYS = 1;
+  public static final String IP_SERVICE = "SocketPastryNodeFactory.ip-service";
 
-  public static final int PREFIX_MATCH = 2;
-
-  public static final int NEVER = 3;
-
-  public static final int OVERWRITE = 1;
-
-  public static final int USE_DIFFERENT_PORT = 2;
-
-  public static final int FAIL = 3;
-  
   public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   private int port;
   protected NodeIdFactory nidFactory;
@@ -182,9 +159,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 
   protected int findFireWallPolicy;
   
-  /**
-   * Used to set up forwarding on UPnP enabled NATs.
-   */
   NATHandler natHandler;
   String firewallAppName;
   int firewallSearchTries;
@@ -307,19 +281,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   public NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) {
     return new SocketNodeHandleFactory(pn);
   }
-
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getNodeHandleAdapterEarly(InetSocketAddress bindAddr, TLPastryNode pn) throws IOException {
-    // wire layer
-    TransportLayer<InetSocketAddress, ByteBuffer> wtl = getWireTransportLayer(bindAddr, pn);
-
-    // magic number layer
-    TransportLayer<InetSocketAddress, ByteBuffer> mntl = getMagicNumberTransportLayer(wtl,pn);
-    
-    // Limited sockets layer
-    TransportLayer<InetSocketAddress, ByteBuffer> lstl = getLimitSocketsTransportLayer(mntl,pn);
-    
-    return lstl;
-  }
   
   public NodeHandleAdapter getNodeHanldeAdapter(
       final TLPastryNode pn, 
@@ -333,12 +294,21 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     MultiInetSocketAddress localAddress = localhandle.eaddress;
     MultiInetSocketAddress proxyAddress = localAddress;
     MultiAddressSourceRouteFactory esrFactory = getMultiAddressSourceRouteFactory(pn);
-    
-    // Wire Layer
-    TransportLayer<InetSocketAddress, ByteBuffer> lstl = (TransportLayer<InetSocketAddress, ByteBuffer>)pn.getVars().get(HIGHEST_INET_LAYER); 
-    
+
+    // wire layer
+    TransportLayer<InetSocketAddress, ByteBuffer> wtl = getWireTransportLayer(localAddress.getInnermostAddress(), pn);
+
+    // magic number layer
+    TransportLayer<InetSocketAddress, ByteBuffer> mntl = getMagicNumberTransportLayer(wtl,pn);
+
+    // Limited sockets layer
+    TransportLayer<InetSocketAddress, ByteBuffer> lstl = getLimitSocketsTransportLayer(mntl,pn);
+       
+    // Network Info layer
+    TransportLayer<InetSocketAddress, ByteBuffer> iptl = getIpServiceTransportLayer(lstl, pn);
+       
     // MultiInet layer
-    TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteTransportLayer(lstl, pn, localAddress);
+    TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteTransportLayer(iptl, pn, proxyAddress);
 
     // SourceRoute<MultiInet> layer
     TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> srl = getSourceRouteTransportLayer(etl, pn, esrFactory);
@@ -475,10 +445,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return lstl;
   }
   
-  protected NetworkInfoTransportLayer getIpServiceTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getIpServiceTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
     Environment environment = pn.getEnvironment();
     NetworkInfoTransportLayer ipTL = 
       new NetworkInfoTransportLayer(wtl,environment,null);
+    pn.getVars().put(IP_SERVICE, ipTL);
     return ipTL;
   }
 
@@ -1057,7 +1028,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * @return A node with a random ID and next port number.
    */
   public PastryNode newNode(NodeHandle nodeHandle, Id id, InetSocketAddress proxyAddress) {
-    final PastryNode n = newNode(id, proxyAddress);
+    PastryNode n = newNode(id, proxyAddress);
     if (nodeHandle == null) {
       n.getBootstrapper().boot(null); 
     } else {
@@ -1210,150 +1181,26 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     Parameters params = environment.getParameters();
 //    System.out.println(environment.getLogManager());
 
-
     MultiInetSocketAddress localAddress = null;
     MultiInetSocketAddress proxyAddress = null;
-
-      localAddress = getEpochAddress(port);
-
-      // bind so we can check the firewall status
-      TLPastryNode pn = new TLPastryNode(nodeId, environment);
-      pn.getVars().put(BIND_ADDRESS, localAddress);
-      TransportLayer<InetSocketAddress, ByteBuffer> lstl = getNodeHandleAdapterEarly(localAddress.getInnermostAddress(), pn);
-//      pn.getVars().put(HIGHEST_INET_LAYER, lstl);
-      NetworkInfoTransportLayer ipService = getIpServiceTransportLayer(lstl, pn);    
-      pn.getVars().put(HIGHEST_INET_LAYER, ipService);
-      pn.getVars().put(IP_ADDR_SERVICE, ipService);
-                    
-      boolean probeForExternalAddress = environment.getParameters().getBoolean("probe_for_external_address");
-      if (pAddress == null) {
-        if (environment.getParameters().contains("external_address")) {
-          pAddress = environment.getParameters().getInetSocketAddress("external_address");
-        } else {
-          if (probeForExternalAddress) {
-            int timeout = environment.getParameters().getInt("pastry_proxy_connectivity_timeout");
-            int tries = environment.getParameters().getInt("pastry_proxy_connectivity_tries");            
-            try {
-              InetSocketAddress[] verifyAddresses = environment.getParameters().getInetSocketAddressArray("probe_for_external_address_bootstraps");
-              if (true) throw new RuntimeException("TODO: implement");
-//              pAddress = verifyConnection(timeout, tries, localAddress.getInnermostAddress(), verifyAddresses, environment, logger);
-            } catch (NullPointerException npe) {
-              throw new RuntimeException("Cannot probe for an external address w/o a bootstrap.  Specify a bootstrap or addresses by setting probe_for_external_address_bootstraps.");
-            }
-          }
-        }
-      }
-      
-      // pAddress is null only if !probeForExternalAddress, but may not be null
-      // proxyAddress is null
-      if (!probeForExternalAddress) {
-        findFireWallIfNecessary();
-        if (pAddress == null) {
-          // may need to find and set the firewall
-          if (natHandler.getFireWallExternalAddress() == null) {
-            proxyAddress = localAddress;
-          } else {
-            // configure the firewall if necessary, can be any port, start with
-            // the freepastry port
-            int availableFireWallPort = natHandler.findAvailableFireWallPort(port, port, firewallSearchTries, firewallAppName);
-            natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-            proxyAddress = new MultiInetSocketAddress(new InetSocketAddress[]{new InetSocketAddress(
-                natHandler.getFireWallExternalAddress(), availableFireWallPort), localAddress.getInnermostAddress()});
-          }
-        } else {
-          // configure the firewall if necessary, but to the specified port
-          if (natHandler.getFireWallExternalAddress() != null) {
-            int availableFireWallPort = natHandler.findAvailableFireWallPort(port,
-                pAddress.getPort(), firewallSearchTries, firewallAppName);
-            if (availableFireWallPort == pAddress.getPort()) {
-              natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-            } else {
-              // decide how to handle this
-              switch (getFireWallPolicyVariable("nat_state_policy")) {
-                case OVERWRITE:
-                  natHandler.openFireWallPort(port, pAddress.getPort(), firewallAppName);
-                  break;
-                case FAIL:
-                  // todo: would be useful to pass the app that is bound to that
-                  // port
-                  throw new BindException(
-                      "Firewall is already bound to the requested port:"
-                          + pAddress);
-                case USE_DIFFERENT_PORT:
-                  natHandler.openFireWallPort(port, availableFireWallPort, firewallAppName);
-                  pAddress = new InetSocketAddress(pAddress.getAddress(),
-                      availableFireWallPort);
-                  break;
-              }
-            }
-          }
-          proxyAddress = new MultiInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()});
-        }
-      } else {
-        proxyAddress = new MultiInetSocketAddress(new InetSocketAddress[]{pAddress, localAddress.getInnermostAddress()});          
-      }
-      
-//      updateAddressList(proxyAddress);
-      
+    localAddress = getEpochAddress(port);
+    proxyAddress = localAddress;
+    
     if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
       port++; // this statement must go after the construction of srManager
               // because the
-
+    TLPastryNode pn = new TLPastryNode(nodeId, environment);
     pn.getVars().put(PROXY_ADDRESS, proxyAddress);
-    
     nodeHandleHelper(pn);
     
+
+//      }
+      
+//    });
+
     return pn;
   }
-
-  protected void findFireWallIfNecessary() throws IOException {
-    switch (getFireWallPolicyVariable("nat_search_policy")) {
-      case NEVER:
-        return;
-      case PREFIX_MATCH:
-        if (!localAddressIsProbablyNatted())
-          return;
-      case ALWAYS:
-      default:
-        natHandler.findFireWall(localAddress);
-    }
-  }
-
-  protected int getFireWallPolicyVariable(String key) {
-    String val = environment.getParameters().getString(key);
-    if (val.equalsIgnoreCase("prefix"))
-      return PREFIX_MATCH;
-    if (val.equalsIgnoreCase("change"))
-      return USE_DIFFERENT_PORT;
-    if (val.equalsIgnoreCase("never"))
-      return NEVER;
-    if (val.equalsIgnoreCase("overwrite"))
-      return OVERWRITE;
-    if (val.equalsIgnoreCase("always"))
-      return ALWAYS;
-    if (val.equalsIgnoreCase("fail"))
-      return FAIL;
-    throw new RuntimeException("Unknown value " + val + " for " + key);
-  }
-
-  /**
-   * @return true if ip address matches firewall prefix
-   */
-  protected boolean localAddressIsProbablyNatted() {
-    String ip = localAddress.getHostAddress();
-    String nattedNetworkPrefixes = environment.getParameters().getString(
-        "nat_network_prefixes");
-
-    String[] nattedNetworkPrefix = nattedNetworkPrefixes.split(";");
-    for (int i = 0; i < nattedNetworkPrefix.length; i++) {
-      if (ip.startsWith(nattedNetworkPrefix[i])) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-
+  
   protected Environment cloneEnvironment(Environment rootEnvironment, Id nodeId) {
     Environment ret = rootEnvironment;
     if (rootEnvironment.getParameters().getBoolean("pastry_factory_multipleNodes")) {

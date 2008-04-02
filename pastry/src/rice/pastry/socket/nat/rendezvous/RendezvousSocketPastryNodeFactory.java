@@ -117,11 +117,6 @@ import rice.pastry.transport.TLPastryNode;
 public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected RandomSource random;
 
-  /**
-   * Maps to a Boolean
-   */
-  public static final String CONTACT_STATE = "RendezvousSocketPastryNodeFactory.CONTACT_STATE";
-  
   
   /**
    * The local node's contact state.  
@@ -159,22 +154,12 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
 
 
-  
   @Override
-  protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getMultiAddressSourceRouteTransportLayer(
-      TransportLayer<InetSocketAddress, ByteBuffer> mntl, TLPastryNode pn,
-      MultiInetSocketAddress localAddress) {
-    TransportLayer<InetSocketAddress, ByteBuffer> mtl = getRendezvousTransportLayer(mntl, pn);
-
-    return super.getMultiAddressSourceRouteTransportLayer(mtl, pn, localAddress);
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getIpServiceTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
+    TransportLayer<InetSocketAddress, ByteBuffer> mtl = super.getIpServiceTransportLayer(wtl, pn);
+    
+    return getRendezvousTransportLayer(mtl, pn);
   }
-
-//  @Override
-//  protected TransportLayer<InetSocketAddress, ByteBuffer> getMagicNumberTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
-//    TransportLayer<InetSocketAddress, ByteBuffer> mtl = super.getMagicNumberTransportLayer(wtl, pn);
-//    
-//    return getRendezvousTransportLayer(mtl, pn);
-//  }
 
   @Override
   protected IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> getIdentiySerializer(TLPastryNode pn, SocketNodeHandleFactory handleFactory) {
@@ -227,10 +212,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   
   protected void generatePilotStrategy(TLPastryNode pn, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousLayer) {
     // only do this if firewalled
-//    if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) {
-    if (((Byte)pn.getVars().get(CONTACT_STATE)).byteValue() == RendezvousSocketNodeHandle.CONTACT_FIREWALLED) {
-      new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer, pn.getEnvironment());  
-    }
+    if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect())
+      new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer, pn.getEnvironment());    
   }
 
   protected ContactDeserializer<InetSocketAddress, RendezvousSocketNodeHandle> getContactDeserializer(final TLPastryNode pn) {
@@ -324,7 +307,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   boolean firstNode = true;
   
   @Override
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getNodeHandleAdapterEarly(InetSocketAddress bindAddr, TLPastryNode pn) throws IOException {
+  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {
     byte contactState = localContactState;    
     
     // this code is for testing
@@ -337,13 +320,6 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         contactState = RendezvousSocketNodeHandle.CONTACT_FIREWALLED;
       }
     }
-    pn.getVars().put(CONTACT_STATE, contactState);
-    return super.getNodeHandleAdapterEarly(bindAddr, pn);
-  }
-  
-  @Override
-  public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {
-    byte contactState = ((Byte)pn.getVars().get(CONTACT_STATE)).byteValue();
     
     RendezvousSNHFactory pnhf = (RendezvousSNHFactory)nhf;
     MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)pn.getVars().get(PROXY_ADDRESS);
@@ -371,8 +347,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
     TransportLayer<InetSocketAddress, ByteBuffer> baseTl = super.getWireTransportLayer(innermostAddress, pn);
     RendezvousSocketNodeHandle handle = (RendezvousSocketNodeHandle)pn.getLocalHandle();
-//    if (!handle.canContactDirect()) {
-    if (((Byte)pn.getVars().get(CONTACT_STATE)).byteValue() == RendezvousSocketNodeHandle.CONTACT_FIREWALLED) {
+    if (!handle.canContactDirect()) {
       return new FirewallTLImpl<InetSocketAddress, ByteBuffer>(baseTl,5000,pn.getEnvironment());
     }
     
