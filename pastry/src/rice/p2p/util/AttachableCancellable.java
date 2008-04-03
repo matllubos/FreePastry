@@ -54,6 +54,10 @@ public class AttachableCancellable implements Cancellable {
    * If subCancellable = null, it's been cancelled.
    */
   Collection<Cancellable> subCancellable = new ArrayList<Cancellable>();
+
+  public boolean isCancelled() {
+    return subCancellable == null;
+  }
   
   /**
    * Returns false if any are false;
@@ -75,7 +79,7 @@ public class AttachableCancellable implements Cancellable {
   public void attach(Cancellable c) {
     if (c == null) return;
     boolean cancel = false;
-    synchronized(this) {
+    synchronized(this) {      
       if (subCancellable == null) {
         cancel = true;
       } else {

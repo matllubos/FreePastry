@@ -36,51 +36,16 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.networkinfo;
 
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.Map;
-
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
-import rice.Continuation;
 import rice.p2p.commonapi.Cancellable;
 
 /**
- * First, call getMyInetAddress to find the external address.  
- * Second, try to use UPnP or user configured portForwarding to configure the NAT
- * Third, call verifyConnectivity to make sure it all worked
+ * Called by the ProbeStrategy
  * 
  * @author Jeff Hoye
  *
  */
-public interface InetSocketAddressLookup {
-  /**
-   * Returns the local node's InetSocketAddress
-   * 
-   * @param bootstrap who to ask
-   * @param c where the return value is delivered
-   * @param options can be null
-   * @return you can cancel the operation
-   */
-  public Cancellable getMyInetAddress(InetSocketAddress bootstrap, 
-      Continuation<InetSocketAddress, Exception> c, 
-      Map<String, Object> options);
-  
-  /** 
-   * Verify that I have connectivity by using a third party.
-   * 
-   * Opens a socket to probeAddress.
-   * probeAddress calls ProbeStrategy.requestProbe()
-   * probeStrategy forwards the request to another node "Carol"
-   * Carol probes local
-   * 
-   * @param bootstrap
-   * @param proxyAddr
-   * @return
-   */
-  public Cancellable verifyConnectivity(MultiInetSocketAddress local, 
-      InetSocketAddress probeAddresses, 
-      ConnectivityResult deliverResultToMe, 
-      Map<String, Object> options);
-
+public interface Prober {
+  Cancellable probe(MultiInetSocketAddress addr, long uid);
 }

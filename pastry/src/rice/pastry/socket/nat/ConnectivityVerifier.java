@@ -39,9 +39,30 @@ package rice.pastry.socket.nat;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
+
 import rice.Continuation;
+import rice.p2p.commonapi.Cancellable;
 
 public interface ConnectivityVerifier {
-  void findExternalAddress(InetSocketAddress local, Collection<InetSocketAddress> probeAddresses, Continuation<InetSocketAddress, Exception> deliverResultToMe);
-  void verifyConnectivity(InetSocketAddress local, ConnectivityResult deliverResultToMe);
+  /**
+   * Finds the external address by contacting a random member of the probeAddresses
+   * 
+   * @param local the local bindaddress
+   * @param probeAddresses the nodes ask 
+   * @param deliverResultToMe deliver the result here
+   * @return cancel the operation
+   */
+  Cancellable findExternalAddress(InetSocketAddress local, Collection<InetSocketAddress> probeAddresses, Continuation<InetSocketAddress, Exception> deliverResultToMe);
+  
+  /**
+   * Verify my connectivity using a 3rd party
+   * 
+   * @param local
+   * @param probeAddresses
+   * @param deliverResultToMe
+   * @return cancel the operation
+   */
+  Cancellable verifyConnectivity(MultiInetSocketAddress local, Collection<InetSocketAddress> probeAddresses, ConnectivityResult deliverResultToMe);
 }

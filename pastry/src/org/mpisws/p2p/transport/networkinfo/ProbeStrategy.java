@@ -34,10 +34,24 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.socket.nat;
+package org.mpisws.p2p.transport.networkinfo;
 
-public interface ConnectivityResult {
-  public void udpSuccess();
-  public void tcpSuccess();
-  public void receivedExceptoin(Exception e);
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+
+import rice.p2p.commonapi.Cancellable;
+
+/**
+ * This is used in a network 
+ * @author Jeff Hoye
+ *
+ */
+public interface ProbeStrategy {
+  /**
+   * Finds another node in the network and asks them to probe the addr with the uid
+   * 
+   * @param addr the location of the requestor
+   * @param uid a unique identifier created by the original requestor at addr
+   * @return can cancel the operation
+   */
+  Cancellable requestProbe(MultiInetSocketAddress addr, long uid);
 }

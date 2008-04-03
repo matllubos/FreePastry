@@ -51,6 +51,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
 import org.mpisws.p2p.transport.util.DefaultCallback;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
@@ -79,6 +80,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  */
 public class NetworkInfoTransportLayer implements 
     InetSocketAddressLookup, 
+    Prober,
     TransportLayer<InetSocketAddress, ByteBuffer>, 
     TransportLayerCallback<InetSocketAddress, ByteBuffer> {
   protected Logger logger;
@@ -312,5 +314,16 @@ public class NetworkInfoTransportLayer implements
 
   public void destroy() {
     tl.destroy();    
+  }
+
+  public Cancellable verifyConnectivity(MultiInetSocketAddress local,
+      InetSocketAddress probeAddresses, ConnectivityResult deliverResultToMe,
+      Map<String, Object> options) {
+    throw new RuntimeException("TODO: Implement.");
+  }
+
+  public Cancellable probe(MultiInetSocketAddress addr, long uid) {
+    // TODO Auto-generated method stub
+    throw new RuntimeException("TODO: Implement.");
   }
 }
