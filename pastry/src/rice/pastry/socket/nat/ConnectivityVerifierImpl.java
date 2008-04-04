@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
@@ -73,25 +74,8 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     
       public void receiveResult(InetSocketAddressLookup lookup) {
         // we're on the selector now, and we have our TL
-        
-        // pull a random node off the list, and try it, we do this so the recursion works
-        InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
-        
-        ret.attach(lookup.getMyInetAddress(target, new Continuation<InetSocketAddress, Exception>() {          
-          public void receiveResult(InetSocketAddress result) {              
-            // success!
-            ret.cancel(); // kill any recursive tries
-            deliverResultToMe.receiveResult(result);
-          }
-        
-          public void receiveException(Exception exception) {
-            // see if we can try anyone else
-            if (probeList.isEmpty()) deliverResultToMe.receiveException(exception);
-            
-            // retry (recursive)
-            ret.attach(findExternalAddress(local, probeList, deliverResultToMe));
-          }      
-        }, null));
+
+        findExternalAddressHelper(lookup, ret, local, probeList, deliverResultToMe);
       }
       
       public void receiveException(Exception exception) {
@@ -102,6 +86,32 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     
     return ret;
   }
+
+  public void findExternalAddressHelper(final InetSocketAddressLookup lookup, final AttachableCancellable ret, final InetSocketAddress local,
+      final List<InetSocketAddress> probeList,
+      final Continuation<InetSocketAddress, Exception> deliverResultToMe) {
+      // we're on the selector now, and we have our TL        
+      // pull a random node off the list, and try it, we do this so the recursion works
+      InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
+      
+      ret.attach(lookup.getMyInetAddress(target, new Continuation<InetSocketAddress, Exception>() {          
+        public void receiveResult(InetSocketAddress result) {              
+          // success!
+          ret.cancel(); // kill any recursive tries
+          lookup.destroy();
+          deliverResultToMe.receiveResult(result);
+        }
+      
+        public void receiveException(Exception exception) {
+          // see if we can try anyone else
+          if (probeList.isEmpty()) deliverResultToMe.receiveException(exception);
+          
+          // retry (recursive)
+          findExternalAddressHelper(lookup, ret, local, probeList, deliverResultToMe);
+        }      
+      }, null));    
+  }
+
 
   protected Cancellable getInetSocketAddressLookup(final InetSocketAddress bindAddress, final Continuation<InetSocketAddressLookup, Exception> deliverResultToMe) {
     final AttachableCancellable ret = new AttachableCancellable();

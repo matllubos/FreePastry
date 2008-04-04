@@ -34,54 +34,56 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.networkinfo;
+package rice.pastry.testing.rendezvous;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.Map;
-
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import java.util.Collections;
 
 import rice.Continuation;
-import rice.Destructable;
-import rice.p2p.commonapi.Cancellable;
+import rice.environment.Environment;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNodeFactory;
+import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.socket.nat.ConnectivityVerifier;
+import rice.pastry.socket.nat.ConnectivityVerifierImpl;
+import rice.pastry.standard.RandomNodeIdFactory;
 
-/**
- * First, call getMyInetAddress to find the external address.  
- * Second, try to use UPnP or user configured portForwarding to configure the NAT
- * Third, call verifyConnectivity to make sure it all worked
- * 
- * @author Jeff Hoye
- *
- */
-public interface InetSocketAddressLookup extends Destructable {
+public class WhatIsMyIP {
+
   /**
-   * Returns the local node's InetSocketAddress
-   * 
-   * @param bootstrap who to ask
-   * @param c where the return value is delivered
-   * @param options can be null
-   * @return you can cancel the operation
+   * @param args
    */
-  public Cancellable getMyInetAddress(InetSocketAddress bootstrap, 
-      Continuation<InetSocketAddress, Exception> c, 
-      Map<String, Object> options);
-  
-  /** 
-   * Verify that I have connectivity by using a third party.
-   * 
-   * Opens a socket to probeAddress.
-   * probeAddress calls ProbeStrategy.requestProbe()
-   * probeStrategy forwards the request to another node "Carol"
-   * Carol probes local
-   * 
-   * @param bootstrap
-   * @param proxyAddr
-   * @return
-   */
-  public Cancellable verifyConnectivity(MultiInetSocketAddress local, 
-      InetSocketAddress probeAddresses, 
-      ConnectivityResult deliverResultToMe, 
-      Map<String, Object> options);
+  public static void main(String[] args) throws IOException {    
+    // the port to use locally
+    int bindport = Integer.parseInt(args[0]);
+    
+    // build the bootaddress from the command line args
+    InetAddress bootaddr = InetAddress.getByName(args[1]);
+    int bootport = Integer.parseInt(args[2]);
+    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+
+    Environment env = new Environment();
+    
+    // Generate the NodeIds Randomly
+    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
+    
+    // construct the PastryNodeFactory, this is how we use rice.pastry.socket
+    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+    
+    ConnectivityVerifier verifier = new ConnectivityVerifierImpl(factory);
+    
+    verifier.findExternalAddress(factory.getNextInetSocketAddress(), Collections.singleton(bootaddress), new Continuation<InetSocketAddress, Exception>() {
+    
+      public void receiveResult(InetSocketAddress result) {
+        System.out.println(result);
+      }
+    
+      public void receiveException(Exception exception) {
+        // TODO Auto-generated method stub    
+      }    
+    });
+  }
 
 }

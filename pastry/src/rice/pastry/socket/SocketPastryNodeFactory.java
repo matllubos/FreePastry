@@ -237,6 +237,14 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       }
     }
   }
+  
+  public InetAddress getBindAddress() {
+    return localAddress;
+  }
+  
+  public InetSocketAddress getNextInetSocketAddress() {
+    return new InetSocketAddress(localAddress, port);
+  }
 
   // ********************** abstract methods **********************
   @Override
