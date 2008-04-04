@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -56,6 +57,7 @@ import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
 import org.mpisws.p2p.transport.util.DefaultCallback;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.InsufficientBytesException;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketInputBuffer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 import org.mpisws.p2p.transport.wire.magicnumber.MagicNumberTransportLayer;
@@ -91,9 +93,11 @@ public class NetworkInfoTransportLayer implements
   protected TransportLayer<InetSocketAddress, ByteBuffer> tl;
 
   protected static final byte HEADER_PASSTHROUGH_BYTE = (byte)0;
-  protected static final byte HEADER_IP_PLEASE_BYTE = (byte)1;
+  protected static final byte HEADER_IP_ADDRESS_REQUEST_BYTE = (byte)1;
+  protected static final byte HEADER_PROBE_REQUEST_BYTE = (byte)2;
+  protected static final byte HEADER_PROBE_RESPONSE_BYTE = (byte)3;
   protected static final byte[] HEADER_PASSTHROUGH = {HEADER_PASSTHROUGH_BYTE};
-  protected static final byte[] HEADER_IP_PLEASE = {HEADER_IP_PLEASE_BYTE};
+  protected static final byte[] HEADER_IP_ADDRESS_REQUEST = {HEADER_IP_ADDRESS_REQUEST_BYTE};
   
   
   public NetworkInfoTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> tl, 
@@ -117,7 +121,7 @@ public class NetworkInfoTransportLayer implements
   public Cancellable getMyInetAddress(InetSocketAddress bootstrap, 
       final Continuation<InetSocketAddress, Exception> c, Map<String, Object> options) {
     AttachableCancellable ret = new AttachableCancellable();
-    ret.attach(openSocket(bootstrap, HEADER_IP_PLEASE, new SocketCallback<InetSocketAddress>() {
+    ret.attach(openSocket(bootstrap, HEADER_IP_ADDRESS_REQUEST, new SocketCallback<InetSocketAddress>() {
     
       public void receiveResult(SocketRequestHandle<InetSocketAddress> cancellable,
           P2PSocket<InetSocketAddress> sock) {
@@ -236,7 +240,7 @@ public class NetworkInfoTransportLayer implements
         case HEADER_PASSTHROUGH_BYTE:
           callback.incomingSocket(socket);
           return;
-        case HEADER_IP_PLEASE_BYTE:
+        case HEADER_IP_ADDRESS_REQUEST_BYTE:
           // write out the caller's ip address
           SimpleOutputBuffer sob = new SimpleOutputBuffer();
           addrSerializer.serialize(socket.getIdentifier(), sob);          
@@ -300,30 +304,188 @@ public class NetworkInfoTransportLayer implements
     return tl.getLocalIdentifier();
   }
 
+  /**
+   * Set the PASSTHROUGH header
+   */
   public MessageRequestHandle<InetSocketAddress, ByteBuffer> sendMessage(
       InetSocketAddress i, ByteBuffer m,
-      MessageCallback<InetSocketAddress, ByteBuffer> deliverAckToMe,
+      final MessageCallback<InetSocketAddress, ByteBuffer> deliverAckToMe,
       Map<String, Object> options) {
-    return tl.sendMessage(i, m, deliverAckToMe, options);
+    
+    final MessageRequestHandleImpl<InetSocketAddress, ByteBuffer> ret = new MessageRequestHandleImpl<InetSocketAddress, ByteBuffer>(i,m,options);
+    
+    ByteBuffer passThrough = ByteBuffer.allocate(m.remaining());
+    passThrough.put(HEADER_PASSTHROUGH_BYTE);
+    passThrough.put(m);
+    
+    MessageCallback<InetSocketAddress, ByteBuffer> myCallback = null;
+    if (deliverAckToMe != null) {
+      myCallback = new MessageCallback<InetSocketAddress, ByteBuffer>() {
+
+        public void ack(MessageRequestHandle<InetSocketAddress, ByteBuffer> msg) {
+          deliverAckToMe.ack(ret);
+        }
+        
+        public void sendFailed(
+            MessageRequestHandle<InetSocketAddress, ByteBuffer> msg,
+            Exception reason) {
+          deliverAckToMe.sendFailed(ret, reason);
+        }
+      };
+    }
+    return tl.sendMessage(i, passThrough, myCallback, options);
   }
+  
   public void messageReceived(InetSocketAddress i, ByteBuffer m,
       Map<String, Object> options) throws IOException {
-    callback.messageReceived(i, m, options);
+    byte header = m.get();
+    switch(header) {
+    case HEADER_PASSTHROUGH_BYTE:
+      callback.messageReceived(i, m, options);
+      return;
+    case HEADER_PROBE_RESPONSE_BYTE:
+      long uid = m.getLong();
+      // No need to remove them from the table, this will get done in destroy()
+      verifyConnectionRequests.get(uid).udpSuccess(i, null);
+    }
   }
 
-
   public void destroy() {
+    verifyConnectionRequests.clear();
     tl.destroy();    
   }
 
-  public Cancellable verifyConnectivity(MultiInetSocketAddress local,
-      InetSocketAddress probeAddresses, ConnectivityResult deliverResultToMe,
-      Map<String, Object> options) {
-    throw new RuntimeException("TODO: Implement.");
+  /**
+   * Ask this strategy to probe a requesting node, but from a 3rd party node
+   */
+  protected ProbeStrategy probeStrategy;
+  public void setProbeStrategy(ProbeStrategy probeStrategy) {
+    this.probeStrategy = probeStrategy;
   }
 
-  public Cancellable probe(MultiInetSocketAddress addr, long uid) {
-    // TODO Auto-generated method stub
-    throw new RuntimeException("TODO: Implement.");
+  Map<Long, ConnectivityResult> verifyConnectionRequests = new HashMap<Long, ConnectivityResult>();
+  
+  /**
+   * ask probeAddress to call probeStrategy.requestProbe()
+   */
+  public Cancellable verifyConnectivity(MultiInetSocketAddress local,
+      InetSocketAddress probeAddress, 
+      final ConnectivityResult deliverResultToMe,
+      Map<String, Object> options) {
+    AttachableCancellable ret = new AttachableCancellable();
+
+    final long uid = environment.getRandomSource().nextLong();
+    
+    if (logger.level <= Logger.FINE) logger.log("verifyConnectivity("+local+","+probeAddress+"):"+uid);
+
+    synchronized(verifyConnectionRequests) {
+      verifyConnectionRequests.put(uid, deliverResultToMe);
+    }
+    
+    // header has the PROBE_REQUEST and uid
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    try {
+      sob.writeByte(HEADER_PROBE_REQUEST_BYTE);
+      sob.writeLong(uid);
+    } catch (IOException ioe) {
+      // shouldn't happen
+      synchronized(verifyConnectionRequests) {
+        verifyConnectionRequests.remove(uid);
+      }      
+      deliverResultToMe.receiveException(ioe);
+      return null;
+    }
+    
+    // if they cancel, pull it from the table
+    ret.attach(new Cancellable() {    
+      public boolean cancel() {
+        synchronized(verifyConnectionRequests) {
+          verifyConnectionRequests.remove(uid);
+        }
+        return true;
+      }    
+    });
+    
+    ret.attach(openSocket(probeAddress, sob.getBytes(), new SocketCallback<InetSocketAddress>() {    
+      public void receiveResult(SocketRequestHandle<InetSocketAddress> cancellable,
+          P2PSocket<InetSocketAddress> sock) {
+        // maybe we should read a response here, but I don't think it's important, just read to close
+        
+        sock.register(true, false, new P2PSocketReceiver<InetSocketAddress>() {
+        
+          public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+              boolean canRead, boolean canWrite) throws IOException {
+            // we just want to record the socket closing
+            long bytesRead = socket.read(ByteBuffer.allocate(1));
+            
+            if (bytesRead < 0) {
+              // what we expect
+              socket.close();
+              return;
+            }
+
+            if (bytesRead == 0) {
+              // weird, but just reregister
+              socket.register(true,false,this);
+              return;
+            }
+            
+            if (bytesRead > 0) {
+              // this shouldn't happen, it should be closed, reregister anyway
+              if (logger.level <= Logger.WARNING) logger.log("Unexpected response on REQUEST_PROBE_SOCKET reregistering.");
+              socket.register(true,false,this);              
+              return;
+            }            
+          }
+        
+          public void receiveException(P2PSocket<InetSocketAddress> socket,
+              Exception ioe) {
+            deliverResultToMe.receiveException(ioe);
+          }        
+        });
+        
+//        final SocketInputBuffer sib = new SocketInputBuffer(sock);
+//        
+//        try {
+//          new P2PSocketReceiver<InetSocketAddress>() {
+//            
+//            public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+//                boolean canRead, boolean canWrite) throws IOException {
+//              // read response
+//              
+//              try {
+//                InetSocketAddress addr = addrSerializer.deserialize(sib, null, null);
+//                c.receiveResult(addr);
+//              } catch (InsufficientBytesException ibe) {
+//                socket.register(true, false, this);
+//              } catch (Exception e) {
+//                c.receiveException(e);
+//              }
+//            }
+//          
+//            public void receiveException(P2PSocket<InetSocketAddress> socket,
+//                Exception ioe) {
+//              c.receiveException(ioe);
+//            }
+//          
+//          }.receiveSelectResult(sock, true, false);        
+//        } catch (IOException ioe) {
+//          c.receiveException(ioe);
+//        }
+      }
+    
+      public void receiveException(SocketRequestHandle<InetSocketAddress> s,
+          Exception ex) {
+        deliverResultToMe.receiveException(ex);
+      }    
+    }, options));
+    return ret;
+  }
+
+  public Cancellable probe(InetSocketAddress addr, long uid, MessageCallback<InetSocketAddress, ByteBuffer> deliverResponseToMe, Map<String, Object> options) {
+    ByteBuffer msg = ByteBuffer.allocate(9); // header+uid
+    msg.put(HEADER_PROBE_RESPONSE_BYTE);
+    msg.putLong(uid);
+    return tl.sendMessage(addr, msg, deliverResponseToMe, options);
   }
 }

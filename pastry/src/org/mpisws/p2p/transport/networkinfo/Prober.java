@@ -36,6 +36,11 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.networkinfo;
 
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
 import rice.p2p.commonapi.Cancellable;
@@ -47,5 +52,16 @@ import rice.p2p.commonapi.Cancellable;
  *
  */
 public interface Prober {
-  Cancellable probe(MultiInetSocketAddress addr, long uid);
+  /**
+   * 
+   * @param addr the address to probe
+   * @param uid the uid with the probe
+   * @param deliverResponseToMe let me know how it goes
+   * @param options tl options
+   * @return call me to cancel
+   */ 
+  public Cancellable probe(InetSocketAddress addr, 
+      long uid, 
+      MessageCallback<InetSocketAddress, ByteBuffer> deliverResponseToMe, 
+      Map<String, Object> options);
 }

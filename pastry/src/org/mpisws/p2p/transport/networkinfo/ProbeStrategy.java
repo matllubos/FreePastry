@@ -49,7 +49,9 @@ public interface ProbeStrategy {
   /**
    * Finds another node in the network and asks them to probe the addr with the uid
    * 
-   * @param addr the location of the requestor
+   * calls Prober.probe() on another node
+   * 
+   * @param addr the location of the requestor (who we need to probe)
    * @param uid a unique identifier created by the original requestor at addr
    * @return can cancel the operation
    */
