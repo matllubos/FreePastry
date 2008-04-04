@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
@@ -58,6 +59,35 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   
   public ConnectivityVerifierImpl(SocketPastryNodeFactory spnf) {
     this.spnf = spnf;
+  }
+  
+  /**
+   * Get the address from the transport layer.  Used by the two public methods.  Does the execution on the selector, 
+   * calls back on the continuation on the selector.
+   */
+  protected Cancellable getInetSocketAddressLookup(final InetSocketAddress bindAddress, final Continuation<InetSocketAddressLookup, Exception> deliverResultToMe) {
+    final AttachableCancellable ret = new AttachableCancellable();
+    
+    Runnable r = new Runnable() {
+      public void run() {
+        if (ret.isCancelled()) return;
+        TLPastryNode pn = new TLPastryNode(Id.build(), spnf.getEnvironment());
+    
+        try {
+          InetSocketAddressLookup lookup = (InetSocketAddressLookup)spnf.getBottomLayers(pn, new MultiInetSocketAddress(bindAddress));      
+          deliverResultToMe.receiveResult(lookup);
+        } catch (IOException ioe) {
+          deliverResultToMe.receiveException(ioe);
+        }
+      }
+    };
+    // only do this on the selector thread, b/c binding on the non-selector makes java cranky on some versions of linux
+    if (spnf.getEnvironment().getSelectorManager().isSelectorThread()) {
+      r.run();
+    } else {
+      spnf.getEnvironment().getSelectorManager().invoke(r);
+    }
+    return ret;    
   }
   
   public Cancellable findExternalAddress(final InetSocketAddress local,
@@ -87,6 +117,15 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     return ret;
   }
 
+  /**
+   * Called recursively.
+   * 
+   * @param lookup
+   * @param ret
+   * @param local
+   * @param probeList
+   * @param deliverResultToMe
+   */
   public void findExternalAddressHelper(final InetSocketAddressLookup lookup, final AttachableCancellable ret, final InetSocketAddress local,
       final List<InetSocketAddress> probeList,
       final Continuation<InetSocketAddress, Exception> deliverResultToMe) {
@@ -104,7 +143,10 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
       
         public void receiveException(Exception exception) {
           // see if we can try anyone else
-          if (probeList.isEmpty()) deliverResultToMe.receiveException(exception);
+          if (probeList.isEmpty()) {
+            lookup.destroy();
+            deliverResultToMe.receiveException(exception);
+          }
           
           // retry (recursive)
           findExternalAddressHelper(lookup, ret, local, probeList, deliverResultToMe);
@@ -113,35 +155,71 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   }
 
 
-  protected Cancellable getInetSocketAddressLookup(final InetSocketAddress bindAddress, final Continuation<InetSocketAddressLookup, Exception> deliverResultToMe) {
-    final AttachableCancellable ret = new AttachableCancellable();
-    
-    Runnable r = new Runnable() {
-      public void run() {
-        if (ret.isCancelled()) return;
-        TLPastryNode pn = new TLPastryNode(Id.build(), spnf.getEnvironment());
-    
-        try {
-          InetSocketAddressLookup lookup = (InetSocketAddressLookup)spnf.getBottomLayers(pn, new MultiInetSocketAddress(bindAddress));      
-          deliverResultToMe.receiveResult(lookup);
-        } catch (IOException ioe) {
-          deliverResultToMe.receiveException(ioe);
-        }
-      }
-    };
-    // only do this on the selector thread, b/c binding on the non-selector makes java cranky on some versions of linux
-    if (spnf.getEnvironment().getSelectorManager().isSelectorThread()) {
-      r.run();
-    } else {
-      spnf.getEnvironment().getSelectorManager().invoke(r);
-    }
-    return ret;    
-  }
-  
-  public Cancellable verifyConnectivity(MultiInetSocketAddress local,
+  public Cancellable verifyConnectivity(final MultiInetSocketAddress local,
       Collection<InetSocketAddress> probeAddresses,
-      ConnectivityResult deliverResultToMe) {
-    throw new RuntimeException("TODO: Implement.");
+      final ConnectivityResult deliverResultToMe) {
+    final ArrayList<InetSocketAddress> probeList = new ArrayList<InetSocketAddress>(probeAddresses);
+    final AttachableCancellable ret = new AttachableCancellable();
+
+    // getInetSocketAddressLookup verifies that we are on the selector
+    ret.attach(getInetSocketAddressLookup(local.getInnermostAddress(), new Continuation<InetSocketAddressLookup, Exception>() {
+    
+      public void receiveResult(final InetSocketAddressLookup lookup) {
+        // we're on the selector now, and we have our TL
+
+        verifyConnectivityHelper(lookup, ret, local, probeList, new ConnectivityResult() {
+          boolean udpSuccess = false;
+          boolean tcpSuccess = false;
+          
+          public void udpSuccess(InetSocketAddress from, Map<String, Object> options) {
+            udpSuccess = true;
+            if (tcpSuccess) {
+              ret.cancel();
+              lookup.destroy();
+            }
+            deliverResultToMe.udpSuccess(from, options);
+          }
+        
+          public void tcpSuccess(InetSocketAddress from, Map<String, Object> options) {
+            tcpSuccess = true;
+            if (udpSuccess) {
+              ret.cancel();
+              lookup.destroy();
+            }
+            deliverResultToMe.tcpSuccess(from, options);
+          }
+                
+          public void receiveException(Exception exception) {
+            // see if we can try anyone else
+            if (probeList.isEmpty()) {
+              lookup.destroy();
+              deliverResultToMe.receiveException(exception);
+            }
+            
+            // retry (recursive)
+            verifyConnectivityHelper(lookup, ret, local, probeList, deliverResultToMe);
+          }      
+        });
+      }
+      
+      public void receiveException(Exception exception) {
+        // we couldn't even get a transport layer, DOA        
+        deliverResultToMe.receiveException(exception);
+      }      
+    }));
+    
+    return ret;
+  }
+
+  public void verifyConnectivityHelper(final InetSocketAddressLookup lookup, final AttachableCancellable ret, 
+      final MultiInetSocketAddress local,
+      final List<InetSocketAddress> probeList,
+      final ConnectivityResult deliverResultToMe) {
+      // we're on the selector now, and we have our TL        
+      // pull a random node off the list, and try it, we do this so the recursion works
+      InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
+      
+      ret.attach(lookup.verifyConnectivity(local, target, deliverResultToMe, null));
   }
 
 }

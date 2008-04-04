@@ -42,5 +42,5 @@ import java.util.Map;
 public interface ConnectivityResult {
   public void udpSuccess(InetSocketAddress from, Map<String, Object> options);
   public void tcpSuccess(InetSocketAddress from, Map<String, Object> options);
-  public void receivedExceptoin(Exception e);
+  public void receiveException(Exception e);
 }
