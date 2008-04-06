@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.wire;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -154,12 +155,12 @@ public class UDPLayerImpl extends SelectionKeyHandler implements UDPLayer {
       key = wire.environment.getSelectorManager().register(channel, this, 0);
       key.interestOps(SelectionKey.OP_READ);
       if (logger.level <= Logger.INFO) logger.log("UDPLayer bound to "+wire.bindAddress);
+    } catch (BindException be) {
+      // Java's stupid exception isn't helpful, make a helpful one...
+      throw new BindException("Address already in use:"+wire.bindAddress);
     } catch (IOException e) {
-//      if (logger.level <= Logger.SEVERE) logger.log(
-//          "PANIC: Error binding datagram server to address " + localAddress + ": " + e);
       throw e;
     }
-//    logger.log("openServerSocket("+wire.bindAddress+")1");
   }
   
 

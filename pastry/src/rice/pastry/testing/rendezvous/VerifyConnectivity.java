@@ -68,7 +68,7 @@ public class VerifyConnectivity {
     int bootport = Integer.parseInt(args[2]);
     final InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
 
-    Environment env = new Environment();
+    final Environment env = new Environment();
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -79,9 +79,14 @@ public class VerifyConnectivity {
     final ConnectivityVerifier verifier = new ConnectivityVerifierImpl(factory);
     verifier.findExternalAddress(factory.getNextInetSocketAddress(), Collections.singleton(bootaddress), new Continuation<InetSocketAddress, Exception>() {
       
-      public void receiveResult(InetSocketAddress result) {
+      public void receiveResult(final InetSocketAddress result) {
         System.out.println("My external address is "+result);
 
+        Runnable r = new Runnable() {
+        
+          public void run() {
+            // TODO Auto-generated method stub
+        
         InetSocketAddress[] addrs = new InetSocketAddress[2];
         addrs[0] = new InetSocketAddress(result.getAddress(), externalPort);
         addrs[1] = factory.getNextInetSocketAddress();
@@ -102,6 +107,12 @@ public class VerifyConnectivity {
             exception.printStackTrace();
           }    
         });        
+          }
+          
+        }; 
+        env.getSelectorManager().invoke(r);
+
+        
       }
     
       public void receiveException(Exception exception) {

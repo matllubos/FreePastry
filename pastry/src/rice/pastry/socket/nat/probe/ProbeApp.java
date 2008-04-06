@@ -49,7 +49,7 @@ public class ProbeApp extends PastryAppl implements ProbeStrategy {
   Prober prober;
   
   public ProbeApp(PastryNode pn, Prober prober) {
-    super(pn);
+    super(pn, null, 0, null);
     this.prober = prober;
   }
 

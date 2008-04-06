@@ -265,6 +265,9 @@ public class NetworkInfoTransportLayer implements
           
           }.receiveSelectResult(socket, false, true);
           return;
+        case HEADER_PROBE_REQUEST_BYTE:
+          handleProbeRequest(socket);
+          return;
         default:
           // header didn't match up
           errorHandler.receivedUnexpectedData(socket.getIdentifier(), ret, 0, socket.getOptions());
@@ -279,6 +282,36 @@ public class NetworkInfoTransportLayer implements
     }.receiveSelectResult(s, true, false);
   }
 
+  public void handleProbeRequest(final P2PSocket<InetSocketAddress> socket) {
+    // read addr, uid
+    try {
+      new P2PSocketReceiver<InetSocketAddress>() {
+        SocketInputBuffer sib = new SocketInputBuffer(socket);
+      
+        public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+            boolean canRead, boolean canWrite) throws IOException {
+          // try to read the stuff until it works or fails
+          try {
+            MultiInetSocketAddress addr = MultiInetSocketAddress.build(sib);
+            long uid = sib.readLong();
+            probeStrategy.requestProbe(addr, uid);
+          } catch (InsufficientBytesException ibe) {    
+            socket.register(true, false, this);
+          }
+        }
+      
+        public void receiveException(P2PSocket<InetSocketAddress> socket,
+            Exception ioe) {
+          // TODO Auto-generated method stub
+      
+        }
+      
+      }.receiveSelectResult(socket, true, false);
+    } catch (IOException ioe) {
+      errorHandler.receivedException(socket.getIdentifier(), ioe);
+      socket.close();
+    }
+  }
   
   public void setCallback(TransportLayerCallback<InetSocketAddress, ByteBuffer> callback) {
     this.callback = callback;
@@ -314,9 +347,10 @@ public class NetworkInfoTransportLayer implements
     
     final MessageRequestHandleImpl<InetSocketAddress, ByteBuffer> ret = new MessageRequestHandleImpl<InetSocketAddress, ByteBuffer>(i,m,options);
     
-    ByteBuffer passThrough = ByteBuffer.allocate(m.remaining());
+    ByteBuffer passThrough = ByteBuffer.allocate(m.remaining()+1);
     passThrough.put(HEADER_PASSTHROUGH_BYTE);
     passThrough.put(m);
+    passThrough.flip();
     
     MessageCallback<InetSocketAddress, ByteBuffer> myCallback = null;
     if (deliverAckToMe != null) {
@@ -333,7 +367,8 @@ public class NetworkInfoTransportLayer implements
         }
       };
     }
-    return tl.sendMessage(i, passThrough, myCallback, options);
+    ret.setSubCancellable(tl.sendMessage(i, passThrough, myCallback, options));
+    return ret;
   }
   
   public void messageReceived(InetSocketAddress i, ByteBuffer m,
@@ -386,6 +421,7 @@ public class NetworkInfoTransportLayer implements
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     try {
       sob.writeByte(HEADER_PROBE_REQUEST_BYTE);
+      local.serialize(sob);
       sob.writeLong(uid);
     } catch (IOException ioe) {
       // shouldn't happen

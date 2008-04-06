@@ -129,29 +129,29 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   public void findExternalAddressHelper(final InetSocketAddressLookup lookup, final AttachableCancellable ret, final InetSocketAddress local,
       final List<InetSocketAddress> probeList,
       final Continuation<InetSocketAddress, Exception> deliverResultToMe) {
-      // we're on the selector now, and we have our TL        
-      // pull a random node off the list, and try it, we do this so the recursion works
-      InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
-      
-      ret.attach(lookup.getMyInetAddress(target, new Continuation<InetSocketAddress, Exception>() {          
-        public void receiveResult(InetSocketAddress result) {              
-          // success!
-          ret.cancel(); // kill any recursive tries
+    // we're on the selector now, and we have our TL        
+    // pull a random node off the list, and try it, we do this so the recursion works
+    InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
+    
+    ret.attach(lookup.getMyInetAddress(target, new Continuation<InetSocketAddress, Exception>() {          
+      public void receiveResult(InetSocketAddress result) {              
+        // success!
+        ret.cancel(); // kill any recursive tries
+        lookup.destroy();
+        deliverResultToMe.receiveResult(result);
+      }
+    
+      public void receiveException(Exception exception) {
+        // see if we can try anyone else
+        if (probeList.isEmpty()) {
           lookup.destroy();
-          deliverResultToMe.receiveResult(result);
+          deliverResultToMe.receiveException(exception);
         }
-      
-        public void receiveException(Exception exception) {
-          // see if we can try anyone else
-          if (probeList.isEmpty()) {
-            lookup.destroy();
-            deliverResultToMe.receiveException(exception);
-          }
-          
-          // retry (recursive)
-          findExternalAddressHelper(lookup, ret, local, probeList, deliverResultToMe);
-        }      
-      }, null));    
+        
+        // retry (recursive)
+        findExternalAddressHelper(lookup, ret, local, probeList, deliverResultToMe);
+      }      
+    }, null));    
   }
 
 
