@@ -115,10 +115,14 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
       this.errorHandler = new DefaultErrorHandler<MultiInetSocketAddress>(logger); 
     }
     if (this.strategy == null) {
-      this.strategy = new SimpleAddressStrategy(localAddress); 
+      this.strategy = new SimpleAddressStrategy(); 
     }
     
     wire.setCallback(this);
+  }
+  
+  public AddressStrategy getAddressStrategy() {
+    return strategy;
   }
   
   // ******************************** Sockets **************************
@@ -141,7 +145,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
     }
     final ByteBuffer b = sendIdentifier ? sob.getByteBuffer() : null;
     
-    InetSocketAddress addr = strategy.getAddress(i);
+    InetSocketAddress addr = strategy.getAddress(getLocalIdentifier(), i);
         
     handle.setSubCancellable(wire.openSocket(addr, 
         new SocketCallback<InetSocketAddress>(){    
@@ -261,7 +265,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
     }
     
     handle.setSubCancellable(wire.sendMessage(
-        strategy.getAddress(i), 
+        strategy.getAddress(getLocalIdentifier(), i), 
         buf, 
         new MessageCallback<InetSocketAddress, ByteBuffer>() {
     

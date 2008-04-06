@@ -36,31 +36,96 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.socket.nat.probe;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+import org.mpisws.p2p.transport.multiaddress.AddressStrategy;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.networkinfo.ProbeStrategy;
 import org.mpisws.p2p.transport.networkinfo.Prober;
 
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.MessageDeserializer;
+import rice.pastry.NodeHandle;
 import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.messaging.Message;
+import rice.pastry.socket.SocketNodeHandle;
 
 public class ProbeApp extends PastryAppl implements ProbeStrategy {
   Prober prober;
+  AddressStrategy addressStrategy;
   
-  public ProbeApp(PastryNode pn, Prober prober) {
+  public ProbeApp(PastryNode pn, Prober prober, AddressStrategy addressStrategy) {
     super(pn, null, 0, null);
     this.prober = prober;
+    this.addressStrategy = addressStrategy;
+    
+    setDeserializer(new MessageDeserializer() {
+      public rice.p2p.commonapi.Message deserialize(InputBuffer buf, short type,
+          int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
+        switch(type) {
+        case ProbeRequestMessage.TYPE:
+          return ProbeRequestMessage.build(buf, getAddress());
+        default:
+          throw new IllegalArgumentException("Unknown type: "+type);    
+        }
+      }    
+    });
   }
 
   @Override
   public void messageForAppl(Message msg) {
-    // TODO Auto-generated method stub
-    
+    ProbeRequestMessage prm = (ProbeRequestMessage)msg;
+    handleProbeRequestMessage(prm);
+  }
+  
+  public void handleProbeRequestMessage(ProbeRequestMessage prm) {
+    prober.probe(
+        addressStrategy.getAddress(((SocketNodeHandle)thePastryNode.getLocalHandle()).getAddress(), 
+            prm.getProbeRequester()), 
+            prm.getUID(), null, null);
   }
 
+  /**
+   * Send a ProbeRequestMessage to a node in the leafset.  
+   * 
+   * The node must not have the same external address as addr.  
+   * If no such candidate can be found, use someone who does.
+   * If there are no candidates at all, send the message to self (or call handleProbeRequest()
+   */
   public Cancellable requestProbe(MultiInetSocketAddress addr, long uid) {
-    throw new RuntimeException("TODO: Implement.");
-  }
+    // Step 1: find valid helpers
+    
+    // make a list of valid candidates
+    ArrayList<NodeHandle> valid = new ArrayList<NodeHandle>();
+    
+    Iterator<NodeHandle> candidates = thePastryNode.getLeafSet().iterator();
+    while(candidates.hasNext()) {
+      SocketNodeHandle nh = (SocketNodeHandle)candidates.next();
+      // don't pick self
+      if (!nh.equals(thePastryNode.getLocalHandle())) {
+        // if nh will send to addr's outermost address
+        if (addressStrategy.getAddress(nh.getAddress(), addr).equals(addr.getOutermostAddress())) {
+          valid.add(nh);
+        }
+      }
+    }
+    
+    // if there are no valid nodes, use the other nodes
+    if (valid.isEmpty()) {
+      if (logger.level <= Logger.WARNING) logger.log("requestProbe("+addr+","+uid+") found nobody to help verify connectivity, doing it by my self");
+      valid.add(thePastryNode.getLocalHandle());
+    }
+    
+    // Step 2: choose one randomly
+    NodeHandle handle = valid.get(thePastryNode.getEnvironment().getRandomSource().nextInt(valid.size()));
 
+    // Step 3: send the probeRequest
+    ProbeRequestMessage prm = new ProbeRequestMessage(addr, uid, getAddress());
+    return thePastryNode.send(handle, prm, null, null);
+  }
 }

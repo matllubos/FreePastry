@@ -45,5 +45,5 @@ import java.net.InetSocketAddress;
  *
  */
 public interface AddressStrategy {
-  public InetSocketAddress getAddress(MultiInetSocketAddress remote);
+  public InetSocketAddress getAddress(MultiInetSocketAddress local, MultiInetSocketAddress remote);
 }

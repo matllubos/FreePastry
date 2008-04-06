@@ -34,22 +34,60 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.multiaddress;
+package rice.pastry.socket.nat.probe;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
-/**
- * This transport layer that can allow a node behind a NAT to talk to nodes outside or inside the firewall.
- * 
- * Could concievably be used to allow a node with multiple NICs pick the best address for different nodes.
- * Perhaps this would be useful if you were running a node on the NAT.
- * 
- * @author Jeff Hoye
- *
- */
-public interface MultiInetAddressTransportLayer extends TransportLayer<MultiInetSocketAddress, ByteBuffer> {
-  public AddressStrategy getAddressStrategy();
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.pastry.messaging.PRawMessage;
+
+public class ProbeRequestMessage extends PRawMessage {
+  
+  public static final short TYPE = 1;
+
+  MultiInetSocketAddress probeRequestor;
+  long uid;
+  
+  /**
+   * 
+   * @param probeRequestor please probe this guy
+   * @param uid use this unique identifier
+   * @param appAddress the application address
+   */
+  public ProbeRequestMessage(MultiInetSocketAddress probeRequestor, long uid, int appAddress) {
+    super(appAddress);
+    this.probeRequestor = probeRequestor;
+    this.uid = uid;
+  }
+
+  // *********** Getters **************
+  public MultiInetSocketAddress getProbeRequester() {
+    return probeRequestor;
+  }
+  
+  public long getUID() {
+    return uid;
+  }
+  
+  // ***************** Raw Serialization ****************
+  public short getType() {
+    return TYPE;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeByte((byte)0); // version
+    probeRequestor.serialize(buf);
+    buf.writeLong(uid);
+  }
+
+  public static ProbeRequestMessage build(InputBuffer buf, int appAddress) throws IOException {
+    byte version = buf.readByte();
+    if (version != 0) throw new IllegalStateException("Unknown version: "+version);
+    MultiInetSocketAddress addr = MultiInetSocketAddress.build(buf);
+    long uid = buf.readLong();
+    return new ProbeRequestMessage(addr, uid, appAddress);
+  }
 }

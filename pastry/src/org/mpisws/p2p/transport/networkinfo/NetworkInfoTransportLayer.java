@@ -519,9 +519,18 @@ public class NetworkInfoTransportLayer implements
   }
 
   public Cancellable probe(InetSocketAddress addr, long uid, MessageCallback<InetSocketAddress, ByteBuffer> deliverResponseToMe, Map<String, Object> options) {
+    // udp
+    AttachableCancellable ret = new AttachableCancellable();
     ByteBuffer msg = ByteBuffer.allocate(9); // header+uid
     msg.put(HEADER_PROBE_RESPONSE_BYTE);
     msg.putLong(uid);
-    return tl.sendMessage(addr, msg, deliverResponseToMe, options);
+    msg.flip();
+    ret.attach(tl.sendMessage(addr, msg, deliverResponseToMe, options));
+    
+    
+    // TODO: tcp
+    logger.log("TODO: tcp in probe("+addr+","+uid+", ...)");
+    
+    return ret;
   }
 }

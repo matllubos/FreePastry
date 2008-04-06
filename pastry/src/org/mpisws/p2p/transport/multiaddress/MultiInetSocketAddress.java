@@ -192,6 +192,10 @@ public class MultiInetSocketAddress implements Serializable {
     return address[address.length-1];     
   }
   
+  public InetSocketAddress getOutermostAddress() {
+    return address[0];     
+  }
+  
   public int getNumAddresses() {
     return address.length; 
   }

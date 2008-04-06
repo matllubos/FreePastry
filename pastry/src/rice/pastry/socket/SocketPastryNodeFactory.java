@@ -155,6 +155,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * Maps to a InetSocketAddressLookup
    */
   public static final String IP_SERVICE = "SocketPastryNodeFactory.ip-service";
+  
+  /**
+   * Maps to MultiInetAddressTransportLayer
+   */
+  public static final String MULTI_INET_TL = "SocketPastryNodeFactory.milti-inet-tl";
 
   public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   private int port;
@@ -265,7 +270,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   
   protected ProbeStrategy getProbeStrategy(TLPastryNode pn) {
     NetworkInfoTransportLayer ipService = (NetworkInfoTransportLayer)pn.getVars().get(IP_SERVICE);
-    ProbeApp probeApp = new ProbeApp(pn, ipService);
+    MultiInetAddressTransportLayer tl = (MultiInetAddressTransportLayer)pn.getVars().get(MULTI_INET_TL);
+    ProbeApp probeApp = new ProbeApp(pn, ipService, tl.getAddressStrategy());
     probeApp.register();
     ipService.setProbeStrategy(probeApp);
     return probeApp;    
@@ -321,7 +327,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
        
     // MultiInet layer
     TransportLayer<MultiInetSocketAddress, ByteBuffer> etl = getMultiAddressSourceRouteTransportLayer(iptl, pn, proxyAddress);
-
+    pn.getVars().put(MULTI_INET_TL, etl);
+    
     // SourceRoute<MultiInet> layer
     TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> srl = getSourceRouteTransportLayer(etl, pn, esrFactory);
     

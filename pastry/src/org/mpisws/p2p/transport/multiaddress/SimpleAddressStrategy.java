@@ -40,18 +40,12 @@ import java.net.InetSocketAddress;
 
 public class SimpleAddressStrategy implements AddressStrategy {
 
-  MultiInetSocketAddress local;
-  
-  public SimpleAddressStrategy(MultiInetSocketAddress local) {
-    this.local = local; 
-  }
-  
   /**
    * Method which returns the address of this address
    *
    * @return The address
    */
-  public InetSocketAddress getAddress(MultiInetSocketAddress remote) {   
+  public InetSocketAddress getAddress(MultiInetSocketAddress local, MultiInetSocketAddress remote) {   
     // start from the outside address, and return the first one not equal to the local address (sans port)
     
     try {
@@ -61,7 +55,8 @@ public class SimpleAddressStrategy implements AddressStrategy {
         }
       }
     } catch (ArrayIndexOutOfBoundsException aioobe) {
-      throw new RuntimeException("ArrayIndexOutOfBoundsException in "+this+".getAddress("+local+")",aioobe);
+      // same computer
+      return remote.getInnermostAddress();
     }
     return remote.address[remote.address.length-1]; // the last address if we are on the same computer
   }
