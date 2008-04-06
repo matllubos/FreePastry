@@ -34,35 +34,33 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.socket.nat;
-
-import java.net.InetSocketAddress;
-import java.util.Collection;
+package rice.pastry.socket.nat.probe;
 
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
+import org.mpisws.p2p.transport.networkinfo.ProbeStrategy;
+import org.mpisws.p2p.transport.networkinfo.Prober;
 
-import rice.Continuation;
 import rice.p2p.commonapi.Cancellable;
+import rice.pastry.PastryNode;
+import rice.pastry.client.PastryAppl;
+import rice.pastry.messaging.Message;
 
-public interface ConnectivityVerifier {
-  /**
-   * Finds the external address by contacting a random member of the probeAddresses
-   * 
-   * @param local the local bindaddress
-   * @param probeAddresses the nodes ask 
-   * @param deliverResultToMe deliver the result here
-   * @return cancel the operation
-   */
-  Cancellable findExternalAddress(InetSocketAddress local, Collection<InetSocketAddress> probeAddresses, Continuation<InetSocketAddress, Exception> deliverResultToMe);
+public class ProbeApp extends PastryAppl implements ProbeStrategy {
+  Prober prober;
   
-  /**
-   * Verify my connectivity using a 3rd party
-   * 
-   * @param local
-   * @param probeAddresses
-   * @param deliverResultToMe
-   * @return cancel the operation
-   */
-  Cancellable verifyConnectivity(MultiInetSocketAddress local, Collection<InetSocketAddress> probeAddresses, ConnectivityResult deliverResultToMe);
+  public ProbeApp(PastryNode pn, Prober prober) {
+    super(pn);
+    this.prober = prober;
+  }
+
+  @Override
+  public void messageForAppl(Message msg) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  public Cancellable requestProbe(MultiInetSocketAddress addr, long uid) {
+    throw new RuntimeException("TODO: Implement.");
+  }
+
 }

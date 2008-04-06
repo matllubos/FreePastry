@@ -34,7 +34,7 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.socket.nat;
+package rice.pastry.socket.nat.connectivityverifiier;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

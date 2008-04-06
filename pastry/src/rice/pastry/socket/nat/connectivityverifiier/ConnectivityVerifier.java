@@ -34,56 +34,35 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.testing.rendezvous;
+package rice.pastry.socket.nat.connectivityverifiier;
 
-import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Collections;
+import java.util.Collection;
+
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
 
 import rice.Continuation;
-import rice.environment.Environment;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNodeFactory;
-import rice.pastry.socket.SocketPastryNodeFactory;
-import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifier;
-import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifierImpl;
-import rice.pastry.standard.RandomNodeIdFactory;
+import rice.p2p.commonapi.Cancellable;
 
-public class WhatIsMyIP {
-
+public interface ConnectivityVerifier {
   /**
-   * @param args bindport bootstrap bootstrapport
+   * Finds the external address by contacting a random member of the probeAddresses
+   * 
+   * @param local the local bindaddress
+   * @param probeAddresses the nodes ask 
+   * @param deliverResultToMe deliver the result here
+   * @return cancel the operation
    */
-  public static void main(String[] args) throws IOException {    
-    // the port to use locally
-    int bindport = Integer.parseInt(args[0]);
-    
-    // build the bootaddress from the command line args
-    InetAddress bootaddr = InetAddress.getByName(args[1]);
-    int bootport = Integer.parseInt(args[2]);
-    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-
-    Environment env = new Environment();
-    
-    // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
-    
-    // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
-    
-    ConnectivityVerifier verifier = new ConnectivityVerifierImpl(factory);
-    
-    verifier.findExternalAddress(factory.getNextInetSocketAddress(), Collections.singleton(bootaddress), new Continuation<InetSocketAddress, Exception>() {
-    
-      public void receiveResult(InetSocketAddress result) {
-        System.out.println(result);
-      }
-    
-      public void receiveException(Exception exception) {
-        // TODO Auto-generated method stub    
-      }    
-    });
-  }
-
+  Cancellable findExternalAddress(InetSocketAddress local, Collection<InetSocketAddress> probeAddresses, Continuation<InetSocketAddress, Exception> deliverResultToMe);
+  
+  /**
+   * Verify my connectivity using a 3rd party
+   * 
+   * @param local
+   * @param probeAddresses
+   * @param deliverResultToMe
+   * @return cancel the operation
+   */
+  Cancellable verifyConnectivity(MultiInetSocketAddress local, Collection<InetSocketAddress> probeAddresses, ConnectivityResult deliverResultToMe);
 }

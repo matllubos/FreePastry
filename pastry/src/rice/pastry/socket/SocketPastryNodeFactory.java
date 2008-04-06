@@ -77,7 +77,10 @@ import org.mpisws.p2p.transport.liveness.Pinger;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.networkinfo.InetSocketAddressLookup;
 import org.mpisws.p2p.transport.networkinfo.NetworkInfoTransportLayer;
+import org.mpisws.p2p.transport.networkinfo.ProbeStrategy;
+import org.mpisws.p2p.transport.networkinfo.Prober;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayerImpl;
 import org.mpisws.p2p.transport.proximity.MinRTTProximityProvider;
@@ -117,8 +120,15 @@ import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.boot.Bootstrapper;
+import rice.pastry.join.JoinProtocol;
+import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocol;
+import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.socket.nat.StubNATHandler;
+import rice.pastry.socket.nat.probe.ProbeApp;
+import rice.pastry.standard.ConsistentJoinProtocol;
+import rice.pastry.standard.PeriodicLeafSetProtocol;
 import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.transport.BogusNodeHandle;
 import rice.pastry.transport.LeafSetNHStrategy;
@@ -246,6 +256,22 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return new InetSocketAddress(localAddress, port);
   }
 
+  @Override
+  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory) {
+    super.registerApps(pn, leafSet, routeTable, nha, handleFactory);
+    
+    ProbeStrategy probeStrategy = getProbeStrategy(pn);
+  }
+  
+  protected ProbeStrategy getProbeStrategy(TLPastryNode pn) {
+    NetworkInfoTransportLayer ipService = (NetworkInfoTransportLayer)pn.getVars().get(IP_SERVICE);
+    ProbeApp probeApp = new ProbeApp(pn, ipService);
+    probeApp.register();
+    ipService.setProbeStrategy(probeApp);
+    return probeApp;    
+  }
+
+  
   // ********************** abstract methods **********************
   @Override
   public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {

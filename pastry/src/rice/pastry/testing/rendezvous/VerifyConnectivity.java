@@ -40,29 +40,33 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
 
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNodeFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifier;
 import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifierImpl;
 import rice.pastry.standard.RandomNodeIdFactory;
 
-public class WhatIsMyIP {
-
+public class VerifyConnectivity {
+  
   /**
-   * @param args bindport bootstrap bootstrapport
+   * @param args bindport bootstrap bootstrapport externalport
    */
   public static void main(String[] args) throws IOException {    
     // the port to use locally
     int bindport = Integer.parseInt(args[0]);
+    final int externalPort = Integer.parseInt(args[3]);
     
     // build the bootaddress from the command line args
     InetAddress bootaddr = InetAddress.getByName(args[1]);
     int bootport = Integer.parseInt(args[2]);
-    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
+    final InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
 
     Environment env = new Environment();
     
@@ -70,20 +74,41 @@ public class WhatIsMyIP {
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+    final SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
     
-    ConnectivityVerifier verifier = new ConnectivityVerifierImpl(factory);
-    
+    final ConnectivityVerifier verifier = new ConnectivityVerifierImpl(factory);
     verifier.findExternalAddress(factory.getNextInetSocketAddress(), Collections.singleton(bootaddress), new Continuation<InetSocketAddress, Exception>() {
-    
+      
       public void receiveResult(InetSocketAddress result) {
-        System.out.println(result);
+        System.out.println("My external address is "+result);
+
+        InetSocketAddress[] addrs = new InetSocketAddress[2];
+        addrs[0] = new InetSocketAddress(result.getAddress(), externalPort);
+        addrs[1] = factory.getNextInetSocketAddress();
+        
+        MultiInetSocketAddress local = new MultiInetSocketAddress(addrs);
+        
+        verifier.verifyConnectivity(local, Collections.singleton(bootaddress), new ConnectivityResult() {
+        
+          public void udpSuccess(InetSocketAddress from, Map<String, Object> options) {
+            System.out.println("UDP works. "+from);
+          }
+        
+          public void tcpSuccess(InetSocketAddress from, Map<String, Object> options) {
+            System.out.println("TCP works. "+from);
+          }
+        
+          public void receiveException(Exception exception) {
+            exception.printStackTrace();
+          }    
+        });        
       }
     
       public void receiveException(Exception exception) {
         // TODO Auto-generated method stub    
       }    
     });
+
   }
 
 }
