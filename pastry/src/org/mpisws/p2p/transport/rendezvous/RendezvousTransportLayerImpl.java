@@ -897,7 +897,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     } else {
       // this will be the ephemeral UDP port
       responseStrategy.messageReceived(i, m, options);
-      OptionsFactory.addOption(options, TAG_KEY, ephemeralDB.getTagForEphemeral(i));
+      options = OptionsFactory.addOption(options, TAG_KEY, ephemeralDB.getTagForEphemeral(i));
     }
     callback.messageReceived(i, m, options);
   }
@@ -1038,6 +1038,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
           responseStrategy.messageSent(ephemeral, m, options);
           return tl.sendMessage(ephemeral, m, deliverAckToMe, options);        
         }
+        if (logger.level <= Logger.FINE) logger.log("Not sending directly on ephemeral "+ephemeral+" for "+high);
         
         final MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
         MessageCallback<HighIdentifier, ByteBuffer> ack;
