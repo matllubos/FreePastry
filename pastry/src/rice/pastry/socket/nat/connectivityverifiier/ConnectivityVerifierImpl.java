@@ -146,6 +146,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
         if (probeList.isEmpty()) {
           lookup.destroy();
           deliverResultToMe.receiveException(exception);
+          return;
         }
         
         // retry (recursive)

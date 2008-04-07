@@ -82,41 +82,37 @@ public class VerifyConnectivity {
       public void receiveResult(final InetSocketAddress result) {
         System.out.println("My external address is "+result);
 
-        Runnable r = new Runnable() {
-        
-          public void run() {
-            // TODO Auto-generated method stub
-        
-        InetSocketAddress[] addrs = new InetSocketAddress[2];
-        addrs[0] = new InetSocketAddress(result.getAddress(), externalPort);
-        addrs[1] = factory.getNextInetSocketAddress();
-        
-        MultiInetSocketAddress local = new MultiInetSocketAddress(addrs);
-        
-        verifier.verifyConnectivity(local, Collections.singleton(bootaddress), new ConnectivityResult() {
-        
-          public void udpSuccess(InetSocketAddress from, Map<String, Object> options) {
-            System.out.println("UDP works. "+from);
-          }
-        
-          public void tcpSuccess(InetSocketAddress from, Map<String, Object> options) {
-            System.out.println("TCP works. "+from);
-          }
-        
-          public void receiveException(Exception exception) {
-            exception.printStackTrace();
-          }    
-        });        
+        // for some reason, can't do this immeadiately... don't know why yet
+        Runnable r = new Runnable() {        
+          public void run() {        
+            InetSocketAddress[] addrs = new InetSocketAddress[2];
+            addrs[0] = new InetSocketAddress(result.getAddress(), externalPort);
+            addrs[1] = factory.getNextInetSocketAddress();
+            
+            MultiInetSocketAddress local = new MultiInetSocketAddress(addrs);
+            
+            verifier.verifyConnectivity(local, Collections.singleton(bootaddress), new ConnectivityResult() {
+            
+              public void udpSuccess(InetSocketAddress from, Map<String, Object> options) {
+                System.out.println("UDP works. "+from);
+              }
+            
+              public void tcpSuccess(InetSocketAddress from, Map<String, Object> options) {
+                System.out.println("TCP works. "+from);
+              }
+            
+              public void receiveException(Exception exception) {
+                exception.printStackTrace();
+              }    
+            });        
           }
           
         }; 
-        env.getSelectorManager().invoke(r);
-
-        
+        env.getSelectorManager().invoke(r);        
       }
     
       public void receiveException(Exception exception) {
-        // TODO Auto-generated method stub    
+        exception.printStackTrace();
       }    
     });
 

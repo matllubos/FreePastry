@@ -43,6 +43,7 @@ import java.util.Map;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
+import rice.Continuation;
 import rice.p2p.commonapi.Cancellable;
 
 /**
@@ -62,6 +63,7 @@ public interface Prober {
    */ 
   public Cancellable probe(InetSocketAddress addr, 
       long uid, 
-      MessageCallback<InetSocketAddress, ByteBuffer> deliverResponseToMe, 
+      Continuation<Long, Exception> deliverResponseToMe, 
       Map<String, Object> options);
+  
 }
