@@ -798,7 +798,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
             errorMessage[0] = INCORRECT_IDENTITY;
             System.arraycopy(localIdentifier, 0, errorMessage, 1, localIdentifier.length);
             ByteBuffer buf = ByteBuffer.wrap(errorMessage);
-            tl.sendMessage(i, buf, null, options);          
+            tl.sendMessage(i, buf, null, options);   // it's important to the rendezvous layer to reuse the options       
             return;
           }          
           

@@ -431,7 +431,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
           sr.getHop(hopNum+1), 
           m, 
           null, // think about this 
-          null);
+          null); // it's important to the rendezvous layer to _not_ reuse the options
     }
   }
 

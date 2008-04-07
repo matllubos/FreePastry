@@ -38,11 +38,14 @@ package org.mpisws.p2p.transport.rendezvous;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -66,6 +69,7 @@ import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
+import rice.environment.time.TimeSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.MutableTuple;
@@ -75,7 +79,8 @@ import rice.selector.TimerTask;
 
 /**
  * The trick here is that this layer is at some level, say InetSocketAddress, but must pass around very High-Level
- * Identifiers, such as a NodeHandle for the rendezvous strategy to do its job, but maybe this can just be the RendezvousContact, and it can be casted.
+ * Identifiers, such as a NodeHandle for the rendezvous strategy to do its job, but maybe this can just be the 
+ * RendezvousContact, and it can be casted.
  * 
  * protocol:
  * byte CONNECTOR_SOCKET
@@ -88,6 +93,36 @@ import rice.selector.TimerTask;
  *   HighIdentifier opener = serializer.deserialize(sib);
  *   int uid = sib.readInt();
  * 
+ * UDP: We send these messages over TCP/routing unless we believe the Firewall has a temporarilly open port
+ * to us (see the following)
+ * 
+ * The firewall will open the port for a few seconds after a message is sent.  However it uses an 
+ * ephemeral port.  So, when we receive a message from a new port, we don't know who it's coming from yet,
+ * and if it is a ping and we send back a pong, the higher layer will try to send it to the outer-most 
+ * addr, but this won't work if the node is NATted and didn't configure forwarding.
+ * 
+ *  Ex:
+ *  Nancy is NATted and her external address:port is x:0 because there is no forwarding.
+ *  
+ *  Here's what this layer sees
+ *  x:5000 -> Alice : UDP // we don't know who x:5000 is, and we don't know what kind of message it is 
+ *  Alice -> x:0 : Pong // we need to translate x:0 into x:5000
+ *  
+ *  To accomplish this we'll use a series of Hash tables, and also tag the incoming addr/port on the options
+ *  of incoming UDP packets.  When Liveness or Identity makes an immediate response to 
+ *  UDP packets we will get our tag back, but when normal traffic is sent we need to remember the mapping.
+ *  
+ *  Note that there may be several NATted nodes behind the same firewall who all advertise the same bogus 
+ *  port of x:0, so we can't use the external port as a key in the table.
+ *  
+ *  We can assume that every sendMessage either has our tag, or a highIdentifier in the tag (set by lower identity), or both
+ *  If there is both then we'll make a binding of the tag, and the highIdentifier to the port
+ *  If there is only a tag, then we'll send it to the tag
+ *  If there is only a highIdentifier, then we may be forced to TCP/route
+ *  
+ *  Also, we need to remember how recently we got a UDP from the node, and if it's been too long, assume that the 
+ *  hole has closed, and we need to shift back to TCP (much slower)
+ *  
  * @author Jeff Hoye
  *
  * @param <Identifier>
@@ -105,6 +140,14 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   public static final byte CONNECTION_RESPONSE_FAILURE = 0; // forms a pilot connection 
   public static final byte CONNECTION_RESPONSE_SUCCESS = 1; // forms a pilot connection 
   
+  // UDP Tagging
+  public static final long NO_TAG = EphemeralDB.NO_TAG;
+  public static final String TAG_KEY = "RendezvousTransportLayer.UDP_TAG";
+  /**
+   * The message came from the overlay, rather than a lower layer
+   */
+  public static final String FROM_OVERLAY = "rendezvous.from_overlay";
+
   /**
    * Value should be a HighIdentifier
    */
@@ -126,6 +169,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   protected ContactDeserializer<Identifier, HighIdentifier> serializer;
   protected SelectorManager selectorManager;
   protected RandomSource random;
+  protected TimeSource time;
+  protected EphemeralDB<Identifier, HighIdentifier> ephemeralDB;
   
   public RendezvousTransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -138,6 +183,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       ResponseStrategy<Identifier> responseStrategy,
       Environment env) {
     this.random = env.getRandomSource();
+    this.time = env.getTimeSource();
     this.selectorManager = env.getSelectorManager();
     this.tl = tl;
     this.localNodeHandle = myRendezvousContact;
@@ -147,6 +193,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     this.pilotFinder = pilotFinder;
     this.rendezvousStrategy = rendezvousStrategy;
     this.responseStrategy = responseStrategy;
+    this.ephemeralDB = new EphemeralDBImpl<Identifier, HighIdentifier>(env,2*60*60*1000); // TODO: make this a configurable parameter
     
     this.logger = env.getLogManager().getLogger(RendezvousTransportLayerImpl.class, null);
     tl.setCallback(this);
@@ -373,11 +420,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     throw new RuntimeException("Not implemented.");    
   }
   
-  protected HighIdentifier getHighIdentifier(Map<String, Object> options) {
-    if (options == null) return null;
-    return (HighIdentifier)options.get(RENDEZVOUS_CONTACT_STRING);
-  }
-
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
 //    logger.log("incomingSocket("+s+")");
     if (logger.level <= Logger.FINEST) logger.log("incomingSocket("+s+")");
@@ -834,53 +876,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     
   }
 
-  
-  /**
-   * What to do if firewalled?
-   *   ConnectRequest UDP only?  For now always use UDP_AND_TCP
-   */
-  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
-    if (logger.level <= Logger.FINEST) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
-
-    HighIdentifier high = getHighIdentifier(options);
-//    logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+"):"+high);
-    if (high == null || high.canContactDirect() || responseStrategy.sendDirect(i, m, options)) {
-      // pass-through, need to allow for null during bootstrap, we assume pass-through works
-      responseStrategy.messageSent(i, m, options);
-      return tl.sendMessage(i, m, deliverAckToMe, options);
-    } else {
-      // rendezvous
-      final MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
-      MessageCallback<HighIdentifier, ByteBuffer> ack;
-      if (deliverAckToMe == null) {
-        ack = null;
-      } else {
-        ack = new MessageCallback<HighIdentifier, ByteBuffer>(){
-          public void ack(MessageRequestHandle<HighIdentifier, ByteBuffer> msg) {
-            deliverAckToMe.ack(ret);
-          }
-          public void sendFailed(MessageRequestHandle<HighIdentifier, ByteBuffer> msg, Exception reason) {
-            deliverAckToMe.sendFailed(ret, reason);
-          }
-        };
-      }
-      
-      // check to see if we have a pilot to the node, if so, use it
-      if (incomingPilots.containsKey(high)) {
-        options = OptionsFactory.addOption(options, OPTION_USE_PILOT, high);
-      }
-      
-      ret.setSubCancellable(rendezvousStrategy.sendMessage(high, m, ack, options));
-      return ret;
-    }
-  }
-  
-  public String toString() {
-    return "RendezvousTL{"+localNodeHandle+"}";
-  }
-
-  public static final String FROM_OVERLAY = "rendezvous.from_overlay";
-  
+  // ************************** UDP **********************
   /**
    * Usually called from the higher level app, who probably used routing to get the message here.
    * 
@@ -899,11 +895,180 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     if (options.containsKey(FROM_OVERLAY) && ((Boolean)options.get(FROM_OVERLAY)) == true) {
       // do nothing
     } else {
+      // this will be the ephemeral UDP port
       responseStrategy.messageReceived(i, m, options);
+      OptionsFactory.addOption(options, TAG_KEY, ephemeralDB.getTagForEphemeral(i));
     }
     callback.messageReceived(i, m, options);
   }
   
+  protected HighIdentifier getHighIdentifier(Map<String, Object> options) {
+    if (options == null) return null;
+    return (HighIdentifier)options.get(RENDEZVOUS_CONTACT_STRING);
+  }
+
+  protected long getTag(Map<String, Object> options) {
+    if (options == null) return NO_TAG;
+    Object ret = options.get(TAG_KEY);
+    if (ret == null) return NO_TAG;
+    return ((Long)ret).longValue();
+  }
+
+//  /**
+//   * Maps an ephemeral InetSocketAddress to a TAG
+//   * 
+//   * , Timestamp
+//   * if the Timestamp is very old +2 hours, recycle it with a new tag 
+//   * (the NAT may be reusing the port) otherwise, update the Timestamp 
+//   * each time ephemeralToTag is called
+//   * 
+//   * cleanup task that is on the order of 24 hours to clean these up
+//   */
+//  Map<Identifier, Long>ephemeralToTag = new HashMap<Identifier, Long>();
+//  /**
+//   * Maps tag -> Identifier, Time
+//   */
+//  Map<Long, MutableTuple<Identifier, Long>> tagToEphemeral = new HashMap<Long, MutableTuple<Identifier,Long>>();
+//  
+//  /**
+//   * Returns the existing tag if it isn't stale, a new one if doesn't exist, or is stale
+//   * @param addr
+//   * @return
+//   */
+//  protected long getTagForEphemeral(Identifier addr) {
+//    // returns a new one if stale or doesn't exist, otherwise, the existing one
+//    // updates the timestamp
+//    return ephemeralDB.getTag(addr);
+//    synchronized(ephemeralDB) {
+//      
+//      long now = time.currentTimeMillis();    
+//      long tag = ephemeralToTag.get(addr);
+//      if (tag == null) {
+//        
+//      }
+//      Long timeStamp = tagToEphemeral.get(tag).b();
+//      
+//      // if it's empty or stale, make a new one
+//      if ((tag == null) || (ret.b() < (now-STALE_PORT_TIME))) {
+//        ret = new MutableTuple<Long, Long>(nextTag++, now);
+//        ephemeralToTag.put(addr, ret);
+//      }
+//          
+//      // update the time
+//      ret.setB(now);
+//      
+//      return ret.a();
+//    }
+//  }
+//
+//  Map<HighIdentifier, Long> highToTag = new HashMap<HighIdentifier, Long>();
+//  protected void mapHighToTag(HighIdentifier high, long tag) {
+//    // if high.canContactDirect() throw an error    
+//    // map high to tag
+//    if (high.canContactDirect()) throw new IllegalStateException("high is non-NATted: "+high);
+//    highToTag.put(high, tag);
+//  }
+//  
+//  protected Identifier getEphemeral(long tag, Identifier i) {
+//    throw new RuntimeException("Implement.");    
+//  }
+//  
+//  protected Identifier getEphemeral(HighIdentifier high) {
+//    throw new RuntimeException("Implement.");    
+//  }
+//  
+//  /**
+//   * Called daily to clean up memory
+//   */
+//  protected void cleanup() {
+//    synchronized(ephemeralToTag) {
+//      long now = time.currentTimeMillis();          
+//      Iterator<Entry<Long, MutableTuple<Long, Long>>> i = ephemeralToTag.entrySet().iterator();
+//      while (i.hasNext()) {
+//        Entry<Identifier, MutableTuple<Long, Long>> entry = i.next();
+//        if (entry.getValue().b() < (now-STALE_PORT_TIME)) {
+//          i.remove();
+//        }
+//      }
+//    }
+//  }
+
+  /**
+   * What to do if firewalled?
+   *   ConnectRequest UDP only?  For now always use UDP_AND_TCP
+   */
+  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, final MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
+    if (logger.level <= Logger.FINEST) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
+
+    HighIdentifier high = getHighIdentifier(options);
+//    logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+"):"+high);
+    if (high == null) {
+      // try to use a tag
+      long tag = getTag(options);
+      if (tag != NO_TAG) {
+        i = ephemeralDB.getEphemeral(tag, i);
+      }
+      
+      responseStrategy.messageSent(i, m, options);
+      return tl.sendMessage(i, m, deliverAckToMe, options);       
+    } else {
+      if (high.canContactDirect()) {
+        // this is the typical case
+        // pass-through, need to allow for null during bootstrap, we assume pass-through works
+        responseStrategy.messageSent(i, m, options);
+        return tl.sendMessage(i, m, deliverAckToMe, options);
+      } else {
+        // rendezvous (we know it's a NATted node)
+        
+        // fetch the tag from the options
+        long tag = getTag(options);
+  
+        // attempt to map from highIdentifier to tag
+        if (tag != NO_TAG) {
+          // we know high != null, and !high.canContactDirect()
+          ephemeralDB.mapHighToTag(high, tag);
+        }
+        
+        // see if we have a valid ephemeral addr:port for this NATted highIdentifier
+        Identifier ephemeral = ephemeralDB.getEphemeral(high);
+             
+        if (ephemeral != null && responseStrategy.sendDirect(ephemeral, m, options)) {
+          // send directly if the strategy allows for it
+          if (logger.level <= Logger.FINE) logger.log("Sending directly on ephemeral "+ephemeral+" for "+high);
+          responseStrategy.messageSent(ephemeral, m, options);
+          return tl.sendMessage(ephemeral, m, deliverAckToMe, options);        
+        }
+        
+        final MessageRequestHandleImpl<Identifier, ByteBuffer> ret = new MessageRequestHandleImpl<Identifier, ByteBuffer>(i, m, options);
+        MessageCallback<HighIdentifier, ByteBuffer> ack;
+        if (deliverAckToMe == null) {
+          ack = null;
+        } else {
+          ack = new MessageCallback<HighIdentifier, ByteBuffer>(){
+            public void ack(MessageRequestHandle<HighIdentifier, ByteBuffer> msg) {
+              deliverAckToMe.ack(ret);
+            }
+            public void sendFailed(MessageRequestHandle<HighIdentifier, ByteBuffer> msg, Exception reason) {
+              deliverAckToMe.sendFailed(ret, reason);
+            }
+          };
+        }
+        
+        // check to see if we have a pilot to the node, if so, use it
+        if (incomingPilots.containsKey(high)) {
+          options = OptionsFactory.addOption(options, OPTION_USE_PILOT, high);
+        }
+        
+        ret.setSubCancellable(rendezvousStrategy.sendMessage(high, m, ack, options));
+        return ret;
+      }
+    }
+  }
+  
+  public String toString() {
+    return "RendezvousTL{"+localNodeHandle+"}";
+  }
+
   public void acceptMessages(boolean b) {
     tl.acceptMessages(b);
   }

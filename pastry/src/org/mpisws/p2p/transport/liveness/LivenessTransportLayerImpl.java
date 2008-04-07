@@ -348,7 +348,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     case HDR_PING:
       if (logger.level <= Logger.FINEST) logger.log("messageReceived("+i+", PING)");
 //      logger.log("Got ping from "+i);
-      pong(i, m.getLong(), options);      
+      pong(i, m.getLong(), options);      // it's important to the rendezvous layer to reuse the options
       notifyPingListenersPing(i);
       return;
     case HDR_PONG:
@@ -363,7 +363,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
         synchronized(manager) {
           if (manager.getPending() != null) {
 //            logger.log(this+"PONG2");
-            manager.getPending().pingResponse(sendTime, options);
+            manager.getPending().pingResponse(sendTime, options); 
             markAlive = true;
 //          } else {
 //            logger.log("Got pong from "+i+", but there is no DeadChecker for "+manager+"@"+System.identityHashCode(manager));            
