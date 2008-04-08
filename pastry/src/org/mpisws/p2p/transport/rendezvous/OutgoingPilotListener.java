@@ -34,63 +34,16 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.socket.nat.rendezvous;
-
-import org.mpisws.p2p.transport.rendezvous.OutgoingPilotListener;
-import org.mpisws.p2p.transport.rendezvous.PilotManager;
-import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
-
-import rice.environment.Environment;
-import rice.environment.logging.Logger;
-import rice.pastry.NodeHandle;
-import rice.pastry.NodeSetEventSource;
-import rice.pastry.NodeSetListener;
-import rice.pastry.leafset.LeafSet;
+package org.mpisws.p2p.transport.rendezvous;
 
 /**
- * Notifies the pilot strategy of leafset changes involving non-natted nodes.
- * 
- * Only instantiate this on NATted nodes.
+ * Tells a NATted node about outgoingPilots.
  * 
  * @author Jeff Hoye
  *
+ * @param <HighIdentifier>
  */
-public class LeafSetPilotStrategy<Identifier extends RendezvousContact> implements NodeSetListener, OutgoingPilotListener<Identifier> {
-  LeafSet leafSet;
-  PilotManager<Identifier> manager;
-  Logger logger;
-  
-  public LeafSetPilotStrategy(LeafSet leafSet, PilotManager<Identifier> manager, Environment env) {
-    this.leafSet = leafSet;
-    this.manager = manager;
-    this.manager.addOutgoingPilotListener(this);
-    this.logger = env.getLogManager().getLogger(LeafSetPilotStrategy.class, null);
-    
-    leafSet.addNodeSetListener(this);
-  }
-
-  public void nodeSetUpdate(NodeSetEventSource nodeSetEventSource, NodeHandle handle, boolean added) {
-    if (logger.level <= Logger.FINER) logger.log("nodeSetUpdate("+handle+")");
-//    if (logger.level <= Logger.FINE) logger.log("nodeSetUpdate("+handle+")");
-    Identifier nh = (Identifier)handle;
-    if (nh.canContactDirect()) {
-      if (added) {
-        manager.openPilot(nh, null);
-      } else {
-        manager.closePilot(nh);        
-      }
-    }
-  }
-
-  public void pilotOpening(Identifier i) {
-    // TODO Auto-generated method stub
-    
-  }
-
-  public void pilotClosed(Identifier i) {
-    if (leafSet.contains((NodeHandle)i)) {
-      manager.openPilot(i, null);
-    }
-  }
-  
+public interface OutgoingPilotListener<HighIdentifier> {
+  void pilotOpening(HighIdentifier i);
+  void pilotClosed(HighIdentifier i);
 }

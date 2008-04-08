@@ -40,9 +40,13 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
 
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
@@ -117,6 +121,15 @@ import rice.pastry.transport.TLPastryNode;
 public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected RandomSource random;
 
+  /**
+   * maps to a RendezvousStrategy<RendezvousSocketNodeHandle>
+   */
+  public static final String RENDEZVOUS_STRATEGY = "RendezvousSocketPastryNodeFactory.RENDEZVOUS_STRATEGY";
+  
+  /**
+   * maps to a RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>
+   */
+  public static final String RENDEZVOUS_TL = "RendezvousSocketPastryNodeFactory.RENDEZVOUS_TL";
   
   /**
    * The local node's contact state.  
@@ -148,7 +161,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet,
       RoutingTable routeTable, LeafSetProtocol lsProtocol) {
     RendezvousJoinProtocol jProtocol = new RendezvousJoinProtocol(pn,
-        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol, rendezvousApps.get(pn).b());
+        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol, (PilotManager<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_TL));
     jProtocol.register();
     return jProtocol;    
   }
@@ -182,8 +195,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         getResponseStrategy(pn),
         pn.getEnvironment());
     
-    rendezvousApps.get(pn).setB(ret);
-    rendezvousApps.get(pn).a().setTransportLayer(ret);
+    pn.getVars().put(RENDEZVOUS_TL, ret);
+    ((RendezvousStrategy<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_STRATEGY)).setTransportLayer(ret);
     
     generatePilotStrategy(pn, ret);
     return ret;
@@ -274,11 +287,11 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    * 
    * This table temporarily holds the rendezvousApps until they are needed, then it is deleted.
    */
-  Map<TLPastryNode, MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>> rendezvousApps = 
-    new HashMap<TLPastryNode, MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>>();
+//  Map<TLPastryNode, MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>> rendezvousApps = 
+//    new HashMap<TLPastryNode, MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>>();
   protected RendezvousStrategy<RendezvousSocketNodeHandle> getRendezvousStrategyHelper(TLPastryNode pn) {
     RendezvousStrategy<RendezvousSocketNodeHandle>  app = getRendezvousStrategy(pn);
-    rendezvousApps.put(pn,new MutableTuple<RendezvousStrategy<RendezvousSocketNodeHandle>, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>>(app,null));
+    pn.getVars().put(RENDEZVOUS_STRATEGY, app);
     return app;
   }
 
@@ -290,7 +303,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   @Override
   protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory) {
     super.registerApps(pn, leafSet, routeTable, nha, handleFactory);
-    RendezvousStrategy<RendezvousSocketNodeHandle> app = rendezvousApps.remove(pn).a();
+    RendezvousStrategy<RendezvousSocketNodeHandle> app = (RendezvousStrategy<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_STRATEGY);
     if (app instanceof RendezvousApp) {
       ((RendezvousApp)app).register();
     }
@@ -369,18 +382,43 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    * This code opens a pilot to our bootstrap node before proceeding.  This is necessary to allow the liveness
    * checks to be sent back to me without the bootstrap node remembering the address that I sent the liveness
    * check on.
+   * 
+   * When the node goes live, close all of the opened pilots, to not blow out the bootstrap node.
    */
   @Override
   protected Bootstrapper getBootstrapper(final TLPastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
       ProximityNeighborSelector pns) {
-    final PilotManager<RendezvousSocketNodeHandle> manager = rendezvousApps.get(pn).b();
+    final PilotManager<RendezvousSocketNodeHandle> manager = (PilotManager<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_TL);
     
     // only do the special step if we're NATted
     if (((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) return super.getBootstrapper(pn, tl, handleFactory, pns);
+
+    // set the contents true when booted
+    final boolean[] booted = new boolean[1];
+    booted[0] = false;
+    final ArrayList<RendezvousSocketNodeHandle> closeMeWhenReady = new ArrayList<RendezvousSocketNodeHandle>();    
+    Observer obs = new Observer() {    
+      public void update(Observable o, Object arg) {
+        if (arg instanceof Boolean) {
+          if (((Boolean)arg).booleanValue()) {
+            // node is ready
+            List<RendezvousSocketNodeHandle> temp;
+            synchronized(closeMeWhenReady) {
+              booted[0] = true;
+            }
+            for (RendezvousSocketNodeHandle nh : closeMeWhenReady) {
+              manager.closePilot(nh);
+            }
+          }
+        }
+      }    
+    };
+    pn.addObserver(obs);
     
     TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns) {
+      
       @Override
       protected void checkLiveness(final SocketNodeHandle h, Map<String, Object> options) {
         // open pilot first, then call checkliveness, but it's gonna fail the first time, because the NH is bogus.
@@ -389,6 +427,24 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         
           public void receiveResult(
               SocketRequestHandle<RendezvousSocketNodeHandle> result) {
+
+            // don't hold the lock when calling closePilot()
+            boolean close = false;
+            
+            // see if we already joined
+            synchronized(closeMeWhenReady) {
+              if (booted[0]) {
+                close = true;
+              } else {
+                closeMeWhenReady.add(result.getIdentifier());
+              }
+            }
+            if (close) {
+              manager.closePilot(result.getIdentifier());
+              return;
+            }
+            
+            // remember to close the pilot once we're joined
             pn.getLivenessProvider().checkLiveness(h, null);
           }
         

@@ -1094,6 +1094,35 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   Map<HighIdentifier, OutgoingPilot> outgoingPilots = 
     new HashMap<HighIdentifier, OutgoingPilot>();
   
+  // listener
+  ArrayList<OutgoingPilotListener<HighIdentifier>> opListeners = new ArrayList<OutgoingPilotListener<HighIdentifier>>();
+  protected void notifyOutgoingPilotAdded(HighIdentifier i) {
+    // avoid cme
+    ArrayList<OutgoingPilotListener<HighIdentifier>> temp = new ArrayList<OutgoingPilotListener<HighIdentifier>>(opListeners);
+    for (OutgoingPilotListener<HighIdentifier> l : temp) {
+      l.pilotOpening(i);
+    }
+  }
+  protected void notifyOutgoingPilotRemoved(HighIdentifier i) {
+    // avoid cme
+    ArrayList<OutgoingPilotListener<HighIdentifier>> temp = new ArrayList<OutgoingPilotListener<HighIdentifier>>(opListeners);
+    for (OutgoingPilotListener<HighIdentifier> l : temp) {
+      l.pilotClosed(i);
+    }
+  }
+
+  public void addOutgoingPilotListener(OutgoingPilotListener<HighIdentifier> listener) {
+    synchronized(opListeners) {
+      opListeners.add(listener);
+    }
+  }
+  
+  public void removeOutgoingPilotListener(OutgoingPilotListener<HighIdentifier> listener) {
+    synchronized(opListeners) {
+      opListeners.remove(listener);
+    }
+  }
+  
   /**
    * Only used by NATted node.
    * 
@@ -1102,14 +1131,24 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   public SocketRequestHandle<HighIdentifier> openPilot(final HighIdentifier i, 
       final Continuation<SocketRequestHandle<HighIdentifier>, Exception> deliverAckToMe) {    
     if (logger.level <= Logger.FINE) logger.log("openPilot("+i+")");
-    if (outgoingPilots.containsKey(i)) {
-      return outgoingPilots.get(i); 
-    }
-
-    Map<String, Object> options = serializer.getOptions(i);
-    final OutgoingPilot o = new OutgoingPilot(i,options);
-    outgoingPilots.put(i, o);
+    OutgoingPilot o2;
+    Map<String, Object> options;
     
+    // make sure we don't open multiple pilots
+    synchronized(outgoingPilots) {
+      if (outgoingPilots.containsKey(i)) {
+        return outgoingPilots.get(i); 
+      }
+  
+      options = serializer.getOptions(i);
+      o2 = new OutgoingPilot(i,options);
+      outgoingPilots.put(i, o2);
+    }
+    o2.init(); // don't want to do this while holding a lock
+    
+    notifyOutgoingPilotAdded(i);
+    
+    final OutgoingPilot o = o2;
     o.setCancellable(tl.openSocket(serializer.convert(i), new SocketCallback<Identifier>(){
       public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
         o.setSocket(sock);
@@ -1127,7 +1166,12 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   
   public void closePilot(HighIdentifier i) {
     if (logger.level <= Logger.FINE) logger.log("closePilot("+i+")");
-    OutgoingPilot closeMe = outgoingPilots.remove(i);
+    OutgoingPilot closeMe;
+    synchronized(outgoingPilots) {
+      closeMe = outgoingPilots.remove(i);
+    }
+    notifyOutgoingPilotRemoved(i);
+    
     if (closeMe != null) {
       closeMe.cancel();
     }
@@ -1197,10 +1241,19 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     
     protected Map<String, Object> options;
     
+    /**
+     * Must call init(), but don't do it while holding a lock
+     * 
+     * @param i
+     * @param options
+     */
     public OutgoingPilot(HighIdentifier i, Map<String, Object> options) {
       this.i = i;
       this.options = options;
-      selectorManager.schedule(this, PILOT_PING_PERIOD, PILOT_PING_PERIOD);
+    }
+    
+    public void init() {
+      selectorManager.schedule(this, PILOT_PING_PERIOD, PILOT_PING_PERIOD);      
     }
 
     public void receiveException(Exception ex) {
@@ -1289,7 +1342,10 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       } else {
         socket.close();        
       }
-      outgoingPilots.remove(i);
+      synchronized(outgoingPilots) {
+        outgoingPilots.remove(i);
+      }
+      notifyOutgoingPilotRemoved(i);
       return true;
     }
 

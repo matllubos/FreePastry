@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.rendezvous.PilotManager;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
 
@@ -91,12 +92,12 @@ import rice.pastry.standard.ConsistentJoinProtocol;
  */
 public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
 
-  RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousTL;
+  PilotManager<RendezvousSocketNodeHandle> pilotManager;
   
   public RendezvousJoinProtocol(PastryNode ln, NodeHandle lh, RoutingTable rt,
-      LeafSet ls, ReadyStrategy nextReadyStrategy, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousTL) {
+      LeafSet ls, ReadyStrategy nextReadyStrategy, PilotManager<RendezvousSocketNodeHandle> pilotManager) {
     super(ln, lh, rt, ls, nextReadyStrategy, new RCJPDeserializer(ln));
-    this.rendezvousTL = rendezvousTL;
+    this.pilotManager = pilotManager;
   }
 
   /**
@@ -113,7 +114,7 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
     // TODO: Throw exception if can't directly contact the bootstrap
     
     // open the pilot before sending the JoinRequest.
-    rendezvousTL.openPilot((RendezvousSocketNodeHandle)bootstrap, 
+    pilotManager.openPilot((RendezvousSocketNodeHandle)bootstrap, 
         new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, Exception>(){
 
       public void receiveException(Exception exception) {

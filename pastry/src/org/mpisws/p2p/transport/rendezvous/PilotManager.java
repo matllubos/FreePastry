@@ -36,8 +36,6 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.rendezvous;
 
-import java.io.IOException;
-
 import org.mpisws.p2p.transport.SocketRequestHandle;
 
 import rice.Continuation;
@@ -70,4 +68,7 @@ public interface PilotManager<Identifier> {
    */
   void closePilot(Identifier i);
 
+  public void addOutgoingPilotListener(OutgoingPilotListener<Identifier> listener);
+  public void removeOutgoingPilotListener(OutgoingPilotListener<Identifier> listener);
+  
 }
