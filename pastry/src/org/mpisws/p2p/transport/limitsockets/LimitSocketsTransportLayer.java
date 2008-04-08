@@ -117,6 +117,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
   }
   
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
+    if (logger.level <= Logger.FINER) logger.log(this+".incomingSocket("+s+")");
     callback.incomingSocket(getLSSock(s));
   }
 
