@@ -1359,6 +1359,35 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   // ********* incoming Pilots, only used by non-NATted nodes *************
   Map<HighIdentifier, IncomingPilot> incomingPilots = new HashMap<HighIdentifier, IncomingPilot>();
   
+  // listener
+  ArrayList<IncomingPilotListener<HighIdentifier>> ipListeners = new ArrayList<IncomingPilotListener<HighIdentifier>>();
+  protected void notifyIncomingPilotAdded(HighIdentifier i) {
+    // avoid cme
+    ArrayList<IncomingPilotListener<HighIdentifier>> temp = new ArrayList<IncomingPilotListener<HighIdentifier>>(ipListeners);
+    for (IncomingPilotListener<HighIdentifier> l : temp) {
+      l.pilotOpening(i);
+    }
+  }
+  protected void notifyIncomingPilotRemoved(HighIdentifier i) {
+    // avoid cme
+    ArrayList<IncomingPilotListener<HighIdentifier>> temp = new ArrayList<IncomingPilotListener<HighIdentifier>>(ipListeners);
+    for (IncomingPilotListener<HighIdentifier> l : temp) {
+      l.pilotClosed(i);
+    }
+  }
+
+  public void addIncomingPilotListener(IncomingPilotListener<HighIdentifier> listener) {
+    synchronized(ipListeners) {
+      ipListeners.add(listener);
+    }
+  }
+  
+  public void removeIncomingPilotListener(IncomingPilotListener<HighIdentifier> listener) {
+    synchronized(ipListeners) {
+      ipListeners.remove(listener);
+    }
+  }
+
   class IncomingPilot extends AbstractPilot {
     /**
      * Used to read the initial connection information, then re-constructed each time to read pings.
@@ -1394,6 +1423,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
         }
         sib.clear();
         incomingPilots.put(i,this);                
+        notifyIncomingPilotAdded(i);
         
         // NOTE, it's not important to put a return here, because maybe the node sent a ping while waiting for this step, 
         // just rely on the recovery to properly re-register this
@@ -1425,7 +1455,11 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     }
 
     public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
-      if (i != null) incomingPilots.remove(i);
+      if (i != null) {
+        if (logger.level <= Logger.FINER) logger.log("Shutdown of incoming pilot "+socket);
+        incomingPilots.remove(i);
+        notifyIncomingPilotRemoved(i);
+      }
       socket.close();
     }
 

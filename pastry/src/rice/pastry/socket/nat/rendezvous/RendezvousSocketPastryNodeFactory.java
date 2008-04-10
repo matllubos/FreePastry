@@ -411,6 +411,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
             for (RendezvousSocketNodeHandle nh : closeMeWhenReady) {
               manager.closePilot(nh);
             }
+            closeMeWhenReady.clear();
+            o.deleteObserver(this);
           }
         }
       }    

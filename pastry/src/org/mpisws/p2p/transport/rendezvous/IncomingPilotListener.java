@@ -36,41 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.rendezvous;
 
-import org.mpisws.p2p.transport.SocketRequestHandle;
-
-import rice.Continuation;
-
-/**
- * Used by NATted nodes.
- * 
- * Normally this would be notified of all changes to the leafset involving non-NATted nodes.
- * 
- * @author Jeff Hoye
- *
- * @param <Identifier>
- */
-public interface PilotManager<Identifier> {
-  /**
-   * Tells the manager to open a pilot to the Identifier
-   * 
-   * @param i
-   * @param deliverAckToMe optional
-   * @return
-   */
-  SocketRequestHandle<Identifier> openPilot(Identifier i, Continuation<SocketRequestHandle<Identifier>, Exception> deliverAckToMe);
-  
-  /**
-   * Tells the manager that the pilot to the Identifier is no longer useful
-   * 
-   * @param i
-   * @param deliverAckToMe optional
-   * @return
-   */
-  void closePilot(Identifier i);
-
-  public void addOutgoingPilotListener(OutgoingPilotListener<Identifier> listener);
-  public void removeOutgoingPilotListener(OutgoingPilotListener<Identifier> listener);
-  public void addIncomingPilotListener(IncomingPilotListener<Identifier> listener);
-  public void removeIncomingPilotListener(IncomingPilotListener<Identifier> listener);
-  
+public interface IncomingPilotListener<HighIdentifier> {
+  void pilotOpening(HighIdentifier i);
+  void pilotClosed(HighIdentifier i);
 }

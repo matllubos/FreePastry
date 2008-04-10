@@ -44,6 +44,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -58,6 +59,8 @@ import org.mpisws.p2p.transport.util.SocketWrapperSocket;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.selector.Timer;
+import rice.selector.TimerTask;
 
 /**
  * Automatically closes sockets based on LRU.
@@ -72,12 +75,14 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
   protected TransportLayer<Identifier, MessageType> tl;
   protected LinkedHashMap<LSSocket, LSSocket> cache;
   protected Logger logger;
-  private TransportLayerCallback<Identifier, MessageType> callback;
+  protected TransportLayerCallback<Identifier, MessageType> callback;
+  protected Timer timer;
   
   public LimitSocketsTransportLayer(int max_sockets, TransportLayer<Identifier, MessageType> tl, Environment env) {
     this.MAX_SOCKETS = max_sockets;
     this.tl = tl;
     this.logger = env.getLogManager().getLogger(LimitSocketsTransportLayer.class, null);
+    this.timer = env.getSelectorManager().getTimer();
     this.cache = new LinkedHashMap<LSSocket, LSSocket>(MAX_SOCKETS,0.75f,true);
     
     tl.setCallback(this);
@@ -144,6 +149,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
   
   class LSSocket extends SocketWrapperSocket<Identifier, Identifier> {
     boolean closed = false;
+    boolean forcedClose = false;
     public LSSocket(P2PSocket<Identifier> socket) {
       super(socket.getIdentifier(), socket, LimitSocketsTransportLayer.this.logger, socket.getOptions());
     }
@@ -155,10 +161,19 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     public void forceClose() {
 //      logger.log(this+".forceClose()");
       if (logger.level <= Logger.FINE) logger.log(this+".forceClose()");
-      closed = true;
-      cache.remove(this);
+      forcedClose = true;
       super.shutdownOutput();
 //      super.close();
+      timer.schedule(new TimerTask() {
+        @Override
+        public void run() {
+          try {
+            close();
+          } catch (Exception ioe) {
+            // do nothing, it's probably already closed anyway
+          }
+        }        
+      }, 3000);
     }
     
     /**
@@ -185,13 +200,23 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
 
     @Override
     public void register(boolean wantToRead, boolean wantToWrite, P2PSocketReceiver<Identifier> receiver) {
+      if (forcedClose) {
+        if (wantToWrite) {
+          receiver.receiveException(this, new ClosedChannelException("Limit Sockets forced close. "+this));        
+        }
+        if (wantToRead) {
+          super.register(true, false, receiver);          
+        }
+        return;
+      }
       if (!closed) touch(this);
       super.register(wantToRead, wantToWrite, receiver);
     }
 
     @Override
     public long write(ByteBuffer srcs) throws IOException {
-      if (!closed) touch(this);
+      if (forcedClose) throw new ClosedChannelException("Limit Sockets forced close. "+this);        
+      if (!closed) touch(this);      
       try {
         return super.write(srcs);
       } catch (IOException ioe) {
@@ -202,7 +227,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
 
     @Override
     public String toString() {
-      return LimitSocketsTransportLayer.this.toString()+"$LSSocket<"+identifier+">["+(closed?"closed":"open")+"]@"+System.identityHashCode(this);
+      return LimitSocketsTransportLayer.this.toString()+"$LSSocket<"+identifier+">["+(closed?"closed":"open")+"]@"+System.identityHashCode(this)+socket.toString();
     }
   }
   

@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -73,6 +74,10 @@ import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerialize
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
+import org.mpisws.p2p.transport.rendezvous.IncomingPilotListener;
+import org.mpisws.p2p.transport.rendezvous.OutgoingPilotListener;
+import org.mpisws.p2p.transport.rendezvous.PilotManager;
+import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayer;
 
 import rice.Destructable;
 import rice.environment.Environment;
@@ -96,6 +101,7 @@ import rice.pastry.routing.RouteMessage;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
+import rice.pastry.socket.nat.rendezvous.RendezvousSocketNodeHandle;
 import rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.TLPastryNode;
@@ -117,7 +123,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     // ******** we overrode SPNF make sure to alos override routeconsistent *******
 //    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
 //    params.setInt("rice.testing.routeconsistent_loglevel", Logger.INFO);
-//    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINE);
+    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO-1);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
@@ -171,6 +177,8 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
   PastryNode localNode;
   LeafSet leafSet;
 
+  static boolean isJanus = false;
+  
   /**
    * Of InetSocketAddress
    */
@@ -308,6 +316,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     if (localAddress.toString().contains(BOOTNODE)) {
       isBootNode = true;      
     }
+    
+    if (localAddress.toString().contains("janus")) {
+      isJanus = true;
+    }
+    
     int killRingTime = 3*60; // minutes
     if (args.length > 0) {
       killRingTime = Integer.valueOf(args[0]).intValue(); 
@@ -372,7 +385,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       
     }
     
-    if (!isBootNode) {
+    if (!isBootNode && !isJanus) {
       // NOTE: Since we are often starting up a bunch of nodes on planetlab
       // at the same time, we need this randomsource to be seeded by more
       // than just the clock, we will include the IP address
@@ -423,7 +436,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       p.setBoolean("rendezvous_test_firewall", true);
       // should require boot node to not be firewalled
       p.setBoolean("rendezvous_test_makes_bootstrap", isBootNode);
-      p.setFloat("rendezvous_test_num_firewalled", 0.3f);
+      if (isJanus) {
+        p.setFloat("rendezvous_test_num_firewalled", 1.0f);
+      } else {
+        p.setFloat("rendezvous_test_num_firewalled", 0.3f);
+      }
       
       // Generate the NodeIds Randomly
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -846,11 +863,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //      final PastryNode node = factory.newNode();
       
       // need this mechanism to make the construction of the TL atomic, looking for better solution...
-      final ArrayList<PastryNode> holder = new ArrayList<PastryNode>();
+      final ArrayList<TLPastryNode> holder = new ArrayList<TLPastryNode>();
       env.getSelectorManager().invoke(new Runnable(){    
         public void run() {
           synchronized(holder) {
-            holder.add(factory.newNode());        
+            holder.add((TLPastryNode)factory.newNode());        
             holder.notify();
           }
         }    
@@ -861,10 +878,14 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
           holder.wait();
         }
       }
-
       
       running = true;
-      final PastryNode node = holder.get(0); //factory.newNode();
+      final TLPastryNode node = holder.get(0); //factory.newNode();
+      ((PilotManager<RendezvousSocketNodeHandle>)node.getVars().get(RendezvousSocketPastryNodeFactory.RENDEZVOUS_TL))
+          .addIncomingPilotListener(new MyPilotListener(node.getEnvironment().getLogManager().getLogger(IncomingPilotListener.class, null)));
+      ((PilotManager<RendezvousSocketNodeHandle>)node.getVars().get(RendezvousSocketPastryNodeFactory.RENDEZVOUS_TL))
+          .addOutgoingPilotListener(new MyPilotListener(node.getEnvironment().getLogManager().getLogger(OutgoingPilotListener.class, null)));
+      
       node.addDestructable(new Destructable(){      
         public void destroy() {
           new Exception("Destroy Stack Trace").printStackTrace();
@@ -1127,6 +1148,57 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
           }
         }
       }    
+    }
+  }
+  
+  static class MyPilotListener implements OutgoingPilotListener<RendezvousSocketNodeHandle>, IncomingPilotListener<RendezvousSocketNodeHandle> {
+    Map<InetAddress, List<RendezvousSocketNodeHandle>> record = new HashMap<InetAddress, List<RendezvousSocketNodeHandle>>();
+    Logger logger;
+    int numPilots = 0;
+    
+    public MyPilotListener(Logger logger) {
+      this.logger = logger;
+    }
+    
+    public void pilotOpening(RendezvousSocketNodeHandle i) {
+      InetSocketAddress isa = i.eaddress.getOutermostAddress();
+      InetAddress ia = isa.getAddress();
+      List<RendezvousSocketNodeHandle> list = record.get(ia);
+      if (list == null) {
+        list = new ArrayList<RendezvousSocketNodeHandle>();
+        record.put(ia, list);
+      }
+      int numHandles = 0;
+      for (RendezvousSocketNodeHandle handle : list) {
+        if (handle.equals(i)) {
+          numHandles++;
+        }
+      }      
+      numPilots++;
+      logger.log("pilotOpened("+i+") pilots:"+numPilots+" handles:"+numHandles+" addrs:"+list.size());              
+      list.add(i);      
+    }
+    
+    public void pilotClosed(RendezvousSocketNodeHandle i) {
+      InetSocketAddress isa = i.eaddress.getOutermostAddress();
+      InetAddress ia = isa.getAddress();
+      List<RendezvousSocketNodeHandle> list = record.get(ia);
+      if (list == null) {
+        logger.logException("pilotClosed("+i+") no record of "+ia, new Exception("Stack Trace."));
+        return;
+      }      
+      if (!list.remove(i)) {
+        logger.logException("pilotClosed("+i+") no record.", new Exception("Stack Trace."));        
+        return;
+      }
+      numPilots--;
+      int numHandles = 0;
+      for (RendezvousSocketNodeHandle handle : list) {
+        if (handle.equals(i)) {
+          numHandles++;
+        }
+      }      
+      logger.log("pilotClosed("+i+") pilots:"+numPilots+" handles:"+numHandles+" addrs:"+list.size());              
     }
   }
 
