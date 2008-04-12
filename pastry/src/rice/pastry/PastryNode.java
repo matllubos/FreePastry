@@ -36,25 +36,42 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.*;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.P2PSocketReceiver;
+import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
+import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
 import rice.*;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.appsocket.AppSocketReceiver;
+import rice.p2p.commonapi.exception.AppNotRegisteredException;
+import rice.p2p.commonapi.exception.AppSocketException;
+import rice.p2p.commonapi.exception.NoReceiverAvailableException;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.client.PastryAppl;
+import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
+import rice.pastry.leafset.LeafSetProtocol;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
+import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.transport.Deserializer;
 import rice.pastry.transport.PMessageNotification;
 import rice.pastry.transport.PMessageReceipt;
+import rice.pastry.transport.SocketAdapter;
 
 /**
  * A Pastry node is single entity in the pastry network.
@@ -66,6 +83,16 @@ import rice.pastry.transport.PMessageReceipt;
 
 public abstract class PastryNode extends Observable implements rice.p2p.commonapi.Node, Destructable, NodeHandleFactory, LivenessProvider<NodeHandle>, ProximityProvider<NodeHandle> {
 
+  /**
+   * Used by AppSockets
+   */
+  public static final byte CONNECTION_UNKNOWN_ERROR = -1;
+  public static final byte CONNECTION_UNKNOWN = -100;
+  public static final byte CONNECTION_OK = 0;
+  public static final byte CONNECTION_NO_APP = 1;
+  public static final byte CONNECTION_NO_ACCEPTOR = 2;
+
+  
   protected Id myNodeId;
 
   private Environment myEnvironment;
@@ -82,8 +109,6 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
 
   protected Logger logger;
   
-  public abstract NodeHandle coalesce(NodeHandle newHandle);
-    
   ReadyStrategy readyStrategy;
   
   protected boolean joinFailed = false;
@@ -92,6 +117,34 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   
   protected Router router;
   
+  /**
+   * ?  what does this do again?
+   * 
+   */
+  protected Deserializer deserializer;
+
+  /**
+   * Used to deserialize NodeHandles
+   */
+  protected NodeHandleFactory handleFactory;
+
+  /**
+   * Call initiateJoin on this class.
+   */
+  protected JoinProtocol joiner;
+
+  /**
+   * Call boot on this class.
+   */
+  protected Bootstrapper bootstrapper;
+  
+  /**
+   * The top level transport layer.
+   */
+  protected TransportLayer<NodeHandle, RawMessage> tl;
+
+  
+
   /**
    * Constructor, with NodeId. Need to set the node's ID before this node is
    * inserted as localHandle.localNode.
@@ -181,6 +234,12 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     this.router = router;
   }
 
+  public void setJoinProtocols(Bootstrapper boot, JoinProtocol joinP, LeafSetProtocol leafsetP, RouteSetProtocol routeP) {
+    this.bootstrapper = boot;
+    this.joiner = joinP;
+  }
+  
+
   public rice.p2p.commonapi.NodeHandle getLocalNodeHandle() {
     return localhandle;
   }
@@ -259,6 +318,11 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
 
   public void setReady(boolean ready) {
     readyStrategy.setReady(ready); 
+  }
+
+  public NodeHandle coalesce(NodeHandle newHandle) {
+    if (logger.level <= Logger.FINER) logger.log("coalesce("+newHandle+")");
+    return handleFactory.coalesce(newHandle);
   }
   
   /**
@@ -416,6 +480,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    */
   public void registerReceiver(int address,
       PastryAppl receiver) {
+    if (logger.level <= Logger.FINE) logger.log("registerReceiver("+address+","+receiver+"):"+receiver.getDeserializer());
+    deserializer.setDeserializer(address, receiver.getDeserializer());
     myMessageDispatch.registerReceiver(address, receiver);
   }
 
@@ -612,7 +678,102 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    * @param receiver
    * @param appl
    */
-  abstract public SocketRequestHandle connect(NodeHandle handle, AppSocketReceiver receiver, PastryAppl appl, int timeout);
+  public SocketRequestHandle connect(NodeHandle i2, final AppSocketReceiver deliverSocketToMe,
+      final PastryAppl appl, int timeout) {
+    
+    final SocketNodeHandle i = (SocketNodeHandle)i2;
+    
+    final SocketRequestHandleImpl<SocketNodeHandle> handle = new SocketRequestHandleImpl<SocketNodeHandle>(i, null, logger);
+
+    // use the proper application address
+    final ByteBuffer b = ByteBuffer.allocate(4);
+    b.asIntBuffer().put(appl.getAddress());
+    b.clear();
+    
+    
+    handle.setSubCancellable(tl.openSocket(i, 
+      new SocketCallback<NodeHandle>(){    
+        public void receiveResult(SocketRequestHandle<NodeHandle> c, 
+            P2PSocket<NodeHandle> result) {
+          
+          if (c != handle.getSubCancellable()) throw new RuntimeException("c != handle.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+handle.getSubCancellable());
+          
+          if (logger.level <= Logger.FINER) logger.log("openSocket("+i+"):receiveResult("+result+")");
+          result.register(false, true, new P2PSocketReceiver<NodeHandle>() {        
+            public void receiveSelectResult(P2PSocket<NodeHandle> socket,
+                boolean canRead, boolean canWrite) throws IOException {
+              if (canRead || !canWrite) throw new IOException("Expected to write! "+canRead+","+canWrite);
+              
+              // write the appId
+              if (socket.write(b) == -1) {
+                deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new ClosedChannelException("Remote node closed socket while opening.  Try again."));
+                return;
+              }
+              
+              // keep working or pass up the new socket
+              if (b.hasRemaining()) {
+                // keep writing
+                socket.register(false, true, this); 
+              } else {
+                // read the response
+                final ByteBuffer answer = ByteBuffer.allocate(1);
+                socket.register(true, false, new P2PSocketReceiver<NodeHandle>(){
+                
+                  public void receiveSelectResult(P2PSocket<NodeHandle> socket, boolean canRead, boolean canWrite) throws IOException {
+                    
+                    if (socket.read(answer) == -1) {
+                      deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new ClosedChannelException("Remote node closed socket while opening.  Try again."));
+                      return;
+                    };
+                    
+                    if (answer.hasRemaining()) {
+                      socket.register(true, false, this);
+                    } else {
+                      answer.clear();
+                      
+                      byte connectResult = answer.get();
+                      //System.out.println(this+"Read "+connectResult);
+                      switch(connectResult) {
+                        case CONNECTION_OK:
+                          // on connector side
+                          deliverSocketToMe.receiveSocket(new SocketAdapter(socket, getEnvironment()));                     
+                          return;
+                        case CONNECTION_NO_APP:
+                          deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new AppNotRegisteredException(appl.getAddress()));
+                          return;
+                        case CONNECTION_NO_ACCEPTOR:
+                          deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new NoReceiverAvailableException());            
+                          return;
+                        default:
+                          deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), new AppSocketException("Unknown error "+connectResult));
+                          return;
+                      }
+                    }                    
+                  }
+                
+                  public void receiveException(P2PSocket<NodeHandle> socket, Exception ioe) {
+                    deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), ioe);
+                  }                
+                });
+              }
+            }
+          
+            public void receiveException(P2PSocket<NodeHandle> socket,
+                Exception e) {
+              deliverSocketToMe.receiveException(new SocketAdapter(socket, getEnvironment()), e);
+            }        
+          }); 
+        }    
+    
+        public void receiveException(SocketRequestHandle<NodeHandle> s, Exception ex) {
+          // TODO: return something with a proper toString()
+          deliverSocketToMe.receiveException(null, ex);
+        }    
+      }, 
+    null));
+    
+    return handle;
+  }
 
   /**
    * The proximity of the node handle.

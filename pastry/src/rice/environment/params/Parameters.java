@@ -50,9 +50,22 @@ import java.net.*;
  * @author Jeff Hoye
  */
 public interface Parameters {
-  // 
+  /**
+   * Remove the key
+   * @param name
+   */
   public void remove(String name);  
+  /**
+   * See if the parameters contains the key
+   * 
+   * @param name
+   * @return
+   */
   public boolean contains(String name);
+  /**
+   * Persistently stores the parameters.
+   * @throws IOException
+   */
   public void store() throws IOException;
   
   // getters
