@@ -1028,10 +1028,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * @return
    */
   public PastryNode newNode() {
-    return newNode(nidFactory.generateNodeId(), null);
+    return newNode(nidFactory.generateNodeId(), (InetSocketAddress)null);
   }
   public PastryNode newNode(Id id) {
-    return newNode(id, null);
+    return newNode(id, (InetSocketAddress)null);
   }
   
   public PastryNode newNode(InetSocketAddress proxyAddress) {
@@ -1073,34 +1073,104 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   /**
-   * Method which creates a Pastry node from the next port with the specified nodeId 
-   * (or one generated from the NodeIdFactory if not specified)
+   * This method uses the pAddress as the outer address if it's non-null.
+   * It automatically generates the internal address from the localAddress, and increments the port as necessary.
    * 
-   * @param pilot Node handle to bootstrap from.
-   * @param nodeId if non-null, will use this nodeId for the node, rather than using the NodeIdFactory
-   * @param pAddress The address to claim that this node is at - used for proxies
+   * @param nodeId
+   * @param pAddress
+   * @return
+   */
+  public synchronized PastryNode newNode(final Id nodeId, final InetSocketAddress pAddress) {
+    try {      
+      MultiInetSocketAddress multiAddress;
+      if (pAddress == null) {
+        multiAddress = new MultiInetSocketAddress(new InetSocketAddress(localAddress, port));
+      } else {
+        multiAddress = new MultiInetSocketAddress(new InetSocketAddress(localAddress, port), pAddress);
+      }
+      PastryNode ret = newNode(nodeId, multiAddress); // fix the method just
+      if (environment.getParameters().getBoolean(
+          "pastry_socket_increment_port_after_construction")) {
+        port++;
+      }
+      return ret;
+        
+      // below if you change
+      // this
+    } catch (BindException e) {
+      if (logger.level <= Logger.WARNING)
+        logger.log("Warning: " + e);
+
+      if (environment.getParameters().getBoolean(
+          "pastry_socket_increment_port_after_construction")) {
+        port++;
+        try {
+          return newNode(nodeId, pAddress); // recursion, this will
+          // prevent from things
+          // getting too out of
+          // hand in
+          // case the node can't bind to anything, expect a
+          // StackOverflowException
+        } catch (StackOverflowError soe) {
+          if (logger.level <= Logger.SEVERE)
+            logger
+                .log("SEVERE: SocketPastryNodeFactory: Could not bind on any ports!"
+                    + soe);
+          throw soe;
+        }
+      } else {
+        // clean up Environment
+        if (this.environment.getParameters().getBoolean(
+            "pastry_factory_multipleNodes")) {
+          environment.destroy();
+        }
+
+        throw new RuntimeException(e);
+      }
+    } catch (IOException ioe) {
+
+      throw new RuntimeException(ioe);
+    }    
+  }
+  
+  /**
+   * Method which creates a Pastry node from the next port with the specified
+   * nodeId (or one generated from the NodeIdFactory if not specified)
+   * 
+   * @param pilot
+   *          Node handle to bootstrap from.
+   * @param nodeId
+   *          if non-null, will use this nodeId for the node, rather than using
+   *          the NodeIdFactory
+   * @param pAddress
+   *          The address to claim that this node is at - used for proxies
    *          behind NATs
    * @return A node with a random ID and next port number.
    */
-  public synchronized PastryNode newNode(final Id nodeId, final InetSocketAddress pAddress) {
+  public synchronized PastryNode newNode(final Id nodeId, final MultiInetSocketAddress pAddress) throws IOException {
     /**
      * This code fixes a bug on some combinations of linux/java that causes binding to the socket
      * to deadlock.  By putting this on the selector thread, we make sure the selector is not
      * selecting. 
      */
     final ArrayList<PastryNode> pn = new ArrayList<PastryNode>(1);
-    final ArrayList<RuntimeException> re = new ArrayList<RuntimeException>(1);
+    final ArrayList<IOException> re = new ArrayList<IOException>(1);
     Runnable r = new Runnable() {
     
       public void run() {
         synchronized(pn) {
-          try {
-            pn.add(newNodeSelector(nodeId, pAddress));
-          } catch (RuntimeException e2) {
-            re.add(e2);
-          } finally {
-            pn.notify();
-          }
+          newNodeSelector(nodeId, pAddress, new Continuation<PastryNode, IOException>() {
+          
+            public void receiveResult(PastryNode node) {
+              pn.add(node);
+              pn.notify();
+            }
+          
+            public void receiveException(IOException exception) {
+              re.add(exception);
+              pn.notify();
+            }          
+          });
         }
       }    
     };
@@ -1126,98 +1196,67 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * @param pAddress
    * @return
    */
-  public PastryNode newNodeSelector(Id nodeId, InetSocketAddress pAddress) {
-    try {
-      return newNodeSelector(nodeId, pAddress, true); // fix the method just
-                                                          // below if you change
-                                                          // this
-    } catch (BindException e) {
-
-      if (logger.level <= Logger.WARNING)
-        logger.log("Warning: " + e);
-
-      if (environment.getParameters().getBoolean(
-          "pastry_socket_increment_port_after_construction")) {
-        port++;
-        try {
-          return newNodeSelector(nodeId, pAddress); // recursion, this will
-                                                        // prevent from things
-                                                        // getting too out of
-                                                        // hand in
-          // case the node can't bind to anything, expect a
-          // StackOverflowException
-        } catch (StackOverflowError soe) {
-          if (logger.level <= Logger.SEVERE)
-            logger
-                .log("SEVERE: SocketPastryNodeFactory: Could not bind on any ports!"
-                    + soe);
-          throw soe;
-        }
-      } else {
-        
-        // clean up Environment
-        if (this.environment.getParameters().getBoolean(
-            "pastry_factory_multipleNodes")) {
-          environment.destroy();
-        }
-        
-        throw new RuntimeException(e);
-      }
-    } catch (IOException ioe) {
-      
-      throw new RuntimeException(ioe);      
-    }
-  }
-
-  protected PastryNode newNodeSelector(Id nodeId,
-      InetSocketAddress pAddress, boolean throwException) throws IOException {
-    final ArrayList<PastryNode> ret = new ArrayList<PastryNode>(1); 
-//    environment.getSelectorManager().invoke(new Runnable() {
-//    
-//      public void run() {
-//        // TODO Auto-generated method stub
-    
-    
-    if (!throwException)
-      return newNodeSelector(nodeId, pAddress); // yes, this is sort of
-                                                    // bizarre
-    // the idea is that we can't throw an exception by default because it will
-    // break reverse compatibility
-    // so this method gets called twice if throwException is false. But the
-    // second time,
-    // it will be called with true, but will be
-    // wrapped with the above function which will catch the exception.
-    // -Jeff May 12, 2006
-//    if (bootstrap == null)
+//  public PastryNode newNodeSelector(Id nodeId, InetSocketAddress pAddress) {
+//    try {
+//      return newNodeSelector(nodeId, pAddress, true); // fix the method just
+//                                                          // below if you change
+//                                                          // this
+//    } catch (BindException e) {
+//
 //      if (logger.level <= Logger.WARNING)
-//        logger
-//            .log("No bootstrap node provided, starting a new ring binding to address "
-//                + localAddress + ":" + port + "...");
-
-    // this code builds a different environment for each PastryNode
-    Environment environment = cloneEnvironment(this.environment, nodeId);
-    
-    Parameters params = environment.getParameters();
-//    System.out.println(environment.getLogManager());
-
-    MultiInetSocketAddress localAddress = null;
-    MultiInetSocketAddress proxyAddress = null;
-    localAddress = getEpochAddress(port);
-    proxyAddress = localAddress;
-    
-    if (environment.getParameters().getBoolean("pastry_socket_increment_port_after_construction"))
-      port++; // this statement must go after the construction of srManager
-              // because the
-    TLPastryNode pn = new TLPastryNode(nodeId, environment);
-    pn.getVars().put(PROXY_ADDRESS, proxyAddress);
-    nodeHandleHelper(pn);
-    
-
+//        logger.log("Warning: " + e);
+//
+//      if (environment.getParameters().getBoolean(
+//          "pastry_socket_increment_port_after_construction")) {
+//        port++;
+//        try {
+//          return newNodeSelector(nodeId, pAddress); // recursion, this will
+//                                                        // prevent from things
+//                                                        // getting too out of
+//                                                        // hand in
+//          // case the node can't bind to anything, expect a
+//          // StackOverflowException
+//        } catch (StackOverflowError soe) {
+//          if (logger.level <= Logger.SEVERE)
+//            logger
+//                .log("SEVERE: SocketPastryNodeFactory: Could not bind on any ports!"
+//                    + soe);
+//          throw soe;
+//        }
+//      } else {
+//        
+//        // clean up Environment
+//        if (this.environment.getParameters().getBoolean(
+//            "pastry_factory_multipleNodes")) {
+//          environment.destroy();
+//        }
+//        
+//        throw new RuntimeException(e);
 //      }
-      
-//    });
+//    } catch (IOException ioe) {
+//      
+//      throw new RuntimeException(ioe);      
+//    }
+//  }
 
-    return pn;
+  protected void newNodeSelector(Id nodeId,
+      MultiInetSocketAddress proxyAddress, Continuation<PastryNode, IOException> deliverResultToMe) {
+    
+    try {
+      // this code builds a different environment for each PastryNode
+      Environment environment = cloneEnvironment(this.environment, nodeId);
+      
+      Parameters params = environment.getParameters();
+  //    System.out.println(environment.getLogManager());
+  
+      TLPastryNode pn = new TLPastryNode(nodeId, environment);
+      pn.getVars().put(PROXY_ADDRESS, proxyAddress);
+      nodeHandleHelper(pn);
+  
+      deliverResultToMe.receiveResult(pn);
+    } catch (IOException ioe) {
+      deliverResultToMe.receiveException(ioe);
+    }
   }
   
   protected Environment cloneEnvironment(Environment rootEnvironment, Id nodeId) {

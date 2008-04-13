@@ -71,11 +71,7 @@ public class InternetPastryNodeFactory extends
       Environment env, boolean firewalled) throws IOException {
     super(nf, startPort, env, firewalled);
   }
-  
-  @Override
-  public TLPastryNode newNode() {
-    throw new RuntimeException("Not Implemented.");
-  }
-  
+    
 
+  
 }

@@ -70,6 +70,11 @@ public class MultiInetSocketAddress implements Serializable {
     this.address = addressList;
   }
   
+  public MultiInetSocketAddress(InetSocketAddress inner,
+      InetSocketAddress outer) {
+    this(new InetSocketAddress[]{outer, inner});
+  }
+
   /**
    * Returns the hashCode of this source route
    *
