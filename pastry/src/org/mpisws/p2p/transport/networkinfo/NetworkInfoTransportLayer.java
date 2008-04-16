@@ -120,7 +120,7 @@ public class NetworkInfoTransportLayer implements
   InetSocketAddressSerializer addrSerializer = new InetSocketAddressSerializer();
   
   public Cancellable getMyInetAddress(InetSocketAddress bootstrap, 
-      final Continuation<InetSocketAddress, Exception> c, Map<String, Object> options) {
+      final Continuation<InetSocketAddress, IOException> c, Map<String, Object> options) {
     AttachableCancellable ret = new AttachableCancellable();
     ret.attach(openSocket(bootstrap, HEADER_IP_ADDRESS_REQUEST, new SocketCallback<InetSocketAddress>() {
     
@@ -139,14 +139,15 @@ public class NetworkInfoTransportLayer implements
                 c.receiveResult(addr);
               } catch (InsufficientBytesException ibe) {
                 socket.register(true, false, this);
-              } catch (Exception e) {
+              } catch (IOException e) {
                 c.receiveException(e);
               }
             }
           
             public void receiveException(P2PSocket<InetSocketAddress> socket,
                 Exception ioe) {
-              c.receiveException(ioe);
+              if (ioe instanceof IOException) c.receiveException((IOException)ioe);
+              c.receiveException(new NetworkInfoIOException(ioe));
             }
           
           }.receiveSelectResult(sock, true, false);        
@@ -157,7 +158,8 @@ public class NetworkInfoTransportLayer implements
     
       public void receiveException(SocketRequestHandle<InetSocketAddress> s,
           Exception ex) {
-        c.receiveException(ex);
+        if (ex instanceof IOException) c.receiveException((IOException)ex);
+        c.receiveException(new NetworkInfoIOException(ex));
       }    
     }, options));
     return ret;

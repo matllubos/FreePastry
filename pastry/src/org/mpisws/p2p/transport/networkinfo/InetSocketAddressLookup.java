@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.networkinfo;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Map;
@@ -64,7 +65,7 @@ public interface InetSocketAddressLookup extends Destructable {
    * @return you can cancel the operation
    */
   public Cancellable getMyInetAddress(InetSocketAddress bootstrap, 
-      Continuation<InetSocketAddress, Exception> c, 
+      Continuation<InetSocketAddress, IOException> c, 
       Map<String, Object> options);
   
   /** 

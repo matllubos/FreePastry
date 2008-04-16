@@ -36,6 +36,8 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.socket.nat.connectivityverifiier;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 
@@ -54,7 +56,7 @@ public interface ConnectivityVerifier {
    * @param deliverResultToMe deliver the result here
    * @return cancel the operation
    */
-  Cancellable findExternalAddress(InetSocketAddress local, Collection<InetSocketAddress> probeAddresses, Continuation<InetSocketAddress, Exception> deliverResultToMe);
+  Cancellable findExternalAddress(InetSocketAddress local, Collection<InetSocketAddress> probeAddresses, Continuation<InetAddress, IOException> deliverResultToMe);
   
   /**
    * Verify my connectivity using a 3rd party

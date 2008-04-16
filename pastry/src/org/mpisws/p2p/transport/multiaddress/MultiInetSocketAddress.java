@@ -70,8 +70,8 @@ public class MultiInetSocketAddress implements Serializable {
     this.address = addressList;
   }
   
-  public MultiInetSocketAddress(InetSocketAddress inner,
-      InetSocketAddress outer) {
+  public MultiInetSocketAddress(InetSocketAddress outer,
+      InetSocketAddress inner) {
     this(new InetSocketAddress[]{outer, inner});
   }
 

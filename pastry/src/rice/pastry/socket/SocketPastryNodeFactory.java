@@ -1086,7 +1086,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       if (pAddress == null) {
         multiAddress = new MultiInetSocketAddress(new InetSocketAddress(localAddress, port));
       } else {
-        multiAddress = new MultiInetSocketAddress(new InetSocketAddress(localAddress, port), pAddress);
+        multiAddress = new MultiInetSocketAddress(pAddress, new InetSocketAddress(localAddress, port));
       }
       PastryNode ret = newNode(nodeId, multiAddress); // fix the method just
       if (environment.getParameters().getBoolean(
@@ -1170,7 +1170,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
               re.add(exception);
               pn.notify();
             }          
-          });
+          }, null);
         }
       }    
     };
@@ -1240,7 +1240,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 //  }
 
   protected void newNodeSelector(Id nodeId,
-      MultiInetSocketAddress proxyAddress, Continuation<PastryNode, IOException> deliverResultToMe) {
+      MultiInetSocketAddress proxyAddress, Continuation<PastryNode, IOException> deliverResultToMe, Map<String, Object> initialVars) {
     
     try {
       // this code builds a different environment for each PastryNode
@@ -1250,7 +1250,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   //    System.out.println(environment.getLogManager());
   
       TLPastryNode pn = new TLPastryNode(nodeId, environment);
+      if (initialVars != null) pn.getVars().putAll(initialVars);
       pn.getVars().put(PROXY_ADDRESS, proxyAddress);
+      
       nodeHandleHelper(pn);
   
       deliverResultToMe.receiveResult(pn);

@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.connectivityverifiier;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -65,7 +66,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
    * Get the address from the transport layer.  Used by the two public methods.  Does the execution on the selector, 
    * calls back on the continuation on the selector.
    */
-  protected Cancellable getInetSocketAddressLookup(final InetSocketAddress bindAddress, final Continuation<InetSocketAddressLookup, Exception> deliverResultToMe) {
+  protected Cancellable getInetSocketAddressLookup(final InetSocketAddress bindAddress, final Continuation<InetSocketAddressLookup, IOException> deliverResultToMe) {
     final AttachableCancellable ret = new AttachableCancellable();
     
     Runnable r = new Runnable() {
@@ -92,7 +93,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   
   public Cancellable findExternalAddress(final InetSocketAddress local,
       Collection<InetSocketAddress> probeAddresses,
-      final Continuation<InetSocketAddress, Exception> deliverResultToMe) {
+      final Continuation<InetAddress, IOException> deliverResultToMe) {
     // TODO: make sure the addresses are Internet routable?
     // TODO: Timeout (can be in parallel, so timeout ~every second, and try the next one, then cancel everything if one comes through)
 
@@ -100,7 +101,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     final AttachableCancellable ret = new AttachableCancellable();
 
     // getInetSocketAddressLookup verifyies that we are on the selector
-    ret.attach(getInetSocketAddressLookup(local, new Continuation<InetSocketAddressLookup, Exception>() {
+    ret.attach(getInetSocketAddressLookup(local, new Continuation<InetSocketAddressLookup, IOException>() {
     
       public void receiveResult(InetSocketAddressLookup lookup) {
         // we're on the selector now, and we have our TL
@@ -108,7 +109,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
         findExternalAddressHelper(lookup, ret, local, probeList, deliverResultToMe);
       }
       
-      public void receiveException(Exception exception) {
+      public void receiveException(IOException exception) {
         // we couldn't even get a transport layer, DOA        
         deliverResultToMe.receiveException(exception);
       }      
@@ -128,20 +129,20 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
    */
   public void findExternalAddressHelper(final InetSocketAddressLookup lookup, final AttachableCancellable ret, final InetSocketAddress local,
       final List<InetSocketAddress> probeList,
-      final Continuation<InetSocketAddress, Exception> deliverResultToMe) {
+      final Continuation<InetAddress, IOException> deliverResultToMe) {
     // we're on the selector now, and we have our TL        
     // pull a random node off the list, and try it, we do this so the recursion works
     InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
     
-    ret.attach(lookup.getMyInetAddress(target, new Continuation<InetSocketAddress, Exception>() {          
+    ret.attach(lookup.getMyInetAddress(target, new Continuation<InetSocketAddress, IOException>() {          
       public void receiveResult(InetSocketAddress result) {              
         // success!
         ret.cancel(); // kill any recursive tries
         lookup.destroy();
-        deliverResultToMe.receiveResult(result);
+        deliverResultToMe.receiveResult(result.getAddress());
       }
     
-      public void receiveException(Exception exception) {
+      public void receiveException(IOException exception) {
         // see if we can try anyone else
         if (probeList.isEmpty()) {
           lookup.destroy();
@@ -163,7 +164,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     final AttachableCancellable ret = new AttachableCancellable();
 
     // getInetSocketAddressLookup verifies that we are on the selector
-    ret.attach(getInetSocketAddressLookup(local.getInnermostAddress(), new Continuation<InetSocketAddressLookup, Exception>() {
+    ret.attach(getInetSocketAddressLookup(local.getInnermostAddress(), new Continuation<InetSocketAddressLookup, IOException>() {
     
       public void receiveResult(final InetSocketAddressLookup lookup) {
         // we're on the selector now, and we have our TL
@@ -203,7 +204,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
         });
       }
       
-      public void receiveException(Exception exception) {
+      public void receiveException(IOException exception) {
         // we couldn't even get a transport layer, DOA        
         deliverResultToMe.receiveException(exception);
       }      

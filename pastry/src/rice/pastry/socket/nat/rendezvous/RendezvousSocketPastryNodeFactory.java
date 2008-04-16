@@ -84,6 +84,7 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.MutableTuple;
 import rice.p2p.util.tuples.Tuple;
+import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
@@ -119,6 +120,11 @@ import rice.pastry.transport.TLPastryNode;
  *
  */
 public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
+  /**
+   * Maps to a byte contactState
+   */
+  protected String CONTACT_STATE = "RendezvousSocketPastryNodeFactory.CONTACT_STATE";
+  
   protected RandomSource random;
 
   /**
@@ -138,7 +144,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    */
   byte localContactState = RendezvousSocketNodeHandle.CONTACT_DIRECT;
   
-  public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, NATHandler handler, boolean firewalled) throws IOException {
+  public RendezvousSocketPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress, int startPort, Environment env, boolean firewalled) throws IOException {
     super(nf, bindAddress, startPort, env);
     init(firewalled);
   }
@@ -155,6 +161,46 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   
   public void setContactState(byte contactState) {
     this.localContactState = contactState;
+  }
+
+  /**
+   * Can override the contactState on a per-node basis
+   * 
+   * @param nodeId
+   * @param proxyAddress
+   * @param deliverResultToMe
+   * @param initialVars
+   * @param firewalled
+   */
+  protected void newNodeSelector(Id nodeId,
+      MultiInetSocketAddress proxyAddress,
+      Continuation<PastryNode, IOException> deliverResultToMe,
+      Map<String, Object> initialVars, boolean firewalled) {
+    
+    byte contactState = localContactState;
+    if (firewalled) {
+      contactState = RendezvousSocketNodeHandle.CONTACT_FIREWALLED;
+    } else {
+      contactState = RendezvousSocketNodeHandle.CONTACT_DIRECT;      
+    }
+    newNodeSelector(nodeId, proxyAddress, deliverResultToMe, initialVars, contactState);
+  }
+
+  /**
+   * Can override the contactState on a per-node basis
+   * 
+   * @param nodeId
+   * @param proxyAddress
+   * @param deliverResultToMe
+   * @param initialVars
+   * @param contactState
+   */
+  protected void newNodeSelector(Id nodeId,
+      MultiInetSocketAddress proxyAddress,
+      Continuation<PastryNode, IOException> deliverResultToMe,
+      Map<String, Object> initialVars, byte contactState) {
+    initialVars = OptionsFactory.addOption(initialVars, CONTACT_STATE, contactState);
+    super.newNodeSelector(nodeId, proxyAddress, deliverResultToMe, initialVars);
   }
   
   @Override
@@ -322,6 +368,10 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   @Override
   public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {
     byte contactState = localContactState;    
+    
+    if (pn.getVars().containsKey(CONTACT_STATE)) {
+      contactState = (Byte)pn.getVars().get(CONTACT_STATE);
+    }
     
     // this code is for testing
     Parameters p = environment.getParameters();    

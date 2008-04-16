@@ -34,56 +34,18 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.testing.rendezvous;
+package org.mpisws.p2p.transport.networkinfo;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.Collections;
 
-import rice.Continuation;
-import rice.environment.Environment;
-import rice.pastry.NodeIdFactory;
-import rice.pastry.PastryNodeFactory;
-import rice.pastry.socket.SocketPastryNodeFactory;
-import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifier;
-import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifierImpl;
-import rice.pastry.standard.RandomNodeIdFactory;
-
-public class WhatIsMyIP {
-
-  /**
-   * @param args bindport bootstrap bootstrapport
-   */
-  public static void main(String[] args) throws IOException {    
-    // the port to use locally
-    int bindport = Integer.parseInt(args[0]);
-    
-    // build the bootaddress from the command line args
-    InetAddress bootaddr = InetAddress.getByName(args[1]);
-    int bootport = Integer.parseInt(args[2]);
-    InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-
-    Environment env = new Environment();
-    
-    // Generate the NodeIds Randomly
-    NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
-    
-    // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
-    
-    ConnectivityVerifier verifier = new ConnectivityVerifierImpl(factory);
-    
-    verifier.findExternalAddress(factory.getNextInetSocketAddress(), Collections.singleton(bootaddress), new Continuation<InetAddress, IOException>() {
-    
-      public void receiveResult(InetAddress result) {
-        System.out.println(result);
-      }
-    
-      public void receiveException(IOException exception) {
-        // TODO Auto-generated method stub    
-      }    
-    });
+/**
+ * Wraps a normal exception in an IOException
+ * 
+ * @author Jeff Hoye
+ *
+ */
+public class NetworkInfoIOException extends IOException {
+  public NetworkInfoIOException(Exception e) {
+    initCause(e);
   }
-
 }

@@ -77,16 +77,16 @@ public class VerifyConnectivity {
     final SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
     
     final ConnectivityVerifier verifier = new ConnectivityVerifierImpl(factory);
-    verifier.findExternalAddress(factory.getNextInetSocketAddress(), Collections.singleton(bootaddress), new Continuation<InetSocketAddress, Exception>() {
+    verifier.findExternalAddress(factory.getNextInetSocketAddress(), Collections.singleton(bootaddress), new Continuation<InetAddress, IOException>() {
       
-      public void receiveResult(final InetSocketAddress result) {
+      public void receiveResult(final InetAddress result) {
         System.out.println("My external address is "+result);
 
         // for some reason, can't do this immeadiately... don't know why yet
         Runnable r = new Runnable() {        
           public void run() {        
             InetSocketAddress[] addrs = new InetSocketAddress[2];
-            addrs[0] = new InetSocketAddress(result.getAddress(), externalPort);
+            addrs[0] = new InetSocketAddress(result, externalPort);
             addrs[1] = factory.getNextInetSocketAddress();
             
             MultiInetSocketAddress local = new MultiInetSocketAddress(addrs);
@@ -111,7 +111,7 @@ public class VerifyConnectivity {
         env.getSelectorManager().invoke(r);        
       }
     
-      public void receiveException(Exception exception) {
+      public void receiveException(IOException exception) {
         exception.printStackTrace();
       }    
     });
