@@ -33,7 +33,7 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
-*******************************************************************************/ 
+*******************************************************************************/
 package rice.pastry.socket;
 
 import java.util.Map;
@@ -52,24 +52,30 @@ public class LivenesSourceRouteForwardStrategy<Identifier> implements
   Logger logger;
   LivenessProvider<SourceRoute<Identifier>> liveness;
   private SourceRouteFactory<Identifier> factory;
-  
+
   public LivenesSourceRouteForwardStrategy(
       SourceRouteFactory<Identifier> factory, Environment env) {
     this.factory = factory;
-    this.logger = env.getLogManager().getLogger(LivenesSourceRouteForwardStrategy.class, null);
+    this.logger = env.getLogManager().getLogger(
+        LivenesSourceRouteForwardStrategy.class, null);
   }
 
-  public void setLivenessProvider(LivenessProvider<SourceRoute<Identifier>> liveness) {
+  public void setLivenessProvider(
+      LivenessProvider<SourceRoute<Identifier>> liveness) {
     this.liveness = liveness;
   }
-  
-  public boolean forward(Identifier nextHop, SourceRoute<Identifier> sr, boolean socket,
-      Map<String, Object> options) {
-    if (!socket) return true;
+
+  public boolean forward(Identifier nextHop, SourceRoute<Identifier> sr,
+      boolean socket, Map<String, Object> options) {
+    if (!socket)
+      return true;
     SourceRoute<Identifier> i = factory.getSourceRoute(nextHop);
     boolean ret = (liveness.getLiveness(i, options) < LivenessProvider.LIVENESS_DEAD);
-    if (!ret) if (logger.level <= Logger.WARNING) logger.log("Not forwarding socket to "+nextHop+" sr:"+sr+" because I believe it is dead.");
-	  return ret;
+    if (!ret)
+      if (logger.level <= Logger.WARNING)
+        logger.log("Not forwarding socket to " + nextHop + " sr:" + sr
+            + " because I believe it is dead.");
+    return ret;
   }
 
 }
