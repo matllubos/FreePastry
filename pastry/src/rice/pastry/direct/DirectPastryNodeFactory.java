@@ -261,7 +261,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
-  protected NodeHandleAdapter getNodeHanldeAdapter(final TLPastryNode pn, NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException {
+  protected NodeHandleAdapter getNodeHandleAdapter(final TLPastryNode pn, NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException {
     NodeRecord nr = (NodeRecord)recordTable.get(pn.getId());
     if (nr == null) {
       nr = simulator.generateNodeRecord();

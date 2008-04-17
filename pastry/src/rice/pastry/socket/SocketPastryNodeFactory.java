@@ -310,7 +310,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return iptl;
   }
   
-  public NodeHandleAdapter getNodeHanldeAdapter(
+  public NodeHandleAdapter getNodeHandleAdapter(
       final TLPastryNode pn, 
       NodeHandleFactory handleFactory2, 
       TLDeserializer deserializer) throws IOException {

@@ -242,7 +242,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
     
     TLDeserializer deserializer = getTLDeserializer(handleFactory,pn);
 
-    final NodeHandleAdapter nha = getNodeHanldeAdapter(pn, handleFactory, deserializer);
+    final NodeHandleAdapter nha = getNodeHandleAdapter(pn, handleFactory, deserializer);
     
     sf = new SocketFactory() {
       int uid = Integer.MIN_VALUE;

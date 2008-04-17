@@ -119,7 +119,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     pn.setElements(localhandle, msgDisp, leafSet, routeTable, router);
   
     
-    NodeHandleAdapter nha = getNodeHanldeAdapter(pn, handleFactory, deserializer);
+    NodeHandleAdapter nha = getNodeHandleAdapter(pn, handleFactory, deserializer);
 
     pn.setSocketElements(localhandle, leafSetMaintFreq, routeSetMaintFreq, 
         nha, nha, nha, deserializer, handleFactory);
@@ -200,7 +200,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     
   protected abstract NodeHandle getLocalHandle(TLPastryNode pn, 
       NodeHandleFactory handleFactory) throws IOException;
-  protected abstract NodeHandleAdapter getNodeHanldeAdapter(TLPastryNode pn, 
+  protected abstract NodeHandleAdapter getNodeHandleAdapter(TLPastryNode pn, 
       NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException;
   protected abstract NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) throws IOException;
   protected abstract Bootstrapper getBootstrapper(TLPastryNode pn, 
