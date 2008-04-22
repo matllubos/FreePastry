@@ -366,7 +366,7 @@ loglevel = WARNING
 
 logging_packageOnly = true
 
-logging_date_format = 
+logging_date_format = yyyyMMdd.HHmmss.SSS
 logging_enable=true
 
 # 24 hours
