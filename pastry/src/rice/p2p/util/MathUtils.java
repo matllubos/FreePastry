@@ -52,7 +52,7 @@ import rice.environment.random.RandomSource;
 public class MathUtils {
   
   /**
-  * The array used for conversion to hexidecimal
+  * The array used for conversion to hexadecimal
    */
   public final static char[] HEX_ARRAY = new char[] {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
   
@@ -112,7 +112,7 @@ public class MathUtils {
   }
   
   /**
-   * Utility method which converts a byte[] to a hexidecimal string of characters, in lower case
+   * Utility method which converts a byte[] to a hexadecimal string of characters, in lower case
    *
    * @param text The array to convert
    * @return A string representation
@@ -164,7 +164,7 @@ public class MathUtils {
   }
   
   /**
-   * A simple and fast hash function for hashing an arbitirary length
+   * A simple and fast hash function for hashing an arbitrary length
    * byte array into an int.  Not for crypto.  Not to be trusted.  
    * 
    * From Wikipedia: http://en.wikipedia.org/wiki/Hash_table
