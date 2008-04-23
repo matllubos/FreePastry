@@ -147,7 +147,7 @@ public class UDPLayerImpl extends SelectionKeyHandler implements UDPLayer {
       // bind to the appropriate port
       channel = DatagramChannel.open();
       channel.configureBlocking(false);
-//      channel.socket().setReuseAddress(true);
+      channel.socket().setReuseAddress(true);
       channel.socket().bind(wire.bindAddress);
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);
@@ -347,10 +347,11 @@ public class UDPLayerImpl extends SelectionKeyHandler implements UDPLayer {
   }
 
   public void destroy() {
-    if (logger.level <= Logger.INFO) logger.log("destroy()");
     Runnable r = new Runnable(){    
       public void run() { 
         try {
+//          logger.logException("destroy", new Exception("stack trace"));
+          if (logger.level <= Logger.INFO) logger.log("destroy(): "+channel);
           if (key != null) {
             if (key.channel() != null)
               key.channel().close();

@@ -36,25 +36,17 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.networkinfo;
 
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
+import java.io.IOException;
 
 /**
- * This is used in a network 
+ * Thrown when we can't find a way to very connectivity by a 3rd party.
  * @author Jeff Hoye
  *
  */
-public interface ProbeStrategy {
-  /**
-   * Finds another node in the network and asks them to probe the addr with the uid
-   * 
-   * calls Prober.probe() on another node
-   * 
-   * @param addr the location of the requestor (who we need to probe)
-   * @param uid a unique identifier created by the original requestor at addr
-   * @return can cancel the operation
-   */
-  Cancellable requestProbe(MultiInetSocketAddress addr, long uid, Continuation<Boolean, Exception> deliverResultToMe);
+public class CantVerifyConnectivityException extends IOException {
+
+  public CantVerifyConnectivityException(String s) {
+    super(s);
+  }
+  
 }

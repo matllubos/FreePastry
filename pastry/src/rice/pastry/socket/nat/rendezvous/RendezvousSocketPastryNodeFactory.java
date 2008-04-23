@@ -136,6 +136,11 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    * maps to a RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle>
    */
   public static final String RENDEZVOUS_TL = "RendezvousSocketPastryNodeFactory.RENDEZVOUS_TL";
+
+  /**
+   * maps to a boolean, if true then simulates a firewall
+   */
+  public static final String SIMULATE_FIREWALL = "rendezvous_simulate_firewall";
   
   /**
    * The local node's contact state.  
@@ -217,6 +222,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected TransportLayer<InetSocketAddress, ByteBuffer> getIpServiceTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, TLPastryNode pn) {
     TransportLayer<InetSocketAddress, ByteBuffer> mtl = super.getIpServiceTransportLayer(wtl, pn);
     
+    if (pn.getLocalHandle() == null) return mtl;
+    
     return getRendezvousTransportLayer(mtl, pn);
   }
 
@@ -271,7 +278,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   
   protected void generatePilotStrategy(TLPastryNode pn, RendezvousTransportLayerImpl<InetSocketAddress, RendezvousSocketNodeHandle> rendezvousLayer) {
     // only do this if firewalled
-    if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect())
+    RendezvousSocketNodeHandle handle = (RendezvousSocketNodeHandle)pn.getLocalHandle();
+    if (handle != null && !handle.canContactDirect())
       new LeafSetPilotStrategy<RendezvousSocketNodeHandle>(pn.getLeafSet(),rendezvousLayer, pn.getEnvironment());    
   }
 
@@ -380,6 +388,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
       // this just guards the next part
     } else if (p.getBoolean("rendezvous_test_firewall")) {
       if (random.nextFloat() <= p.getFloat("rendezvous_test_num_firewalled")) {
+        pn.getEnvironment().getParameters().setBoolean(SIMULATE_FIREWALL, true);
         contactState = RendezvousSocketNodeHandle.CONTACT_FIREWALLED;
       }
     }
@@ -409,8 +418,8 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   @Override
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
     TransportLayer<InetSocketAddress, ByteBuffer> baseTl = super.getWireTransportLayer(innermostAddress, pn);
-    RendezvousSocketNodeHandle handle = (RendezvousSocketNodeHandle)pn.getLocalHandle();
-    if (!handle.canContactDirect()) {
+    Parameters p = pn.getEnvironment().getParameters();
+    if (p.contains(SIMULATE_FIREWALL) && p.getBoolean(SIMULATE_FIREWALL)) {
       return new FirewallTLImpl<InetSocketAddress, ByteBuffer>(baseTl,5000,pn.getEnvironment());
     }
     

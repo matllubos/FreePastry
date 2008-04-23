@@ -125,6 +125,13 @@ pastry_socket_random_seed = clock
 # force the node to be a seed node
 rice_socket_seed = false
 
+# the parameter simulates some nodes being firewalled, base on rendezvous_test_num_firewalled
+rendezvous_test_firewall = false
+# probabilistic fraction of firewalled nodes
+rendezvous_test_num_firewalled = 0.3
+# don't firewall the first node, useful for testing
+rendezvous_test_makes_bootstrap = false
+
 # FP 2.1 uses the new transport layer
 transport_wire_datagram_receive_buffer_size = 131072
 transport_wire_datagram_send_buffer_size = 65536
@@ -144,7 +151,7 @@ pastry_proxy_connectivity_tries = 3
 # whether to search for a nat using UPnP
 nat_search_policy = prefix
 # whether to verify connectivity
-firewall_test_policy = always
+firewall_test_policy = boot
 # policy for setting port forwarding the state of the firewall if there is already a conflicting rule: overwrite, fail (throw exception), change (use different port) 
 # you may want to set this to overwrite or fail on the bootstrap nodes, but most freepastry applications can run on any available port, so the default is change
 nat_state_policy = change

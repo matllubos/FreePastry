@@ -45,6 +45,7 @@ import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.networkinfo.ProbeStrategy;
 import org.mpisws.p2p.transport.networkinfo.Prober;
 
+import rice.Continuation;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -54,6 +55,8 @@ import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.messaging.Message;
 import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.transport.PMessageNotification;
+import rice.pastry.transport.PMessageReceipt;
 
 public class ProbeApp extends PastryAppl implements ProbeStrategy {
   Prober prober;
@@ -84,6 +87,7 @@ public class ProbeApp extends PastryAppl implements ProbeStrategy {
   }
   
   public void handleProbeRequestMessage(ProbeRequestMessage prm) {
+    if (logger.level <= Logger.FINE) logger.log("handleProbeRequestMessage("+prm+")");
     prober.probe(
         addressStrategy.getAddress(((SocketNodeHandle)thePastryNode.getLocalHandle()).getAddress(), 
             prm.getProbeRequester()), 
@@ -97,7 +101,8 @@ public class ProbeApp extends PastryAppl implements ProbeStrategy {
    * If no such candidate can be found, use someone who does.
    * If there are no candidates at all, send the message to self (or call handleProbeRequest()
    */
-  public Cancellable requestProbe(MultiInetSocketAddress addr, long uid) {
+  public Cancellable requestProbe(MultiInetSocketAddress addr, long uid, final Continuation<Boolean, Exception> deliverResultToMe) {
+    if (logger.level <= Logger.FINE) logger.log("requestProbe("+addr+","+uid+","+deliverResultToMe+")");
     // Step 1: find valid helpers
     
     // make a list of valid candidates
@@ -117,8 +122,10 @@ public class ProbeApp extends PastryAppl implements ProbeStrategy {
     
     // if there are no valid nodes, use the other nodes
     if (valid.isEmpty()) {
-      if (logger.level <= Logger.WARNING) logger.log("requestProbe("+addr+","+uid+") found nobody to help verify connectivity, doing it by my self");
-      valid.add(thePastryNode.getLocalHandle());
+      deliverResultToMe.receiveResult(false);
+      return null;
+//      if (logger.level <= Logger.WARNING) logger.log("requestProbe("+addr+","+uid+") found nobody to help verify connectivity, doing it by my self");
+//      valid.add(thePastryNode.getLocalHandle());
     }
     
     // Step 2: choose one randomly
@@ -126,6 +133,13 @@ public class ProbeApp extends PastryAppl implements ProbeStrategy {
 
     // Step 3: send the probeRequest
     ProbeRequestMessage prm = new ProbeRequestMessage(addr, uid, getAddress());
-    return thePastryNode.send(handle, prm, null, null);
+    return thePastryNode.send(handle, prm, new PMessageNotification() {    
+      public void sent(PMessageReceipt msg) {
+        deliverResultToMe.receiveResult(true);
+      }    
+      public void sendFailed(PMessageReceipt msg, Exception reason) {
+        deliverResultToMe.receiveResult(false);
+      }    
+    }, null);
   }
 }

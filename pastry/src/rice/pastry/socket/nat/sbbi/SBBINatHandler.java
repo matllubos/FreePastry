@@ -45,6 +45,7 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.pastry.socket.nat.CantFindFirewallException;
 import rice.pastry.socket.nat.NATHandler;
 
 import net.sbbi.upnp.impls.InternetGatewayDevice;
@@ -101,8 +102,8 @@ public class SBBINatHandler implements NATHandler {
         throw new IOException(ure.toString()); 
       }
     } else {
-      throw new IOException(
-          "Could not find firewall.  Please enable UPnP on firewall, or set 'find_firewall_policy = never'");
+      throw new CantFindFirewallException(
+          "Could not find firewall for bindAddress:"+bindAddress);
     }
     return fireWallExternalAddress;
   }
@@ -323,17 +324,17 @@ public class SBBINatHandler implements NATHandler {
     try {
       boolean mapped = true;
       mapped = fireWall.addPortMapping(appName, null, local, external, localAddress.getHostAddress(),
-          0, "TCP");
-      if (!mapped)
-        throw new IOException(
-            "Could not set firewall TCP port forwarding from external:"
-                + fireWallExternalAddress + ":" + external + " -> local:"
-                + localAddress + ":" + local);
-      mapped = fireWall.addPortMapping(appName, null, local, external, localAddress.getHostAddress(),
           0, "UDP");
       if (!mapped)
         throw new IOException(
             "Could not set firewall UDP port forwarding from external:"
+                + fireWallExternalAddress + ":" + external + " -> local:"
+                + localAddress + ":" + local);
+      mapped = fireWall.addPortMapping(appName, null, local, external, localAddress.getHostAddress(),
+          0, "TCP");
+      if (!mapped)
+        throw new IOException(
+            "Could not set firewall TCP port forwarding from external:"
                 + fireWallExternalAddress + ":" + external + " -> local:"
                 + localAddress + ":" + local);
     } catch (UPNPResponseException ure) {

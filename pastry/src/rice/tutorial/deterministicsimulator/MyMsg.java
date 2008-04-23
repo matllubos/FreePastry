@@ -34,27 +34,45 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.networkinfo;
+/*
+ * Created on Feb 15, 2005
+ */
+package rice.tutorial.deterministicsimulator;
 
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.Message;
 
 /**
- * This is used in a network 
+ * An example message.
+ * 
  * @author Jeff Hoye
- *
  */
-public interface ProbeStrategy {
+public class MyMsg implements Message {
   /**
-   * Finds another node in the network and asks them to probe the addr with the uid
-   * 
-   * calls Prober.probe() on another node
-   * 
-   * @param addr the location of the requestor (who we need to probe)
-   * @param uid a unique identifier created by the original requestor at addr
-   * @return can cancel the operation
+   * Where the Message came from.
    */
-  Cancellable requestProbe(MultiInetSocketAddress addr, long uid, Continuation<Boolean, Exception> deliverResultToMe);
+  Id from;
+  /**
+   * Where the Message is going.
+   */
+  Id to;
+  
+  /**
+   * Constructor.
+   */
+  public MyMsg(Id from, Id to) {
+    this.from = from;
+    this.to = to;
+  }
+  
+  public String toString() {
+    return "MyMsg from "+from+" to "+to;
+  }
+
+  /**
+   * Use low priority to prevent interference with overlay maintenance traffic.
+   */
+  public int getPriority() {
+    return Message.LOW_PRIORITY;
+  }
 }

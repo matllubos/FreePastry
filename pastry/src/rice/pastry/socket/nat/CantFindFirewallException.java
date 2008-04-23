@@ -34,27 +34,14 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.networkinfo;
+package rice.pastry.socket.nat;
 
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import java.io.IOException;
 
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
+public class CantFindFirewallException extends IOException {
 
-/**
- * This is used in a network 
- * @author Jeff Hoye
- *
- */
-public interface ProbeStrategy {
-  /**
-   * Finds another node in the network and asks them to probe the addr with the uid
-   * 
-   * calls Prober.probe() on another node
-   * 
-   * @param addr the location of the requestor (who we need to probe)
-   * @param uid a unique identifier created by the original requestor at addr
-   * @return can cancel the operation
-   */
-  Cancellable requestProbe(MultiInetSocketAddress addr, long uid, Continuation<Boolean, Exception> deliverResultToMe);
+  public CantFindFirewallException(String msg) {
+    super(msg);
+  }
+
 }

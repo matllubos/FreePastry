@@ -104,7 +104,7 @@ public class NetworkInfoTransportLayer implements
   public NetworkInfoTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> tl, 
       Environment env, 
       ErrorHandler<InetSocketAddress> errorHandler) {
-    this.logger = env.getLogManager().getLogger(MagicNumberTransportLayer.class, null);
+    this.logger = env.getLogManager().getLogger(NetworkInfoTransportLayer.class, null);
     this.environment = env;
     this.tl= tl;
     
@@ -171,15 +171,16 @@ public class NetworkInfoTransportLayer implements
     return openSocket(i,HEADER_PASSTHROUGH,deliverSocketToMe,options);
   }
   
-  public SocketRequestHandle<InetSocketAddress> openSocket(InetSocketAddress i, final byte[] header,
+  public SocketRequestHandle<InetSocketAddress> openSocket(final InetSocketAddress i, final byte[] header,
       final SocketCallback<InetSocketAddress> deliverSocketToMe,
       Map<String, Object> options) {
+    if (logger.level <= Logger.FINEST) logger.log("openSocket("+i+","+header.length+")");
 
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
 
     final SocketRequestHandleImpl<InetSocketAddress> cancellable = new SocketRequestHandleImpl<InetSocketAddress>(i, options, logger);
 
-    cancellable.setSubCancellable(tl.openSocket(i, new SocketCallback<InetSocketAddress>(){    
+    cancellable.setSubCancellable(tl.openSocket(i, new SocketCallback<InetSocketAddress>(){
       public void receiveResult(SocketRequestHandle<InetSocketAddress> c, final P2PSocket<InetSocketAddress> result) {
         if (cancellable.getSubCancellable() != null && c != cancellable.getSubCancellable()) throw new RuntimeException("c != cancellable.getSubCancellable() (indicates a bug in the code) c:"+c+" sub:"+cancellable.getSubCancellable());
         
@@ -201,6 +202,8 @@ public class NetworkInfoTransportLayer implements
               return;
             }
 //            notifyListenersWrite((int)ret, socket.getIdentifier(), socket.getOptions(), false, true);
+            if (logger.level <= Logger.FINEST) logger.log("openSocket("+i+","+header.length+") wrote "+ret+".  Remaining:"+buf.remaining());
+
             if (buf.hasRemaining()) {
               socket.register(false, true, this);
             } else {
@@ -222,12 +225,15 @@ public class NetworkInfoTransportLayer implements
     return cancellable;
   }
 
-  public void incomingSocket(P2PSocket<InetSocketAddress> s) throws IOException {
+  public void incomingSocket(final P2PSocket<InetSocketAddress> s) throws IOException {
+    if (logger.level <= Logger.FINEST) logger.log("incomingSocket("+s+")");
     new P2PSocketReceiver<InetSocketAddress>() {
       ByteBuffer bb = ByteBuffer.allocate(HEADER_PASSTHROUGH.length); 
       public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
           boolean canRead, boolean canWrite) throws IOException {
-        if (socket.read(bb) < 0) {
+        long bytesRead = socket.read(bb);
+        if (logger.level <= Logger.FINEST) logger.log("incomingSocket("+s+"): bytesRead = "+bytesRead+" remaining:"+bb.remaining());
+        if (bytesRead < 0) {
           socket.close();
           return;
         }
@@ -239,6 +245,7 @@ public class NetworkInfoTransportLayer implements
         // read the array
         byte[] ret = bb.array();
         if (ret.length > 1) throw new RuntimeException("Make this work over the array, implementation expectes header to be 1 byte.");
+        if (logger.level <= Logger.FINEST) logger.log("incomingSocket("+s+"): type = "+ret[0]);
         switch (ret[0]) {
         case HEADER_PASSTHROUGH_BYTE:
           callback.incomingSocket(socket);
@@ -246,6 +253,7 @@ public class NetworkInfoTransportLayer implements
         case HEADER_IP_ADDRESS_REQUEST_BYTE:
           // write out the caller's ip address
           SimpleOutputBuffer sob = new SimpleOutputBuffer();
+          logger.log("serializing "+socket.getIdentifier());
           addrSerializer.serialize(socket.getIdentifier(), sob);          
           final ByteBuffer writeMe = sob.getByteBuffer();
           new P2PSocketReceiver<InetSocketAddress>() {           
@@ -294,13 +302,52 @@ public class NetworkInfoTransportLayer implements
       new P2PSocketReceiver<InetSocketAddress>() {
         SocketInputBuffer sib = new SocketInputBuffer(socket);
       
-        public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+        public void receiveSelectResult(final P2PSocket<InetSocketAddress> socket,
             boolean canRead, boolean canWrite) throws IOException {
           // try to read the stuff until it works or fails
           try {
             MultiInetSocketAddress addr = MultiInetSocketAddress.build(sib);
             long uid = sib.readLong();
-            probeStrategy.requestProbe(addr, uid);
+            probeStrategy.requestProbe(addr, uid, new Continuation<Boolean, Exception>() {            
+              public void receiveResult(Boolean result) {
+                returnResult(result.booleanValue());
+              }
+            
+              public void receiveException(Exception exception) {
+                returnResult(false);
+              }
+              
+              public void returnResult(boolean ret) {
+                final ByteBuffer writeMe = ByteBuffer.allocate(1);
+                writeMe.put(ret ? (byte)1 : (byte)0);
+                writeMe.flip();
+                
+                try {
+                  new P2PSocketReceiver<InetSocketAddress>() {                
+                    public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+                        boolean canRead, boolean canWrite) throws IOException {
+                      long bytesWritten = socket.write(writeMe);
+                      if (bytesWritten < 0) {
+                        socket.close();
+                        return;
+                      }
+                      if (writeMe.hasRemaining()) {
+                        socket.register(false, true, this);
+                      } else {
+                        socket.close();
+                      }
+                    }
+                  
+                    public void receiveException(P2PSocket<InetSocketAddress> socket,
+                        Exception ioe) {
+                      socket.close();
+                    }                
+                  }.receiveSelectResult(socket, false, true);
+                } catch (IOException ioe) {
+                  socket.close();
+                }
+              }
+            });
           } catch (InsufficientBytesException ibe) {    
             socket.register(true, false, this);
           }
@@ -308,8 +355,7 @@ public class NetworkInfoTransportLayer implements
       
         public void receiveException(P2PSocket<InetSocketAddress> socket,
             Exception ioe) {
-          // TODO Auto-generated method stub
-      
+          socket.close();
         }
       
       }.receiveSelectResult(socket, true, false);
@@ -439,8 +485,8 @@ public class NetworkInfoTransportLayer implements
   /**
    * ask probeAddress to call probeStrategy.requestProbe()
    */
-  public Cancellable verifyConnectivity(MultiInetSocketAddress local,
-      InetSocketAddress probeAddress, 
+  public Cancellable verifyConnectivity(final MultiInetSocketAddress local,
+      final InetSocketAddress probeAddress, 
       final ConnectivityResult deliverResultToMe,
       Map<String, Object> options) {
     AttachableCancellable ret = new AttachableCancellable();
@@ -484,30 +530,32 @@ public class NetworkInfoTransportLayer implements
         // maybe we should read a response here, but I don't think it's important, just read to close
         
         sock.register(true, false, new P2PSocketReceiver<InetSocketAddress>() {
+          ByteBuffer readMe = ByteBuffer.allocate(1);
         
           public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
               boolean canRead, boolean canWrite) throws IOException {
-            // we just want to record the socket closing
-            long bytesRead = socket.read(ByteBuffer.allocate(1));
-            
+            // read result
+            long bytesRead = socket.read(readMe);
+
             if (bytesRead < 0) {
-              // what we expect
+              deliverResultToMe.receiveException(new ClosedChannelException("Channel closed before reporting success/failure"));
               socket.close();
               return;
             }
 
-            if (bytesRead == 0) {
-              // weird, but just reregister
+            if (readMe.hasRemaining()) {
               socket.register(true,false,this);
               return;
             }
             
-            if (bytesRead > 0) {
-              // this shouldn't happen, it should be closed, reregister anyway
-              if (logger.level <= Logger.WARNING) logger.log("Unexpected response on REQUEST_PROBE_SOCKET reregistering.");
-              socket.register(true,false,this);              
+            readMe.flip();
+            byte ret = readMe.get();
+            if (ret == 1) {
+              // true
+            } else {
+              deliverResultToMe.receiveException(new CantVerifyConnectivityException(probeAddress+" can't verify our connectivity for address "+local));
               return;
-            }            
+            }
           }
         
           public void receiveException(P2PSocket<InetSocketAddress> socket,
@@ -554,7 +602,8 @@ public class NetworkInfoTransportLayer implements
     return ret;
   }
 
-  public Cancellable probe(final InetSocketAddress addr, final long uid, final Continuation<Long, Exception> deliverResponseToMe, Map<String, Object> options) {
+  public Cancellable probe(final InetSocketAddress addr, final long uid, final Continuation<Long, Exception> deliverResponseToMe, final Map<String, Object> options) {
+    if (logger.level <= Logger.FINE) logger.log("probe("+addr+","+uid+","+deliverResponseToMe+","+options+")");
     // udp
     final AttachableCancellable ret = new AttachableCancellable();
     ByteBuffer msg = ByteBuffer.allocate(9); // header+uid
@@ -571,18 +620,20 @@ public class NetworkInfoTransportLayer implements
     MessageCallback<InetSocketAddress, ByteBuffer> mc = null;
     if (deliverResponseToMe != null) {
       mc = new MessageCallback<InetSocketAddress, ByteBuffer>() {
-      
-        public void sendFailed(
-            MessageRequestHandle<InetSocketAddress, ByteBuffer> msg, Exception reason) {
-          ret.cancel();
-          deliverResponseToMe.receiveException(reason);
-        }
-      
         public void ack(MessageRequestHandle<InetSocketAddress, ByteBuffer> msg) {
+          if (logger.level <= Logger.FINER) logger.log("probe("+addr+","+uid+","+deliverResponseToMe+","+options+").udpSuccess()");
           success[0] = true;
           if (success[1]) {
             deliverResponseToMe.receiveResult(uid);
           }
+        }
+            
+        public void sendFailed(
+            MessageRequestHandle<InetSocketAddress, ByteBuffer> msg, Exception reason) {
+          if (logger.level <= Logger.FINER) logger.log("probe("+addr+","+uid+","+deliverResponseToMe+","+options+").udpFailure()");
+
+          ret.cancel();
+          deliverResponseToMe.receiveException(reason);
         }
       
       };
@@ -600,43 +651,51 @@ public class NetworkInfoTransportLayer implements
       public void receiveResult(SocketRequestHandle<InetSocketAddress> cancellable,
           P2PSocket<InetSocketAddress> sock) {
         // maybe we should read a response here, but I don't think it's important, just read to close
+        if (logger.level <= Logger.FINER) logger.log("probe("+addr+","+uid+","+deliverResponseToMe+","+options+").receiveResult("+sock+")");
+        success[1] = true;
+        if (success[0]) {
+          deliverResponseToMe.receiveResult(uid);
+        }
+        sock.close();
         
-        sock.register(true, false, new P2PSocketReceiver<InetSocketAddress>() {
-        
-          public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
-              boolean canRead, boolean canWrite) throws IOException {
-            // we just want to record the socket closing
-            long bytesRead = socket.read(ByteBuffer.allocate(1));
-            
-            if (bytesRead < 0) {
-              // what we expect
-              socket.close();
-              return;
-            }
-
-            if (bytesRead == 0) {
-              // weird, but just reregister
-              socket.register(true,false,this);
-              return;
-            }
-            
-            if (bytesRead > 0) {
-              // this shouldn't happen, it should be closed, reregister anyway
-              if (logger.level <= Logger.WARNING) logger.log("Unexpected response on REQUEST_PROBE_SOCKET reregistering.");
-              socket.register(true,false,this);              
-              return;
-            }            
-          }
-        
-          public void receiveException(P2PSocket<InetSocketAddress> socket,
-              Exception ioe) {
-            if (deliverResponseToMe != null) deliverResponseToMe.receiveException(ioe);
-          }        
-        });        
+//        sock.register(true, false, new P2PSocketReceiver<InetSocketAddress>() {
+//        
+//          public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+//              boolean canRead, boolean canWrite) throws IOException {
+//            // we just want to record the socket closing
+//            long bytesRead = socket.read(ByteBuffer.allocate(1));
+//            
+//            if (bytesRead < 0) {
+//              // what we expect
+//              socket.close();
+//              return;
+//            }
+//
+//            if (bytesRead == 0) {
+//              // weird, but just reregister
+//              socket.register(true,false,this);
+//              return;
+//            }
+//            
+//            if (bytesRead > 0) {
+//              // this shouldn't happen, it should be closed, reregister anyway
+//              if (logger.level <= Logger.WARNING) logger.log("Unexpected response on REQUEST_PROBE_SOCKET reregistering.");
+//              socket.register(true,false,this);              
+//              return;
+//            }            
+//          }
+//        
+//          public void receiveException(P2PSocket<InetSocketAddress> socket,
+//              Exception ioe) {
+//            if (logger.level <= Logger.FINER) logger.log("probe("+addr+","+uid+","+deliverResponseToMe+","+options+").tcpFailure() "+ioe);
+//            if (deliverResponseToMe != null) deliverResponseToMe.receiveException(ioe);
+//          }        
+//        });        
       }
     
       public void receiveException(SocketRequestHandle<InetSocketAddress> s,
           Exception ex) {
+        if (logger.level <= Logger.FINER) logger.log("probe("+addr+","+uid+","+deliverResponseToMe+","+options+").tcpFailure2() "+ex);
         if (deliverResponseToMe != null) deliverResponseToMe.receiveException(ex);
       }    
     }, options));    

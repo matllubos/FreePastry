@@ -168,7 +168,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     }
   }
   
-  public void boot(Collection o) {
+  public void boot(Collection o2) {
+    ArrayList o = new ArrayList(o2);
+    while (o.remove(null)); // remove all null
     getBootstrapper().boot(o);
   }
   

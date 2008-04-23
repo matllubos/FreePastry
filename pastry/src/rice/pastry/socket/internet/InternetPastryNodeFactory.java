@@ -46,18 +46,22 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.networkinfo.CantVerifyConnectivityException;
 import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
 
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
+import rice.p2p.commonapi.Cancellable;
 import rice.pastry.Id;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
+import rice.pastry.socket.nat.CantFindFirewallException;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.socket.nat.StubNATHandler;
 import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifier;
+import rice.pastry.socket.nat.connectivityverifiier.ConnectivityVerifierImpl;
 import rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory;
 import rice.selector.TimerTask;
 
@@ -83,6 +87,10 @@ public class InternetPastryNodeFactory extends
   public static final int ALWAYS = 1;
   public static final int PREFIX_MATCH = 2;
   public static final int NEVER = 3;
+  /**
+   * Don't check bootstrap nodes
+   */
+  public static final int BOOT = 4;
   public static final int OVERWRITE = 1;
   public static final int USE_DIFFERENT_PORT = 2;
   public static final int FAIL = 3;
@@ -102,7 +110,7 @@ public class InternetPastryNodeFactory extends
   InetAddress[] externalAddresses;
   
   public InternetPastryNodeFactory(NodeIdFactory nf, int startPort,
-      Environment env, boolean firewalled) throws IOException {
+      Environment env) throws IOException {
     this(nf, null, startPort, env, null, null, null);
   }
 
@@ -126,6 +134,8 @@ public class InternetPastryNodeFactory extends
       externalAddresses = new InetAddress[1];
       externalAddresses[0] = params.getInetSocketAddress("external_address").getAddress();
     }
+    
+    this.connectivityVerifier = new ConnectivityVerifierImpl(this);
     
     // sets/verifies externalAddress
     findExternalAddressIfNecessary(this.localAddress); // blocking call
@@ -195,7 +205,17 @@ public class InternetPastryNodeFactory extends
   protected boolean findExternalAddressIfNecessary(InetAddress address /*, Collection<InetSocketAddress> probeAddresses*/) throws IOException {
     if (!shouldFindExternalAddress(address)) return true;
     
-    natHandler.findFireWall(address); // warning, this is blocking...
+    try {
+      natHandler.findFireWall(address); // warning, this is blocking...
+    } catch (CantFindFirewallException cffe) {
+      if (logger.level <= Logger.INFO) logger.log("Can't find firewall, continuing. For better performance, enable UPnP.  Will try to verify if user configured a port forward rule..."+cffe);
+      // ignore
+      return false;
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.log(ioe.toString());
+      // ignore
+      return false;
+    }
     if (this.externalAddresses == null) {
       this.externalAddresses = new InetAddress[1];
       this.externalAddresses[0] = natHandler.getFireWallExternalAddress();
@@ -277,7 +297,7 @@ public class InternetPastryNodeFactory extends
       }
     } else {
       // try the probeAddresses
-      if (probeAddresses == null || probeAddresses.isEmpty()) {
+      if (probeAddresses != null && !probeAddresses.isEmpty()) {
         connectivityVerifier.findExternalAddress(bindAddress, probeAddresses, new Continuation<InetAddress, IOException>() {
           
           public void receiveResult(InetAddress result) {
@@ -385,19 +405,34 @@ public class InternetPastryNodeFactory extends
       final MultiInetSocketAddress proxyAddress,
       final Continuation<PastryNode, IOException> deliverResultToMe) {
     
+    if (!shouldCheckConnectivity(proxyAddress, probeAddresses)) {
+      newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, false);   
+      return;
+    }
+    
     final boolean[] timeout = new boolean[1];
     timeout[0] = false;
+    final Cancellable[] cancelme = new Cancellable[1];
 
     final TimerTask timer = new TimerTask() {    
       @Override
       public void run() {
         timeout[0] = true;
-        newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, true);        
+        
+        // clear up the bind address
+        cancelme[0].cancel(); 
+        
+        // invoke to let the cancel succeed
+        environment.getSelectorManager().invoke(new Runnable() {        
+          public void run() {
+            newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, true);        
+          }        
+        });
       }    
     };
     environment.getSelectorManager().getTimer().schedule(timer, 10000); 
 
-    connectivityVerifier.verifyConnectivity(proxyAddress, probeAddresses, new ConnectivityResult() {
+    cancelme[0] = connectivityVerifier.verifyConnectivity(proxyAddress, probeAddresses, new ConnectivityResult() {
       boolean udpSuccess = false;
       boolean tcpSuccess = false;
       
@@ -419,7 +454,17 @@ public class InternetPastryNodeFactory extends
       }
       
       public void receiveException(Exception e) {
-        newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, true);
+        timer.cancel();
+        if (e instanceof CantVerifyConnectivityException) {
+          // mark node firewalled if internal address matches the prefix, otherwise not firewalled
+          if (shouldFindExternalAddress(proxyAddress.getInnermostAddress().getAddress())) {
+            newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, true);
+          } else {
+            newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, false);                      
+          }
+        } else {
+          newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, true);          
+        }
       }
     });
   }
@@ -447,6 +492,8 @@ public class InternetPastryNodeFactory extends
       return OVERWRITE;
     if (val.equalsIgnoreCase("always"))
       return ALWAYS;
+    if (val.equalsIgnoreCase("boot"))
+      return BOOT;
     if (val.equalsIgnoreCase("fail"))
       return FAIL;
     if (val.equalsIgnoreCase("rendezvous"))
@@ -459,12 +506,16 @@ public class InternetPastryNodeFactory extends
    * @param proxyAddress
    * @return
    */
-  protected boolean shouldCheckConnectivity(MultiInetSocketAddress proxyAddress) {
+  protected boolean shouldCheckConnectivity(MultiInetSocketAddress proxyAddress, Collection<InetSocketAddress> bootstraps) {
     switch (getFireWallPolicyVariable("firewall_test_policy")) {
     case NEVER:
       return false;
     case PREFIX_MATCH:
       return !isInternetRoutable(proxyAddress);
+    case BOOT:
+      // don't do it if we're the bootstrap node
+      if (bootstraps.contains(proxyAddress.getOutermostAddress())) return false;
+      return true;
     case ALWAYS:
       return true;
     } // switch

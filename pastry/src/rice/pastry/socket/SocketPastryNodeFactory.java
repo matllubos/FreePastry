@@ -1099,7 +1099,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       // this
     } catch (BindException e) {
       if (logger.level <= Logger.WARNING)
-        logger.log("Warning: " + e);
+        logger.logException("Warning: " , e);
 
       if (environment.getParameters().getBoolean(
           "pastry_socket_increment_port_after_construction")) {
@@ -1162,13 +1162,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           newNodeSelector(nodeId, pAddress, new Continuation<PastryNode, IOException>() {
           
             public void receiveResult(PastryNode node) {
-              pn.add(node);
-              pn.notify();
+              synchronized(pn) {
+                pn.add(node);
+                pn.notify();
+              }
             }
           
             public void receiveException(IOException exception) {
-              re.add(exception);
-              pn.notify();
+              synchronized(pn) {
+                re.add(exception);
+                pn.notify();
+              }
             }          
           }, null);
         }

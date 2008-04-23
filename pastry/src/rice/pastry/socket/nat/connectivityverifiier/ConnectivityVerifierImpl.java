@@ -49,6 +49,8 @@ import org.mpisws.p2p.transport.networkinfo.ConnectivityResult;
 import org.mpisws.p2p.transport.networkinfo.InetSocketAddressLookup;
 
 import rice.Continuation;
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.util.AttachableCancellable;
 import rice.pastry.Id;
@@ -57,9 +59,13 @@ import rice.pastry.transport.TLPastryNode;
 
 public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   SocketPastryNodeFactory spnf;
+  Environment environment;
+  Logger logger;
   
   public ConnectivityVerifierImpl(SocketPastryNodeFactory spnf) {
     this.spnf = spnf;
+    this.environment = spnf.getEnvironment();
+    this.logger = environment.getLogManager().getLogger(ConnectivityVerifierImpl.class, null);
   }
   
   /**
@@ -91,9 +97,13 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     return ret;    
   }
   
+  /**
+   * Call this to determine your external address.
+   */
   public Cancellable findExternalAddress(final InetSocketAddress local,
-      Collection<InetSocketAddress> probeAddresses,
+      final Collection<InetSocketAddress> probeAddresses,
       final Continuation<InetAddress, IOException> deliverResultToMe) {
+    if (logger.level <= Logger.FINER) logger.log("findExternalAddress("+local+","+probeAddresses+","+deliverResultToMe+")");
     // TODO: make sure the addresses are Internet routable?
     // TODO: Timeout (can be in parallel, so timeout ~every second, and try the next one, then cancel everything if one comes through)
 
@@ -105,19 +115,19 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     
       public void receiveResult(InetSocketAddressLookup lookup) {
         // we're on the selector now, and we have our TL
-
         findExternalAddressHelper(lookup, ret, local, probeList, deliverResultToMe);
       }
       
       public void receiveException(IOException exception) {
         // we couldn't even get a transport layer, DOA        
+        if (logger.level <= Logger.INFO) logger.log("findExternalAddress("+local+","+probeAddresses+","+deliverResultToMe+").receiveException("+exception+")");
         deliverResultToMe.receiveException(exception);
       }      
     }));
     
     return ret;
   }
-
+  
   /**
    * Called recursively.
    * 
@@ -130,23 +140,40 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   public void findExternalAddressHelper(final InetSocketAddressLookup lookup, final AttachableCancellable ret, final InetSocketAddress local,
       final List<InetSocketAddress> probeList,
       final Continuation<InetAddress, IOException> deliverResultToMe) {
+    if (logger.level <= Logger.FINER) logger.log("findExternalAddressHelper("+lookup+","+local+","+probeList+")");
     // we're on the selector now, and we have our TL        
     // pull a random node off the list, and try it, we do this so the recursion works
     InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
     
     ret.attach(lookup.getMyInetAddress(target, new Continuation<InetSocketAddress, IOException>() {          
-      public void receiveResult(InetSocketAddress result) {              
+      public void receiveResult(final InetSocketAddress result) {              
+        if (logger.level <= Logger.INFO) logger.log("findExternalAddressHelper("+lookup+","+local+","+probeList+").success:"+result);
+
         // success!
         ret.cancel(); // kill any recursive tries
         lookup.destroy();
-        deliverResultToMe.receiveResult(result.getAddress());
+        
+        // lookup.destroy() uses an invoke
+        environment.getSelectorManager().invoke(new Runnable() {        
+          public void run() {
+            deliverResultToMe.receiveResult(result.getAddress());
+          }        
+        });
       }
     
-      public void receiveException(IOException exception) {
+      public void receiveException(final IOException exception) {
+        if (logger.level <= Logger.INFO) logger.log("findExternalAddressHelper("+lookup+","+local+","+probeList+").receiveException("+exception+")");
+        
         // see if we can try anyone else
         if (probeList.isEmpty()) {
           lookup.destroy();
-          deliverResultToMe.receiveException(exception);
+
+          // lookup.destroy() uses an invoke
+          environment.getSelectorManager().invoke(new Runnable() {        
+            public void run() {
+              deliverResultToMe.receiveException(exception);
+            }        
+          });
           return;
         }
         
@@ -157,10 +184,27 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   }
 
 
+  /**
+   * Call this to determine if your connectivity is good.
+   */
   public Cancellable verifyConnectivity(final MultiInetSocketAddress local,
-      Collection<InetSocketAddress> probeAddresses,
+      final Collection<InetSocketAddress> probeAddresses,
       final ConnectivityResult deliverResultToMe) {
     final ArrayList<InetSocketAddress> probeList = new ArrayList<InetSocketAddress>(probeAddresses);
+//    logger.logException("verifyConnectivity("+local+","+probeAddresses+")", new Exception("Stack Trace"));
+    if (logger.level <= Logger.FINER) logger.log("verifyConnectivity("+local+","+probeAddresses+")");
+
+    // don't probe self
+    for (int ctr = 0; ctr < local.getNumAddresses(); ctr++) {
+      probeList.remove(local.getAddress(ctr));
+    }
+    
+    if (probeList.isEmpty()) {
+      if (logger.level <= Logger.FINER) logger.log("verifyConnectivity("+local+","+probeAddresses+"). no valid addresses");
+      deliverResultToMe.receiveException(new IllegalStateException("No valid probe addresses. "+probeAddresses+" local:"+local));
+      return null;
+    }
+    
     final AttachableCancellable ret = new AttachableCancellable();
 
     // getInetSocketAddressLookup verifies that we are on the selector
@@ -168,34 +212,67 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     
       public void receiveResult(final InetSocketAddressLookup lookup) {
         // we're on the selector now, and we have our TL
+        ret.attach(new Cancellable() {
+        
+          public boolean cancel() {
+            lookup.destroy();            
+            return true;
+          }
+        
+        });
+        
 
         verifyConnectivityHelper(lookup, ret, local, probeList, new ConnectivityResult() {
           boolean udpSuccess = false;
           boolean tcpSuccess = false;
           
-          public void udpSuccess(InetSocketAddress from, Map<String, Object> options) {
+          public void udpSuccess(final InetSocketAddress from, final Map<String, Object> options) {
             udpSuccess = true;
             if (tcpSuccess) {
               ret.cancel();
               lookup.destroy();
             }
-            deliverResultToMe.udpSuccess(from, options);
+            if (logger.level <= Logger.INFO) logger.log("verifyConnectivity("+local+","+probeAddresses+"). udpSuccess("+from+")");
+            
+            // lookup.destroy() uses an invoke
+            environment.getSelectorManager().invoke(new Runnable() {        
+              public void run() {
+                deliverResultToMe.udpSuccess(from, options);
+              }        
+            });
           }
         
-          public void tcpSuccess(InetSocketAddress from, Map<String, Object> options) {
+          public void tcpSuccess(final InetSocketAddress from, final Map<String, Object> options) {
             tcpSuccess = true;
             if (udpSuccess) {
               ret.cancel();
               lookup.destroy();
             }
-            deliverResultToMe.tcpSuccess(from, options);
+            if (logger.level <= Logger.INFO) logger.log("verifyConnectivity("+local+","+probeAddresses+"). tcpSuccess("+from+")");
+            
+            // lookup.destroy() uses an invoke
+            environment.getSelectorManager().invoke(new Runnable() {        
+              public void run() {
+                deliverResultToMe.tcpSuccess(from, options);
+              }        
+            });
+
           }
                 
-          public void receiveException(Exception exception) {
+          public void receiveException(final Exception exception) {
             // see if we can try anyone else
             if (probeList.isEmpty()) {
               lookup.destroy();
-              deliverResultToMe.receiveException(exception);
+              if (logger.level <= Logger.INFO) logger.log("verifyConnectivity("+local+","+probeAddresses+"). failure no more addresses "+exception);
+              
+              // lookup.destroy() uses an invoke
+              environment.getSelectorManager().invoke(new Runnable() {        
+                public void run() {
+                  deliverResultToMe.receiveException(exception);
+                }        
+              });
+
+              return;
             }
             
             // retry (recursive)
@@ -206,6 +283,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
       
       public void receiveException(IOException exception) {
         // we couldn't even get a transport layer, DOA        
+        if (logger.level <= Logger.INFO) logger.log("verifyConnectivity("+local+","+probeAddresses+"). couldn't get tl "+exception);
         deliverResultToMe.receiveException(exception);
       }      
     }));
@@ -217,6 +295,8 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
       final MultiInetSocketAddress local,
       final List<InetSocketAddress> probeList,
       final ConnectivityResult deliverResultToMe) {
+      if (logger.level <= Logger.INFO) logger.log("verifyConnectivityHelper("+local+","+probeList+")");
+      
       // we're on the selector now, and we have our TL        
       // pull a random node off the list, and try it, we do this so the recursion works
       InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
