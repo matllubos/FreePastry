@@ -38,6 +38,7 @@ package rice.pastry.socket.internet;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -168,6 +169,9 @@ public class InternetPastryNodeFactory extends
         if (logger.level <= Logger.INFO) logger.log("Didn't find UPnP libs, skipping UPnP");
         return new StubNATHandler(env, localAddress);
 //        natHandler = new SocketNatHandler(environment, new InetSocketAddress(localAddress,port), pAddress);
+      } catch (InvocationTargetException e) {
+        if (logger.level <= Logger.INFO) logger.log("Didn't find UPnP libs, skipping UPnP");
+        return new StubNATHandler(env, localAddress);        
       } catch (Exception e) {
         if (logger.level <= Logger.WARNING) logger.logException("Error constructing NATHandler.",e);
         throw new RuntimeException(e);
