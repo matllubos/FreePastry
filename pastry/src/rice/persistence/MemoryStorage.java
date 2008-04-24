@@ -344,7 +344,7 @@ public class MemoryStorage implements Storage {
 
       return baos.toByteArray().length;
     } catch (IOException e) {
-      throw new RuntimeException("Object " + obj + " was not serialized correctly!");
+      throw new RuntimeException("Object " + obj + " was not serialized correctly! "+e.toString(),e);
     }
   }
 }
