@@ -42,13 +42,18 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
+import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.proximity.ProximityListener;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
@@ -59,10 +64,12 @@ import rice.p2p.commonapi.appsocket.AppSocketReceiver;
 import rice.p2p.commonapi.exception.AppNotRegisteredException;
 import rice.p2p.commonapi.exception.AppSocketException;
 import rice.p2p.commonapi.exception.NoReceiverAvailableException;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.join.JoinProtocol;
+import rice.pastry.leafset.InitiateLeafSetMaintenance;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.leafset.LeafSetProtocol;
 import rice.pastry.messaging.*;
@@ -71,6 +78,7 @@ import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.transport.Deserializer;
 import rice.pastry.transport.PMessageNotification;
 import rice.pastry.transport.PMessageReceipt;
+import rice.pastry.transport.PMessageReceiptImpl;
 import rice.pastry.transport.SocketAdapter;
 
 /**
@@ -81,7 +89,12 @@ import rice.pastry.transport.SocketAdapter;
  * @author Andrew Ladd
  */
 
-public abstract class PastryNode extends Observable implements rice.p2p.commonapi.Node, Destructable, NodeHandleFactory, LivenessProvider<NodeHandle>, ProximityProvider<NodeHandle> {
+public class PastryNode extends Observable implements 
+    rice.p2p.commonapi.Node, Destructable, NodeHandleFactory, 
+    LivenessProvider<NodeHandle>, ProximityProvider<NodeHandle>, 
+    ProximityListener<NodeHandle>,
+    TransportLayerCallback<NodeHandle, RawMessage>, 
+    LivenessListener<NodeHandle> {
 
   /**
    * Used by AppSockets
@@ -143,8 +156,8 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
    */
   protected TransportLayer<NodeHandle, RawMessage> tl;
 
+  protected ProximityProvider<NodeHandle> proxProvider;
   
-
   /**
    * Constructor, with NodeId. Need to set the node's ID before this node is
    * inserted as localHandle.localNode.
@@ -282,17 +295,6 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   public boolean removeDestructable(Destructable d) {
     return destructables.remove(d);    
   }
-
-  /**
-   * Overridden by derived classes, and invoked when the node has joined
-   * successfully.
-   * 
-   * This one is for backwards compatability. It will soon be deprecated.
-   * 
-   * @deprecated use nodeIsReady(boolean)
-   * 
-   */
-  public abstract void nodeIsReady();
 
   /**
    * Overridden by derived classes, and invoked when the node has joined
@@ -500,57 +502,9 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     apps.add(app);
   }
 
-  /**
-   * Schedule the specified message to be sent to the local node after a
-   * specified delay. Useful to provide timeouts.
-   * 
-   * @param msg
-   *          a message that will be delivered to the local node after the
-   *          specified delay
-   * @param delay
-   *          time in milliseconds before message is to be delivered
-   * @return the scheduled event object; can be used to cancel the message
-   */
-  public abstract ScheduledMessage scheduleMsg(Message msg, long delay);
-
-  /**
-   * Schedule the specified message for repeated fixed-delay delivery to the
-   * local node, beginning after the specified delay. Subsequent executions take
-   * place at approximately regular intervals separated by the specified period.
-   * Useful to initiate periodic tasks.
-   * 
-   * @param msg
-   *          a message that will be delivered to the local node after the
-   *          specified delay
-   * @param delay
-   *          time in milliseconds before message is to be delivered
-   * @param period
-   *          time in milliseconds between successive message deliveries
-   * @return the scheduled event object; can be used to cancel the message
-   */
-  public abstract ScheduledMessage scheduleMsg(Message msg, long delay,
-      long period);
-
-  /**
-   * Schedule the specified message for repeated fixed-rate delivery to the
-   * local node, beginning after the specified delay. Subsequent executions take
-   * place at approximately regular intervals, separated by the specified
-   * period.
-   * 
-   * @param msg
-   *          a message that will be delivered to the local node after the
-   *          specified delay
-   * @param delay
-   *          time in milliseconds before message is to be delivered
-   * @param period
-   *          time in milliseconds between successive message deliveries
-   * @return the scheduled event object; can be used to cancel the message
-   */
-  public abstract ScheduledMessage scheduleMsgAtFixedRate(Message msg,
-      long delay, long period);
-
   public String toString() {
-    return "Pastry node " + myNodeId.toString();
+    return "PastryNode"+localhandle;
+//    return "Pastry node " + myNodeId.toString();
   }
 
   // Common API Support
@@ -660,19 +614,18 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
       d.destroy(); 
     }
     getEnvironment().removeDestructable(this);
+    if (getEnvironment().getSelectorManager().isSelectorThread()) {
+      if (tl != null) tl.destroy();
+    } else {
+      getEnvironment().getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          if (tl != null) tl.destroy();
+        }
+      });
+    }    
   }
 
 
-  /**
-   * Deliver message to the NodeHandle.
-   * 
-   * @param nh
-   * @param m
-   * @return
-   */
-  abstract public PMessageReceipt send(NodeHandle handle, Message message, 
-      PMessageNotification deliverAckToMe, Map<String, Object> options);
-  
   /**
    * Called by PastryAppl to ask the transport layer to open a Socket to its counterpart on another node.
    * 
@@ -777,13 +730,6 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     return handle;
   }
 
-  /**
-   * The proximity of the node handle.
-   * 
-   * @param nh
-   * @return
-   */
-  abstract public int proximity(NodeHandle nh);
 
   
   protected JoinFailedException joinFailedReason;
@@ -810,8 +756,6 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     return joinFailedReason; 
   }
 
-  abstract public Bootstrapper getBootstrapper();
-
   public Router getRouter() {
     return router;
   }
@@ -821,6 +765,449 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     ret+=routeSet.toString();
     return ret;
   }
+  
+  // from TLPastryNode
+  
+  // TODO: this all needs to go!
+
+  // Period (in seconds) at which the leafset and routeset maintenance tasks, respectively, are invoked.
+  // 0 means never.
+  protected int leafSetMaintFreq, routeSetMaintFreq;
+
+  protected ScheduledMessage leafSetRoutineMaintenance = null;
+  protected ScheduledMessage routeSetRoutineMaintenance = null;
+  
+  protected LivenessProvider<NodeHandle> livenessProvider;
+
+  public void setSocketElements(NodeHandle localhandle,
+      int lsmf, int rsmf, 
+      TransportLayer<NodeHandle, RawMessage> tl,
+      LivenessProvider<NodeHandle> livenessProvider,
+      ProximityProvider<NodeHandle> proxProvider,
+      Deserializer deserializer, 
+      NodeHandleFactory handleFactory) {
+    this.localhandle = localhandle;
+    this.leafSetMaintFreq = lsmf;
+    this.routeSetMaintFreq = rsmf;
+    this.handleFactory = handleFactory;
+    this.proxProvider = proxProvider;
+    proxProvider.addProximityListener(this);
+    
+    this.tl = tl;
+    this.livenessProvider = livenessProvider;
+    this.deserializer = deserializer;
+    tl.setCallback(this);
+    livenessProvider.addLivenessListener(this);
+  }
+
+  Map<String, Object> vars = new HashMap<String, Object>();
+  public Map<String, Object> getVars() {
+    return vars;
+  }
+  
+  public void incomingSocket(P2PSocket<NodeHandle> s) throws IOException {
+    
+    // read the appId
+    final ByteBuffer appIdBuffer = ByteBuffer.allocate(4);
+    
+    s.register(true, false, new P2PSocketReceiver<NodeHandle>() {
+    
+      public void receiveSelectResult(
+          P2PSocket<NodeHandle> socket,
+          boolean canRead, boolean canWrite) throws IOException {
+        // read the appId
+        if (socket.read(appIdBuffer) == -1) {
+          if (logger.level <= Logger.WARNING) logger.log("AppId Socket from "+socket+" closed unexpectedly.");
+          return;
+        }
+        
+        if (appIdBuffer.hasRemaining()) {
+          // read the rest;
+          socket.register(true, false, this);
+        } else {
+          appIdBuffer.clear();
+          final int appId = appIdBuffer.asIntBuffer().get();
+
+//          logger.log("Read AppId:"+appId);
+          // we need to write the result, and there is a timing issure on the appl, so we need to first request to write, then do everything
+          // the alternative approach is to return a dummy socket (or a wrapper) and cache any registration request until we write the response
+          socket.register(false, true, new P2PSocketReceiver<NodeHandle>(){
+          
+            public void receiveSelectResult(P2PSocket<NodeHandle> socket, 
+                boolean canRead, boolean canWrite) throws IOException {
+
+              PastryAppl acceptorAppl = getMessageDispatch().getDestinationByAddress(appId);
+
+              ByteBuffer toWrite = ByteBuffer.allocate(1);
+              boolean success = false;
+              
+              if (acceptorAppl == null) {
+                if (logger.level <= Logger.WARNING) logger.log("Sending error to connecter "+socket+" "+new AppNotRegisteredException(appId));
+                toWrite.put(CONNECTION_NO_APP);
+                toWrite.clear();
+//                logger.log("incomingSocket("+socket+") rSR(): writing1:"+toWrite);
+                socket.write(toWrite);
+                socket.close();
+              } else {  
+                synchronized(acceptorAppl) {
+                // try to register with the application
+                  if (acceptorAppl.canReceiveSocket()) {
+                    toWrite.put(CONNECTION_OK);
+                    toWrite.clear();
+                    success = true;
+                  } else {
+                    if (logger.level <= Logger.WARNING) logger.log("Sending error to connecter "+socket+" "+new NoReceiverAvailableException());
+                    toWrite.put(CONNECTION_NO_ACCEPTOR);                    
+                    toWrite.clear();
+                  }
+                  
+//                  logger.log("rSR(): writing2:"+toWrite);
+                  socket.write(toWrite);
+                  if (toWrite.hasRemaining()) {
+                    // this sucks, because the snychronization with the app-receiver becomes all wrong, this shouldn't normally happen
+                    if (logger.level <= Logger.WARNING) logger.log("couldn't write 1 bite!!! "+toWrite);
+                    socket.close();
+                    return;
+                  }
+                  
+                  if (success) {
+//                    logger.log("rSR(): delivering socket to receiver:"+toWrite);
+                    acceptorAppl.finishReceiveSocket(new SocketAdapter(socket, getEnvironment()));
+                  }
+                } // sync
+              } // if (acceptorAppl!=null)              
+            } // rSR()
+          
+            public void receiveException(P2PSocket<NodeHandle> socket, Exception ioe) {
+              if (logger.level <= Logger.WARNING) logger.logException("incomingSocket("+socket+")", ioe);
+              return;
+            }          
+          });
+        }
+      }
+    
+      public void receiveException(
+          P2PSocket<NodeHandle> socket,
+          Exception ioe) {
+        if (logger.level <= Logger.WARNING) logger.logException("incomingSocket("+socket+")",ioe);
+      }
+    
+    });
+  }
+
+  protected void acceptAppSocket(int appId) throws AppSocketException {
+    PastryAppl acceptorAppl = getMessageDispatch().getDestinationByAddress(appId);
+    if (acceptorAppl == null) throw new AppNotRegisteredException(appId);
+    if (!acceptorAppl.canReceiveSocket()) throw new NoReceiverAvailableException();
+  }
+
+
+
+
+  /**
+   * The proximity of the node handle.
+   * 
+   * @param nh
+   * @return
+   */
+  public int proximity(NodeHandle nh) {
+    return proximity(nh, null);
+  }
+  
+  public int proximity(NodeHandle nh, Map<String, Object> options) {
+    return proxProvider.proximity(nh, options);
+  }
+  
+  /**
+   * Schedule the specified message to be sent to the local node after a
+   * specified delay. Useful to provide timeouts.
+   *
+   * @param msg a message that will be delivered to the local node after the
+   *      specified delay
+   * @param delay time in milliseconds before message is to be delivered
+   * @return the scheduled event object; can be used to cancel the message
+   */
+  public ScheduledMessage scheduleMsg(Message msg, long delay) {
+    ScheduledMessage sm = new ScheduledMessage(this, msg);
+    getEnvironment().getSelectorManager().getTimer().schedule(sm, delay);
+    return sm;
+  }
+
+
+  /**
+   * Schedule the specified message for repeated fixed-delay delivery to the
+   * local node, beginning after the specified delay. Subsequent executions take
+   * place at approximately regular intervals separated by the specified period.
+   * Useful to initiate periodic tasks.
+   *
+   * @param msg a message that will be delivered to the local node after the
+   *      specified delay
+   * @param delay time in milliseconds before message is to be delivered
+   * @param period time in milliseconds between successive message deliveries
+   * @return the scheduled event object; can be used to cancel the message
+   */
+  public ScheduledMessage scheduleMsg(Message msg, long delay, long period) {
+    ScheduledMessage sm = new ScheduledMessage(this, msg);
+    getEnvironment().getSelectorManager().getTimer().schedule(sm, delay, period);
+    return sm;
+  }
+
+  /**
+   * Schedule the specified message for repeated fixed-rate delivery to the
+   * local node, beginning after the specified delay. Subsequent executions take
+   * place at approximately regular intervals, separated by the specified
+   * period.
+   *
+   * @param msg a message that will be delivered to the local node after the
+   *      specified delay
+   * @param delay time in milliseconds before message is to be delivered
+   * @param period time in milliseconds between successive message deliveries
+   * @return the scheduled event object; can be used to cancel the message
+   */
+  public ScheduledMessage scheduleMsgAtFixedRate(Message msg, long delay, long period) {
+    ScheduledMessage sm = new ScheduledMessage(this, msg);
+    getEnvironment().getSelectorManager().getTimer().scheduleAtFixedRate(sm, delay, period);
+    return sm;
+  }
+
+  /**
+   * Deliver message to the NodeHandle.
+   * 
+   * @param nh
+   * @param m
+   * @return
+   */
+  public PMessageReceipt send(final NodeHandle handle, 
+      final Message msg, 
+      final PMessageNotification deliverAckToMe, 
+      Map<String, Object> tempOptions) {
+    
+    // set up the priority field in the options
+    if (tempOptions != null && tempOptions.containsKey(PriorityTransportLayer.OPTION_PRIORITY)) {
+      // already has the priority;
+    } else {
+      if (tempOptions == null) {
+        tempOptions = new HashMap<String, Object>(); 
+      } else {
+        tempOptions = new HashMap<String, Object>(tempOptions);
+      }
+      tempOptions.put(PriorityTransportLayer.OPTION_PRIORITY, msg.getPriority());
+    }
+    
+    final Map<String, Object> options = tempOptions;
+    
+    if (handle.equals(localhandle)) {
+      receiveMessage(msg);
+      PMessageReceipt ret = new PMessageReceipt() {
+
+        public boolean cancel() {
+          return false;
+        }
+
+        public NodeHandle getIdentifier() {
+          return localhandle;
+        }
+
+        public Map<String, Object> getOptions() {
+          return options;
+        }
+
+        public Message getMessage() {
+          return msg;
+        }
+        public String toString() {
+          return "TLPN$PMsgRecpt{"+msg+","+localhandle+"}";
+        }
+      }; 
+      if (deliverAckToMe != null) deliverAckToMe.sent(ret);
+      return ret;
+    }
+    
+    final PRawMessage rm;
+    if (msg instanceof PRawMessage) {
+      rm = (PRawMessage)msg; 
+    } else {
+      rm = new PJavaSerializedMessage(msg); 
+    }
+      
+    final PMessageReceiptImpl ret = new PMessageReceiptImpl(msg, options);
+    final MessageCallback<NodeHandle, RawMessage> callback;
+    if (deliverAckToMe == null) {
+      callback = null;
+    } else {
+      callback = new MessageCallback<NodeHandle, RawMessage>(){        
+        public void ack(MessageRequestHandle<NodeHandle, RawMessage> msg) {
+          if (ret.getInternal() == null) ret.setInternal(msg);
+          deliverAckToMe.sent(ret);
+        }      
+        public void sendFailed(MessageRequestHandle<NodeHandle, RawMessage> msg, Exception reason) {        
+          if (ret.getInternal() == null) ret.setInternal(msg);
+          deliverAckToMe.sendFailed(ret, reason);
+        }     
+      };      
+    }
+    if (getEnvironment().getSelectorManager().isSelectorThread()) {              
+      ret.setInternal(tl.sendMessage(handle, rm, callback, options));
+    } else {
+      getEnvironment().getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          ret.setInternal(tl.sendMessage(handle, rm, callback, options));
+        }      
+      });
+    }
+    return ret;
+  }
+  
+  public void messageReceived(NodeHandle i, RawMessage m, Map<String, Object> options) throws IOException {
+    if (m.getType() == 0 && (m instanceof PJavaSerializedMessage)) {
+      receiveMessage(((PJavaSerializedMessage)m).getMessage());
+    } else {
+      receiveMessage((Message)m);
+    }
+  }
+
+
+  public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
+    return handleFactory.readNodeHandle(buf);
+  }
+  
+//  public void setElements(NodeHandle lh, MessageDispatch md, LeafSet ls, RoutingTable rt, Router router, Bootstrapper bootstrapper) {
+//    super.setElements(lh, md, ls, rt, router);
+//    this.bootstrapper = bootstrapper;
+//  }
+  
+  public Bootstrapper getBootstrapper() {
+    return bootstrapper;
+  }
+
+
+
+
+  /**
+   * Called after the node is initialized.
+   * 
+   * @param bootstrap The node which this node should boot off of.
+   */
+  public void doneNode(Collection<NodeHandle> bootstrap) { 
+    if (logger.level <= Logger.INFO) logger.log("doneNode:"+bootstrap);
+//    doneNode(bootstrap.toArray(new NodeHandle[1]));
+//  }
+//
+//  public void doneNode(NodeHandle[] bootstrap) {
+    if (logger.level <= Logger.INFO) logger.log("doneNode:"+bootstrap);
+    if (routeSetMaintFreq > 0) {
+      // schedule the routeset maintenance event
+      routeSetRoutineMaintenance = scheduleMsgAtFixedRate(new InitiateRouteSetMaintenance(),
+        routeSetMaintFreq * 1000, routeSetMaintFreq * 1000);
+      if (logger.level <= Logger.CONFIG) logger.log(
+          "Scheduling routeSetMaint for "+routeSetMaintFreq * 1000+","+routeSetMaintFreq * 1000);
+    }
+    if (leafSetMaintFreq > 0) {
+      // schedule the leafset maintenance event
+      leafSetRoutineMaintenance = scheduleMsgAtFixedRate(new InitiateLeafSetMaintenance(),
+        leafSetMaintFreq * 1000, leafSetMaintFreq * 1000);
+      if (logger.level <= Logger.CONFIG) logger.log(
+          "Scheduling leafSetMaint for "+leafSetMaintFreq * 1000+","+leafSetMaintFreq * 1000);
+    }
+    
+    joiner.initiateJoin(bootstrap);
+//    initiateJoin(bootstrap);
+  }
+    
+  public void livenessChanged(NodeHandle i, int val, Map<String, Object> options) {
+    if (val == LIVENESS_ALIVE) {
+      i.update(NodeHandle.DECLARED_LIVE);
+    } else {
+      if (val >= LIVENESS_DEAD) {
+        i.update(NodeHandle.DECLARED_DEAD);
+      }
+    }
+    
+    notifyLivenessListeners((NodeHandle)i, val, options);
+  }
+  
+  Collection<LivenessListener<NodeHandle>> livenessListeners = new ArrayList<LivenessListener<NodeHandle>>();
+  public void addLivenessListener(LivenessListener<NodeHandle> name) {
+    synchronized(livenessListeners) {
+      livenessListeners.add(name);
+    }    
+  }
+  
+  public boolean removeLivenessListener(LivenessListener<NodeHandle> name) {
+    synchronized(livenessListeners) {
+      return livenessListeners.remove(name);
+    }    
+  }
+  
+  protected void notifyLivenessListeners(NodeHandle i, int val, Map<String, Object> options) {
+    if (logger.level <= Logger.FINE) logger.log("notifyLivenessListeners("+i+","+val+")"); 
+    ArrayList<LivenessListener<NodeHandle>> temp;
+    synchronized(livenessListeners) {
+      temp = new ArrayList<LivenessListener<NodeHandle>>(livenessListeners);
+    }
+    for (LivenessListener<NodeHandle> ll : temp) {
+      ll.livenessChanged(i, val, options);
+    }
+  }
+
+  public boolean checkLiveness(NodeHandle i, Map<String, Object> options) {    
+    return livenessProvider.checkLiveness(i, options);
+  }
+
+  public int getLiveness(NodeHandle i, Map<String, Object> options) {
+    return livenessProvider.getLiveness(i, options);
+  }
+
+
+  public void proximityChanged(NodeHandle i, int val, Map<String, Object> options) {
+    SocketNodeHandle handle = ((SocketNodeHandle)i);
+    handle.update(NodeHandle.PROXIMITY_CHANGED);     
+  }
+
+  public LivenessProvider<NodeHandle> getLivenessProvider() {
+    return livenessProvider;
+  }
+
+  public ProximityProvider<NodeHandle> getProxProvider() {
+    return proxProvider;
+  }
+  
+  public TransportLayer<NodeHandle, RawMessage> getTL() {
+    return tl;
+  }
+
+  public void clearState(NodeHandle i) {
+    livenessProvider.clearState(i);
+  }
+
+  public void addProximityListener(ProximityListener<NodeHandle> listener) {
+    proxProvider.addProximityListener(listener);
+  }
+
+  public boolean removeProximityListener(ProximityListener<NodeHandle> listener) {
+    return proxProvider.removeProximityListener(listener);
+  }
+
+  /**
+   * Overridden by derived classes, and invoked when the node has joined
+   * successfully.
+   * 
+   * This one is for backwards compatability. It will soon be deprecated.
+   * 
+   * @deprecated use nodeIsReady(boolean)
+   * 
+   */
+  public void nodeIsReady() {
+    
+    // nothing, used to cancel the joinEvent
+  }
+  
+//  protected NodeHandleFactory handleFactory;
+
+  public NodeHandleFactory getHandleFactroy() {
+    return handleFactory;
+  }
+
   
   /******************* network listeners *********************/
   // the list of network listeners
@@ -862,11 +1249,6 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
   public void broadcastReceivedListeners(int address, short msgType, InetSocketAddress from, int size, int wireType) {
     for (NetworkListener listener : getNetworkListeners())
       listener.dataReceived(address, msgType, from, size, wireType);
-  }  
-  
-  Map<String, Object> vars = new HashMap<String, Object>();
-  public Map<String, Object> getVars() {
-    return vars;
-  }
+  }    
 }
 

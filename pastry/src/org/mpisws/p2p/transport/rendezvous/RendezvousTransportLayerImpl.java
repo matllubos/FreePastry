@@ -1137,6 +1137,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     // make sure we don't open multiple pilots
     synchronized(outgoingPilots) {
       if (outgoingPilots.containsKey(i)) {
+        if (logger.level <= Logger.FINER) logger.log("openPilot("+i+") already had one.");        
         return outgoingPilots.get(i); 
       }
   
@@ -1271,6 +1272,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       }
       this.cancellable = null;
       this.socket = socket;
+      if (logger.level <= Logger.FINE) logger.log(this+" success opening outgoing pilot");
       try {
         enqueue(ByteBuffer.wrap(PILOT_SOCKET_BYTES));
         enqueue(serializer.serialize(localNodeHandle));
@@ -1279,6 +1281,10 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       } catch (IOException ioe) {
         cancel();
       }
+    }
+    
+    public String toString() {
+      return "OutgoingPilot{"+i+"}("+socket+")";
     }
     
     public boolean ping() {

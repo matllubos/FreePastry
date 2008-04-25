@@ -249,6 +249,7 @@ public abstract class CommonAPITest {
    */
   public void createNodes() {
     if (simulator != null) simulator.setMaxSpeed(10.0f);
+    long last = environment.getTimeSource().currentTimeMillis();
     for (int i=0; i<NUM_NODES; i++) {
       nodes[i] = createNode(i);
       
@@ -257,7 +258,10 @@ public abstract class CommonAPITest {
       processNode(i, nodes[i]);
       simulate();
     
-      System.out.println("Created node " + i + " with id " + nodes[i]+" at "+environment.getTimeSource().currentTimeMillis());
+      long now = environment.getTimeSource().currentTimeMillis();
+      System.out.println("Created node " + i + " with id " + nodes[i]+" at "+now+" "+(now-last));
+      last = now;
+      if (logger.level <= Logger.FINE) logger.log(((PastryNode)nodes[i]).getLeafSet().toString());
     }
     if (logger.level <= Logger.INFO) logger.log(((PastryNode)nodes[0]).getLeafSet().toString());
     if (simulator != null) simulator.setFullSpeed();

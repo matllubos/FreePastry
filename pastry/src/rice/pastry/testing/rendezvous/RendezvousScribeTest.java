@@ -77,6 +77,7 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
     Environment env = RawScribeRegrTest.parseArgs(args);
     
     Parameters p = env.getParameters();
+//    p.setInt("org.mpisws.p2p.transport_loglevel", Logger.FINE);
 //    p.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
 //    p.setInt("org.mpisws.p2p.transport.wire_loglevel", Logger.FINE);
 //    p.setInt("rice.pastry.socket.nat.rendezvous_loglevel", Logger.FINE);
@@ -84,7 +85,9 @@ public class RendezvousScribeTest /*extends RawScribeRegrTest*/ {
 //    p.setInt("org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl_loglevel", Logger.FINEST);
 //    p.setInt("rice.pastry.socket.nat.rendezvous.RendezvousRouterStrategy_loglevel", Logger.FINEST);
 //    p.setInt("rice.pastry.socket.nat.rendezvous.RendezvousApp_loglevel", Logger.FINE);    
-//    p.setInt("loglevel", Logger.FINE);
+//    p.setInt("loglevel", Logger.INFO);
+//    p.setInt("rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory_loglevel", Logger.FINE);
+//    p.setInt("rice.p2p.scribe.testing.RawScribeRegrTest_loglevel", Logger.FINE);
     
     p.setBoolean("rendezvous_test_firewall", true);
     p.setBoolean("rendezvous_test_makes_bootstrap", true);

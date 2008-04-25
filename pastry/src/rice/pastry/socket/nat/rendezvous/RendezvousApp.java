@@ -185,7 +185,7 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
   public void messageForAppl(Message msg) {
     if (msg instanceof ByteBufferMsg) {
       ByteBufferMsg bbm = (ByteBufferMsg)msg;
-      if (logger.level <= Logger.FINER) logger.log("messageForAppl("+bbm+")");
+      if (logger.level <= Logger.FINE) logger.log("messageForAppl("+bbm+")");
       try {
         tl.messageReceivedFromOverlay((RendezvousSocketNodeHandle)bbm.getOriginalSender(), bbm.buffer, null);
       } catch (IOException ioe) {

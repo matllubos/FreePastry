@@ -113,6 +113,10 @@ public class PMessageReceiptImpl implements PMessageReceipt {
     if (callCancel) internal.cancel();
   }
   
+  public MessageRequestHandle<NodeHandle, RawMessage> getInternal() {
+    return internal;
+  }
+  
   public boolean isCancelled() {
     return cancelled;
   }

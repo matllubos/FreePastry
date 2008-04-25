@@ -388,7 +388,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
       // this just guards the next part
     } else if (p.getBoolean("rendezvous_test_firewall")) {
       if (random.nextFloat() <= p.getFloat("rendezvous_test_num_firewalled")) {
-        pn.getEnvironment().getParameters().setBoolean(SIMULATE_FIREWALL, true);
+        pn.getVars().put(SIMULATE_FIREWALL, true);
         contactState = RendezvousSocketNodeHandle.CONTACT_FIREWALLED;
       }
     }
@@ -398,7 +398,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     SocketNodeHandle ret = pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId(), contactState);
     
     // this code is for logging    
-    if (contactState != localContactState && logger.level <= Logger.INFO) {
+    if (logger.level <= Logger.FINE || (contactState != localContactState && logger.level <= Logger.INFO)) {
       switch(contactState) {
       case RendezvousSocketNodeHandle.CONTACT_DIRECT:
         logger.log(ret+" is not firewalled.");
@@ -419,7 +419,9 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
     TransportLayer<InetSocketAddress, ByteBuffer> baseTl = super.getWireTransportLayer(innermostAddress, pn);
     Parameters p = pn.getEnvironment().getParameters();
-    if (p.contains(SIMULATE_FIREWALL) && p.getBoolean(SIMULATE_FIREWALL)) {
+    
+    if ((pn.getVars().containsKey(SIMULATE_FIREWALL) && ((Boolean)pn.getVars().get(SIMULATE_FIREWALL)).booleanValue()) ||
+        (p.contains(SIMULATE_FIREWALL) && p.getBoolean(SIMULATE_FIREWALL))) {
       return new FirewallTLImpl<InetSocketAddress, ByteBuffer>(baseTl,5000,pn.getEnvironment());
     }
     
