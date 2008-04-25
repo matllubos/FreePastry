@@ -81,10 +81,12 @@ public interface Endpoint extends NodeHandleReader {
    * @param id The destination Id of the message.
    * @param message The message to deliver
    * @param hint The first node to send this message to, optional
+   * @param deliverAckToMe notified when the message is sent
+   * @return can cancel the request
    */
-  MessageReceipt route(Id id, Message message, NodeHandle hint);
   MessageReceipt route(Id id, Message message, NodeHandle hint,  
       DeliveryNotification deliverAckToMe);
+  MessageReceipt route(Id id, Message message, NodeHandle hint);
 
   /**
    * Same as the other call, but uses the Raw serialization rather than java serialization.

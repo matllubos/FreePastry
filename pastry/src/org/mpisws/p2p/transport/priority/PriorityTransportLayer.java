@@ -87,15 +87,24 @@ public interface PriorityTransportLayer<Identifier> extends TransportLayer<Ident
   public Map<String, Object> connectionOptions(Identifier i);
   
   /**
+   * usually used with bytesPending() or queueLength()
+   * @return any Identifier with messages to be sent
+   */
+  public Collection<Identifier> nodesWithPendingMessages(); 
+  
+  /**
    * Returns the number of messages pending to be sent
    * @param i
    * @return
    */
   public int queueLength(Identifier i);
   
+  /**
+   * The number of bytes to be sent to the identifier
+   * @param i
+   * @return
+   */
   public long bytesPending(Identifier i);
-  
-  public Collection<Identifier> nodesWithPendingMessages(); 
   
   /**
    * open a primary connection

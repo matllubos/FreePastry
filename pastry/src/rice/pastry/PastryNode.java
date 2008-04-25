@@ -863,5 +863,10 @@ public abstract class PastryNode extends Observable implements rice.p2p.commonap
     for (NetworkListener listener : getNetworkListeners())
       listener.dataReceived(address, msgType, from, size, wireType);
   }  
+  
+  Map<String, Object> vars = new HashMap<String, Object>();
+  public Map<String, Object> getVars() {
+    return vars;
+  }
 }
 

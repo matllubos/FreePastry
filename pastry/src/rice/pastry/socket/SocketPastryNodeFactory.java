@@ -160,6 +160,12 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * Maps to MultiInetAddressTransportLayer
    */
   public static final String MULTI_INET_TL = "SocketPastryNodeFactory.milti-inet-tl";
+  
+  /**
+   * maps to a PriorityTransportLayer<MultiInetSocketAddress>
+   */
+  public static final String PRIORITY_TL = "PriorityTransportLayer.PRIORITY_TL";
+
 
   public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   private int port;
@@ -666,6 +672,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
           environment.getParameters().getInt("pastry_socket_writer_max_msg_size"),
           environment.getParameters().getInt("pastry_socket_writer_max_queue_length"),
           null);
+    pn.getVars().put(PRIORITY_TL, priorityTL);
+
     return priorityTL;
   }
 
