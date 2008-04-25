@@ -33,7 +33,7 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
-*******************************************************************************/
+*******************************************************************************/ 
 package rice.pastry.socket;
 
 import java.util.Map;
