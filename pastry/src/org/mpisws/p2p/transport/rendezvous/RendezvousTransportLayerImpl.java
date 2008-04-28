@@ -171,6 +171,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   protected RandomSource random;
   protected TimeSource time;
   protected EphemeralDB<Identifier, HighIdentifier> ephemeralDB;
+  protected ContactDirectStrategy<HighIdentifier> contactDirectStrategy;
   
   public RendezvousTransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -181,6 +182,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       PilotFinder<HighIdentifier> pilotFinder,
       RendezvousStrategy<HighIdentifier> rendezvousStrategy, 
       ResponseStrategy<Identifier> responseStrategy,
+      ContactDirectStrategy<HighIdentifier> contactDirectStrategy,
       Environment env) {
     this.random = env.getRandomSource();
     this.time = env.getTimeSource();
@@ -193,6 +195,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     this.pilotFinder = pilotFinder;
     this.rendezvousStrategy = rendezvousStrategy;
     this.responseStrategy = responseStrategy;
+    this.contactDirectStrategy = contactDirectStrategy;
     this.ephemeralDB = new EphemeralDBImpl<Identifier, HighIdentifier>(env,2*60*60*1000); // TODO: make this a configurable parameter
     
     this.logger = env.getLogManager().getLogger(RendezvousTransportLayerImpl.class, null);
@@ -207,7 +210,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     // TODO: throw proper exception if options == null, or !contains(R_C_S)
     final HighIdentifier contact = getHighIdentifier(options);
 
-    if (contact == null || contact.canContactDirect()) {
+    if (contact == null || contact.canContactDirect() || contactDirectStrategy.canContactDirect(contact)) {
       // write NORMAL_SOCKET and continue
       tl.openSocket(i, new SocketCallback<Identifier>(){
         public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
@@ -1012,7 +1015,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       responseStrategy.messageSent(i, m, options);
       return tl.sendMessage(i, m, deliverAckToMe, options);       
     } else {
-      if (high.canContactDirect()) {
+      if (high.canContactDirect() || contactDirectStrategy.canContactDirect(high)) {
         // this is the typical case
         // pass-through, need to allow for null during bootstrap, we assume pass-through works
         responseStrategy.messageSent(i, m, options);

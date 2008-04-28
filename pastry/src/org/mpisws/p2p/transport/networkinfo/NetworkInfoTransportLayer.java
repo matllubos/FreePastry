@@ -253,7 +253,7 @@ public class NetworkInfoTransportLayer implements
         case HEADER_IP_ADDRESS_REQUEST_BYTE:
           // write out the caller's ip address
           SimpleOutputBuffer sob = new SimpleOutputBuffer();
-          logger.log("serializing "+socket.getIdentifier());
+          if (logger.level <= Logger.INFO) logger.log("serializing "+socket.getIdentifier());
           addrSerializer.serialize(socket.getIdentifier(), sob);          
           final ByteBuffer writeMe = sob.getByteBuffer();
           new P2PSocketReceiver<InetSocketAddress>() {           

@@ -55,11 +55,14 @@ import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.liveness.LivenessProvider;
 import org.mpisws.p2p.transport.liveness.Pinger;
+import org.mpisws.p2p.transport.multiaddress.AddressStrategy;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.multiaddress.SimpleAddressStrategy;
 import org.mpisws.p2p.transport.nat.FirewallTLImpl;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.rendezvous.ContactDeserializer;
+import org.mpisws.p2p.transport.rendezvous.ContactDirectStrategy;
 import org.mpisws.p2p.transport.rendezvous.PilotFinder;
 import org.mpisws.p2p.transport.rendezvous.PilotManager;
 import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
@@ -246,6 +249,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         getPilotFinder(pn),
         getRendezvousStrategyHelper(pn),
         getResponseStrategy(pn),
+        getContactDirectStrategy(pn),
         pn.getEnvironment());
     
     pn.getVars().put(RENDEZVOUS_TL, ret);
@@ -268,10 +272,18 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
   
   protected ResponseStrategy<InetSocketAddress> getResponseStrategy(TLPastryNode pn) {
-//    return new NeverResponseStrategy<InetSocketAddress>();
-    return new TimeoutResponseStrategy<InetSocketAddress>(3000, pn.getEnvironment());
-  }
-  
+//  return new NeverResponseStrategy<InetSocketAddress>();
+  return new TimeoutResponseStrategy<InetSocketAddress>(3000, pn.getEnvironment());
+}
+
+  protected ContactDirectStrategy<RendezvousSocketNodeHandle> getContactDirectStrategy(TLPastryNode pn) {
+    AddressStrategy adrStrat = (AddressStrategy)pn.getVars().get(MULTI_ADDRESS_STRATEGY);    
+    if (adrStrat == null) {
+      adrStrat = new SimpleAddressStrategy();
+    }
+    return new RendezvousContactDirectStrategy((RendezvousSocketNodeHandle)pn.getLocalNodeHandle(), adrStrat, pn.getEnvironment());
+}
+
   protected PilotFinder<RendezvousSocketNodeHandle> getPilotFinder(TLPastryNode pn) {
     return new LeafSetPilotFinder(pn);
   }
@@ -481,6 +493,14 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     pn.addObserver(obs);
     
     TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns) {
+      
+      @Override
+      protected void bootAsBootstrap() {
+        if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) {
+          throw new RuntimeException("Local node is believed to be firewalled and can't be used as a bootstrap node. "+pn.getLocalHandle());
+        }
+        super.bootAsBootstrap();
+      }
       
       @Override
       protected void checkLiveness(final SocketNodeHandle h, Map<String, Object> options) {

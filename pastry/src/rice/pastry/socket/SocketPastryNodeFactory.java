@@ -74,9 +74,11 @@ import org.mpisws.p2p.transport.liveness.LivenessTransportLayer;
 import org.mpisws.p2p.transport.liveness.LivenessTransportLayerImpl;
 import org.mpisws.p2p.transport.liveness.OverrideLiveness;
 import org.mpisws.p2p.transport.liveness.Pinger;
+import org.mpisws.p2p.transport.multiaddress.AddressStrategy;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.multiaddress.SimpleAddressStrategy;
 import org.mpisws.p2p.transport.networkinfo.InetSocketAddressLookup;
 import org.mpisws.p2p.transport.networkinfo.NetworkInfoTransportLayer;
 import org.mpisws.p2p.transport.networkinfo.ProbeStrategy;
@@ -166,7 +168,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    */
   public static final String PRIORITY_TL = "PriorityTransportLayer.PRIORITY_TL";
 
-
+  public static final String MULTI_ADDRESS_STRATEGY = "SocketPastryNodeFactory.milti-inet-addressStrategy"; 
+  
   public static final byte[] PASTRY_MAGIC_NUMBER = new byte[] {0x27, 0x40, 0x75, 0x3A};
   private int port;
   protected NodeIdFactory nidFactory;
@@ -482,7 +485,9 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       TransportLayer<InetSocketAddress, ByteBuffer> mntl, 
       TLPastryNode pn, 
       MultiInetSocketAddress localAddress) {
-    return new MultiInetAddressTransportLayerImpl(localAddress, mntl, pn.getEnvironment(), null, null);
+    AddressStrategy adrStrat = new SimpleAddressStrategy();
+    pn.getVars().put(MULTI_ADDRESS_STRATEGY, adrStrat);    
+    return new MultiInetAddressTransportLayerImpl(localAddress, mntl, pn.getEnvironment(), null, adrStrat);
   }
 
   protected TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getSourceRouteTransportLayer(
@@ -789,6 +794,10 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       this.pns = pns;
 //      this.localAddr = ((MultiInetSocketAddress)localAddr).getInnermostAddress();
     }
+    
+    protected void bootAsBootstrap() {
+      pn.doneNode(Collections.EMPTY_LIST); 
+    }
 
     /**
      * This method is a bit out of order to make it work on any thread.  The method itself is non-blocking.  
@@ -821,7 +830,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       if (bootaddresses.isEmpty() ||
           (bootaddresses.size() == 1 && seed)) {
         if (logger.level <= Logger.INFO) logger.log("boot() calling pn.doneNode(empty)");
-        pn.doneNode(Collections.EMPTY_LIST); 
+        bootAsBootstrap();
         return;
       }
       

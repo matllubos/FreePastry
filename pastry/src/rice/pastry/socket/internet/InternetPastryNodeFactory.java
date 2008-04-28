@@ -43,7 +43,9 @@ import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
@@ -289,7 +291,23 @@ public class InternetPastryNodeFactory extends
   protected void findExternalAddress(final Id nodeId,
       final InetSocketAddress bindAddress,
       final Continuation<PastryNode, IOException> deliverResultToMe) {
-
+    
+    // pull self from probeAddresses
+    Collection<InetSocketAddress> myProbeAddresses = null;
+    if (this.probeAddresses != null) {
+      myProbeAddresses = new ArrayList<InetSocketAddress>(probeAddresses);
+      while(myProbeAddresses.remove(bindAddress));
+      
+      // pull non-internet routable addresses
+      Iterator<InetSocketAddress> i = myProbeAddresses.iterator();
+      while (i.hasNext()) {
+        InetSocketAddress foo = i.next();
+        if (!isInternetRoutablePrefix(foo.getAddress())) {
+          i.remove();
+        }
+      }
+    }
+    
     // see if it's specified in the configuration
     if (environment.getParameters().contains("external_address")) {
       // get it from the param
@@ -301,7 +319,7 @@ public class InternetPastryNodeFactory extends
       }
     } else {
       // try the probeAddresses
-      if (probeAddresses != null && !probeAddresses.isEmpty()) {
+      if (myProbeAddresses != null && !myProbeAddresses.isEmpty()) {
         connectivityVerifier.findExternalAddress(bindAddress, probeAddresses, new Continuation<InetAddress, IOException>() {
           
           public void receiveResult(InetAddress result) {
@@ -392,7 +410,15 @@ public class InternetPastryNodeFactory extends
       // doesn't matter, can just rendezvous
       port = 0;
     }
-    verifyConnectivityThenMakeNewNode(nodeId, new MultiInetSocketAddress(new InetSocketAddress(externalAddress, port), bindAddress), deliverResultToMe);      
+    
+    // if we found an externalAddress under any mechanism, use it, otherwise dont.
+    MultiInetSocketAddress fullAddress;
+    if (externalAddress == null) {
+      fullAddress = new MultiInetSocketAddress(bindAddress);
+    } else {
+      fullAddress = new MultiInetSocketAddress(new InetSocketAddress(externalAddress, port), bindAddress);
+    }
+    verifyConnectivityThenMakeNewNode(nodeId, fullAddress, deliverResultToMe);      
   }
    
   
