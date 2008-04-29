@@ -151,7 +151,7 @@ pastry_proxy_connectivity_tries = 3
 # whether to search for a nat using UPnP
 nat_search_policy = prefix
 # whether to verify connectivity
-firewall_test_policy = boot
+firewall_test_policy = prefix
 # policy for setting port forwarding the state of the firewall if there is already a conflicting rule: overwrite, fail (throw exception), change (use different port) 
 # you may want to set this to overwrite or fail on the bootstrap nodes, but most freepastry applications can run on any available port, so the default is change
 nat_state_policy = change

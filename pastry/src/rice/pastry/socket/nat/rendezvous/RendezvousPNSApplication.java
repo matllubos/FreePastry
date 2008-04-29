@@ -40,6 +40,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.mpisws.p2p.transport.rendezvous.ContactDirectStrategy;
+
 
 import rice.Continuation;
 import rice.environment.logging.Logger;
@@ -62,8 +64,12 @@ import rice.pastry.routing.RouteSet;
  */
 public class RendezvousPNSApplication extends PNSApplication {
 
-  public RendezvousPNSApplication(PastryNode pn) {
+  ContactDirectStrategy<RendezvousSocketNodeHandle> contactDirectStrategy;
+  
+  public RendezvousPNSApplication(PastryNode pn, ContactDirectStrategy<RendezvousSocketNodeHandle> contactDirectStrategy) {
     super(pn, pn.getEnvironment().getLogManager().getLogger(RendezvousPNSApplication.class, null));
+    this.contactDirectStrategy = contactDirectStrategy;
+    if (contactDirectStrategy == null) throw new IllegalArgumentException("Need contactDirectStrategy was null");
   }
 
   /**
@@ -94,7 +100,8 @@ public class RendezvousPNSApplication extends PNSApplication {
    */
   protected boolean useHandle(NodeHandle handle) {
     RendezvousSocketNodeHandle rsnh = (RendezvousSocketNodeHandle)handle;
-    return rsnh.canContactDirect();    
+    return contactDirectStrategy.canContactDirect(rsnh);
+//    return rsnh.canContactDirect();    
   }
   
   /**

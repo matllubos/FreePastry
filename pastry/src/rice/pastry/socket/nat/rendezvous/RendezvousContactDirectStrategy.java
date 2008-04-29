@@ -60,6 +60,7 @@ public class RendezvousContactDirectStrategy implements ContactDirectStrategy<Re
   }
 
   public boolean canContactDirect(RendezvousSocketNodeHandle remoteNode) {    
+    if (remoteNode.canContactDirect()) return true;
     boolean ret = addressStrategy.getAddress(localAddr, remoteNode.getAddress()).equals(remoteNode.getAddress().getInnermostAddress());
     if (ret && logger.level <= Logger.FINE) logger.log("rendezvous contacting direct:"+remoteNode); 
     return ret;

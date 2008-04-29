@@ -146,6 +146,11 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   public static final String SIMULATE_FIREWALL = "rendezvous_simulate_firewall";
   
   /**
+   * getVars() maps to a ContactDirectStrategy<RendezvousSocketNodeHandle>
+   */
+  public static final String RENDEZVOUS_CONTACT_DIRECT_STRATEGY = "RendezvousSocketPastryNodeFactory.ContactDirectStrategy";
+  
+  /**
    * The local node's contact state.  
    * 
    * TODO: Configure this
@@ -281,7 +286,11 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     if (adrStrat == null) {
       adrStrat = new SimpleAddressStrategy();
     }
-    return new RendezvousContactDirectStrategy((RendezvousSocketNodeHandle)pn.getLocalNodeHandle(), adrStrat, pn.getEnvironment());
+    
+    ContactDirectStrategy<RendezvousSocketNodeHandle> ret = new RendezvousContactDirectStrategy((RendezvousSocketNodeHandle)pn.getLocalNodeHandle(), adrStrat, pn.getEnvironment());
+    pn.getVars().put(RENDEZVOUS_CONTACT_DIRECT_STRATEGY, ret);
+    
+    return ret;
 }
 
   protected PilotFinder<RendezvousSocketNodeHandle> getPilotFinder(TLPastryNode pn) {
@@ -333,7 +342,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   @Override
   protected ProximityNeighborSelector getProximityNeighborSelector(TLPastryNode pn) {    
     if (environment.getParameters().getBoolean("transport_use_pns")) {
-      RendezvousPNSApplication pns = new RendezvousPNSApplication(pn);
+      RendezvousPNSApplication pns = new RendezvousPNSApplication(pn, (ContactDirectStrategy<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_CONTACT_DIRECT_STRATEGY));
       pns.register();
       return pns;
     }
@@ -494,13 +503,13 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     
     TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns) {
       
-      @Override
-      protected void bootAsBootstrap() {
-        if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) {
-          throw new RuntimeException("Local node is believed to be firewalled and can't be used as a bootstrap node. "+pn.getLocalHandle());
-        }
-        super.bootAsBootstrap();
-      }
+//      @Override
+//      protected void bootAsBootstrap() {
+//        if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) {
+//          throw new RuntimeException("Local node is believed to be firewalled and can't be used as a bootstrap node. "+pn.getLocalHandle());
+//        }
+//        super.bootAsBootstrap();
+//      }
       
       @Override
       protected void checkLiveness(final SocketNodeHandle h, Map<String, Object> options) {
