@@ -98,6 +98,94 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   }
   
   /**
+   * Call this to find some nodes outside your firewall.
+   */
+  public Cancellable findExternalNodes(final InetSocketAddress local,
+      final Collection<InetSocketAddress> probeAddresses,
+      final Continuation<Collection<InetSocketAddress>, IOException> deliverResultToMe) {
+    if (logger.level <= Logger.FINER) logger.log("findExternalAddress("+local+","+probeAddresses+","+deliverResultToMe+")");
+    // TODO: make sure the addresses are Internet routable?
+    // TODO: Timeout (can be in parallel, so timeout ~every second, and try the next one, then cancel everything if one comes through)
+
+    final ArrayList<InetSocketAddress> probeList = new ArrayList<InetSocketAddress>(probeAddresses);
+    final AttachableCancellable ret = new AttachableCancellable();
+
+    // getInetSocketAddressLookup verifyies that we are on the selector
+    ret.attach(getInetSocketAddressLookup(local, new Continuation<InetSocketAddressLookup, IOException>() {
+    
+      public void receiveResult(InetSocketAddressLookup lookup) {
+        // we're on the selector now, and we have our TL
+        findExternalNodesHelper(lookup, ret, local, probeList, deliverResultToMe);
+      }
+      
+      public void receiveException(IOException exception) {
+        // we couldn't even get a transport layer, DOA        
+        if (logger.level <= Logger.INFO) logger.log("findExternalAddress("+local+","+probeAddresses+","+deliverResultToMe+").receiveException("+exception+")");
+        deliverResultToMe.receiveException(exception);
+      }      
+    }));
+    
+    return ret;
+  }
+  
+  /**
+   * Called recursively.
+   * 
+   * @param lookup
+   * @param ret
+   * @param local
+   * @param probeList
+   * @param deliverResultToMe
+   */
+  public void findExternalNodesHelper(final InetSocketAddressLookup lookup, final AttachableCancellable ret, final InetSocketAddress local,
+      final List<InetSocketAddress> probeList,
+      final Continuation<Collection<InetSocketAddress>, IOException> deliverResultToMe) {
+    if (logger.level <= Logger.FINER) logger.log("findExternalNodesHelper("+lookup+","+local+","+probeList+")");
+    // we're on the selector now, and we have our TL        
+    // pull a random node off the list, and try it, we do this so the recursion works
+    InetSocketAddress target = probeList.remove(spnf.getEnvironment().getRandomSource().nextInt(probeList.size())); 
+    
+    ret.attach(lookup.getExternalNodes(target, new Continuation<Collection<InetSocketAddress>, IOException>() {          
+      public void receiveResult(final Collection<InetSocketAddress> result) {              
+        if (logger.level <= Logger.INFO) logger.log("findExternalNodesHelper("+lookup+","+local+","+probeList+").success:"+result);
+
+        // success!
+        ret.cancel(); // kill any recursive tries
+        lookup.destroy();
+        
+        // lookup.destroy() uses an invoke
+        environment.getSelectorManager().invoke(new Runnable() {        
+          public void run() {
+            //if (logger.level <= Logger.INFO) 
+              logger.log("findExternalNodesHelper("+lookup+","+local+","+probeList+").success:"+result);
+            deliverResultToMe.receiveResult(result);
+          }        
+        });
+      }
+    
+      public void receiveException(final IOException exception) {
+        if (logger.level <= Logger.INFO) logger.log("findExternalNodesHelper("+lookup+","+local+","+probeList+").receiveException("+exception+")");
+        
+        // see if we can try anyone else
+        if (probeList.isEmpty()) {
+          lookup.destroy();
+
+          // lookup.destroy() uses an invoke
+          environment.getSelectorManager().invoke(new Runnable() {        
+            public void run() {
+              deliverResultToMe.receiveException(exception);
+            }        
+          });
+          return;
+        }
+        
+        // retry (recursive)
+        findExternalNodesHelper(lookup, ret, local, probeList, deliverResultToMe);
+      }      
+    }, null));    
+  }
+
+  /**
    * Call this to determine your external address.
    */
   public Cancellable findExternalAddress(final InetSocketAddress local,

@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.rendezvous.ContactDirectStrategy;
 import org.mpisws.p2p.transport.rendezvous.PilotManager;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
@@ -106,7 +107,10 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
   @Override
   protected void getJoinRequest(NodeHandle b, final Continuation<JoinRequest, Exception> deliverJRToMe) {
     final RendezvousSocketNodeHandle bootstrap = (RendezvousSocketNodeHandle)b;
-    if (((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) {
+    if ((((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) || 
+         ((ContactDirectStrategy<RendezvousSocketNodeHandle>)
+            thePastryNode.getVars().get(RendezvousSocketPastryNodeFactory.RENDEZVOUS_CONTACT_DIRECT_STRATEGY)).canContactDirect(
+                bootstrap)) {
       super.getJoinRequest(bootstrap, deliverJRToMe);
       return;
     }

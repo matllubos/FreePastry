@@ -147,8 +147,47 @@ public class UDPLayerImpl extends SelectionKeyHandler implements UDPLayer {
       // bind to the appropriate port
       channel = DatagramChannel.open();
       channel.configureBlocking(false);
-      // this needs to be false because in windows, TCP doesn't do the right thing.
+      
+      // this needs to be false because in windows, TCP doesn't do the right thing, so we need UDP to 
+      // fail with a BindException
+      /*
+       * http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6421091 The
+       * setReuseAddress option toggles the SO_REUSEADDR socket option.
+       * Unfortunately on Windows this socket option does not provide BSD
+       * semantics and does not prevent multiple TCP sockets from binding to the
+       * same address/port. This explains why the bind method does not fail in
+       * this test case. The reason the connect method throws an exception stems
+       * from the fact that the TCP/IP protocol requires a unique 4-tuple to
+       * distinguish connections (4-tuple = local-addr/port and
+       * remote-addr/port). As both SocketChannels are bound to the same
+       * address/port and connect to the same remote address/port it means the
+       * second connect is required to fail. It fails with a bind error and that
+       * is why we throw a BindException.
+       * 
+       * So is this problem fixable? In Windows 2000 SP1 Microsoft added the
+       * SO_EXCLUSIVEADDRUSE which prevents multiple sockets from binding to the
+       * same address/port. This socket option was initially only usable by
+       * processes with Administrator privileges but that was changed in Windows
+       * XP SP2 to allow non-Administrators use the option. Unfortunately this
+       * socket option has side effects. We can't use it for MulticastSocket for
+       * example as we need to be able to bind multiple UDP sockets to the same
+       * address/port for multicasting purposes. Also, the socket option creates
+       * problems for ServerSocket/ServerSocketChannel as it prevents the
+       * re-binding of the socket when a there is a previous connection in
+       * TIMED_WAIT state.
+       * 
+       * One possible workaround for the submitter of this bug is to set the
+       * DisableAddressSharing registry.
+       * (HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\Afd\Parameters)
+       * and reboot. This registry setting prevents multiple sockets from
+       * binding to the same port and is essentially enabling
+       * SO_EXCLUSIVEADDRUSE on all sockets. We have not done any testing with
+       * this registry setting so there may be side-effects (like unable to
+       * re-bind when a previous connection is in timed wait for example).
+       * Posted Date : 2006-05-03 11:40:31.0
+       */
       channel.socket().setReuseAddress(false);
+      
       channel.socket().bind(wire.bindAddress);
       channel.socket().setSendBufferSize(DATAGRAM_SEND_BUFFER_SIZE);
       channel.socket().setReceiveBufferSize(DATAGRAM_RECEIVE_BUFFER_SIZE);

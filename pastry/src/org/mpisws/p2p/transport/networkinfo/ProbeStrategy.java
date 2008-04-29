@@ -36,6 +36,9 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.networkinfo;
 
+import java.net.InetSocketAddress;
+import java.util.Collection;
+
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 
 import rice.Continuation;
@@ -57,4 +60,10 @@ public interface ProbeStrategy {
    * @return can cancel the operation
    */
   Cancellable requestProbe(MultiInetSocketAddress addr, long uid, Continuation<Boolean, Exception> deliverResultToMe);
+
+  /**
+   * Returns some known external addresses.
+   * @return
+   */
+  Collection<InetSocketAddress> getExternalAddresses();
 }

@@ -284,6 +284,7 @@ public class InternetPastryNodeFactory extends
       openFirewallPort(nodeId, proxyAddress.getInnermostAddress(), deliverResultToMe, proxyAddress.getOutermostAddress().getAddress(), proxyAddress.getOutermostAddress().getPort());
     }
   }
+  // this needs to ask natted nodes for known non-natted nodes, then call findExternalAddress again, 
   
   /**
    * Finds the external address, calls openFirewallPort()
@@ -291,22 +292,6 @@ public class InternetPastryNodeFactory extends
   protected void findExternalAddress(final Id nodeId,
       final InetSocketAddress bindAddress,
       final Continuation<PastryNode, IOException> deliverResultToMe) {
-    
-    // pull self from probeAddresses
-    Collection<InetSocketAddress> myProbeAddresses = null;
-    if (this.probeAddresses != null) {
-      myProbeAddresses = new ArrayList<InetSocketAddress>(probeAddresses);
-      while(myProbeAddresses.remove(bindAddress));
-      
-      // pull non-internet routable addresses
-      Iterator<InetSocketAddress> i = myProbeAddresses.iterator();
-      while (i.hasNext()) {
-        InetSocketAddress foo = i.next();
-        if (!isInternetRoutablePrefix(foo.getAddress())) {
-          i.remove();
-        }
-      }
-    }
     
     // see if it's specified in the configuration
     if (environment.getParameters().contains("external_address")) {
@@ -318,29 +303,80 @@ public class InternetPastryNodeFactory extends
         deliverResultToMe.receiveException(uhe);
       }
     } else {
-      // try the probeAddresses
-      if (myProbeAddresses != null && !myProbeAddresses.isEmpty()) {
-        connectivityVerifier.findExternalAddress(bindAddress, probeAddresses, new Continuation<InetAddress, IOException>() {
-          
-          public void receiveResult(InetAddress result) {
-            if (externalAddresses != null) {
-              if (!externalAddresses[0].equals(result)) {
-                deliverResultToMe.receiveException(new IOException("Probe address ("+result+") does not match specified externalAddress ("+externalAddresses[0]+")."));
-                return;
-              }
-            }
-            openFirewallPort(nodeId, bindAddress, deliverResultToMe, result, -1);
-          }
+      // pull self from probeAddresses
+      Collection<InetSocketAddress> myProbeAddresses = null;
+      Collection<InetSocketAddress> nonInternetRoutable = null;
+      if (this.probeAddresses != null) {
+        myProbeAddresses = new ArrayList<InetSocketAddress>(probeAddresses);
+        nonInternetRoutable = new ArrayList<InetSocketAddress>();
+        while(myProbeAddresses.remove(bindAddress));
         
-          public void receiveException(IOException exception) {
-            deliverResultToMe.receiveException(exception);
-          }          
-        });                              
-      } else {
-        // try the firewall
-        openFirewallPort(nodeId, bindAddress, deliverResultToMe, natHandler.getFireWallExternalAddress(), -1);        
+        // pull non-internet routable addresses
+        Iterator<InetSocketAddress> i = myProbeAddresses.iterator();
+        while (i.hasNext()) {
+          InetSocketAddress foo = i.next();
+          if (!isInternetRoutablePrefix(foo.getAddress())) {
+            nonInternetRoutable.add(foo);
+            i.remove();
+          }
+        }
       }
+    
+      if ((myProbeAddresses == null || myProbeAddresses.isEmpty()) && (nonInternetRoutable != null && !nonInternetRoutable.isEmpty())) {
+        findExternalNodes(nodeId, bindAddress, nonInternetRoutable, deliverResultToMe);
+      } else {
+        findExternalAddressHelper(nodeId,bindAddress,deliverResultToMe, myProbeAddresses);
+      }  
     }
+  }
+  
+  /**
+   * Probe the internalAddresses to get more externalAddresses, then call findExternalAddressHelper
+   */
+  protected void findExternalNodes(final Id nodeId,
+      final InetSocketAddress bindAddress,
+      final Collection<InetSocketAddress> nonInternetRoutable,
+      final Continuation<PastryNode, IOException> deliverResultToMe) {
+    if (nonInternetRoutable == null || nonInternetRoutable.isEmpty()) findExternalAddressHelper(nodeId, bindAddress, deliverResultToMe, null);
+
+    connectivityVerifier.findExternalNodes(bindAddress, nonInternetRoutable, new Continuation<Collection<InetSocketAddress>, IOException>() {
+      
+      public void receiveResult(Collection<InetSocketAddress> result) {
+        findExternalAddressHelper(nodeId, bindAddress, deliverResultToMe, result);
+      }
+    
+      public void receiveException(IOException exception) {
+        if (nonInternetRoutable == null || nonInternetRoutable.isEmpty()) findExternalAddressHelper(nodeId, bindAddress, deliverResultToMe, null);
+      }          
+    });                              
+  }
+  
+  protected void findExternalAddressHelper(final Id nodeId,
+      final InetSocketAddress bindAddress,
+      final Continuation<PastryNode, IOException> deliverResultToMe,
+      Collection<InetSocketAddress> myProbeAddresses) {
+    // try the probeAddresses
+    if (myProbeAddresses != null && !myProbeAddresses.isEmpty()) {
+      connectivityVerifier.findExternalAddress(bindAddress, myProbeAddresses, new Continuation<InetAddress, IOException>() {
+        
+        public void receiveResult(InetAddress result) {
+          if (externalAddresses != null) {
+            if (!externalAddresses[0].equals(result)) {
+              deliverResultToMe.receiveException(new IOException("Probe address ("+result+") does not match specified externalAddress ("+externalAddresses[0]+")."));
+              return;
+            }
+          }
+          openFirewallPort(nodeId, bindAddress, deliverResultToMe, result, -1);
+        }
+      
+        public void receiveException(IOException exception) {
+          deliverResultToMe.receiveException(exception);
+        }          
+      });                              
+    } else {
+      // try the firewall
+      openFirewallPort(nodeId, bindAddress, deliverResultToMe, natHandler.getFireWallExternalAddress(), -1);        
+    }    
   }
 
     
@@ -434,6 +470,11 @@ public class InternetPastryNodeFactory extends
   protected void verifyConnectivityThenMakeNewNode(final Id nodeId,
       final MultiInetSocketAddress proxyAddress,
       final Continuation<PastryNode, IOException> deliverResultToMe) {
+    
+    if (proxyAddress.getOutermostAddress().getPort()<1) {
+      newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, true);   
+      return;      
+    }
     
     if (!shouldCheckConnectivity(proxyAddress, probeAddresses)) {
       newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, false);   
@@ -552,21 +593,4 @@ public class InternetPastryNodeFactory extends
     return true; // will probably never happen
   }
   
-  /**
-   * @return true if ip address matches firewall prefix
-   */
-  protected boolean isInternetRoutablePrefix(InetAddress address) {    
-    String ip = address.getHostAddress();
-    String nattedNetworkPrefixes = environment.getParameters().getString(
-        "nat_network_prefixes");
-
-    String[] nattedNetworkPrefix = nattedNetworkPrefixes.split(";");
-    for (int i = 0; i < nattedNetworkPrefix.length; i++) {
-      if (ip.startsWith(nattedNetworkPrefix[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-
 }

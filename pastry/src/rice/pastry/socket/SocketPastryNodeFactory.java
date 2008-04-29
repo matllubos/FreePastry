@@ -774,11 +774,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   public class TLBootstrapper implements Bootstrapper<InetSocketAddress>
   {
 //    InetSocketAddress localAddr;
-    TLPastryNode pn;
-    TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl;
-    SocketNodeHandleFactory handleFactory;
-    ProximityNeighborSelector pns;
-    Logger logger;
+    protected TLPastryNode pn;
+    protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl;
+    protected SocketNodeHandleFactory handleFactory;
+    protected ProximityNeighborSelector pns;
+    protected Logger logger;
     
     // we need to store this in a mutable final object
     final List<LivenessListener<NodeHandle>> listener = new ArrayList<LivenessListener<NodeHandle>>();
@@ -848,7 +848,8 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       for (InetSocketAddress addr : bootaddresses) { 
         if (logger.level <= Logger.FINER) logger.log("addr:"+addr+" local:"+localAddr);
         if (!addr.equals(localAddr)) {
-          tempBootHandles.add(handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build()));
+//          tempBootHandles.add(handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build()));
+          tempBootHandles.add(getTempNodeHandle(addr));
         }
       }
 
@@ -967,6 +968,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
 //      logger.log("boot:"+first);
 //      tl.checkLiveness((TLNodeHandle)handleFactory.getNodeHandle(new EpochInetSocketAddress(first), Id.build()));
     }
+    /**
+     * Used as a helper to TLBootstrapper.boot() to generate a temporary node handle
+     *  
+     * @param addr
+     * @return
+     */
+    protected SocketNodeHandle getTempNodeHandle(InetSocketAddress addr) {
+      return handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build());
+    }
+
+    
 
 //    public void livenessChanged(TransportLayerNodeHandle<EpochInetSocketAddress> i, int val) {
 //      if (i.getAddress().equals(first)) {

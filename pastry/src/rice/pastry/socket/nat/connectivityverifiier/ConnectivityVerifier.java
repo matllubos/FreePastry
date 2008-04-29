@@ -49,6 +49,19 @@ import rice.p2p.commonapi.Cancellable;
 
 public interface ConnectivityVerifier {
   /**
+   * Finds known external nodes from other bootstrap nodes who are in your firewall
+   * 
+   * @param local the local bindaddress
+   * @param probeAddresses the nodes ask 
+   * @param deliverResultToMe deliver the result here
+   * @return cancel the operation
+   */
+  Cancellable findExternalNodes(InetSocketAddress local, 
+      Collection<InetSocketAddress> probeAddresses, 
+      Continuation<Collection<InetSocketAddress>, 
+      IOException> deliverResultToMe);
+  
+  /**
    * Finds the external address by contacting a random member of the probeAddresses
    * 
    * @param local the local bindaddress

@@ -38,6 +38,7 @@ package rice.pastry.join;
 
 import rice.pastry.*;
 import rice.pastry.messaging.*;
+import rice.pastry.socket.nat.rendezvous.RendezvousSocketNodeHandle;
 
 import java.io.*;
 import java.util.*;
@@ -82,6 +83,13 @@ public class InitiateJoin extends Message implements Serializable {
   public InitiateJoin(Date stamp, Collection<NodeHandle> nh) {
     super(JoinAddress.getCode(), stamp);
     handle = nh.toArray(new NodeHandle[1]);
+//    for (int i = 0; i < handle.length; i++) {
+//      if (handle[i] instanceof RendezvousSocketNodeHandle) {
+//        if (!((RendezvousSocketNodeHandle)handle[i]).canContactDirect()) {
+//          throw new IllegalArgumentException("Can't contact directly "+handle[i]+" "+handle.length);
+//        }
+//      }
+//    }
 //    System.out.println("IJ<ctor>"+this);
   }
 

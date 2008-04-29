@@ -502,7 +502,24 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     pn.addObserver(obs);
     
     TLBootstrapper bootstrapper = new TLBootstrapper(pn, tl.getTL(), (SocketNodeHandleFactory)handleFactory, pns) {
+
+      /**
+       * Used as a helper to TLBootstrapper.boot() to generate a temporary node handle
+       *  
+       * @param addr
+       * @return
+       */
+      @Override
+      protected SocketNodeHandle getTempNodeHandle(InetSocketAddress addr) {
+        RendezvousSocketNodeHandle local = (RendezvousSocketNodeHandle)pn.getLocalNodeHandle();
+        if (!isInternetRoutablePrefix(addr.getAddress()) && !local.canContactDirect()) {
+          // assume we have the same external address
+          return handleFactory.getNodeHandle(new MultiInetSocketAddress(local.getAddress().getOutermostAddress(), addr), -1, Id.build());          
+        }
+        return handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build());
+      }
       
+
 //      @Override
 //      protected void bootAsBootstrap() {
 //        if (!((RendezvousSocketNodeHandle)pn.getLocalHandle()).canContactDirect()) {
@@ -515,6 +532,12 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
       protected void checkLiveness(final SocketNodeHandle h, Map<String, Object> options) {
         // open pilot first, then call checkliveness, but it's gonna fail the first time, because the NH is bogus.
         // so, open it the first time and watch it fail, then open it again
+        ContactDirectStrategy<RendezvousSocketNodeHandle> contactStrat = 
+          (ContactDirectStrategy<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_CONTACT_DIRECT_STRATEGY);
+        if (contactStrat.canContactDirect((RendezvousSocketNodeHandle)h)) {
+          super.checkLiveness(h, options);
+          return;
+        }
         manager.openPilot((RendezvousSocketNodeHandle)h, new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, Exception>() {
         
           public void receiveResult(
@@ -549,5 +572,23 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
     };
     return bootstrapper;
   }
+
+  /**
+   * @return true if ip address matches firewall prefix
+   */
+  protected boolean isInternetRoutablePrefix(InetAddress address) {    
+    String ip = address.getHostAddress();
+    String nattedNetworkPrefixes = environment.getParameters().getString(
+        "nat_network_prefixes");
+
+    String[] nattedNetworkPrefix = nattedNetworkPrefixes.split(";");
+    for (int i = 0; i < nattedNetworkPrefix.length; i++) {
+      if (ip.startsWith(nattedNetworkPrefix[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
 
 }

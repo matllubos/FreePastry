@@ -56,7 +56,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
  * 
  * The read operations will either:
  *   a) succeed
- *   b) throw a InsufficientBytesException, which you should probably retry later when there are more bytes
+ *   b) throw a InsufficientBytesException, which you should probably retry later when there are more bytes (automatically calls reset)
  *   c) throw a ClosedChannelException, which means the socket was closed, 
  *   d) other IOException
  *   
@@ -259,7 +259,10 @@ public class SocketInputBuffer implements InputBuffer {
     }
     int ret = writePtr.position()-readPtr.position();
     if (ret > num) ret = num;
-    if (fail && ret < num) throw new InsufficientBytesException(num, ret);
+    if (fail && ret < num) {
+      reset();
+      throw new InsufficientBytesException(num, ret);
+    }
     return ret;
   }
   

@@ -56,6 +56,21 @@ import rice.p2p.commonapi.Cancellable;
  *
  */
 public interface InetSocketAddressLookup extends Destructable {
+
+  /**
+   * find nodes outside of our firewall so I can boot
+   * 
+   * @param target
+   * @param continuation
+   * @param options
+   * @return
+   */
+  public Cancellable getExternalNodes(InetSocketAddress bootstrap,
+      Continuation<Collection<InetSocketAddress>, IOException> c,
+      Map<String, Object> options);
+
+
+  
   /**
    * Returns the local node's InetSocketAddress
    * 
@@ -83,6 +98,5 @@ public interface InetSocketAddressLookup extends Destructable {
   public Cancellable verifyConnectivity(MultiInetSocketAddress local, 
       InetSocketAddress probeAddresses, 
       ConnectivityResult deliverResultToMe, 
-      Map<String, Object> options);
-
+      Map<String, Object> options);  
 }

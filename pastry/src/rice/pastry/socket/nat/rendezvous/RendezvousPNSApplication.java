@@ -39,6 +39,7 @@ package rice.pastry.socket.nat.rendezvous;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.mpisws.p2p.transport.rendezvous.ContactDirectStrategy;
 
@@ -103,6 +104,27 @@ public class RendezvousPNSApplication extends PNSApplication {
     return contactDirectStrategy.canContactDirect(rsnh);
 //    return rsnh.canContactDirect();    
   }
+
+  /**
+   * Don't return any non-contactDirect handles unless all of them are.
+   */
+  @Override
+  protected List<NodeHandle> getNearHandlesHelper(List<NodeHandle> handles) {
+    ArrayList<NodeHandle> contactDirect = new ArrayList<NodeHandle>();
+    ArrayList<NodeHandle> notContactDirect = new ArrayList<NodeHandle>();
+    
+    for (NodeHandle foo : handles) {
+      RendezvousSocketNodeHandle rsnh = (RendezvousSocketNodeHandle)foo;
+      if (rsnh.canContactDirect()) {
+        contactDirect.add(foo);
+      } else {
+        notContactDirect.add(foo);        
+      }
+    }
+    if (contactDirect.isEmpty()) return notContactDirect;
+    return contactDirect;
+  }
+
   
   /**
    * This is the first step, cull out the bootHandles that we can't use good.

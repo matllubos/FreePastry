@@ -37,7 +37,9 @@ advised of the possibility of such damage.
 package rice.pastry.socket.nat.probe;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 
 import org.mpisws.p2p.transport.multiaddress.AddressStrategy;
@@ -55,6 +57,7 @@ import rice.pastry.PastryNode;
 import rice.pastry.client.PastryAppl;
 import rice.pastry.messaging.Message;
 import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.socket.nat.rendezvous.RendezvousSocketNodeHandle;
 import rice.pastry.transport.PMessageNotification;
 import rice.pastry.transport.PMessageReceipt;
 
@@ -141,5 +144,19 @@ public class ProbeApp extends PastryAppl implements ProbeStrategy {
         deliverResultToMe.receiveResult(false);
       }    
     }, null);
+  }
+
+  public Collection<InetSocketAddress> getExternalAddresses() {
+    ArrayList<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
+    Iterator<NodeHandle> i = thePastryNode.getLeafSet().iterator();
+    while(i.hasNext()) {
+      NodeHandle nh = i.next();      
+      RendezvousSocketNodeHandle rsnh = (RendezvousSocketNodeHandle)nh;
+      if (rsnh.canContactDirect()) {
+        ret.add(rsnh.getInetSocketAddress());
+      }      
+    }
+
+    return ret;
   }
 }

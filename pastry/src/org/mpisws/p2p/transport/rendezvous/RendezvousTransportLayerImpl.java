@@ -57,6 +57,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.sourceroute.Forwarder;
 import org.mpisws.p2p.transport.util.InsufficientBytesException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
@@ -74,6 +75,10 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.MutableTuple;
 import rice.p2p.util.tuples.Tuple;
+import rice.pastry.Id;
+import rice.pastry.socket.SocketNodeHandle;
+import rice.pastry.socket.SocketNodeHandleFactory;
+import rice.pastry.socket.SocketPastryNodeFactory.TLBootstrapper;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
@@ -504,7 +509,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
             rendezvousStrategy.openChannel(target, localNodeHandle, opener, uid, null, socket.getOptions());
           }
         } catch (InsufficientBytesException ibe) {
-          sib.reset();
           socket.register(true, false, this);
         }
       }
@@ -631,7 +635,6 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
                         
           }
         } catch (InsufficientBytesException ibe) {
-          sib.reset();
           acceptorSocket.register(true, false, this);
         }
       }
@@ -1134,6 +1137,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   public SocketRequestHandle<HighIdentifier> openPilot(final HighIdentifier i, 
       final Continuation<SocketRequestHandle<HighIdentifier>, Exception> deliverAckToMe) {    
     if (logger.level <= Logger.FINE) logger.log("openPilot("+i+")");
+    if (!i.canContactDirect()) throw new IllegalArgumentException("can't open pilot to natted node:"+i);
     OutgoingPilot o2;
     Map<String, Object> options;
     

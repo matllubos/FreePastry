@@ -241,7 +241,7 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
               List<NodeHandle> ret = sortedProximityCache();
               purgeProximityCache();
               if (logger.level <= Logger.INFO) logger.log("getNearHandles("+bootHandles+"):"+ret.size()+ret);
-              deliverResultToMe.receiveResult(ret);        
+              deliverResultToMe.receiveResult(getNearHandlesHelper(ret));        
             }
           });
 
@@ -256,6 +256,18 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
       getProximity(handle, c, 10000); // TODO: Make configurable
     }
     return ret;
+  }
+  
+  /**
+   * Helper for getNearHandles
+   * 
+   * Can be overridden to select out any handles that shouldn't be returned.
+   * 
+   * @param handles
+   * @return
+   */
+  protected List<NodeHandle> getNearHandlesHelper(List<NodeHandle> handles) {
+    return handles;
   }
   
   /**
