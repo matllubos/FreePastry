@@ -280,6 +280,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
       final ConnectivityResult deliverResultToMe) {
     final ArrayList<InetSocketAddress> probeList = new ArrayList<InetSocketAddress>(probeAddresses);
 //    logger.logException("verifyConnectivity("+local+","+probeAddresses+")", new Exception("Stack Trace"));
+//    logger.log("verifyConnectivity("+local+","+probeAddresses+")");
     if (logger.level <= Logger.FINER) logger.log("verifyConnectivity("+local+","+probeAddresses+")");
 
     // don't probe self

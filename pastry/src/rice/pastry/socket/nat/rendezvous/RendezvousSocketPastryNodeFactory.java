@@ -509,15 +509,15 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
        * @param addr
        * @return
        */
-      @Override
-      protected SocketNodeHandle getTempNodeHandle(InetSocketAddress addr) {
-        RendezvousSocketNodeHandle local = (RendezvousSocketNodeHandle)pn.getLocalNodeHandle();
-        if (!isInternetRoutablePrefix(addr.getAddress()) && !local.canContactDirect() && local.getAddress().getNumAddresses() > 1) {
-          // assume we have the same external address
-          return handleFactory.getNodeHandle(new MultiInetSocketAddress(local.getAddress().getOutermostAddress(), addr), -1, Id.build());          
-        }
-        return handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build());
-      }
+//      @Override
+//      protected SocketNodeHandle getTempNodeHandle(InetSocketAddress addr) {
+//        RendezvousSocketNodeHandle local = (RendezvousSocketNodeHandle)pn.getLocalNodeHandle();
+//        if (!isInternetRoutablePrefix(addr.getAddress()) && !local.canContactDirect() && local.getAddress().getNumAddresses() > 1) {
+//          // assume we have the same external address
+//          return handleFactory.getNodeHandle(new MultiInetSocketAddress(local.getAddress().getOutermostAddress(), addr), -1, Id.build());          
+//        }
+//        return handleFactory.getNodeHandle(new MultiInetSocketAddress(addr), -1, Id.build());
+//      }
       
 
 //      @Override
@@ -534,10 +534,14 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
         // so, open it the first time and watch it fail, then open it again
         ContactDirectStrategy<RendezvousSocketNodeHandle> contactStrat = 
           (ContactDirectStrategy<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_CONTACT_DIRECT_STRATEGY);
-        if (contactStrat.canContactDirect((RendezvousSocketNodeHandle)h)) {
+        RendezvousSocketNodeHandle rsnh = (RendezvousSocketNodeHandle)h;
+        if (!rsnh.canContactDirect() && contactStrat.canContactDirect(rsnh)) {
+//          logger.log("not opening pilot to "+rsnh);
           super.checkLiveness(h, options);
           return;
         }
+        
+//        logger.log("opening pilot to "+rsnh);
         manager.openPilot((RendezvousSocketNodeHandle)h, new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, Exception>() {
         
           public void receiveResult(
@@ -555,6 +559,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
               }
             }
             if (close) {
+              logger.log("closing pilot");
               manager.closePilot(result.getIdentifier());
               return;
             }

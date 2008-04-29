@@ -102,7 +102,16 @@ public class MultiInetSocketAddress implements Serializable {
   }
   
   public boolean addressEquals(MultiInetSocketAddress that) {
-    if (this.address.length != that.address.length) return false;
+    if (this.address.length != that.address.length) {
+      // this code is here so we can say we are the same if one node knows they are firewalled and the other doesn't
+      
+//      System.out.println("MulitInetSocketAddress.equals(): "+this+" "+that);
+      if (that.getInnermostAddress().equals(this.getInnermostAddress())) {
+//        System.out.println("MulitInetSocketAddress.equals(): "+this+" "+that+" "+true);
+        return true;
+      }
+      return false;
+    }
     for (int ctr = 0; ctr < this.address.length; ctr++) {
       if (!this.address[ctr].equals(that.address[ctr])) return false;
     }

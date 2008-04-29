@@ -438,7 +438,8 @@ public class InternetPastryNodeFactory extends
         }
       }
       if (rendezvous) {
-        port = 0;
+        // this could go either way... since the connectivity check will fail, it'll show up natted, but it used to be zero
+        port = bindAddress.getPort();
       } else {
         natHandler.openFireWallPort(bindAddress.getPort(), port, firewallAppName);
       }
@@ -493,12 +494,12 @@ public class InternetPastryNodeFactory extends
         // clear up the bind address
         cancelme[0].cancel(); 
         
-        // invoke to let the cancel succeed
-        environment.getSelectorManager().invoke(new Runnable() {        
+        // invoke to let the cancel succeed, seems to need to take a second sometimes
+        environment.getSelectorManager().schedule(new TimerTask() {        
           public void run() {
             newNodeSelector(nodeId, proxyAddress, deliverResultToMe, null, true);        
           }        
-        });
+        }, 1000);
       }    
     };
     environment.getSelectorManager().getTimer().schedule(timer, 10000); 
