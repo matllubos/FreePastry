@@ -157,7 +157,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
         environment.getSelectorManager().invoke(new Runnable() {        
           public void run() {
             //if (logger.level <= Logger.INFO) 
-              logger.log("findExternalNodesHelper("+lookup+","+local+","+probeList+").success:"+result);
+//              logger.log("findExternalNodesHelper("+lookup+","+local+","+probeList+").success:"+result);
             deliverResultToMe.receiveResult(result);
           }        
         });

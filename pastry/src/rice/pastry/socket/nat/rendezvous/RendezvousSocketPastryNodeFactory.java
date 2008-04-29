@@ -512,7 +512,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
       @Override
       protected SocketNodeHandle getTempNodeHandle(InetSocketAddress addr) {
         RendezvousSocketNodeHandle local = (RendezvousSocketNodeHandle)pn.getLocalNodeHandle();
-        if (!isInternetRoutablePrefix(addr.getAddress()) && !local.canContactDirect()) {
+        if (!isInternetRoutablePrefix(addr.getAddress()) && !local.canContactDirect() && local.getAddress().getNumAddresses() > 1) {
           // assume we have the same external address
           return handleFactory.getNodeHandle(new MultiInetSocketAddress(local.getAddress().getOutermostAddress(), addr), -1, Id.build());          
         }
