@@ -540,12 +540,12 @@ public class InternetPastryNodeFactory extends
     switch (getFireWallPolicyVariable("firewall_test_policy")) {
     case NEVER:
       return false;
-    case PREFIX_MATCH:
-      return !isInternetRoutable(proxyAddress);
     case BOOT:
       // don't do it if we're the bootstrap node
-      if (bootstraps.contains(proxyAddress.getOutermostAddress())) return false;
-      return true;
+      if (!bootstraps.contains(proxyAddress.getOutermostAddress())) return true;
+      // continue to PREFIX_MATCH
+    case PREFIX_MATCH:
+      return !isInternetRoutable(proxyAddress);
     case ALWAYS:
       return true;
     } // switch
