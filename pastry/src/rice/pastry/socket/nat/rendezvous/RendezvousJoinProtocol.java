@@ -47,6 +47,7 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayerImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.Continuation;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.NodeHandle;
 import rice.pastry.PastryNode;
@@ -107,10 +108,14 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
   @Override
   protected void getJoinRequest(NodeHandle b, final Continuation<JoinRequest, Exception> deliverJRToMe) {
     final RendezvousSocketNodeHandle bootstrap = (RendezvousSocketNodeHandle)b;
-    if ((((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) || 
-         ((ContactDirectStrategy<RendezvousSocketNodeHandle>)
-            thePastryNode.getVars().get(RendezvousSocketPastryNodeFactory.RENDEZVOUS_CONTACT_DIRECT_STRATEGY)).canContactDirect(
-                bootstrap)) {
+    
+    
+    // if I can be contacted directly by anyone, or I can contact the bootstrap despite the fact that he's firewalled, then call super
+    ContactDirectStrategy<RendezvousSocketNodeHandle> contactStrat = 
+      (ContactDirectStrategy<RendezvousSocketNodeHandle>)
+      thePastryNode.getVars().get(RendezvousSocketPastryNodeFactory.RENDEZVOUS_CONTACT_DIRECT_STRATEGY);
+    if ((((RendezvousSocketNodeHandle)thePastryNode.getLocalHandle()).canContactDirect()) || // I can be contacted directly
+         (!bootstrap.canContactDirect() && contactStrat.canContactDirect(bootstrap))) { // I can contact the bootstrap even though he's firewalled
       super.getJoinRequest(bootstrap, deliverJRToMe);
       return;
     }
@@ -118,6 +123,7 @@ public class RendezvousJoinProtocol extends ConsistentJoinProtocol {
     // TODO: Throw exception if can't directly contact the bootstrap
     
     // open the pilot before sending the JoinRequest.
+    if (logger.level <= Logger.FINE) logger.log("opening pilot to "+bootstrap);
     pilotManager.openPilot((RendezvousSocketNodeHandle)bootstrap, 
         new Continuation<SocketRequestHandle<RendezvousSocketNodeHandle>, Exception>(){
 

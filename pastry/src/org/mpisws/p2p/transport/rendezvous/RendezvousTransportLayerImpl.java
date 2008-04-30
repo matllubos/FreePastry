@@ -1145,6 +1145,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     synchronized(outgoingPilots) {
       if (outgoingPilots.containsKey(i)) {
         if (logger.level <= Logger.FINER) logger.log("openPilot("+i+") already had one.");        
+        if (deliverAckToMe != null) deliverAckToMe.receiveResult(outgoingPilots.get(i));
         return outgoingPilots.get(i); 
       }
   
