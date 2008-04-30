@@ -376,6 +376,7 @@ public class SourceRouteManagerImpl<Identifier> implements
         livenessProvider.clearState(sr);
         proxProvider.clearState(sr);
       }
+      this.liveness = LIVENESS_SUSPECTED; // don't stay dead forever... we may have a new connection
     }
 
     class PendingSocket implements SocketRequestHandle<Identifier>, SocketCallback<SourceRoute<Identifier>> {

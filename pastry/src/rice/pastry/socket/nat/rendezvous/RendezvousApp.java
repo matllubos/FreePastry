@@ -44,6 +44,8 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
+import org.mpisws.p2p.transport.liveness.LivenessListener;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import org.mpisws.p2p.transport.rendezvous.RendezvousStrategy;
@@ -220,6 +222,13 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       final Map<String, Object> options) {
 
     if (logger.level <= Logger.INFO) logger.log("openChannel()"+source+"->"+target+" via "+rendezvous+" uid:"+uid+","+deliverAckToMe+","+options);
+
+    if (target.getLiveness() > LivenessListener.LIVENESS_DEAD) {
+      // if he's dead forever (consider changing this to dead... but think of implications)
+      if (logger.level <= Logger.INFO) logger.log("openChannel() attempted to open to dead_forever target. Dropping."+source+"->"+target+" via "+rendezvous+" uid:"+uid+","+deliverAckToMe+","+options);
+      if (deliverAckToMe != null) deliverAckToMe.receiveException(new NodeIsFaultyException(target));
+      return null;
+    }
     
     if (target.canContactDirect()) {
       // this is a bug

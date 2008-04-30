@@ -465,8 +465,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     if (time == null
         || (time.longValue() < (currentTime - BLS_THROTTLE))) {
       if (logger.level <= Logger.FINE) // only log if not throttled
-        logger.log("PeriodicLeafSetProtocol: Checking liveness on neighbor:"
-              + sendTo+" "+time);
+        logger.log("PeriodicLeafSetProtocol: Checking liveness on neighbor:"+ sendTo+" "+time+" cl:"+checkLiveness);
       lastTimeSentBLS.put(sendTo, new Long(currentTime));
 
       thePastryNode.send(sendTo, new BroadcastLeafSet(localHandle, leafSet, BroadcastLeafSet.Update, 0), null, options);

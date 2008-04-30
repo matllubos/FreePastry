@@ -251,11 +251,11 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
           P2PSocketReceiver<InetSocketAddress> temp = writer;
           writer = null;
           reader = null;
-          temp.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
+          temp.receiveException(SocketManager.this, new ClosedChannelException("Channel closed. "+SocketManager.this));
         } else {
           P2PSocketReceiver<InetSocketAddress> temp = writer;
           writer = null;
-          temp.receiveException(SocketManager.this, new ClosedChannelException("Channel closed."));
+          temp.receiveException(SocketManager.this, new ClosedChannelException("Channel closed. "+SocketManager.this));
         }
       }
       
