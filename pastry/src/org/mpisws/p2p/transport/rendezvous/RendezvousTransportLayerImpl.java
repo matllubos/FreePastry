@@ -161,7 +161,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   /**
    * options.get(RENDEZVOUS_CONTACT_STRING) returns a RendezvousContact
    */
-  public String RENDEZVOUS_CONTACT_STRING;  // usually: commonapi_destination_identity 
+  public String RENDEZVOUS_CONTACT_STRING;  // usually: identity.node_handle_to_index 
   
   protected TransportLayer<Identifier, ByteBuffer> tl;
   protected TransportLayerCallback<Identifier, ByteBuffer> callback;
@@ -208,7 +208,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   }
   
   public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
-    if (logger.level <= Logger.FINEST) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
+    if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
 
     final SocketRequestHandle<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options,logger);
     
@@ -216,6 +216,14 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     final HighIdentifier contact = getHighIdentifier(options);
 
     if (contact == null || contact.canContactDirect() || contactDirectStrategy.canContactDirect(contact)) {
+      if (logger.level <= Logger.FINER) {
+        String s = "null";
+        if (contact != null) {
+          s = contact+" strat:"+contactDirectStrategy.canContactDirect(contact);
+        }
+        logger.log("openSocket("+i+","+deliverSocketToMe+","+options+") contact:"+s);
+      }
+      
       // write NORMAL_SOCKET and continue
       tl.openSocket(i, new SocketCallback<Identifier>(){
         public void receiveResult(SocketRequestHandle<Identifier> cancellable, P2PSocket<Identifier> sock) {
@@ -271,6 +279,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       final Map<String, Object> options) {
 //  if (true) throw new RuntimeException("Not Implemented.");
     // route to the node to open the socket to me
+    if (logger.level <= Logger.FINER) logger.log("opening a socket using routing to "+contact); 
+
     final int uid = random.nextInt();
     putExpectedIncomingSocket(contact, uid, deliverSocketToMe, handle);
 
