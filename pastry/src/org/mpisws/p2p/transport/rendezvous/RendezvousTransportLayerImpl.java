@@ -208,7 +208,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   }
   
   public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
-    if (logger.level <= Logger.FINER) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
+    if (logger.level <= Logger.FINEST) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
 
     final SocketRequestHandle<Identifier> handle = new SocketRequestHandleImpl<Identifier>(i,options,logger);
     

@@ -254,8 +254,9 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    * @return false if the new binding is actually old (IE, don't upgrade it)
    */
   protected boolean addBinding(UpperIdentifier u, LowerIdentifier l, Map<String, Object> options) {
+    if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be called on selector thread.");
     MiddleIdentifier m = serializer.translateDown(u);
-    synchronized(bindings) {
+//    synchronized(bindings) { // synchronization by selector thread
       if (deadForever.contains(u)) return false;
       
       UpperIdentifier old = bindings.get(m);
@@ -298,7 +299,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           return false;
         }
       }
-    }
+//    }
   }
   
   /**
@@ -971,16 +972,27 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       return handle;
     }
 
+    /**
+     * Synchronization by selector thread.  Make sure setDeadForever() is only called on selector, otherwise the 
+     * next layer down could get stuck trying to send to dead-forever node.
+     */
     public MessageRequestHandle<UpperIdentifier, UpperMsgType> sendMessage(
         UpperIdentifier i, 
         UpperMsgType m, 
         MessageCallback<UpperIdentifier, UpperMsgType> deliverAckToMe, 
         Map<String, Object> options) {
+      if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be called on selector thread.");
       if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+options+")");
 
       // how to synchronized this properly?  It's too bad that we have to hold the lock for the calls into the lower levels.
       // an alternative would be to re-synchronized and check again, and immeadiately cancel the message
-
+      if (deadForever.contains(i)) {
+        MessageRequestHandle<UpperIdentifier, UpperMsgType> mrh =             
+          new MessageRequestHandleImpl<UpperIdentifier, UpperMsgType>(i, m, options);
+        deliverAckToMe.sendFailed(mrh, new NodeIsFaultyException(i, m));
+        return mrh;
+      }
+      
       IdentityMessageHandle ret;
       
       MiddleIdentifier middle = serializer.translateDown(i);
