@@ -119,6 +119,7 @@ import rice.pastry.Id;
 import rice.pastry.JoinFailedException;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
+import rice.pastry.NodeHandleFactoryListener;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.boot.Bootstrapper;
@@ -538,11 +539,11 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     byte[] localHandleBytes = new byte[buf.getWritten()];
     System.arraycopy(buf.getBytes(), 0, localHandleBytes, 0, localHandleBytes.length);
     
-    IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, 
+    final IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, 
         ByteBuffer, SourceRoute<MultiInetSocketAddress>> identity = 
       new IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, 
             ByteBuffer, SourceRoute<MultiInetSocketAddress>>(
-          localHandleBytes, serializer, 
+          localHandleBytes, serializer,
           new NodeChangeStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>>(){
             public boolean canChange(
                 TransportLayerNodeHandle<MultiInetSocketAddress> oldDest, 

@@ -81,6 +81,8 @@ import rice.p2p.commonapi.Cancellable;
 import rice.p2p.util.TimerWeakHashMap;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+import rice.pastry.NodeHandleFactoryListener;
+import rice.pastry.socket.SocketNodeHandle;
 
 public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, LowerIdentifier> implements LivenessTypes {
   protected byte[] localIdentifier;
@@ -151,6 +153,21 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 //    this.reverseIntendedDest = new TimerWeakHashMap<UpperIdentifier, Integer>(environment.getSelectorManager(), 300000);
     
     this.bindings = new HashMap<MiddleIdentifier, UpperIdentifier>();
+    
+    serializer.addSerializerListener(new SerializerListener<UpperIdentifier>() {
+      public void nodeHandleFound(final UpperIdentifier handle) {
+        Runnable r = new Runnable() {
+          public void run() {
+            addBinding(handle, null, null); // I hope setting the options to null is ok...           
+          }
+        };
+        if (IdentityImpl.this.environment.getSelectorManager().isSelectorThread()) {
+          r.run();
+        } else {
+          IdentityImpl.this.environment.getSelectorManager().invoke(r);
+        }
+      }
+    });
   }
   
   public void addPendingMessage(UpperIdentifier i, IdentityMessageHandle ret) {
@@ -247,9 +264,8 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   }
 
   /**
-   * Put this in lower.
    * @param u
-   * @param l is optional
+   * @param l is optional, and is set when the lower-layer calls it
    * @param options
    * @return false if the new binding is actually old (IE, don't upgrade it)
    */

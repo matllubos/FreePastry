@@ -81,6 +81,8 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
 
   boolean guaranteeConsistency;
   
+  protected Collection<NodeHandleFactoryListener<NodeHandle>> listeners = 
+    new ArrayList<NodeHandleFactoryListener<NodeHandle>>();
 
   
   /**
@@ -246,7 +248,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   @Override
   protected NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) throws IOException {
     // TODO: Make this work
-    return new NodeHandleFactory(){
+    return new NodeHandleFactory<NodeHandle>(){
     
       public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
         // TODO Auto-generated method stub
@@ -255,8 +257,37 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
     
       public NodeHandle coalesce(NodeHandle handle) {
         // TODO Auto-generated method stub
+        notifyListeners(handle);
         return null;
-      }    
+      }
+
+      /**
+       * Notify the listeners that this new handle has come along.
+       */
+      protected void notifyListeners(NodeHandle nh) {
+        Collection<NodeHandleFactoryListener<NodeHandle>> temp = listeners;
+        synchronized (listeners) {      
+          temp = new ArrayList<NodeHandleFactoryListener<NodeHandle>>(listeners);      
+        }
+        for (NodeHandleFactoryListener<NodeHandle> foo:temp) {
+          foo.nodeHandleFound(nh);
+        }
+      }
+
+      public void addNodeHandleFactoryListener(
+          NodeHandleFactoryListener<NodeHandle> listener) {
+        synchronized(listeners) {
+          listeners.add(listener);
+        }
+      }
+
+
+      public void removeNodeHandleFactoryListener(
+          NodeHandleFactoryListener<NodeHandle> listener) {
+        synchronized(listeners) {
+          listeners.remove(listener);
+        }
+      }
     };
   }
 

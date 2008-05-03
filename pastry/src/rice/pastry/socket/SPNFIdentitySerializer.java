@@ -37,8 +37,11 @@ advised of the possibility of such damage.
 package rice.pastry.socket;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
+import org.mpisws.p2p.transport.identity.SerializerListener;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 
@@ -46,9 +49,12 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
+import rice.pastry.NodeHandleFactoryListener;
 import rice.pastry.transport.TLPastryNode;
 
-public class SPNFIdentitySerializer  implements IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> {
+public class SPNFIdentitySerializer implements 
+    IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, 
+    MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> {
   protected TLPastryNode pn;
 
   protected SocketNodeHandleFactory factory;
@@ -70,17 +76,20 @@ public class SPNFIdentitySerializer  implements IdentitySerializer<TransportLaye
     nid.serialize(buf);
   }
 
+  /**
+   * This is different from the normal deserializer b/c we already have the address
+   */
   public TransportLayerNodeHandle<MultiInetSocketAddress> deserialize(
       InputBuffer buf, SourceRoute<MultiInetSocketAddress> i)
       throws IOException {
     long epoch = buf.readLong();
     Id nid = Id.build(buf);
     
-    NodeHandle ret = buildSNH(buf, i.getLastHop(), epoch, nid);
+    SocketNodeHandle ret = buildSNH(buf, i.getLastHop(), epoch, nid);
     return (TransportLayerNodeHandle<MultiInetSocketAddress>) factory.coalesce(ret);
   }
   
-  protected NodeHandle buildSNH(InputBuffer buf, MultiInetSocketAddress i, long epoch, Id nid) throws IOException {
+  protected SocketNodeHandle buildSNH(InputBuffer buf, MultiInetSocketAddress i, long epoch, Id nid) throws IOException {
     return new SocketNodeHandle(i, epoch, nid, pn);
   }
 
@@ -91,5 +100,23 @@ public class SPNFIdentitySerializer  implements IdentitySerializer<TransportLaye
 
   public MultiInetSocketAddress translateUp(SourceRoute<MultiInetSocketAddress> i) {
     return i.getLastHop();
+  }
+
+  Map<SerializerListener<TransportLayerNodeHandle<MultiInetSocketAddress>>, NodeHandleFactoryListener<SocketNodeHandle>> listeners = 
+    new HashMap<SerializerListener<TransportLayerNodeHandle<MultiInetSocketAddress>>, NodeHandleFactoryListener<SocketNodeHandle>>();
+  public void addSerializerListener(final 
+      SerializerListener<TransportLayerNodeHandle<MultiInetSocketAddress>> listener) {
+    NodeHandleFactoryListener<SocketNodeHandle> foo = new NodeHandleFactoryListener<SocketNodeHandle>() {
+      public void nodeHandleFound(SocketNodeHandle nodeHandle) {
+        listener.nodeHandleFound(nodeHandle);
+      }      
+    };
+    listeners.put(listener, foo);
+    factory.addNodeHandleFactoryListener(foo);
+  }
+
+  public void removeSerializerListener(final 
+      SerializerListener<TransportLayerNodeHandle<MultiInetSocketAddress>> listener) {
+    factory.removeNodeHandleFactoryListener(listeners.get(listener));
   }
 }

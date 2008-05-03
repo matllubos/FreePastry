@@ -1249,6 +1249,14 @@ public class PastryNode extends Observable implements
   public void broadcastReceivedListeners(int address, short msgType, InetSocketAddress from, int size, int wireType) {
     for (NetworkListener listener : getNetworkListeners())
       listener.dataReceived(address, msgType, from, size, wireType);
+  }
+
+  public void addNodeHandleFactoryListener(NodeHandleFactoryListener listener) {
+    handleFactory.addNodeHandleFactoryListener(listener);
+  }
+
+  public void removeNodeHandleFactoryListener(NodeHandleFactoryListener listener) {
+    handleFactory.removeNodeHandleFactoryListener(listener);
   }    
 }
 

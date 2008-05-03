@@ -34,38 +34,14 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.pastry.socket.nat.rendezvous;
+package org.mpisws.p2p.transport.identity;
 
-import java.io.IOException;
-
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
-
-import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.pastry.Id;
-import rice.pastry.NodeHandle;
-import rice.pastry.socket.SocketNodeHandle;
-import rice.pastry.socket.SocketNodeHandleFactory;
-import rice.pastry.transport.TLPastryNode;
-
-public class RendezvousSNHFactory extends SocketNodeHandleFactory {
-
-  public RendezvousSNHFactory(TLPastryNode pn) {
-    super(pn);
-  }
-
-  @Override
-  public SocketNodeHandle getNodeHandle(MultiInetSocketAddress i, long epoch, Id id) {
-    return getNodeHandle(i,epoch, id, (byte)0);
-  }
-  
-  public SocketNodeHandle getNodeHandle(MultiInetSocketAddress i, long epoch, Id id, byte contactState) {
-    SocketNodeHandle handle = new RendezvousSocketNodeHandle(i, epoch, id, pn, contactState);
-    
-    return (SocketNodeHandle)coalesce(handle);
-  }
-
-  @Override
-  public SocketNodeHandle readNodeHandle(InputBuffer buf) throws IOException {
-    return coalesce(RendezvousSocketNodeHandle.build(buf, pn));
-  }
+/**
+ * Notified every time we hear of a new UpperIdentifier (usually deserialization) 
+ * @author Jeff Hoye
+ *
+ * @param <UpperIdentifier>
+ */
+public interface SerializerListener<UpperIdentifier> {
+  public void nodeHandleFound(UpperIdentifier handle);
 }

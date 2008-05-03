@@ -49,4 +49,8 @@ public interface IdentitySerializer<UpperIdentifier, MiddleIdentifier, LowerIden
   public MiddleIdentifier translateDown(UpperIdentifier i);
   
   public MiddleIdentifier translateUp(LowerIdentifier i);
+  
+  public void addSerializerListener(SerializerListener<UpperIdentifier> listener);
+  public void removeSerializerListener(SerializerListener<UpperIdentifier> listener);
+
 }

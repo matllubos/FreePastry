@@ -45,6 +45,7 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.socket.SPNFIdentitySerializer;
+import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.transport.TLPastryNode;
@@ -64,7 +65,7 @@ public class RendezvousSPNFIdentitySerializer extends SPNFIdentitySerializer {
   }
 
   @Override
-  protected NodeHandle buildSNH(InputBuffer buf, MultiInetSocketAddress i, long epoch, Id nid) throws IOException {
+  protected SocketNodeHandle buildSNH(InputBuffer buf, MultiInetSocketAddress i, long epoch, Id nid) throws IOException {
     return new RendezvousSocketNodeHandle(i, epoch, nid, pn, buf.readByte());
   }
 

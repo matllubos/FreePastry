@@ -37,6 +37,8 @@ advised of the possibility of such damage.
 package rice.pastry.socket;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -48,12 +50,13 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
+import rice.pastry.NodeHandleFactoryListener;
 import rice.pastry.transport.TLPastryNode;
 
-public class SocketNodeHandleFactory implements NodeHandleFactory {
+public class SocketNodeHandleFactory implements NodeHandleFactory<SocketNodeHandle> {
   protected TLPastryNode pn;
   protected Map<SocketNodeHandle, SocketNodeHandle> handleSet;
-  
+  protected Collection<NodeHandleFactoryListener<SocketNodeHandle>> listeners = new ArrayList<NodeHandleFactoryListener<SocketNodeHandle>>();
   Logger logger;
   
   public SocketNodeHandleFactory(TLPastryNode pn) {
@@ -65,7 +68,8 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
   
   
   /**
-   * This is kind of weird, may need to rethink this.
+   * This is kind of weird, may need to rethink this.  This is called to build one w/o 
+   * deserializing anything.  (Either the local node, or one with a bogus id).
    * 
    * @param i
    * @param id
@@ -77,11 +81,11 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
     return (SocketNodeHandle)coalesce(handle);
   }
 
-  public NodeHandle readNodeHandle(InputBuffer buf) throws IOException {
+  public SocketNodeHandle readNodeHandle(InputBuffer buf) throws IOException {
     return coalesce(SocketNodeHandle.build(buf, pn));
   }
   
-  public NodeHandle coalesce(NodeHandle h) {
+  public SocketNodeHandle coalesce(SocketNodeHandle h) {
     SocketNodeHandle handle = (SocketNodeHandle)h;
     if (handleSet.containsKey(handle)) {
       return handleSet.get(handle);
@@ -90,6 +94,36 @@ public class SocketNodeHandleFactory implements NodeHandleFactory {
     handle.setLocalNode(pn);
     
     handleSet.put(handle, handle);
+    notifyListeners(handle);
     return handle;
+  }
+  
+  /**
+   * Notify the listeners that this new handle has come along.
+   */
+  protected void notifyListeners(SocketNodeHandle nh) {
+    Collection<NodeHandleFactoryListener<SocketNodeHandle>> temp = listeners;
+    synchronized (listeners) {      
+      temp = new ArrayList<NodeHandleFactoryListener<SocketNodeHandle>>(listeners);      
+    }
+    for (NodeHandleFactoryListener<SocketNodeHandle> foo:temp) {
+      foo.nodeHandleFound(nh);
+    }
+  }
+
+
+  public void addNodeHandleFactoryListener(
+      NodeHandleFactoryListener<SocketNodeHandle> listener) {
+    synchronized(listeners) {
+      listeners.add(listener);
+    }
+  }
+
+
+  public void removeNodeHandleFactoryListener(
+      NodeHandleFactoryListener<SocketNodeHandle> listener) {
+    synchronized(listeners) {
+      listeners.remove(listener);
+    }
   }
 }
