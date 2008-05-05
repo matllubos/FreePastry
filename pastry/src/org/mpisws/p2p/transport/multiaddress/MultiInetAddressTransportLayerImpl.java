@@ -135,7 +135,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
 
     final SocketRequestHandleImpl<MultiInetSocketAddress> handle = new SocketRequestHandleImpl<MultiInetSocketAddress>(i, options, logger);
     
-    if (logger.level <= Logger.FINE) logger.log("openSocket("+i+")");
+    if (logger.level <= Logger.INFO-50) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
     SimpleOutputBuffer sob = new SimpleOutputBuffer(localAddress.getSerializedLength());
     try {
       localAddress.serialize(sob);

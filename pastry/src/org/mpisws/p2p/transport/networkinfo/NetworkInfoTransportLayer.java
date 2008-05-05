@@ -223,6 +223,8 @@ public class NetworkInfoTransportLayer implements
   public SocketRequestHandle<InetSocketAddress> openSocket(InetSocketAddress i,
       SocketCallback<InetSocketAddress> deliverSocketToMe,
       Map<String, Object> options) {
+    if (logger.level <= Logger.INFO-50) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
+
     return openSocket(i,HEADER_PASSTHROUGH,deliverSocketToMe,options);
   }
   

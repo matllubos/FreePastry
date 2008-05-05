@@ -64,6 +64,7 @@ import org.mpisws.p2p.transport.proximity.ProximityListener;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 import org.mpisws.p2p.transport.sourceroute.SourceRouteFactory;
+import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteManagerImpl.AddressManager.PendingMessage;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
@@ -231,6 +232,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       Identifier i, 
       SocketCallback<Identifier> deliverSocketToMe, 
       Map<String, Object> options) {
+    if (logger.level <= Logger.INFO-50) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
     return getAddressManager(i).openSocket(deliverSocketToMe, options);
   }
   
@@ -351,16 +353,13 @@ public class SourceRouteManagerImpl<Identifier> implements
       this.address = address;
       this.pendingMessages = new LinkedList<PendingMessage>();
       this.pendingSockets = new LinkedList<PendingSocket>();
-      this.liveness = LIVENESS_UNKNOWN;
-      this.updated = 0L;
       
       if (logger.level <= Logger.FINE) logger.log("new AddressManager("+address+")");      
+      clearLivenessState();
             
 //      if (address.equals(localAddress)) {
 //        best = srFactory.getSourceRoute(address);
 //      } else {
-        best = srFactory.getSourceRoute(localAddress, address);
-        routes.add(best);
 //        best = null; 
 //        tl.checkLiveness(direct, options);
 //        this.updated = environment.getTimeSource().currentTimeMillis();
@@ -372,11 +371,28 @@ public class SourceRouteManagerImpl<Identifier> implements
       ArrayList<SourceRoute<Identifier>> temp = new ArrayList<SourceRoute<Identifier>>(routes);
       routes.clear();
 //      }
+      
+      this.liveness = LIVENESS_UNKNOWN; // don't stay dead forever... we may have a new connection
       for (SourceRoute<Identifier> sr : temp) {
         livenessProvider.clearState(sr);
         proxProvider.clearState(sr);
       }
-      this.liveness = LIVENESS_SUSPECTED; // don't stay dead forever... we may have a new connection
+
+      Exception reason = new IOException("State cleared. for "+this);
+      ArrayList<PendingMessage> temp2 = new ArrayList<PendingMessage>(pendingMessages); 
+      for (PendingMessage foo : temp2) {
+        foo.fail(reason);
+      }
+      
+      ArrayList<PendingSocket> temp3 = new ArrayList<PendingSocket>(pendingSockets); 
+      for (PendingSocket foo : temp3) {
+        foo.fail(reason);
+      }
+      
+      this.liveness = LIVENESS_UNKNOWN; // don't stay dead forever... we may have a new connection
+      this.updated = 0L;
+      best = srFactory.getSourceRoute(localAddress, address);
+      routes.add(best);
     }
 
     class PendingSocket implements SocketRequestHandle<Identifier>, SocketCallback<SourceRoute<Identifier>> {
@@ -397,6 +413,11 @@ public class SourceRouteManagerImpl<Identifier> implements
         deliverSocketToMe.receiveException(this, ex);
       }        
 
+      public void fail(Exception ex) {
+        cancel();
+        receiveException(null, ex);
+      }        
+      
       public boolean cancel() {
         if (cancellable == null) {
           return pendingSockets.remove(this);
@@ -450,6 +471,11 @@ public class SourceRouteManagerImpl<Identifier> implements
 
       public void sendFailed(MessageRequestHandle<SourceRoute<Identifier>, ByteBuffer> msg, Exception reason) {
         deliverAckToMe.sendFailed(this, reason);        
+      }
+      
+      public void fail(Exception reason) {
+        cancel();
+        sendFailed(null, reason);
       }
     }
     

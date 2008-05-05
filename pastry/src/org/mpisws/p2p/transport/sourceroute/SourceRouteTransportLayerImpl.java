@@ -132,6 +132,8 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
       Map<String, Object> options) {
     if (deliverSocketToMe == null) throw new IllegalArgumentException("deliverSocketToMe must be non-null!");
     
+    if (logger.level <= Logger.INFO-50) logger.log("openSocket("+i+","+deliverSocketToMe+","+options+")");
+
     // invariants
     if (i.getNumHops() <= 1) {
       throw new IllegalArgumentException("SourceRoute must have more than 1 hop! sr:"+i);
