@@ -356,14 +356,12 @@ public class SourceRouteManagerImpl<Identifier> implements
       
       if (logger.level <= Logger.FINE) logger.log("new AddressManager("+address+")");      
       clearLivenessState();
+      
+//      this.liveness = LIVENESS_UNKNOWN; // don't stay dead forever... we may have a new connection
+//      this.updated = 0L;
+//      best = srFactory.getSourceRoute(localAddress, address);
+//      routes.add(best);
             
-//      if (address.equals(localAddress)) {
-//        best = srFactory.getSourceRoute(address);
-//      } else {
-//        best = null; 
-//        tl.checkLiveness(direct, options);
-//        this.updated = environment.getTimeSource().currentTimeMillis();
-//      }        
     }
     
     public void clearLivenessState() {
@@ -372,21 +370,28 @@ public class SourceRouteManagerImpl<Identifier> implements
       routes.clear();
 //      }
       
-      this.liveness = LIVENESS_UNKNOWN; // don't stay dead forever... we may have a new connection
       for (SourceRoute<Identifier> sr : temp) {
         livenessProvider.clearState(sr);
         proxProvider.clearState(sr);
       }
 
-      Exception reason = new IOException("State cleared. for "+this);
-      ArrayList<PendingMessage> temp2 = new ArrayList<PendingMessage>(pendingMessages); 
-      for (PendingMessage foo : temp2) {
-        foo.fail(reason);
-      }
-      
-      ArrayList<PendingSocket> temp3 = new ArrayList<PendingSocket>(pendingSockets); 
-      for (PendingSocket foo : temp3) {
-        foo.fail(reason);
+      // these may never get called due to the above clearing of the source routes
+      if (!pendingMessages.isEmpty() || !pendingSockets.isEmpty()) {
+        Exception reason = new NodeIsFaultyException(this.address, "State cleared. for "+this);
+        
+        ArrayList<PendingSocket> temp3 = new ArrayList<PendingSocket>(pendingSockets); 
+        pendingSockets.clear();
+        for (PendingSocket foo : temp3) {
+          if (logger.level <= Logger.FINE) logger.log(this+".clearLivenessState()1 "+foo);
+          foo.fail(reason);
+        }
+        
+        ArrayList<PendingMessage> temp2 = new ArrayList<PendingMessage>(pendingMessages); 
+        pendingMessages.clear();
+        for (PendingMessage foo : temp2) {
+          if (logger.level <= Logger.FINE) logger.log(this+".clearLivenessState()2 "+foo);
+          foo.fail(reason);
+        }
       }
       
       this.liveness = LIVENESS_UNKNOWN; // don't stay dead forever... we may have a new connection
