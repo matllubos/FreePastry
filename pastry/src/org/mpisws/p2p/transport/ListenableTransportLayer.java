@@ -36,14 +36,20 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-
+/**
+ * Notifies TransportLayerListeners of reading/writing.
+ * 
+ * @author Jeff Hoye
+ *
+ * @param <Identifier>
+ */
 public interface ListenableTransportLayer<Identifier> {
   public void addTransportLayerListener(TransportLayerListener<Identifier> listener); 
   public void removeTransportLayerListener(TransportLayerListener<Identifier> listener); 
-  
+
+  /**
+   * Example impl code
+   */
 //  Collection<TransportLayerListener<Identifier, ByteBuffer>> listeners = new ArrayList<TransportLayerListener<Identifier,ByteBuffer>>();
 //  public void addTransportLayerListener(
 //      TransportLayerListener<Identifier, ByteBuffer> listener) {

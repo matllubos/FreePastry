@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package rice.pastry.testing.rendezvous;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -149,6 +150,11 @@ public class DistTutorialInternet {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
+//    System.setOut(new PrintStream("minerva"+System.currentTimeMillis()+".txt"));
+//    System.setOut(new PrintStream("~/logz/minerva"+System.currentTimeMillis()+".txt"));
+    System.setOut(new PrintStream("M:\\unix-home\\logz\\janus"+System.currentTimeMillis()+".txt"));
+    System.setErr(System.out);
+    
     // Loads pastry settings
     Environment env = new Environment();
 

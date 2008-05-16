@@ -55,10 +55,16 @@ import rice.environment.logging.Logger;
 public class DefaultErrorHandler<Identifier> implements
     ErrorHandler<Identifier> {
   public int NUM_BYTES_TO_PRINT = 8;
-  
+  protected int printlevel;
   Logger logger;
+  
   public DefaultErrorHandler(Logger logger) {
+    this(logger, Logger.INFO);
+  }
+  
+  public DefaultErrorHandler(Logger logger, int printlevel) {
     this.logger = logger;
+    this.printlevel = printlevel;
   }
   
   public void receivedUnexpectedData(Identifier id, byte[] bytes, int pos, Map<String, Object> options) {
@@ -75,7 +81,7 @@ public class DefaultErrorHandler<Identifier> implements
   }
 
   public void receivedException(Identifier i, Throwable error) {
-    if (logger.level <= Logger.INFO) {      
+    if (logger.level <= printlevel) {      
       logger.logException(i == null ? null : i.toString(), error);
 //      logger.logException("here I am", new Exception("ErrorHandlerCall"));
     }

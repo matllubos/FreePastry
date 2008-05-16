@@ -49,6 +49,10 @@ import rice.pastry.NodeHandle;
  */
 public interface Router {
 
+  /**
+   * Send the RouteMessage based on the Pastry Algorithm
+   * @param rm
+   */
   void route(RouteMessage rm);
 
   /**

@@ -1295,6 +1295,18 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       deliverResultToMe.receiveException(ioe);
     }
   }
+
+//  protected Environment cloneEnvironment(Environment rootEnvironment, Id nodeId) {
+//    Environment ret = rootEnvironment;
+//    if (rootEnvironment.getParameters().getBoolean(
+//        "pastry_factory_multipleNodes")) {
+//      ret = rootEnvironment.cloneEnvironment("0x"+nodeId.toStringBare(), 
+//          rootEnvironment.getParameters().getBoolean("pastry_factory_selectorPerNode"),
+//          rootEnvironment.getParameters().getBoolean("pastry_factory_processorPerNode"));
+//    }
+//    return ret;
+//  }
+
   
   protected Environment cloneEnvironment(Environment rootEnvironment, Id nodeId) {
     Environment ret = rootEnvironment;

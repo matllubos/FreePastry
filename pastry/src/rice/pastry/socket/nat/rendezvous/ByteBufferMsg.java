@@ -43,6 +43,12 @@ import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.messaging.PRawMessage;
 
+/**
+ * Used to hold a UDP message (usually liveness) when delivering to a firewalled node via Routing.
+ *  
+ * @author Jeff Hoye
+ *
+ */
 public class ByteBufferMsg extends PRawMessage {
   public static final short TYPE = 1;
   

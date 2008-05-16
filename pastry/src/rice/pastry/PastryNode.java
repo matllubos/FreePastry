@@ -468,9 +468,9 @@ public class PastryNode extends Observable implements
     myMessageDispatch.dispatchMessage(msg);
   }
   
-  public synchronized void receiveMessage(RawMessageDelivery delivery) {
-    myMessageDispatch.dispatchMessage(delivery); 
-  }
+//  public synchronized void receiveMessage(RawMessageDelivery delivery) {
+//    myMessageDispatch.dispatchMessage(delivery); 
+//  }
   
   /**
    * Registers a message receiver with this Pastry node.

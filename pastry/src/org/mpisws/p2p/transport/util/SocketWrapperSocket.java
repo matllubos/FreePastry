@@ -172,6 +172,7 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
       reader = null;
       temp.receiveException(this, e);
     }
+    if (reader == null && writer == null && logger.level <= Logger.WARNING) logger.logException("",e);
 //    receiver.receiveException(SocketWrapperSocket.this, e);
   }    
 

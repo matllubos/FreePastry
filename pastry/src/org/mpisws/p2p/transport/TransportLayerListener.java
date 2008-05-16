@@ -38,6 +38,12 @@ package org.mpisws.p2p.transport;
 
 import java.util.Map;
 
+/**
+ * Can be installed on a ListenableTransportLayer
+ * @author Jeff Hoye
+ *
+ * @param <Identifier>
+ */
 public interface TransportLayerListener<Identifier>{
   
   /**

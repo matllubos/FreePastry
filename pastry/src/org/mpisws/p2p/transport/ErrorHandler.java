@@ -36,7 +36,6 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**

@@ -148,26 +148,26 @@ public class MessageDispatch implements Destructable {
     }
   }  
   
-  public boolean dispatchMessage(RawMessageDelivery msg) {
-    if (msg.getAddress() == 0) {
-      Logger logger = localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null);
-      if (logger.level <= Logger.WARNING) logger.logException(
-          "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
-      return false;
-    }
-    // NOTE: There is no safety issue with calling localNode.isReady() because this is on the 
-    // PastryThread, and the only way to set a node ready is also on the ready thread.
-    PastryAppl mr = (PastryAppl) addressBook.get(Integer.valueOf(msg.getAddress()));
-
-    if (mr == null) {
-      if (logger.level <= Logger.WARNING) logger.log(
-          "Dropping message " + msg + " because the application address " + msg.getAddress() + " is unknown.");
-      return false;
-    } else {
-      mr.receiveMessageInternal(msg); 
-      return true;
-    }
-  }  
+//  public boolean dispatchMessage(RawMessageDelivery msg) {
+//    if (msg.getAddress() == 0) {
+//      Logger logger = localNode.getEnvironment().getLogManager().getLogger(MessageDispatch.class, null);
+//      if (logger.level <= Logger.WARNING) logger.logException(
+//          "Message "+msg+","+msg.getClass().getName()+" has no destination.", new Exception("Stack Trace"));
+//      return false;
+//    }
+//    // NOTE: There is no safety issue with calling localNode.isReady() because this is on the 
+//    // PastryThread, and the only way to set a node ready is also on the ready thread.
+//    PastryAppl mr = (PastryAppl) addressBook.get(Integer.valueOf(msg.getAddress()));
+//
+//    if (mr == null) {
+//      if (logger.level <= Logger.WARNING) logger.log(
+//          "Dropping message " + msg + " because the application address " + msg.getAddress() + " is unknown.");
+//      return false;
+//    } else {
+//      mr.receiveMessageInternal(msg); 
+//      return true;
+//    }
+//  }  
   
   public void destroy() {
     Iterator i = addressBook.values().iterator();

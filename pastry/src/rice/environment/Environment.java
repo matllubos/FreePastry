@@ -58,6 +58,7 @@ import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
+import rice.pastry.Id;
 import rice.selector.SelectorManager;
 
 
@@ -310,6 +311,63 @@ public class Environment implements Destructable {
     ExceptionStrategy ret = exceptionStrategy;
     exceptionStrategy = newStrategy;
     return ret;
+  }
+  public Environment cloneEnvironment(String prefix) {
+    return cloneEnvironment(prefix, false, false);
+  }
+  
+  public Environment cloneEnvironment(String prefix, boolean cloneSelector, boolean cloneProcessor) {
+    // new logManager
+    LogManager lman = cloneLogManager(prefix);
+    
+    // new selector
+    SelectorManager sman = cloneSelectorManager(prefix, lman, cloneSelector);
+    
+    // new processor
+    Processor proc = cloneProcessor(prefix, lman, cloneProcessor);
+    
+    // new random source
+    RandomSource rand = cloneRandomSource(lman);
+    
+    // build the environment
+    Environment ret = new Environment(sman, proc, rand, getTimeSource(), lman,
+        getParameters(), getExceptionStrategy());
+  
+    // gain shared fate with the rootEnvironment
+    addDestructable(ret);     
+      
+    return ret;
+  }
+
+  protected LogManager cloneLogManager(String prefix) {
+    LogManager lman = getLogManager();
+    if (lman instanceof CloneableLogManager) {
+      lman = ((CloneableLogManager) getLogManager()).clone(prefix);
+    }
+    return lman;
+  }
+  
+  protected SelectorManager cloneSelectorManager(String prefix, LogManager lman, boolean cloneSelector) {
+    SelectorManager sman = getSelectorManager();
+    if (cloneSelector) {
+      sman = new SelectorManager(prefix + " Selector",
+          getTimeSource(), lman);
+    }
+    return sman;
+  }
+  
+  protected Processor cloneProcessor(String prefix, LogManager lman, boolean cloneProcessor) {
+    Processor proc = getProcessor();
+    if (cloneProcessor) {
+      proc = new SimpleProcessor(prefix + " Processor");
+    }
+
+    return proc;
+  }
+  
+  protected RandomSource cloneRandomSource(LogManager lman) {
+    long randSeed = getRandomSource().nextLong();
+    return new SimpleRandomSource(randSeed, lman);    
   }
 }
 

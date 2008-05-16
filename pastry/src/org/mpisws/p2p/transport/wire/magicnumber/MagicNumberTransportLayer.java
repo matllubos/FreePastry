@@ -91,7 +91,6 @@ public class MagicNumberTransportLayer<Identifier> implements
    * 
    * @param wtl
    * @param env
-   * @param callback notify me of new sockets/messages
    * @param errorHandler call me when there is a problem
    * @param header the header to expect from a socket/packet
    * @param timeOut how long to wait before killing a socket that is not sending (milliseconds)
