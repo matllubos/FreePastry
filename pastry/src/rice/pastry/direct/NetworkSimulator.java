@@ -48,7 +48,6 @@ import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
-import rice.pastry.transport.TLPastryNode;
 
 /**
  * Interface to an object which is simulating the network.
@@ -156,9 +155,9 @@ public interface NetworkSimulator<Identifier, MessageType> {
    * 
    * @param nh the node handle to register.
    */
-//  public void registerNode(TLPastryNode dpn, TransportLayer<DirectNodeHandle, RawMessage> tl, NodeRecord nr);
+//  public void registerNode(PastryNode dpn, TransportLayer<DirectNodeHandle, RawMessage> tl, NodeRecord nr);
 
-  public void removeNode(TLPastryNode node);
+  public void removeNode(PastryNode node);
 
   public void start();
   

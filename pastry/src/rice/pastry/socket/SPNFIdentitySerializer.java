@@ -50,16 +50,16 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactoryListener;
-import rice.pastry.transport.TLPastryNode;
+import rice.pastry.PastryNode;
 
 public class SPNFIdentitySerializer implements 
     IdentitySerializer<TransportLayerNodeHandle<MultiInetSocketAddress>, 
     MultiInetSocketAddress, SourceRoute<MultiInetSocketAddress>> {
-  protected TLPastryNode pn;
+  protected PastryNode pn;
 
   protected SocketNodeHandleFactory factory;
 
-  public SPNFIdentitySerializer(TLPastryNode pn, SocketNodeHandleFactory factory) {
+  public SPNFIdentitySerializer(PastryNode pn, SocketNodeHandleFactory factory) {
     this.pn = pn;
     this.factory = factory;
   }

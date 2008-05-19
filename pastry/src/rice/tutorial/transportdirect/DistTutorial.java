@@ -61,7 +61,6 @@ import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.NodeHandleAdapter;
-import rice.pastry.transport.TLPastryNode;
 
 /**
  * This tutorial shows how to setup a FreePastry node using the Socket Protocol.
@@ -98,7 +97,7 @@ public class DistTutorial {
        * Swap in Direct instead of wire.
        */
       @Override
-      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(final InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(final InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
         DirectTransportLayer<InetSocketAddress, ByteBuffer> tl = new DirectTransportLayer<InetSocketAddress, ByteBuffer>(
             innermostAddress, simulator, simulator.generateNodeRecord(), pn.getEnvironment());
 

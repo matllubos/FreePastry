@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
@@ -55,8 +56,8 @@ public class SourceRouteManagerP2PSocket<Identifier> extends SocketWrapperSocket
 //  P2PSocket<SourceRoute<Identifier>> socket;
 //  Logger logger;
   
-  public SourceRouteManagerP2PSocket(P2PSocket<SourceRoute<Identifier>> socket, Environment env) {
-    super(socket.getIdentifier().getLastHop(),socket,env.getLogManager().getLogger(SourceRouteManagerP2PSocket.class,null),socket.getOptions());
+  public SourceRouteManagerP2PSocket(P2PSocket<SourceRoute<Identifier>> socket, Logger logger, ErrorHandler<Identifier> errorHandler, Environment env) {
+    super(socket.getIdentifier().getLastHop(),socket,logger, errorHandler ,socket.getOptions());
 //    this.socket = socket; 
 //    this.logger = env.getLogManager().getLogger(SourceRouteManagerP2PSocket.class,null);
 //    logger.log("ctor("+socket.getOptions()+")");

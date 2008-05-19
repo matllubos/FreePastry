@@ -81,7 +81,6 @@ import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.ProximityNeighborSelector;
 import rice.pastry.standard.RandomNodeIdFactory;
 import rice.pastry.transport.NodeHandleAdapter;
-import rice.pastry.transport.TLPastryNode;
 import rice.pastry.transport.TransportPastryNodeFactory;
 import rice.selector.SelectorManager;
 
@@ -125,7 +124,7 @@ public class Recorder implements MyEvents {
     final SocketPastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
       
       @Override
-      public rice.pastry.NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {
+      public rice.pastry.NodeHandle getLocalHandle(PastryNode pn, NodeHandleFactory nhf) {
         SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf);
         if (logger.level <= Logger.FINE) logger.log("getLocalHandle():"+ret.toStringFull());
         return ret;
@@ -142,7 +141,7 @@ public class Recorder implements MyEvents {
       }
 
 //      @Override
-//      protected PriorityTransportLayer<MultiInetSocketAddress> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
+//      protected PriorityTransportLayer<MultiInetSocketAddress> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, PastryNode pn) {
 //        // get rid of the priorityLayer
 //        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
 //          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
@@ -152,7 +151,7 @@ public class Recorder implements MyEvents {
 //      }
 
       @Override
-      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
         // record here
         
         RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
@@ -161,7 +160,7 @@ public class Recorder implements MyEvents {
       }
       
       @Override
-      protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns) {
+      protected Bootstrapper getBootstrapper(final PastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns) {
         final Bootstrapper internal = super.getBootstrapper(pn, tl, handleFactory, pns);
         Bootstrapper ret = new Bootstrapper() {        
           public void boot(Collection bootaddresses) {
@@ -184,11 +183,11 @@ public class Recorder implements MyEvents {
       
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
-      final ArrayList<TLPastryNode> nodeContainer = new ArrayList<TLPastryNode>(1); 
+      final ArrayList<PastryNode> nodeContainer = new ArrayList<PastryNode>(1); 
       env.getSelectorManager().invoke(new Runnable() {
       
         public void run() {
-          TLPastryNode node = (TLPastryNode)factory.newNode();
+          PastryNode node = (PastryNode)factory.newNode();
           nodeContainer.add(node);
           // construct a new scribe application
           MyScribeClient app = new MyScribeClient(node);
@@ -210,7 +209,7 @@ public class Recorder implements MyEvents {
         }
       }
       
-      TLPastryNode node = nodeContainer.get(0);
+      PastryNode node = nodeContainer.get(0);
 
       synchronized(node) {
         while (!node.isReady() && !node.joinFailed()) {

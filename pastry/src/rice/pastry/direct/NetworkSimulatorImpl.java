@@ -57,9 +57,9 @@ import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
+import rice.pastry.PastryNode;
 import rice.pastry.ScheduledMessage;
 import rice.pastry.messaging.Message;
-import rice.pastry.transport.TLPastryNode;
 
 public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSimulator<Identifier, MessageType> {
   protected BasicNetworkSimulator<Identifier, MessageType> simulator;
@@ -206,7 +206,7 @@ public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSim
     }
   }
 
-//  public ScheduledMessage deliverMessage(Message msg, TLPastryNode node, DirectNodeHandle from, int delay) {
+//  public ScheduledMessage deliverMessage(Message msg, PastryNode node, DirectNodeHandle from, int delay) {
 //    node.deliverMess
 //    return new ScheduledMessage(node, msg, simulator.deliverMessage(msg, (DirectNodeHandle)node.getLocalHandle(), from, delay));
 //  }
@@ -254,7 +254,7 @@ public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSim
     return simulator.proximity(a, b);
   }
 
-  public void removeNode(TLPastryNode node) {
+  public void removeNode(PastryNode node) {
     // TODO Auto-generated method stub
     
   }
@@ -271,7 +271,7 @@ public class NetworkSimulatorImpl<Identifier, MessageType> implements NetworkSim
     return simulator;
   }
 
-//  public void registerNode(TLPastryNode dpn, NodeRecord nr) {
+//  public void registerNode(PastryNode dpn, NodeRecord nr) {
 //  simulator.registerIdentifier(dpn.getLocalHandle(), dpn.getTL(), nr);
   public void registerNode(Identifier i, DirectTransportLayer<Identifier, MessageType> dtl, NodeRecord nr) {
     simulator.registerIdentifier(i, dtl, nr);

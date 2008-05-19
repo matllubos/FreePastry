@@ -371,7 +371,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   class LowerIdentityImpl implements LowerIdentity<LowerIdentifier, ByteBuffer>, TransportLayerCallback<LowerIdentifier, ByteBuffer> {
     TransportLayer<LowerIdentifier, ByteBuffer> tl;    
     TransportLayerCallback<LowerIdentifier, ByteBuffer> callback;
-    ErrorHandler<LowerIdentifier> handler;
+    ErrorHandler<LowerIdentifier> errorHandler;
     Logger logger;
     
     public LowerIdentityImpl(
@@ -380,9 +380,9 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
       this.tl = tl;
       logger = environment.getLogManager().getLogger(IdentityImpl.class, "lower");
       if (handler != null) {
-        this.handler = handler;        
+        this.errorHandler = handler;        
       } else {
-        this.handler = new DefaultErrorHandler<LowerIdentifier>(logger);        
+        this.errorHandler = new DefaultErrorHandler<LowerIdentifier>(logger);        
       }
             
       tl.setCallback(this);
@@ -535,13 +535,13 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
         ByteBuffer buf = ByteBuffer.allocate(1);
         
         public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-          handler.receivedException(socket.getIdentifier(), ioe);
+          errorHandler.receivedException(socket.getIdentifier(), ioe);
         }
         
         public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
           if (socket.read(buf) < 0) {
             // socket closed
-            if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new IOException("Socket closed while incoming."));
+            if (logger.level <= Logger.INFO) errorHandler.receivedException(socket.getIdentifier(), new IOException("Socket closed while incoming."));
             return;
           }          
           if (buf.hasRemaining()) {
@@ -558,7 +558,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
             ByteBuffer buf = ByteBuffer.allocate(localIdentifier.length);
 
             public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-              handler.receivedException(socket.getIdentifier(), ioe);
+              errorHandler.receivedException(socket.getIdentifier(), ioe);
             }
 
             public void receiveSelectResult(final P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
@@ -570,7 +570,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 // read the TO field
                 if (socket.read(buf) < 0) {
                   // socket closed
-                  if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new IOException("Socket closed while incoming."));
+                  if (logger.level <= Logger.INFO) errorHandler.receivedException(socket.getIdentifier(), new IOException("Socket closed while incoming."));
                   return;
                 }
                 
@@ -593,7 +593,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                   final ByteBuffer writeMe = ByteBuffer.wrap(result);
                   new P2PSocketReceiver<LowerIdentifier>() {
                     public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                      handler.receivedException(socket.getIdentifier(), ioe);                
+                      errorHandler.receivedException(socket.getIdentifier(), ioe);                
                     }
 
                     public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
@@ -602,7 +602,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                       
                       if (socket.write(writeMe) == -1) {
                         // socket closed
-                        if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
+                        if (logger.level <= Logger.INFO) errorHandler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
                         return;                  
                       }
                       
@@ -624,7 +624,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
               final SocketInputBuffer sib = new SocketInputBuffer(socket, 1024);
               new P2PSocketReceiver<LowerIdentifier>() {
                 public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                  handler.receivedException(socket.getIdentifier(), ioe);
+                  errorHandler.receivedException(socket.getIdentifier(), ioe);
                 }
 
                 public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
@@ -661,7 +661,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                   final ByteBuffer writeMe = ByteBuffer.wrap(result);
                   new P2PSocketReceiver<LowerIdentifier>() {
                     public void receiveException(P2PSocket<LowerIdentifier> socket, Exception ioe) {
-                      if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), ioe);                
+                      if (logger.level <= Logger.INFO) errorHandler.receivedException(socket.getIdentifier(), ioe);                
                     }
 
                     public void receiveSelectResult(P2PSocket<LowerIdentifier> socket, boolean canRead, boolean canWrite) throws IOException {
@@ -670,7 +670,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                       
                       if (socket.write(writeMe) == -1) {
                         // socket closed
-                        if (logger.level <= Logger.INFO) handler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
+                        if (logger.level <= Logger.INFO) errorHandler.receivedException(socket.getIdentifier(), new ClosedChannelException("Error on incoming socket."));
                         return;                  
                       }
                       
@@ -682,7 +682,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 
                       // done writing pass up socket with the newOptions
                       final P2PSocket<LowerIdentifier> returnMe = new SocketWrapperSocket<LowerIdentifier, LowerIdentifier>(
-                          socket.getIdentifier(), socket, logger, newOptions);
+                          socket.getIdentifier(), socket, logger, errorHandler, newOptions);
                       callback.incomingSocket(returnMe);
                     }                    
                   }.receiveSelectResult(socket, false, true); // write SUCCESS
@@ -786,7 +786,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
                 throw new RuntimeException("msg != cancellable.getSubCancellable() (indicates a bug in the code) msg:"+
                     msg+" sub:"+ret.getSubCancellable());
               if (deliverAckToMe == null) {
-                handler.receivedException(i, ex);
+                errorHandler.receivedException(i, ex);
               } else {
                 deliverAckToMe.sendFailed(ret, ex);
               }
@@ -834,7 +834,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           } else {
             if (logger.level <= Logger.WARNING) logger.log("Warning.  Received message from stale identifier:"+
                 from+". Current identifier is "+bindings.get(serializer.translateUp(i))+" lower:"+i+" Probably a delayed message, dropping.");
-            handler.receivedUnexpectedData(i, m.array(), m.position(), newOptions);
+            errorHandler.receivedUnexpectedData(i, m.array(), m.position(), newOptions);
             return;
           }
           
@@ -891,7 +891,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
     }
 
     public void setErrorHandler(ErrorHandler<LowerIdentifier> handler) {
-      this.handler = handler;
+      this.errorHandler = handler;
     }
 
     public void destroy() {
@@ -984,7 +984,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
           deliverSocketToMe.receiveException(handle, ex);
         }
         public void receiveResult(SocketRequestHandle<MiddleIdentifier> cancellable, P2PSocket<MiddleIdentifier> sock) {
-          deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<UpperIdentifier, MiddleIdentifier>(i,sock,logger,options));
+          deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<UpperIdentifier, MiddleIdentifier>(i,sock,logger,errorHandler,options));
         }      
       }, newOptions));
       return handle;
@@ -1057,7 +1057,7 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
 
       
       if (sanityChecker.isSane(from, s.getIdentifier())) {
-        callback.incomingSocket(new SocketWrapperSocket<UpperIdentifier, MiddleIdentifier>(from, s, logger, s.getOptions()));
+        callback.incomingSocket(new SocketWrapperSocket<UpperIdentifier, MiddleIdentifier>(from, s, logger, errorHandler, s.getOptions()));
       } else {
         if (logger.level <= Logger.WARNING) logger.logException(
             "incomingSocket() Sanity checker did not match "+from+" to "+s.getIdentifier()+" options:"+s.getOptions(), 

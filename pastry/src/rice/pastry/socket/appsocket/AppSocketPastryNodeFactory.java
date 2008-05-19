@@ -77,6 +77,7 @@ import rice.p2p.util.MathUtils;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
@@ -84,7 +85,6 @@ import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.SocketAdapter;
 import rice.pastry.transport.TLDeserializer;
-import rice.pastry.transport.TLPastryNode;
 
 /**
  * Extends SocketPastryNodeFactory and adds getSocketFactory() to allow access to
@@ -203,7 +203,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
     }
   }
   
-  class BogusTLPastryNode extends TLPastryNode  {
+  class BogusTLPastryNode extends PastryNode  {
     
 
     public BogusTLPastryNode(Id id, Environment e) {
@@ -370,7 +370,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
   }
   
   @Override
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, final TLPastryNode pn) throws IOException {
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, final PastryNode pn) throws IOException {
     Environment environment = pn.getEnvironment();    
     WireTransportLayerImpl wtl = new WireTransportLayerImpl(innermostAddress,environment, null, (pn instanceof BogusTLPastryNode));    
     wtl.addSocketCountListener(getSocketCountListener(pn));
@@ -388,7 +388,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
   @Override
   protected TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLivenessTransportLayer(
       final TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl,
-      TLPastryNode pn) {
+      PastryNode pn) {
     if (pn instanceof BogusTLPastryNode) {
       return new TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>(){    
         public TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getTransportLayer() {

@@ -51,9 +51,9 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
+import rice.pastry.PastryNode;
 import rice.pastry.dist.DistNodeHandle;
 import rice.pastry.messaging.Message;
-import rice.pastry.transport.TLPastryNode;
 
 public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
 //  public class SocketNodeHandle extends DistNodeHandle implements TransportLayerNodeHandle<MultiInetSocketAddress> {
@@ -61,7 +61,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
   public MultiInetSocketAddress eaddress;
   long epoch;
   
-  protected SocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node) {
+  protected SocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, PastryNode node) {
     super(id);
     this.eaddress = eisa;
     this.epoch = epoch;    
@@ -73,7 +73,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
     return epoch;
   }
 
-  public void setLocalNode(TLPastryNode pn) {
+  public void setLocalNode(PastryNode pn) {
     localnode = pn;
     this.logger = localnode.getEnvironment().getLogManager().getLogger(getClass(),null);
   }  
@@ -98,7 +98,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
 //      if (localEaddr.addressEquals(eaddress)) {
 //        return LIVENESS_ALIVE;        
 //      }
-      return ((TLPastryNode)localnode).getLivenessProvider().getLiveness(this, null);
+      return ((PastryNode)localnode).getLivenessProvider().getLiveness(this, null);
     }
   }
   
@@ -139,7 +139,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
    */
   public boolean checkLiveness() {
     if (logger.level <= Logger.FINE) logger.log(this+".checkLiveness()");
-    ((TLPastryNode)localnode).getLivenessProvider().checkLiveness(this, null);
+    ((PastryNode)localnode).getLivenessProvider().checkLiveness(this, null);
 //    SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 //    
 //    if (spn != null)
@@ -251,7 +251,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
    * @return the proximity metric value
    */
   public int proximity() {
-    return ((TLPastryNode)localnode).getProxProvider().proximity(this, null);
+    return ((PastryNode)localnode).getProxProvider().proximity(this, null);
   }
 
   /**
@@ -263,7 +263,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
    */
   public boolean ping() {
     if (localnode.getLocalHandle().equals(this)) return false;
-    ((TLPastryNode)localnode).getLivenessProvider().checkLiveness(this, null);
+    ((PastryNode)localnode).getLivenessProvider().checkLiveness(this, null);
 //    final SocketPastryNode spn = (SocketPastryNode) getLocalNode();
 //    
 ////    Runnable runnable = new Runnable() {    
@@ -308,7 +308,7 @@ public class SocketNodeHandle extends DistNodeHandle<MultiInetSocketAddress> {
    * @param buf
    * @return
    */
-  static SocketNodeHandle build(InputBuffer buf, TLPastryNode local) throws IOException {
+  static SocketNodeHandle build(InputBuffer buf, PastryNode local) throws IOException {
 //    NodeHandle (Version 0)
 //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //    + Epoch InetSocketAddress                                       +

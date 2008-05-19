@@ -48,7 +48,6 @@ import rice.pastry.messaging.*;
 import rice.pastry.standard.*;
 import rice.pastry.transport.NodeHandleAdapter;
 import rice.pastry.transport.TLDeserializer;
-import rice.pastry.transport.TLPastryNode;
 import rice.pastry.transport.TransportPastryNodeFactory;
 import rice.pastry.routing.*;
 import rice.pastry.boot.Bootstrapper;
@@ -160,7 +159,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
             this.environment.getExceptionStrategy());
         }
       }    
-      TLPastryNode pn = new TLPastryNode(nodeId, environment);
+      PastryNode pn = new PastryNode(nodeId, environment);
       nodeHandleHelper(pn);
 //      ((DirectPastryNode)pn).doneNode(getNearest(pn.getLocalHandle(), bootstrap));
         
@@ -240,13 +239,13 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
-  protected NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory handleFactory) throws IOException {
+  protected NodeHandle getLocalHandle(PastryNode pn, NodeHandleFactory handleFactory) throws IOException {
     DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
     return localhandle;
   }
 
   @Override
-  protected NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) throws IOException {
+  protected NodeHandleFactory getNodeHandleFactory(PastryNode pn) throws IOException {
     // TODO: Make this work
     return new NodeHandleFactory<NodeHandle>(){
     
@@ -292,7 +291,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
-  protected NodeHandleAdapter getNodeHandleAdapter(final TLPastryNode pn, NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException {
+  protected NodeHandleAdapter getNodeHandleAdapter(final PastryNode pn, NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException {
     NodeRecord nr = (NodeRecord)recordTable.get(pn.getId());
     if (nr == null) {
       nr = simulator.generateNodeRecord();
@@ -324,7 +323,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
-  protected Bootstrapper getBootstrapper(final TLPastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, final ProximityNeighborSelector pns) {
+  protected Bootstrapper getBootstrapper(final PastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, final ProximityNeighborSelector pns) {
     return new Bootstrapper<NodeHandle>() {
     
       public void boot(Collection<NodeHandle> bootaddresses) {

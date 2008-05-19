@@ -141,7 +141,7 @@ public class SimpleIdentityTransportLayer<Identifier, MessageType> implements
                 return;
               }
               // done
-              deliverSocketToMe.receiveResult(ret, new SocketWrapperSocket<Identifier, Identifier>(socket.getIdentifier(),socket,logger,socket.getOptions()));
+              deliverSocketToMe.receiveResult(ret, new SocketWrapperSocket<Identifier, Identifier>(socket.getIdentifier(),socket,logger,errorHandler,socket.getOptions()));
             }
             public void receiveException(P2PSocket<Identifier> socket,
                 Exception ioe) {
@@ -189,7 +189,7 @@ public class SimpleIdentityTransportLayer<Identifier, MessageType> implements
           boolean canRead, boolean canWrite) throws IOException {
         try {
           Identifier remoteIdentifier = serializer.deserialize(sib, socket.getIdentifier(), socket.getOptions());
-          callback.incomingSocket(new SocketWrapperSocket<Identifier, Identifier>(remoteIdentifier,socket,logger,socket.getOptions()));
+          callback.incomingSocket(new SocketWrapperSocket<Identifier, Identifier>(remoteIdentifier,socket,logger,errorHandler,socket.getOptions()));
         } catch (InsufficientBytesException ibe) {
           socket.register(true, false, this);          
         } // throw the rest        

@@ -206,7 +206,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
       P2PSocket<Identifier> socket, 
       SourceRoute<Identifier> i) {
     
-    deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(i, socket, logger, socket.getOptions()));     
+    deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(i, socket, logger, errorHandler, socket.getOptions()));     
   }
   
   /**
@@ -217,7 +217,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
    * @throws IOException
    */
   protected void incomingSocketHelper(P2PSocket<Identifier> socket, SourceRoute<Identifier> sr) throws IOException {
-    callback.incomingSocket(new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(sr, socket, logger, socket.getOptions())); 
+    callback.incomingSocket(new SocketWrapperSocket<SourceRoute<Identifier>, Identifier>(sr, socket, logger, errorHandler, socket.getOptions())); 
   }
 
   public void incomingSocket(final P2PSocket<Identifier> socka) throws IOException {

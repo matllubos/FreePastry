@@ -46,7 +46,6 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.TransportLayerNodeHandle;
-import rice.pastry.transport.TLPastryNode;
 
 /**
  * the node handle used with the direct network
@@ -57,7 +56,7 @@ import rice.pastry.transport.TLPastryNode;
  */
 
 public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> implements Observer {
-  private transient TLPastryNode remoteNode;
+  private transient PastryNode remoteNode;
   public transient NetworkSimulator simulator;
 
   /**
@@ -67,7 +66,7 @@ public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> imple
    * @param rn The remote pastry node
    * @param sim The current network simulator
    */
-  DirectNodeHandle(TLPastryNode ln, TLPastryNode rn, NetworkSimulator sim) {
+  DirectNodeHandle(PastryNode ln, PastryNode rn, NetworkSimulator sim) {
     localnode = ln;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
     if (rn == null) throw new IllegalArgumentException("rn must be non-null");
@@ -82,7 +81,7 @@ public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> imple
    *
    * @return The Remote value
    */
-  public TLPastryNode getRemote() {
+  public PastryNode getRemote() {
     return remoteNode;
   }
 

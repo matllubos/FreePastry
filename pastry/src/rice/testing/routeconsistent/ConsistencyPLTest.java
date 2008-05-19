@@ -104,7 +104,6 @@ import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.socket.nat.rendezvous.RendezvousSocketNodeHandle;
 import rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
-import rice.pastry.transport.TLPastryNode;
 import rice.selector.LoopObserver;
 
 /**
@@ -129,7 +128,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
 //      params.setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
 //    params.setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
-//    params.setInt("rice.pastry.transport.TLPastryNode_loglevel", Logger.FINE);
+//    params.setInt("rice.pastry.transport.PastryNode_loglevel", Logger.FINE);
 //    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
@@ -439,7 +438,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       if (isJanus) {
         p.setFloat("rendezvous_test_num_firewalled", 1.0f);
       } else {
-        p.setFloat("rendezvous_test_num_firewalled", 0.3f);
+        p.setFloat("rendezvous_test_num_firewalled", 0.5f);
       }
       
       // Generate the NodeIds Randomly
@@ -459,13 +458,13 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
           return new SimpleRandomSource(randSeed, lman);    
         }
 //        @Override
-//        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
+//        protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, PastryNode pn) {
 //          // TODO Auto-generated method stub
 //          return super.getTLDeserializer(handleFactory, pn);
 //        }
 
 //        @Override
-//        protected IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> getIdentityImpl(TLPastryNode pn, SocketNodeHandleFactory handleFactory) throws IOException {          
+//        protected IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> getIdentityImpl(PastryNode pn, SocketNodeHandleFactory handleFactory) throws IOException {          
 //          final IdentityImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, MultiInetSocketAddress, ByteBuffer, SourceRoute<MultiInetSocketAddress>> ret = super.getIdentityImpl(pn, handleFactory);
 //          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
 //            @Override
@@ -477,7 +476,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //        }
 
         @Override
-        protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+        protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
           if (!USE_REPLAY) return super.getWireTransportLayer(innermostAddress, pn);
           System.out.println("Initializing RecordLayer "+pn.getNodeId());
           RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
@@ -490,7 +489,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //        protected TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> 
 //          getCommonAPITransportLayer(
 //              TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> upperIdentity, 
-//              TLPastryNode pn, TLDeserializer deserializer) {
+//              PastryNode pn, TLDeserializer deserializer) {
 //          
 //          final TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, RawMessage> tl = 
 //            super.getCommonAPITransportLayer(upperIdentity, pn, deserializer);
@@ -540,7 +539,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //            TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, 
 //            LivenessProvider<MultiInetSocketAddress> liveness, 
 //            ProximityProvider<MultiInetSocketAddress> prox, 
-//            TLPastryNode pn) {
+//            PastryNode pn) {
 //          final PriorityTransportLayerImpl<MultiInetSocketAddress> ret = 
 //            (PriorityTransportLayerImpl<MultiInetSocketAddress>)super.getPriorityTransportLayer(trans, liveness, prox, pn);          
 //          environment.getSelectorManager().getTimer().schedule(new TimerTask() {          
@@ -556,7 +555,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //        protected TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer>
 //          getLivenessTransportLayer(
 //            TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> tl, 
-//            TLPastryNode pn) {
+//            PastryNode pn) {
 //          
 //          TransLiveness<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl = 
 //            super.getLivenessTransportLayer(tl, pn);
@@ -594,7 +593,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    {
 //
 //      @Override
-//      public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
+//      public NodeHandle getLocalHandle(PastryNode pn, NodeHandleFactory nhf, Object localNodeInfo) {
 //        SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf, localNodeInfo);
 //        logger.log(ret.toStringFull());
 //        return ret;
@@ -606,7 +605,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //      }
 //      
 //      @Override
-//      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+//      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
 //        IdentifierSerializer<InetSocketAddress> serializer = new ISASerializer();
 //        
 //        HashProvider hashProv = new NullHashProvider();
@@ -863,11 +862,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //      final PastryNode node = factory.newNode();
       
       // need this mechanism to make the construction of the TL atomic, looking for better solution...
-      final ArrayList<TLPastryNode> holder = new ArrayList<TLPastryNode>();
+      final ArrayList<PastryNode> holder = new ArrayList<PastryNode>();
       env.getSelectorManager().invoke(new Runnable(){    
         public void run() {
           synchronized(holder) {
-            holder.add((TLPastryNode)factory.newNode());        
+            holder.add((PastryNode)factory.newNode());        
             holder.notify();
           }
         }    
@@ -880,7 +879,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       }
       
       running = true;
-      final TLPastryNode node = holder.get(0); //factory.newNode();
+      final PastryNode node = holder.get(0); //factory.newNode();
       ((PilotManager<RendezvousSocketNodeHandle>)node.getVars().get(RendezvousSocketPastryNodeFactory.RENDEZVOUS_TL))
           .addIncomingPilotListener(new MyPilotListener(node.getEnvironment().getLogManager().getLogger(IncomingPilotListener.class, null)));
       ((PilotManager<RendezvousSocketNodeHandle>)node.getVars().get(RendezvousSocketPastryNodeFactory.RENDEZVOUS_TL))

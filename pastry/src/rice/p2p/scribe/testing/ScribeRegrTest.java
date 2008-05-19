@@ -144,15 +144,15 @@ public class ScribeRegrTest extends CommonAPITest {
     }
 
     // Run each test
-//    testBasic(1, "Basic");
-//    testBasic(2, "Partial (1)");
-//    testBasic(4, "Partial (2)");
-//    testMultiSubscribe(1, "Basic");
-//    testSingleRoot("Single rooted Trees");
+    testBasic(1, "Basic");
+    testBasic(2, "Partial (1)");
+    testBasic(4, "Partial (2)");
+    testMultiSubscribe(1, "Basic");
+    testSingleRoot("Single rooted Trees");
     testAPI();
-//    testFailureNotification();
-//    testAddNode();    
-//    testMaintenance();
+    testFailureNotification();
+    testAddNode();    
+    testMaintenance();
 
   }
 

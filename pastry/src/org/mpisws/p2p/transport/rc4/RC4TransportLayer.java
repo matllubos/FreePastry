@@ -265,7 +265,7 @@ public class RC4TransportLayer<Identifier, MsgType> implements TransportLayer<Id
                   try {
                     Cipher encryptCipher = Cipher.getInstance(ALGORITHM);
                     encryptCipher.init(Cipher.ENCRYPT_MODE, encryptKey);
-                    deliverSocketToMe.receiveResult(ret, new EncryptedSocket<Identifier>(i,socket,logger,options,encryptCipher,decryptCipher,WRITE_BUFFER_SIZE));
+                    deliverSocketToMe.receiveResult(ret, new EncryptedSocket<Identifier>(i,socket,logger,errorHandler,options,encryptCipher,decryptCipher,WRITE_BUFFER_SIZE));
                   } catch (GeneralSecurityException gse) {
                     socket.close();
                     deliverSocketToMe.receiveException(ret, gse);
@@ -374,7 +374,7 @@ public class RC4TransportLayer<Identifier, MsgType> implements TransportLayer<Id
               }
               
               // we're done...
-              callback.incomingSocket(new EncryptedSocket<Identifier>(socket.getIdentifier(),socket,logger,socket.getOptions(),encryptCipher,decryptCipher,WRITE_BUFFER_SIZE));
+              callback.incomingSocket(new EncryptedSocket<Identifier>(socket.getIdentifier(),socket,logger,errorHandler,socket.getOptions(),encryptCipher,decryptCipher,WRITE_BUFFER_SIZE));
             }
             
             public void receiveException(P2PSocket<Identifier> socket,

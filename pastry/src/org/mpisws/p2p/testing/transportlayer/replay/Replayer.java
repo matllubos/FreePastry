@@ -80,12 +80,11 @@ import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketPastryNodeFactory;
-import rice.pastry.transport.TLPastryNode;
 import rice.selector.SelectorManager;
 
 public class Replayer implements MyEvents, EventCallback {
   InetSocketAddress bootaddress;
-  TLPastryNode node;
+  PastryNode node;
   MyScribeClient app;
   Logger logger;
   
@@ -116,7 +115,7 @@ public class Replayer implements MyEvents, EventCallback {
     },addr.getPort(),env) {
   
 //      @Override
-//      protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, TLPastryNode pn) {
+//      protected TransportLayer<MultiInetSocketAddress, ByteBuffer> getPriorityTransportLayer(TransportLayer<MultiInetSocketAddress, ByteBuffer> trans, LivenessProvider<MultiInetSocketAddress> liveness, ProximityProvider<MultiInetSocketAddress> prox, PastryNode pn) {
 //        // get rid of the priorityLayer
 //        if (params.getBoolean("org.mpisws.p2p.testing.transportlayer.replay.use_priority")) {
 //          return super.getPriorityTransportLayer(trans, liveness, prox, pn);
@@ -126,7 +125,7 @@ public class Replayer implements MyEvents, EventCallback {
 //      }
 
       @Override
-      public NodeHandle getLocalHandle(TLPastryNode pn, NodeHandleFactory nhf) {
+      public NodeHandle getLocalHandle(PastryNode pn, NodeHandleFactory nhf) {
         SocketNodeHandle ret = (SocketNodeHandle)super.getLocalHandle(pn, nhf);
         logger.log(ret.toStringFull());
         return ret;
@@ -138,7 +137,7 @@ public class Replayer implements MyEvents, EventCallback {
       }
       
       @Override
-      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+      protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
         IdentifierSerializer<InetSocketAddress> serializer = new ISASerializer();
         
         HashProvider hashProv = new NullHashProvider();
@@ -156,7 +155,7 @@ public class Replayer implements MyEvents, EventCallback {
     
     // construct a node, passing the null boothandle on the first loop will
     // cause the node to start its own ring
-    node = (TLPastryNode)factory.newNode();
+    node = (PastryNode)factory.newNode();
     app = new MyScribeClient(node);
     
     ReplaySM sim = (ReplaySM)env.getSelectorManager();

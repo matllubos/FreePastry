@@ -57,7 +57,6 @@ import rice.pastry.messaging.Message;
 import rice.pastry.routing.RouteMessage;
 import rice.pastry.transport.PMessageNotification;
 import rice.pastry.transport.PMessageReceipt;
-import rice.pastry.transport.TLPastryNode;
 import rice.selector.SelectorManager;
 import rice.selector.Timer;
 

@@ -44,8 +44,8 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousContact;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
+import rice.pastry.PastryNode;
 import rice.pastry.socket.SocketNodeHandle;
-import rice.pastry.transport.TLPastryNode;
 
 /**
  * Maintains RendezvousInfo with the NodeHandle
@@ -65,7 +65,7 @@ public class RendezvousSocketNodeHandle extends SocketNodeHandle implements Rend
 
   private byte contactStatus;
   
-  RendezvousSocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, TLPastryNode node, byte contactStatus) {
+  RendezvousSocketNodeHandle(MultiInetSocketAddress eisa, long epoch, Id id, PastryNode node, byte contactStatus) {
     super(eisa, epoch, id, node);
     this.contactStatus = contactStatus; 
   }
@@ -80,7 +80,7 @@ public class RendezvousSocketNodeHandle extends SocketNodeHandle implements Rend
     return contactStatus != CONTACT_FIREWALLED;
   }
 
-  static SocketNodeHandle build(InputBuffer buf, TLPastryNode local) throws IOException {
+  static SocketNodeHandle build(InputBuffer buf, PastryNode local) throws IOException {
     MultiInetSocketAddress eaddr = MultiInetSocketAddress.build(buf);
     long epoch = buf.readLong();
     Id nid = Id.build(buf);

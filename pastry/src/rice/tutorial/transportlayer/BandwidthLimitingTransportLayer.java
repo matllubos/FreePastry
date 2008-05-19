@@ -59,6 +59,7 @@ import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
 import org.mpisws.p2p.transport.sourceroute.SourceRoute;
 import org.mpisws.p2p.transport.sourceroute.factory.MultiAddressSourceRouteFactory;
+import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketWrapperSocket;
@@ -66,9 +67,9 @@ import org.mpisws.p2p.transport.util.SocketWrapperSocket;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
-import rice.pastry.transport.TLPastryNode;
 import rice.selector.TimerTask;
 
 public class BandwidthLimitingTransportLayer<Identifier> implements 
@@ -101,6 +102,8 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
    */
   protected int bucket;
 
+  protected ErrorHandler<Identifier> errorHandler;
+  
   /**
    * To send 10K/second specify use
    * 
@@ -118,6 +121,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     BUCKET_SIZE = bucketSize;
     BUCKET_TIME_LIMIT = bucketTimelimit;    
     logger = env.getLogManager().getLogger(BandwidthLimitingTransportLayer.class, null);
+    this.errorHandler = new DefaultErrorHandler<Identifier>(logger);
     tl.setCallback(this);
     
     environment.getSelectorManager().getTimer().schedule(new TimerTask(){    
@@ -198,6 +202,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
     public BandwidthLimitingSocket(P2PSocket<Identifier> socket) {
       super(socket.getIdentifier(), socket, 
           BandwidthLimitingTransportLayer.this.logger, 
+          BandwidthLimitingTransportLayer.this.errorHandler,
           socket.getOptions());
       synchronized(BandwidthLimitingTransportLayer.this) {
         sockets.add(this);
@@ -307,6 +312,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
   }
 
   public void setErrorHandler(ErrorHandler<Identifier> handler) {
+    this.errorHandler = handler;
     tl.setErrorHandler(handler);
   }
 
@@ -331,7 +337,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
        */
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(
-          InetSocketAddress innermostAddress, TLPastryNode pn) throws IOException {
+          InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
         // get the default layer
         TransportLayer<InetSocketAddress, ByteBuffer> wtl = 
           super.getWireTransportLayer(innermostAddress, pn);        
@@ -353,7 +359,7 @@ public class BandwidthLimitingTransportLayer<Identifier> implements
           TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> ltl, 
           LivenessProvider<SourceRoute<MultiInetSocketAddress>> livenessProvider, 
           Pinger<SourceRoute<MultiInetSocketAddress>> pinger, 
-          TLPastryNode pn, 
+          PastryNode pn, 
           MultiInetSocketAddress proxyAddress, 
           MultiAddressSourceRouteFactory esrFactory) throws IOException {
         

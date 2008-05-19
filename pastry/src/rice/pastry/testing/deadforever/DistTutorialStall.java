@@ -53,7 +53,6 @@ import rice.pastry.PastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
-import rice.pastry.transport.TLPastryNode;
 import rice.tutorial.lesson3.MyApp;
 
 /**

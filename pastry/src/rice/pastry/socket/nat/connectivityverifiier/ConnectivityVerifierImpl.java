@@ -54,8 +54,8 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.util.AttachableCancellable;
 import rice.pastry.Id;
+import rice.pastry.PastryNode;
 import rice.pastry.socket.SocketPastryNodeFactory;
-import rice.pastry.transport.TLPastryNode;
 
 public class ConnectivityVerifierImpl implements ConnectivityVerifier {
   SocketPastryNodeFactory spnf;
@@ -78,7 +78,7 @@ public class ConnectivityVerifierImpl implements ConnectivityVerifier {
     Runnable r = new Runnable() {
       public void run() {
         if (ret.isCancelled()) return;
-        TLPastryNode pn = new TLPastryNode(Id.build(), spnf.getEnvironment());
+        PastryNode pn = new PastryNode(Id.build(), spnf.getEnvironment());
     
         try {
           InetSocketAddressLookup lookup = (InetSocketAddressLookup)spnf.getBottomLayers(pn, new MultiInetSocketAddress(bindAddress));      

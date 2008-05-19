@@ -411,7 +411,7 @@ public class SourceRouteManagerImpl<Identifier> implements
       }
 
       public void receiveResult(SocketRequestHandle<SourceRoute<Identifier>> cancellable, P2PSocket<SourceRoute<Identifier>> sock) {
-        deliverSocketToMe.receiveResult(this, new SourceRouteManagerP2PSocket<Identifier>(sock, environment));
+        deliverSocketToMe.receiveResult(this, new SourceRouteManagerP2PSocket<Identifier>(sock, logger, errorHandler, environment));
       }
       
       public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, Exception ex) {
@@ -604,7 +604,7 @@ public class SourceRouteManagerImpl<Identifier> implements
           public void receiveResult(
               SocketRequestHandle<SourceRoute<Identifier>> cancellable, 
               P2PSocket<SourceRoute<Identifier>> sock) {
-            deliverSocketToMe.receiveResult(handle, new SourceRouteManagerP2PSocket<Identifier>(sock, environment));
+            deliverSocketToMe.receiveResult(handle, new SourceRouteManagerP2PSocket<Identifier>(sock, logger, errorHandler, environment));
           }        
           public void receiveException(SocketRequestHandle<SourceRoute<Identifier>> s, Exception ex) {
             deliverSocketToMe.receiveException(handle, ex);
@@ -1073,7 +1073,7 @@ public class SourceRouteManagerImpl<Identifier> implements
 //  }
 
   public void incomingSocket(P2PSocket<SourceRoute<Identifier>> s) throws IOException {
-    callback.incomingSocket(new SourceRouteManagerP2PSocket<Identifier>(s, environment));
+    callback.incomingSocket(new SourceRouteManagerP2PSocket<Identifier>(s, logger, errorHandler, environment));
   }
 
   public void messageReceived(SourceRoute<Identifier> i, ByteBuffer m, Map<String, Object> options) throws IOException {

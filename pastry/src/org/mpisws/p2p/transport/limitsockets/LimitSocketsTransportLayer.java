@@ -54,6 +54,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 import org.mpisws.p2p.transport.util.SocketWrapperSocket;
 
@@ -77,13 +78,19 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
   protected Logger logger;
   protected TransportLayerCallback<Identifier, MessageType> callback;
   protected Timer timer;
+  protected ErrorHandler<Identifier> handler;
+
   
-  public LimitSocketsTransportLayer(int max_sockets, TransportLayer<Identifier, MessageType> tl, Environment env) {
+  public LimitSocketsTransportLayer(int max_sockets, TransportLayer<Identifier, MessageType> tl, ErrorHandler<Identifier> handler, Environment env) {
     this.MAX_SOCKETS = max_sockets;
     this.tl = tl;
     this.logger = env.getLogManager().getLogger(LimitSocketsTransportLayer.class, null);
     this.timer = env.getSelectorManager().getTimer();
     this.cache = new LinkedHashMap<LSSocket, LSSocket>(MAX_SOCKETS,0.75f,true);
+    this.handler = handler;
+    if (this.handler == null) {
+      this.handler = new DefaultErrorHandler<Identifier>(logger);
+    }
     
     tl.setCallback(this);
   }
@@ -151,7 +158,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
     boolean closed = false;
     boolean forcedClose = false;
     public LSSocket(P2PSocket<Identifier> socket) {
-      super(socket.getIdentifier(), socket, LimitSocketsTransportLayer.this.logger, socket.getOptions());
+      super(socket.getIdentifier(), socket, LimitSocketsTransportLayer.this.logger, handler, socket.getOptions());
     }
     
     /**
@@ -269,6 +276,7 @@ public class LimitSocketsTransportLayer<Identifier, MessageType> implements Tran
   }
 
   public void setErrorHandler(ErrorHandler<Identifier> handler) {
+    this.handler = handler;
     tl.setErrorHandler(handler);    
   }
 

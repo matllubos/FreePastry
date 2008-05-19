@@ -43,8 +43,8 @@ import org.mpisws.p2p.transport.rendezvous.PilotFinder;
 
 import rice.environment.random.RandomSource;
 import rice.pastry.NodeHandle;
+import rice.pastry.PastryNode;
 import rice.pastry.leafset.LeafSet;
-import rice.pastry.transport.TLPastryNode;
 
 public class LeafSetPilotFinder implements
     PilotFinder<RendezvousSocketNodeHandle> {
@@ -52,7 +52,7 @@ public class LeafSetPilotFinder implements
   RandomSource random;
   
   
-  public LeafSetPilotFinder(TLPastryNode pn) {
+  public LeafSetPilotFinder(PastryNode pn) {
     this.leafSet = pn.getLeafSet();
     this.random = pn.getEnvironment().getRandomSource();
   }

@@ -43,7 +43,7 @@ import org.mpisws.p2p.transport.rendezvous.RendezvousGenerationStrategy;
 
 import rice.environment.random.RandomSource;
 import rice.pastry.NodeHandle;
-import rice.pastry.transport.TLPastryNode;
+import rice.pastry.PastryNode;
 
 /**
  * Update RendezvousInfo based on the LeafSet
@@ -53,10 +53,10 @@ import rice.pastry.transport.TLPastryNode;
  */
 public class LeafSetRendezvousStrategy implements RendezvousGenerationStrategy<RendezvousSocketNodeHandle>{
 
-  protected TLPastryNode pn;
+  protected PastryNode pn;
   protected RandomSource random;
 
-  public LeafSetRendezvousStrategy(TLPastryNode pn, RandomSource r) {
+  public LeafSetRendezvousStrategy(PastryNode pn, RandomSource r) {
     this.pn = pn;
     this.random = r;
   }

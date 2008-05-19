@@ -1049,7 +1049,7 @@ public class LivenessTransportLayerImpl<Identifier> implements
     boolean closed = false;
     
     public LSocket(EntityManager manager, P2PSocket<Identifier> socket, Identifier hardRef) {
-      super(socket.getIdentifier(), socket, LivenessTransportLayerImpl.this.logger, socket.getOptions());
+      super(socket.getIdentifier(), socket, LivenessTransportLayerImpl.this.logger, LivenessTransportLayerImpl.this.errorHandler, socket.getOptions());
       if (hardRef == null) throw new IllegalArgumentException("hardRef == null "+manager+" "+socket);
       this.manager = manager;
       this.hardRef = hardRef;

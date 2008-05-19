@@ -100,7 +100,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     routeSetMaintFreq = params.getInt("pastry_routeSetMaintFreq");
   }
     
-  protected TLPastryNode nodeHandleHelper(TLPastryNode pn) throws IOException {
+  protected PastryNode nodeHandleHelper(PastryNode pn) throws IOException {
 //    final Object lock = new Object();
 //    final ArrayList<IOException> retException = new ArrayList<IOException>();
 //    Object nhaPart1 = getnodeHandleAdapterPart1(pn);
@@ -135,7 +135,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     return null; // use the default one
   }
   
-  protected void registerApps(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory) {
+  protected void registerApps(PastryNode pn, LeafSet leafSet, RoutingTable routeTable, NodeHandleAdapter nha, NodeHandleFactory handleFactory) {
     ProximityNeighborSelector pns = getProximityNeighborSelector(pn);
     
     Bootstrapper bootstrapper = getBootstrapper(pn, nha, handleFactory, pns);          
@@ -149,13 +149,13 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     pn.setJoinProtocols(bootstrapper, jProtocol, lsProtocol, rsProtocol);    
   }
   
-  protected RouteSetProtocol getRouteSetProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable) {
+  protected RouteSetProtocol getRouteSetProtocol(PastryNode pn, LeafSet leafSet, RoutingTable routeTable) {
     StandardRouteSetProtocol rsProtocol = new StandardRouteSetProtocol(pn, routeTable);    
     rsProtocol.register();
     return rsProtocol;
   }
   
-  protected LeafSetProtocol getLeafSetProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable) {
+  protected LeafSetProtocol getLeafSetProtocol(PastryNode pn, LeafSet leafSet, RoutingTable routeTable) {
     PeriodicLeafSetProtocol lsProtocol = new PeriodicLeafSetProtocol(pn,
         pn.getLocalHandle(), leafSet, routeTable);    
 //    StandardLeafSetProtocol lsProtocol = new StandardLeafSetProtocol(pn,pn.getLocalHandle(),leafSet,routeTable);
@@ -164,7 +164,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     
   }
   
-  protected JoinProtocol getJoinProtocol(TLPastryNode pn, LeafSet leafSet, RoutingTable routeTable, LeafSetProtocol lsProtocol) {
+  protected JoinProtocol getJoinProtocol(PastryNode pn, LeafSet leafSet, RoutingTable routeTable, LeafSetProtocol lsProtocol) {
     ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
         pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol);
 //    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn,pn.getLocalHandle(), routeTable, leafSet);
@@ -172,7 +172,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     return jProtocol;    
   }
   
-  protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, TLPastryNode pn) {
+  protected TLDeserializer getTLDeserializer(NodeHandleFactory handleFactory, PastryNode pn) {
     TLDeserializer deserializer = new TLDeserializer(handleFactory, pn.getEnvironment());
     return deserializer;
   }
@@ -182,7 +182,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
    * @param pn
    * @return
    */
-  protected ProximityNeighborSelector getProximityNeighborSelector(TLPastryNode pn) {    
+  protected ProximityNeighborSelector getProximityNeighborSelector(PastryNode pn) {    
     if (environment.getParameters().getBoolean("transport_use_pns")) {
       PNSApplication pns = new PNSApplication(pn);
       pns.register();
@@ -198,12 +198,12 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     };
   }
     
-  protected abstract NodeHandle getLocalHandle(TLPastryNode pn, 
+  protected abstract NodeHandle getLocalHandle(PastryNode pn, 
       NodeHandleFactory handleFactory) throws IOException;
-  protected abstract NodeHandleAdapter getNodeHandleAdapter(TLPastryNode pn, 
+  protected abstract NodeHandleAdapter getNodeHandleAdapter(PastryNode pn, 
       NodeHandleFactory handleFactory, TLDeserializer deserializer) throws IOException;
-  protected abstract NodeHandleFactory getNodeHandleFactory(TLPastryNode pn) throws IOException;
-  protected abstract Bootstrapper getBootstrapper(TLPastryNode pn, 
+  protected abstract NodeHandleFactory getNodeHandleFactory(PastryNode pn) throws IOException;
+  protected abstract Bootstrapper getBootstrapper(PastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
       ProximityNeighborSelector pns);  

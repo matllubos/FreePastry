@@ -59,6 +59,7 @@ import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.sourceroute.Forwarder;
+import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.InsufficientBytesException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.OptionsFactory;
@@ -177,6 +178,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
   protected TimeSource time;
   protected EphemeralDB<Identifier, HighIdentifier> ephemeralDB;
   protected ContactDirectStrategy<HighIdentifier> contactDirectStrategy;
+  protected ErrorHandler<Identifier> errorHandler;
   
   public RendezvousTransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
@@ -202,6 +204,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     this.responseStrategy = responseStrategy;
     this.contactDirectStrategy = contactDirectStrategy;
     this.ephemeralDB = new EphemeralDBImpl<Identifier, HighIdentifier>(env,2*60*60*1000); // TODO: make this a configurable parameter
+    this.errorHandler = new DefaultErrorHandler<Identifier>(logger);
     
     this.logger = env.getLogManager().getLogger(RendezvousTransportLayerImpl.class, null);
     tl.setCallback(this);
@@ -575,7 +578,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
 
               public void receiveResult(P2PSocket<Identifier> result) {
                 // need to return a wrapper with the proper options from deliverSocketToMe.b().getOptions(), do we need to merge these?  Probably 
-                deliverSocketToMe.a().receiveResult(deliverSocketToMe.b(), new SocketWrapperSocket<Identifier, Identifier>(result.getIdentifier(),result,logger,OptionsFactory.merge(deliverSocketToMe.b().getOptions(),result.getOptions())));
+                deliverSocketToMe.a().receiveResult(deliverSocketToMe.b(), new SocketWrapperSocket<Identifier, Identifier>(result.getIdentifier(),result,logger,errorHandler,OptionsFactory.merge(deliverSocketToMe.b().getOptions(),result.getOptions())));
               }}).receiveSelectResult(acceptorSocket, false, true);
             return;
           }
@@ -1099,7 +1102,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     this.callback = callback;
   }
   public void setErrorHandler(ErrorHandler<Identifier> handler) {
-    // TODO Auto-generated method stub    
+    this.errorHandler = handler;
   }
   public void destroy() {
     tl.destroy();

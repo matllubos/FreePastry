@@ -177,7 +177,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
               if (b.hasRemaining()) {
                 socket.register(false, true, this); 
               } else {
-                deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(i, socket, logger, socket.getOptions())); 
+                deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(i, socket, logger, errorHandler, socket.getOptions())); 
               }
             }
           
@@ -188,7 +188,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
           }); 
           
         } else {
-          deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(i, result, logger, result.getOptions()));            
+          deliverSocketToMe.receiveResult(handle, new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(i, result, logger, errorHandler, result.getOptions()));            
         }
       }    
       public void receiveException(SocketRequestHandle<InetSocketAddress> c, Exception exception) {
@@ -213,7 +213,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
           try {
             MultiInetSocketAddress eisa = MultiInetSocketAddress.build(sib);
             if (logger.level <= Logger.FINEST) logger.log("Read "+eisa);
-            callback.incomingSocket(new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(eisa, socket, logger, socket.getOptions()));
+            callback.incomingSocket(new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(eisa, socket, logger, errorHandler, socket.getOptions()));
           } catch (InsufficientBytesException ibe) {
             socket.register(true, false, this); 
           } catch (IOException e) {
@@ -230,7 +230,7 @@ public class MultiInetAddressTransportLayerImpl implements MultiInetAddressTrans
       // just pass up the socket
       callback.incomingSocket(
           new SocketWrapperSocket<MultiInetSocketAddress, InetSocketAddress>(
-              new MultiInetSocketAddress(s.getIdentifier()),s, logger, s.getOptions())); 
+              new MultiInetSocketAddress(s.getIdentifier()),s, logger, errorHandler, s.getOptions())); 
     }
   }
 

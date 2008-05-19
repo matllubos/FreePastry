@@ -51,15 +51,15 @@ import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeHandleFactoryListener;
-import rice.pastry.transport.TLPastryNode;
+import rice.pastry.PastryNode;
 
 public class SocketNodeHandleFactory implements NodeHandleFactory<SocketNodeHandle> {
-  protected TLPastryNode pn;
+  protected PastryNode pn;
   protected Map<SocketNodeHandle, SocketNodeHandle> handleSet;
   protected Collection<NodeHandleFactoryListener<SocketNodeHandle>> listeners = new ArrayList<NodeHandleFactoryListener<SocketNodeHandle>>();
   Logger logger;
   
-  public SocketNodeHandleFactory(TLPastryNode pn) {
+  public SocketNodeHandleFactory(PastryNode pn) {
     this.pn = pn;
     this.logger = pn.getEnvironment().getLogManager().getLogger(SocketNodeHandleFactory.class, null);
     

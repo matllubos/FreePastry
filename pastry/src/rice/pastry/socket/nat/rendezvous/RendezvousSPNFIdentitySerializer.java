@@ -44,15 +44,15 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
+import rice.pastry.PastryNode;
 import rice.pastry.socket.SPNFIdentitySerializer;
 import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
-import rice.pastry.transport.TLPastryNode;
 
 public class RendezvousSPNFIdentitySerializer extends SPNFIdentitySerializer {
 
-  protected RendezvousSPNFIdentitySerializer(TLPastryNode pn, SocketNodeHandleFactory factory) {
+  protected RendezvousSPNFIdentitySerializer(PastryNode pn, SocketNodeHandleFactory factory) {
     super(pn, factory);
   }
 

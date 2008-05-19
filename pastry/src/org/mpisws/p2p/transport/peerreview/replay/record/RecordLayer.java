@@ -54,6 +54,7 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
 import rice.environment.Environment;
@@ -89,6 +90,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   TransportLayer<Identifier, ByteBuffer> tl;
   TransportLayerCallback<Identifier, ByteBuffer> callback;
   IdentifierSerializer<Identifier> identifierSerializer;
+  ErrorHandler<Identifier> handler;
   
   SecureHistory history;
   Logger logger;
@@ -121,6 +123,8 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     
     this.environment = env;
     this.lastLogEntry = -1;
+    
+    this.handler = new DefaultErrorHandler<Identifier>(logger);
 
 //    env.addDestructable(this);  // TransportLayer will alrady call this.
     
@@ -282,8 +286,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   }
 
   public void setErrorHandler(ErrorHandler<Identifier> handler) {
-    // TODO Auto-generated method stub
-    
+    this.handler = handler;
   }
 
   public void destroy() {

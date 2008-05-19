@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
 
@@ -61,12 +62,14 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
   protected Map<String, Object> options;
   // TODO: make getters
   protected P2PSocketReceiver<Identifier> reader, writer;
+  protected ErrorHandler<Identifier> errorHandler;
   
-  public SocketWrapperSocket(Identifier identifier, P2PSocket<SubIdentifier> socket, Logger logger, Map<String, Object> options) {
+  public SocketWrapperSocket(Identifier identifier, P2PSocket<SubIdentifier> socket, Logger logger, ErrorHandler<Identifier> errorHandler, Map<String, Object> options) {
     this.identifier = identifier;
     this.socket = socket;
     this.logger = logger;
     this.options = options;
+    this.errorHandler = errorHandler;
   }
   
   public Identifier getIdentifier() {
@@ -172,7 +175,7 @@ public class SocketWrapperSocket<Identifier, SubIdentifier> implements P2PSocket
       reader = null;
       temp.receiveException(this, e);
     }
-    if (reader == null && writer == null && logger.level <= Logger.WARNING) logger.logException("",e);
+    if (reader == null && writer == null && errorHandler != null) errorHandler.receivedException(getIdentifier(), e);
 //    receiver.receiveException(SocketWrapperSocket.this, e);
   }    
 
