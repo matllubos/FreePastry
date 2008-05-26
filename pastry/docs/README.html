@@ -7,7 +7,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 2.1alpha3,&nbsp; 7 December 2007.
+Release 2.1beta1,&nbsp; 26 May, 2008.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://freepastry.org/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -117,6 +117,19 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.5.0+. The software was
 developed using Sun's SDK, version 1.5.0+
+
+<h3>Changes since release 2.1alpha3</h3>
+<ul>
+  <li>Support for NATs w/o using UPnP</li>
+  <ul><li>rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory -- Will relay traffic for NATted nodes.</li>
+      <li>rice.pastry.socket.internet.InternetPastryNodeFactory -- Autoconfigures RendezvousSocketPastryNodeFactory</li></ul>      
+</ul>
+<p/>Many Bug Fixes, including:
+<ul>
+  <li>Fixed bug causing newNode to stall/deadlock on some versions of linux.</li>
+  <li>Fixed a problem with replication in the PastryEndpoint.</li>
+  <li>Can boot from a NATted node as long as it has proper port forwarding.</li>
+</ul>
 
 <h3>Changes since release 2.1alpha2</h3>
 <ul>
