@@ -151,6 +151,9 @@ public class DirectAppSocket<Identifier, MessageType> {
       int lengthRead = 0;
       
       synchronized(this) {
+        if (byteDeliveries.isEmpty()) {
+          return 0;
+        }
         if (byteDeliveries.getFirst() == EOF) {
 //          inputClosed = true;
           return -1;          
