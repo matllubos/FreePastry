@@ -182,7 +182,7 @@ public class RendezvousPNSApplication extends PNSApplication {
           if (rs != null) {
             for (NodeHandle handle : rs) {
               if (handle != null && !useHandle(handle)) {
-                if (logger.level <= Logger.FINE) logger.log("getRouteRow("+input+","+row+") Dropping "+handle);
+                if (logger.level <= Logger.FINE) logger.log("getRouteRow("+input+","+row+") Dropping "+handle+" because it is FireWalled");
                 rs.remove(handle);
               }
             }

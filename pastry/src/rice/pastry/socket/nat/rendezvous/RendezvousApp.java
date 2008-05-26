@@ -214,6 +214,10 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
     }
   }
 
+  public boolean deliverWhenNotReady() {
+    return true;
+  }  
+
   public Cancellable openChannel(final RendezvousSocketNodeHandle target, 
       final RendezvousSocketNodeHandle rendezvous, 
       final RendezvousSocketNodeHandle source,
@@ -304,7 +308,7 @@ public class RendezvousApp extends PastryAppl implements RendezvousStrategy<Rend
       final ByteBuffer m, 
       final MessageCallback<RendezvousSocketNodeHandle, ByteBuffer> deliverAckToMe, 
       Map<String, Object> ops) {
-    if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
+    if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+ops+")");
     // TODO: use the new method in PastryAppl
     
     // pull USE_UDP, because that's not going to happen

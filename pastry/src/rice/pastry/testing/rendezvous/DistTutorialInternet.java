@@ -150,9 +150,9 @@ public class DistTutorialInternet {
    * example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
    */
   public static void main(String[] args) throws Exception {
-//    System.setOut(new PrintStream("minerva"+System.currentTimeMillis()+".txt"));
+    System.setOut(new PrintStream("minerva"+System.currentTimeMillis()+".txt"));
 //    System.setOut(new PrintStream("~/logz/minerva"+System.currentTimeMillis()+".txt"));
-    System.setOut(new PrintStream("M:\\unix-home\\logz\\janus"+System.currentTimeMillis()+".txt"));
+//    System.setOut(new PrintStream("M:\\unix-home\\logz\\janus"+System.currentTimeMillis()+".txt"));
     System.setErr(System.out);
     
     // Loads pastry settings

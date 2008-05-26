@@ -118,22 +118,23 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     
 //    params.setInt("rice.environment.time.simulated_loglevel", Logger.WARNING);
     
-//  params.setInt("rice.pastry_loglevel", Logger.INFO);
-    // ******** we overrode SPNF make sure to alos override routeconsistent *******
+    params.setInt("rice.pastry_loglevel", Logger.INFO);
+    // ******** we overrode SPNF make sure to also override routeconsistent *******
 //    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
 //    params.setInt("rice.testing.routeconsistent_loglevel", Logger.INFO);
     params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO-1);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
-//      params.setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
+      params.setInt("org.mpisws.p2p.transport.wire.TCPLayer_loglevel", Logger.FINER);
 //    params.setInt("rice.pastry.transport_loglevel", Logger.CONFIG);
 //    params.setInt("rice.pastry.transport.PastryNode_loglevel", Logger.FINE);
 //    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
-//    params.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINE);
-    params.setInt("org.mpisws.p2p.transport.limitsockets_loglevel", Logger.FINER);
+    params.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINEST);
+    params.setInt("rice.pastry.socket.nat.rendezvous.RendezvousApp_loglevel", Logger.FINEST);
+//    params.setInt("org.mpisws.p2p.transport.limitsockets_loglevel", Logger.FINER);
 //    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINEST);
     
@@ -142,8 +143,11 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     
     // turn on consistent join protocol's logger to make sure this is correct for consistency
 //    params.setInt("rice.pastry.standard.ConsistentJoinProtocol_loglevel",Logger.INFO);
-//    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.INFO);
-    
+    params.setInt("rice.pastry.standard.PeriodicLeafSetProtocol_loglevel",Logger.FINE);
+    // to see the JoinRequests
+//    params.setInt("rice.pastry.socket.nat.rendezvous.RendezvousJoinProtocol_loglevel", Logger.CONFIG);
+
+    params.setInt("rice.pastry.socket.nat.rendezvous_loglevel", Logger.FINE);
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
     
@@ -432,14 +436,17 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       Parameters p = env.getParameters(); 
       setupParams(p);
 
-      p.setBoolean("rendezvous_test_firewall", true);
-      // should require boot node to not be firewalled
-      p.setBoolean("rendezvous_test_makes_bootstrap", isBootNode);
-      if (isJanus) {
-        p.setFloat("rendezvous_test_num_firewalled", 1.0f);
-      } else {
-        p.setFloat("rendezvous_test_num_firewalled", 0.5f);
-      }
+      boolean testFirewall = true;
+      if (testFirewall) {      
+        p.setBoolean("rendezvous_test_firewall", true);
+        // should require boot node to not be firewalled
+        p.setBoolean("rendezvous_test_makes_bootstrap", isBootNode);
+        if (isJanus) {
+          p.setFloat("rendezvous_test_num_firewalled", 1.0f);
+        } else {
+          p.setFloat("rendezvous_test_num_firewalled", 0.5f);
+        }
+      }      
       
       // Generate the NodeIds Randomly
       NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -793,23 +800,23 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 
 //    networkActivity = new MyNetworkListener();
       final BooleanHolder imaliveRunning = new BooleanHolder();
-      final Runtime r = Runtime.getRuntime();
-      new Thread(new Runnable() {
-        public void run() {
-          while(imaliveRunning.running) {
-//            String foo = networkActivity.clobber();
-//            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" "+foo);
-            long free = r.freeMemory();
-            long total = r.totalMemory();
-            long allocated = total-free;
-            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" a:"+allocated+" f:"+free+" t:"+total);
-                
-            try {
-              Thread.sleep(15000);
-            } catch (Exception e) {}
-          } 
-        }
-      },"ImALIVE").start();
+//      final Runtime r = Runtime.getRuntime();
+//      new Thread(new Runnable() {
+//        public void run() {
+//          while(imaliveRunning.running) {
+////            String foo = networkActivity.clobber();
+////            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" "+foo);
+//            long free = r.freeMemory();
+//            long total = r.totalMemory();
+//            long allocated = total-free;
+//            System.out.println("ImALIVE:"+environment.getTimeSource().currentTimeMillis()+" a:"+allocated+" f:"+free+" t:"+total);
+//                
+//            try {
+//              Thread.sleep(15000);
+//            } catch (Exception e) {}
+//          } 
+//        }
+//      },"ImALIVE").start();
       
       // test port bindings before proceeding
       int tries = 0;

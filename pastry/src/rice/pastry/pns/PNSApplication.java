@@ -119,6 +119,13 @@ public class PNSApplication extends PastryAppl implements ProximityNeighborSelec
     depth = (short)(Id.IdBitLength / rtBase);
   }
 
+  /**
+   * We always want to receive messages.
+   */
+  public boolean deliverWhenNotReady() {
+    return true;
+  }
+
   @Override
   public void messageForAppl(Message msg) {
 //    logger.log("messageForAppl("+msg+")");

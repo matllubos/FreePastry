@@ -204,9 +204,9 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     this.responseStrategy = responseStrategy;
     this.contactDirectStrategy = contactDirectStrategy;
     this.ephemeralDB = new EphemeralDBImpl<Identifier, HighIdentifier>(env,2*60*60*1000); // TODO: make this a configurable parameter
+    this.logger = env.getLogManager().getLogger(RendezvousTransportLayerImpl.class, null);
     this.errorHandler = new DefaultErrorHandler<Identifier>(logger);
     
-    this.logger = env.getLogManager().getLogger(RendezvousTransportLayerImpl.class, null);
     tl.setCallback(this);
   }
   
@@ -1192,7 +1192,9 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     synchronized(outgoingPilots) {
       closeMe = outgoingPilots.remove(i);
     }
-    notifyOutgoingPilotRemoved(i);
+    
+    // called in cancel()
+//    notifyOutgoingPilotRemoved(i);
     
     if (closeMe != null) {
       closeMe.cancel();
@@ -1369,10 +1371,14 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
       } else {
         socket.close();        
       }
+      
+      
+      OutgoingPilot pilot = null;
       synchronized(outgoingPilots) {
-        outgoingPilots.remove(i);
+        pilot  = outgoingPilots.remove(i);
       }
-      notifyOutgoingPilotRemoved(i);
+      // cancel gets called a few times sometimes, so this notifies only once
+      if (pilot != null) notifyOutgoingPilotRemoved(i);
       return true;
     }
 
@@ -1484,8 +1490,8 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
     public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
       if (i != null) {
         if (logger.level <= Logger.FINER) logger.log("Shutdown of incoming pilot "+socket);
-        incomingPilots.remove(i);
-        notifyIncomingPilotRemoved(i);
+        IncomingPilot pilot = incomingPilots.remove(i);        
+        if (pilot != null) notifyIncomingPilotRemoved(i);
       }
       socket.close();
     }

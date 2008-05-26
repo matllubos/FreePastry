@@ -56,13 +56,14 @@ public class DefaultErrorHandler<Identifier> implements
     ErrorHandler<Identifier> {
   public int NUM_BYTES_TO_PRINT = 8;
   protected int printlevel;
-  Logger logger;
+  private Logger logger;
   
   public DefaultErrorHandler(Logger logger) {
     this(logger, Logger.INFO);
   }
   
   public DefaultErrorHandler(Logger logger, int printlevel) {
+    if (logger == null) throw new IllegalArgumentException("logger is null");
     this.logger = logger;
     this.printlevel = printlevel;
   }

@@ -220,7 +220,7 @@ public class StandardJoinProtocol extends PastryAppl implements JoinProtocol {
           }
         
           public void sendFailed(RouteMessage message, Exception e) {
-            if (logger.level <= Logger.CONFIG) logger.log("sendFailed("+message+")");
+            if (logger.level <= Logger.CONFIG) logger.logException("sendFailed("+message+") ",e);
           }          
         });
         

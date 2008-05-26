@@ -78,4 +78,8 @@ public class MessageRequestHandleImpl<Identifier, MessageType> implements Messag
   public Cancellable getSubCancellable() {
     return subCancellable;
   }
+  
+  public String toString() {
+    return "MRHi("+identifier+","+msg+","+options+")";
+  }
 }

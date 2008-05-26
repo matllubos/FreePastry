@@ -59,10 +59,23 @@ public class RendezvousContactDirectStrategy implements ContactDirectStrategy<Re
     this.logger = environment.getLogManager().getLogger(RendezvousContactDirectStrategy.class, null);
   }
 
+  /**
+   * Return true if they're behind the same firewall
+   * 
+   * If the address I should use to contact the node is the same as his internal address
+   * 
+   */
   public boolean canContactDirect(RendezvousSocketNodeHandle remoteNode) {    
     if (remoteNode.canContactDirect()) return true;
-    boolean ret = addressStrategy.getAddress(localAddr, remoteNode.getAddress()).equals(remoteNode.getAddress().getInnermostAddress());
-    if (ret && logger.level <= Logger.FINE) logger.log("rendezvous contacting direct:"+remoteNode); 
-    return ret;
+    
+    MultiInetSocketAddress a = remoteNode.getAddress();
+    if (a.getNumAddresses() == 1) {
+      // they're on the same physical node
+      return a.getInnermostAddress().getAddress().equals(localAddr.getInnermostAddress().getAddress());
+    } else {
+      boolean ret = addressStrategy.getAddress(localAddr, a).equals(a.getInnermostAddress());
+      if (ret && logger.level <= Logger.FINE) logger.log("rendezvous contacting direct:"+remoteNode); 
+      return ret;
+    }
   }
 }
