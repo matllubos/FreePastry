@@ -333,6 +333,8 @@ public interface Endpoint extends NodeHandleReader {
   
   public NodeHandleSet readNodeHandleSet(InputBuffer buf, short type) throws IOException;
   
+  public NodeHandle readNodeHandle(InputBuffer buf) throws IOException;
+  
   /**
    * Call this after you have set up your Endpoint:
    *   called setDeserializer(), called accept().

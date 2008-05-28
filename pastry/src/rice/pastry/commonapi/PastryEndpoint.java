@@ -495,16 +495,17 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   }
 
   public final boolean enrouteMessage(rice.pastry.messaging.Message msg, rice.pastry.Id key, rice.pastry.NodeHandle nextHop, SendOptions opt) {
-    if (msg instanceof RouteMessage) {
-      if (logger.level <= Logger.FINER) logger.log(
-          "[" + thePastryNode + "] forward " + msg);
-      boolean ret = application.forward((RouteMessage) msg);
-      if (logger.level <= Logger.FINEST) logger.log(
-          "[" + thePastryNode + "] forward " + msg + " forwarding?:"+ret);
-      return ret;
-    } else {
-      return true;
-    }
+    throw new RuntimeException("Should not be called, should only be handled by PastryEndpoint.receiveMessage()");
+//    if (msg instanceof RouteMessage) {
+//      if (logger.level <= Logger.FINER) logger.log(
+//          "[" + thePastryNode + "] forward " + msg);
+//      boolean ret = application.forward((RouteMessage) msg);
+//      if (logger.level <= Logger.FINEST) logger.log(
+//          "[" + thePastryNode + "] forward " + msg + " forwarding?:"+ret);
+//      return ret;
+//    } else {
+//      return true;
+//    }
   }
 
   public void leafSetChange(rice.pastry.NodeHandle nh, boolean wasAdded) {

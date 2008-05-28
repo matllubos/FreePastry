@@ -61,6 +61,7 @@ import rice.pastry.dist.*;
 import rice.pastry.leafset.BroadcastLeafSet;
 import rice.pastry.leafset.RequestLeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.socket.nat.rendezvous.RendezvousSocketPastryNodeFactory;
 import rice.pastry.standard.*;
 import rice.selector.SelectorManager;
 
@@ -187,11 +188,11 @@ public abstract class CommonAPITest {
       
       factory = new DirectPastryNodeFactory(idFactory, simulator, env);
     } else if (PROTOCOL.equalsIgnoreCase(PROTOCOL_SOCKET)) {
-      factory = DistPastryNodeFactory.getFactory(idFactory,
-          DistPastryNodeFactory.PROTOCOL_SOCKET,PORT,env);
+      InetSocketAddress address = params.getInetSocketAddress("commonapi_testing_bootstrap");
+      factory = new SocketPastryNodeFactory(idFactory, address.getAddress(), PORT, env);
     } else if (PROTOCOL.equalsIgnoreCase(PROTOCOL_RENDEZVOUS)) {
-      factory = DistPastryNodeFactory.getFactory(idFactory,
-          DistPastryNodeFactory.PROTOCOL_RENDEZVOUS,PORT,env);
+      InetSocketAddress address = params.getInetSocketAddress("commonapi_testing_bootstrap");
+      factory = new RendezvousSocketPastryNodeFactory(idFactory, address.getAddress(), PORT, env, false);
     }
 
     if (factory == null) {

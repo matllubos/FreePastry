@@ -539,7 +539,7 @@ public abstract class PastryAppl /*implements Observer*/
     return receiver != null;
   }
   
-  public void finishReceiveSocket(AppSocket socket) {
+  public void finishReceiveSocket(AppSocket socket) throws IOException {
     AppSocketReceiver theReceiver = receiver;
     receiver = null;
     theReceiver.receiveSocket(socket);    
