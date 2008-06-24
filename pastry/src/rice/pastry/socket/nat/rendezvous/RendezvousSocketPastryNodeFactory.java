@@ -92,6 +92,7 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
+import rice.pastry.ReadyStrategy;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
@@ -219,9 +220,9 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
   
   @Override
   protected JoinProtocol getJoinProtocol(PastryNode pn, LeafSet leafSet,
-      RoutingTable routeTable, LeafSetProtocol lsProtocol) {
+      RoutingTable routeTable, ReadyStrategy lsProtocol) {
     RendezvousJoinProtocol jProtocol = new RendezvousJoinProtocol(pn,
-        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol, (PilotManager<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_TL));
+        pn.getLocalHandle(), routeTable, leafSet, lsProtocol, (PilotManager<RendezvousSocketNodeHandle>)pn.getVars().get(RENDEZVOUS_TL));
     jProtocol.register();
     return jProtocol;    
   }

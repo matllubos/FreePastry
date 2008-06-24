@@ -92,7 +92,7 @@ public class ProfileSelector extends SelectorManager {
             Thread.sleep(60000);
           } catch (InterruptedException ie) {
           }
-          }
+        }
       }
     }, "ProfileSelectorWatchdog").start();
 

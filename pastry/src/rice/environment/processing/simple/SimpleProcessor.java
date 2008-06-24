@@ -84,12 +84,12 @@ public class SimpleProcessor implements Processor {
    * @param command
    *          The command to return the result to once it's done
    */
-  public void process(Executable task, Continuation command,
+  public <R, E extends Exception> void process(Executable<R> task, Continuation<R, E> command,
       SelectorManager selector, TimeSource ts, LogManager log) {
     process(task, command, 0, selector, ts, log);
   }
 
-  public void process(Executable task, Continuation command, int priority,
+  public <R, E extends Exception> void process(Executable<R> task, Continuation<R, E> command, int priority,
       SelectorManager selector, TimeSource ts, LogManager log) {
     long nextSeq;
     synchronized(SimpleProcessor.this) {

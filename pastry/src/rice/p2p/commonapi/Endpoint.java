@@ -350,6 +350,8 @@ public interface Endpoint extends NodeHandleReader {
    */
   public int proximity(NodeHandle nh);
   
+  public boolean isAlive(NodeHandle nh);
+  
   /**
    * Uses these options as defaults.
    * 

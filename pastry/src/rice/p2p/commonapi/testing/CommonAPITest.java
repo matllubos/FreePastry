@@ -293,7 +293,7 @@ public abstract class CommonAPITest {
 
   /**
    * 
-   * @param numOps the approximage number of operations that will occur during this time, an operation is a network hop for example
+   * @param numOps the approximate number of operations that will occur during this time, an operation is a network hop for example
    */
   protected void simulate(int numOps) {
     if (environment.getSelectorManager().isSelectorThread()) return;

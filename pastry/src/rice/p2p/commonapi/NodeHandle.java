@@ -76,6 +76,7 @@ public abstract class NodeHandle extends Observable implements Serializable  {
   /**
    * Returns whether or not this node is currently alive
    *
+   * @deprecated use Endpoint.isAlive(NodeHandle) 
    * @return Whether or not this node is currently alive
    */
   public abstract boolean isAlive();

@@ -81,6 +81,8 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle
    * Invoking this method does not cause network activity.
    *
    * @return true if the node is alive, false otherwise.
+   * 
+   * @deprecated use PastryNode.isAlive(NodeHandle) 
    */
   public final boolean isAlive() {
     return getLiveness() < LIVENESS_DEAD; 

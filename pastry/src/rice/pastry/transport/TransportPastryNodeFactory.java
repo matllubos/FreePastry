@@ -52,6 +52,7 @@ import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
+import rice.pastry.ReadyStrategy;
 import rice.pastry.boot.Bootstrapper;
 import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
@@ -144,7 +145,14 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
       
     LeafSetProtocol lsProtocol = getLeafSetProtocol(pn, leafSet, routeTable);
     
-    JoinProtocol jProtocol = getJoinProtocol(pn, leafSet, routeTable, lsProtocol);
+    ReadyStrategy readyStrategy;
+    if (lsProtocol instanceof ReadyStrategy) {
+      readyStrategy = (ReadyStrategy)lsProtocol;
+    } else {
+      readyStrategy = pn.getDefaultReadyStrategy();
+    }
+    
+    JoinProtocol jProtocol = getJoinProtocol(pn, leafSet, routeTable, readyStrategy);
     
     pn.setJoinProtocols(bootstrapper, jProtocol, lsProtocol, rsProtocol);    
   }
@@ -164,9 +172,9 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     
   }
   
-  protected JoinProtocol getJoinProtocol(PastryNode pn, LeafSet leafSet, RoutingTable routeTable, LeafSetProtocol lsProtocol) {
+  protected JoinProtocol getJoinProtocol(PastryNode pn, LeafSet leafSet, RoutingTable routeTable, ReadyStrategy lsProtocol) {
     ConsistentJoinProtocol jProtocol = new ConsistentJoinProtocol(pn,
-        pn.getLocalHandle(), routeTable, leafSet, (PeriodicLeafSetProtocol)lsProtocol);
+        pn.getLocalHandle(), routeTable, leafSet, lsProtocol);
 //    StandardJoinProtocol jProtocol = new StandardJoinProtocol(pn,pn.getLocalHandle(), routeTable, leafSet);
     jProtocol.register();
     return jProtocol;    

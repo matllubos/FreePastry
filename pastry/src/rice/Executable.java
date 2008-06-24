@@ -45,13 +45,13 @@ package rice;
  *
  * @author Alan Mislove
  */
-public interface Executable {
+public interface Executable<R> {
 
   /**
    * Executes the potentially expensive task and returns the result.
    *
    * @param result The result of the command.
    */
-  public Object execute();
+  public R execute();
 
 }

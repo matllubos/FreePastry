@@ -1169,6 +1169,14 @@ public class PastryNode extends Observable implements
     return livenessProvider.getLiveness(i, options);
   }
 
+  public int getLiveness(NodeHandle i) {
+    return livenessProvider.getLiveness(i, null);
+  }
+
+  public boolean isAlive(NodeHandle i) {
+    return (livenessProvider.getLiveness(i, null) < LIVENESS_DEAD);
+  }
+
 
   public void proximityChanged(NodeHandle i, int val, Map<String, Object> options) {
     SocketNodeHandle handle = ((SocketNodeHandle)i);
