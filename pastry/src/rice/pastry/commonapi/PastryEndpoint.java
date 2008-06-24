@@ -383,7 +383,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   public NodeHandleSet replicaSet(Id id, int maxRank) {
     LeafSet leafset = getLeafSet();
     if (maxRank > leafset.maxSize() / 2 + 1) {
-      throw new IllegalArgumentException("maximum replicaSet size for this configuration exceeded; asked for "+maxRank+" but max is "+leafset.maxSize()/2+1);
+      throw new IllegalArgumentException("maximum replicaSet size for this configuration exceeded; asked for "+maxRank+" but max is "+(leafset.maxSize()/2+1));
     }
     if (maxRank > leafset.size()) {
       if (logger.level <= Logger.FINER) logger.log(
