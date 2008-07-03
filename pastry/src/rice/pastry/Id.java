@@ -177,7 +177,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * Constructor, which takes the output of a toStringFull() and converts it back
    * into an Id.  Should not normally be used.
    *
-   * @param hex The hexadeciaml representation from the toStringFull()
+   * @param hex The hexadecimal representation from the toStringFull()
    */
   public static Id build(String hex) {
     while (hex.length() < IdBitLength/4) 
@@ -190,7 +190,7 @@ public class Id implements rice.p2p.commonapi.Id {
    * Constructor, which takes the output of a toStringFull() and converts it back
    * into an Id.  Should not normally be used.
    *
-   * @param hex The hexadeciaml representation from the toStringFull()
+   * @param hex The hexadecimal representation from the toStringFull()
    */
   public static Id build(char[] chars, int offset, int length) {
     int[] array = new int[nlen];
@@ -252,8 +252,8 @@ public class Id implements rice.p2p.commonapi.Id {
    * Static method for converting the hex representation into an array of
    * ints.
    *
-   * @param hex The hexadecimal represetnation
-   * @return The cooresponding int array
+   * @param hex The hexadecimal representation
+   * @return The corresponding int array
    */
   protected static int[] trans(String hex) {
     int[] ints = new int[nlen];
