@@ -98,8 +98,10 @@ public class PastryIdFactory implements IdFactory {
    * @return The built Id.
    */
   public Id buildId(String string) {
-    md.update(string.getBytes());
-    return buildId(md.digest());
+    synchronized (md) {
+      md.update(string.getBytes());
+      return buildId(md.digest());
+    }
   }
   
   /**
