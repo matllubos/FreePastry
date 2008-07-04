@@ -169,7 +169,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     synchronized(queue) {
       if (failed) return;
     }
-    callback.receiveException(e);
+    if (callback != null) callback.receiveException(e);
     purge();
   }
 
