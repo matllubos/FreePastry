@@ -251,7 +251,7 @@ public class RouteMessage extends PRawMessage implements Serializable,
       return internalMsg;
     }
     try {      
-      endpointDeserializer.setSubDeserializer(endpointDeserializer);
+      endpointDeserializer.setSubDeserializer(new JavaSerializedDeserializer(pn));
       return unwrap(endpointDeserializer);//pn.getEnvironment().getLogManager().getLogger(RouteMessage.class, null)));
     } catch (IOException ioe) {
       throw new RuntimeException(ioe); 
