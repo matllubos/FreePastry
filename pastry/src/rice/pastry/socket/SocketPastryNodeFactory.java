@@ -60,6 +60,7 @@ import org.mpisws.p2p.transport.TransportLayerListener;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.commonapi.IdFactory;
+import org.mpisws.p2p.transport.commonapi.OptionsAdder;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
@@ -97,6 +98,7 @@ import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteManagerImpl;
 import org.mpisws.p2p.transport.sourceroute.manager.SourceRouteStrategy;
 import org.mpisws.p2p.transport.sourceroute.manager.simple.NextHopStrategy;
 import org.mpisws.p2p.transport.sourceroute.manager.simple.SimpleSourceRouteStrategy;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 import org.mpisws.p2p.transport.wire.WireTransportLayer;
 import org.mpisws.p2p.transport.wire.WireTransportLayerImpl;
 import org.mpisws.p2p.transport.wire.magicnumber.MagicNumberTransportLayer;
@@ -111,6 +113,7 @@ import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.p2p.commonapi.Message;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
@@ -123,9 +126,11 @@ import rice.pastry.NodeHandleFactoryListener;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.boot.Bootstrapper;
+import rice.pastry.commonapi.PastryEndpointMessage;
 import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.leafset.LeafSetProtocol;
+import rice.pastry.routing.RouteMessage;
 import rice.pastry.routing.RoutingTable;
 import rice.pastry.socket.nat.NATHandler;
 import rice.pastry.socket.nat.StubNATHandler;
@@ -726,6 +731,36 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         upperIdentity, 
         idFactory, 
         deserializer,
+        new OptionsAdder() {
+        
+          public Map<String, Object> addOptions(Map<String, Object> options,
+              RawMessage m1) {
+            Message m = m1;
+            if (m instanceof RouteMessage) {
+              RouteMessage rm = (RouteMessage)m;
+              m = rm.internalMsg;
+              if (m == null) m = rm;
+            }
+            if (m instanceof PastryEndpointMessage) {
+              PastryEndpointMessage pem = (PastryEndpointMessage)m;
+              m = pem.getMessage();
+              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_ADDR, pem.getDestination());
+            }
+            if (m instanceof rice.pastry.messaging.Message) {
+              rice.pastry.messaging.Message pm = (rice.pastry.messaging.Message)m;
+              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_ADDR, pm.getDestination());
+            }
+            if (m instanceof RawMessage) {
+              RawMessage rm = (RawMessage)m;
+              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_TYPE, rm.getType());
+//            } else {
+//              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_TYPE, 0);              
+            }
+            
+            return OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_STRING, m.toString(), CommonAPITransportLayerImpl.MSG_CLASS, m.getClass().getName());
+          }
+        
+        },
         new ErrorHandler<TransportLayerNodeHandle<MultiInetSocketAddress>>() {          
           Logger logger = environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null);
           public void receivedUnexpectedData(

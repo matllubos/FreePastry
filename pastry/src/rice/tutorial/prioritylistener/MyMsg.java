@@ -34,58 +34,45 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.util;
+/*
+ * Created on Feb 15, 2005
+ */
+package rice.tutorial.prioritylistener;
 
-import java.util.HashMap;
-import java.util.Map;
+import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.Message;
 
-public class OptionsFactory {
-  public static Map<String, Object> addOption(Map<String, Object> existing, String s, Object i) {
-    Map<String, Object> ret = copyOptions(existing);
-    ret.put(s,i);
-    return ret;
-  }
-  public static Map<String, Object> addOption(Map<String, Object> existing, String s1, Object i1, String s2, Object i2) {
-    Map<String, Object> ret = copyOptions(existing);
-    ret.put(s1,i1);
-    ret.put(s2,i2);
-    return ret;
-  }
-  
-  public static Map<String, Object> addOption(Map<String, Object> existing, String s1, Object i1, String s2, Object i2, String s3, Object i3) {
-    Map<String, Object> ret = copyOptions(existing);
-    ret.put(s1,i1);
-    ret.put(s2,i2);
-    ret.put(s3,i3);
-    return ret;
-  }
-
-  public static Map<String, Object> copyOptions(Map<String, Object> existing) {
-    if (existing == null) return new HashMap<String, Object>();
-    return new HashMap<String, Object>(existing);
-  }
+/**
+ * An example message.
+ * 
+ * @author Jeff Hoye
+ */
+public class MyMsg implements Message {
+  /**
+   * Where the Message came from.
+   */
+  Id from;
+  /**
+   * Where the Message is going.
+   */
+  Id to;
   
   /**
-   * Merge 2 options, keeping the first if there is a conflict
-   * 
-   * @param options
-   * @param options2
-   * @return
+   * Constructor.
    */
-  public static Map<String, Object> merge(Map<String, Object> options,
-      Map<String, Object> options2) {
-    Map<String, Object> ret = copyOptions(options2);
-    if (options == null) return ret;
-    for (String k : options.keySet()) {
-      ret.put(k, options.get(k));
-    }
-    return ret;
+  public MyMsg(Id from, Id to) {
+    this.from = from;
+    this.to = to;
   }
   
-  public static Map<String, Object> removeOption(Map<String, Object> options,
-      String option) {
-    Map<String, Object> ret = copyOptions(options);
-    ret.remove(option);
-    return ret;
+  public String toString() {
+    return "MyMsg from "+from+" to "+to;
+  }
+
+  /**
+   * Use low priority to prevent interference with overlay maintenance traffic.
+   */
+  public int getPriority() {
+    return Message.LOW_PRIORITY;
   }
 }

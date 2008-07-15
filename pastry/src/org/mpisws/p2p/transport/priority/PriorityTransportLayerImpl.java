@@ -61,6 +61,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.TransportLayerListener;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
 import org.mpisws.p2p.transport.identity.MemoryExpiredException;
 import org.mpisws.p2p.transport.liveness.LivenessListener;
@@ -1015,7 +1016,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       ByteBuffer message;
       MessageCallback<Identifier, ByteBuffer> deliverAckToMe;
       Map<String, Object> options;      
-      
+      int originalSize;
       boolean cancelled = false; // true when cancel is called
       boolean completed = false; // true when completed is called
       
@@ -1024,7 +1025,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           ByteBuffer message, 
           MessageCallback<Identifier, ByteBuffer> deliverAckToMe, 
           Map<String, Object> options, int priority, int seq) {
-
+        this.originalSize = message.remaining();
 //        if (options == null) throw new RuntimeException("options is null");  // debugging
         
         this.myIdentifier = temp;
@@ -1049,6 +1050,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       public void complete() {
         completed = true;
         if (deliverAckToMe != null) deliverAckToMe.ack(this);
+        notifyListenersWrote(originalSize, myIdentifier, options);        
       }
 
       /**
@@ -1249,6 +1251,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       public void done(P2PSocket<Identifier> socket) throws IOException {
         if (logger.level <= Logger.FINE) logger.log(EntityManager.this+" read message of size "+buf.capacity()+" from "+socket);        
         callback.messageReceived(socket.getIdentifier(), buf, socket.getOptions()); 
+        notifyListenersRead(buf.capacity(), socket.getIdentifier(), socket.getOptions());
         new SizeReader(socket);
       }
       
@@ -1276,6 +1279,47 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       return ret;
     }
   } // EntityManager
+  
+  // *************************** Listeners *********************
+  ArrayList<TransportLayerListener<Identifier>> listeners = new ArrayList<TransportLayerListener<Identifier>>();
+  public void addTransportLayerListener(TransportLayerListener<Identifier> listener) {
+    synchronized(listeners) { 
+      listeners.add(listener);
+    }
+  }
+  public void removeTransportLayerListener(TransportLayerListener<Identifier> listener) {
+    synchronized(listeners) { 
+      listeners.remove(listener);
+    }
+  }
+  
+  public void notifyListenersRead(int size, Identifier source,
+      Map<String, Object> options) {
+
+    if (listeners.isEmpty()) return;
+    ArrayList<TransportLayerListener<Identifier>> temp;
+    
+    synchronized(listeners) { 
+      temp = new ArrayList<TransportLayerListener<Identifier>>(listeners);
+    }
+    for (TransportLayerListener<Identifier> l : temp) {
+      l.read(size, source, options, true, true);
+    }
+  }
+
+  public void notifyListenersWrote(int size, Identifier dest,
+      Map<String, Object> options) {
+    if (listeners.isEmpty()) return;
+    ArrayList<TransportLayerListener<Identifier>> temp;
+    
+    synchronized(listeners) { 
+      temp = new ArrayList<TransportLayerListener<Identifier>>(listeners);
+    }
+    for (TransportLayerListener<Identifier> l : temp) {
+      l.wrote(size, dest, options, true, true);
+    }
+  }
+
   
   // ********************************** introspection ***********************
   public long bytesPending(Identifier i) {

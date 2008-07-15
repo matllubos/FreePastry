@@ -43,6 +43,7 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.TransportLayerListener;
 
 import rice.Continuation;
 
@@ -71,6 +72,10 @@ public interface PriorityTransportLayer<Identifier> extends TransportLayer<Ident
   public static final int STATUS_CONNECTING = 1;
   public static final int STATUS_CONNECTED = 2;
   
+  
+  public void addTransportLayerListener(TransportLayerListener<Identifier> listener);
+  public void removeTransportLayerListener(TransportLayerListener<Identifier> listener);
+
   /**
    * Returns if there is a primary connection to the identifier
    * 

@@ -79,15 +79,19 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
 //  NodeHandleFactory<Identifier> nodeHandleFactory;
   Logger logger;
   
+  public static final String MSG_CLASS = "commonapi_msg_class";
   public static final String MSG_STRING = "commonapi_msg_string";
   public static final String MSG_TYPE = "commonapi_msg_type";
   public static final String MSG_ADDR = "commonapi_msg_addr";
 //  public static final String DESTINATION_IDENTITY = "commonapi_destination_identity";
 
+  protected OptionsAdder optionsAdder;
+  
   public CommonAPITransportLayerImpl(
       TransportLayer<Identifier, ByteBuffer> tl, 
       IdFactory idFactory,
       RawMessageDeserializer deserializer,
+      OptionsAdder optionsAdder,
       ErrorHandler errorHandler,
       Environment env) {
     
@@ -95,6 +99,16 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
     this.tl = tl;
 //    this.localAddress = localAddress;
     this.deserializer = deserializer; 
+    this.optionsAdder = optionsAdder;
+    if (this.optionsAdder == null) {
+      this.optionsAdder = new OptionsAdder() {
+      
+        public Map<String, Object> addOptions(Map<String, Object> options,
+            RawMessage m) {
+          return OptionsFactory.addOption(options, MSG_STRING, m.toString(), MSG_TYPE, m.getType(), MSG_CLASS, m.getClass().getName());
+        }      
+      };
+    }
     
     if (tl == null) throw new IllegalArgumentException("tl must be non-null");
 //    if (localAddress == null) throw new IllegalArgumentException("localAddress must be non-null");
@@ -216,7 +230,8 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
           }
         }, 
 //        OptionsFactory.addOption(options, MSG_STRING, m.toString(), DESTINATION_IDENTITY, i)));
-        OptionsFactory.addOption(options, MSG_STRING, m.toString(), MSG_TYPE, m.getType())));
+//        OptionsFactory.addOption(options, MSG_STRING, m.toString(), MSG_TYPE, m.getType(), MSG_CLASS, m.getClass().getName())));
+        optionsAdder.addOptions(options,m)));
     return handle;
   }
 
