@@ -71,8 +71,17 @@ public class PastryEndpointMessage extends PRawMessage {
     this(address, message instanceof RawMessage ? (RawMessage) message : new JavaSerializedMessage(message), sender);
   }
 
+  public static void checkRawType(RawMessage message) {
+    if (message.getType() == 0) {
+      if (!(message instanceof JavaSerializedMessage)) {
+        throw new IllegalArgumentException("Message "+message+" is raw, but its type is 0, this is only allowed by Java Serialized Messages.");
+      }
+    }    
+  }
+  
   public PastryEndpointMessage(int address, RawMessage message, NodeHandle sender) {
     super(address);
+    checkRawType(message);
     setSender(sender);
     this.message = message;
 //    isRaw = true;
