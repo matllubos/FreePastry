@@ -74,7 +74,12 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     public Message deserialize(InputBuffer buf, short type, int priority,
         NodeHandle sender) throws IOException {
 //      if (type == PastryEndpointMessage.TYPE)
+      try {
         return new PastryEndpointMessage(getAddress(),buf,appDeserializer,type, priority,(rice.pastry.NodeHandle)sender);
+      } catch (IllegalArgumentException iae) {
+        logger.log("Unable to deserialize message of type "+type+" "+PastryEndpoint.this+" "+appDeserializer);
+        throw iae;
+      }
 //    return null;
 //      throw new IllegalArgumentException("Unknown type "+type+" (priority:"+priority+" sender:"+sender+" appDes:"+appDeserializer+")");
     }    
