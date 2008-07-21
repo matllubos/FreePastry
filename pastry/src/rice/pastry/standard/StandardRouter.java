@@ -212,7 +212,11 @@ public class StandardRouter extends PastryAppl implements Router {
           if (logger.level <= Logger.FINE) {
             logger.logException("sendFailed("+rm+")=>"+handle, reason);                      
           } else {
-            if (logger.level <= Logger.INFO) logger.log("sendFailed("+rm+")=>"+handle+" "+reason);          
+            if (reason instanceof NodeIsFaultyException) {
+              if (logger.level <= Logger.INFO) logger.log("sendFailed("+rm+")=>"+handle+" "+reason);          
+            } else {
+              if (logger.level <= Logger.WARNING) logger.logException("sendFailed("+rm+")=>"+handle,reason);                        
+            }
           }
         }
       }    

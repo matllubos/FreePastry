@@ -197,6 +197,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
       } else {
         deliverAckToMe.sendFailed(handle, ioe);
       }
+      return handle;
     }
     
     buf = ByteBuffer.wrap(sob.getBytes());
