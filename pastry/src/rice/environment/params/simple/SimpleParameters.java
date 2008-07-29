@@ -66,11 +66,11 @@ public class SimpleParameters implements Parameters {
    */
   private String configFileName;
 
-  private static String FILENAME_EXTENSION = ".params";
+  public static final String FILENAME_EXTENSION = ".params";
 
-  private static String ARRAY_SPACER = ",";
+  public static final String ARRAY_SPACER = ",";
 
-  private static final String defaultParamsFile = "user"+FILENAME_EXTENSION;
+  public static final String defaultParamsFile = "user"+FILENAME_EXTENSION;
   
   /**
    * 
@@ -86,7 +86,9 @@ public class SimpleParameters implements Parameters {
       this.configFileName = mutableConfigFileName + FILENAME_EXTENSION;
     } else {
       try {
-        if (new File(defaultParamsFile).exists()) {
+        File f = new File(defaultParamsFile);
+//        System.out.println(f.getAbsolutePath());
+        if (f.exists()) {
           this.configFileName = defaultParamsFile; 
         }
       } catch (Exception e) {

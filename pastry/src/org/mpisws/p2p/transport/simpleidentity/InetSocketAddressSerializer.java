@@ -59,9 +59,17 @@ public class InetSocketAddressSerializer implements Serializer<InetSocketAddress
   public static final byte IPV6 = 6;
   public static final int IPV4_BYTES = 4;
   public static final int IPV6_BYTES = 16;
-  
+
   public InetSocketAddress deserialize(InputBuffer b, InetSocketAddress i,
       Map<String, Object> options) throws IOException {
+    return deserializeAddress(b);
+  }
+
+  public void serialize(InetSocketAddress i, OutputBuffer b) throws IOException {
+    serializeAddress(i,b);
+  }
+
+  public static InetSocketAddress deserializeAddress(InputBuffer b) throws IOException {
     byte version = b.readByte();
     byte[] addr;
     
@@ -80,7 +88,7 @@ public class InetSocketAddressSerializer implements Serializer<InetSocketAddress
     return new InetSocketAddress(InetAddress.getByAddress(addr),0xFFFF & port);
   }
 
-  public void serialize(InetSocketAddress i, OutputBuffer b) throws IOException {
+  public static void serializeAddress(InetSocketAddress i, OutputBuffer b) throws IOException {
     byte[] addr = i.getAddress().getAddress();
     // write version
     switch (addr.length) {

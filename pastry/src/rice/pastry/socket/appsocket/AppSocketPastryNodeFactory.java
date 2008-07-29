@@ -369,6 +369,9 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
     return sf;
   }
   
+  /**
+   * This code tells the WireTransportLayerImpl not to create a server-socket if we are using the BogusTLPastryNode
+   */
   @Override
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, final PastryNode pn) throws IOException {
     Environment environment = pn.getEnvironment();    
