@@ -102,7 +102,7 @@ public class GenericProximityGenerator implements ProximityGenerator {
     return new GNNodeRecord(); 
   }
   
-  private class GNNodeRecord implements NodeRecord {
+  public class GNNodeRecord implements NodeRecord {
     public int index; // index in the symmetric inter-host latency matrix
 
     public GNNodeRecord() {
