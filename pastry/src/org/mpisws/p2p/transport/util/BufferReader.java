@@ -96,7 +96,7 @@ public class BufferReader<Identifier> implements P2PSocketReceiver<Identifier> {
 
   public void receiveSelectResult(P2PSocket<Identifier> socket,
       boolean canRead, boolean canWrite) throws IOException {
-    System.out.println("BufferReader.rsr()");
+//    System.out.println("BufferReader.rsr()");
     if (socket.read(buf) < 0) {
       receiveException(socket,new ClosedChannelException("Unexpected closure of channel to "+socket.getIdentifier()));
       return;
@@ -110,7 +110,7 @@ public class BufferReader<Identifier> implements P2PSocketReceiver<Identifier> {
     if (size < 0) {
       // we need to read the size from the buffer
       size = buf.asIntBuffer().get();
-      System.out.println("read size");
+//      System.out.println("read size");
       buf = ByteBuffer.allocate(size);
       receiveSelectResult(socket, true, false);
     } else {

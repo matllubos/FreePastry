@@ -93,7 +93,7 @@ public class BufferWriter<Identifier> implements P2PSocketReceiver<Identifier> {
 
   public void receiveSelectResult(P2PSocket<Identifier> socket,
       boolean canRead, boolean canWrite) throws IOException {
-    System.out.println("BufferWriter.rsr()");
+//    System.out.println("BufferWriter.rsr()");
     if (sizeBuf != null && sizeBuf.hasRemaining()) {
       if (socket.write(sizeBuf) < 0) {
         receiveException(socket,new ClosedChannelException("Unexpected closure of channel to "+socket.getIdentifier()));

@@ -36,16 +36,16 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.util;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.mpisws.p2p.transport.P2PSocket;
-import org.mpisws.p2p.transport.P2PSocketReceiver;
 
 import rice.Continuation;
 
 /**
- * Reads a buffer and writes a buffer at the same time, then calls the continuation when done.
+ * Concurrently reads a buffer and writes a buffer at the same time, 
+ * then calls the continuation when done.
+ * 
  * @author Jeff Hoye
  *
  */
@@ -102,7 +102,7 @@ public class BufferReaderWriter<Identifier> {
   }
   
   public void done(Exception e) {
-    System.out.println("done r:"+doneReading+" w:"+doneWriting);
+//    System.out.println("done r:"+doneReading+" w:"+doneWriting);
     if (failed) {
       if (!sentException) {
         sentException = true;
