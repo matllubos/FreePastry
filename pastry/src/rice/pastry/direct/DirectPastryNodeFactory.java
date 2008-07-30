@@ -297,7 +297,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
       nr = simulator.generateNodeRecord();
       recordTable.put(pn.getNodeId(),nr);
     }
-    DirectTransportLayer<NodeHandle, RawMessage> tl = getDirectTransportLayer(pn, nr);
+    TransportLayer<NodeHandle, RawMessage> tl = getDirectTransportLayer(pn, nr);
     // new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator, nr, pn.getEnvironment());
         
     NodeHandleAdapter nha = new NodeHandleAdapter(tl,simulator.getLivenessProvider(),new ProximityProvider<NodeHandle>(){          
@@ -329,7 +329,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
    * @param nr
    * @return
    */
-  protected DirectTransportLayer<NodeHandle, RawMessage> getDirectTransportLayer(PastryNode pn, NodeRecord nr) {
+  protected TransportLayer<NodeHandle, RawMessage> getDirectTransportLayer(PastryNode pn, NodeRecord nr) {
     DirectTransportLayer<NodeHandle, RawMessage> tl = new DirectTransportLayer<NodeHandle, RawMessage>(pn.getLocalHandle(), simulator, nr, pn.getEnvironment());    
     return tl;
   }
