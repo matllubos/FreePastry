@@ -43,6 +43,7 @@ import java.util.*;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.SizeCheckOutputBuffer;
 import rice.pastry.*;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.TransportLayerNodeHandle;
@@ -219,7 +220,11 @@ public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> imple
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
-    throw new RuntimeException("Should not be called.");
+    if (buf instanceof SizeCheckOutputBuffer) {
+      ((SizeCheckOutputBuffer)buf).writeSpecial(this);
+    } else {
+      throw new RuntimeException("DirectNodeHandle.serialize() Should not be called.  If you are doing this to determine the size, please use a SizeCheckOutputBuffer such as the DirectSizeChecker.");
+    }
   }
 
   public NodeRecord getAddress() {
