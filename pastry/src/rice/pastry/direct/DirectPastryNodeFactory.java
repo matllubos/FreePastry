@@ -77,8 +77,6 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
 //  protected RandomSource random;
 
   protected NetworkSimulator simulator;
-
-  boolean guaranteeConsistency;
   
   protected Collection<NodeHandleFactoryListener<NodeHandle>> listeners = 
     new ArrayList<NodeHandleFactoryListener<NodeHandle>>();
@@ -94,9 +92,21 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim, Environment env) {    
     super(env);
     env.getParameters().setInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled",120000);
-    guaranteeConsistency = env.getParameters().getBoolean("pastry_direct_guarantee_consistency"); // true
     nidFactory = nf;
     simulator = sim;
+  }
+
+  @Override
+  protected LeafSetProtocol getLeafSetProtocol(PastryNode pn, LeafSet leafSet,
+      RoutingTable routeTable) {
+    if (pn.getEnvironment().getParameters().getBoolean("pastry_direct_guarantee_consistency")) { // true
+      return super.getLeafSetProtocol(pn, leafSet, routeTable);
+    } else {
+//      System.out.println("using standard ls protocol");
+      StandardLeafSetProtocol ret = new StandardLeafSetProtocol(pn,pn.getLocalHandle(),leafSet, routeTable);
+      ret.register();
+      return ret;
+    }
   }
 
   /**

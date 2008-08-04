@@ -187,11 +187,13 @@ public class PastryNode extends Observable implements
     getBootstrapper().boot(o);
   }
   
+  ReadyStrategy defaultReadyStrategy = null;
   /**
    * Simple Ready Strategy
    */
   public ReadyStrategy getDefaultReadyStrategy() {
-    return new ReadyStrategy() {
+    if (defaultReadyStrategy != null) return defaultReadyStrategy;
+    defaultReadyStrategy = new ReadyStrategy() {
       private boolean ready = false; 
       
       public void setReady(boolean r) {
@@ -208,13 +210,14 @@ public class PastryNode extends Observable implements
       }
       
       public void start() {
-        // don't need to do any initialization 
+        setReady(true);
       }
 
       public void stop() {
         // don't need to do any initialization
       }
     };
+    return defaultReadyStrategy;
   }
   
   public void setReadyStrategy(ReadyStrategy rs) {
