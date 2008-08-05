@@ -74,7 +74,6 @@ import rice.pastry.leafset.LeafSet;
 import rice.pastry.leafset.LeafSetProtocol;
 import rice.pastry.messaging.*;
 import rice.pastry.routing.*;
-import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.transport.Deserializer;
 import rice.pastry.transport.PMessageNotification;
 import rice.pastry.transport.PMessageReceipt;
@@ -636,12 +635,12 @@ public class PastryNode extends Observable implements
    * @param receiver
    * @param appl
    */
-  public SocketRequestHandle connect(NodeHandle i2, final AppSocketReceiver deliverSocketToMe,
+  public SocketRequestHandle connect(final NodeHandle i, final AppSocketReceiver deliverSocketToMe,
       final PastryAppl appl, int timeout) {
     
-    final SocketNodeHandle i = (SocketNodeHandle)i2;
+//    final SocketNodeHandle i = (SocketNodeHandle)i2;
     
-    final SocketRequestHandleImpl<SocketNodeHandle> handle = new SocketRequestHandleImpl<SocketNodeHandle>(i, null, logger);
+    final SocketRequestHandleImpl<NodeHandle> handle = new SocketRequestHandleImpl<NodeHandle>(i, null, logger);
 
     Runnable r = new Runnable() {
       public void run() {
@@ -1181,8 +1180,8 @@ public class PastryNode extends Observable implements
   }
 
 
-  public void proximityChanged(NodeHandle i, int val, Map<String, Object> options) {
-    SocketNodeHandle handle = ((SocketNodeHandle)i);
+  public void proximityChanged(NodeHandle handle, int val, Map<String, Object> options) {
+//    SocketNodeHandle handle = ((SocketNodeHandle)i);
     handle.update(NodeHandle.PROXIMITY_CHANGED);     
   }
 
