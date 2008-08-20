@@ -164,7 +164,15 @@ public class BandwidthMeasuringTransportLayer<Identifier> implements
    * @return
    */
   public Map<Identifier, Tuple3<Integer, Integer, Boolean>> getBandwidthUsed() {
-    return null; 
+    synchronized(measured) {
+      HashMap<Identifier, Tuple3<Integer, Integer, Boolean>> ret = new HashMap<Identifier, Tuple3<Integer, Integer, Boolean>>();
+      for (Identifier i : measured.keySet()) {
+        Tuple<int[], Collection<MySocket>> t = measured.get(i);
+        int[] vals = t.a();
+        ret.put(i,new Tuple3(vals[LAST_DOWN], vals[LAST_UP], (vals[LAST_SATURATED] == SATURATED)?true:false));
+      }
+      return ret;
+    }
   }
 
   public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
@@ -220,6 +228,7 @@ public class BandwidthMeasuringTransportLayer<Identifier> implements
         if (srcs.hasRemaining()) {
           vals[CUR_SATURATED] = SATURATED;
         }
+//        System.out.println("adding "+ret+" to "+CUR_UP);
         vals[CUR_UP]+=ret;
       }
       return ret;
