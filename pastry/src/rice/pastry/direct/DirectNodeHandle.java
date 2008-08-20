@@ -57,24 +57,22 @@ import rice.pastry.socket.TransportLayerNodeHandle;
  */
 
 public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> implements Observer {
-  private transient PastryNode remoteNode;
+//  private transient PastryNode remoteNode;
   public transient NetworkSimulator simulator;
 
   /**
    * Constructor for DirectNodeHandle.
    *
    * @param ln The local pastry node
-   * @param rn The remote pastry node
    * @param sim The current network simulator
    */
-  DirectNodeHandle(PastryNode ln, PastryNode rn, NetworkSimulator sim) {
+  DirectNodeHandle(PastryNode ln, NetworkSimulator sim) {
     localnode = ln;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
-    if (rn == null) throw new IllegalArgumentException("rn must be non-null");
-    remoteNode = rn;
+//    if (rn == null) throw new IllegalArgumentException("rn must be non-null");
     simulator = sim;
     
-    rn.addObserver(this);
+    ln.addObserver(this);
   }
 
   /**
@@ -83,7 +81,7 @@ public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> imple
    * @return The Remote value
    */
   public PastryNode getRemote() {
-    return remoteNode;
+    return localnode;
   }
 
   /**
@@ -92,7 +90,7 @@ public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> imple
    * @return The NodeId value
    */
   public Id getNodeId() {
-    return remoteNode.getNodeId();
+    return localnode.getNodeId();
   }
 
   /**

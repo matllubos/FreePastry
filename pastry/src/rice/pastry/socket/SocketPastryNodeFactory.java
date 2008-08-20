@@ -113,16 +113,19 @@ import rice.environment.processing.Processor;
 import rice.environment.processing.simple.SimpleProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.Message;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawMessage;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.JoinFailedException;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeHandleFactoryListener;
+import rice.pastry.NodeHandleFetcher;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.boot.Bootstrapper;
@@ -299,9 +302,16 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     MultiInetSocketAddress proxyAddress = (MultiInetSocketAddress)pn.getVars().get(PROXY_ADDRESS);
     return pnhf.getNodeHandle(proxyAddress, pn.getEnvironment().getTimeSource().currentTimeMillis(), pn.getNodeId());
   }
+ 
   
+  public static final String NODE_HANDLE_FACTORY = "SocketPastryNodeFactory.NODE_HANDLE_FACTORY";
   public NodeHandleFactory getNodeHandleFactory(PastryNode pn) {
-    return new SocketNodeHandleFactory(pn);
+    if (pn.getVars().containsKey(NODE_HANDLE_FACTORY)) {
+      return (NodeHandleFactory) pn.getVars().get(NODE_HANDLE_FACTORY);
+    }
+    NodeHandleFactory ret = new SocketNodeHandleFactory(pn);
+    pn.getVars().put(NODE_HANDLE_FACTORY, ret);
+    return ret;
   }
 
   /**
@@ -478,11 +488,42 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return lstl;
   }
   
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getIpServiceTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, PastryNode pn) {
+  public static final byte NETWORK_INFO_NODE_HANDLE_INDEX = 1;
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getIpServiceTransportLayer(
+      TransportLayer<InetSocketAddress, ByteBuffer> wtl, final PastryNode pn) throws IOException {
+    
+    // make the network layer    
     Environment environment = pn.getEnvironment();
-    NetworkInfoTransportLayer ipTL = 
+    final NetworkInfoTransportLayer ipTL = 
       new NetworkInfoTransportLayer(wtl,environment,null);
     pn.getVars().put(IP_SERVICE, ipTL);
+    
+    // install the NodeHandle as an ID
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    pn.getLocalHandle().serialize(sob);
+    ipTL.setId(NETWORK_INFO_NODE_HANDLE_INDEX, sob.getBytes());
+
+    // install the NodeHandleFetcher for the NodeHandle
+    pn.setNodeHandleFetcher(new NodeHandleFetcher() {
+      public Cancellable getNodeHandle(Object o, final Continuation<NodeHandle, Exception> c) {
+        InetSocketAddress addr = (InetSocketAddress)o;
+        return ipTL.getId(addr, NETWORK_INFO_NODE_HANDLE_INDEX, new Continuation<byte[], IOException>() {
+        
+          public void receiveResult(byte[] result) {
+            try {
+              NodeHandle nh = getNodeHandleFactory(pn).readNodeHandle(new SimpleInputBuffer(result));
+              c.receiveResult(nh);
+            } catch (IOException ioe) {
+              c.receiveException(ioe);
+            }
+          }
+        
+          public void receiveException(IOException exception) {
+            c.receiveException(exception);
+          }        
+        }, null);
+      }
+    });
     return ipTL;
   }
 

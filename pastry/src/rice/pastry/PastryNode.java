@@ -792,8 +792,7 @@ public class PastryNode extends Observable implements
   
   protected LivenessProvider<NodeHandle> livenessProvider;
 
-  public void setSocketElements(NodeHandle localhandle,
-      int lsmf, int rsmf, 
+  public void setSocketElements(int lsmf, int rsmf, 
       TransportLayer<NodeHandle, RawMessage> tl,
       LivenessProvider<NodeHandle> livenessProvider,
       ProximityProvider<NodeHandle> proxProvider,
@@ -1278,6 +1277,15 @@ public class PastryNode extends Observable implements
 
   public void removeNodeHandleFactoryListener(NodeHandleFactoryListener listener) {
     handleFactory.removeNodeHandleFactoryListener(listener);
+  }
+
+  NodeHandleFetcher nodeHandleFetcher;
+  public void setNodeHandleFetcher(NodeHandleFetcher nodeHandleFetcher) {
+    this.nodeHandleFetcher = nodeHandleFetcher;
   }    
+  
+  public void getNodeHandle(Object o, Continuation<NodeHandle, Exception> c) {
+    nodeHandleFetcher.getNodeHandle(o, c);
+  }
 }
 

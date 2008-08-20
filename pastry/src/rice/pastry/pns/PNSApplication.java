@@ -85,6 +85,14 @@ import rice.selector.TimerTask;
 /**
  * Can request LeafSet, RouteRow, Proximity of nodes, implements the PNS algorithm.
  * 
+ * Flow:
+ *   call getLeafSet(...)
+ *     addToWaitingForLeafSet()
+ *   
+ *   cancellable.cancel()
+ *     removeFromWaitingForLeafSet()
+ * 
+ * 
  * TODO: Make use the environment's clock for the wait() calls.
  * 
  * @author Jeff Hoye

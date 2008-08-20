@@ -122,7 +122,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     
     NodeHandleAdapter nha = getNodeHandleAdapter(pn, handleFactory, deserializer);
 
-    pn.setSocketElements(localhandle, leafSetMaintFreq, routeSetMaintFreq, 
+    pn.setSocketElements(leafSetMaintFreq, routeSetMaintFreq, 
         nha, nha, nha, deserializer, handleFactory);
     
     router.register();

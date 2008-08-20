@@ -250,7 +250,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
 
   @Override
   protected NodeHandle getLocalHandle(PastryNode pn, NodeHandleFactory handleFactory) throws IOException {
-    DirectNodeHandle localhandle = new DirectNodeHandle(pn, pn, simulator);
+    DirectNodeHandle localhandle = new DirectNodeHandle(pn, simulator);
     return localhandle;
   }
 

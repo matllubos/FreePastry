@@ -235,7 +235,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * to be started when this thread's start() method is invoked.
    */
   public void run() {
-//    System.out.println("SelectorManager starting...");
+    //System.out.println("SelectorManager starting..."+Thread.currentThread());
     if (logger.level <= Logger.INFO) logger.log("SelectorManager -- " + instance + " starting...");
 
     lastTime = timeSource.currentTimeMillis();
@@ -750,4 +750,9 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     logger.level = level;
   }
 
+  
+  public static void main(String[] args) {
+    new Environment();
+    new Environment();
+  }
 }

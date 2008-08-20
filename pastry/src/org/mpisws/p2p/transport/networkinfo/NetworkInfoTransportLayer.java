@@ -57,6 +57,8 @@ import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
+import org.mpisws.p2p.transport.util.BufferReader;
+import org.mpisws.p2p.transport.util.BufferWriter;
 import org.mpisws.p2p.transport.util.DefaultCallback;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import org.mpisws.p2p.transport.util.InsufficientBytesException;
@@ -80,6 +82,10 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * header = 0; // bypass
  * header = 1; // return IP
  * 
+ * Also holds a "serialized id."  This is an externally specified piece of information.  It can be a NodeHandle, a PublicKey etc, 
+ * any information that any node should be able to query for and may need to do so w/o having a joined PastryNode.
+ * 
+ * 
  * @author Jeff Hoye
  *
  */
@@ -100,10 +106,12 @@ public class NetworkInfoTransportLayer implements
   protected static final byte HEADER_PROBE_REQUEST_BYTE = (byte)2;
   protected static final byte HEADER_PROBE_RESPONSE_BYTE = (byte)3;
   protected static final byte HEADER_NODES_REQUEST_BYTE = (byte)4;
+  protected static final byte HEADER_ID_REQUEST_BYTE = (byte)5;
   protected static final byte[] HEADER_PASSTHROUGH = {HEADER_PASSTHROUGH_BYTE};
   protected static final byte[] HEADER_IP_ADDRESS_REQUEST = {HEADER_IP_ADDRESS_REQUEST_BYTE};
   protected static final byte[] HEADER_NODES_REQUEST = {HEADER_NODES_REQUEST_BYTE};
-  
+
+  Map<Byte, byte[]> serializedIds = new HashMap<Byte, byte[]>();
   
   public NetworkInfoTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> tl, 
       Environment env, 
@@ -120,7 +128,7 @@ public class NetworkInfoTransportLayer implements
     
     tl.setCallback(this);
   }
-
+  
   InetSocketAddressSerializer addrSerializer = new InetSocketAddressSerializer();
   
   public Cancellable getMyInetAddress(InetSocketAddress bootstrap, 
@@ -141,6 +149,62 @@ public class NetworkInfoTransportLayer implements
               try {
                 InetSocketAddress addr = addrSerializer.deserialize(sib, null, null);
                 c.receiveResult(addr);
+              } catch (InsufficientBytesException ibe) {
+                socket.register(true, false, this);
+              } catch (IOException e) {
+                c.receiveException(e);
+              }
+            }
+          
+            public void receiveException(P2PSocket<InetSocketAddress> socket,
+                Exception ioe) {
+              if (ioe instanceof IOException) c.receiveException((IOException)ioe);
+              c.receiveException(new NetworkInfoIOException(ioe));
+            }
+          
+          }.receiveSelectResult(sock, true, false);        
+        } catch (IOException ioe) {
+          c.receiveException(ioe);
+        }
+      }
+    
+      public void receiveException(SocketRequestHandle<InetSocketAddress> s,
+          Exception ex) {
+        if (ex instanceof IOException) c.receiveException((IOException)ex);
+        c.receiveException(new NetworkInfoIOException(ex));
+      }    
+    }, options));
+    return ret;
+  }
+
+  public void setId(byte index, byte[] value) {
+    serializedIds.put(index, value);
+  }
+  
+  public Cancellable getId(InetSocketAddress bootstrap, byte index,
+      final Continuation<byte[], IOException> c, Map<String, Object> options) {
+    byte[] hdr = new byte[2];
+    hdr[0] = HEADER_ID_REQUEST_BYTE;
+    hdr[1] = index;
+    
+    AttachableCancellable ret = new AttachableCancellable();
+    ret.attach(openSocket(bootstrap, hdr, new SocketCallback<InetSocketAddress>() {
+    
+      public void receiveResult(SocketRequestHandle<InetSocketAddress> cancellable,
+          P2PSocket<InetSocketAddress> sock) {
+        final SocketInputBuffer sib = new SocketInputBuffer(sock);
+        
+        try {
+          new P2PSocketReceiver<InetSocketAddress>() {
+            
+            public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+                boolean canRead, boolean canWrite) throws IOException {
+              try {
+                // read size
+                int size = sib.readInt();
+                byte[] ret = new byte[size];
+                sib.read(ret);
+                c.receiveResult(ret);
               } catch (InsufficientBytesException ibe) {
                 socket.register(true, false, this);
               } catch (IOException e) {
@@ -319,6 +383,9 @@ public class NetworkInfoTransportLayer implements
         case HEADER_PROBE_RESPONSE_BYTE:
           handleProbeResponse(socket);
           return;
+        case HEADER_ID_REQUEST_BYTE:
+          handleIdRequest(socket);
+          return;
         default:
           // header didn't match up
           errorHandler.receivedUnexpectedData(socket.getIdentifier(), ret, 0, socket.getOptions());
@@ -403,6 +470,27 @@ public class NetworkInfoTransportLayer implements
       }
     
     }.receiveSelectResult(socket, false, true);
+  }
+  
+  public void handleIdRequest(final P2PSocket<InetSocketAddress> socket) throws IOException {
+    // read the index
+    final ByteBuffer indexBuf = ByteBuffer.allocate(1);
+    new BufferReader<InetSocketAddress>(socket,new Continuation<ByteBuffer, Exception>() {
+    
+      public void receiveResult(ByteBuffer result) {
+        byte index = result.get();
+        if (serializedIds.get(index) == null) {
+          // consider returning an error
+          socket.close();
+          return;          
+        }
+        new BufferWriter<InetSocketAddress>(ByteBuffer.wrap(serializedIds.get(index)),socket,null);
+      }
+    
+      public void receiveException(Exception exception) {
+        socket.close();
+      }    
+    },1);
   }
   
   public void handleProbeRequest(final P2PSocket<InetSocketAddress> socket) {

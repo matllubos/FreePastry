@@ -229,7 +229,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
 
 
   @Override
-  protected TransportLayer<InetSocketAddress, ByteBuffer> getIpServiceTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, PastryNode pn) {
+  protected TransportLayer<InetSocketAddress, ByteBuffer> getIpServiceTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, PastryNode pn) throws IOException {
     TransportLayer<InetSocketAddress, ByteBuffer> mtl = super.getIpServiceTransportLayer(wtl, pn);
     
     if (pn.getLocalHandle() == null) return mtl;

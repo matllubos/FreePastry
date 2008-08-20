@@ -40,6 +40,8 @@ advised of the possibility of such damage.
 package rice.pastry.direct;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,8 +83,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
   /**
    * This maps to the next highest transport layer
    */
-  Map<Identifier, Tupel> nodes = 
-    new HashMap<Identifier, Tupel>();
+  Map<Identifier, Tupel> nodes = Collections.synchronizedMap(new HashMap<Identifier, Tupel>());
 
 
   // to notify of send/receive
@@ -195,6 +196,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
 
 
   public void registerIdentifier(Identifier i, DirectTransportLayer<Identifier, MessageType> dtl, NodeRecord record) {
+    //logger.log("registerIdentifier("+i+") on thread "+Thread.currentThread());
     nodes.put(i, new Tupel(i, dtl, record));
   }
 
@@ -264,11 +266,11 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
     Tupel ta = nodes.get(a);
     Tupel tb = nodes.get(b);
     if (ta == null) {
-      throw new RuntimeException("asking about node proximity for unknown node "+a);
+      throw new RuntimeException("asking about node proximity for unknown node "+a+" "+b);
     }
       
     if (tb == null) {
-      throw new RuntimeException("asking about node proximity for unknown node "+b);      
+      throw new RuntimeException("asking about node proximity for unknown node "+b+" "+a);      
     }
     
     NodeRecord nra = ta.record;

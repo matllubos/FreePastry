@@ -50,6 +50,8 @@ import rice.Continuation;
  * 
  * Used for writing headers.
  * 
+ * If continuation is null, then it closes the socket when done, or if there is an error.
+ * 
  * @author Jeff Hoye
  *
  * @param <Identifier>
@@ -88,7 +90,11 @@ public class BufferWriter<Identifier> implements P2PSocketReceiver<Identifier> {
   }
 
   public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
-    continuation.receiveException(ioe);
+    if (continuation == null) {
+      socket.close();
+    } else {
+      continuation.receiveException(ioe);
+    }
   }
 
   public void receiveSelectResult(P2PSocket<Identifier> socket,
@@ -108,7 +114,11 @@ public class BufferWriter<Identifier> implements P2PSocketReceiver<Identifier> {
       socket.register(false, true, this);
       return;
     }
-    
-    continuation.receiveResult(socket);
+        
+    if (continuation == null) {
+      socket.close();
+    } else {
+      continuation.receiveResult(socket);
+    }
   }
 }
