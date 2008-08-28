@@ -47,6 +47,6 @@ import org.mpisws.p2p.transport.TransportLayer;
  * @author Jeff Hoye
  *
  */
-public interface LimitBandwidhtTransportLayer<Identifier> extends TransportLayer<Identifier, ByteBuffer> {
+public interface LimitBandwidthTransportLayer<Identifier> extends TransportLayer<Identifier, ByteBuffer> {
 
 }
