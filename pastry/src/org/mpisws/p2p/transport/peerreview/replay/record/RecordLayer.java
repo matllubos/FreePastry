@@ -316,7 +316,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     DirectTimeSource dts = new DirectTimeSource(System.currentTimeMillis());
     LogManager lm = Environment.generateDefaultLogManager(dts,params);
     dts.setLogManager(lm);
-    SelectorManager selector = new RecordSM("Default", new SimpleTimeSource(), dts,lm);
+    SelectorManager selector = new RecordSM("Default", new SimpleTimeSource(), dts,lm,rs);
     dts.setSelectorManager(selector);
     Processor proc = new SimProcessor(selector);
     Environment ret = new Environment(selector,proc,rs,dts,lm,

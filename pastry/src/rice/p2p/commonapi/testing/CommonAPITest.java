@@ -633,11 +633,13 @@ public abstract class CommonAPITest {
     SelectorManager selector = null;
     Processor proc = null;
     LogManager logManager = null;
+    RandomSource rand = null; 
     if (params.getString("commonapi_testing_protocol").equals("direct")) {
       timeSource = new DirectTimeSource(params);
       logManager = Environment.generateDefaultLogManager(timeSource, params);
+      rand = Environment.generateDefaultRandomSource(params, logManager);
       ((DirectTimeSource)timeSource).setLogManager(logManager);
-      selector = Environment.generateDefaultSelectorManager(timeSource,logManager);
+      selector = Environment.generateDefaultSelectorManager(timeSource, logManager, rand);
       ((DirectTimeSource)timeSource).setSelectorManager(selector);
       
       proc = new SimProcessor(selector);

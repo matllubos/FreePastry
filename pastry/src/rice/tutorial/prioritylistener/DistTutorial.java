@@ -47,6 +47,7 @@ import org.mpisws.p2p.transport.TransportLayerListener;
 import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.priority.PriorityTransportLayerListener;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
@@ -95,7 +96,7 @@ public class DistTutorial {
       final PastryNode node = factory.newNode(bootHandle);
         
       PriorityTransportLayer<MultiInetSocketAddress> ptl = (PriorityTransportLayer<MultiInetSocketAddress>)node.getVars().get(SocketPastryNodeFactory.PRIORITY_TL);
-      ptl.addTransportLayerListener(new TransportLayerListener<MultiInetSocketAddress>() {
+      ptl.addPriorityTransportLayerListener(new PriorityTransportLayerListener<MultiInetSocketAddress>() {
       
         public void wrote(int bytes, MultiInetSocketAddress i,
             Map<String, Object> options, boolean passthrough, boolean socket) {          
@@ -118,6 +119,40 @@ public class DistTutorial {
             Map<String, Object> options, boolean passthrough, boolean socket) {
           System.out.println(node+" read a message of size "+bytes+" from "+i);      
 
+        }
+
+        public void enqueued(int bytes, MultiInetSocketAddress i,
+            Map<String, Object> options, boolean passthrough, boolean socket) {
+          int address = 0;
+          Integer addressI = (Integer)options.get(CommonAPITransportLayerImpl.MSG_ADDR);
+          if (addressI != null) {
+            address = addressI.intValue();
+          }
+          String messageClass = (String)options.get(CommonAPITransportLayerImpl.MSG_CLASS);
+          String toString = (String)options.get(CommonAPITransportLayerImpl.MSG_STRING);
+          short type = 0;
+          Short typeS = (Short)options.get(CommonAPITransportLayerImpl.MSG_TYPE);
+          if (typeS != null) {
+            type = typeS.shortValue();
+          }
+          System.out.println(node+" enqueued a "+messageClass+" of size "+bytes+" to "+i+" addr:"+address+" type:"+type+" "+toString);      
+        }      
+        
+        public void dropped(int bytes, MultiInetSocketAddress i,
+            Map<String, Object> options, boolean passthrough, boolean socket) {
+          int address = 0;
+          Integer addressI = (Integer)options.get(CommonAPITransportLayerImpl.MSG_ADDR);
+          if (addressI != null) {
+            address = addressI.intValue();
+          }
+          String messageClass = (String)options.get(CommonAPITransportLayerImpl.MSG_CLASS);
+          String toString = (String)options.get(CommonAPITransportLayerImpl.MSG_STRING);
+          short type = 0;
+          Short typeS = (Short)options.get(CommonAPITransportLayerImpl.MSG_TYPE);
+          if (typeS != null) {
+            type = typeS.shortValue();
+          }
+          System.out.println(node+" dropped a "+messageClass+" of size "+bytes+" to "+i+" addr:"+address+" type:"+type+" "+toString);      
         }      
       });
       

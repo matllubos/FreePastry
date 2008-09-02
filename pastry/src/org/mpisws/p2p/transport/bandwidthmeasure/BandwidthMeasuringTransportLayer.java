@@ -100,6 +100,7 @@ public class BandwidthMeasuringTransportLayer<Identifier> implements
    * Current measure, last measure
    */
   Map<Identifier, Tuple<int[], Collection<MySocket>>> measured = new HashMap<Identifier, Tuple<int[], Collection<MySocket>>>();
+  protected rice.environment.time.TimeSource time;
   
   public BandwidthMeasuringTransportLayer(int measurementPeriod, TransportLayer<Identifier, ByteBuffer> tl, Environment env) {
     this.tl = tl;
@@ -107,6 +108,8 @@ public class BandwidthMeasuringTransportLayer<Identifier> implements
     this.measurementPeriod = measurementPeriod;
     this.logger = env.getLogManager().getLogger(BandwidthMeasuringTransportLayer.class, null);
     this.errorHandler = new DefaultErrorHandler<Identifier>(logger);
+    this.time = env.getTimeSource();
+    this.lastMeasure = time.currentTimeMillis();
     
     env.getSelectorManager().schedule(new TimerTask() {
     
@@ -118,13 +121,22 @@ public class BandwidthMeasuringTransportLayer<Identifier> implements
     },measurementPeriod,measurementPeriod);    
   }
   
+  /**
+   * Last time measure was called.
+   */
+  long lastMeasure;
+  
   protected void measure() {
+    
     synchronized(measured) {
+      long now = time.currentTimeMillis();
+      int diff = (int)(now - lastMeasure);
+      lastMeasure = now;
       for (Identifier i : measured.keySet()) {
         Tuple<int[], Collection<MySocket>> t = measured.get(i);
         int[] vals = t.a();
-        vals[LAST_DOWN] = vals[CUR_DOWN];
-        vals[LAST_UP] = vals[CUR_UP];
+        vals[LAST_DOWN] = vals[CUR_DOWN]*1000/diff;
+        vals[LAST_UP] = vals[CUR_UP]*1000/diff;
         vals[LAST_SATURATED] = vals[CUR_SATURATED];
         vals[CUR_DOWN] = 0;
         vals[CUR_UP] = 0;

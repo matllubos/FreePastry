@@ -955,6 +955,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
       // enqueue the message
       ret = new MessageWrapper(temp, message, deliverAckToMe, options, priority, seq++);        
+      notifyListenersEnqueued(ret.originalSize, temp, options);
       enqueue(ret);
       if (selectorManager.isSelectorThread()) {
         scheduleToWriteIfNeeded();
@@ -1106,6 +1107,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       public void drop() {
         // TODO: make sure we've done evrything necessary here to clean this up        
         if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, new QueueOverflowException(identifier.get(), originalMessage));
+        notifyListenersDropped(originalSize, myIdentifier, options);
       }
             
       /**
@@ -1281,7 +1283,12 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
   } // EntityManager
   
   // *************************** Listeners *********************
+  /**
+   * Note that listeners contains a superset of plisteners
+   */
   ArrayList<TransportLayerListener<Identifier>> listeners = new ArrayList<TransportLayerListener<Identifier>>();
+  ArrayList<PriorityTransportLayerListener<Identifier>> plisteners = new ArrayList<PriorityTransportLayerListener<Identifier>>();
+  
   public void addTransportLayerListener(TransportLayerListener<Identifier> listener) {
     synchronized(listeners) { 
       listeners.add(listener);
@@ -1291,6 +1298,19 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     synchronized(listeners) { 
       listeners.remove(listener);
     }
+  }
+  
+  public void addPriorityTransportLayerListener(PriorityTransportLayerListener<Identifier> listener) {
+    synchronized(plisteners) { 
+      plisteners.add(listener);
+    }
+    addTransportLayerListener(listener);
+  }
+  public void removePriorityTransportLayerListener(PriorityTransportLayerListener<Identifier> listener) {
+    synchronized(plisteners) { 
+      plisteners.remove(listener);
+    }
+    removeTransportLayerListener(listener);
   }
   
   public void notifyListenersRead(int size, Identifier source,
@@ -1317,6 +1337,32 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     }
     for (TransportLayerListener<Identifier> l : temp) {
       l.wrote(size, dest, options, true, true);
+    }
+  }
+
+  public void notifyListenersEnqueued(int size, Identifier dest,
+      Map<String, Object> options) {
+    if (plisteners.isEmpty()) return;
+    ArrayList<PriorityTransportLayerListener<Identifier>> temp;
+    
+    synchronized(plisteners) { 
+      temp = new ArrayList<PriorityTransportLayerListener<Identifier>>(plisteners);
+    }
+    for (PriorityTransportLayerListener<Identifier> l : temp) {
+      l.enqueued(size, dest, options, true, true);
+    }
+  }
+
+  public void notifyListenersDropped(int size, Identifier dest,
+      Map<String, Object> options) {
+    if (plisteners.isEmpty()) return;
+    ArrayList<PriorityTransportLayerListener<Identifier>> temp;
+    
+    synchronized(plisteners) { 
+      temp = new ArrayList<PriorityTransportLayerListener<Identifier>>(plisteners);
+    }
+    for (PriorityTransportLayerListener<Identifier> l : temp) {
+      l.dropped(size, dest, options, true, true);
     }
   }
 

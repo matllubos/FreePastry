@@ -54,7 +54,8 @@ import java.util.Hashtable;
 import java.util.Iterator;
 
 import rice.environment.logging.*;
-import rice.environment.logging.LogManager;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 
 /**
@@ -78,18 +79,26 @@ public class ProfileSelector extends SelectorManager {
   int numInvocationsScheduled = 0;
   int numInvocationsExecuted = 0;
   
+  public ProfileSelector(String instance,
+      TimeSource timeSource, LogManager log) {    
+    this(instance,timeSource,log,null);
+  }
 
+  public ProfileSelector(String instance, TimeSource timeSource, LogManager log, RandomSource rand) {
+    this(instance, timeSource,log, null, 60000);
+  }
+  
   /**
    * 
    */
-  public ProfileSelector(String instance, TimeSource timeSource, LogManager log) {
-    super(instance, timeSource, log);
+  public ProfileSelector(String instance, TimeSource timeSource, LogManager log, RandomSource rand, final int lastTaskTime) {
+    super(instance, timeSource, log, (rand == null)?new SimpleRandomSource(log):rand);
     new Thread(new Runnable() {
       public void run() {
         while(true) {
           System.out.println("LastTask: type:"+lastTaskType+" class:"+lastTaskClass+" toString():"+lastTaskToString+" hash:"+lastTaskHash);
           try {
-            Thread.sleep(60000);
+            Thread.sleep(lastTaskTime);
           } catch (InterruptedException ie) {
           }
         }
@@ -174,6 +183,16 @@ public class ProfileSelector extends SelectorManager {
     while(i.hasNext()) {
       System.out.println("  "+i.next()); 
     }
+  }
+
+  protected boolean executeTask(TimerTask next) {
+    lastTaskType = "Executing "+next;
+    long startTime = timeSource.currentTimeMillis();
+    boolean ret = super.executeTask(next);
+    int time = (int)(timeSource.currentTimeMillis() - startTime);
+    lastTaskType = "Executing "+next+" Complete";
+    addStat("executing "+next.getClass(),time);   
+    return ret;
   }
 
   protected void doSelections() throws IOException {
@@ -346,6 +365,8 @@ public class ProfileSelector extends SelectorManager {
     }
   }
 
+  
+  
   /**
    * A statistic as to how long user code is taking to process a paritcular message.
    * 

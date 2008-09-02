@@ -75,6 +75,8 @@ public interface PriorityTransportLayer<Identifier> extends TransportLayer<Ident
   
   public void addTransportLayerListener(TransportLayerListener<Identifier> listener);
   public void removeTransportLayerListener(TransportLayerListener<Identifier> listener);
+  public void addPriorityTransportLayerListener(PriorityTransportLayerListener<Identifier> listener);
+  public void removePriorityTransportLayerListener(PriorityTransportLayerListener<Identifier> listener);
 
   /**
    * Returns if there is a primary connection to the identifier

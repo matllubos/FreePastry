@@ -1423,7 +1423,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     SelectorManager sman = rootEnvironment.getSelectorManager();
     if (rootEnvironment.getParameters().getBoolean("pastry_factory_selectorPerNode")) {
       sman = new SelectorManager(nodeId.toString() + " Selector",
-          rootEnvironment.getTimeSource(), lman);
+          rootEnvironment.getTimeSource(), lman, rootEnvironment.getRandomSource());
     }
     return sman;
   }

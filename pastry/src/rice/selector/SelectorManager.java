@@ -43,6 +43,8 @@ import java.util.*;
 import rice.Destructable;
 import rice.environment.Environment;
 import rice.environment.logging.*;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 
@@ -95,13 +97,16 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    */
   protected boolean select = true;
   
+  protected RandomSource random;
+  
   /**
    * Constructor, which is private since there is only one selector per JVM.
    */
   public SelectorManager(String instance,
-      TimeSource timeSource, LogManager log) {    
+      TimeSource timeSource, LogManager log, RandomSource random) {    
     super(instance == null ? "Selector Thread" : "Selector Thread -- "
         + instance);
+    this.random = random;
     this.instance = instance;
     this.logger = log.getLogger(getClass(), instance);
     this.invocations = new LinkedList<Runnable>();
@@ -120,6 +125,11 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     lastTime = timeSource.currentTimeMillis();
   }
 
+  public SelectorManager(String instance,
+      TimeSource timeSource, LogManager log) {    
+    this(instance,timeSource,log,new SimpleRandomSource(log));
+  }
+  
   protected Environment environment;
   
   /**
@@ -373,7 +383,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     }
 
     for (int i = 0; i < keys.length; i++) {
-      selector.selectedKeys().remove(keys[i]);
+      selector.selectedKeys().remove(keys[i]);      
 
       synchronized (keys[i]) {
         SelectionKeyHandler skh = (SelectionKeyHandler) keys[i].attachment();
@@ -522,15 +532,24 @@ public class SelectorManager extends Thread implements Timer, Destructable {
 //  }
 
   /**
-   * Selects all of the currenlty selected keys on the selector and returns the
+   * Selects all of the currently selected keys on the selector and returns the
    * result as an array of keys.
    * 
    * @return The array of keys
    * @exception IOException DESCRIBE THE EXCEPTION
    */
   protected SelectionKey[] selectedKeys() throws IOException {
-    return (SelectionKey[]) selector.selectedKeys()
-        .toArray(new SelectionKey[0]);
+    Set<SelectionKey> s = selector.selectedKeys();
+    SelectionKey[] k = (SelectionKey[])s.toArray(new SelectionKey[0]);
+    // randomize k
+    for (int c = 0; c < k.length; c++) {
+      SelectionKey temp = k[c];
+      int swapIndex = random.nextInt(k.length);
+      k[c] = k[swapIndex];
+      k[swapIndex] = temp;
+    }
+    
+    return k;
   }
 
   /**
@@ -691,7 +710,8 @@ public class SelectorManager extends Thread implements Timer, Destructable {
       TimerTask next = i.next();
       try {
         if (logger.level <= Logger.FINER) logger.log("executing task "+next);
-        if (next.execute(timeSource)) {
+        
+        if (executeTask(next)) {
           addBack.add(next);
         }
       } catch (RuntimeException e) {
@@ -724,6 +744,10 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     }
   }
 
+  protected boolean executeTask(TimerTask next) {
+    return next.execute(timeSource);
+  }
+  
   /**
    * Returns the timer associated with this SelectorManager (in this case, it is
    * this).

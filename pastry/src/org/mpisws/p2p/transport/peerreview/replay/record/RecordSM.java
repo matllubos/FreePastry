@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.peerreview.replay.record;
 
 import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
+import rice.environment.random.RandomSource;
 import rice.environment.time.TimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.selector.SelectorManager;
@@ -54,8 +55,8 @@ public class RecordSM extends SelectorManager {
   DirectTimeSource simTime;
   TimeSource realTime;
   
-  public RecordSM(String instance, TimeSource realTime, DirectTimeSource simTime, LogManager log) {
-    super(instance, simTime, log);
+  public RecordSM(String instance, TimeSource realTime, DirectTimeSource simTime, LogManager log, RandomSource rs) {
+    super(instance, simTime, log, rs);
     this.realTime = realTime;
     this.simTime = simTime;
   }

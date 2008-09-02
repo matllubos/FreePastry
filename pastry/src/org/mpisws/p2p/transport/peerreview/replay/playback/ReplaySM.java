@@ -64,7 +64,7 @@ public class ReplaySM extends SelectorManager {
   DirectTimeSource simTime;
   
   public ReplaySM(String instance, DirectTimeSource timeSource, LogManager log) {
-    super(instance, timeSource, log);
+    super(instance, timeSource, log, null);
     this.simTime = timeSource;
     setSelect(false);
   }

@@ -148,7 +148,7 @@ public class Environment implements Destructable {
     DirectTimeSource dts = new DirectTimeSource(params);
     LogManager lm = generateDefaultLogManager(dts,params);
     dts.setLogManager(lm);
-    SelectorManager selector = generateDefaultSelectorManager(dts,lm);
+    SelectorManager selector = generateDefaultSelectorManager(dts,lm,rs);
     dts.setSelectorManager(selector);
     Processor proc = new SimProcessor(selector);
     Environment ret = new Environment(selector,proc,rs,dts,lm,
@@ -185,7 +185,7 @@ public class Environment implements Destructable {
       randomSource = generateDefaultRandomSource(params,logManager);
     }    
     if (selectorManager == null) {      
-      selectorManager = generateDefaultSelectorManager(time, logManager); 
+      selectorManager = generateDefaultSelectorManager(time, logManager, randomSource); 
     }
     if (processor == null) {    
       if (params.contains("environment_use_sim_processor") &&
@@ -227,8 +227,8 @@ public class Environment implements Destructable {
     return new SimpleLogManager(time, params); 
   }
   
-  public static SelectorManager generateDefaultSelectorManager(TimeSource time, LogManager logging) {
-    return new SelectorManager("Default", time, logging);
+  public static SelectorManager generateDefaultSelectorManager(TimeSource time, LogManager logging, RandomSource randomSource) {
+    return new SelectorManager("Default", time, logging, randomSource);
   }
   
   public static Processor generateDefaultProcessor() {
@@ -351,7 +351,7 @@ public class Environment implements Destructable {
     SelectorManager sman = getSelectorManager();
     if (cloneSelector) {
       sman = new SelectorManager(prefix + " Selector",
-          getTimeSource(), lman);
+          getTimeSource(), lman, getRandomSource());
     }
     return sman;
   }
