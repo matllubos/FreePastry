@@ -36,5 +36,55 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.commitment;
 
+import java.io.IOException;
+import java.util.List;
+
+/**
+ * Witnesses use instances of this class to store authenticators. Typically
+ * there are three instances: authInStore, authPendingStore and authOutStore.
+ * The former two contain authenticators about nodes for which the local node is
+ * a witness, while the latter contains authenticators about other nodes which
+ * haven't been sent to the corresponding witness sets yet.
+ */
 public interface AuthenticatorStore<Identifier> {
+  public Authenticator getMostRecentAuthenticator(Identifier id);
+  public Authenticator getOldestAuthenticator(Identifier id);
+  public Authenticator getLastAuthenticatorBefore(Identifier id, long seq);
+  
+  /**
+   * Also writes it to disk.
+   * @param id
+   * @param authenticator
+   * @throws IOException 
+   */
+  public void addAuthenticator(Identifier id, Authenticator authenticator) throws IOException;
+  
+  /**
+   * Commits the Authenticators in memory to disk, overwriting the old store.
+   * 
+   * Since the authenticator file on disk is append-only, we need to garbage
+   * collect it from time to time. When this becomes necessary, we clear the
+   * file and then write out the authenticators currently in memory.
+   * @throws IOException 
+   */
+  public void garbageCollect() throws IOException;
+  
+  public int numAuthenticatorsFor(Identifier id);
+  
+  public int numAuthenticatorsFor(Identifier id, long minseq, long maxseq);
+  
+  public void flushAuthenticatorsFor(Identifier id, long minseq, long maxseq);
+
+  /**
+   * Retrieve all the authenticators within a given range of sequence numbers
+   */
+  public List<Authenticator> getAuthenticators(Identifier id, long minseq, long maxseq);
+  public List<Identifier> getSubjects();
+  public int getNumSubjects();
+  
+  public int getAuthenticatorSizeBytes();
+
+  public void flush(Identifier id);
+  public void flushAll();
+  
 }

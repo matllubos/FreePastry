@@ -38,8 +38,11 @@ package org.mpisws.p2p.transport.peerreview.commitment;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -52,7 +55,6 @@ import rice.p2p.util.RandomAccessFileIOBuffer;
 
 public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Identifier> {
   
-//  protected int authenticatorSizeBytes;
   protected boolean allowDuplicateSeqs;
   PeerReview<Identifier> peerreview;
   int numSubjects;
@@ -63,7 +65,7 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
   Logger logger;
   IdentifierSerializer<Identifier> idSerializer;
   AuthenticatorSerializer authenticatorSerializer;
-
+  
   public AuthenticatorStoreImpl(PeerReview<Identifier> peerreview, boolean allowDuplicateSeqs) {
     this.allowDuplicateSeqs = allowDuplicateSeqs;
     this.authenticators = new HashMap<Identifier, SortedSet<Authenticator>>();
@@ -91,20 +93,8 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
   }
   
   /**
-   *  Discard the authenticators in a certain sequence range (presumably because we just checked 
-   *  them against the corresponding log segment, and they were okay) 
-   */
-  protected void flushAuthenticatorsFromMemory(Identifier id, long minseq, long maxseq) {
-    
-    SortedSet<Authenticator> list = authenticators.get(id);    
-
-    if (list != null) {
-      SortedSet<Authenticator> subList = list.subSet(new Authenticator(minseq,null,null), new Authenticator(maxseq+1,null,null));      
-      list.removeAll(new ArrayList<Authenticator>(subList));
-    }    
-  }
-  
-  /**
+   * Read in the Authenticators from a file.
+   * 
    *  Each instance of this class has just a single file in which to store authenticators.
    *  The file format is (<id> <auth>)*; authenticators from different peers can be
    *  mixed. This method sets the name of the file and reads its current contents
@@ -121,21 +111,22 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
     // read in authenticators
     int authenticatorsRead = 0;
     int bytesRead = 0;
+    long pos = 0;
     while (authFile.bytesRemaining() > 0) {
       
-      long pos = authFile.getFilePointer();
       try {
         Identifier id = idSerializer.deserialize(authFile); //idbuf, &pos, sizeof(idbuf));
         Authenticator authenticator = authenticatorSerializer.deserialize(authFile);
         addAuthenticatorToMemory(id, authenticator);
         authenticatorsRead++;
+        pos = authFile.getFilePointer();
       } catch (IOException ioe) {
-        // clobber anything in the file after the ioexception
-        authFile.seek(pos);
         break;
       }
     }
      
+    // clobber anything in the file after the ioexception
+    authFile.setLength(pos);
     authFile.seek(authFile.length());
     
     return true;
@@ -165,8 +156,109 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
     list.add(authenticator);
   }
   
+  /**
+   *  Discard the authenticators in a certain sequence range (presumably because we just checked 
+   *  them against the corresponding log segment, and they were okay) 
+   */
+  protected void flushAuthenticatorsFromMemory(Identifier id, long minseq, long maxseq) {
+
+    SortedSet<Authenticator> list = authenticators.get(id);    
+
+    if (list != null) {
+      list.removeAll(getAuthenticators(id, minseq, maxseq));
+    }    
+  }
+  
   protected SortedSet<Authenticator> findSubject(Identifier id) {
     return authenticators.get(id);
+  }
+
+  public void addAuthenticator(Identifier id, Authenticator authenticator) throws IOException {
+    if (authFile != null) {
+      idSerializer.serialize(id,authFile);
+      authenticator.serialize(authFile);
+    }
+    addAuthenticatorToMemory(id, authenticator);
+  }
+
+  public void flushAuthenticatorsFor(Identifier id, long minseq, long maxseq) {
+    flushAuthenticatorsFromMemory(id, minseq, maxseq);
+  }
+
+  public void garbageCollect() throws IOException {
+    if (authFile == null) return;
+
+    // clobber the file
+    authFile.setLength(0);
+    authFile.seek(0);
+
+    // write all the elements
+    for (Identifier i : authenticators.keySet()) {
+      SortedSet<Authenticator> list = authenticators.get(i);
+      for (Authenticator a : list) {
+        idSerializer.serialize(i,authFile);
+        a.serialize(authFile);
+      }
+    }
+  }
+
+  public int getAuthenticatorSizeBytes() {
+    return authenticatorSerializer.getSerializedSize();
+  }
+
+  public List<Authenticator> getAuthenticators(Identifier id, long minseq,
+      long maxseq) {
+    SortedSet<Authenticator> list = authenticators.get(id);    
+
+    if (list != null) {
+      SortedSet<Authenticator> subList = list.subSet(new Authenticator(minseq,null,null), new Authenticator(maxseq+1,null,null));      
+      return new ArrayList<Authenticator>(subList);
+    }    
+    return Collections.emptyList();
+  }
+
+  public Authenticator getLastAuthenticatorBefore(Identifier id, long seq) {
+    List<Authenticator> list = getAuthenticators(id, Long.MIN_VALUE, seq);
+    if (list.isEmpty()) return null;
+    return list.get(list.size()-1);
+  }
+
+  public Authenticator getMostRecentAuthenticator(Identifier id) {
+    SortedSet<Authenticator> list = authenticators.get(id);    
+    if (list == null) return null;
+    return list.last();
+  }
+
+  public int getNumSubjects() {
+    return authenticators.size();
+  }
+
+  public Authenticator getOldestAuthenticator(Identifier id) {
+    SortedSet<Authenticator> list = authenticators.get(id);    
+    if (list == null) return null;
+    return list.first();
+  }
+
+  public List<Identifier> getSubjects() {
+    return new ArrayList<Identifier>(authenticators.keySet());
+  }
+
+  public int numAuthenticatorsFor(Identifier id) {
+    SortedSet<Authenticator> list = authenticators.get(id);    
+    if (list == null) return 0;
+    return list.size();
+  }
+
+  public int numAuthenticatorsFor(Identifier id, long minseq, long maxseq) {
+    return getAuthenticators(id, minseq, maxseq).size();    
+  }
+
+  public void flush(Identifier id) {
+    authenticators.remove(id);
+  }
+
+  public void flushAll() {
+    authenticators.clear();
   }
 
 }

@@ -1252,8 +1252,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
       public void done(P2PSocket<Identifier> socket) throws IOException {
         if (logger.level <= Logger.FINE) logger.log(EntityManager.this+" read message of size "+buf.capacity()+" from "+socket);        
-        callback.messageReceived(socket.getIdentifier(), buf, socket.getOptions()); 
         notifyListenersRead(buf.capacity(), socket.getIdentifier(), socket.getOptions());
+        callback.messageReceived(socket.getIdentifier(), buf, socket.getOptions()); 
         new SizeReader(socket);
       }
       

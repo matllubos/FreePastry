@@ -47,6 +47,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
  */
 public interface AuthenticatorSerializer {
 
-  Authenticator deserialize(InputBuffer buf) throws IOException;
+  public int getSerializedSize();
+  public Authenticator deserialize(InputBuffer buf) throws IOException;
   
 }
