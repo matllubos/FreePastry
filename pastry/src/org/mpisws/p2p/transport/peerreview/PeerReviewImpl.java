@@ -47,14 +47,33 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
+import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+
+import rice.environment.Environment;
 
 public class PeerReviewImpl<Identifier, MessageType> implements 
   TransportLayer<Identifier, MessageType>,
-  TransportLayerCallback<Identifier, MessageType> {
+  TransportLayerCallback<Identifier, MessageType>,
+  PeerReview<Identifier> {
 
   TransportLayer<Identifier, MessageType> tl;
   TransportLayerCallback<Identifier, MessageType> callback;
 
+  Environment env;
+  IdentifierSerializer<Identifier> idSerializer;
+  AuthenticatorSerializer authenticatorSerialilzer;
+  
+  public PeerReviewImpl(TransportLayer<Identifier, MessageType> tl,
+      Environment env, IdentifierSerializer<Identifier> idSerializer,
+      AuthenticatorSerializer authenticatorSerialilzer) {
+    super();
+    this.tl = tl;
+    this.env = env;
+    this.idSerializer = idSerializer;
+    this.authenticatorSerialilzer = authenticatorSerialilzer;
+  }
+    
   public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
     return tl.openSocket(i, deliverSocketToMe, options);
   }
@@ -95,4 +114,17 @@ public class PeerReviewImpl<Identifier, MessageType> implements
   public void destroy() {
     tl.destroy();
   }
+
+  public AuthenticatorSerializer getAuthenticatorSerializer() {
+    return authenticatorSerialilzer;
+  }
+
+  public Environment getEnvironment() {
+    return env;
+  }
+
+  public IdentifierSerializer<Identifier> getIdSerializer() {
+    return idSerializer;
+  }
+
 }
