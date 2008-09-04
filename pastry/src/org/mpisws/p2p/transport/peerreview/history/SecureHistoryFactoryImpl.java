@@ -66,7 +66,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
    * bytes for each entry. Note that the caller must specify the node hash and the sequence
    * number of the first log entry, which forms the base of the hash chain.
    */
-  public SecureHistory create(String name, long baseSeq, Hash baseHash) throws IOException {
+  public SecureHistory create(String name, long baseSeq, byte[] baseHash) throws IOException {
     RandomAccessFileIOBuffer indexFile, dataFile;
     
     if (name == null) {
@@ -132,8 +132,10 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     long fileIndex = buf.readLong();
     int sizeInFile = buf.readInt();
     short type = buf.readShort();
-    Hash contentHash = hashProv.build(buf);
-    Hash nodeHash = hashProv.build(buf);
+    byte[] contentHash = new byte[hashProv.getSerizlizedSize()];
+    buf.read(contentHash);
+    byte[] nodeHash = new byte[hashProv.getSerizlizedSize()];
+    buf.read(nodeHash);
     return new IndexEntry(seq, fileIndex, type, sizeInFile, contentHash, nodeHash);
   }
 

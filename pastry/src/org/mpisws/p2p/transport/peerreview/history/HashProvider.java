@@ -41,14 +41,14 @@ import java.nio.ByteBuffer;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public interface HashProvider {
-  public Hash hash(long seq, short type, Hash nodeHash, Hash contentHash);
-  public Hash hash(ByteBuffer ... hashMe);
+  public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash);
+  public byte[] hash(ByteBuffer ... hashMe);
   
-  public Hash build(InputBuffer buf);
-  public Hash build(byte[] hashBytes, int start, int length);
+//  public byte[] build(InputBuffer buf);
+//  public byte[] build(byte[] hashBytes, int start, int length);
 
-  int getSerizlizedSize(); // 20 by default
+  short getSerizlizedSize(); // 20 by default
 
-  public Hash getEmpty();
+  public byte[] getEmpty();
 
 }

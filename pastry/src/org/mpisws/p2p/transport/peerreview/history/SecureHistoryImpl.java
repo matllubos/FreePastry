@@ -193,7 +193,7 @@ public class SecureHistoryImpl implements SecureHistory {
    * the content type, sequence number, and hash values. No entry is made in
    * the data file. 
    */
-  public void appendHash(short type, Hash hash) throws IOException {
+  public void appendHash(short type, byte[] hash) throws IOException {
     assert(indexFile != null && dataFile != null);
     
     // Sanity check (for debugging) 
@@ -331,7 +331,7 @@ public class SecureHistoryImpl implements SecureHistory {
     pointerAtEnd = false;  
     indexFile.seek((idxFrom-1) * indexFactory.getSerializedSize());
     ie = indexFactory.build(indexFile);
-    ie.nodeHash.serialize(outfile);
+    outfile.write(ie.nodeHash);
     
     // Go through entries one by one    
     long previousSeq = -1;
@@ -399,7 +399,7 @@ public class SecureHistoryImpl implements SecureHistory {
       if (hashIt) {
         outfile.writeByte(0);
 //        header[bytesInHeader++] = 0;
-        ie.contentHash.serialize(outfile);
+        outfile.write(ie.contentHash); 
 //        for (int i=0; i<hashProv.getSizeOfHash(); i++)
 //          header[bytesInHeader++] = ie.contentHash[i];
       } else if (ie.sizeInFile < 255) {

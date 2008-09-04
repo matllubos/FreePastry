@@ -36,6 +36,8 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.commitment;
 
+import java.io.IOException;
+
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 
@@ -45,6 +47,6 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
  */
 public interface AuthenticatorSerializer {
 
-  Authenticator deserialize(InputBuffer buf);
+  Authenticator deserialize(InputBuffer buf) throws IOException;
   
 }

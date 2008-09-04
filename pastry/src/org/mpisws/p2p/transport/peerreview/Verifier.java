@@ -45,7 +45,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
-import org.mpisws.p2p.transport.peerreview.history.Hash;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
@@ -189,7 +188,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
       // make the nextEvent only the content hash
       
       nextEventIsHashed = true;
-      nextEvent = new SimpleInputBuffer(next.getContentHash().getBytes());
+      nextEvent = new SimpleInputBuffer(next.getContentHash());
 //      nextEventSize = hashSizeBytes;
 //      memcpy(nextEvent, chash, hashSizeBytes);
       if (logger.level <= Logger.FINE) logger.log("Fetched log entry #"+nextEventIndex+" (type "+next.getType()+", hashed, seq="+next.getSeq()+")");
@@ -277,7 +276,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //        else
         message.position(pos);
         message.limit(lim);
-        Hash hash = hashProv.hash(message);
+        byte[] hash = hashProv.hash(message);
 //          
 //        pos += hashSizeBytes;
       }
@@ -285,7 +284,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //      // this code serializes the contentHash
 //      unsigned char chash[hashSizeBytes];
 //      hash(chash, buf, pos);
-      Hash cHash = hashProv.hash(ByteBuffer.wrap(buf.getBytes()));
+      byte[] cHash = hashProv.hash(ByteBuffer.wrap(buf.getBytes()));
       if (!cHash.equals(next.getContentHash())) {
 //      if (memcmp(chash, nextEvent, hashSizeBytes)) {
         if (logger.level <= Logger.WARNING) logger.log("Replay: SEND is hashed, but hash of predicted SEND entry does not match hash in the log");
@@ -348,9 +347,11 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
         return;
       }
       
-      Hash logHash = hashProv.build(nextEvent);
+      byte[] logHash = new byte[hashSizeBytes]; 
+      nextEvent.read(logHash);
       byte[] msgHashBytes = message.array();
-      Hash msgHash = hashProv.build(msgHashBytes, msgHashBytes.length-hashSizeBytes, hashSizeBytes);
+      byte[] msgHash = new byte[hashSizeBytes];
+      System.arraycopy(msgHashBytes, msgHashBytes.length-hashSizeBytes, msgHash, 0, hashSizeBytes);
       assert(msgLen == (relevantLen + hashSizeBytes));
       if (!msgHash.equals(logHash)) {
         if (logger.level <= Logger.WARNING) logger.log("Replay: Hashed part of partly hashed message differs");

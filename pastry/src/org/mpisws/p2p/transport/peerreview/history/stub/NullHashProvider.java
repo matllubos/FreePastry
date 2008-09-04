@@ -38,36 +38,35 @@ package org.mpisws.p2p.transport.peerreview.history.stub;
 
 import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.transport.peerreview.history.Hash;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public class NullHashProvider implements HashProvider {
 
-  public static final NullHash EMPTY_HASH = new NullHash();
+  public static final byte[] EMPTY_HASH = new byte[0];
   
-  public Hash hash(long seq, short type, Hash nodeHash, Hash contentHash) {
+  public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
     return EMPTY_HASH;
   }
 
-  public Hash hash(ByteBuffer... hashMe) {
+  public byte[] hash(ByteBuffer... hashMe) {
     return EMPTY_HASH;
   }
 
-  public Hash build(InputBuffer buf) {
+  public byte[] build(InputBuffer buf) {
     return EMPTY_HASH;
   }
 
-  public Hash getEmpty() {
+  public byte[] getEmpty() {
     return EMPTY_HASH;
   }
 
-  public int getSerizlizedSize() {
+  public short getSerizlizedSize() {
     return 0;
   }
 
-  public Hash build(byte[] hashBytes, int start, int length) {
+  public byte[] build(byte[] hashBytes, int start, int length) {
     if (length > 0) throw new IllegalArgumentException("Length must equal 0");
     return EMPTY_HASH;
   }

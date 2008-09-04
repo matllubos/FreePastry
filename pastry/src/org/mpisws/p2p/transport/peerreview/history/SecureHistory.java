@@ -67,7 +67,7 @@ public interface SecureHistory /* extends Iterable<IndexEntry> */ {
    * the content type, sequence number, and hash values. No entry is made in
    * the data file. 
    */
-  public void appendHash(short type, Hash hash) throws IOException;
+  public void appendHash(short type, byte[] hash) throws IOException;
 
   /**
    * Sets the next sequence number to be used. The PeerReview library typically

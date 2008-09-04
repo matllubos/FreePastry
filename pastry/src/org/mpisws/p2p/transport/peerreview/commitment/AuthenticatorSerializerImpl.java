@@ -34,19 +34,30 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.history;
+package org.mpisws.p2p.transport.peerreview.commitment;
 
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import java.io.IOException;
 
-public interface Hash {
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 
-  /**
-   * Write self to file.
-   * 
-   * @param buf
-   */
-  void serialize(OutputBuffer buf);
-
-  byte[] getBytes();
+public class AuthenticatorSerializerImpl implements AuthenticatorSerializer {
   
+  int hashLength;
+  int signatureLength;
+  
+  public AuthenticatorSerializerImpl(int hashLength, int signatureLength) {
+    this.hashLength = hashLength;
+    this.signatureLength = signatureLength;
+  }
+  
+  public Authenticator deserialize(InputBuffer buf) throws IOException {
+    long seq = buf.readLong();
+    byte[] hash = new byte[hashLength];
+    buf.read(hash);
+    byte[] signature = new byte[signatureLength];
+    buf.read(signature);
+    
+    return new Authenticator(seq, hash, signature);
+  }
+
 }

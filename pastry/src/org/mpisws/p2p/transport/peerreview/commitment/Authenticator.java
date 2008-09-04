@@ -40,29 +40,27 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.mpisws.p2p.transport.peerreview.history.Hash;
-
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.MathUtils;
 
 public class Authenticator implements Comparable<Authenticator> {
   private long seq;
-  private Hash hash;
+  private byte[] hash;
   private byte[] signature;
   
   int hashCode = 0;
   
-  public Authenticator(long seq, Hash hash, byte[] signature) {
+  public Authenticator(long seq, byte[] hash, byte[] signature) {
     super();
     this.seq = seq;
     this.hash = hash;
     this.signature = signature;
-    hashCode = (int)(seq ^ (seq >>> 32))^Arrays.hashCode(hash.getBytes())^Arrays.hashCode(signature);
+    hashCode = (int)(seq ^ (seq >>> 32))^Arrays.hashCode(hash)^Arrays.hashCode(signature);
   }
     
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeLong(seq);
-    hash.serialize(buf);
+    buf.write(hash, 0, hash.length);
     buf.write(signature, 0, signature.length);
   }
 
@@ -105,7 +103,7 @@ public class Authenticator implements Comparable<Authenticator> {
       }
     }
     
-    int ret = ByteBuffer.wrap(hash.getBytes()).compareTo(ByteBuffer.wrap(that.hash.getBytes()));
+    int ret = ByteBuffer.wrap(hash).compareTo(ByteBuffer.wrap(that.hash));
     if (ret == 0) {
       return ByteBuffer.wrap(signature).compareTo(ByteBuffer.wrap(that.signature));
     }
@@ -117,6 +115,6 @@ public class Authenticator implements Comparable<Authenticator> {
   }
   
   public String toString() {
-    return seq+" "+MathUtils.toHex(hash.getBytes())+" "+MathUtils.toHex(signature);
+    return seq+" "+MathUtils.toHex(hash)+" "+MathUtils.toHex(signature);
   }
 }

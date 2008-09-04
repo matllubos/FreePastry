@@ -47,6 +47,6 @@ public interface SecureHistoryFactory {
    * bytes for each entry. Note that the caller must specify the node hash and the sequence
    * number of the first log entry, which forms the base of the hash chain.
    */
-  SecureHistory create(String name, long baseSeq, Hash baseHash) throws IOException;
+  SecureHistory create(String name, long baseSeq, byte[] baseHash) throws IOException;
   SecureHistory open(String name, String mode) throws IOException;
 }

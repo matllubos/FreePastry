@@ -68,17 +68,17 @@ public class IndexEntry {
    * 
    * H(full content)
    */
-  Hash contentHash;
+  byte[] contentHash;
   /**
    * H(prevNode.nodeHash, seq, type, contentHash)
    */
-  Hash nodeHash;
+  byte[] nodeHash;
   
   public IndexEntry(long seq) {
     this.seq = seq;
   }
 
-  public IndexEntry(long seq, long index, short type, int size, Hash contentHash, Hash nodeHash) {
+  public IndexEntry(long seq, long index, short type, int size, byte[] contentHash, byte[] nodeHash) {
     this.seq = seq;
     this.fileIndex = index;
     this.type = type;
@@ -92,11 +92,11 @@ public class IndexEntry {
     buf.writeLong(fileIndex);
     buf.writeInt(sizeInFile);
     buf.writeShort(type);
-    contentHash.serialize(buf);
-    nodeHash.serialize(buf);
+    buf.write(contentHash, 0, contentHash.length);
+    buf.write(nodeHash,0, nodeHash.length);
   }
 
-  public Hash getContentHash() {
+  public byte[] getContentHash() {
     return contentHash;
   }
 
@@ -104,7 +104,7 @@ public class IndexEntry {
     return fileIndex;
   }
 
-  public Hash getNodeHash() {
+  public byte[] getNodeHash() {
     return nodeHash;
   }
 

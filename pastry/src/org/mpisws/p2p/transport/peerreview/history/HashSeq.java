@@ -37,15 +37,15 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.history;
 
 public class HashSeq {
-  private Hash hash;
+  private byte[] hash;
   private long seq;
   
-  public HashSeq(Hash h, long s) {
+  public HashSeq(byte[] h, long s) {
     hash = h;
     seq = s;
   }
   
-  public Hash getHash() {
+  public byte[] getHash() {
     return hash;
   }
   
