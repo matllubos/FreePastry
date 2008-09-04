@@ -37,5 +37,4 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.commitment;
 
 public interface AuthenticatorStore<Identifier> {
-  public void addAuthenticatorToMemory(Identifier id, Authenticator authenticator);
 }

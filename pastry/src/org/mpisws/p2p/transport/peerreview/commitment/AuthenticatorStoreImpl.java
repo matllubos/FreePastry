@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.commitment;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -77,9 +78,6 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
   
   public void destroy() {
     authenticators.clear();
-//    while (head != null) {
-//      flushAuthenticatorsFromMemory(head.id, Long.MIN_VALUE, Long.MAX_VALUE);
-//    }
     
     if (authFile != null) {
       try {
@@ -96,25 +94,13 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
    *  Discard the authenticators in a certain sequence range (presumably because we just checked 
    *  them against the corresponding log segment, and they were okay) 
    */
-  void flushAuthenticatorsFromMemory(Identifier id, long minseq, long maxseq) {
+  protected void flushAuthenticatorsFromMemory(Identifier id, long minseq, long maxseq) {
     
     SortedSet<Authenticator> list = authenticators.get(id);    
 
     if (list != null) {
-      SortedSet<Authenticator> subList = list.subSet(new Authenticator(minseq,null,null), new Authenticator(maxseq,null,null));
-      list.removeAll(subList);
-      Iterator<Authenticator> it = list.iterator();
-      while(it.hasNext()) {
-        Authenticator n = it.next();
-        long thisSeq = n.getSeq();
-        if (thisSeq > maxseq) {
-          break;
-        } else {
-          if (thisSeq>=minseq) {
-            it.remove();
-          }
-        }
-      }
+      SortedSet<Authenticator> subList = list.subSet(new Authenticator(minseq,null,null), new Authenticator(maxseq+1,null,null));      
+      list.removeAll(new ArrayList<Authenticator>(subList));
     }    
   }
   
@@ -132,29 +118,16 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
     
     authFile = new RandomAccessFileIOBuffer(filename, "rw"); //O_RDWR | O_CREAT, 0644);
     
-//    if (authFile < 0) {
-//      authFile = 0;
-//      return false;
-//    }
-    
     // read in authenticators
-//    Authenticator authenticator;  
     int authenticatorsRead = 0;
     int bytesRead = 0;
-//    unsigned char idbuf[peerreview->getIdentifierSizeBytes()];
     while (authFile.bytesRemaining() > 0) {
       
-//      if (read(authFile, &authenticator, authenticatorSizeBytes) != authenticatorSizeBytes)
-//        break;
-
       long pos = authFile.getFilePointer();
       try {
         Identifier id = idSerializer.deserialize(authFile); //idbuf, &pos, sizeof(idbuf));
         Authenticator authenticator = authenticatorSerializer.deserialize(authFile);
         addAuthenticatorToMemory(id, authenticator);
-  //      delete id;
-         
-  //      bytesRead += sizeof(idbuf) + authenticatorSizeBytes;
         authenticatorsRead++;
       } catch (IOException ioe) {
         // clobber anything in the file after the ioexception
@@ -163,8 +136,6 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
       }
     }
      
-    // this method clobbers any partially written authenticators from before
-//    ftruncate(authFile, bytesRead);
     authFile.seek(authFile.length());
     
     return true;
@@ -175,7 +146,7 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
    * and by sequence number, whereas on disk, they are not sorted at all. 
    */
 
-  public void addAuthenticatorToMemory(Identifier id, Authenticator authenticator) {
+  protected void addAuthenticatorToMemory(Identifier id, Authenticator authenticator) {
     SortedSet<Authenticator> list = authenticators.get(id);
     if (list == null) {
       list = new TreeSet<Authenticator>();
@@ -192,6 +163,10 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
       }
     }
     list.add(authenticator);
+  }
+  
+  protected SortedSet<Authenticator> findSubject(Identifier id) {
+    return authenticators.get(id);
   }
 
 }

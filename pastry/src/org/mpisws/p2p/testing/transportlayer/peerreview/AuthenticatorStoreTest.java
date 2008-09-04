@@ -38,6 +38,7 @@ package org.mpisws.p2p.testing.transportlayer.peerreview;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.SortedSet;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
@@ -55,13 +56,15 @@ public class AuthenticatorStoreTest {
   public static final int HASH_LEN = 20;
   public static final int SIGN_LEN = 28;
   
+  
+  
   /**
    * @param args
    */
   public static void main(String[] args) throws Exception {
     Environment env = new Environment();
     PeerReview<InetSocketAddress> pr = new TestPeerReview(env, new AuthenticatorSerializerImpl(HASH_LEN, SIGN_LEN));
-    AuthenticatorStore<InetSocketAddress> store = new AuthenticatorStoreImpl<InetSocketAddress>(pr,false);
+    TestAuthenticatorStore store = new TestAuthenticatorStore(pr,false);
     
     InetSocketAddress id = new InetSocketAddress(InetAddress.getLocalHost(), 6789);
     
@@ -86,15 +89,40 @@ public class AuthenticatorStoreTest {
     Authenticator a3 = new Authenticator(42,h3,s3);
 
     store.addAuthenticatorToMemory(id, new Authenticator(4,h1,s1));
+    store.addAuthenticatorToMemory(id, new Authenticator(7,h1,s1));
     store.addAuthenticatorToMemory(id, new Authenticator(8,h1,s1));
+    store.addAuthenticatorToMemory(id, new Authenticator(9,h1,s1));
     store.addAuthenticatorToMemory(id, new Authenticator(41,h1,s1));
     store.addAuthenticatorToMemory(id, new Authenticator(43,h1,s1));
     store.addAuthenticatorToMemory(id, new Authenticator(53,h1,s1));
     
     store.addAuthenticatorToMemory(id, a1);
     store.addAuthenticatorToMemory(id, a2); // should not crash here
-    store.addAuthenticatorToMemory(id, a3); // should crash here
+    
+    boolean fail = true;
+    try {
+      store.addAuthenticatorToMemory(id, a3); // should crash here
+      fail = false;
+    } catch (RuntimeException re) {
+      fail = true;
+    }
+    if (!fail) {
+      System.out.println("Allowed Duplicates, BAD!!!!");
+      return;
+    }
+    
+    store.flushAuthenticatorsFromMemory(id, 8, 42);
+    if (store.findSubject(id).size() != 4) {
+      System.out.println("flush failed! "+store.findSubject(id));
+    }
 
+    store.flushAuthenticatorsFromMemory(id, 43, 43);
+    if (store.findSubject(id).size() != 3) {
+      System.out.println("flush failed! "+store.findSubject(id));
+    }
+
+    System.out.println("success");
+    env.destroy();
   }
 }
   class TestPeerReview implements PeerReview<InetSocketAddress> {
@@ -119,3 +147,29 @@ public class AuthenticatorStoreTest {
     }
   }
 
+  class TestAuthenticatorStore extends AuthenticatorStoreImpl<InetSocketAddress> {
+
+    public TestAuthenticatorStore(PeerReview<InetSocketAddress> peerreview,
+        boolean allowDuplicateSeqs) {
+      super(peerreview, allowDuplicateSeqs);
+    }
+    
+    @Override
+    public void addAuthenticatorToMemory(InetSocketAddress id,
+        Authenticator authenticator) {
+      super.addAuthenticatorToMemory(id, authenticator);
+    }
+
+    @Override
+    public void flushAuthenticatorsFromMemory(InetSocketAddress id,
+        long minseq, long maxseq) {
+      super.flushAuthenticatorsFromMemory(id, minseq, maxseq);
+    }
+
+    @Override
+    public SortedSet<Authenticator> findSubject(InetSocketAddress id) {
+      return super.findSubject(id);
+    }
+
+    
+  }
