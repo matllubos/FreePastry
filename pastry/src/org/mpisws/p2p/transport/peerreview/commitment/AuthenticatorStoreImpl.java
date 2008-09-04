@@ -175,7 +175,7 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
    * and by sequence number, whereas on disk, they are not sorted at all. 
    */
 
-  void addAuthenticatorToMemory(Identifier id, Authenticator authenticator) {
+  public void addAuthenticatorToMemory(Identifier id, Authenticator authenticator) {
     SortedSet<Authenticator> list = authenticators.get(id);
     if (list == null) {
       list = new TreeSet<Authenticator>();
