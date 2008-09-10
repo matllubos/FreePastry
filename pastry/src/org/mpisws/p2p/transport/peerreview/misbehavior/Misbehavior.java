@@ -34,13 +34,8 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.security;
+package org.mpisws.p2p.transport.peerreview.misbehavior;
 
-import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayer;
+public interface Misbehavior {
 
-import rice.p2p.commonapi.NodeHandle;
-
-public interface CertificateTransportLayer extends CommonAPITransportLayer {
-
-  public Certificate getCertificate(NodeHandle handle);
 }

@@ -58,6 +58,7 @@ import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.identity.CertificateManager;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.util.BufferReader;
 import org.mpisws.p2p.transport.util.BufferWriter;
@@ -78,7 +79,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @author Jeff Hoye
  *
  */
-public class CertificateTransprotLayerImpl<Identifier> implements CertificateTransportLayer<Identifier, ByteBuffer>, TransportLayerCallback<Identifier, ByteBuffer>, CertificateManager<Identifier> {
+public class CertificateTransprotLayerImpl<Identifier> implements CertificateTransportLayer<Identifier, ByteBuffer>, TransportLayerCallback<Identifier, ByteBuffer>, IdentityTransport<Identifier, ByteBuffer> {
   public static final byte PASSTHROUGH = 0;
   public static final byte CERT_REQUEST = 1;
   public static final byte CERT_RESPONSE = 2;

@@ -34,16 +34,12 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.security;
+package org.mpisws.p2p.transport.peerreview.commitment;
 
-import rice.Continuation;
-import rice.p2p.commonapi.NodeHandle;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
-/**
- * Specifies the method to acquire a Node's certificate
- * @author Jeff Hoye
- *
- */
-public interface CertificateFactory {
-  void getCertificate(NodeHandle handle, Continuation<Certificate, Exception> response);
+public class PacketInfo {
+  Map<String, Object> options;
+  ByteBuffer msg;
 }

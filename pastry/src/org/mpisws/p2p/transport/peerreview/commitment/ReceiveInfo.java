@@ -37,18 +37,19 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.commitment;
 
 /**
- * This protocol attaches signatures to outgoing messages and acknowledges
- * incoming messages. It also has transmit and receive queues where messages can
- * be held while acknowledgments are pending, and it can retransmit messages a
- * few times when an acknowledgment is not received.
+ * We cache a few recently received messages, so we can recognize duplicates.
+ * We also remember the location of the corresponding RECV entry in the log,
+ * so we can reproduce the matching acknowledgment
  */
-public interface CommitmentProtocol<Identifier> {
-//  int lookupPeer(Identifier handle);
-//  PacketInfo *enqueueTail(struct packetInfo *queue, unsigned char *message, int msglen);
-//  void makeProgress(int idx);
-//  int findRecvEntry(Identifier *id, long long seq);
-//  long long findAckEntry(Identifier *id, long long seq);
-//  void initReceiveCache();
-//  void addToReceiveCache(Identifier *id, long long senderSeq, int indexInLocalHistory);
-
+public class ReceiveInfo<Identifier> {
+  Identifier sender;
+  long senderSeq;
+  long indexInLocalHistory;
+  
+  public ReceiveInfo(Identifier sender, long senderSeq, long indexInLocalHistory) {
+    super();
+    this.sender = sender;
+    this.senderSeq = senderSeq;
+    this.indexInLocalHistory = indexInLocalHistory;
+  }
 }

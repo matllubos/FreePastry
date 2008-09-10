@@ -34,21 +34,8 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.commitment;
+package org.mpisws.p2p.transport.peerreview.infostore;
 
-/**
- * This protocol attaches signatures to outgoing messages and acknowledges
- * incoming messages. It also has transmit and receive queues where messages can
- * be held while acknowledgments are pending, and it can retransmit messages a
- * few times when an acknowledgment is not received.
- */
-public interface CommitmentProtocol<Identifier> {
-//  int lookupPeer(Identifier handle);
-//  PacketInfo *enqueueTail(struct packetInfo *queue, unsigned char *message, int msglen);
-//  void makeProgress(int idx);
-//  int findRecvEntry(Identifier *id, long long seq);
-//  long long findAckEntry(Identifier *id, long long seq);
-//  void initReceiveCache();
-//  void addToReceiveCache(Identifier *id, long long senderSeq, int indexInLocalHistory);
+public interface PeerInfoStore {
 
 }

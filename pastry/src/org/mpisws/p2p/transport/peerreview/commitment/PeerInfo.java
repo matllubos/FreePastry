@@ -34,8 +34,39 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.security;
+package org.mpisws.p2p.transport.peerreview.commitment;
 
-public interface Certificate {
+import java.util.LinkedList;
 
+/**
+ * We need to keep some state for each peer, including separate transmit and
+ * receive queues
+ */
+public class PeerInfo {
+//  NodeHandle *handle;
+  public static final int INITIAL_CHALLENGE_INTERVAL_MICROS = 30000000;
+
+  
+  int numOutstandingPackets;
+  long lastTransmit;
+  long currentTimeout;
+  int retransmitsSoFar;
+  long lastChallenge;
+  long currentChallengeInterval;
+  LinkedList<PacketInfo> xmitQueue;
+  LinkedList<PacketInfo> recvQueue;
+  boolean isReceiving;
+  
+
+  public PeerInfo() {
+    numOutstandingPackets = 0;
+    lastTransmit = 0;
+    xmitQueue = new LinkedList<PacketInfo>();
+    recvQueue = new LinkedList<PacketInfo>();
+    currentTimeout = 0;
+    retransmitsSoFar = 0;
+    lastChallenge = -1;
+    currentChallengeInterval = INITIAL_CHALLENGE_INTERVAL_MICROS;
+    isReceiving = false;
+  }
 }
