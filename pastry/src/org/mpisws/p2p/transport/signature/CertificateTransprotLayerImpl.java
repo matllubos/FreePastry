@@ -360,5 +360,9 @@ public class CertificateTransprotLayerImpl<Identifier> implements CertificateTra
     }
     return ret;
   }
+
+  public short signatureSizeInBytes() {
+    throw new RuntimeException("implement me.");
+  }
   
 }

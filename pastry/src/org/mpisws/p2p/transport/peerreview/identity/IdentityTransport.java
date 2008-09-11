@@ -39,5 +39,5 @@ package org.mpisws.p2p.transport.peerreview.identity;
 import org.mpisws.p2p.transport.TransportLayer;
 
 public interface IdentityTransport<Identifier, MessageType> extends CertificateManager<Identifier>, TransportLayer<Identifier, MessageType> {
-
+  
 }

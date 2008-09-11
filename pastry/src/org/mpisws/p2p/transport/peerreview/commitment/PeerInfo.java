@@ -53,6 +53,9 @@ public class PeerInfo {
   int retransmitsSoFar;
   long lastChallenge;
   long currentChallengeInterval;
+  /**
+   * The first message hasn't been acknowledged, the rest haven't been sent.
+   */
   LinkedList<PacketInfo> xmitQueue;
   LinkedList<PacketInfo> recvQueue;
   boolean isReceiving;

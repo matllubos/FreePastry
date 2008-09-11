@@ -59,4 +59,5 @@ public interface CertificateManager<Identifier> {
   public void verify(Identifier id, byte[] msg, int moff, int mlen, byte[] signature, int soff, int slen) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException, UnknownCertificateException ;
   public boolean hasCertificate(Identifier id);
   public Cancellable requestCertificate(Identifier source, Identifier certHolder, Continuation<X509Certificate, Exception> c, Map<String, Object> options);
+  public short signatureSizeInBytes();
 }

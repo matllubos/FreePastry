@@ -137,14 +137,14 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
    * updated, this function is called. 
    */  
   public void updateLogTime() {
-   long now = environment.getTimeSource().currentTimeMillis();
-  
-   if (now > lastLogEntry) {
-     if (!history.setNextSeq(now * 1000000))
-       throw new RuntimeException("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
+    long now = environment.getTimeSource().currentTimeMillis();
+   
+    if (now > lastLogEntry) {
+      if (!history.setNextSeq(now * 1000000))
+        throw new RuntimeException("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
        
-     lastLogEntry = now;
-   }
+      lastLogEntry = now;
+    }
   }
   
   /* Called by applications to log some application-specific event, such as PAST_GET. */

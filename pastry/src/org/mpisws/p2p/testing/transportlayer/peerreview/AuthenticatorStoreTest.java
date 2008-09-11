@@ -145,6 +145,10 @@ public class AuthenticatorStoreTest {
     public AuthenticatorSerializer getAuthenticatorSerializer() {
       return aSer;
     }
+
+    public long getTime() {
+      return env.getTimeSource().currentTimeMillis();
+    }
   }
 
   class TestAuthenticatorStore extends AuthenticatorStoreImpl<InetSocketAddress> {

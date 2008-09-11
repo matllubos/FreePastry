@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.peerreview.commitment;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.SignatureException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -46,17 +47,23 @@ import java.util.Map;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.history.HashSeq;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.misbehavior.Misbehavior;
 import org.mpisws.p2p.transport.signature.CertificateTransportLayer;
 
+import rice.environment.logging.Logger;
+import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.Tuple;
 import rice.selector.TimerTask;
 
-public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol {
+public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Identifier>, PeerReviewEvents {
   public int MAX_PEERS = 250;
   public int INITIAL_TIMEOUT_MICROS = 1000000;
   public int RETRANSMIT_TIMEOUT_MICROS = 1000000;
@@ -64,6 +71,7 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol {
   public int MAX_RETRANSMISSIONS = 2;
   public int TI_PROGRESS = 1;
   public int PROGRESS_INTERVAL_MICROS = 1000000;
+  public int MAX_ENTRIES_PER_MS = 1000000;      /* Max number of entries per millisecond */
 
   /**
    * We need to keep some state for each peer, including separate transmit and
@@ -83,24 +91,30 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol {
   PeerReviewCallback app;
   PeerReview<Identifier> peerreview;
   PeerInfoStore infoStore;
-  CertificateTransportLayer<Identifier, ByteBuffer> transport;
+  IdentityTransport<Identifier, ByteBuffer> transport;
+  HashProvider hasher;
   Identifier myHandle;
-  Misbehavior misbehavior;
-  long timeToleranceMicros;
+  Misbehavior<Identifier> misbehavior;
+  /**
+   * If the time is more different than this from a peer, we discard the message
+   */
+  long timeToleranceMillis;
   int nextReceiveCacheEntry;
   int signatureSizeBytes;
   int hashSizeBytes;
   
   TimerTask makeProgressTask;
+  Logger logger;
 //  int numPeers;
   
   public CommitmentProtocolImpl(PeerReview<Identifier> peerreview,
-      CertificateTransportLayer<Identifier, ByteBuffer> transport,
-      PeerInfoStore infoStore, AuthenticatorStore authStore,
-      SecureHistory history, PeerReviewCallback app, Misbehavior misbehavior,
-      long timeToleranceMicros) throws IOException {
+      IdentityTransport<Identifier, ByteBuffer> transport, HashProvider hasher,
+      PeerInfoStore infoStore, AuthenticatorStore<Identifier> authStore,
+      SecureHistory history, PeerReviewCallback app, Misbehavior<Identifier> misbehavior,
+      long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
     this.myHandle = transport.getLocalIdentifier();
+    this.hasher = hasher;
 //    this.signatureSizeBytes = transport.getSignatureSizeBytes();
 //    this.hashSizeBytes = transport.getHashSizeBytes();
     this.transport = transport;
@@ -111,8 +125,9 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol {
     this.misbehavior = misbehavior;
     this.nextReceiveCacheEntry = 0;
 //    this.numPeers = 0;
-    this.timeToleranceMicros = timeToleranceMicros;
+    this.timeToleranceMillis = timeToleranceMillis;
     
+    this.logger = peerreview.getEnvironment().getLogManager().getLogger(CommitmentProtocolImpl.class, null);
 //    for (int i=0; i<RECEIVE_CACHE_SIZE; i++) {
 //      receiveCache[i].sender = NULL;
 //      receiveCache[i].senderSeq = 0;
@@ -202,5 +217,248 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol {
 
   void makeProgress(Identifier idx) {
     throw new RuntimeException("todo: implement.");
+  }
+  
+  long findRecvEntry(Identifier id, long seq) {
+    ReceiveInfo<Identifier> ret = receiveCache.get(new Tuple<Identifier, Long>(id,seq));
+    if (ret == null) return -1;
+    return ret.indexInLocalHistory;
+  }
+  
+  /**
+   * Handle an incoming USERDATA message 
+   */
+  void handleIncomingMessage(Identifier source, ByteBuffer msg, Map<String, Object> options) throws IOException {
+//    char buf1[256];    
+    SimpleInputBuffer sib = new SimpleInputBuffer(msg);
+    assert(sib.readByte() == MSG_USERDATA);
+
+    /* Sanity checks */
+
+    if (msg.remaining() < (17 + hashSizeBytes + signatureSizeBytes)) {
+      if (logger.level <= Logger.WARNING) logger.log("Short application message from "+source+"; discarding.");
+      return;
+    }
+
+    /* Check whether the timestamp (in the sequence number) is close enough to our local time.
+       If not, the node may be trying to roll forward its clock, so we discard the message. */
+    long seq = sib.readLong();
+    long txmit = (seq / MAX_ENTRIES_PER_MS);
+
+    if ((txmit < (peerreview.getTime()-timeToleranceMillis)) || (txmit > (peerreview.getTime()+timeToleranceMillis))) {
+      if (logger.level <= Logger.WARNING) logger.log("Invalid sequence no #"+seq+" on incoming message (dt="+(txmit-peerreview.getTime())+"); discarding");
+      return;
+    }
+
+    /**
+     * Append a copy of the message to our receive queue. If the node is
+     * trusted, the message is going to be delivered directly by makeProgress();
+     * otherwise a challenge is sent.
+     */
+    lookupPeer(source).recvQueue.addLast(new PacketInfo(msg, options));
+
+    makeProgress(source);
+  }
+
+  long handleOutgoingMessage(Identifier target, ByteBuffer message, int relevantlen, Map<String, Object> options) throws IOException, SignatureException {
+    assert(relevantlen >= 0);
+
+    /* Append a SEND entry to our local log */
+    
+    byte[] hTopMinusOne, hTop, hToSign;
+//    long topSeq;
+    hTopMinusOne = history.getTopLevelEntry().getHash();
+    if (relevantlen < message.remaining()) {
+//      int logEntryMaxlen = MAX_ID_SIZE + 1 + relevantlen + hashSizeBytes;
+//      unsigned char *logEntry = (unsigned char*) malloc(logEntryMaxlen);
+//      unsigned int logEntryLen = 0;
+//      target->getIdentifier()->write(logEntry, &logEntryLen, logEntryMaxlen);
+//      writeByte(logEntry, &logEntryLen, 1);
+//      if (relevantlen > 0) {
+//        memcpy(&logEntry[logEntryLen], message, relevantlen);
+//        logEntryLen += relevantlen;
+//      }
+//      transport->hash(&logEntry[logEntryLen], &message[relevantlen], msglen - relevantlen);
+//      logEntryLen += hashSizeBytes;
+//      
+//      history->appendEntry(EVT_SEND, true, logEntry, logEntryLen);
+//      free(logEntry);
+//    } else {
+//      unsigned char header[MAX_ID_SIZE+1];
+//      unsigned int headerSize = 0;
+//      target->getIdentifier()->write(header, &headerSize, sizeof(header));
+//      writeByte(header, &headerSize, 0);
+//      history->appendEntry(EVT_SEND, true, message, msglen, header, headerSize);
+    }
+    
+    //  hTop, &topSeq
+    HashSeq top = history.getTopLevelEntry();
+    
+    /* Maybe we need to do some mischief for testing? */
+    
+    if (misbehavior != null) {
+      misbehavior.maybeChangeSeqInUserMessage(top.getSeq());
+    }
+    
+    /* Sign the authenticator */
+      
+    hToSign = hasher.hash(ByteBuffer.wrap(MathUtils.longToByteArray(top.getSeq())), ByteBuffer.wrap(top.getHash()));
+
+    byte[] signature = transport.sign(hToSign);
+    
+    /* Append a SENDSIGN entry */
+    
+    ByteBuffer relevantMsg = message;
+    if (relevantlen < message.remaining()) {
+      relevantMsg = ByteBuffer.wrap(message.array(), message.position(), relevantlen);
+    }
+    history.appendEntry(EVT_SENDSIGN, true, relevantMsg, ByteBuffer.wrap(signature));
+    
+    /* Maybe do some more mischief for testing? */
+
+    if (misbehavior != null && misbehavior.dropAfterLogging(target, message, options)) {
+      return top.getSeq();
+    }
+    
+    /* Construct a USERDATA message... */
+    
+    assert((relevantlen == message.remaining()) || (relevantlen < 255));    
+    byte relevantCode = (relevantlen == message.remaining()) ? (byte)0xFF : (byte)relevantlen;
+//    unsigned int maxLen = 1 + sizeof(topSeq) + MAX_HANDLE_SIZE + hashSizeBytes + signatureSizeBytes + sizeof(relevantCode) + msglen;
+//    unsigned char *buf = (unsigned char *)malloc(maxLen);
+//    unsigned int totalLen = 0;
+    
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    sob.writeByte(MSG_USERDATA);
+    sob.writeLong(top.getSeq());
+    peerreview.getIdSerializer().serialize(myHandle, sob);
+    sob.write(hTopMinusOne);
+    sob.write(signature);
+    sob.writeByte(relevantCode);
+    sob.write(message.array(), message.position(), message.remaining());
+//    assert(totalLen <= maxLen);
+    
+    /* ... and put it into the send queue. If the node is trusted and does not have any
+       unacknowledged messages, makeProgress() will simply send it out. */
+    
+    lookupPeer(target).xmitQueue.addLast(new PacketInfo(sob.getByteBuffer(),options));
+    makeProgress(target);
+    
+    return top.getSeq();
+  }
+  /* This is called if we receive an acknowledgment from another node */
+
+  void handleIncomingAck(Identifier source, ByteBuffer message, Map<String, Object> options) throws IOException {
+//    char buf1[256];
+    SimpleInputBuffer sib = new SimpleInputBuffer(message);
+    assert(sib.readByte() == MSG_ACK);
+    
+    /* Sanity check */    
+//    if (msglen < (17 + peerreview.getIdentifierSizeBytes() + hashSizeBytes + signatureSizeBytes)) {
+//      return;
+//    }
+        
+    /* Acknowledgment: Log it (if we don't have it already) and send the next message, if any */
+
+    if (logger.level <= Logger.FINE) logger.log("Received an ACK from "+source);
+
+    Identifier remoteId = peerreview.getIdSerializer().deserialize(sib);
+    long ackedSeq = sib.readLong();
+    long hisSeq = sib.readLong();    
+    byte[] hTopMinusOne = new byte[hasher.getSerizlizedSize()];
+    sib.read(hTopMinusOne);
+    byte[] signature = new byte[transport.signatureSizeInBytes()];
+    
+    if (transport.hasCertificate(remoteId)) {
+      PeerInfo p = lookupPeer(source);
+      /**
+      MSG_USERDATA
+      byte type = MSG_USERDATA
+      long long topSeq   
+      handle senderHandle
+      hash hTopMinusOne
+      signature sig
+      byte relevantCode          // 0xFF = fully, otherwise length in bytes
+      [payload bytes follow]
+       */
+      
+      SimpleInputBuffer xmittedMsg = new SimpleInputBuffer(p.xmitQueue.getFirst().msg);
+      xmittedMsg.readByte();
+      long sendSeq = xmittedMsg.readLong();
+
+      /* The ACK must acknowledge the sequence number of the packet that is currently
+         at the head of the send queue */
+
+      if (ackedSeq == sendSeq) {
+        Identifier sendHandle = peerreview.getIdSerializer().deserialize(xmittedMsg);
+        // skip the hTopMinusOne
+        sib.read(new byte[hasher.getSerizlizedSize()+transport.signatureSizeInBytes()]);
+        int relevantCode = MathUtils.uByteToInt(xmittedMsg.readByte());
+        
+        int payloadLen = sib.bytesRemaining();
+        byte[] payload = new byte[payloadLen];
+        sib.read(payload);
+        int relevantLen = (relevantCode == 0xFF) ? payloadLen : relevantCode;
+
+        /* The peer will have logged a RECV entry, and the signature is calculated over that
+           entry. To verify the signature, we must reconstruct that RECV entry locally */
+
+        SimpleOutputBuffer sob = new SimpleOutputBuffer();
+        peerreview.getIdSerializer().serialize(sendHandle, sob);
+        sob.writeLong(sendSeq);
+        sob.writeByte((relevantLen < payloadLen) ? 1 : 0);
+        ByteBuffer recvEntryHeader = sob.getByteBuffer();
+        
+        byte[] innerHash;
+        if (relevantLen < payloadLen) {
+          byte[] irrelevantHash = hasher.hash(ByteBuffer.wrap(payload, relevantLen, payloadLen - relevantLen));
+          innerHash = hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload, 0, relevantLen), ByteBuffer.wrap(irrelevantHash));
+        } else {
+          innerHash = hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload));
+        }
+
+        /* Now we're ready to check the signature */
+
+//        unsigned char authenticator[sizeof(long long) + hashSizeBytes + signatureSizeBytes];
+//        if (peerreview->extractAuthenticator(remoteId, hisSeq, EVT_RECV, innerHash, hTopMinusOne, signature, authenticator)) {
+//
+//          /* Signature is okay... append an ACK entry to the log */
+//
+//          dlog(2, "ACK is okay; logging");
+//          unsigned char entry[2*sizeof(long long) + MAX_ID_SIZE + hashSizeBytes + signatureSizeBytes];
+//          unsigned int pos = 0;
+//          remoteId->write(entry, &pos, sizeof(entry));
+//          writeLongLong(entry, &pos, ackedSeq);
+//          writeLongLong(entry, &pos, hisSeq);
+//          writeBytes(entry, &pos, hTopMinusOne, hashSizeBytes);
+//          writeBytes(entry, &pos, signature, signatureSizeBytes);
+//          history->appendEntry(EVT_ACK, true, entry, pos);
+//          app->sendComplete(ackedSeq);
+//
+//          /* Remove the message from the xmit queue */
+//
+//          struct packetInfo *pi = peer[idx].xmitQueue;
+//          peer[idx].xmitQueue = peer[idx].xmitQueue->next;
+//          peer[idx].numOutstandingPackets --;
+//          free(pi->message);
+//          free(pi);
+//
+//          /* Make progress (e.g. by sending the next message) */
+//
+//          makeProgress(idx);
+//        } else {
+//          warning("Invalid ACK from <%s>; discarding", remoteId->render(buf1));
+//        }
+//      } else {
+//        if (findAckEntry(remoteId, ackedSeq) < 0) {
+//          warning("<%s> has ACKed something we haven't sent (%lld); discarding", remoteId->render(buf1), ackedSeq);
+//        } else {
+//          warning("Duplicate ACK from <%s>; discarding", remoteId->render(buf1));
+//        }
+//      }
+//    } else {
+//      warning("We got an ACK from <%s>, but we don't have the certificate; discarding", remoteId->render(buf1));
+      }
+    }
   }
 }

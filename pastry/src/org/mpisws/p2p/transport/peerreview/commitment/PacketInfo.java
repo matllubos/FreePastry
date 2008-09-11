@@ -40,6 +40,11 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class PacketInfo {
-  Map<String, Object> options;
   ByteBuffer msg;
+  Map<String, Object> options;
+
+  public PacketInfo(ByteBuffer msg, Map<String, Object> options) {
+    this.msg = msg;
+    this.options = options;
+  }
 }

@@ -48,4 +48,11 @@ public interface PeerReview<Identifier> {
   AuthenticatorSerializer getAuthenticatorSerializer();
 
   IdentifierSerializer<Identifier> getIdSerializer();
+
+  /**
+   * Current time in millis, however, we depend on there being a timesource that is more discritized
+   * than the "wall" clock.  It is only advanced on a timeout or a message receipt.
+   * @return
+   */
+  long getTime();
 }

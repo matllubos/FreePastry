@@ -36,6 +36,11 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.misbehavior;
 
-public interface Misbehavior {
+import java.nio.ByteBuffer;
+import java.util.Map;
 
+public interface Misbehavior<Identifier> {
+
+  void maybeChangeSeqInUserMessage(long seq);
+  boolean dropAfterLogging(Identifier target, ByteBuffer message, Map<String, Object> options);
 }

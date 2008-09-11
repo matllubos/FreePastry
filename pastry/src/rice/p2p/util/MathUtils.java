@@ -330,4 +330,13 @@ public class MathUtils {
 
     return result;
   }
+  
+  public static int uByteToInt(byte b) {
+    return (int) b & 0xFF;
+  }
+  
+  public static byte intToUByte(int i) {
+    if ((i > 255) || (i < 0)) throw new RuntimeException("can't convert "+i+" to an unsigned byte");
+    return (byte)i;
+  }  
 }

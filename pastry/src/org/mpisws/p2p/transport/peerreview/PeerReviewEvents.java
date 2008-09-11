@@ -65,5 +65,15 @@ public interface PeerReviewEvents {
   public static final short EX_TYPE_IO = 1;
   public static final short EX_TYPE_ClosedChannel = 2;
   public static final short EX_TYPE_Unknown = 0;
-  
+ 
+  public static final short MSG_USERDATA = 16;            /* Contains data the application has sent */
+  public static final short MSG_ACK = 17;                       /* Acknowledges an USERDATA message */
+  public static final short MSG_ACCUSATION = 18;            /* Contains evidence about a third node */
+  public static final short MSG_CHALLENGE = 19;            /* Contains evidence about the recipient */
+  public static final short MSG_RESPONSE = 20;                      /* Answers a previous CHALLENGE */
+  public static final short MSG_AUTHPUSH = 21;        /* Sent to a witness; contains authenticators */
+  public static final short MSG_AUTHREQ = 22;    /* Asks a witness to return a recent authenticator */
+  public static final short MSG_AUTHRESP = 23;                    /* Responds to a previous AUTHREQ */
+  public static final short MSG_USERDGRAM = 24;    /* Contains a datagram from the app (not logged) */
+
 }

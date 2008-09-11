@@ -127,4 +127,8 @@ public class PeerReviewImpl<Identifier, MessageType> implements
     return idSerializer;
   }
 
+  public long getTime() {
+    return env.getTimeSource().currentTimeMillis();
+  }
+
 }
