@@ -1139,15 +1139,16 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       
       public boolean cancel() {
         cancelled = true;
-        if (this.equals(messageThatIsBeingWritten)) {
-          if (message.position() == 0) {
-            // TODO: can still cancel the message, but have to have special behavior when the socket calls us back 
-            return true;
-          } else {
-            return false;
-          }
-        }
         synchronized(queue) {
+          if (this.equals(messageThatIsBeingWritten)) {
+            if (message.position() == 0) {
+              // TODO: can still cancel the message, but have to have special behavior when the socket calls us back 
+              messageThatIsBeingWritten = null;
+              return true;
+            } else {
+              return false;
+            }
+          }
           return queue.remove(this);
         }
       }
