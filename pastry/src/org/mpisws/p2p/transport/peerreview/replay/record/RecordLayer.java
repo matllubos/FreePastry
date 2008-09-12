@@ -49,12 +49,12 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
-import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
+import org.mpisws.p2p.transport.util.Serializer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
 import rice.environment.Environment;
@@ -72,7 +72,7 @@ import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.selector.SelectorManager;
 
-public class RecordLayer<Identifier> implements PeerReviewEvents,
+public class RecordLayer<Identifier> implements PeerReviewConstants,
   TransportLayer<Identifier, ByteBuffer>,
   TransportLayerCallback<Identifier, ByteBuffer> {
 
@@ -89,7 +89,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   Environment environment;
   TransportLayer<Identifier, ByteBuffer> tl;
   TransportLayerCallback<Identifier, ByteBuffer> callback;
-  IdentifierSerializer<Identifier> identifierSerializer;
+  Serializer<Identifier> identifierSerializer;
   ErrorHandler<Identifier> handler;
   
   SecureHistory history;
@@ -102,7 +102,7 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   
   public static ByteBuffer ONE, ZERO;
   
-  public RecordLayer(TransportLayer<Identifier, ByteBuffer> tl, String name, IdentifierSerializer<Identifier> serializer, Environment env) throws IOException {
+  public RecordLayer(TransportLayer<Identifier, ByteBuffer> tl, String name, Serializer<Identifier> serializer, Environment env) throws IOException {
     this.logger = env.getLogManager().getLogger(RecordLayer.class, null);
     this.identifierSerializer = serializer;
     
@@ -165,8 +165,10 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
   public SocketRequestHandle<Identifier> openSocket(final Identifier i, final SocketCallback<Identifier> deliverSocketToMe, final Map<String, Object> options) {
     final int socketId = socketCtr++;
     final ByteBuffer socketIdBuffer = ByteBuffer.wrap(MathUtils.intToByteArray(socketId));
-    try {
-      logEvent(EVT_SOCKET_OPEN_OUTGOING, socketIdBuffer, identifierSerializer.serialize(i));
+    try {        
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      identifierSerializer.serialize(i, sob);
+      logEvent(EVT_SOCKET_OPEN_OUTGOING, socketIdBuffer, sob.getByteBuffer());
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("openSocket("+i+")",ioe); 
     }
@@ -204,7 +206,9 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
     final ByteBuffer socketIdBuffer = ByteBuffer.wrap(MathUtils.intToByteArray(socketId));
     try {
       socketIdBuffer.clear();
-      logEvent(EVT_SOCKET_OPEN_INCOMING, socketIdBuffer, identifierSerializer.serialize(s.getIdentifier()));
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      identifierSerializer.serialize(s.getIdentifier(), sob);
+      logEvent(EVT_SOCKET_OPEN_INCOMING, socketIdBuffer, sob.getByteBuffer());
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("incomingSocket("+s.getIdentifier()+")",ioe); 
     }
@@ -233,7 +237,9 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
       }
       
       try {
-        logEvent(EVT_SEND, identifierSerializer.serialize(i), m);
+        SimpleOutputBuffer sob = new SimpleOutputBuffer();
+        identifierSerializer.serialize(i, sob);
+        logEvent(EVT_SEND, sob.getByteBuffer(), m);
       } catch (IOException ioe) {
         if (logger.level <= Logger.WARNING) logger.logException("sendMessage("+i+","+m+")",ioe); 
       }
@@ -261,7 +267,9 @@ public class RecordLayer<Identifier> implements PeerReviewEvents,
         if (logger.level <= Logger.WARNING) logger.log("Dropping messageReceived("+i+","+m+") while booting");
         return; 
       }
-      logEvent(EVT_RECV, identifierSerializer.serialize(i), m);
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      identifierSerializer.serialize(i, sob);
+      logEvent(EVT_RECV, sob.getByteBuffer(), m);
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.logException("messageReceived("+i+","+m+")",ioe); 
     }

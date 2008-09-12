@@ -53,8 +53,8 @@ import org.mpisws.p2p.transport.peerreview.Verifier;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
@@ -76,7 +76,7 @@ public class ReplayLayer<Identifier> extends Verifier<Identifier> implements
   TransportLayerCallback<Identifier, ByteBuffer> callback;
   Map<Integer, ReplaySocket<Identifier>> sockets = new HashMap<Integer, ReplaySocket<Identifier>>();
 
-  public ReplayLayer(IdentifierSerializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, Environment environment) throws IOException {
+  public ReplayLayer(Serializer<Identifier> serializer, HashProvider hashProv, SecureHistory history, Identifier localHandle, Environment environment) throws IOException {
     super(serializer, hashProv, history, localHandle, (short)0, (short)0, 0, environment.getLogManager().getLogger(ReplayLayer.class, localHandle.toString()));
     this.environment = environment;
   }

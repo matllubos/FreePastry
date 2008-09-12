@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -47,46 +48,73 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.proof.ProofInconsistent;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public class PeerReviewImpl<Identifier, MessageType> implements 
-  TransportLayer<Identifier, MessageType>,
-  TransportLayerCallback<Identifier, MessageType>,
-  PeerReview<Identifier> {
+/**
+ * 
+ * @author Jeff Hoye
+ *
+ * @param <Handle> (Usually a NodeHandle)
+ * @param <Identifier> (Permanent Identifier), can get an Identifier from a Handle
+ */
+public class PeerReviewImpl<Handle, Identifier> implements 
+  TransportLayer<Handle, ByteBuffer>,
+  TransportLayerCallback<Handle, ByteBuffer>,
+  PeerReview<Handle, Identifier> {
 
-  TransportLayer<Identifier, MessageType> tl;
-  TransportLayerCallback<Identifier, MessageType> callback;
+  TransportLayer<Handle, ByteBuffer> tl;
+  TransportLayerCallback<Handle, ByteBuffer> callback;
 
   Environment env;
-  IdentifierSerializer<Identifier> idSerializer;
+  Serializer<Identifier> idSerializer;
+  Serializer<Handle> handleSerializer;
   AuthenticatorSerializer authenticatorSerialilzer;
+  AuthenticatorStore<Identifier> authOutStore;
+  HashProvider hasher;
+  IdentityTransport<Handle, Identifier> transport;
+  PeerInfoStore<Handle, Identifier> infoStore;
   
-  public PeerReviewImpl(TransportLayer<Identifier, MessageType> tl,
-      Environment env, IdentifierSerializer<Identifier> idSerializer,
+  IdentifierExtractor<Handle, Identifier> identifierExtractor;
+  Logger logger;
+
+  public PeerReviewImpl(TransportLayer<Handle, ByteBuffer> tl,
+      Environment env, Serializer<Handle> handleSerializer,
+      Serializer<Identifier> idSerializer,      
       AuthenticatorSerializer authenticatorSerialilzer) {
     super();
     this.tl = tl;
     this.env = env;
+    this.logger = env.getLogManager().getLogger(PeerReviewImpl.class, null);
     this.idSerializer = idSerializer;
-    this.authenticatorSerialilzer = authenticatorSerialilzer;
+    this.handleSerializer = handleSerializer;
+    this.authenticatorSerialilzer = authenticatorSerialilzer; 
   }
     
-  public SocketRequestHandle<Identifier> openSocket(Identifier i, SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
+  public SocketRequestHandle<Handle> openSocket(Handle i, SocketCallback<Handle> deliverSocketToMe, Map<String, Object> options) {
     return tl.openSocket(i, deliverSocketToMe, options);
   }
 
-  public void incomingSocket(P2PSocket<Identifier> s) throws IOException {
+  public void incomingSocket(P2PSocket<Handle> s) throws IOException {
     callback.incomingSocket(s);
   }
 
-  public MessageRequestHandle<Identifier, MessageType> sendMessage(Identifier i, MessageType m, MessageCallback<Identifier, MessageType> deliverAckToMe, Map<String, Object> options) {
+  public MessageRequestHandle<Handle, ByteBuffer> sendMessage(Handle i, ByteBuffer m, MessageCallback<Handle, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
     return tl.sendMessage(i, m, deliverAckToMe, options);
   }
 
-  public void messageReceived(Identifier i, MessageType m, Map<String, Object> options) throws IOException {
+  public void messageReceived(Handle i, ByteBuffer m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
   }
   
@@ -98,15 +126,15 @@ public class PeerReviewImpl<Identifier, MessageType> implements
     tl.acceptSockets(b);
   }
 
-  public Identifier getLocalIdentifier() {
+  public Handle getLocalIdentifier() {
     return tl.getLocalIdentifier();
   }
 
-  public void setCallback(TransportLayerCallback<Identifier, MessageType> callback) {
+  public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
     this.callback = callback;
   }
 
-  public void setErrorHandler(ErrorHandler<Identifier> handler) {
+  public void setErrorHandler(ErrorHandler<Handle> handler) {
     // TODO Auto-generated method stub
     
   }
@@ -123,12 +151,136 @@ public class PeerReviewImpl<Identifier, MessageType> implements
     return env;
   }
 
-  public IdentifierSerializer<Identifier> getIdSerializer() {
+  public Serializer<Identifier> getIdSerializer() {
     return idSerializer;
   }
 
   public long getTime() {
     return env.getTimeSource().currentTimeMillis();
   }
+  
+  /** 
+   * A helper function that extracts an authenticator from an incoming message and adds it to our local store. 
+   */
+  Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException {
+//    *(long long*)&authenticator[0] = seq;
+    
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    sob.writeLong(seq);
+    sob.writeShort(entryType);
+    sob.write(hTopMinusOne);
+    sob.write(entryHash);
+    byte[] hash = hasher.hash(sob.getByteBuffer());
+    Authenticator ret = new Authenticator(seq,hash,signature);
+    if (addAuthenticatorIfValid(authOutStore, id, ret)) {
+      return ret;
+    }
+    return null;
+  }
 
+  /**
+   * Helper function called internally from the library. It takes a (potentially
+   * new) authenticator and adds it to our local store if (a) it hasn't been
+   * recorded before, and (b) its signature is valid.
+   */
+  boolean addAuthenticatorIfValid(AuthenticatorStore<Identifier> store, Identifier subject, Authenticator auth) {
+    // see if we can exit early
+    Authenticator existingAuth = store.statAuthenticator(subject, auth.getSeq());
+    if (existingAuth != null) {       
+      /* If yes, then it should be bit-wise identical to the new one */
+    
+      if (auth.equals(existingAuth)) {
+        return true;
+      }
+    }
+   
+     /* maybe the new authenticator is a forgery? Let's check the signature! 
+        If the signature doesn't check out, then we simply discard the 'authenticator' and
+        move on. */
+     assert(transport.hasCertificate(subject));
+
+     try {
+       SimpleOutputBuffer sob = new SimpleOutputBuffer();
+       sob.writeLong(auth.getSeq());
+       sob.write(auth.getHash());
+       byte[] signedHash = hasher.hash(sob.getByteBuffer());
+       transport.verify(subject, signedHash, 0, signedHash.length, auth.getSignature(), 0, auth.getSignature().length);
+       
+//    char buf1[1000];
+       
+       /* Do we already have an authenticator with the same sequence number and from the same node? */
+       if (existingAuth != null) {
+         /* The signature checks out, so the node must have signed two different authenticators
+         with the same sequence number! This is a proof of misbehavior, and we must
+         notify the witness set! */
+             if (logger.level < Logger.WARNING) logger.log("Authenticator conflict for "+subject+" seq #"+auth.getSeq());
+             if (logger.level < Logger.FINE) logger.log("Existing: ["+existingAuth+"]");
+             if (logger.level < Logger.FINE) logger.log("New:      ["+auth+"]");
+             
+             /**
+              * PROOF_INCONSISTENT
+              * byte type = PROOF_INCONSISTENT
+              * authenticator auth1
+              * char whichInconsistency   // 0=another auth, 1=a log snippet
+              * -----------------------
+              * authenticator auth2       // if whichInconsistency==0
+              * -----------------------
+              * long long firstSeq        // if whichInconsistency==1
+              * hash baseHash
+              * [entries]
+              */
+             ProofInconsistent proof = new ProofInconsistent(auth,existingAuth);
+        long evidenceSeq = getEvidenceSeq();
+        infoStore.addEvidence(identifierExtractor.extractIdentifier(transport.getLocalIdentifier()), subject, evidenceSeq, proof);
+        sendEvidenceToWitnesses(subject, evidenceSeq, proof);
+         return false;
+       }
+       
+     
+       /* We haven't seen this authenticator... Signature is ok, so we keep the new authenticator in our store. */  
+       store.addAuthenticator(subject, auth);
+       return true;
+       
+    } catch (Exception e) {
+      return false;
+    }
+  }
+   
+  /**
+   * Called internally by other classes if they have found evidence against one of our peers.
+   * We ask the EvidenceTransferProtocol to send it to the corresponding witness set. 
+   */
+  protected void sendEvidenceToWitnesses(Identifier subject, long evidenceSeq,
+      ProofInconsistent evidence) {
+    throw new RuntimeException("todo: implement.");
+//    unsigned int accusationMaxlen = 1 + 2*MAX_ID_SIZE + sizeof(long long) + evidenceLen + signatureSizeBytes;
+//    unsigned char *accusation = (unsigned char*) malloc(accusationMaxlen);
+//    unsigned int accusationLen = 0;
+//    char buf1[256];
+//  
+//    accusation[accusationLen++] = MSG_ACCUSATION;
+//    transport->getLocalHandle()->getIdentifier()->write(accusation, &accusationLen, accusationMaxlen);
+//    subject->write(accusation, &accusationLen, accusationMaxlen);
+//    writeLongLong(accusation, &accusationLen, evidenceSeq);
+//    memcpy(&accusation[accusationLen], evidence, evidenceLen);
+//    accusationLen += evidenceLen;
+//   
+//    plog(2, "Relaying evidence to <%s>'s witnesses", subject->render(buf1));
+//    evidenceTransferProtocol->sendMessageToWitnesses(subject, false, accusation, accusationLen);
+//  
+//    free(accusation);
+  }
+
+  /* Gets a fresh, unique sequence number for evidence */
+  long nextEvidenceSeq = 0L;
+  long getEvidenceSeq() {
+    if (nextEvidenceSeq < getTime()) {
+      nextEvidenceSeq = getTime();
+    }
+    return nextEvidenceSeq++;
+  }
+
+  public Serializer<Handle> getHandleSerializer() {
+    return handleSerializer;
+  }
 }

@@ -43,15 +43,15 @@ import java.net.InetSocketAddress;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 
 public class MyEntryDeserializer extends BasicEntryDeserializer implements MyEvents {
-  IdentifierSerializer serializer;
+  Serializer serializer;
 
-  public MyEntryDeserializer(IdentifierSerializer serializer) {
+  public MyEntryDeserializer(Serializer serializer) {
     this.serializer = serializer;
   }
   

@@ -117,4 +117,12 @@ public class Authenticator implements Comparable<Authenticator> {
   public String toString() {
     return seq+" "+MathUtils.toHex(hash)+" "+MathUtils.toHex(signature);
   }
+
+  public byte[] getHash() {
+    return hash;
+  }
+
+  public byte[] getSignature() {
+    return signature;
+  }
 }

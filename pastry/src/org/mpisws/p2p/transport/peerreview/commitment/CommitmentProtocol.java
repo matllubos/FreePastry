@@ -36,13 +36,15 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.commitment;
 
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
 /**
  * This protocol attaches signatures to outgoing messages and acknowledges
  * incoming messages. It also has transmit and receive queues where messages can
  * be held while acknowledgments are pending, and it can retransmit messages a
  * few times when an acknowledgment is not received.
  */
-public interface CommitmentProtocol<Identifier> {
+public interface CommitmentProtocol<Handle extends RawSerializable, Identifier> {
 //  int lookupPeer(Identifier handle);
 //  PacketInfo *enqueueTail(struct packetInfo *queue, unsigned char *message, int msglen);
 //  void makeProgress(int idx);

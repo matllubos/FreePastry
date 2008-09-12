@@ -1229,5 +1229,24 @@ public class Id implements rice.p2p.commonapi.Id {
   public short getType() {
     return TYPE;
   }
+  
+  public static void main(String[] args) {
+    System.out.println(new Id(Half).getCCW().toStringFull());    
+    System.out.println(new Id(Half).getCW().toStringFull());    
+    System.out.println(new Id(Null).getCCW().toStringFull());    
+    System.out.println(new Id(Null).getCW().toStringFull());    
+    System.out.println(new Id(NegOne).getCCW().toStringFull());    
+    System.out.println(new Id(NegOne).getCW().toStringFull());    
+    System.out.println(new Id(One).getCCW().toStringFull());    
+    System.out.println(new Id(One).getCW().toStringFull());    
+
+//    System.out.println(build("ABCD").toStringFull());
+//    
+//    int[] material = new int[2];
+//    material[0] = 9876;
+//    material[1] = 1234;
+//    System.out.println(new Id(material).toStringFull());
+  }
+
 }
 

@@ -47,8 +47,8 @@ public interface HashProvider {
 //  public byte[] build(InputBuffer buf);
 //  public byte[] build(byte[] hashBytes, int start, int length);
 
-  short getSerizlizedSize(); // 20 by default
+  short getHashSizeBytes(); // 20 by default
 
-  public byte[] getEmpty();
+  public byte[] getEmptyHash();
 
 }

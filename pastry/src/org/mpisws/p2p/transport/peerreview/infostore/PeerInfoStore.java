@@ -36,6 +36,8 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
-public interface PeerInfoStore {
+import org.mpisws.p2p.transport.peerreview.proof.ProofInconsistent;
 
+public interface PeerInfoStore<Handle, Identifier> {
+  void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, ProofInconsistent proof);
 }

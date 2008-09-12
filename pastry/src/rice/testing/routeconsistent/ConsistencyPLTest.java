@@ -69,8 +69,6 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
@@ -78,6 +76,8 @@ import org.mpisws.p2p.transport.rendezvous.IncomingPilotListener;
 import org.mpisws.p2p.transport.rendezvous.OutgoingPilotListener;
 import org.mpisws.p2p.transport.rendezvous.PilotManager;
 import org.mpisws.p2p.transport.rendezvous.RendezvousTransportLayer;
+import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.Destructable;
 import rice.environment.Environment;
@@ -486,7 +486,7 @@ public class ConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
           if (!USE_REPLAY) return super.getWireTransportLayer(innermostAddress, pn);
           System.out.println("Initializing RecordLayer "+pn.getNodeId());
-          RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
+          RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new InetSocketAddressSerializer(), pn.getEnvironment());
 //          recorders.put(pn, ret);
           historyHolder.add(ret);
           return ret;

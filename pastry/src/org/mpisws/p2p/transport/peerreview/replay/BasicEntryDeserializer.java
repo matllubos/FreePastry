@@ -40,7 +40,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
@@ -52,7 +52,7 @@ import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import rice.environment.Environment;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 
-public class BasicEntryDeserializer implements PeerReviewEvents, EntryDeserializer {
+public class BasicEntryDeserializer implements PeerReviewConstants, EntryDeserializer {
 
   public String entryId(short id) {
     switch (id) {

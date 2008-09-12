@@ -52,12 +52,12 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
 import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
+import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
@@ -154,7 +154,9 @@ public class Recorder implements MyEvents {
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
         // record here
         
-        RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), new ISASerializer(), pn.getEnvironment());
+        RecordLayer<InetSocketAddress> ret = new RecordLayer<InetSocketAddress>(
+            super.getWireTransportLayer(innermostAddress, pn), "0x"+pn.getNodeId().toStringBare(), 
+            new InetSocketAddressSerializer(), pn.getEnvironment());
         recorders.put(pn, ret);
         return ret;
       }
@@ -313,7 +315,7 @@ public class Recorder implements MyEvents {
   }
 
   public void printLog(String arg, Environment env) throws IOException {
-    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(new ISASerializer()), env); 
+    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(new InetSocketAddressSerializer()), env); 
   }
     
   /**

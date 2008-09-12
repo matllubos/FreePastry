@@ -58,11 +58,11 @@ public class NullHashProvider implements HashProvider {
     return EMPTY_HASH;
   }
 
-  public byte[] getEmpty() {
+  public byte[] getEmptyHash() {
     return EMPTY_HASH;
   }
 
-  public short getSerizlizedSize() {
+  public short getHashSizeBytes() {
     return 0;
   }
 

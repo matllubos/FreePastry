@@ -36,8 +36,14 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.identity;
 
-import org.mpisws.p2p.transport.TransportLayer;
+import java.nio.ByteBuffer;
 
-public interface IdentityTransport<Identifier, MessageType> extends CertificateManager<Identifier>, TransportLayer<Identifier, MessageType> {
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+
+public interface IdentityTransport<Handle, Identifier> extends 
+  CertificateManager<Handle, Identifier>, 
+  TransportLayer<Handle, ByteBuffer>, 
+  HashProvider {
   
 }

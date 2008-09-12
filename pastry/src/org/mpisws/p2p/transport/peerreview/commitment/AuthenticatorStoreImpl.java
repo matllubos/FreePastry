@@ -48,7 +48,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.logging.Logger;
 import rice.p2p.util.RandomAccessFileIOBuffer;
@@ -56,17 +56,17 @@ import rice.p2p.util.RandomAccessFileIOBuffer;
 public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Identifier> {
   
   protected boolean allowDuplicateSeqs;
-  PeerReview<Identifier> peerreview;
+  PeerReview<?, Identifier> peerreview;
   int numSubjects;
   RandomAccessFileIOBuffer authFile;
 
   Map<Identifier,SortedSet<Authenticator>> authenticators;
   
   Logger logger;
-  IdentifierSerializer<Identifier> idSerializer;
+  Serializer<Identifier> idSerializer;
   AuthenticatorSerializer authenticatorSerializer;
   
-  public AuthenticatorStoreImpl(PeerReview<Identifier> peerreview, boolean allowDuplicateSeqs) {
+  public AuthenticatorStoreImpl(PeerReview<?, Identifier> peerreview, boolean allowDuplicateSeqs) {
     this.allowDuplicateSeqs = allowDuplicateSeqs;
     this.authenticators = new HashMap<Identifier, SortedSet<Authenticator>>();
     this.authFile = null;
@@ -253,6 +253,12 @@ public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Id
     return getAuthenticators(id, minseq, maxseq).size();    
   }
 
+  public Authenticator statAuthenticator(Identifier id, long seq) {
+    List<Authenticator> ret = getAuthenticators(id, seq, seq);
+    if (ret == null || ret.isEmpty()) return null;
+    return ret.get(0);
+  }
+  
   public void flush(Identifier id) {
     authenticators.remove(id);
   }

@@ -46,24 +46,26 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
-import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.HashSeq;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.peerreview.misbehavior.Misbehavior;
 import org.mpisws.p2p.transport.signature.CertificateTransportLayer;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.Tuple;
 import rice.selector.TimerTask;
 
-public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Identifier>, PeerReviewEvents {
+public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier> implements CommitmentProtocol<Handle, Identifier>, PeerReviewConstants {
   public int MAX_PEERS = 250;
   public int INITIAL_TIMEOUT_MICROS = 1000000;
   public int RETRANSMIT_TIMEOUT_MICROS = 1000000;
@@ -89,11 +91,11 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Id
   AuthenticatorStore<Identifier> authStore;
   SecureHistory history;
   PeerReviewCallback app;
-  PeerReview<Identifier> peerreview;
-  PeerInfoStore infoStore;
-  IdentityTransport<Identifier, ByteBuffer> transport;
+  PeerReview<?, Identifier> peerreview;
+  PeerInfoStore<?, Identifier> infoStore;
+  IdentityTransport<?, Identifier> transport;
   HashProvider hasher;
-  Identifier myHandle;
+  Handle myHandle;
   Misbehavior<Identifier> misbehavior;
   /**
    * If the time is more different than this from a peer, we discard the message
@@ -107,9 +109,9 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Id
   Logger logger;
 //  int numPeers;
   
-  public CommitmentProtocolImpl(PeerReview<Identifier> peerreview,
-      IdentityTransport<Identifier, ByteBuffer> transport, HashProvider hasher,
-      PeerInfoStore infoStore, AuthenticatorStore<Identifier> authStore,
+  public CommitmentProtocolImpl(PeerReview<?,Identifier> peerreview,
+      IdentityTransport<Handle, Identifier> transport, HashProvider hasher,
+      PeerInfoStore<?, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
       SecureHistory history, PeerReviewCallback app, Misbehavior<Identifier> misbehavior,
       long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
@@ -157,7 +159,7 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Id
     
     for (long i=history.getNumEntries()-1; (i>=1) && (receiveCache.size() < RECEIVE_CACHE_SIZE); i--) {
       IndexEntry hIndex = history.statEntry(i);
-      if (hIndex.getType() == PeerReviewEvents.EVT_RECV) {
+      if (hIndex.getType() == PeerReviewConstants.EVT_RECV) {
         // NOTE: this could be more efficient, because we don't need the whole thing
         SimpleInputBuffer sib = new SimpleInputBuffer(history.getEntry(hIndex, hIndex.getSizeInFile()));
         Identifier thisSender = peerreview.getIdSerializer().deserialize(sib);
@@ -327,20 +329,22 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Id
 //    unsigned int maxLen = 1 + sizeof(topSeq) + MAX_HANDLE_SIZE + hashSizeBytes + signatureSizeBytes + sizeof(relevantCode) + msglen;
 //    unsigned char *buf = (unsigned char *)malloc(maxLen);
 //    unsigned int totalLen = 0;
-    
-    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    sob.writeByte(MSG_USERDATA);
-    sob.writeLong(top.getSeq());
-    peerreview.getIdSerializer().serialize(myHandle, sob);
-    sob.write(hTopMinusOne);
-    sob.write(signature);
-    sob.writeByte(relevantCode);
-    sob.write(message.array(), message.position(), message.remaining());
+
+    UserDataMessage<Handle> udm = new UserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen);
+//    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+//    sob.writeByte(MSG_USERDATA);
+//    sob.writeLong(top.getSeq());
+//    peerreview.getIdSerializer().serialize(myHandle, sob);
+//    sob.write(hTopMinusOne);
+//    sob.write(signature);
+//    sob.writeByte(relevantCode);
+//    sob.write(message.array(), message.position(), message.remaining());
 //    assert(totalLen <= maxLen);
     
     /* ... and put it into the send queue. If the node is trusted and does not have any
        unacknowledged messages, makeProgress() will simply send it out. */
-    
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    udm.serialize(sob);
     lookupPeer(target).xmitQueue.addLast(new PacketInfo(sob.getByteBuffer(),options));
     makeProgress(target);
     
@@ -361,13 +365,23 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Id
     /* Acknowledgment: Log it (if we don't have it already) and send the next message, if any */
 
     if (logger.level <= Logger.FINE) logger.log("Received an ACK from "+source);
-
+    /**
+    MSG_ACK
+    byte type = MSG_ACK
+    nodeID recipientID
+    long long sendEntrySeq
+    long long recvEntrySeq
+    hash hashTopMinusOne
+    signature sig
+    */
+    
     Identifier remoteId = peerreview.getIdSerializer().deserialize(sib);
     long ackedSeq = sib.readLong();
     long hisSeq = sib.readLong();    
-    byte[] hTopMinusOne = new byte[hasher.getSerizlizedSize()];
+    byte[] hTopMinusOne = new byte[hasher.getHashSizeBytes()];
     sib.read(hTopMinusOne);
     byte[] signature = new byte[transport.signatureSizeInBytes()];
+    sib.read(signature);
     
     if (transport.hasCertificate(remoteId)) {
       PeerInfo p = lookupPeer(source);
@@ -392,7 +406,7 @@ public class CommitmentProtocolImpl<Identifier> implements CommitmentProtocol<Id
       if (ackedSeq == sendSeq) {
         Identifier sendHandle = peerreview.getIdSerializer().deserialize(xmittedMsg);
         // skip the hTopMinusOne
-        sib.read(new byte[hasher.getSerizlizedSize()+transport.signatureSizeInBytes()]);
+        xmittedMsg.read(new byte[hasher.getHashSizeBytes()+transport.signatureSizeInBytes()]);
         int relevantCode = MathUtils.uByteToInt(xmittedMsg.readByte());
         
         int payloadLen = sib.bytesRemaining();

@@ -41,7 +41,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewEvents;
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
 
 import rice.environment.Environment;
@@ -49,7 +49,7 @@ import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.RandomAccessFileIOBuffer;
 
-public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntryFactory, PeerReviewEvents {
+public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntryFactory, PeerReviewConstants {
   Environment environment;
   
   HashProvider hashProv;
@@ -84,7 +84,7 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
       throw ioe;
     }
 
-    IndexEntry entry = new IndexEntry(baseSeq, (long)0,EVT_INIT,-1, hashProv.getEmpty(), baseHash);
+    IndexEntry entry = new IndexEntry(baseSeq, (long)0,EVT_INIT,-1, hashProv.getEmptyHash(), baseHash);
     
     entry.serialize(indexFile);
     
@@ -132,15 +132,15 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     long fileIndex = buf.readLong();
     int sizeInFile = buf.readInt();
     short type = buf.readShort();
-    byte[] contentHash = new byte[hashProv.getSerizlizedSize()];
+    byte[] contentHash = new byte[hashProv.getHashSizeBytes()];
     buf.read(contentHash);
-    byte[] nodeHash = new byte[hashProv.getSerizlizedSize()];
+    byte[] nodeHash = new byte[hashProv.getHashSizeBytes()];
     buf.read(nodeHash);
     return new IndexEntry(seq, fileIndex, type, sizeInFile, contentHash, nodeHash);
   }
 
   public int getSerializedSize() {
-    return 8+8+4+2+hashProv.getSerizlizedSize()*2;
+    return 8+8+4+2+hashProv.getHashSizeBytes()*2;
   }
 
 }

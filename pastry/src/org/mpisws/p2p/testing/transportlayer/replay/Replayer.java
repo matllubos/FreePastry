@@ -56,11 +56,11 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.replay.BasicEntryDeserializer;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 import org.mpisws.p2p.transport.proximity.ProximityProvider;
+import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
@@ -138,7 +138,7 @@ public class Replayer implements MyEvents, EventCallback {
       
       @Override
       protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, PastryNode pn) throws IOException {
-        IdentifierSerializer<InetSocketAddress> serializer = new ISASerializer();
+        Serializer<InetSocketAddress> serializer = new InetSocketAddressSerializer();
         
         HashProvider hashProv = new NullHashProvider();
         SecureHistoryFactory shFactory = new SecureHistoryFactoryImpl(hashProv, pn.getEnvironment());
@@ -216,7 +216,7 @@ public class Replayer implements MyEvents, EventCallback {
   }
 
   public static void printLog(String arg, Environment env) throws IOException {
-    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(new ISASerializer()), env); 
+    BasicEntryDeserializer.printLog(arg, new MyEntryDeserializer(new InetSocketAddressSerializer()), env); 
   }
   
   /**

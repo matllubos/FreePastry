@@ -43,7 +43,6 @@ import java.io.IOException;
 
 import rice.p2p.commonapi.Message;
 
-public interface RawMessage extends Message {
+public interface RawMessage extends Message, RawSerializable {
   public short getType();
-  public void serialize(OutputBuffer buf) throws IOException;
 }

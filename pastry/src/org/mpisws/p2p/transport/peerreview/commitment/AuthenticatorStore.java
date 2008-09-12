@@ -75,6 +75,8 @@ public interface AuthenticatorStore<Identifier> {
   
   public void flushAuthenticatorsFor(Identifier id, long minseq, long maxseq);
 
+  public Authenticator statAuthenticator(Identifier id, long seq);
+
   /**
    * Retrieve all the authenticators within a given range of sequence numbers
    */

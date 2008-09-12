@@ -46,8 +46,8 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.inetsocketaddress.ISASerializer;
+import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
 
@@ -63,7 +63,7 @@ public class AuthenticatorStoreTest {
    */
   public static void main(String[] args) throws Exception {
     Environment env = new Environment();
-    PeerReview<InetSocketAddress> pr = new TestPeerReview(env, new AuthenticatorSerializerImpl(HASH_LEN, SIGN_LEN));
+    PeerReview<Object, InetSocketAddress> pr = new TestPeerReview(env, new AuthenticatorSerializerImpl(HASH_LEN, SIGN_LEN));
     TestAuthenticatorStore store = new TestAuthenticatorStore(pr,false);
     
     InetSocketAddress id = new InetSocketAddress(InetAddress.getLocalHost(), 6789);
@@ -125,7 +125,7 @@ public class AuthenticatorStoreTest {
     env.destroy();
   }
 }
-  class TestPeerReview implements PeerReview<InetSocketAddress> {
+  class TestPeerReview implements PeerReview<Object, InetSocketAddress> {
     
     Environment env;
     AuthenticatorSerializer aSer;
@@ -134,8 +134,8 @@ public class AuthenticatorStoreTest {
       this.aSer = aSer;
     }
 
-    public IdentifierSerializer<InetSocketAddress> getIdSerializer() {
-      return new ISASerializer();
+    public Serializer<InetSocketAddress> getIdSerializer() {
+      return new InetSocketAddressSerializer();
     }
   
     public Environment getEnvironment() {
@@ -149,11 +149,16 @@ public class AuthenticatorStoreTest {
     public long getTime() {
       return env.getTimeSource().currentTimeMillis();
     }
+
+    public Serializer<Object> getHandleSerializer() {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
 
   class TestAuthenticatorStore extends AuthenticatorStoreImpl<InetSocketAddress> {
 
-    public TestAuthenticatorStore(PeerReview<InetSocketAddress> peerreview,
+    public TestAuthenticatorStore(PeerReview<?, InetSocketAddress> peerreview,
         boolean allowDuplicateSeqs) {
       super(peerreview, allowDuplicateSeqs);
     }

@@ -49,14 +49,14 @@ import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public abstract class Verifier<Identifier> implements PeerReviewEvents {
+public abstract class Verifier<Identifier> implements PeerReviewConstants {
 
   protected Identifier localHandle;
   protected SecureHistory history;
@@ -76,7 +76,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
   int numTimers;
   int[] eventToCallback = new int[256];
   protected Logger logger;
-  protected IdentifierSerializer<Identifier> serializer; // was transport in c++ impl
+  protected Serializer<Identifier> serializer; // was transport in c++ impl
   protected HashProvider hashProv;
   
   // these are shortcuts in the Java impl, they would all be true in the c++ impl, but in some cases it's more efficient if we can turn them off
@@ -86,7 +86,7 @@ public abstract class Verifier<Identifier> implements PeerReviewEvents {
 //  boolean useBeginInitialized = true;
   
   public Verifier(
-      IdentifierSerializer<Identifier> serializer, 
+      Serializer<Identifier> serializer, 
       HashProvider hashProv,
       SecureHistory history, 
       Identifier localHandle, 

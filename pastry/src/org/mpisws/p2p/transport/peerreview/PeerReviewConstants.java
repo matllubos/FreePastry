@@ -36,7 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview;
 
-public interface PeerReviewEvents {
+public interface PeerReviewConstants {
 
   public static final short EVT_SEND = 0; // Outgoing message (followed by SENDSIGN entry)
   public static final short EVT_RECV = 1; // Incoming message (followed by SIGN entry)
@@ -75,5 +75,11 @@ public interface PeerReviewEvents {
   public static final short MSG_AUTHREQ = 22;    /* Asks a witness to return a recent authenticator */
   public static final short MSG_AUTHRESP = 23;                    /* Responds to a previous AUTHREQ */
   public static final short MSG_USERDGRAM = 24;    /* Contains a datagram from the app (not logged) */
+
+  /* Evidence types (challenges and proofs) */
+  public static final byte CHAL_AUDIT = 1;    
+  public static final byte CHAL_SEND = 2;
+  public static final byte PROOF_INCONSISTENT = 3;
+  public static final byte PROOF_NONCONFORMANT = 4;
 
 }

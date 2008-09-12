@@ -57,12 +57,13 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.identity.CertificateManager;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
 import org.mpisws.p2p.transport.util.BufferReader;
 import org.mpisws.p2p.transport.util.BufferWriter;
 import org.mpisws.p2p.transport.util.DefaultErrorHandler;
+import org.mpisws.p2p.transport.util.Serializer;
 import org.mpisws.p2p.transport.util.SocketInputBuffer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
@@ -79,7 +80,11 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @author Jeff Hoye
  *
  */
-public class CertificateTransprotLayerImpl<Identifier> implements CertificateTransportLayer<Identifier, ByteBuffer>, TransportLayerCallback<Identifier, ByteBuffer>, IdentityTransport<Identifier, ByteBuffer> {
+public class CertificateTransprotLayerImpl<Identifier> implements 
+    CertificateTransportLayer<Identifier, ByteBuffer>, 
+    TransportLayerCallback<Identifier, ByteBuffer>
+//   , IdentityTransport<Identifier, ByteBuffer> 
+{
   public static final byte PASSTHROUGH = 0;
   public static final byte CERT_REQUEST = 1;
   public static final byte CERT_RESPONSE = 2;
@@ -93,7 +98,7 @@ public class CertificateTransprotLayerImpl<Identifier> implements CertificateTra
   TransportLayerCallback<Identifier, ByteBuffer> callback;
   TransportLayer<Identifier, ByteBuffer> tl;
 
-  IdentifierSerializer<Identifier> identifierSerializer;
+  Serializer<Identifier> identifierSerializer;
   X509Serializer certificateSerializer;
    
   ErrorHandler<Identifier> errorHandler;
@@ -107,17 +112,19 @@ public class CertificateTransprotLayerImpl<Identifier> implements CertificateTra
   // TODO: handle memory problems
   Map<Identifier, Signature> verifiers = new HashMap<Identifier, Signature>();
   
-  public CertificateTransprotLayerImpl(IdentifierSerializer<Identifier> iSerializer, X509Serializer cSerializer, X509Certificate localCert, PrivateKey localPrivate, TransportLayer<Identifier, ByteBuffer> tl, Environment env) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
+  HashProvider hasher;
+  
+  public CertificateTransprotLayerImpl(Serializer<Identifier> iSerializer, X509Serializer cSerializer, X509Certificate localCert, PrivateKey localPrivate, TransportLayer<Identifier, ByteBuffer> tl, HashProvider hasher, Environment env) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
     this.identifierSerializer = iSerializer;
     this.certificateSerializer = cSerializer;
     this.tl = tl;
+    this.hasher = hasher;
     
     this.logger = env.getLogManager().getLogger(CertificateTransprotLayerImpl.class, null);
     this.errorHandler = new DefaultErrorHandler<Identifier>(this.logger);
     
     signer = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM,"BC");
     signer.initSign(localPrivate);
-
   }
   
   /**
@@ -363,6 +370,22 @@ public class CertificateTransprotLayerImpl<Identifier> implements CertificateTra
 
   public short signatureSizeInBytes() {
     throw new RuntimeException("implement me.");
+  }
+
+  public byte[] getEmptyHash() {
+    return hasher.getEmptyHash();
+  }
+
+  public short getHashSizeBytes() {
+    return hasher.getHashSizeBytes();
+  }
+
+  public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
+    return hasher.hash(seq, type, nodeHash, contentHash);
+  }
+
+  public byte[] hash(ByteBuffer... hashMe) {
+    return hasher.hash(hashMe);
   }
   
 }

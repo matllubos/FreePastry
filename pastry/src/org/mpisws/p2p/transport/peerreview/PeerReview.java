@@ -37,17 +37,18 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview;
 
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
-import org.mpisws.p2p.transport.peerreview.replay.IdentifierSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
 
-public interface PeerReview<Identifier> {
+public interface PeerReview<Handle, Identifier> {
 
   Environment getEnvironment();
 
   AuthenticatorSerializer getAuthenticatorSerializer();
 
-  IdentifierSerializer<Identifier> getIdSerializer();
+  Serializer<Handle> getHandleSerializer();
+  Serializer<Identifier> getIdSerializer();
 
   /**
    * Current time in millis, however, we depend on there being a timesource that is more discritized
