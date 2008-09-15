@@ -51,8 +51,11 @@ import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.HashSeq;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtRecv;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSign;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.peerreview.misbehavior.Misbehavior;
 
@@ -64,7 +67,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.Tuple;
 import rice.selector.TimerTask;
 
-public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier> implements CommitmentProtocol<Handle, Identifier>, PeerReviewConstants {
+public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements CommitmentProtocol<Handle, Identifier>, PeerReviewConstants {
   public int MAX_PEERS = 250;
   public int INITIAL_TIMEOUT_MICROS = 1000000;
   public int RETRANSMIT_TIMEOUT_MICROS = 1000000;
@@ -90,9 +93,9 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier> 
   AuthenticatorStore<Identifier> authStore;
   SecureHistory history;
   PeerReviewCallback app;
-  PeerReview<?, Identifier> peerreview;
-  PeerInfoStore<?, Identifier> infoStore;
-  IdentityTransport<?, Identifier> transport;
+  PeerReview<Handle, Identifier> peerreview;
+  PeerInfoStore<Handle, Identifier> infoStore;
+  IdentityTransport<Handle, Identifier> transport;
   HashProvider hasher;
   Handle myHandle;
   Misbehavior<Identifier> misbehavior;
@@ -108,9 +111,9 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier> 
   Logger logger;
 //  int numPeers;
   
-  public CommitmentProtocolImpl(PeerReview<?,Identifier> peerreview,
+  public CommitmentProtocolImpl(PeerReview<Handle,Identifier> peerreview,
       IdentityTransport<Handle, Identifier> transport, HashProvider hasher,
-      PeerInfoStore<?, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
+      PeerInfoStore<Handle, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
       SecureHistory history, PeerReviewCallback app, Misbehavior<Identifier> misbehavior,
       long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
@@ -191,14 +194,81 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier> 
    * Checks whether an incoming message is already in the log (which can happen with duplicates).
    * If not, it adds the message to the log. 
    * @return The ack message and whether it was already logged.
+   * @throws SignatureException 
    */
-  Tuple<ByteBuffer, Boolean> logMessageIfNew(ByteBuffer message) throws IOException {
-    // NOTE: sib does not molester the the message, it only goes after the backing array, but doesn't write to it
-    SimpleInputBuffer sib = new SimpleInputBuffer(message);
-    long seq = sib.readLong();
-    Identifier handle = peerreview.getIdSerializer().deserialize(sib);
+  public Tuple<AckMessage<Identifier>,Boolean> logMessageIfNew(UserDataMessage<Handle> udm) throws IOException, SignatureException {
+    boolean loggedPreviously; // part of the return statement
+    long seqOfRecvEntry;
+    byte[] myHashTop;
+    byte[] myHashTopMinusOne;
     
-    throw new RuntimeException("implement me.");    
+//    SimpleInputBuffer sib = new SimpleInputBuffer(message);
+//    UserDataMessage<Handle> udm = UserDataMessage.build(sib, peerreview.getHandleSerializer(), peerreview.getHashSizeInBytes(), peerreview.getSignatureSizeInBytes());
+    
+    /* Check whether the log contains a matching RECV entry, i.e. one with a message
+    from the same node and with the same send sequence number */
+
+    long indexOfRecvEntry = findRecvEntry(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), udm.getTopSeq());
+
+    /* If there is no such RECV entry, we append one */
+
+    if (indexOfRecvEntry < 0L) {
+      /* Construct the RECV entry and append it to the log */
+
+      EvtRecv<Handle> recv;
+      myHashTopMinusOne = history.getTopLevelEntry().getHash();
+      if (udm.getRelevantLen() < udm.getPayload().remaining()) {
+        recv = new EvtRecv<Handle>(udm.getSenderHandle(), udm.getTopSeq(), udm.getPayload(), udm.getRelevantLen(), transport);
+      } else {
+        recv = new EvtRecv<Handle>(udm.getSenderHandle(), udm.getTopSeq(), udm.getPayload());
+      }
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      recv.serialize(sob);
+      history.appendEntry(EVT_RECV, true, sob.getByteBuffer());
+            
+      HashSeq foo = history.getTopLevelEntry();
+      myHashTop = foo.getHash();
+      seqOfRecvEntry = foo.getSeq();
+      
+      addToReceiveCache(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), 
+          udm.getTopSeq(), history.getNumEntries() - 1);
+      if (logger.level < Logger.FINE) logger.log("New message logged as seq#"+seqOfRecvEntry);
+
+      /* Construct the SIGN entry and append it to the log */
+
+      
+      sob = new SimpleOutputBuffer();
+      new EvtSign(udm.getHTopMinusOne(),udm.getSignature()).serialize(sob);
+      history.appendEntry(EVT_RECV, true, sob.getByteBuffer());
+      loggedPreviously = false;
+    } else {
+      loggedPreviously = true;
+      
+      /* If the RECV entry already exists, retrieve it */
+      
+//      unsigned char type;
+//      bool ok = true;
+      IndexEntry i2 = history.statEntry(indexOfRecvEntry); //, &seqOfRecvEntry, &type, NULL, NULL, myHashTop);
+      IndexEntry i1 = history.statEntry(indexOfRecvEntry-1); //, NULL, NULL, NULL, NULL, myHashTopMinusOne);
+      assert(i1 != null && i2 != null && i2.getType() == EVT_RECV) : "i1:"+i1+" i2:"+i2;
+      seqOfRecvEntry = i2.getSeq();
+      myHashTop = i2.getNodeHash();
+      myHashTopMinusOne = i1.getNodeHash();
+      if (logger.level < Logger.FINE) logger.log("This message has already been logged as seq#"+seqOfRecvEntry);
+    }
+
+    /* Generate ACK = (MSG_ACK, myID, remoteSeq, localSeq, myTopMinusOne, signature) */
+
+    byte[] hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(seqOfRecvEntry)), ByteBuffer.wrap(myHashTop));
+
+    AckMessage<Identifier> ack = new AckMessage<Identifier>(
+        peerreview.getIdentifierExtractor().extractIdentifier(myHandle),
+        udm.getTopSeq(),
+        seqOfRecvEntry,
+        myHashTopMinusOne,
+        transport.sign(hToSign));
+    
+    return new Tuple<AckMessage<Identifier>,Boolean>(ack, loggedPreviously);
   }
   
   void notifyStatusChange(Identifier id, int newStatus) {
@@ -324,7 +394,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier> 
     /* Construct a USERDATA message... */
     
     assert((relevantlen == message.remaining()) || (relevantlen < 255));    
-    byte relevantCode = (relevantlen == message.remaining()) ? (byte)0xFF : (byte)relevantlen;
+//    byte relevantCode = (relevantlen == message.remaining()) ? (byte)0xFF : (byte)relevantlen;
 //    unsigned int maxLen = 1 + sizeof(topSeq) + MAX_HANDLE_SIZE + hashSizeBytes + signatureSizeBytes + sizeof(relevantCode) + msglen;
 //    unsigned char *buf = (unsigned char *)malloc(maxLen);
 //    unsigned int totalLen = 0;

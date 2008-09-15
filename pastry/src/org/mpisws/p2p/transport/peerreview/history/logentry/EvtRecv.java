@@ -34,32 +34,48 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.transport.peerreview.history.logentry;
 
-import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
-import org.mpisws.p2p.transport.util.Serializer;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
-import rice.environment.Environment;
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 
-public interface PeerReview<Handle, Identifier> {
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-  Environment getEnvironment();
-
-  AuthenticatorSerializer getAuthenticatorSerializer();
-
-  Serializer<Handle> getHandleSerializer();
-  Serializer<Identifier> getIdSerializer();
-
-  /**
-   * Current time in millis, however, we depend on there being a timesource that is more discritized
-   * than the "wall" clock.  It is only advanced on a timeout or a message receipt.
-   * @return
-   */
-  long getTime();
-
-  int getHashSizeInBytes();
-
-  int getSignatureSizeInBytes();
+public class EvtRecv<Handle extends RawSerializable> implements PeerReviewConstants {
+  Handle senderHandle;
+  long senderSeq;
+  byte[] payload; // may be full, or just relevant
+  byte[] hash; // null if the whole payload is there (hashed == false)
   
-  public IdentifierExtractor<Handle, Identifier> getIdentifierExtractor();
+  public EvtRecv(Handle senderHandle, long topSeq, ByteBuffer payload) {
+    this.senderHandle = senderHandle;
+    this.senderSeq = topSeq;
+    this.payload = new byte[payload.remaining()];
+    System.arraycopy(payload.array(), payload.position(), this.payload, 0, payload.remaining());    
+  }
+  
+  public EvtRecv(Handle senderHandle, long topSeq, ByteBuffer payload,
+      short relevantLen, HashProvider hasher) {
+    this.senderHandle = senderHandle;
+    this.senderSeq = topSeq;
+    this.payload = new byte[payload.remaining()];
+    System.arraycopy(payload.array(), payload.position(), this.payload, 0, relevantLen);
+    hash = hasher.hash(ByteBuffer.wrap(this.payload));
+  }
+
+  public short getType() {
+    return EVT_RECV;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    senderHandle.serialize(buf);
+    buf.writeLong(senderSeq);
+    buf.writeBoolean(hash != null);  
+    buf.write(payload, 0, payload.length);
+    if (hash != null) buf.write(hash, 0, hash.length);
+  }
 }

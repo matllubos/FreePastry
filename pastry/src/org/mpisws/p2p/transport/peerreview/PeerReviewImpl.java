@@ -82,7 +82,6 @@ public class PeerReviewImpl<Handle, Identifier> implements
   Serializer<Handle> handleSerializer;
   AuthenticatorSerializer authenticatorSerialilzer;
   AuthenticatorStore<Identifier> authOutStore;
-  HashProvider hasher;
   IdentityTransport<Handle, Identifier> transport;
   PeerInfoStore<Handle, Identifier> infoStore;
   
@@ -92,6 +91,7 @@ public class PeerReviewImpl<Handle, Identifier> implements
   public PeerReviewImpl(TransportLayer<Handle, ByteBuffer> tl,
       Environment env, Serializer<Handle> handleSerializer,
       Serializer<Identifier> idSerializer,      
+      IdentifierExtractor<Handle, Identifier> identifierExtractor,
       AuthenticatorSerializer authenticatorSerialilzer) {
     super();
     this.tl = tl;
@@ -99,6 +99,7 @@ public class PeerReviewImpl<Handle, Identifier> implements
     this.logger = env.getLogManager().getLogger(PeerReviewImpl.class, null);
     this.idSerializer = idSerializer;
     this.handleSerializer = handleSerializer;
+    this.identifierExtractor = identifierExtractor;
     this.authenticatorSerialilzer = authenticatorSerialilzer; 
   }
     
@@ -170,7 +171,7 @@ public class PeerReviewImpl<Handle, Identifier> implements
     sob.writeShort(entryType);
     sob.write(hTopMinusOne);
     sob.write(entryHash);
-    byte[] hash = hasher.hash(sob.getByteBuffer());
+    byte[] hash = transport.hash(sob.getByteBuffer());
     Authenticator ret = new Authenticator(seq,hash,signature);
     if (addAuthenticatorIfValid(authOutStore, id, ret)) {
       return ret;
@@ -203,7 +204,7 @@ public class PeerReviewImpl<Handle, Identifier> implements
        SimpleOutputBuffer sob = new SimpleOutputBuffer();
        sob.writeLong(auth.getSeq());
        sob.write(auth.getHash());
-       byte[] signedHash = hasher.hash(sob.getByteBuffer());
+       byte[] signedHash = transport.hash(sob.getByteBuffer());
        transport.verify(subject, signedHash, 0, signedHash.length, auth.getSignature(), 0, auth.getSignature().length);
        
 //    char buf1[1000];
@@ -282,5 +283,17 @@ public class PeerReviewImpl<Handle, Identifier> implements
 
   public Serializer<Handle> getHandleSerializer() {
     return handleSerializer;
+  }
+
+  public int getHashSizeInBytes() {
+    return transport.getHashSizeBytes();
+  }
+
+  public int getSignatureSizeInBytes() {
+    return transport.signatureSizeInBytes();
+  }
+
+  public IdentifierExtractor<Handle, Identifier> getIdentifierExtractor() {
+    return identifierExtractor;
   }
 }

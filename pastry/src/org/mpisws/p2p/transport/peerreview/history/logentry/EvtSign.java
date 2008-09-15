@@ -34,32 +34,21 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.transport.peerreview.history.logentry;
 
-import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
-import org.mpisws.p2p.transport.util.Serializer;
+import java.io.IOException;
 
-import rice.environment.Environment;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
-public interface PeerReview<Handle, Identifier> {
-
-  Environment getEnvironment();
-
-  AuthenticatorSerializer getAuthenticatorSerializer();
-
-  Serializer<Handle> getHandleSerializer();
-  Serializer<Identifier> getIdSerializer();
-
-  /**
-   * Current time in millis, however, we depend on there being a timesource that is more discritized
-   * than the "wall" clock.  It is only advanced on a timeout or a message receipt.
-   * @return
-   */
-  long getTime();
-
-  int getHashSizeInBytes();
-
-  int getSignatureSizeInBytes();
-  
-  public IdentifierExtractor<Handle, Identifier> getIdentifierExtractor();
+public class EvtSign {
+  byte[] hTopMinusOne;
+  byte[] signature;
+  public EvtSign(byte[] hTopMinusOne, byte[] signature) {
+    this.hTopMinusOne = hTopMinusOne;
+    this.signature = signature;
+  }
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.write(hTopMinusOne, 0, hTopMinusOne.length);
+    buf.write(signature, 0, signature.length);
+  }
 }

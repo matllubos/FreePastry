@@ -40,6 +40,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.SortedSet;
 
+import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
@@ -151,6 +152,21 @@ public class AuthenticatorStoreTest {
     }
 
     public Serializer<Object> getHandleSerializer() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public int getHashSizeInBytes() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    public int getSignatureSizeInBytes() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    public IdentifierExtractor<Object, InetSocketAddress> getIdentifierExtractor() {
       // TODO Auto-generated method stub
       return null;
     }

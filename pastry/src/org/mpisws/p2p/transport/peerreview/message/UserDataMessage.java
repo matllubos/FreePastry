@@ -40,8 +40,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.MathUtils;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 /**
@@ -58,12 +63,12 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @author Jeff Hoye
  *
  */
-public class UserDataMessage<Handle extends RawSerializable> implements PeerReviewConstants {
+public class UserDataMessage<Handle extends RawSerializable> implements RawSerializable, PeerReviewConstants {
   long topSeq;
   Handle senderHandle;
   byte[] hTopMinusOne;
-  byte[] sig;
-  byte relevantCode;
+  byte[] signature;
+  short relevantLen; // = message.remaining() or < 255
   ByteBuffer payload;
 
   public UserDataMessage(long topSeq, Handle senderHandle, byte[] topMinusOne,
@@ -72,19 +77,64 @@ public class UserDataMessage<Handle extends RawSerializable> implements PeerRevi
     this.topSeq = topSeq;
     this.senderHandle = senderHandle;
     hTopMinusOne = topMinusOne;
-    this.sig = sig;
+    this.signature = sig;
 
     assert((relevantlen == message.remaining()) || (relevantlen < 255));    
-    relevantCode = (relevantlen == message.remaining()) ? (byte)0xFF : (byte)relevantlen;
     this.payload = message;
   }
 
   public short getType() {
-    return MSG_ACCUSATION;
+    return MSG_USERDATA;
   }
 
-  public void serialize(SimpleOutputBuffer sob) throws IOException {
-    sob.writeLong(topSeq);
-    
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeLong(topSeq);
+    senderHandle.serialize(buf);
+    buf.write(hTopMinusOne, 0, hTopMinusOne.length);
+    buf.write(signature, 0, signature.length); 
+    byte relevantCode = (relevantLen == payload.remaining()) ? (byte)0xFF : (byte)relevantLen;
+    buf.writeByte(relevantCode);
+    if (relevantCode == 0xFF) {
+      buf.write(payload.array(), payload.position(), payload.remaining());
+    } else {
+      buf.write(payload.array(), payload.position(), relevantLen);      
+    }
+  }
+
+  public static <H extends RawSerializable> UserDataMessage<H> build(InputBuffer buf, Serializer<H> serializer, int hashSize, int sigSize) throws IOException {
+    long seq = buf.readLong();
+    H handle = serializer.deserialize(buf); 
+    byte[] hash = new byte[hashSize]; 
+    buf.read(hash);
+    byte[] sig = new byte[sigSize];
+    buf.read(sig);
+    byte relevantCode = buf.readByte();
+    int len = MathUtils.uByteToInt(relevantCode);
+    byte[] msg = new byte[buf.bytesRemaining()];
+    return new UserDataMessage<H>(seq, handle, hash, sig, ByteBuffer.wrap(msg), len);
+  }
+
+  public long getTopSeq() {
+    return topSeq;
+  }
+
+  public Handle getSenderHandle() {
+    return senderHandle;
+  }
+
+  public byte[] getHTopMinusOne() {
+    return hTopMinusOne;
+  }
+
+  public byte[] getSignature() {
+    return signature;
+  }
+
+  public short getRelevantLen() {
+    return relevantLen;
+  }
+
+  public ByteBuffer getPayload() {
+    return payload;
   }
 }
