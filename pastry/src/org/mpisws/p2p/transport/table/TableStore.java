@@ -36,33 +36,15 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.table;
 
-import java.nio.ByteBuffer;
-import java.util.Map;
-
-import org.mpisws.p2p.transport.TransportLayer;
-
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
-
 /**
- * Keeps a store of information at each node, such that other nodes can query for the information.
- * 
- * This is useful for example, for certificates.  The information in this table must be constant, and
- * must be able to propagate epidemically. 
- * 
+ * A subset of the functionality of java.util.Map.  The idea is that you can optionally use an implementation of Map. 
  * @author Jeff Hoye
  *
+ * @param <Key>
+ * @param <Value>
  */
-public interface TableTransportLayer<Identifier, Key, Value> extends TransportLayer<Identifier, ByteBuffer> {
-  /**
-   * Get a Value of the source.
-   * 
-   * @param source
-   * @param principal
-   * @param c
-   * @param options
-   * @return UnknownValueException if the source doesn't value for the key
-   */
-  public Cancellable requestValue(Identifier source, Key key, Continuation<Value, Exception> c, Map<String, Object> options);
-
+public interface TableStore<Key, Value> {
+  public boolean containsKey(Key key);
+  public void put(Key k, Value v);
+  public Value get(Key k);
 }

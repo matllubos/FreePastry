@@ -36,33 +36,22 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.table;
 
-import java.nio.ByteBuffer;
-import java.util.Map;
+public class UnknownValueException extends Exception {
+  Object source; 
+  Object key;
+  
+  public UnknownValueException(Object source, Object key) {
+    super("The node "+source+" did not have a value for the key "+key+".");
+    this.source = source;
+    this.key = key;
+  }
 
-import org.mpisws.p2p.transport.TransportLayer;
-
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
-
-/**
- * Keeps a store of information at each node, such that other nodes can query for the information.
- * 
- * This is useful for example, for certificates.  The information in this table must be constant, and
- * must be able to propagate epidemically. 
- * 
- * @author Jeff Hoye
- *
- */
-public interface TableTransportLayer<Identifier, Key, Value> extends TransportLayer<Identifier, ByteBuffer> {
-  /**
-   * Get a Value of the source.
-   * 
-   * @param source
-   * @param principal
-   * @param c
-   * @param options
-   * @return UnknownValueException if the source doesn't value for the key
-   */
-  public Cancellable requestValue(Identifier source, Key key, Continuation<Value, Exception> c, Map<String, Object> options);
-
+  public Object getSource() {
+    return source;
+  }
+  
+  public Object getKey() {
+    return key;
+  }
+  
 }
