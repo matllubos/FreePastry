@@ -42,12 +42,14 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
+import org.mpisws.p2p.transport.util.Serializer;
+
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
-public interface X509Serializer {
-  X509Certificate deserialize(InputBuffer buf) throws IOException, CertificateException, NoSuchProviderException;
-  void serialize(OutputBuffer buf, X509Certificate cert) throws IOException, CertificateEncodingException;  
+public interface X509Serializer extends Serializer<X509Certificate> {
+//  X509Certificate deserialize(InputBuffer buf) throws IOException, CertificateException, NoSuchProviderException;
+//  void serialize(OutputBuffer buf, X509Certificate cert) throws IOException, CertificateEncodingException;  
   
   
 

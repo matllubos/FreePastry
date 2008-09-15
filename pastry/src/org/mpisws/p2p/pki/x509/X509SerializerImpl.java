@@ -49,18 +49,35 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 public class X509SerializerImpl implements X509Serializer {
 
-  public void serialize(OutputBuffer buf, X509Certificate cert) throws IOException, CertificateEncodingException {
-    byte[] encoded = cert.getEncoded();
-    buf.writeInt(encoded.length);
-    buf.write(encoded, 0, encoded.length);
+  CertificateFactory certificatefactory;
+
+  public X509SerializerImpl() throws CertificateException, NoSuchProviderException {
+    certificatefactory = CertificateFactory.getInstance("X.509", "BC");    
   }
   
-  public X509Certificate deserialize(InputBuffer buf) throws IOException, CertificateException, NoSuchProviderException {
-    byte[] encoded = new byte[buf.readInt()]; 
-    buf.read(encoded);
-    CertificateFactory certificatefactory = CertificateFactory.getInstance("X.509", "BC");
-    ByteArrayInputStream bytearrayinputstream = new ByteArrayInputStream(encoded);
-    return (X509Certificate)certificatefactory.generateCertificate(bytearrayinputstream);    
+  public void serialize(X509Certificate cert, OutputBuffer buf) throws IOException {
+    try {
+      byte[] encoded = cert.getEncoded();
+      buf.writeInt(encoded.length);
+      buf.write(encoded, 0, encoded.length);
+    } catch (CertificateEncodingException cee) {
+      IOException ioe = new IOException(cee.getLocalizedMessage());
+      ioe.initCause(cee);
+      throw ioe;
+    }
+  }
+  
+  public X509Certificate deserialize(InputBuffer buf) throws IOException {
+    try {
+      byte[] encoded = new byte[buf.readInt()]; 
+      buf.read(encoded);
+      ByteArrayInputStream bytearrayinputstream = new ByteArrayInputStream(encoded);
+      return (X509Certificate)certificatefactory.generateCertificate(bytearrayinputstream);    
+    } catch (CertificateException ce) {
+      IOException ioe = new IOException(ce.getLocalizedMessage());
+      ioe.initCause(ce);
+      throw ioe;
+    }
   }
 
   

@@ -43,7 +43,6 @@ import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
 
-import org.mpisws.p2p.transport.signature.UnknownCertificateException;
 
 import rice.Continuation;
 import rice.p2p.commonapi.Cancellable;

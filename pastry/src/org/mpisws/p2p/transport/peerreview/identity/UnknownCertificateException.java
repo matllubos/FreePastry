@@ -34,33 +34,24 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.signature;
+package org.mpisws.p2p.transport.peerreview.identity;
 
-import java.security.cert.X509Certificate;
-import java.util.Map;
+public class UnknownCertificateException extends Exception {
+  Object source; 
+  Object principal;
+  
+  public UnknownCertificateException(Object source, Object principal) {
+    super("The node "+source+" did not have a certificate for "+principal+".");
+    this.source = source;
+    this.principal = principal;
+  }
 
-import org.mpisws.p2p.transport.TransportLayer;
-
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
-
-/**
- * Can fetch a Certificate.  Caches known certificates.
- * 
- * @author Jeff Hoye
- *
- * @param <Identifier>
- * @param <MessageType>
- */
-public interface CertificateTransportLayer<Identifier, MessageType> extends TransportLayer<Identifier, MessageType> {
-  /**
-   * Get a certificate of the principal from the source.
-   * 
-   * @param source
-   * @param principal
-   * @param c
-   * @param options
-   * @return UnknownCertificateException if the source doesn't know the certificate for the principal
-   */
-  public Cancellable requestCertificate(Identifier source, Identifier principal, Continuation<X509Certificate, Exception> c, Map<String, Object> options);
+  public Object getSource() {
+    return source;
+  }
+  
+  public Object getPrincipal() {
+    return principal;
+  }
+  
 }

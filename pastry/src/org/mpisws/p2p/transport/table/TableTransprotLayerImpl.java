@@ -76,23 +76,32 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
   /**
    * Could just be a hashTable
    */
-  TableStore<Key, Value> knownValues;
+  protected TableStore<Key, Value> knownValues;
 
-  TransportLayerCallback<Identifier, ByteBuffer> callback;
-  TransportLayer<Identifier, ByteBuffer> tl;
+  protected TransportLayerCallback<Identifier, ByteBuffer> callback;
+  protected TransportLayer<Identifier, ByteBuffer> tl;
 
-  Serializer<Key> keySerializer;
-  Serializer<Value> valueSerializer;
+  protected Serializer<Key> keySerializer;
+  protected Serializer<Value> valueSerializer;
    
-  ErrorHandler<Identifier> errorHandler;
-  Logger logger;
+  protected ErrorHandler<Identifier> errorHandler;
+  protected Logger logger;
   
-  public TableTransprotLayerImpl(Serializer<Key> iSerializer, Serializer<Value> cSerializer, TransportLayer<Identifier, ByteBuffer> tl, Environment env) {
+  /**
+   * 
+   * @param iSerializer
+   * @param cSerializer
+   * @param tableStore should be pre-populated with any persistent or initial values
+   * @param tl
+   * @param env
+   */
+  public TableTransprotLayerImpl(Serializer<Key> iSerializer, Serializer<Value> cSerializer, TableStore<Key, Value> tableStore, TransportLayer<Identifier, ByteBuffer> tl, Environment env) {
     this.keySerializer = iSerializer;
     this.valueSerializer = cSerializer;
+    this.knownValues = tableStore;
     this.tl = tl;
     
-    this.logger = env.getLogManager().getLogger(TableTransprotLayerImpl.class, null);
+    this.logger = env.getLogManager().getLogger(getClass(), null);
     this.errorHandler = new DefaultErrorHandler<Identifier>(this.logger);
     
   }
@@ -259,7 +268,7 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
     });
   }
   
-  public boolean hasCertificate(Key i) {
+  public boolean hasKey(Key i) {
     return knownValues.containsKey(i);
   }
   

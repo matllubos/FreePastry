@@ -64,5 +64,7 @@ public interface TableTransportLayer<Identifier, Key, Value> extends TransportLa
    * @return UnknownValueException if the source doesn't value for the key
    */
   public Cancellable requestValue(Identifier source, Key key, Continuation<Value, Exception> c, Map<String, Object> options);
+  
+  public boolean hasKey(Key k);
 
 }

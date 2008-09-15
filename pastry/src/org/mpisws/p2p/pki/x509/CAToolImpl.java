@@ -288,7 +288,7 @@ public class CAToolImpl implements CATool {
     // serialize/deserialize
     X509Serializer serializer = new X509SerializerImpl();
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    serializer.serialize(sob, caTool.getCertificate());
+    serializer.serialize(caTool.getCertificate(), sob);
     
     SimpleInputBuffer sib = new SimpleInputBuffer(sob.getBytes());    
     X509Certificate caCert = serializer.deserialize(sib);
