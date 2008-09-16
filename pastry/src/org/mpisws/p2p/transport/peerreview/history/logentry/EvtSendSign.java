@@ -34,43 +34,39 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.commitment;
+package org.mpisws.p2p.transport.peerreview.history.logentry;
 
-import java.util.LinkedList;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 /**
- * We need to keep some state for each peer, including separate transmit and
- * receive queues
+ * EVT_SENDSIGN
+  signature sig
+  data restOfMessage
+
+ * @author Jeff Hoye
+ *
  */
-public class PeerInfo<Handle> {
-  public static final int INITIAL_CHALLENGE_INTERVAL_MICROS = 30000000;
-
-  Handle handle;
-
-  int numOutstandingPackets;
-  long lastTransmit;
-  long currentTimeout;
-  int retransmitsSoFar;
-  long lastChallenge;
-  long currentChallengeInterval;
-  /**
-   * The first message hasn't been acknowledged, the rest haven't been sent.
-   */
-  LinkedList<PacketInfo> xmitQueue;
-  LinkedList<PacketInfo> recvQueue;
-  boolean isReceiving;
+public class EvtSendSign implements PeerReviewConstants {
+  byte[] signature;
+  ByteBuffer restOfMessage;
   
-
-  public PeerInfo(Handle handle) {
-    this.handle = handle;
-    numOutstandingPackets = 0;
-    lastTransmit = 0;
-    xmitQueue = new LinkedList<PacketInfo>();
-    recvQueue = new LinkedList<PacketInfo>();
-    currentTimeout = 0;
-    retransmitsSoFar = 0;
-    lastChallenge = -1;
-    currentChallengeInterval = INITIAL_CHALLENGE_INTERVAL_MICROS;
-    isReceiving = false;
+  public EvtSendSign(byte[] signature, ByteBuffer restOfMessage) {
+    this.signature = signature;
+    this.restOfMessage = restOfMessage;
   }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.write(signature, 0, signature.length);
+    buf.write(restOfMessage.array(), restOfMessage.position(), restOfMessage.remaining());
+  }
+  
+  public short getType() {
+    return EVT_SENDSIGN;
+  }
+
 }

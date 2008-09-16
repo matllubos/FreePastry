@@ -52,6 +52,7 @@ import org.mpisws.p2p.transport.peerreview.history.HashSeq;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtRecv;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSend;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSign;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
@@ -81,7 +82,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
    * We need to keep some state for each peer, including separate transmit and
    * receive queues
    */
-  Map<Identifier, PeerInfo> peer = new HashMap<Identifier, PeerInfo>();
+  Map<Identifier, PeerInfo<Handle>> peer = new HashMap<Identifier, PeerInfo<Handle>>();
   
   /**
    * We cache a few recently received messages, so we can recognize duplicates.
@@ -98,7 +99,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   IdentityTransport<Handle, Identifier> transport;
   HashProvider hasher;
   Handle myHandle;
-  Misbehavior<Identifier> misbehavior;
+  Misbehavior<Handle> misbehavior;
   /**
    * If the time is more different than this from a peer, we discard the message
    */
@@ -114,7 +115,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   public CommitmentProtocolImpl(PeerReview<Handle,Identifier> peerreview,
       IdentityTransport<Handle, Identifier> transport, HashProvider hasher,
       PeerInfoStore<Handle, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
-      SecureHistory history, PeerReviewCallback app, Misbehavior<Identifier> misbehavior,
+      SecureHistory history, PeerReviewCallback app, Misbehavior<Handle> misbehavior,
       long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
     this.myHandle = transport.getLocalIdentifier();
@@ -132,12 +133,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     this.timeToleranceMillis = timeToleranceMillis;
     
     this.logger = peerreview.getEnvironment().getLogManager().getLogger(CommitmentProtocolImpl.class, null);
-//    for (int i=0; i<RECEIVE_CACHE_SIZE; i++) {
-//      receiveCache[i].sender = NULL;
-//      receiveCache[i].senderSeq = 0;
-//      receiveCache[i].indexInLocalHistory = 0;
-//    }
-      
+
     initReceiveCache();
     makeProgressTask = new TimerTask(){    
       @Override
@@ -176,12 +172,12 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     receiveCache.put(new Tuple<Identifier, Long>(id,senderSeq), new ReceiveInfo<Identifier>(id, senderSeq, indexInLocalHistory));
   }
   
-  PeerInfo lookupPeer(Identifier handle) {
-    PeerInfo ret = peer.get(handle);
+  PeerInfo<Handle> lookupPeer(Handle handle) {
+    PeerInfo<Handle> ret = peer.get(peerreview.getIdentifierExtractor().extractIdentifier(handle));
     if (ret != null) return ret;
     
-    ret = new PeerInfo(); 
-    peer.put(handle, ret);
+    ret = new PeerInfo<Handle>(handle); 
+    peer.put(peerreview.getIdentifierExtractor().extractIdentifier(handle), ret);
     return ret;
   }
   
@@ -284,8 +280,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   /**
    * Tries to make progress on the message queue of the specified peer, e.g. after that peer
    * has become TRUSTED, or after it has sent us an acknowledgment 
-   */
-
+   */    
   void makeProgress(Identifier idx) {
     throw new RuntimeException("todo: implement.");
   }
@@ -299,7 +294,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   /**
    * Handle an incoming USERDATA message 
    */
-  void handleIncomingMessage(Identifier source, ByteBuffer msg, Map<String, Object> options) throws IOException {
+  void handleIncomingMessage(Handle source, ByteBuffer msg, Map<String, Object> options) throws IOException {
 //    char buf1[256];    
     SimpleInputBuffer sib = new SimpleInputBuffer(msg);
     assert(sib.readByte() == MSG_USERDATA);
@@ -328,10 +323,10 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
      */
     lookupPeer(source).recvQueue.addLast(new PacketInfo(msg, options));
 
-    makeProgress(source);
+    makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(source));
   }
 
-  long handleOutgoingMessage(Identifier target, ByteBuffer message, int relevantlen, Map<String, Object> options) throws IOException, SignatureException {
+  long handleOutgoingMessage(Handle target, ByteBuffer message, int relevantlen, Map<String, Object> options) throws IOException, SignatureException {
     assert(relevantlen >= 0);
 
     /* Append a SEND entry to our local log */
@@ -339,7 +334,10 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     byte[] hTopMinusOne, hTop, hToSign;
 //    long topSeq;
     hTopMinusOne = history.getTopLevelEntry().getHash();
+    EvtSend<Identifier> evtSend;
     if (relevantlen < message.remaining()) {
+      
+      evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message,relevantlen,hasher);
 //      int logEntryMaxlen = MAX_ID_SIZE + 1 + relevantlen + hashSizeBytes;
 //      unsigned char *logEntry = (unsigned char*) malloc(logEntryMaxlen);
 //      unsigned int logEntryLen = 0;
@@ -352,15 +350,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
 //      transport->hash(&logEntry[logEntryLen], &message[relevantlen], msglen - relevantlen);
 //      logEntryLen += hashSizeBytes;
 //      
+      
 //      history->appendEntry(EVT_SEND, true, logEntry, logEntryLen);
 //      free(logEntry);
-//    } else {
-//      unsigned char header[MAX_ID_SIZE+1];
-//      unsigned int headerSize = 0;
-//      target->getIdentifier()->write(header, &headerSize, sizeof(header));
-//      writeByte(header, &headerSize, 0);
-//      history->appendEntry(EVT_SEND, true, message, msglen, header, headerSize);
+    } else {
+      evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message);
     }
+    history.appendEntry(evtSend.getType(), true, evtSend.serialize());
     
     //  hTop, &topSeq
     HashSeq top = history.getTopLevelEntry();
@@ -394,34 +390,21 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     /* Construct a USERDATA message... */
     
     assert((relevantlen == message.remaining()) || (relevantlen < 255));    
-//    byte relevantCode = (relevantlen == message.remaining()) ? (byte)0xFF : (byte)relevantlen;
-//    unsigned int maxLen = 1 + sizeof(topSeq) + MAX_HANDLE_SIZE + hashSizeBytes + signatureSizeBytes + sizeof(relevantCode) + msglen;
-//    unsigned char *buf = (unsigned char *)malloc(maxLen);
-//    unsigned int totalLen = 0;
 
     UserDataMessage<Handle> udm = new UserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen);
-//    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-//    sob.writeByte(MSG_USERDATA);
-//    sob.writeLong(top.getSeq());
-//    peerreview.getIdSerializer().serialize(myHandle, sob);
-//    sob.write(hTopMinusOne);
-//    sob.write(signature);
-//    sob.writeByte(relevantCode);
-//    sob.write(message.array(), message.position(), message.remaining());
-//    assert(totalLen <= maxLen);
     
     /* ... and put it into the send queue. If the node is trusted and does not have any
        unacknowledged messages, makeProgress() will simply send it out. */
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     udm.serialize(sob);
     lookupPeer(target).xmitQueue.addLast(new PacketInfo(sob.getByteBuffer(),options));
-    makeProgress(target);
+    makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(target));
     
     return top.getSeq();
   }
   /* This is called if we receive an acknowledgment from another node */
 
-  void handleIncomingAck(Identifier source, ByteBuffer message, Map<String, Object> options) throws IOException {
+  void handleIncomingAck(Handle source, ByteBuffer message, Map<String, Object> options) throws IOException {
 //    char buf1[256];
     SimpleInputBuffer sib = new SimpleInputBuffer(message);
     assert(sib.readByte() == MSG_ACK);
@@ -453,7 +436,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     sib.read(signature);
     
     if (transport.hasCertificate(remoteId)) {
-      PeerInfo p = lookupPeer(source);
+      PeerInfo<Handle> p = lookupPeer(source);
       /**
       MSG_USERDATA
       byte type = MSG_USERDATA

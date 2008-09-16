@@ -34,43 +34,43 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.commitment;
+package org.mpisws.p2p.transport.peerreview.evidence;
 
-import java.util.LinkedList;
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 
 /**
- * We need to keep some state for each peer, including separate transmit and
- * receive queues
+ * PROOF_INCONSISTENT
+ * byte type = PROOF_INCONSISTENT
+ * authenticator auth1
+ * char whichInconsistency   // 0=another auth, 1=a log snippet
+ * -----------------------
+ * authenticator auth2       // if whichInconsistency==0
+ * -----------------------
+ * long long firstSeq        // if whichInconsistency==1
+ * hash baseHash
+ * [entries]
+ * 
+ * @author Jeff Hoye
  */
-public class PeerInfo<Handle> {
-  public static final int INITIAL_CHALLENGE_INTERVAL_MICROS = 30000000;
-
-  Handle handle;
-
-  int numOutstandingPackets;
-  long lastTransmit;
-  long currentTimeout;
-  int retransmitsSoFar;
-  long lastChallenge;
-  long currentChallengeInterval;
-  /**
-   * The first message hasn't been acknowledged, the rest haven't been sent.
-   */
-  LinkedList<PacketInfo> xmitQueue;
-  LinkedList<PacketInfo> recvQueue;
-  boolean isReceiving;
+public class ProofInconsistent implements PeerReviewConstants {
+  public static final byte ANOTHER_AUTH = 0;
+  public static final byte LOG_SNIPPET = 1;
   
+  
+  Authenticator auth1;
+  
+  Authenticator auth2;
+  
+  long firstSeq;
+  byte[] baseHash;
 
-  public PeerInfo(Handle handle) {
-    this.handle = handle;
-    numOutstandingPackets = 0;
-    lastTransmit = 0;
-    xmitQueue = new LinkedList<PacketInfo>();
-    recvQueue = new LinkedList<PacketInfo>();
-    currentTimeout = 0;
-    retransmitsSoFar = 0;
-    lastChallenge = -1;
-    currentChallengeInterval = INITIAL_CHALLENGE_INTERVAL_MICROS;
-    isReceiving = false;
+  public ProofInconsistent(Authenticator auth1, Authenticator auth2) {
+    this.auth1 = auth1;
+    this.auth2 = auth2;
+  }
+  
+  public byte getType() {
+    return PROOF_INCONSISTENT;
   }
 }

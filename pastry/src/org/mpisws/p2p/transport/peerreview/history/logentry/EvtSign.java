@@ -38,15 +38,22 @@ package org.mpisws.p2p.transport.peerreview.history.logentry;
 
 import java.io.IOException;
 
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
-public class EvtSign {
+public class EvtSign implements PeerReviewConstants {
   byte[] hTopMinusOne;
   byte[] signature;
   public EvtSign(byte[] hTopMinusOne, byte[] signature) {
     this.hTopMinusOne = hTopMinusOne;
     this.signature = signature;
   }
+  
+  public short getType() {
+    return EVT_SIGN;
+  }
+  
   public void serialize(OutputBuffer buf) throws IOException {
     buf.write(hTopMinusOne, 0, hTopMinusOne.length);
     buf.write(signature, 0, signature.length);

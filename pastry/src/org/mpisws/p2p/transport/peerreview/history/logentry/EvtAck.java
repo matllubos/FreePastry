@@ -34,43 +34,52 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.proof;
+package org.mpisws.p2p.transport.peerreview.history.logentry;
+
+import java.io.IOException;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
- * PROOF_INCONSISTENT
- * byte type = PROOF_INCONSISTENT
- * authenticator auth1
- * char whichInconsistency   // 0=another auth, 1=a log snippet
- * -----------------------
- * authenticator auth2       // if whichInconsistency==0
- * -----------------------
- * long long firstSeq        // if whichInconsistency==1
- * hash baseHash
- * [entries]
- * 
+  EVT_ACK
+  nodeID remoteID
+  long long ackedSeq
+  long long hisSeq
+  hash hTopMinusOne
+  signature sig
  * @author Jeff Hoye
+ *
+ * @param <Identifier>
  */
-public class ProofInconsistent implements PeerReviewConstants {
-  public static final byte ANOTHER_AUTH = 0;
-  public static final byte LOG_SNIPPET = 1;
-  
-  
-  Authenticator auth1;
-  byte whichInconsistency;
-  Authenticator auth2;
-  long firstSeq;
-  byte[] baseHash;
+public class EvtAck<Identifier extends RawSerializable> implements PeerReviewConstants {
+  Identifier remoteId;
+  long ackedSeq;
+  long hisSeq;
+  byte[] hTopMinusOne;
+  byte[] signature;
 
-  public ProofInconsistent(Authenticator auth1, Authenticator auth2) {
-    this.auth1 = auth1;
-    this.auth2 = auth2;
-    whichInconsistency = ANOTHER_AUTH; 
+  public EvtAck(Identifier remoteId, long ackedSeq, long hisSeq,
+      byte[] topMinusOne, byte[] signature) {
+    super();
+    this.remoteId = remoteId;
+    this.ackedSeq = ackedSeq;
+    this.hisSeq = hisSeq;
+    hTopMinusOne = topMinusOne;
+    this.signature = signature;
   }
   
-  public byte getType() {
-    return PROOF_INCONSISTENT;
+  public short getType() {
+    return EVT_SENDSIGN;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    remoteId.serialize(buf);
+    buf.writeLong(ackedSeq);
+    buf.writeLong(hisSeq);
+    buf.write(hTopMinusOne,0,hTopMinusOne.length);
+    buf.write(signature,0,signature.length);
   }
 }
