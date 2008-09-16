@@ -53,36 +53,59 @@
     </javac>
   </target>
 
-	<property environment="env"/>
-	  <!-- The classpath -->
-	  <path id="interned.classpath">
-	    <fileset dir="${lib.dir}">
-	      <include name="**/*.jar"/>
-	    </fileset>
-	    <fileset dir="C:/jsr308/checkers">
-	      <include name="checkers.jar"/>
-	    </fileset>
-	    <pathelement path="${build.dir}"/>
-	  </path>
-	  <property name="jsr308.javac" value="C:/jsr308/jdk1.7.0/bin/javac"/>
-	  <!-- "clean" target is necessary or else this won't re-compile if .class
-	  files already exist.
-	  "executable" and "fork" fields ensure we call an external program, not
-	  just run javac via a Java method call. -->
-	  <target name="interned" depends="clean,init">
-	    <javac srcdir="${src.dir}"
-	       destdir="${build.dir}"
-	       classpathref="interned.classpath"
-	       includes="**/*.java"
-	       deprecation="no"
-	       debuglevel="lines,vars,source"
-	       fork="yes"
-	       executable="${jsr308.javac}"
-	       debug="true">
-	      <compilerarg value="-version"/>
-	      <compilerarg line="-processor checkers.interning.InterningChecker"/>
-	    </javac>
-	  </target>
+  <!-- Environment variables for the Checker Framework -->
+  <!-- Override on the command line, e.g.:  ant -Djsr308.dir=$HOME/jsr308  -->
+  <property environment="env"/>
+  <property name="jsr308.dir" value="C:/jsr308"/>
+  <property name="jsr308.checkers.dir" value="${jsr308.dir}/checkers"/>
+  <property name="jsr308.javac" value="${jsr308.dir}/jdk1.7.0/bin/javac"/>
+  <property name="jsr308.processor" value="checkers.interning.InterningChecker"/>
+
+  <!-- The classpath for using the Checker Framework -->
+  <path id="checkers.classpath">
+    <fileset dir="${lib.dir}">
+      <include name="**/*.jar"/>
+    </fileset>
+    <fileset dir="${jsr308.checkers.dir}">
+      <include name="checkers.jar"/>
+    </fileset>
+    <pathelement path="${build.dir}"/>
+  </path>
+
+  <!-- Running a checker from the Checker Framework -->
+  <!--
+    "clean" target is because the javac target doesn't re-compile .java
+    files for which a .class file already exists.
+    "executable" and "fork" fields ensure we call an external program, not
+    just run javac via a Java method call.  That's because the JSR 308
+    compiler might not be the one that is running Ant.
+  -->
+  <target name="checker" depends="clean,init">
+    <javac srcdir="${src.dir}"
+       destdir="${build.dir}"
+       classpathref="checkers.classpath"
+       includes="**/*.java"
+       deprecation="no"
+       debuglevel="lines,vars,source"
+       fork="yes"
+       executable="${jsr308.javac}"
+       debug="true">
+      <compilerarg value="-version"/>
+      <compilerarg value="-processor"/>
+      <compilerarg value="${jsr308.processor}"/>
+    </javac>
+  </target>
+
+
+  <target name="etags" depends="tags">
+  </target>
+  <target name="tags" description="Create Emacs TAGS table">
+    <exec executable="/bin/sh">
+      <arg value="-c"/>
+      <arg value="etags `find -name '*.java' | sort-directory-order.pl`"/>
+    </exec>
+  </target>
+
 
   <target name="compileappend" depends="init">
     <javac srcdir="${pretty.lib.dir}"
