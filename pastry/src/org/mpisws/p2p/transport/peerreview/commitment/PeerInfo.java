@@ -38,16 +38,19 @@ package org.mpisws.p2p.transport.peerreview.commitment;
 
 import java.util.LinkedList;
 
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
+
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
 /**
  * We need to keep some state for each peer, including separate transmit and
  * receive queues
  */
-public class PeerInfo<Handle> {
+public class PeerInfo<Handle extends RawSerializable> {
   public static final int INITIAL_CHALLENGE_INTERVAL_MICROS = 30000000;
 
   Handle handle;
 
-  int numOutstandingPackets;
   long lastTransmit;
   long currentTimeout;
   int retransmitsSoFar;
@@ -56,21 +59,59 @@ public class PeerInfo<Handle> {
   /**
    * The first message hasn't been acknowledged, the rest haven't been sent.
    */
-  LinkedList<PacketInfo> xmitQueue;
+  LinkedList<UserDataMessage<Handle>> xmitQueue;
   LinkedList<PacketInfo> recvQueue;
   boolean isReceiving;
   
+  public int getNumOutstandingPackets() {
+    return xmitQueue.size();
+  }
 
   public PeerInfo(Handle handle) {
     this.handle = handle;
-    numOutstandingPackets = 0;
     lastTransmit = 0;
-    xmitQueue = new LinkedList<PacketInfo>();
+    xmitQueue = new LinkedList<UserDataMessage<Handle>>();
     recvQueue = new LinkedList<PacketInfo>();
     currentTimeout = 0;
     retransmitsSoFar = 0;
     lastChallenge = -1;
     currentChallengeInterval = INITIAL_CHALLENGE_INTERVAL_MICROS;
     isReceiving = false;
+  }
+
+  public Handle getHandle() {
+    return handle;
+  }
+
+  public long getLastTransmit() {
+    return lastTransmit;
+  }
+
+  public long getCurrentTimeout() {
+    return currentTimeout;
+  }
+
+  public int getRetransmitsSoFar() {
+    return retransmitsSoFar;
+  }
+
+  public long getLastChallenge() {
+    return lastChallenge;
+  }
+
+  public long getCurrentChallengeInterval() {
+    return currentChallengeInterval;
+  }
+
+  public LinkedList<UserDataMessage<Handle>> getXmitQueue() {
+    return xmitQueue;
+  }
+
+  public LinkedList<PacketInfo> getRecvQueue() {
+    return recvQueue;
+  }
+
+  public boolean isReceiving() {
+    return isReceiving;
   }
 }

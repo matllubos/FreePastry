@@ -37,86 +37,20 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.message;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.util.Serializer;
 
-import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-/**
-  MSG_ACK
-  byte type = MSG_ACK
-  nodeID recipientID
-  long long sendEntrySeq
-  long long recvEntrySeq
-  hash hashTopMinusOne
-  signature sig
- * 
- * @author Jeff Hoye
- *
- * @param <Identifier>
- */
-public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMessage {
+public abstract class PeerReviewMessage implements PeerReviewConstants, RawSerializable {
 
-  Identifier nodeId;
-  long sendEntrySeq;
-  long recvEntrySeq;
-  byte[] hashTopMinusOne;
-  byte[] signature;
-  
-  public AckMessage(Identifier nodeId, long sendEntrySeq, long recvEntrySeq,
-      byte[] hashTopMinusOne, byte[] signature) {
-    super();
-    this.nodeId = nodeId;
-    this.sendEntrySeq = sendEntrySeq;
-    this.recvEntrySeq = recvEntrySeq;
-    this.hashTopMinusOne = hashTopMinusOne;
-    this.signature = signature;
-  }
-  
-  public short getType() {
-    return MSG_ACK;
-  }
-
-  public void serialize(OutputBuffer buf) throws IOException {
-    nodeId.serialize(buf);
-    buf.writeLong(sendEntrySeq);
-    buf.writeLong(recvEntrySeq);
-    buf.write(hashTopMinusOne,0,hashTopMinusOne.length);
-    buf.write(signature,0,signature.length);
-  }
-  
-  public static <Identifier extends RawSerializable> AckMessage<Identifier> build(InputBuffer sib, Serializer<Identifier> serializer, int hashSizeInBytes, int signatureSizeInBytes) throws IOException {
-    Identifier remoteId = serializer.deserialize(sib);
-    long ackedSeq = sib.readLong();
-    long hisSeq = sib.readLong();    
-    byte[] hTopMinusOne = new byte[hashSizeInBytes];
-    sib.read(hTopMinusOne);
-    byte[] signature = new byte[signatureSizeInBytes];
-    sib.read(signature);
-    return new AckMessage<Identifier>(remoteId, ackedSeq, hisSeq, hTopMinusOne, signature);
-  }
-
-  public Identifier getNodeId() {
-    return nodeId;
-  }
-
-  public long getSendEntrySeq() {
-    return sendEntrySeq;
-  }
-
-  public long getRecvEntrySeq() {
-    return recvEntrySeq;
-  }
-
-  public byte[] getHashTopMinusOne() {
-    return hashTopMinusOne;
-  }
-
-  public byte[] getSignature() {
-    return signature;
+  public ByteBuffer serialize() throws IOException {
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    serialize(sob);
+    return sob.getByteBuffer();
   }
 
 }

@@ -36,6 +36,9 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview;
 
+import java.io.IOException;
+
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.util.Serializer;
 
@@ -43,6 +46,9 @@ import rice.environment.Environment;
 
 public interface PeerReview<Handle, Identifier> {
 
+  public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException;
+
+  
   Environment getEnvironment();
 
   AuthenticatorSerializer getAuthenticatorSerializer();

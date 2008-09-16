@@ -42,7 +42,7 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
-public class EvtSign implements PeerReviewConstants {
+public class EvtSign extends HistoryEvent {
   byte[] hTopMinusOne;
   byte[] signature;
   public EvtSign(byte[] hTopMinusOne, byte[] signature) {

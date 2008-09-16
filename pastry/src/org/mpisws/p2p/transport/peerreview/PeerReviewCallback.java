@@ -36,6 +36,8 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview;
 
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
+
 import rice.Destructable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -45,7 +47,7 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
  * During normal operation, PeerReview uses this interface to checkpoint the
  * application, and to inquire about the witness set of another node. 
  */
-public interface PeerReviewCallback extends Destructable /*: public IdentityTransportCallback*/ {
+public interface PeerReviewCallback<Handle, Identifier> extends Destructable, IdentityTransportCallback<Handle, Identifier> {
   // PeerReviewCallback() : IdentityTransportCallback() {};
   public void init();
   void storeCheckpoint(OutputBuffer buffer);

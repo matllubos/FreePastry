@@ -34,48 +34,14 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.history.logentry;
+package org.mpisws.p2p.transport.peerreview.identity;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+public interface IdentityTransportCallback<Handle, Identifier> {
+  void receive(Handle source, boolean datagram, ByteBuffer msg);
+  void sendComplete(long id);
+  void statusChange(Identifier id, int newStatus);
+  void notifyCertificateAvailable(Identifier id);
 
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
-import rice.p2p.commonapi.rawserialization.RawSerializable;
-
-public class EvtRecv<Handle extends RawSerializable> extends HistoryEvent {
-  Handle senderHandle;
-  long senderSeq;
-  byte[] payload; // may be full, or just relevant
-  byte[] hash; // null if the whole payload is there (hashed == false)
-  
-  public EvtRecv(Handle senderHandle, long topSeq, ByteBuffer payload) {
-    this.senderHandle = senderHandle;
-    this.senderSeq = topSeq;
-    this.payload = new byte[payload.remaining()];
-    System.arraycopy(payload.array(), payload.position(), this.payload, 0, payload.remaining());    
-  }
-  
-  public EvtRecv(Handle senderHandle, long topSeq, ByteBuffer payload,
-      short relevantLen, HashProvider hasher) {
-    this.senderHandle = senderHandle;
-    this.senderSeq = topSeq;
-    this.payload = new byte[payload.remaining()];
-    System.arraycopy(payload.array(), payload.position(), this.payload, 0, relevantLen);
-    hash = hasher.hash(ByteBuffer.wrap(this.payload));
-  }
-
-  public short getType() {
-    return EVT_RECV;
-  }
-
-  public void serialize(OutputBuffer buf) throws IOException {
-    senderHandle.serialize(buf);
-    buf.writeLong(senderSeq);
-    buf.writeBoolean(hash != null);  
-    buf.write(payload, 0, payload.length);
-    if (hash != null) buf.write(hash, 0, hash.length);
-  }
 }

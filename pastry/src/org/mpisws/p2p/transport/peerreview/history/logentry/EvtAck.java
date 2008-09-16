@@ -54,7 +54,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  *
  * @param <Identifier>
  */
-public class EvtAck<Identifier extends RawSerializable> implements PeerReviewConstants {
+public class EvtAck<Identifier extends RawSerializable> extends HistoryEvent {
   Identifier remoteId;
   long ackedSeq;
   long hisSeq;

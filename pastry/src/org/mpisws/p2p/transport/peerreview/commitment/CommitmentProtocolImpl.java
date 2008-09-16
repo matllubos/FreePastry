@@ -51,6 +51,7 @@ import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.HashSeq;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtAck;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtRecv;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSend;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSign;
@@ -211,16 +212,9 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     if (indexOfRecvEntry < 0L) {
       /* Construct the RECV entry and append it to the log */
 
-      EvtRecv<Handle> recv;
       myHashTopMinusOne = history.getTopLevelEntry().getHash();
-      if (udm.getRelevantLen() < udm.getPayload().remaining()) {
-        recv = new EvtRecv<Handle>(udm.getSenderHandle(), udm.getTopSeq(), udm.getPayload(), udm.getRelevantLen(), transport);
-      } else {
-        recv = new EvtRecv<Handle>(udm.getSenderHandle(), udm.getTopSeq(), udm.getPayload());
-      }
-      SimpleOutputBuffer sob = new SimpleOutputBuffer();
-      recv.serialize(sob);
-      history.appendEntry(EVT_RECV, true, sob.getByteBuffer());
+      EvtRecv<Handle> recv = udm.getReceiveEvent(transport);
+      history.appendEntry(EVT_RECV, true, recv.serialize());
             
       HashSeq foo = history.getTopLevelEntry();
       myHashTop = foo.getHash();
@@ -231,11 +225,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
       if (logger.level < Logger.FINE) logger.log("New message logged as seq#"+seqOfRecvEntry);
 
       /* Construct the SIGN entry and append it to the log */
-
       
-      sob = new SimpleOutputBuffer();
-      new EvtSign(udm.getHTopMinusOne(),udm.getSignature()).serialize(sob);
-      history.appendEntry(EVT_RECV, true, sob.getByteBuffer());
+      history.appendEntry(EVT_RECV, true, new EvtSign(udm.getHTopMinusOne(),udm.getSignature()).serialize());
       loggedPreviously = false;
     } else {
       loggedPreviously = true;
@@ -291,6 +282,10 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     return ret.indexInLocalHistory;
   }
   
+  long findAckEntry(Identifier id, long seq) {
+    return -1;
+  }
+  
   /**
    * Handle an incoming USERDATA message 
    */
@@ -335,24 +330,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
 //    long topSeq;
     hTopMinusOne = history.getTopLevelEntry().getHash();
     EvtSend<Identifier> evtSend;
-    if (relevantlen < message.remaining()) {
-      
+    if (relevantlen < message.remaining()) {      
       evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message,relevantlen,hasher);
-//      int logEntryMaxlen = MAX_ID_SIZE + 1 + relevantlen + hashSizeBytes;
-//      unsigned char *logEntry = (unsigned char*) malloc(logEntryMaxlen);
-//      unsigned int logEntryLen = 0;
-//      target->getIdentifier()->write(logEntry, &logEntryLen, logEntryMaxlen);
-//      writeByte(logEntry, &logEntryLen, 1);
-//      if (relevantlen > 0) {
-//        memcpy(&logEntry[logEntryLen], message, relevantlen);
-//        logEntryLen += relevantlen;
-//      }
-//      transport->hash(&logEntry[logEntryLen], &message[relevantlen], msglen - relevantlen);
-//      logEntryLen += hashSizeBytes;
-//      
-      
-//      history->appendEntry(EVT_SEND, true, logEntry, logEntryLen);
-//      free(logEntry);
     } else {
       evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message);
     }
@@ -391,140 +370,71 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     
     assert((relevantlen == message.remaining()) || (relevantlen < 255));    
 
-    UserDataMessage<Handle> udm = new UserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen);
+    UserDataMessage<Handle> udm = new UserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen, options);
     
     /* ... and put it into the send queue. If the node is trusted and does not have any
        unacknowledged messages, makeProgress() will simply send it out. */
-    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    udm.serialize(sob);
-    lookupPeer(target).xmitQueue.addLast(new PacketInfo(sob.getByteBuffer(),options));
+    lookupPeer(target).xmitQueue.addLast(udm);
     makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(target));
     
     return top.getSeq();
   }
   /* This is called if we receive an acknowledgment from another node */
 
-  void handleIncomingAck(Handle source, ByteBuffer message, Map<String, Object> options) throws IOException {
-//    char buf1[256];
-    SimpleInputBuffer sib = new SimpleInputBuffer(message);
-    assert(sib.readByte() == MSG_ACK);
-    
-    /* Sanity check */    
-//    if (msglen < (17 + peerreview.getIdentifierSizeBytes() + hashSizeBytes + signatureSizeBytes)) {
-//      return;
-//    }
-        
+  void handleIncomingAck(Handle source, AckMessage<Identifier> ackMessage, Map<String, Object> options) throws IOException {
+//  AckMessage<Identifier> ackMessage = AckMessage.build(sib, peerreview.getIdSerializer(), hasher.getHashSizeBytes(), transport.signatureSizeInBytes());
+
     /* Acknowledgment: Log it (if we don't have it already) and send the next message, if any */
 
     if (logger.level <= Logger.FINE) logger.log("Received an ACK from "+source);
-    /**
-    MSG_ACK
-    byte type = MSG_ACK
-    nodeID recipientID
-    long long sendEntrySeq
-    long long recvEntrySeq
-    hash hashTopMinusOne
-    signature sig
-    */
-    
-    Identifier remoteId = peerreview.getIdSerializer().deserialize(sib);
-    long ackedSeq = sib.readLong();
-    long hisSeq = sib.readLong();    
-    byte[] hTopMinusOne = new byte[hasher.getHashSizeBytes()];
-    sib.read(hTopMinusOne);
-    byte[] signature = new byte[transport.signatureSizeInBytes()];
-    sib.read(signature);
-    
-    if (transport.hasCertificate(remoteId)) {
+    // TODO: check that ackMessage came from the source
+        
+    if (transport.hasCertificate(ackMessage.getNodeId())) {
       PeerInfo<Handle> p = lookupPeer(source);
-      /**
-      MSG_USERDATA
-      byte type = MSG_USERDATA
-      long long topSeq   
-      handle senderHandle
-      hash hTopMinusOne
-      signature sig
-      byte relevantCode          // 0xFF = fully, otherwise length in bytes
-      [payload bytes follow]
-       */
-      
-      SimpleInputBuffer xmittedMsg = new SimpleInputBuffer(p.xmitQueue.getFirst().msg);
-      xmittedMsg.readByte();
-      long sendSeq = xmittedMsg.readLong();
+
+      UserDataMessage<Handle> udm = p.xmitQueue.getFirst();
 
       /* The ACK must acknowledge the sequence number of the packet that is currently
          at the head of the send queue */
 
-      if (ackedSeq == sendSeq) {
-        Identifier sendHandle = peerreview.getIdSerializer().deserialize(xmittedMsg);
-        // skip the hTopMinusOne
-        xmittedMsg.read(new byte[hasher.getHashSizeBytes()+transport.signatureSizeInBytes()]);
-        int relevantCode = MathUtils.uByteToInt(xmittedMsg.readByte());
+      if (ackMessage.getSendEntrySeq() == udm.getTopSeq()) {
         
-        int payloadLen = sib.bytesRemaining();
-        byte[] payload = new byte[payloadLen];
-        sib.read(payload);
-        int relevantLen = (relevantCode == 0xFF) ? payloadLen : relevantCode;
-
-        /* The peer will have logged a RECV entry, and the signature is calculated over that
-           entry. To verify the signature, we must reconstruct that RECV entry locally */
-
-        SimpleOutputBuffer sob = new SimpleOutputBuffer();
-        peerreview.getIdSerializer().serialize(sendHandle, sob);
-        sob.writeLong(sendSeq);
-        sob.writeByte((relevantLen < payloadLen) ? 1 : 0);
-        ByteBuffer recvEntryHeader = sob.getByteBuffer();
-        
-        byte[] innerHash;
-        if (relevantLen < payloadLen) {
-          byte[] irrelevantHash = hasher.hash(ByteBuffer.wrap(payload, relevantLen, payloadLen - relevantLen));
-          innerHash = hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload, 0, relevantLen), ByteBuffer.wrap(irrelevantHash));
-        } else {
-          innerHash = hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload));
-        }
-
         /* Now we're ready to check the signature */
 
-//        unsigned char authenticator[sizeof(long long) + hashSizeBytes + signatureSizeBytes];
-//        if (peerreview->extractAuthenticator(remoteId, hisSeq, EVT_RECV, innerHash, hTopMinusOne, signature, authenticator)) {
-//
-//          /* Signature is okay... append an ACK entry to the log */
-//
-//          dlog(2, "ACK is okay; logging");
-//          unsigned char entry[2*sizeof(long long) + MAX_ID_SIZE + hashSizeBytes + signatureSizeBytes];
-//          unsigned int pos = 0;
-//          remoteId->write(entry, &pos, sizeof(entry));
-//          writeLongLong(entry, &pos, ackedSeq);
-//          writeLongLong(entry, &pos, hisSeq);
-//          writeBytes(entry, &pos, hTopMinusOne, hashSizeBytes);
-//          writeBytes(entry, &pos, signature, signatureSizeBytes);
-//          history->appendEntry(EVT_ACK, true, entry, pos);
-//          app->sendComplete(ackedSeq);
-//
-//          /* Remove the message from the xmit queue */
-//
-//          struct packetInfo *pi = peer[idx].xmitQueue;
-//          peer[idx].xmitQueue = peer[idx].xmitQueue->next;
-//          peer[idx].numOutstandingPackets --;
-//          free(pi->message);
-//          free(pi);
-//
-//          /* Make progress (e.g. by sending the next message) */
-//
-//          makeProgress(idx);
-//        } else {
-//          warning("Invalid ACK from <%s>; discarding", remoteId->render(buf1));
-//        }
-//      } else {
-//        if (findAckEntry(remoteId, ackedSeq) < 0) {
-//          warning("<%s> has ACKed something we haven't sent (%lld); discarding", remoteId->render(buf1), ackedSeq);
-//        } else {
-//          warning("Duplicate ACK from <%s>; discarding", remoteId->render(buf1));
-//        }
-//      }
-//    } else {
-//      warning("We got an ACK from <%s>, but we don't have the certificate; discarding", remoteId->render(buf1));
+        byte[] innerHash = udm.getInnerHash(peerreview.getHandleSerializer(), transport);
+        
+        Authenticator authenticator = peerreview.extractAuthenticator(
+            ackMessage.getNodeId(), ackMessage.getRecvEntrySeq(), EVT_RECV, innerHash, 
+            ackMessage.getHashTopMinusOne(), ackMessage.getSignature());
+        if (authenticator != null) {
+
+          /* Signature is okay... append an ACK entry to the log */
+
+          if (logger.level <= Logger.FINE) logger.log("ACK is okay; logging "+ackMessage);
+          
+          EvtAck<Identifier> evtAck = new EvtAck<Identifier>(ackMessage.getNodeId(), ackMessage.getSendEntrySeq(), ackMessage.getRecvEntrySeq(), ackMessage.getHashTopMinusOne(), ackMessage.getSignature());
+          history.appendEntry(EVT_ACK, true, evtAck.serialize());
+          app.sendComplete(ackMessage.getSendEntrySeq());
+
+          /* Remove the message from the xmit queue */
+
+          p.xmitQueue.removeFirst();
+
+          /* Make progress (e.g. by sending the next message) */
+
+          makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(p.getHandle()));
+        } else {
+          if (logger.level <= Logger.WARNING) logger.log("Invalid ACK from <"+ackMessage.getNodeId()+">; discarding");
+        }
+      } else {
+        if (findAckEntry(ackMessage.getNodeId(), ackMessage.getSendEntrySeq()) < 0) {
+          if (logger.level <= Logger.WARNING) logger.log("<"+ackMessage.getNodeId()+"> has ACKed something we haven't sent ("+ackMessage.getSendEntrySeq()+"); discarding");
+        } else {
+          if (logger.level <= Logger.WARNING) logger.log("Duplicate ACK from <"+ackMessage.getNodeId()+">; discarding");
+        }
       }
+    } else {
+      if (logger.level <= Logger.WARNING) logger.log("We got an ACK from <"+ackMessage.getNodeId()+">, but we don't have the certificate; discarding");     
     }
   }
 }

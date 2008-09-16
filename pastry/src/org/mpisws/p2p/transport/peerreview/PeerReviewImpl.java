@@ -163,7 +163,7 @@ public class PeerReviewImpl<Handle, Identifier> implements
   /** 
    * A helper function that extracts an authenticator from an incoming message and adds it to our local store. 
    */
-  Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException {
+  public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException {
 //    *(long long*)&authenticator[0] = seq;
     
     SimpleOutputBuffer sob = new SimpleOutputBuffer();

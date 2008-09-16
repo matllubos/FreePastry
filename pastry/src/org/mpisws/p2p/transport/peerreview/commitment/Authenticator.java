@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.MathUtils;
 
@@ -51,7 +52,6 @@ public class Authenticator implements Comparable<Authenticator> {
   int hashCode = 0;
   
   public Authenticator(long seq, byte[] hash, byte[] signature) {
-    super();
     this.seq = seq;
     this.hash = hash;
     this.signature = signature;

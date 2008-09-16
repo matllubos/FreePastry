@@ -38,8 +38,11 @@ package org.mpisws.p2p.transport.peerreview.message;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtRecv;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -63,17 +66,20 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @author Jeff Hoye
  *
  */
-public class UserDataMessage<Handle extends RawSerializable> implements RawSerializable, PeerReviewConstants {
+public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewMessage {
   long topSeq;
   Handle senderHandle;
   byte[] hTopMinusOne;
   byte[] signature;
   short relevantLen; // = message.remaining() or < 255
   ByteBuffer payload;
+  
+  Map<String, Object> options;
 
   public UserDataMessage(long topSeq, Handle senderHandle, byte[] topMinusOne,
-      byte[] sig, ByteBuffer message, int relevantlen) {
-    super();
+      byte[] sig, ByteBuffer message, int relevantlen, Map<String, Object> options) {
+    this.options = options;
+    
     this.topSeq = topSeq;
     this.senderHandle = senderHandle;
     hTopMinusOne = topMinusOne;
@@ -101,7 +107,7 @@ public class UserDataMessage<Handle extends RawSerializable> implements RawSeria
     }
   }
 
-  public static <H extends RawSerializable> UserDataMessage<H> build(InputBuffer buf, Serializer<H> serializer, int hashSize, int sigSize) throws IOException {
+  public static <H extends RawSerializable> UserDataMessage<H> build(InputBuffer buf, Serializer<H> serializer, int hashSize, int sigSize, Map<String, Object> options) throws IOException {
     long seq = buf.readLong();
     H handle = serializer.deserialize(buf); 
     byte[] hash = new byte[hashSize]; 
@@ -111,7 +117,8 @@ public class UserDataMessage<Handle extends RawSerializable> implements RawSeria
     byte relevantCode = buf.readByte();
     int len = MathUtils.uByteToInt(relevantCode);
     byte[] msg = new byte[buf.bytesRemaining()];
-    return new UserDataMessage<H>(seq, handle, hash, sig, ByteBuffer.wrap(msg), len);
+    buf.read(msg);
+    return new UserDataMessage<H>(seq, handle, hash, sig, ByteBuffer.wrap(msg), len, options);
   }
 
   public long getTopSeq() {
@@ -136,5 +143,37 @@ public class UserDataMessage<Handle extends RawSerializable> implements RawSeria
 
   public ByteBuffer getPayload() {
     return payload;
+  }
+  
+  public EvtRecv<Handle> getReceiveEvent(HashProvider hasher) {
+    if (getRelevantLen() < getPayload().remaining()) {
+      return new EvtRecv<Handle>(getSenderHandle(), getTopSeq(), getPayload(), getRelevantLen(), hasher);
+    } else {
+      return new EvtRecv<Handle>(getSenderHandle(), getTopSeq(), getPayload());
+    }
+  }
+
+  /**
+   * recvEntryHeader is the SendHandle, topSeq, (relevantLen < payload)?
+   * @param hasher
+   * @return
+   */
+  public byte[] getInnerHash(Serializer<Handle> serializer, HashProvider hasher) throws IOException {
+    /* The peer will have logged a RECV entry, and the signature is calculated over that
+    entry. To verify the signature, we must reconstruct that RECV entry locally */
+
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    serializer.serialize(senderHandle, sob);
+    sob.writeLong(topSeq);
+    sob.writeByte((relevantLen < payload.remaining()) ? 1 : 0);
+    ByteBuffer recvEntryHeader = sob.getByteBuffer();
+
+    if (relevantLen < payload.remaining()) {
+      byte[] irrelevantHash = hasher.hash(ByteBuffer.wrap(payload.array(), relevantLen, payload.remaining()-relevantLen));
+      return hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload.array(), payload.position(), relevantLen), ByteBuffer.wrap(irrelevantHash));
+    } else {
+      return hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload.array(), payload.position(), payload.remaining()));
+    }
+    
   }
 }

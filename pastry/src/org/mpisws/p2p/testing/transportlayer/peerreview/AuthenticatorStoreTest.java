@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.testing.transportlayer.peerreview;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.SortedSet;
@@ -167,6 +168,13 @@ public class AuthenticatorStoreTest {
     }
 
     public IdentifierExtractor<Object, InetSocketAddress> getIdentifierExtractor() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public Authenticator extractAuthenticator(InetSocketAddress id, long seq,
+        short entryType, byte[] entryHash, byte[] topMinusOne, byte[] signature)
+        throws IOException {
       // TODO Auto-generated method stub
       return null;
     }
