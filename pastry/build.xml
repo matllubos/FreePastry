@@ -54,26 +54,36 @@
   </target>
 
 	<property environment="env"/>
+	  <!-- The classpath -->
+	  <path id="interned.classpath">
+	    <fileset dir="${lib.dir}">
+	      <include name="**/*.jar"/>
+	    </fileset>
+	    <fileset dir="C:/jsr308/checkers">
+	      <include name="checkers.jar"/>
+	    </fileset>
+	    <pathelement path="${build.dir}"/>
+	  </path>
+	  <property name="jsr308.javac" value="C:/jsr308/jdk1.7.0/bin/javac"/>
 	  <!-- "clean" target is necessary or else this won't re-compile if .class
 	  files already exist.
 	  "executable" and "fork" fields ensure we call an external program, not
 	  just run javac via a Java method call. -->
 	  <target name="interned" depends="clean,init">
 	    <javac srcdir="${src.dir}"
-		   destdir="${build.dir}"
-		   classpathref="project.classpath"
-		   includes="**/*.java"
-		   deprecation="no"
-		   debuglevel="lines,vars,source"
-		   fork="yes"
-		   executable="C:/jsr308/jsr308-langtools/langtools/dist/bin/javac"
-		   debug="true">
+	       destdir="${build.dir}"
+	       classpathref="interned.classpath"
+	       includes="**/*.java"
+	       deprecation="no"
+	       debuglevel="lines,vars,source"
+	       fork="yes"
+	       executable="${jsr308.javac}"
+	       debug="true">
 	      <compilerarg value="-version"/>
-	      <compilerarg line="-processor checkers.interned.InternedChecker"/>
+	      <compilerarg line="-processor checkers.interning.InterningChecker"/>
 	    </javac>
 	  </target>
 
-	
   <target name="compileappend" depends="init">
     <javac srcdir="${pretty.lib.dir}"
            destdir="."
