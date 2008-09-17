@@ -243,10 +243,12 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    * @return
    */
   private MessageWrapper peek() {
-    if (messageThatIsBeingWritten == null) {
-      return queue.peek();
+    synchronized(queue) {
+      if (messageThatIsBeingWritten == null) {
+        return queue.peek();
+      }
+      return messageThatIsBeingWritten;
     }
-    return messageThatIsBeingWritten;
   }
   
   /**
@@ -254,14 +256,16 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    * @return
    */
   private MessageWrapper poll() {
-    if (messageThatIsBeingWritten == null) {
-      messageThatIsBeingWritten = queue.poll();
-      if (logger.level <= Logger.FINEST) logger.log(this+".poll() set messageThatIsBeingWritten = "+messageThatIsBeingWritten);
+    synchronized(queue) {
+      if (messageThatIsBeingWritten == null) {
+        messageThatIsBeingWritten = queue.poll();
+        if (logger.level <= Logger.FINEST) logger.log(this+".poll() set messageThatIsBeingWritten = "+messageThatIsBeingWritten);
+      }
+      if (queue.size() >= (MAX_QUEUE_SIZE-1) && logger.level <= Logger.INFO) {
+        logger.log(this+"polling from full queue ("+queue.size()+") (this is a good thing) "+messageThatIsBeingWritten);
+      }      
+      return messageThatIsBeingWritten;
     }
-    if (queue.size() >= (MAX_QUEUE_SIZE-1) && logger.level <= Logger.INFO) {
-      logger.log(this+"polling from full queue ("+queue.size()+") (this is a good thing) "+messageThatIsBeingWritten);
-    }      
-    return messageThatIsBeingWritten;
   }
   
   /**
@@ -269,8 +273,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    * @return
    */
   private boolean haveMessageToSend() {
-    if (messageThatIsBeingWritten == null && queue.isEmpty()) return false; 
-    return true;
+    synchronized(queue) {
+      if (messageThatIsBeingWritten == null && queue.isEmpty()) return false; 
+      return true;
+    }
   }
 
   protected boolean complete(MessageWrapper wrapper) {
