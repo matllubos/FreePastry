@@ -141,9 +141,15 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     return super.hasKey(i);
   }
   
-  public byte[] sign(byte[] bytes) throws SignatureException {
-    signer.update(bytes);
-    return signer.sign();
+  public byte[] sign(byte[] bytes) {
+    try {
+      signer.update(bytes);
+      return signer.sign();
+    } catch (SignatureException se) {
+      RuntimeException throwMe = new RuntimeException("Couldn't sign "+bytes);
+      throwMe.initCause(se);
+      throw throwMe;
+    }
   }
 
   public void verify(I id, byte[] msg, int moff, int mlen, byte[] signature, int soff, int slen) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException, UnknownCertificateException {

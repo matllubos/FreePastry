@@ -66,6 +66,8 @@ public interface PeerReviewConstants {
   public static final short EX_TYPE_ClosedChannel = 2;
   public static final short EX_TYPE_Unknown = 0;
  
+  /* Message types used in PeerReview */
+
   public static final short MSG_USERDATA = 16;            /* Contains data the application has sent */
   public static final short MSG_ACK = 17;                       /* Acknowledges an USERDATA message */
   public static final short MSG_ACCUSATION = 18;            /* Contains evidence about a third node */
@@ -81,5 +83,11 @@ public interface PeerReviewConstants {
   public static final byte CHAL_SEND = 2;
   public static final byte PROOF_INCONSISTENT = 3;
   public static final byte PROOF_NONCONFORMANT = 4;
+
+  /* Constants for reporting the status of a remote node to the application */
+
+  public static final int STATUS_TRUSTED = 0;
+  public static final int STATUS_SUSPECTED = 1;
+  public static final int STATUS_EXPOSED = 2;
 
 }

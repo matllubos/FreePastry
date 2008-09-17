@@ -51,6 +51,10 @@ public class PeerInfo<Handle extends RawSerializable> {
 
   Handle handle;
 
+  /**
+   * The number off un-acknowledged packets, currently can only be 1 or 0
+   */
+  int numOutstandingPackets;
   long lastTransmit;
   long currentTimeout;
   int retransmitsSoFar;
@@ -60,18 +64,14 @@ public class PeerInfo<Handle extends RawSerializable> {
    * The first message hasn't been acknowledged, the rest haven't been sent.
    */
   LinkedList<UserDataMessage<Handle>> xmitQueue;
-  LinkedList<PacketInfo> recvQueue;
+  LinkedList<UserDataMessage<Handle>> recvQueue;
   boolean isReceiving;
   
-  public int getNumOutstandingPackets() {
-    return xmitQueue.size();
-  }
-
   public PeerInfo(Handle handle) {
     this.handle = handle;
     lastTransmit = 0;
     xmitQueue = new LinkedList<UserDataMessage<Handle>>();
-    recvQueue = new LinkedList<PacketInfo>();
+    recvQueue = new LinkedList<UserDataMessage<Handle>>();
     currentTimeout = 0;
     retransmitsSoFar = 0;
     lastChallenge = -1;
@@ -107,11 +107,15 @@ public class PeerInfo<Handle extends RawSerializable> {
     return xmitQueue;
   }
 
-  public LinkedList<PacketInfo> getRecvQueue() {
+  public LinkedList<UserDataMessage<Handle>> getRecvQueue() {
     return recvQueue;
   }
 
   public boolean isReceiving() {
     return isReceiving;
+  }
+
+  public void clearXmitQueue() {
+    xmitQueue.clear();
   }
 }

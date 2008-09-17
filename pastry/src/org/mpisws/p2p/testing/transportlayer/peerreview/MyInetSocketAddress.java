@@ -34,57 +34,71 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.testing.transportlayer.peerreview;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
-import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
-import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
-import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
-import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
+import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
 import org.mpisws.p2p.transport.util.Serializer;
 
-import rice.environment.Environment;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> {
+public class MyInetSocketAddress extends InetSocketAddress implements RawSerializable {
+  public static final Serializer<MyInetSocketAddress> serializer = new Serializer<MyInetSocketAddress>(){
+    public static final byte IPV4 = 4;
+    public static final byte IPV6 = 6;
+    public static final int IPV4_BYTES = 4;
+    public static final int IPV6_BYTES = 16;
 
-  public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException;
+    public MyInetSocketAddress deserialize(InputBuffer b) throws IOException {
+      byte version = b.readByte();
+      byte[] addr;
+      
+      switch(version) {
+      case IPV4:
+        addr = new byte[IPV4_BYTES];
+        break;
+      case IPV6:
+        addr = new byte[IPV6_BYTES];
+        break;      
+      default:
+        throw new IOException("Incorrect IP version, expecting 4 or 6, got "+version);
+      }
+      b.read(addr);
+      short port = b.readShort();    
+      return new MyInetSocketAddress(InetAddress.getByAddress(addr),0xFFFF & port);
+    }
+
+    public void serialize(MyInetSocketAddress i, OutputBuffer b)
+        throws IOException {
+      byte[] addr = i.getAddress().getAddress();
+      // write version
+      switch (addr.length) {
+      case IPV4_BYTES:
+        b.writeByte(IPV4);
+        break;
+      case IPV6_BYTES:
+        b.writeByte(IPV6);
+        break;
+      default:
+        throw new IOException("Incorrect number of bytes for IPaddress, expecting 4 or 16, got "+addr.length);
+      }
+      // write addr
+      b.write(addr,0,addr.length);
+      b.writeShort((short)i.getPort());    
+    }};
+  
+  public MyInetSocketAddress(InetAddress addr, int port) {
+    super(addr, port);
+  }
 
   
-  Environment getEnvironment();
-
-  AuthenticatorSerializer getAuthenticatorSerializer();
-
-  Serializer<Handle> getHandleSerializer();
-  Serializer<Identifier> getIdSerializer();
-
-  void challengeSuspectedNode(Handle h);
-
-  public void transmit(Handle dest, boolean b, PeerReviewMessage message);
-
-  /**
-   * Current time in millis, however, we depend on there being a timesource that is more discritized
-   * than the "wall" clock.  It is only advanced on a timeout or a message receipt.
-   * @return
-   */
-  long getTime();
-
-  int getHashSizeInBytes();
-
-  int getSignatureSizeInBytes();
-  
-  public IdentifierExtractor<Handle, Identifier> getIdentifierExtractor();
-
-  public long getEvidenceSeq();
-  
-  /**
-   * 
-   * @param subject the "bad" guy
-   * @param timestamp
-   * @param evidence
-   */
-  public void sendEvidenceToWitnesses(Identifier subject, long timestamp, Evidence evidence);
+  public void serialize(OutputBuffer buf) throws IOException {
+    serializer.serialize(this, buf);    
+  }
 
 }

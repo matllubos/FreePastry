@@ -51,9 +51,10 @@ import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.RandomAccessFileIOBuffer;
 
-public class AuthenticatorStoreImpl<Identifier> implements AuthenticatorStore<Identifier> {
+public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implements AuthenticatorStore<Identifier> {
   
   protected boolean allowDuplicateSeqs;
   PeerReview<?, Identifier> peerreview;

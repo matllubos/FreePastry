@@ -43,6 +43,7 @@ import java.util.Map;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtRecv;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -53,6 +54,8 @@ import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 /**
+ * 
+ * Note, it's only Evidence when the type has been changed.
  * 
   MSG_USERDATA
   byte type = MSG_USERDATA
@@ -66,7 +69,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @author Jeff Hoye
  *
  */
-public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewMessage {
+public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewMessage implements Evidence {
   long topSeq;
   Handle senderHandle;
   byte[] hTopMinusOne;
@@ -75,6 +78,7 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   ByteBuffer payload;
   
   Map<String, Object> options;
+  short type = MSG_USERDATA;
 
   public UserDataMessage(long topSeq, Handle senderHandle, byte[] topMinusOne,
       byte[] sig, ByteBuffer message, int relevantlen, Map<String, Object> options) {
@@ -90,7 +94,7 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   }
 
   public short getType() {
-    return MSG_USERDATA;
+    return type;
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
@@ -175,5 +179,13 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
       return hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload.array(), payload.position(), payload.remaining()));
     }
     
+  }
+
+  public void setType(short newType) {
+    type = newType;
+  }
+
+  public int getPayloadLen() {
+    return payload.remaining();
   }
 }

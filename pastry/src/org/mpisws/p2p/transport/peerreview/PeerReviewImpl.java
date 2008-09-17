@@ -54,11 +54,15 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
@@ -69,7 +73,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @param <Handle> (Usually a NodeHandle)
  * @param <Identifier> (Permanent Identifier), can get an Identifier from a Handle
  */
-public class PeerReviewImpl<Handle, Identifier> implements 
+public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements 
   TransportLayer<Handle, ByteBuffer>,
   TransportLayerCallback<Handle, ByteBuffer>,
   PeerReview<Handle, Identifier> {
@@ -247,34 +251,9 @@ public class PeerReviewImpl<Handle, Identifier> implements
     }
   }
    
-  /**
-   * Called internally by other classes if they have found evidence against one of our peers.
-   * We ask the EvidenceTransferProtocol to send it to the corresponding witness set. 
-   */
-  protected void sendEvidenceToWitnesses(Identifier subject, long evidenceSeq,
-      ProofInconsistent evidence) {
-    throw new RuntimeException("todo: implement.");
-//    unsigned int accusationMaxlen = 1 + 2*MAX_ID_SIZE + sizeof(long long) + evidenceLen + signatureSizeBytes;
-//    unsigned char *accusation = (unsigned char*) malloc(accusationMaxlen);
-//    unsigned int accusationLen = 0;
-//    char buf1[256];
-//  
-//    accusation[accusationLen++] = MSG_ACCUSATION;
-//    transport->getLocalHandle()->getIdentifier()->write(accusation, &accusationLen, accusationMaxlen);
-//    subject->write(accusation, &accusationLen, accusationMaxlen);
-//    writeLongLong(accusation, &accusationLen, evidenceSeq);
-//    memcpy(&accusation[accusationLen], evidence, evidenceLen);
-//    accusationLen += evidenceLen;
-//   
-//    plog(2, "Relaying evidence to <%s>'s witnesses", subject->render(buf1));
-//    evidenceTransferProtocol->sendMessageToWitnesses(subject, false, accusation, accusationLen);
-//  
-//    free(accusation);
-  }
-
   /* Gets a fresh, unique sequence number for evidence */
   long nextEvidenceSeq = 0L;
-  long getEvidenceSeq() {
+  public long getEvidenceSeq() {
     if (nextEvidenceSeq < getTime()) {
       nextEvidenceSeq = getTime();
     }
@@ -296,4 +275,39 @@ public class PeerReviewImpl<Handle, Identifier> implements
   public IdentifierExtractor<Handle, Identifier> getIdentifierExtractor() {
     return identifierExtractor;
   }
+
+  public void challengeSuspectedNode(Handle h) {
+    throw new RuntimeException("todo: implement");
+  }
+
+  public void transmit(Handle dest, boolean b, PeerReviewMessage message) {
+    throw new RuntimeException("todo: implement");
+  }
+
+  /**
+   * Called internally by other classes if they have found evidence against one of our peers.
+   * We ask the EvidenceTransferProtocol to send it to the corresponding witness set. 
+   */
+  public void sendEvidenceToWitnesses(Identifier subject, long timestamp,
+      Evidence evidence) {
+    throw new RuntimeException("todo: implement.");
+//    unsigned int accusationMaxlen = 1 + 2*MAX_ID_SIZE + sizeof(long long) + evidenceLen + signatureSizeBytes;
+//    unsigned char *accusation = (unsigned char*) malloc(accusationMaxlen);
+//    unsigned int accusationLen = 0;
+//    char buf1[256];
+//  
+//    accusation[accusationLen++] = MSG_ACCUSATION;
+//    transport->getLocalHandle()->getIdentifier()->write(accusation, &accusationLen, accusationMaxlen);
+//    subject->write(accusation, &accusationLen, accusationMaxlen);
+//    writeLongLong(accusation, &accusationLen, evidenceSeq);
+//    memcpy(&accusation[accusationLen], evidence, evidenceLen);
+//    accusationLen += evidenceLen;
+//   
+//    plog(2, "Relaying evidence to <%s>'s witnesses", subject->render(buf1));
+//    evidenceTransferProtocol->sendMessageToWitnesses(subject, false, accusation, accusationLen);
+//  
+//    free(accusation);
+  }
+
+
 }

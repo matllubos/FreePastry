@@ -94,7 +94,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   
   AuthenticatorStore<Identifier> authStore;
   SecureHistory history;
-  PeerReviewCallback app;
+  PeerReviewCallback<Handle, Identifier> app;
   PeerReview<Handle, Identifier> peerreview;
   PeerInfoStore<Handle, Identifier> infoStore;
   IdentityTransport<Handle, Identifier> transport;
@@ -116,7 +116,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   public CommitmentProtocolImpl(PeerReview<Handle,Identifier> peerreview,
       IdentityTransport<Handle, Identifier> transport, HashProvider hasher,
       PeerInfoStore<Handle, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
-      SecureHistory history, PeerReviewCallback app, Misbehavior<Handle> misbehavior,
+      SecureHistory history, PeerReviewCallback<Handle, Identifier> app, Misbehavior<Handle> misbehavior,
       long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
     this.myHandle = transport.getLocalIdentifier();
@@ -193,69 +193,75 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
    * @return The ack message and whether it was already logged.
    * @throws SignatureException 
    */
-  public Tuple<AckMessage<Identifier>,Boolean> logMessageIfNew(UserDataMessage<Handle> udm) throws IOException, SignatureException {
-    boolean loggedPreviously; // part of the return statement
-    long seqOfRecvEntry;
-    byte[] myHashTop;
-    byte[] myHashTopMinusOne;
-    
-//    SimpleInputBuffer sib = new SimpleInputBuffer(message);
-//    UserDataMessage<Handle> udm = UserDataMessage.build(sib, peerreview.getHandleSerializer(), peerreview.getHashSizeInBytes(), peerreview.getSignatureSizeInBytes());
-    
-    /* Check whether the log contains a matching RECV entry, i.e. one with a message
-    from the same node and with the same send sequence number */
-
-    long indexOfRecvEntry = findRecvEntry(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), udm.getTopSeq());
-
-    /* If there is no such RECV entry, we append one */
-
-    if (indexOfRecvEntry < 0L) {
-      /* Construct the RECV entry and append it to the log */
-
-      myHashTopMinusOne = history.getTopLevelEntry().getHash();
-      EvtRecv<Handle> recv = udm.getReceiveEvent(transport);
-      history.appendEntry(EVT_RECV, true, recv.serialize());
-            
-      HashSeq foo = history.getTopLevelEntry();
-      myHashTop = foo.getHash();
-      seqOfRecvEntry = foo.getSeq();
+  public Tuple<AckMessage<Identifier>,Boolean> logMessageIfNew(UserDataMessage<Handle> udm) {
+    try {
+      boolean loggedPreviously; // part of the return statement
+      long seqOfRecvEntry;
+      byte[] myHashTop;
+      byte[] myHashTopMinusOne;
       
-      addToReceiveCache(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), 
-          udm.getTopSeq(), history.getNumEntries() - 1);
-      if (logger.level < Logger.FINE) logger.log("New message logged as seq#"+seqOfRecvEntry);
-
-      /* Construct the SIGN entry and append it to the log */
+  //    SimpleInputBuffer sib = new SimpleInputBuffer(message);
+  //    UserDataMessage<Handle> udm = UserDataMessage.build(sib, peerreview.getHandleSerializer(), peerreview.getHashSizeInBytes(), peerreview.getSignatureSizeInBytes());
       
-      history.appendEntry(EVT_RECV, true, new EvtSign(udm.getHTopMinusOne(),udm.getSignature()).serialize());
-      loggedPreviously = false;
-    } else {
-      loggedPreviously = true;
+      /* Check whether the log contains a matching RECV entry, i.e. one with a message
+      from the same node and with the same send sequence number */
+  
+      long indexOfRecvEntry = findRecvEntry(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), udm.getTopSeq());
+  
+      /* If there is no such RECV entry, we append one */
+  
+      if (indexOfRecvEntry < 0L) {
+        /* Construct the RECV entry and append it to the log */
+  
+        myHashTopMinusOne = history.getTopLevelEntry().getHash();
+        EvtRecv<Handle> recv = udm.getReceiveEvent(transport);
+        history.appendEntry(EVT_RECV, true, recv.serialize());
+              
+        HashSeq foo = history.getTopLevelEntry();
+        myHashTop = foo.getHash();
+        seqOfRecvEntry = foo.getSeq();
+        
+        addToReceiveCache(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), 
+            udm.getTopSeq(), history.getNumEntries() - 1);
+        if (logger.level < Logger.FINE) logger.log("New message logged as seq#"+seqOfRecvEntry);
+  
+        /* Construct the SIGN entry and append it to the log */
+        
+        history.appendEntry(EVT_RECV, true, new EvtSign(udm.getHTopMinusOne(),udm.getSignature()).serialize());
+        loggedPreviously = false;
+      } else {
+        loggedPreviously = true;
+        
+        /* If the RECV entry already exists, retrieve it */
+        
+  //      unsigned char type;
+  //      bool ok = true;
+        IndexEntry i2 = history.statEntry(indexOfRecvEntry); //, &seqOfRecvEntry, &type, NULL, NULL, myHashTop);
+        IndexEntry i1 = history.statEntry(indexOfRecvEntry-1); //, NULL, NULL, NULL, NULL, myHashTopMinusOne);
+        assert(i1 != null && i2 != null && i2.getType() == EVT_RECV) : "i1:"+i1+" i2:"+i2;
+        seqOfRecvEntry = i2.getSeq();
+        myHashTop = i2.getNodeHash();
+        myHashTopMinusOne = i1.getNodeHash();
+        if (logger.level < Logger.FINE) logger.log("This message has already been logged as seq#"+seqOfRecvEntry);
+      }
+  
+      /* Generate ACK = (MSG_ACK, myID, remoteSeq, localSeq, myTopMinusOne, signature) */
+  
+      byte[] hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(seqOfRecvEntry)), ByteBuffer.wrap(myHashTop));
+  
+      AckMessage<Identifier> ack = new AckMessage<Identifier>(
+          peerreview.getIdentifierExtractor().extractIdentifier(myHandle),
+          udm.getTopSeq(),
+          seqOfRecvEntry,
+          myHashTopMinusOne,
+          transport.sign(hToSign));
       
-      /* If the RECV entry already exists, retrieve it */
-      
-//      unsigned char type;
-//      bool ok = true;
-      IndexEntry i2 = history.statEntry(indexOfRecvEntry); //, &seqOfRecvEntry, &type, NULL, NULL, myHashTop);
-      IndexEntry i1 = history.statEntry(indexOfRecvEntry-1); //, NULL, NULL, NULL, NULL, myHashTopMinusOne);
-      assert(i1 != null && i2 != null && i2.getType() == EVT_RECV) : "i1:"+i1+" i2:"+i2;
-      seqOfRecvEntry = i2.getSeq();
-      myHashTop = i2.getNodeHash();
-      myHashTopMinusOne = i1.getNodeHash();
-      if (logger.level < Logger.FINE) logger.log("This message has already been logged as seq#"+seqOfRecvEntry);
+      return new Tuple<AckMessage<Identifier>,Boolean>(ack, loggedPreviously);
+    } catch (IOException ioe) {
+      RuntimeException throwMe = new RuntimeException("Unexpect error logging message :"+udm);
+      throwMe.initCause(ioe);
+      throw throwMe;
     }
-
-    /* Generate ACK = (MSG_ACK, myID, remoteSeq, localSeq, myTopMinusOne, signature) */
-
-    byte[] hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(seqOfRecvEntry)), ByteBuffer.wrap(myHashTop));
-
-    AckMessage<Identifier> ack = new AckMessage<Identifier>(
-        peerreview.getIdentifierExtractor().extractIdentifier(myHandle),
-        udm.getTopSeq(),
-        seqOfRecvEntry,
-        myHashTopMinusOne,
-        transport.sign(hToSign));
-    
-    return new Tuple<AckMessage<Identifier>,Boolean>(ack, loggedPreviously);
   }
   
   void notifyStatusChange(Identifier id, int newStatus) {
@@ -273,7 +279,150 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
    * has become TRUSTED, or after it has sent us an acknowledgment 
    */    
   void makeProgress(Identifier idx) {
-    throw new RuntimeException("todo: implement.");
+    PeerInfo<Handle> info = peer.get(idx);
+    if (info.xmitQueue.isEmpty() && info.recvQueue.isEmpty()) {
+      return;
+    }
+    
+    /* Get the public key. If we don't have it (yet), ask the peer to send it */
+
+    if (transport.hasCertificate(idx)) {
+      transport.requestCertificate(info.handle, idx, null, null);
+      return;
+    }
+
+    /* Transmit queue: If the peer is suspected, challenge it; otherwise, send the next message
+       or retransmit the one currently in flight */
+
+    if (!info.xmitQueue.isEmpty()) {
+      int status = infoStore.getStatus(idx);
+      switch (status) {
+        case STATUS_EXPOSED: /* Node is already exposed; no point in sending it any further messages */
+          if (logger.level <= Logger.WARNING) logger.log("Releasing messages sent to exposed node "+idx);
+          info.clearXmitQueue();
+          return;
+        case STATUS_SUSPECTED: /* Node is suspected; send the first unanswered challenge */
+          if (info.lastChallenge < (peerreview.getTime() - info.currentChallengeInterval)) {
+            if (logger.level <= Logger.WARNING) logger.log(
+                "Pending message for SUSPECTED node "+info.getHandle()+"; challenging node (interval="+info.currentChallengeInterval+")");
+            info.lastChallenge = peerreview.getTime();
+            info.currentChallengeInterval *= 2;
+            peerreview.challengeSuspectedNode(info.handle);
+          }
+          return;
+        case STATUS_TRUSTED: /* Node is trusted; continue below */
+          info.lastChallenge = -1;
+          info.currentChallengeInterval = PeerInfo.INITIAL_CHALLENGE_INTERVAL_MICROS;
+          break;
+      }
+    
+      /* If there are no unacknowledged packets to that node, transmit the next packet */
+    
+      if (info.numOutstandingPackets == 0) {
+        info.numOutstandingPackets++;
+        info.lastTransmit = peerreview.getTime();
+        info.currentTimeout = INITIAL_TIMEOUT_MICROS;
+        info.retransmitsSoFar = 0;
+        peerreview.transmit(info.getHandle(), false, info.xmitQueue.getFirst());
+      } else if (peerreview.getTime() > (info.lastTransmit + info.currentTimeout)) {
+      
+        /* Otherwise, retransmit the current packet a few times, up to the specified limit */
+      
+        if (info.retransmitsSoFar < MAX_RETRANSMISSIONS) {
+          if (logger.level <= Logger.WARNING) logger.log(
+              "Retransmitting a "+info.xmitQueue.getFirst().getPayload().remaining()+"-byte message to "+info.getHandle()+
+              " (lastxmit="+info.lastTransmit+", timeout="+info.currentTimeout+", type="+
+              info.xmitQueue.getFirst().getType()+")");
+          info.retransmitsSoFar++;
+          info.currentTimeout = RETRANSMIT_TIMEOUT_MICROS;
+          info.lastTransmit = peerreview.getTime();
+          peerreview.transmit(info.handle, false, info.xmitQueue.getFirst());
+        } else {
+        
+          /* If the peer still won't acknowledge the message, file a SEND challenge with its witnesses */
+        
+          if (logger.level <= Logger.WARNING) logger.log(info.handle+
+              " has not acknowledged our message after "+info.retransmitsSoFar+
+              " retransmissions; filing as evidence");
+          UserDataMessage<Handle> challenge = info.xmitQueue.removeFirst();
+          long evidenceSeq = peerreview.getEvidenceSeq();
+          challenge.setType(CHAL_SEND);
+
+          infoStore.addEvidence(peerreview.getIdentifierExtractor().extractIdentifier(myHandle), 
+              peerreview.getIdentifierExtractor().extractIdentifier(info.handle), 
+              evidenceSeq, challenge);
+          
+          peerreview.sendEvidenceToWitnesses(peerreview.getIdentifierExtractor().extractIdentifier(info.handle), 
+              evidenceSeq, challenge);
+          
+          info.numOutstandingPackets --;
+        }
+      }
+    }
+
+    /* Receive queue */
+
+    if (!info.recvQueue.isEmpty() && !info.isReceiving) {
+      info.isReceiving = true;
+    
+      /* Dequeue the packet. After this point, we must either deliver it or discard it */
+
+      UserDataMessage<Handle> udm = info.recvQueue.removeFirst();
+      
+      /* Extract the authenticator */
+      byte[] innerHash;
+      Authenticator authenticator;
+      try {
+        innerHash = udm.getInnerHash(peerreview.getHandleSerializer(), transport);
+      
+        authenticator = peerreview.extractAuthenticator(
+            peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), 
+            udm.getTopSeq(), 
+            EVT_SEND, 
+            innerHash, udm.getHTopMinusOne(), udm.getSignature());
+      } catch (IOException ioe) {
+        RuntimeException throwMe = new RuntimeException("Unexpeced serialization problem building authenticator for "+udm);
+        throwMe.initCause(ioe);
+        throw throwMe;
+      }
+
+      if (authenticator != null) {
+
+        /* At this point, we are convinced that:
+              - The remote node is TRUSTED [TODO!!]
+              - The message has an acceptable sequence number
+              - The message is properly signed
+           Now we must check our log for an existing RECV entry:
+              - If we already have such an entry, we generate the ACK from there
+              - If we do not yet have the entry, we log the message and deliver it  */
+
+        Tuple<AckMessage<Identifier>, Boolean> ret = logMessageIfNew(udm);
+
+        /* Since the message is not yet in the log, deliver it to the application */
+
+        if (!ret.b()) {
+          if (logger.level <= Logger.FINE) logger.log(
+              "Delivering message from "+udm.getSenderHandle()+" via "+info.handle+" ("+
+              udm.getPayloadLen()+" bytes; "+udm.getRelevantLen()+"/"+udm.getPayloadLen()+" relevant)");
+          app.receive(udm.getSenderHandle(), false, udm.getPayload()); 
+        } else {
+          if (logger.level <= Logger.FINE) logger.log(
+              "Message from "+udm.getSenderHandle()+" via "+info.getHandle()+" was previously logged; not delivered");
+        }
+
+        /* Send the ACK */
+
+        if (logger.level <= Logger.FINE) logger.log("Returning ACK to"+info.getHandle());
+        peerreview.transmit(info.handle, false, ret.a());
+      } else {
+        if (logger.level <= Logger.WARNING) logger.log("Cannot verify signature on message "+udm.getTopSeq()+" from "+info.getHandle()+"; discarding");
+      }
+      
+      /* Release the message */
+
+      info.isReceiving = false;
+      makeProgress(idx);
+    }
   }
   
   long findRecvEntry(Identifier id, long seq) {
@@ -289,25 +438,15 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   /**
    * Handle an incoming USERDATA message 
    */
-  void handleIncomingMessage(Handle source, ByteBuffer msg, Map<String, Object> options) throws IOException {
+  void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException {
 //    char buf1[256];    
-    SimpleInputBuffer sib = new SimpleInputBuffer(msg);
-    assert(sib.readByte() == MSG_USERDATA);
-
-    /* Sanity checks */
-
-    if (msg.remaining() < (17 + hashSizeBytes + signatureSizeBytes)) {
-      if (logger.level <= Logger.WARNING) logger.log("Short application message from "+source+"; discarding.");
-      return;
-    }
 
     /* Check whether the timestamp (in the sequence number) is close enough to our local time.
        If not, the node may be trying to roll forward its clock, so we discard the message. */
-    long seq = sib.readLong();
-    long txmit = (seq / MAX_ENTRIES_PER_MS);
+    long txmit = (msg.getTopSeq() / MAX_ENTRIES_PER_MS);
 
     if ((txmit < (peerreview.getTime()-timeToleranceMillis)) || (txmit > (peerreview.getTime()+timeToleranceMillis))) {
-      if (logger.level <= Logger.WARNING) logger.log("Invalid sequence no #"+seq+" on incoming message (dt="+(txmit-peerreview.getTime())+"); discarding");
+      if (logger.level <= Logger.WARNING) logger.log("Invalid sequence no #"+msg.getTopSeq()+" on incoming message (dt="+(txmit-peerreview.getTime())+"); discarding");
       return;
     }
 
@@ -316,7 +455,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
      * trusted, the message is going to be delivered directly by makeProgress();
      * otherwise a challenge is sent.
      */
-    lookupPeer(source).recvQueue.addLast(new PacketInfo(msg, options));
+    lookupPeer(source).recvQueue.addLast(msg);
 
     makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(source));
   }
@@ -419,6 +558,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           /* Remove the message from the xmit queue */
 
           p.xmitQueue.removeFirst();
+          p.numOutstandingPackets--;
 
           /* Make progress (e.g. by sending the next message) */
 

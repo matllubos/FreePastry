@@ -38,7 +38,6 @@ package org.mpisws.p2p.testing.transportlayer.peerreview;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.SortedSet;
 
 import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
@@ -48,7 +47,9 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
-import org.mpisws.p2p.transport.simpleidentity.InetSocketAddressSerializer;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
@@ -65,10 +66,10 @@ public class AuthenticatorStoreTest {
    */
   public static void main(String[] args) throws Exception {
     Environment env = new Environment();
-    PeerReview<Object, InetSocketAddress> pr = new TestPeerReview(env, new AuthenticatorSerializerImpl(HASH_LEN, SIGN_LEN));
+    PeerReview<MyInetSocketAddress, MyInetSocketAddress> pr = new TestPeerReview(env, new AuthenticatorSerializerImpl(HASH_LEN, SIGN_LEN));
     TestAuthenticatorStore store = new TestAuthenticatorStore(pr,false);
     
-    InetSocketAddress id = new InetSocketAddress(InetAddress.getLocalHost(), 6789);
+    MyInetSocketAddress id = new MyInetSocketAddress(InetAddress.getLocalHost(), 6789);
     
     byte[] h1 = new byte[HASH_LEN];
     h1[2] = 5;
@@ -127,7 +128,7 @@ public class AuthenticatorStoreTest {
     env.destroy();
   }
 }
-  class TestPeerReview implements PeerReview<Object, InetSocketAddress> {
+  class TestPeerReview implements PeerReview<MyInetSocketAddress, MyInetSocketAddress> {
     
     Environment env;
     AuthenticatorSerializer aSer;
@@ -136,8 +137,8 @@ public class AuthenticatorStoreTest {
       this.aSer = aSer;
     }
 
-    public Serializer<InetSocketAddress> getIdSerializer() {
-      return new InetSocketAddressSerializer();
+    public Serializer<MyInetSocketAddress> getIdSerializer() {
+      return MyInetSocketAddress.serializer;
     }
   
     public Environment getEnvironment() {
@@ -152,7 +153,7 @@ public class AuthenticatorStoreTest {
       return env.getTimeSource().currentTimeMillis();
     }
 
-    public Serializer<Object> getHandleSerializer() {
+    public Serializer<MyInetSocketAddress> getHandleSerializer() {
       // TODO Auto-generated method stub
       return null;
     }
@@ -167,40 +168,62 @@ public class AuthenticatorStoreTest {
       return 0;
     }
 
-    public IdentifierExtractor<Object, InetSocketAddress> getIdentifierExtractor() {
+    public IdentifierExtractor<MyInetSocketAddress, MyInetSocketAddress> getIdentifierExtractor() {
       // TODO Auto-generated method stub
       return null;
     }
 
-    public Authenticator extractAuthenticator(InetSocketAddress id, long seq,
+    public Authenticator extractAuthenticator(MyInetSocketAddress id, long seq,
         short entryType, byte[] entryHash, byte[] topMinusOne, byte[] signature)
         throws IOException {
       // TODO Auto-generated method stub
       return null;
     }
+
+    public void challengeSuspectedNode(MyInetSocketAddress h) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void transmit(MyInetSocketAddress dest, boolean b,
+        PeerReviewMessage message) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public long getEvidenceSeq() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    public void sendEvidenceToWitnesses(MyInetSocketAddress subject,
+        long timestamp, Evidence evidence) {
+      // TODO Auto-generated method stub
+      
+    }
   }
 
-  class TestAuthenticatorStore extends AuthenticatorStoreImpl<InetSocketAddress> {
+  class TestAuthenticatorStore extends AuthenticatorStoreImpl<MyInetSocketAddress> {
 
-    public TestAuthenticatorStore(PeerReview<?, InetSocketAddress> peerreview,
+    public TestAuthenticatorStore(PeerReview<?, MyInetSocketAddress> peerreview,
         boolean allowDuplicateSeqs) {
       super(peerreview, allowDuplicateSeqs);
     }
     
     @Override
-    public void addAuthenticatorToMemory(InetSocketAddress id,
+    public void addAuthenticatorToMemory(MyInetSocketAddress id,
         Authenticator authenticator) {
       super.addAuthenticatorToMemory(id, authenticator);
     }
 
     @Override
-    public void flushAuthenticatorsFromMemory(InetSocketAddress id,
+    public void flushAuthenticatorsFromMemory(MyInetSocketAddress id,
         long minseq, long maxseq) {
       super.flushAuthenticatorsFromMemory(id, minseq, maxseq);
     }
 
     @Override
-    public SortedSet<Authenticator> findSubject(InetSocketAddress id) {
+    public SortedSet<Authenticator> findSubject(MyInetSocketAddress id) {
       return super.findSubject(id);
     }
 

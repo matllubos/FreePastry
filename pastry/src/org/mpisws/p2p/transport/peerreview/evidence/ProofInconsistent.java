@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.peerreview.evidence;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
 /**
  * PROOF_INCONSISTENT
@@ -53,7 +54,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
  * 
  * @author Jeff Hoye
  */
-public class ProofInconsistent implements PeerReviewConstants {
+public class ProofInconsistent implements PeerReviewConstants, Evidence {
   public static final byte ANOTHER_AUTH = 0;
   public static final byte LOG_SNIPPET = 1;
   
