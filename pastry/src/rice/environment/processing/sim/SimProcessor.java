@@ -44,6 +44,7 @@ import rice.environment.logging.LogManager;
 import rice.environment.processing.*;
 import rice.environment.processing.simple.ProcessingRequest;
 import rice.environment.time.TimeSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.selector.SelectorManager;
 
 public class SimProcessor implements Processor {
@@ -53,18 +54,21 @@ public class SimProcessor implements Processor {
     this.selector = selector;
   }
 
-  public <R, E extends Exception> void process(Executable<R> task, Continuation<R, E> command,
+  public <R, E extends Exception> Cancellable process(Executable<R> task, Continuation<R, E> command,
       SelectorManager selector, TimeSource ts, LogManager log) {
-    process(task, command, 0, selector, ts, log);
+    return process(task, command, 0, selector, ts, log);
   }
 
-  public <R, E extends Exception> void process(Executable<R> task, Continuation<R, E> command, int priority,
+  public <R, E extends Exception> Cancellable process(Executable<R> task, Continuation<R, E> command, int priority,
       SelectorManager selector, TimeSource ts, LogManager log) {
-    selector.invoke(new ProcessingRequest(task, command, 0, 0, log, ts, selector));
+    ProcessingRequest ret = new ProcessingRequest(task, command, 0, 0, log, ts, selector);
+    selector.invoke(ret);
+    return ret;
   }
 
-  public void processBlockingIO(WorkRequest request) {
+  public Cancellable processBlockingIO(WorkRequest request) {
     selector.invoke(request);
+    return request;
   }
 
   public void destroy() {

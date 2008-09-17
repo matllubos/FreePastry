@@ -42,6 +42,7 @@ package rice.environment.processing.simple;
 import rice.*;
 import rice.environment.logging.*;
 import rice.environment.time.TimeSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.selector.SelectorManager;
 
 /**
@@ -50,10 +51,12 @@ import rice.selector.SelectorManager;
  * @author Jeff Hoye
  */
 public class ProcessingRequest implements Runnable,
-    Comparable<ProcessingRequest> {
+    Comparable<ProcessingRequest>, Cancellable {
   Continuation c;
   Executable r;
-
+  private boolean cancelled = false;
+  private boolean running = false;
+  
   TimeSource timeSource;
   SelectorManager selectorManager;
   Logger logger;
@@ -92,6 +95,8 @@ public class ProcessingRequest implements Runnable,
   }
 
   public void run() {
+    if (cancelled) return;
+    running = true;
     if (logger.level <= Logger.FINER)
       logger.log("COUNT: Starting execution of " + this);
     try {
@@ -124,5 +129,9 @@ public class ProcessingRequest implements Runnable,
     if (logger.level <= Logger.FINER)
       logger.log("COUNT: Done execution of " + this);
   }
-  
+
+  public boolean cancel() {
+    cancelled = true;
+    return !running;
+  }
 }

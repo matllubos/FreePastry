@@ -42,6 +42,7 @@ package rice.environment.processing;
 import rice.*;
 import rice.environment.logging.LogManager;
 import rice.environment.time.TimeSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.selector.SelectorManager;
 
 /**
@@ -61,7 +62,7 @@ public interface Processor extends Destructable {
    * @param task The task to run on the processing thread
    * @param command The command to return the result to once it's done
    */
-  public <R, E extends Exception> void process(Executable<R> task, Continuation<R,E> command, SelectorManager selector, TimeSource ts, LogManager log);
+  public <R, E extends Exception> Cancellable process(Executable<R> task, Continuation<R,E> command, SelectorManager selector, TimeSource ts, LogManager log);
     
   /**
    * Schedules a job for processing on the dedicated processing thread.  CPU intensive jobs, such
@@ -73,14 +74,14 @@ public interface Processor extends Destructable {
    * @param task The task to run on the processing thread
    * @param command The command to return the result to once it's done
    */
-  public <R, E extends Exception> void process(Executable<R> task, Continuation<R,E> command, int priority, SelectorManager selector, TimeSource ts, LogManager log);
+  public <R, E extends Exception> Cancellable process(Executable<R> task, Continuation<R,E> command, int priority, SelectorManager selector, TimeSource ts, LogManager log);
 
   /**
    * Schedules a different type of task.  This thread is for doing Disk IO that is required to be blocking.
    * 
    * @param request
    */
-  public void processBlockingIO(WorkRequest request);
+  public Cancellable processBlockingIO(WorkRequest request);
   
   /**
    * Shuts down the processing thread.

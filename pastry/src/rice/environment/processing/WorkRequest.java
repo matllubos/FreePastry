@@ -40,6 +40,7 @@ advised of the possibility of such damage.
 package rice.environment.processing;
 
 import rice.Continuation;
+import rice.p2p.commonapi.Cancellable;
 import rice.selector.SelectorManager;
 
 /**
@@ -49,10 +50,13 @@ import rice.selector.SelectorManager;
  * 
  * @author Jeff Hoye
  */
-public abstract class WorkRequest<R> implements Runnable {
+public abstract class WorkRequest<R> implements Runnable, Cancellable {
   private Continuation<R, Exception> c;
   private SelectorManager selectorManager;
   
+  protected boolean cancelled = false;
+  protected boolean running = false;
+
   public WorkRequest(Continuation<R, Exception> c, SelectorManager sm){
     this.c = c;
     this.selectorManager = sm;
@@ -71,6 +75,9 @@ public abstract class WorkRequest<R> implements Runnable {
   }
   
   public void run() {
+    if (cancelled) return;
+    running = true;
+
     try {
      // long start = environment.getTimeSource().currentTimeMillis();
       final R result = doWork();
@@ -97,5 +104,10 @@ public abstract class WorkRequest<R> implements Runnable {
     }
   }
   
+  public boolean cancel() {
+    cancelled = true;
+    return !running;
+  }
+
   public abstract R doWork() throws Exception;
 }
