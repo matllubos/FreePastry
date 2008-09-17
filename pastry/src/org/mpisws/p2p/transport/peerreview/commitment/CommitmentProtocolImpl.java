@@ -111,7 +111,6 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   
   TimerTask makeProgressTask;
   Logger logger;
-//  int numPeers;
   
   public CommitmentProtocolImpl(PeerReview<Handle,Identifier> peerreview,
       IdentityTransport<Handle, Identifier> transport, HashProvider hasher,
@@ -121,8 +120,6 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     this.peerreview = peerreview;
     this.myHandle = transport.getLocalIdentifier();
     this.hasher = hasher;
-//    this.signatureSizeBytes = transport.getSignatureSizeBytes();
-//    this.hashSizeBytes = transport.getHashSizeBytes();
     this.transport = transport;
     this.infoStore = infoStore;
     this.authStore = authStore;
@@ -149,7 +146,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   /**
    * Load the last events from the history into the cache
    */
-  void initReceiveCache() throws IOException {
+  protected void initReceiveCache() throws IOException {
     receiveCache = new LinkedHashMap<Tuple<Identifier, Long>, ReceiveInfo<Identifier>>(RECEIVE_CACHE_SIZE, 0.75f, true) {
       protected boolean removeEldestEntry(Map.Entry eldest) {
         return size() > RECEIVE_CACHE_SIZE;
@@ -169,11 +166,11 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     }
   }
 
-  void addToReceiveCache(Identifier id, long senderSeq, long indexInLocalHistory) {
+  protected void addToReceiveCache(Identifier id, long senderSeq, long indexInLocalHistory) {
     receiveCache.put(new Tuple<Identifier, Long>(id,senderSeq), new ReceiveInfo<Identifier>(id, senderSeq, indexInLocalHistory));
   }
   
-  PeerInfo<Handle> lookupPeer(Handle handle) {
+  protected PeerInfo<Handle> lookupPeer(Handle handle) {
     PeerInfo<Handle> ret = peer.get(peerreview.getIdentifierExtractor().extractIdentifier(handle));
     if (ret != null) return ret;
     
@@ -182,7 +179,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     return ret;
   }
   
-  void notifyCertificateAvailable(Identifier id) {
+  protected void notifyCertificateAvailable(Identifier id) {
     makeProgress(id);
   }
   
@@ -264,11 +261,11 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     }
   }
   
-  void notifyStatusChange(Identifier id, int newStatus) {
+  protected void notifyStatusChange(Identifier id, int newStatus) {
     makeProgressAllPeers();
   }
 
-  private void makeProgressAllPeers() {
+  protected void makeProgressAllPeers() {
     for (Identifier i : peer.keySet()) {
       makeProgress(i);
     }
@@ -278,7 +275,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
    * Tries to make progress on the message queue of the specified peer, e.g. after that peer
    * has become TRUSTED, or after it has sent us an acknowledgment 
    */    
-  void makeProgress(Identifier idx) {
+  protected void makeProgress(Identifier idx) {
     PeerInfo<Handle> info = peer.get(idx);
     if (info.xmitQueue.isEmpty() && info.recvQueue.isEmpty()) {
       return;
@@ -425,20 +422,20 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     }
   }
   
-  long findRecvEntry(Identifier id, long seq) {
+  protected long findRecvEntry(Identifier id, long seq) {
     ReceiveInfo<Identifier> ret = receiveCache.get(new Tuple<Identifier, Long>(id,seq));
     if (ret == null) return -1;
     return ret.indexInLocalHistory;
   }
   
-  long findAckEntry(Identifier id, long seq) {
+  protected long findAckEntry(Identifier id, long seq) {
     return -1;
   }
   
   /**
    * Handle an incoming USERDATA message 
    */
-  void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException {
+  protected void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException {
 //    char buf1[256];    
 
     /* Check whether the timestamp (in the sequence number) is close enough to our local time.
@@ -460,7 +457,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(source));
   }
 
-  long handleOutgoingMessage(Handle target, ByteBuffer message, int relevantlen, Map<String, Object> options) throws IOException, SignatureException {
+  protected long handleOutgoingMessage(Handle target, ByteBuffer message, int relevantlen, Map<String, Object> options) throws IOException, SignatureException {
     assert(relevantlen >= 0);
 
     /* Append a SEND entry to our local log */
@@ -520,7 +517,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   }
   /* This is called if we receive an acknowledgment from another node */
 
-  void handleIncomingAck(Handle source, AckMessage<Identifier> ackMessage, Map<String, Object> options) throws IOException {
+  protected void handleIncomingAck(Handle source, AckMessage<Identifier> ackMessage, Map<String, Object> options) throws IOException {
 //  AckMessage<Identifier> ackMessage = AckMessage.build(sib, peerreview.getIdSerializer(), hasher.getHashSizeBytes(), transport.signatureSizeInBytes());
 
     /* Acknowledgment: Log it (if we don't have it already) and send the next message, if any */
