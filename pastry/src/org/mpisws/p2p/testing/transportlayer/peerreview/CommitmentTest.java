@@ -43,6 +43,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -77,12 +78,16 @@ import rice.p2p.util.RandomAccessFileIOBuffer;
 
 public class CommitmentTest {
  
+  
   static class HandleImpl implements RawSerializable {
     String name;
     IdImpl id;
-    public HandleImpl(String s) {
+    
+    public HandleImpl(String s, IdImpl id) {
       this.name = s;
+      this.id = id;
     }
+    
     public void serialize(OutputBuffer buf) throws IOException {
       buf.writeUTF(name);
       id.serialize(buf);
@@ -100,7 +105,6 @@ public class CommitmentTest {
   }
   
   static class BogusPR implements PeerReview<HandleImpl, IdImpl> {
-
     public void challengeSuspectedNode(HandleImpl h) {
       throw new RuntimeException("implement");
     }
@@ -159,7 +163,15 @@ public class CommitmentTest {
   }
   
   static class BogusTransport implements IdentityTransport<HandleImpl, IdImpl>{
-
+    public static Map<HandleImpl, BogusTransport> peerTable = new HashMap<HandleImpl, BogusTransport>();
+    
+    HandleImpl localIdentifier;
+    
+    public BogusTransport(HandleImpl handle) {
+      peerTable.put(handle, this);
+      this.localIdentifier = handle;
+    }
+    
     public boolean hasCertificate(IdImpl id) {
       throw new RuntimeException("implement");
     }
@@ -193,7 +205,7 @@ public class CommitmentTest {
     }
 
     public HandleImpl getLocalIdentifier() {
-      throw new RuntimeException("implement");
+      return localIdentifier;
     }
 
     public SocketRequestHandle<HandleImpl> openSocket(HandleImpl i,
@@ -206,12 +218,23 @@ public class CommitmentTest {
         HandleImpl i, ByteBuffer m,
         MessageCallback<HandleImpl, ByteBuffer> deliverAckToMe,
         Map<String, Object> options) {
-      throw new RuntimeException("implement");
+      peerTable.get(i).receiveMessage(localIdentifier, m);      
+      return null;
+    }
+
+    TransportLayerCallback<HandleImpl, ByteBuffer> callback;
+    
+    private void receiveMessage(HandleImpl i, ByteBuffer m) {
+      try {
+        callback.messageReceived(i, m, null);
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
     }
 
     public void setCallback(
         TransportLayerCallback<HandleImpl, ByteBuffer> callback) {
-      throw new RuntimeException("implement");
+      this.callback = callback;
     }
 
     public void setErrorHandler(ErrorHandler<HandleImpl> handler) {
@@ -241,11 +264,10 @@ public class CommitmentTest {
   }
 
   static class Player {
-    String name;
-    int id;
+    HandleImpl localHandle;
     
     IdentityTransport<HandleImpl, IdImpl> transport;
-    PeerReview<HandleImpl, IdImpl> pr;
+    BogusPR pr;
     PeerInfoStore<HandleImpl, IdImpl> store;
     AuthenticatorStore<IdImpl> authStore;
     SecureHistory history;
@@ -254,10 +276,9 @@ public class CommitmentTest {
 
     public Player(String name, int id, Environment env) throws IOException {
       super();
-      this.name = name;
-      this.id = id;
+      this.localHandle = new HandleImpl(name, new IdImpl(id));
       
-      transport = new BogusTransport();
+      transport = new BogusTransport(localHandle);
       pr = new BogusPR();
 //      store;
 //      authStore;
