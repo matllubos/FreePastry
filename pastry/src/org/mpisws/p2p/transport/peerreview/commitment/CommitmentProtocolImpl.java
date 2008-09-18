@@ -98,7 +98,6 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   PeerReview<Handle, Identifier> peerreview;
   PeerInfoStore<Handle, Identifier> infoStore;
   IdentityTransport<Handle, Identifier> transport;
-  HashProvider hasher;
   Handle myHandle;
   Misbehavior<Handle> misbehavior;
   /**
@@ -113,13 +112,12 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   Logger logger;
   
   public CommitmentProtocolImpl(PeerReview<Handle,Identifier> peerreview,
-      IdentityTransport<Handle, Identifier> transport, HashProvider hasher,
+      IdentityTransport<Handle, Identifier> transport,
       PeerInfoStore<Handle, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
       SecureHistory history, PeerReviewCallback<Handle, Identifier> app, Misbehavior<Handle> misbehavior,
       long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
     this.myHandle = transport.getLocalIdentifier();
-    this.hasher = hasher;
     this.transport = transport;
     this.infoStore = infoStore;
     this.authStore = authStore;
@@ -467,7 +465,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     hTopMinusOne = history.getTopLevelEntry().getHash();
     EvtSend<Identifier> evtSend;
     if (relevantlen < message.remaining()) {      
-      evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message,relevantlen,hasher);
+      evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message,relevantlen,transport);
     } else {
       evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message);
     }
@@ -484,7 +482,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     
     /* Sign the authenticator */
       
-    hToSign = hasher.hash(ByteBuffer.wrap(MathUtils.longToByteArray(top.getSeq())), ByteBuffer.wrap(top.getHash()));
+    hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(top.getSeq())), ByteBuffer.wrap(top.getHash()));
 
     byte[] signature = transport.sign(hToSign);
     
