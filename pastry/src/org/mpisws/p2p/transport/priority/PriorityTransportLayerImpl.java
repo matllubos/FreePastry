@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -1048,6 +1049,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         this.seq = seq;      
       }
       
+      public MessageInfo getMessageInfo() {
+        return new MessageInfoImpl(originalMessage,options,priority);
+      }
+      
       public void complete() {
         completed = true;
         if (deliverAckToMe != null) deliverAckToMe.ack(this);
@@ -1155,6 +1160,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       public String toString() {
         return "MessagWrapper{"+message+"}@"+System.identityHashCode(this)+"->"+identifier.get()+" pri:"+priority+" seq:"+seq+" s:"+this.socket; 
       }
+
     }
     
     // *********************** Reader ************************
@@ -1281,6 +1287,19 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }
       return ret;
     }
+    
+    public List<MessageInfo> getPendingMessages() {
+      synchronized(queue) {
+        ArrayList<MessageInfo> ret = new ArrayList<MessageInfo>(queue.size());
+//        if (messageThatIsBeingWritten != null) {
+//          ret+=messageThatIsBeingWritten.message.remaining();        
+//        }
+        for (MessageWrapper foo : queue) {
+          ret.add(foo.getMessageInfo());
+        }
+        return ret;
+      }
+    }
   } // EntityManager
   
   // *************************** Listeners *********************
@@ -1375,6 +1394,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 
   public int queueLength(Identifier i) {
     return getEntityManager(i).queueLength();
+  }
+  
+  public List<MessageInfo> getPendingMessages(Identifier i) {
+    return getEntityManager(i).getPendingMessages();
   }
   
   public Collection<Identifier> nodesWithPendingMessages() {

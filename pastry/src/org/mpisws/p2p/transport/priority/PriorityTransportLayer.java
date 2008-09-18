@@ -39,6 +39,7 @@ package org.mpisws.p2p.transport.priority;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.TransportLayer;
@@ -46,6 +47,7 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.TransportLayerListener;
 
 import rice.Continuation;
+import rice.p2p.util.tuples.Tuple3;
 
 /**
  * Does 3 things:
@@ -112,6 +114,13 @@ public interface PriorityTransportLayer<Identifier> extends TransportLayer<Ident
    * @return
    */
   public long bytesPending(Identifier i);
+  
+  /**
+   * The number of bytes to be sent to the identifier
+   * @param i
+   * @return
+   */
+  public List<MessageInfo> getPendingMessages(Identifier i);
   
   /**
    * open a primary connection
