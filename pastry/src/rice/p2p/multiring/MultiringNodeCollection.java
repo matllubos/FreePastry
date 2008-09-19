@@ -122,7 +122,7 @@ public class MultiringNodeCollection {
    * @param hint A suggested hint
    */
   protected MessageReceipt route(RingId id, RawMessage message, String application,
-      DeliveryNotification deliverAckToMe) {
+      DeliveryNotification deliverAckToMe, Map<String, Object> options) {
     MultiringNode best = (MultiringNode) nodes.elementAt(0);
     
     for (int i=1; i<nodes.size(); i++) {
@@ -138,7 +138,7 @@ public class MultiringNodeCollection {
     
     //System.out.println("ROUTING MESSAGE TO TARGET " + id + " VIA NODE " + best.getId());
         
-    return best.route(id, message, application, deliverAckToMe);
+    return best.route(id, message, application, deliverAckToMe, options);
   }
   
   /**

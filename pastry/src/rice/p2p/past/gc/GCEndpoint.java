@@ -114,6 +114,14 @@ public class GCEndpoint implements Endpoint {
     return endpoint.route(id, message, hint, deliverAckToMe);
   }
 
+  public MessageReceipt route(Id id, Message message, NodeHandle hint, DeliveryNotification deliverAckToMe, Map<String, Object> options) {
+    return endpoint.route(id, message, hint, deliverAckToMe, options);
+  }
+  
+  public MessageReceipt route(Id id, RawMessage message, NodeHandle hint, DeliveryNotification deliverAckToMe, Map<String, Object> options) {
+    return endpoint.route(id, message, hint, deliverAckToMe, options);
+  }
+
 
   
   /**

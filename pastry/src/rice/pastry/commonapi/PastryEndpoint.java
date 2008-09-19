@@ -156,13 +156,16 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
   public MessageReceipt route(Id key, Message msg, NodeHandle hint) {
     return route(key, msg, hint, null);
   }
-  
   public MessageReceipt route(Id key, Message msg, NodeHandle hint, DeliveryNotification deliverAckToMe) {
+    return route(key, msg, hint, deliverAckToMe, null);
+  }
+  
+  public MessageReceipt route(Id key, Message msg, NodeHandle hint, DeliveryNotification deliverAckToMe, Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log(
       "[" + thePastryNode + "] route " + msg + " to " + key);
 
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
-    return routeHelper(key, pm, hint, deliverAckToMe);
+    return routeHelper(key, pm, hint, deliverAckToMe, options);
   }
   
   
@@ -174,11 +177,14 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     return route(key, msg, hint, null);
   }
   public MessageReceipt route(Id key, RawMessage msg, NodeHandle hint, DeliveryNotification deliverAckToMe) {
+    return route(key, msg, hint, deliverAckToMe, null);  
+  }
+  public MessageReceipt route(Id key, RawMessage msg, NodeHandle hint, DeliveryNotification deliverAckToMe, Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log(
         "[" + thePastryNode + "] route " + msg + " to " + key);
 
     PastryEndpointMessage pm = new PastryEndpointMessage(this.getAddress(), msg, thePastryNode.getLocalHandle());
-    return routeHelper(key, pm, hint, deliverAckToMe);
+    return routeHelper(key, pm, hint, deliverAckToMe, options);
   }
   
   /**
@@ -194,7 +200,8 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param deliverAckToMe
    * @return
    */
-  private MessageReceipt routeHelper(Id key, final PastryEndpointMessage pm, final NodeHandle hint, final DeliveryNotification deliverAckToMe) { 
+  private MessageReceipt routeHelper(Id key, final PastryEndpointMessage pm, final NodeHandle hint, final DeliveryNotification deliverAckToMe, Map<String, Object> options) { 
+    if (options == null) options = this.options;
     if (logger.level <= Logger.FINE) logger.log("routeHelper("+key+","+pm+","+hint+","+deliverAckToMe+").init()");
     if ((key == null) && (hint == null)) {
       throw new IllegalArgumentException("key and hint are null!");

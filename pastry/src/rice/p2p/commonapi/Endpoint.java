@@ -85,6 +85,8 @@ public interface Endpoint extends NodeHandleReader {
    * @return can cancel the request
    */
   MessageReceipt route(Id id, Message message, NodeHandle hint,  
+      DeliveryNotification deliverAckToMe, Map<String, Object> options);
+  MessageReceipt route(Id id, Message message, NodeHandle hint,  
       DeliveryNotification deliverAckToMe);
   MessageReceipt route(Id id, Message message, NodeHandle hint);
 
@@ -94,9 +96,11 @@ public interface Endpoint extends NodeHandleReader {
    * @param message
    * @param hint
    */
-  MessageReceipt route(Id id, RawMessage message, NodeHandle hint);
+  MessageReceipt route(Id id, RawMessage message, NodeHandle hint,  
+      DeliveryNotification deliverAckToMe, Map<String, Object> options);
   MessageReceipt route(Id id, RawMessage message, NodeHandle hint,  
       DeliveryNotification deliverAckToMe);
+  MessageReceipt route(Id id, RawMessage message, NodeHandle hint);
 
   
   

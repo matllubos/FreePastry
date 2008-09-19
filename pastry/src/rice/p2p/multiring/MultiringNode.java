@@ -281,11 +281,11 @@ public class MultiringNode implements Node, ScribeClient {
    * @param hint The first node to send this message to, optional
    */
   MessageReceipt route(final RingId id, final RawMessage message, String application, 
-      DeliveryNotification deliverAckToMe) {
+      DeliveryNotification deliverAckToMe, Map<String, Object> options) {
     
     if (id.getRingId().equals(ringId)) {
       MultiringEndpoint endpoint = (MultiringEndpoint) endpoints.get(application);
-      return endpoint.route(id, message, null, deliverAckToMe);
+      return endpoint.route(id, message, null, deliverAckToMe, options);
     } else {
       //System.outt.println("ANYCASTING TO SCRIBE GROUP " + getTarget(id) + " AT NODE " + getId() + " FOR APPLICATION " + application);
       scribe.anycast(new Topic(RingId.build(ringId, getTarget(id))), new RingMessage(id, message, application));
@@ -364,7 +364,7 @@ public class MultiringNode implements Node, ScribeClient {
     if (content instanceof RingMessage) {
       RingMessage rm = (RingMessage) content;
       //System.outt.println("RECEIVED ANYCAST TO " + rm.getId() + " AT NODE " + getId());
-      collection.route(rm.getId(), rm.getRawMessage(), rm.getApplication(), null);
+      collection.route(rm.getId(), rm.getRawMessage(), rm.getApplication(), null, null);
     } else {
       if (logger.level <= Logger.WARNING) logger.log(
           "Received unrecognized message " + content);

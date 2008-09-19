@@ -133,12 +133,16 @@ public class MultiringEndpoint implements Endpoint {
   }
   
   public MessageReceipt route(Id id, Message message, NodeHandle hint, DeliveryNotification deliverAckToMe) {
+    return route(id, message, hint, deliverAckToMe, null);
+  }
+  
+  public MessageReceipt route(Id id, Message message, NodeHandle hint, DeliveryNotification deliverAckToMe, Map<String, Object> options) {
     if (message instanceof RawMessage) {
-      return route(id, (RawMessage)message, hint, deliverAckToMe);
+      return route(id, (RawMessage)message, hint, deliverAckToMe, options);
     } else {
       final MRHAdapter ret = new MRHAdapter();
       return route(id, (RawMessage)new JavaSerializedMessage(message), hint, 
-          deliverAckToMe); 
+          deliverAckToMe, options); 
     }
   }
   
@@ -150,25 +154,31 @@ public class MultiringEndpoint implements Endpoint {
       Id id, RawMessage message, 
       NodeHandle hint, 
       DeliveryNotification deliverAckToMe) {
+    return route(id, message, hint, deliverAckToMe, null);
+  }
+  public MessageReceipt route(
+      Id id, RawMessage message, 
+      NodeHandle hint, 
+      DeliveryNotification deliverAckToMe, Map<String, Object> options) {
     
     RingId mId = (RingId) id;
     MultiringNodeHandle mHint = (MultiringNodeHandle) hint;
           
     if (mId == null) {
       if (mHint.getRingId().equals(node.getRingId())) {
-        return endpoint.route(null, message, mHint.getHandle(), deliverAckToMe);
+        return endpoint.route(null, message, mHint.getHandle(), deliverAckToMe, options);
       } else {
-        return route(mHint.getId(), message, null, deliverAckToMe);
+        return route(mHint.getId(), message, null, deliverAckToMe, options);
       }
     } else {
       if (mId.getRingId().equals(node.getRingId())) {
         if ((mHint != null) && (mHint.getRingId().equals(node.getRingId()))) {
-          return endpoint.route(mId.getId(), message, mHint.getHandle(), deliverAckToMe);
+          return endpoint.route(mId.getId(), message, mHint.getHandle(), deliverAckToMe, options);
         } else {
-          return endpoint.route(mId.getId(), message, null, deliverAckToMe);
+          return endpoint.route(mId.getId(), message, null, deliverAckToMe, options);
         }
       } else {
-        return node.getCollection().route(mId, message, getInstance(), deliverAckToMe);
+        return node.getCollection().route(mId, message, getInstance(), deliverAckToMe, options);
       }
     } 
   }
