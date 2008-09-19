@@ -188,4 +188,8 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   public int getPayloadLen() {
     return payload.remaining();
   }
+
+  public Map<String, Object> getOptions() {
+    return options;
+  }
 }

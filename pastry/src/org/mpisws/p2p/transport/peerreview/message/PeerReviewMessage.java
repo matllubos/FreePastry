@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.peerreview.message;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
@@ -47,10 +48,13 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 public abstract class PeerReviewMessage implements PeerReviewConstants, RawSerializable {
 
+  public abstract short getType();
+  
+  public abstract Map<String, Object> getOptions();
+  
   public ByteBuffer serialize() throws IOException {
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     serialize(sob);
     return sob.getByteBuffer();
   }
-
 }

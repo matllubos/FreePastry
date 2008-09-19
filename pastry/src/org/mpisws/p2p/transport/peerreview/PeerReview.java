@@ -37,9 +37,15 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
@@ -48,7 +54,7 @@ import org.mpisws.p2p.transport.util.Serializer;
 import rice.environment.Environment;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> {
+public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends IdentityTransportCallback<Handle, ByteBuffer>, IdentityTransport<Handle, Identifier> {
 
   public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException;
 
@@ -62,8 +68,8 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
 
   void challengeSuspectedNode(Handle h);
 
-  public void transmit(Handle dest, boolean b, PeerReviewMessage message);
-
+  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest, boolean b, PeerReviewMessage message, MessageCallback<Handle, PeerReviewMessage> deliverAckToMe);
+  
   /**
    * Current time in millis, however, we depend on there being a timesource that is more discritized
    * than the "wall" clock.  It is only advanced on a timeout or a message receipt.

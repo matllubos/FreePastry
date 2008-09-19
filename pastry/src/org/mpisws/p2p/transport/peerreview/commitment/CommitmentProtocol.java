@@ -36,6 +36,13 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.commitment;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
@@ -52,5 +59,10 @@ public interface CommitmentProtocol<Handle extends RawSerializable, Identifier> 
 //  long long findAckEntry(Identifier *id, long long seq);
 //  void initReceiveCache();
 //  void addToReceiveCache(Identifier *id, long long senderSeq, int indexInLocalHistory);
+  public MessageRequestHandle<Handle, ByteBuffer> handleOutgoingMessage(
+      Handle target, ByteBuffer message, 
+      int relevantlen, 
+      MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
+      Map<String, Object> options) throws IOException;
 
 }

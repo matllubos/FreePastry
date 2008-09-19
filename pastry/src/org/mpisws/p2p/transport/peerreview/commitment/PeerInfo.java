@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.peerreview.commitment;
 
 import java.util.LinkedList;
 
+import org.mpisws.p2p.transport.peerreview.message.OutgoingUserDataMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
 import rice.p2p.commonapi.rawserialization.RawSerializable;
@@ -63,14 +64,14 @@ public class PeerInfo<Handle extends RawSerializable> {
   /**
    * The first message hasn't been acknowledged, the rest haven't been sent.
    */
-  LinkedList<UserDataMessage<Handle>> xmitQueue;
+  LinkedList<OutgoingUserDataMessage<Handle>> xmitQueue;
   LinkedList<UserDataMessage<Handle>> recvQueue;
   boolean isReceiving;
   
   public PeerInfo(Handle handle) {
     this.handle = handle;
     lastTransmit = 0;
-    xmitQueue = new LinkedList<UserDataMessage<Handle>>();
+    xmitQueue = new LinkedList<OutgoingUserDataMessage<Handle>>();
     recvQueue = new LinkedList<UserDataMessage<Handle>>();
     currentTimeout = 0;
     retransmitsSoFar = 0;
@@ -103,7 +104,7 @@ public class PeerInfo<Handle extends RawSerializable> {
     return currentChallengeInterval;
   }
 
-  public LinkedList<UserDataMessage<Handle>> getXmitQueue() {
+  public LinkedList<OutgoingUserDataMessage<Handle>> getXmitQueue() {
     return xmitQueue;
   }
 

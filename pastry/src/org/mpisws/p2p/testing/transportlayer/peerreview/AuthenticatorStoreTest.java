@@ -38,8 +38,22 @@ package org.mpisws.p2p.testing.transportlayer.peerreview;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
+import java.security.cert.X509Certificate;
+import java.util.Map;
 import java.util.SortedSet;
 
+import org.mpisws.p2p.transport.ErrorHandler;
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.SocketCallback;
+import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
@@ -47,12 +61,15 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
+import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.Continuation;
 import rice.environment.Environment;
+import rice.p2p.commonapi.Cancellable;
 
 
 public class AuthenticatorStoreTest {
@@ -200,6 +217,132 @@ public class AuthenticatorStoreTest {
         long timestamp, Evidence evidence) {
       // TODO Auto-generated method stub
       
+    }
+
+    public MessageRequestHandle<MyInetSocketAddress, PeerReviewMessage> transmit(
+        MyInetSocketAddress dest, boolean b, PeerReviewMessage message,
+        MessageCallback<MyInetSocketAddress, PeerReviewMessage> deliverAckToMe) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public void notifyCertificateAvailable(ByteBuffer id) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void statusChange(ByteBuffer id, int newStatus) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void incomingSocket(P2PSocket<MyInetSocketAddress> s)
+        throws IOException {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void messageReceived(MyInetSocketAddress i, ByteBuffer m,
+        Map<String, Object> options) throws IOException {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public boolean hasCertificate(MyInetSocketAddress id) {
+      // TODO Auto-generated method stub
+      return false;
+    }
+
+    public Cancellable requestCertificate(MyInetSocketAddress source,
+        MyInetSocketAddress certHolder,
+        Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public byte[] sign(byte[] bytes) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public short signatureSizeInBytes() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    public void verify(MyInetSocketAddress id, byte[] msg, int moff, int mlen,
+        byte[] signature, int soff, int slen) throws InvalidKeyException,
+        NoSuchAlgorithmException, NoSuchProviderException, SignatureException,
+        UnknownCertificateException {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void acceptMessages(boolean b) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void acceptSockets(boolean b) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public MyInetSocketAddress getLocalIdentifier() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public SocketRequestHandle<MyInetSocketAddress> openSocket(
+        MyInetSocketAddress i,
+        SocketCallback<MyInetSocketAddress> deliverSocketToMe,
+        Map<String, Object> options) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public MessageRequestHandle<MyInetSocketAddress, ByteBuffer> sendMessage(
+        MyInetSocketAddress i, ByteBuffer m,
+        MessageCallback<MyInetSocketAddress, ByteBuffer> deliverAckToMe,
+        Map<String, Object> options) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public void setCallback(
+        TransportLayerCallback<MyInetSocketAddress, ByteBuffer> callback) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void setErrorHandler(ErrorHandler<MyInetSocketAddress> handler) {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void destroy() {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public byte[] getEmptyHash() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public short getHashSizeBytes() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public byte[] hash(ByteBuffer... hashMe) {
+      // TODO Auto-generated method stub
+      return null;
     }
   }
 

@@ -39,8 +39,17 @@ package org.mpisws.p2p.transport.peerreview.misbehavior;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-public interface Misbehavior<Identifier> {
+import org.mpisws.p2p.transport.MessageRequestHandle;
+
+public interface Misbehavior<Handle> {
 
   void maybeChangeSeqInUserMessage(long seq);
-  boolean dropAfterLogging(Identifier target, ByteBuffer message, Map<String, Object> options);
+  /**
+   * 
+   * @param target
+   * @param message
+   * @param options
+   * @return a non-null MRE if you want it to be dropped
+   */      
+  MessageRequestHandle<Handle, ByteBuffer> dropAfterLogging(Handle target, ByteBuffer message, Map<String, Object> options);
 }

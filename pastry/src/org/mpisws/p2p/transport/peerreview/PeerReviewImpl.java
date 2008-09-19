@@ -38,6 +38,11 @@ package org.mpisws.p2p.transport.peerreview;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
+import java.security.cert.X509Certificate;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -51,17 +56,23 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
+import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
@@ -78,7 +89,6 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   TransportLayerCallback<Handle, ByteBuffer>,
   PeerReview<Handle, Identifier> {
 
-  TransportLayer<Handle, ByteBuffer> tl;
   TransportLayerCallback<Handle, ByteBuffer> callback;
 
   Environment env;
@@ -88,27 +98,31 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   AuthenticatorStore<Identifier> authOutStore;
   IdentityTransport<Handle, Identifier> transport;
   PeerInfoStore<Handle, Identifier> infoStore;
+
+  CommitmentProtocol<Handle, Identifier> commitmentProtocol;
   
   IdentifierExtractor<Handle, Identifier> identifierExtractor;
   Logger logger;
 
-  public PeerReviewImpl(TransportLayer<Handle, ByteBuffer> tl,
+  public PeerReviewImpl(IdentityTransport<Handle, Identifier> transport,
       Environment env, Serializer<Handle> handleSerializer,
       Serializer<Identifier> idSerializer,      
       IdentifierExtractor<Handle, Identifier> identifierExtractor,
       AuthenticatorSerializer authenticatorSerialilzer) {
     super();
-    this.tl = tl;
+    this.transport = transport;
     this.env = env;
     this.logger = env.getLogManager().getLogger(PeerReviewImpl.class, null);
     this.idSerializer = idSerializer;
     this.handleSerializer = handleSerializer;
     this.identifierExtractor = identifierExtractor;
     this.authenticatorSerialilzer = authenticatorSerialilzer; 
+    
+//    this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,null,null,null,null);
   }
     
   public SocketRequestHandle<Handle> openSocket(Handle i, SocketCallback<Handle> deliverSocketToMe, Map<String, Object> options) {
-    return tl.openSocket(i, deliverSocketToMe, options);
+    return transport.openSocket(i, deliverSocketToMe, options);
   }
 
   public void incomingSocket(P2PSocket<Handle> s) throws IOException {
@@ -116,7 +130,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
   public MessageRequestHandle<Handle, ByteBuffer> sendMessage(Handle i, ByteBuffer m, MessageCallback<Handle, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
-    return tl.sendMessage(i, m, deliverAckToMe, options);
+    throw new RuntimeException("todo: implement");
+//    return commitmentProtocol.handleOutgoingMessage(i, m, m.remaining(), deliverAckToMe, options);
+//    transport.sendMessage(i, m, deliverAckToMe, options);
+//    return ret;
   }
 
   public void messageReceived(Handle i, ByteBuffer m, Map<String, Object> options) throws IOException {
@@ -124,15 +141,15 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
   
   public void acceptMessages(boolean b) {
-    tl.acceptMessages(b);
+    transport.acceptMessages(b);
   }
 
   public void acceptSockets(boolean b) {
-    tl.acceptSockets(b);
+    transport.acceptSockets(b);
   }
 
   public Handle getLocalIdentifier() {
-    return tl.getLocalIdentifier();
+    return transport.getLocalIdentifier();
   }
 
   public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
@@ -145,7 +162,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
   public void destroy() {
-    tl.destroy();
+    transport.destroy();
   }
 
   public AuthenticatorSerializer getAuthenticatorSerializer() {
@@ -307,6 +324,60 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 //    evidenceTransferProtocol->sendMessageToWitnesses(subject, false, accusation, accusationLen);
 //  
 //    free(accusation);
+  }
+
+  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest,
+      boolean b, PeerReviewMessage message,
+      MessageCallback<Handle, PeerReviewMessage> deliverAckToMe) {
+    throw new RuntimeException("implement");
+  }
+
+  public void notifyCertificateAvailable(ByteBuffer id) {
+    throw new RuntimeException("implement");
+  }
+
+  public void statusChange(ByteBuffer id, int newStatus) {
+    throw new RuntimeException("implement");
+  }
+
+  public boolean hasCertificate(Identifier id) {
+    throw new RuntimeException("implement");
+  }
+
+  public Cancellable requestCertificate(Handle source, Identifier certHolder,
+      Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
+    throw new RuntimeException("implement");
+  }
+
+  public byte[] sign(byte[] bytes) {
+    throw new RuntimeException("implement");
+  }
+
+  public short signatureSizeInBytes() {
+    throw new RuntimeException("implement");
+  }
+
+  public void verify(Identifier id, byte[] msg, int moff, int mlen,
+      byte[] signature, int soff, int slen) throws InvalidKeyException,
+      NoSuchAlgorithmException, NoSuchProviderException, SignatureException,
+      UnknownCertificateException {
+    throw new RuntimeException("implement");
+  }
+
+  public byte[] getEmptyHash() {
+    throw new RuntimeException("implement");
+  }
+
+  public short getHashSizeBytes() {
+    throw new RuntimeException("implement");
+  }
+
+  public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
+    throw new RuntimeException("implement");
+  }
+
+  public byte[] hash(ByteBuffer... hashMe) {
+    throw new RuntimeException("implement");
   }
 
 

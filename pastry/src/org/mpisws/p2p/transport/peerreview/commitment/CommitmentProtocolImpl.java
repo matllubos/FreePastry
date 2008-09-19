@@ -44,6 +44,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
@@ -58,8 +60,10 @@ import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSign;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
+import org.mpisws.p2p.transport.peerreview.message.OutgoingUserDataMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.peerreview.misbehavior.Misbehavior;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
@@ -249,7 +253,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           udm.getTopSeq(),
           seqOfRecvEntry,
           myHashTopMinusOne,
-          transport.sign(hToSign));
+          transport.sign(hToSign), udm.getOptions());
       
       return new Tuple<AckMessage<Identifier>,Boolean>(ack, loggedPreviously);
     } catch (IOException ioe) {
@@ -318,7 +322,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         info.lastTransmit = peerreview.getTime();
         info.currentTimeout = INITIAL_TIMEOUT_MICROS;
         info.retransmitsSoFar = 0;
-        peerreview.transmit(info.getHandle(), false, info.xmitQueue.getFirst());
+        OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
+        peerreview.transmit(info.getHandle(), false, oudm, oudm);
       } else if (peerreview.getTime() > (info.lastTransmit + info.currentTimeout)) {
       
         /* Otherwise, retransmit the current packet a few times, up to the specified limit */
@@ -331,7 +336,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           info.retransmitsSoFar++;
           info.currentTimeout = RETRANSMIT_TIMEOUT_MICROS;
           info.lastTransmit = peerreview.getTime();
-          peerreview.transmit(info.handle, false, info.xmitQueue.getFirst());
+          OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
+          peerreview.transmit(info.handle, false, oudm, oudm);
         } else {
         
           /* If the peer still won't acknowledge the message, file a SEND challenge with its witnesses */
@@ -399,7 +405,11 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           if (logger.level <= Logger.FINE) logger.log(
               "Delivering message from "+udm.getSenderHandle()+" via "+info.handle+" ("+
               udm.getPayloadLen()+" bytes; "+udm.getRelevantLen()+"/"+udm.getPayloadLen()+" relevant)");
-          app.receive(udm.getSenderHandle(), false, udm.getPayload()); 
+          try {
+            app.messageReceived(udm.getSenderHandle(), udm.getPayload(), udm.getOptions()); 
+          } catch (IOException ioe) {
+            logger.logException("Error handling "+udm, ioe);
+          }
         } else {
           if (logger.level <= Logger.FINE) logger.log(
               "Message from "+udm.getSenderHandle()+" via "+info.getHandle()+" was previously logged; not delivered");
@@ -408,7 +418,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         /* Send the ACK */
 
         if (logger.level <= Logger.FINE) logger.log("Returning ACK to"+info.getHandle());
-        peerreview.transmit(info.handle, false, ret.a());
+        peerreview.transmit(info.handle, false, ret.a(), null);
       } else {
         if (logger.level <= Logger.WARNING) logger.log("Cannot verify signature on message "+udm.getTopSeq()+" from "+info.getHandle()+"; discarding");
       }
@@ -455,7 +465,10 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(source));
   }
 
-  protected long handleOutgoingMessage(Handle target, ByteBuffer message, int relevantlen, Map<String, Object> options) throws IOException, SignatureException {
+  public MessageRequestHandle<Handle, ByteBuffer> handleOutgoingMessage(
+      final Handle target, final ByteBuffer message, int relevantlen, 
+      MessageCallback<Handle, ByteBuffer> deliverAckToMe,
+      final Map<String, Object> options) {
     assert(relevantlen >= 0);
 
     /* Append a SEND entry to our local log */
@@ -469,7 +482,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     } else {
       evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message);
     }
-    history.appendEntry(evtSend.getType(), true, evtSend.serialize());
+    try {
+      history.appendEntry(evtSend.getType(), true, evtSend.serialize());
+    } catch (IOException ioe) {
+      MessageRequestHandle<Handle, ByteBuffer> ret = new MessageRequestHandleImpl<Handle, ByteBuffer>(target,message,options);
+      if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, ioe);
+      return ret;
+    }
     
     //  hTop, &topSeq
     HashSeq top = history.getTopLevelEntry();
@@ -492,26 +511,37 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     if (relevantlen < message.remaining()) {
       relevantMsg = ByteBuffer.wrap(message.array(), message.position(), relevantlen);
     }
-    history.appendEntry(EVT_SENDSIGN, true, relevantMsg, ByteBuffer.wrap(signature));
+    try {
+      history.appendEntry(EVT_SENDSIGN, true, relevantMsg, ByteBuffer.wrap(signature));
+    } catch (IOException ioe) {
+      MessageRequestHandle<Handle, ByteBuffer> ret = new MessageRequestHandleImpl<Handle, ByteBuffer>(target,message,options);
+      if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, ioe);
+      return ret;
+    }
     
     /* Maybe do some more mischief for testing? */
 
-    if (misbehavior != null && misbehavior.dropAfterLogging(target, message, options)) {
-      return top.getSeq();
+    if (misbehavior != null) {
+      MessageRequestHandle<Handle, ByteBuffer> ret = misbehavior.dropAfterLogging(target, message, options);
+      if (ret != null) {
+        return ret;
+      }
     }
     
     /* Construct a USERDATA message... */
     
     assert((relevantlen == message.remaining()) || (relevantlen < 255));    
 
-    UserDataMessage<Handle> udm = new UserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen, options);
+    PeerInfo pi = lookupPeer(target);
+
+    OutgoingUserDataMessage<Handle> udm = new OutgoingUserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen, options, pi, deliverAckToMe);
     
     /* ... and put it into the send queue. If the node is trusted and does not have any
        unacknowledged messages, makeProgress() will simply send it out. */
-    lookupPeer(target).xmitQueue.addLast(udm);
+    pi.xmitQueue.addLast(udm);
     makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(target));
     
-    return top.getSeq();
+    return udm;
   }
   /* This is called if we receive an acknowledgment from another node */
 
@@ -526,7 +556,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     if (transport.hasCertificate(ackMessage.getNodeId())) {
       PeerInfo<Handle> p = lookupPeer(source);
 
-      UserDataMessage<Handle> udm = p.xmitQueue.getFirst();
+      OutgoingUserDataMessage<Handle> udm = p.xmitQueue.getFirst();
 
       /* The ACK must acknowledge the sequence number of the packet that is currently
          at the head of the send queue */
@@ -548,7 +578,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           
           EvtAck<Identifier> evtAck = new EvtAck<Identifier>(ackMessage.getNodeId(), ackMessage.getSendEntrySeq(), ackMessage.getRecvEntrySeq(), ackMessage.getHashTopMinusOne(), ackMessage.getSignature());
           history.appendEntry(EVT_ACK, true, evtAck.serialize());
-          app.sendComplete(ackMessage.getSendEntrySeq());
+          udm.sendComplete(); //ackMessage.getSendEntrySeq());
 
           /* Remove the message from the xmit queue */
 
