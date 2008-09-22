@@ -89,5 +89,18 @@ public interface PeerReviewConstants {
   public static final int STATUS_TRUSTED = 0;
   public static final int STATUS_SUSPECTED = 1;
   public static final int STATUS_EXPOSED = 2;
+  
+  public static final int DEFAULT_AUTH_PUSH_INTERVAL_MICROS = 5000000;
+  public static final long DEFAULT_CHECKPOINT_INTERVAL_MICROS = 10000000L;
+  public static final int MAINTENANCE_INTERVAL_MICROS = 10000000;
+  public static final int DEFAULT_TIME_TOLERANCE_MICROS = 60000000;
+
+  public static final int TI_CHECKPOINT = 99;
+  public static final int TI_MAINTENANCE = 6;
+  public static final int TI_AUTH_PUSH = 7;
+  public static final int TI_MAX_RESERVED = TI_AUTH_PUSH;
+  public static final int TI_STATUS_INFO = 101;
+  public static final int MAX_STATUS_INFO = 100;
+
 
 }

@@ -73,7 +73,8 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.Tuple;
 import rice.selector.TimerTask;
 
-public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements CommitmentProtocol<Handle, Identifier>, PeerReviewConstants {
+public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements 
+    CommitmentProtocol<Handle, Identifier>, PeerReviewConstants {
   public int MAX_PEERS = 250;
   public int INITIAL_TIMEOUT_MICROS = 1000000;
   public int RETRANSMIT_TIMEOUT_MICROS = 1000000;
@@ -98,7 +99,6 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   
   AuthenticatorStore<Identifier> authStore;
   SecureHistory history;
-  PeerReviewCallback<Handle, Identifier> app;
   PeerReview<Handle, Identifier> peerreview;
   PeerInfoStore<Handle, Identifier> infoStore;
   IdentityTransport<Handle, Identifier> transport;
@@ -118,7 +118,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   public CommitmentProtocolImpl(PeerReview<Handle,Identifier> peerreview,
       IdentityTransport<Handle, Identifier> transport,
       PeerInfoStore<Handle, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
-      SecureHistory history, PeerReviewCallback<Handle, Identifier> app, Misbehavior<Handle> misbehavior,
+      SecureHistory history, Misbehavior<Handle> misbehavior,
       long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
     this.myHandle = transport.getLocalIdentifier();
@@ -126,7 +126,6 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     this.infoStore = infoStore;
     this.authStore = authStore;
     this.history = history;
-    this.app = app;
     this.misbehavior = misbehavior;
     this.nextReceiveCacheEntry = 0;
 //    this.numPeers = 0;
@@ -406,7 +405,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
               "Delivering message from "+udm.getSenderHandle()+" via "+info.handle+" ("+
               udm.getPayloadLen()+" bytes; "+udm.getRelevantLen()+"/"+udm.getPayloadLen()+" relevant)");
           try {
-            app.messageReceived(udm.getSenderHandle(), udm.getPayload(), udm.getOptions()); 
+            peerreview.getApp().messageReceived(udm.getSenderHandle(), udm.getPayload(), udm.getOptions()); 
           } catch (IOException ioe) {
             logger.logException("Error handling "+udm, ioe);
           }
@@ -466,9 +465,14 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   }
 
   public MessageRequestHandle<Handle, ByteBuffer> handleOutgoingMessage(
-      final Handle target, final ByteBuffer message, int relevantlen, 
+      final Handle target, final ByteBuffer message, 
       MessageCallback<Handle, ByteBuffer> deliverAckToMe,
       final Map<String, Object> options) {
+    int relevantlen = message.remaining();
+    if (options != null && options.containsKey(PeerReview.RELEVANT_LENGTH)) {
+      Number n = (Number)options.get(PeerReview.RELEVANT_LENGTH);
+      relevantlen = n.intValue();      
+    }
     assert(relevantlen >= 0);
 
     /* Append a SEND entry to our local log */

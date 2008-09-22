@@ -61,7 +61,6 @@ public interface CommitmentProtocol<Handle extends RawSerializable, Identifier> 
 //  void addToReceiveCache(Identifier *id, long long senderSeq, int indexInLocalHistory);
   public MessageRequestHandle<Handle, ByteBuffer> handleOutgoingMessage(
       Handle target, ByteBuffer message, 
-      int relevantlen, 
       MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
       Map<String, Object> options) throws IOException;
 

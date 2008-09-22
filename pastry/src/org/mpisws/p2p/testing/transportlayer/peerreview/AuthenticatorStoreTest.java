@@ -56,6 +56,7 @@ import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
+import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
@@ -341,6 +342,11 @@ public class AuthenticatorStoreTest {
     }
 
     public byte[] hash(ByteBuffer... hashMe) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public PeerReviewCallback<MyInetSocketAddress, MyInetSocketAddress> getApp() {
       // TODO Auto-generated method stub
       return null;
     }

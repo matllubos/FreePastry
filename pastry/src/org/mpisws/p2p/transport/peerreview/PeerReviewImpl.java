@@ -60,7 +60,11 @@ import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
@@ -85,11 +89,11 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @param <Identifier> (Permanent Identifier), can get an Identifier from a Handle
  */
 public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements 
-  TransportLayer<Handle, ByteBuffer>,
-  TransportLayerCallback<Handle, ByteBuffer>,
-  PeerReview<Handle, Identifier> {
+    TransportLayer<Handle, ByteBuffer>,
+    TransportLayerCallback<Handle, ByteBuffer>,
+    PeerReview<Handle, Identifier> {
 
-  TransportLayerCallback<Handle, ByteBuffer> callback;
+  PeerReviewCallback<Handle, Identifier> callback;
 
   Environment env;
   Serializer<Identifier> idSerializer;
@@ -104,6 +108,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   IdentifierExtractor<Handle, Identifier> identifierExtractor;
   Logger logger;
 
+  SecureHistoryFactory historyFactory;
+  SecureHistory history;
+  
   public PeerReviewImpl(IdentityTransport<Handle, Identifier> transport,
       Environment env, Serializer<Handle> handleSerializer,
       Serializer<Identifier> idSerializer,      
@@ -117,10 +124,19 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.handleSerializer = handleSerializer;
     this.identifierExtractor = identifierExtractor;
     this.authenticatorSerialilzer = authenticatorSerialilzer; 
-    
-//    this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,null,null,null,null);
+
+    this.historyFactory = new SecureHistoryFactoryImpl(transport, env);
+  }
+  
+  public void init(String historyName) throws IOException {    
+    this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());
+    this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
   }
     
+  public PeerReviewCallback<Handle, Identifier> getApp() {
+    return callback;
+  }
+  
   public SocketRequestHandle<Handle> openSocket(Handle i, SocketCallback<Handle> deliverSocketToMe, Map<String, Object> options) {
     return transport.openSocket(i, deliverSocketToMe, options);
   }
@@ -152,8 +168,15 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     return transport.getLocalIdentifier();
   }
 
-  public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
+  public void setApp(PeerReviewCallback<Handle, Identifier> callback) {
     this.callback = callback;
+  }
+  
+  /**
+   * 
+   */
+  public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
+    setApp((PeerReviewCallback<Handle, Identifier>)callback);
   }
 
   public void setErrorHandler(ErrorHandler<Handle> handler) {

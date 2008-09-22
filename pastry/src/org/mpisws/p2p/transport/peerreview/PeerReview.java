@@ -54,8 +54,14 @@ import org.mpisws.p2p.transport.util.Serializer;
 import rice.environment.Environment;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends IdentityTransportCallback<Handle, ByteBuffer>, IdentityTransport<Handle, Identifier> {
+public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends 
+    IdentityTransportCallback<Handle, ByteBuffer>, IdentityTransport<Handle, Identifier>, PeerReviewConstants {
 
+  /**
+   * Option should map to an int < 255 to record the relevant length of the message.
+   */
+  public static final String RELEVANT_LENGTH = "PeerReview_Relevant_length";  
+  
   public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException;
 
   
@@ -92,5 +98,8 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
    * @param evidence
    */
   public void sendEvidenceToWitnesses(Identifier subject, long timestamp, Evidence evidence);
+
+
+  public PeerReviewCallback<Handle, Identifier> getApp();
 
 }

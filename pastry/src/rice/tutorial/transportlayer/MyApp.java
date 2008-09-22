@@ -42,6 +42,11 @@ advised of the possibility of such damage.
  */
 package rice.tutorial.transportlayer;
 
+import java.util.Collections;
+
+import org.mpisws.p2p.transport.priority.PriorityTransportLayer;
+import org.mpisws.p2p.transport.wire.WireTransportLayer;
+
 import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.Id;
@@ -91,7 +96,7 @@ public class MyApp implements Application {
   public void routeMyMsg(Id id) {
     System.out.println(this+" sending to "+id);    
     Message msg = new MyMsg(endpoint.getId(), id);
-    endpoint.route(id, msg, null);
+    endpoint.route(id, msg, null, null, Collections.singletonMap(WireTransportLayer.OPTION_TRANSPORT_TYPE, (Object)WireTransportLayer.TRANSPORT_TYPE_DATAGRAM));
   }
   
   /**
