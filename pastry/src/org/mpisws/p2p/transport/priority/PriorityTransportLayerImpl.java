@@ -253,9 +253,10 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 
   public void messageReceived(Identifier i, ByteBuffer m, Map<String, Object> options) throws IOException {
     callback.messageReceived(i, m, options);
+    notifyListenersRead(m.remaining(), i, options);
   }  
 
-  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
+  public MessageRequestHandle<Identifier, ByteBuffer> sendMessage(final Identifier i, ByteBuffer m, MessageCallback<Identifier, ByteBuffer> deliverAckToMe, final Map<String, Object> options) {
     if (logger.level <= Logger.FINE) logger.log("sendMessage("+i+","+m+","+deliverAckToMe+","+options+")");
     
 //    if (options == null) throw new IllegalArgumentException("options is null"); // delme, only for debugging something else
@@ -265,7 +266,20 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         Integer val = (Integer)options.get(WireTransportLayer.OPTION_TRANSPORT_TYPE);
         if (val != null &&
             val.intValue() == WireTransportLayer.TRANSPORT_TYPE_DATAGRAM) {
-          return tl.sendMessage(i, m, deliverAckToMe, options);
+          final int originalSize = m.remaining();
+          return tl.sendMessage(i, m, new MessageCallback<Identifier, ByteBuffer>() {
+
+            public void ack(MessageRequestHandle<Identifier, ByteBuffer> msg) {
+              notifyListenersWrote(originalSize, i, options);
+            }
+
+            public void sendFailed(
+                MessageRequestHandle<Identifier, ByteBuffer> msg,
+                Exception reason) {
+              notifyListenersDropped(originalSize, i, options);
+            }
+            
+          }, options);
         }
     }
     
