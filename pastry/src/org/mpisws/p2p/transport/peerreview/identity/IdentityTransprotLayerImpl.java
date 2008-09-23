@@ -45,6 +45,7 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -85,6 +86,13 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 public class IdentityTransprotLayerImpl<Identifier, I> extends 
      TableTransprotLayerImpl<Identifier, I, X509Certificate> 
      implements IdentityTransport<Identifier, I> {
+  @Override
+  public void setCallback(
+      TransportLayerCallback<Identifier, ByteBuffer> callback) {
+    ((MyStore<Identifier, I>)knownValues).callback = (IdentityTransportCallback<Identifier, I>)callback;
+    super.setCallback(callback);
+  }
+
   public static final String DEFAULT_SIGNATURE_ALGORITHM = "SHA1withRSA";
     
   String signatureAlgorithm = DEFAULT_SIGNATURE_ALGORITHM;
@@ -103,8 +111,8 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
    * @param params
    * @return
    */
-  static <I> TableStore<I, X509Certificate> getTableStore(I localId, X509Certificate localCert, Serializer<I> iSerializer, X509Serializer cSerializer, InputBuffer buf) {
-    MyStore<I> ret = new MyStore<I>();
+  static <H, I> TableStore<I, X509Certificate> getTableStore(I localId, X509Certificate localCert, Serializer<I> iSerializer, X509Serializer cSerializer, InputBuffer buf) {
+    MyStore<H, I> ret = new MyStore<H, I>();
     ret.put(localId, localCert);
     if (buf != null) {
       // load store from the file
@@ -114,7 +122,16 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     return ret;
   }
   
-  static class MyStore<I> extends HashMap<I, X509Certificate> implements TableStore<I, X509Certificate> {}
+  static class MyStore<H, I> extends HashMap<I, X509Certificate> implements TableStore<I, X509Certificate> {
+    IdentityTransportCallback<H, I> callback;
+    @Override
+    public X509Certificate put(I key, X509Certificate value) {
+      X509Certificate ret = super.put(key, value);     
+      if (ret == null) {
+        callback.notifyCertificateAvailable(key);
+      }
+      return ret;
+    }}
   
   public IdentityTransprotLayerImpl(Serializer<I> iSerializer, X509Serializer cSerializer, I localId, X509Certificate localCert, PrivateKey localPrivate, TransportLayer<Identifier, ByteBuffer> tl, HashProvider hasher, Environment env) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
     super(iSerializer, cSerializer, getTableStore(localId, localCert, iSerializer, cSerializer, null), tl, env);

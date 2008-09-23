@@ -77,7 +77,7 @@ public abstract class SourceRoute<Identifier> {
   }  
   
   protected SourceRoute(Identifier local, Identifier remote) {
-    this.path = new ArrayList<Identifier>(1);
+    this.path = new ArrayList<Identifier>(2);
     path.add(local);
     path.add(remote);
   }  

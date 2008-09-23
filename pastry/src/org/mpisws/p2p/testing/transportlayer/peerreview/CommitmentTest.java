@@ -36,16 +36,23 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.testing.transportlayer.peerreview;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
+import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mpisws.p2p.pki.x509.CATool;
+import org.mpisws.p2p.pki.x509.CAToolImpl;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -69,10 +76,12 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
+import org.mpisws.p2p.transport.table.UnknownValueException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
 
@@ -85,7 +94,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 public class CommitmentTest {
-
+  public static final byte[] EMPTY_ARRAY = new byte[0];
   static class IdExtractor implements IdentifierExtractor<HandleImpl, IdImpl> {
 
     public IdImpl extractIdentifier(HandleImpl h) {
@@ -135,6 +144,10 @@ public class CommitmentTest {
     public static HandleImpl build(InputBuffer buf) throws IOException {
       return new HandleImpl(buf.readUTF(), IdImpl.build(buf));
     }
+    
+    public String toString() {
+      return "HandleImpl<"+name+">";
+    }
   }
   
   static class IdImpl implements RawSerializable {
@@ -148,6 +161,19 @@ public class CommitmentTest {
     
     public static IdImpl build(InputBuffer buf) throws IOException {
       return new IdImpl(buf.readInt());
+    }
+    
+    public String toString() {
+      return "Id<"+id+">";
+    }
+    
+    public int hashCode() {
+      return id;      
+    }
+    
+    public boolean equals(Object o) {
+      IdImpl that = (IdImpl)o;
+      return (this.id == that.id);
     }
   }
   
@@ -170,16 +196,15 @@ public class CommitmentTest {
 //      commitmentProtocol = new CommitmentProtocolImpl<HandleImpl, IdImpl>(this,transport,store,authStore,history, app, null, 60000);       
 //    }
     
-    public BogusPR(IdentityTransport<HandleImpl, IdImpl> transport,
-        Environment env) {
+    public BogusPR(String name, IdentityTransport<HandleImpl, IdImpl> transport,
+        Environment env) throws IOException {
 //      , Serializer<HandleImpl> handleSerializer,
 //        Serializer<IdImpl> idSerializer,
 //        IdentifierExtractor<HandleImpl, IdImpl> identifierExtractor,
 //        AuthenticatorSerializer authenticatorSerialilzer) {
       super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(),
           new AuthenticatorSerializerImpl(0,0));
-      // TODO Auto-generated constructor stub
-      
+      init(name);
     }
 
 //    public void challengeSuspectedNode(HandleImpl h) {
@@ -370,36 +395,54 @@ public class CommitmentTest {
   static class BogusTransport implements IdentityTransport<HandleImpl, IdImpl>{
     public static Map<HandleImpl, BogusTransport> peerTable = new HashMap<HandleImpl, BogusTransport>();
     
+    public Map<IdImpl, X509Certificate> certs = new HashMap<IdImpl, X509Certificate>();
+    
     HandleImpl localIdentifier;
     
-    public BogusTransport(HandleImpl handle) {
+    public BogusTransport(HandleImpl handle, X509Certificate cert) {
       peerTable.put(handle, this);
       this.localIdentifier = handle;
+      certs.put(handle.id, cert);
     }
     
     public boolean hasCertificate(IdImpl id) {
-      throw new RuntimeException("implement");
+      return certs.containsKey(id);
     }
 
     public Cancellable requestCertificate(HandleImpl source, IdImpl certHolder,
         Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-      throw new RuntimeException("implement");
+      System.out.println("requestCert("+source+")");
+      X509Certificate cert = peerTable.get(source).certs.get(certHolder);
+      if (cert != null) {
+        certs.put(certHolder, cert);
+        if (c != null) c.receiveResult(cert);
+        callback.notifyCertificateAvailable(certHolder);
+      } else {
+        UnknownValueException ex = new UnknownValueException(source, certHolder);
+        if (c != null) {
+          c.receiveException(ex);
+        } else {
+          ex.printStackTrace();
+        }
+      }
+      return null;
     }
 
     public byte[] sign(byte[] bytes) {
-      throw new RuntimeException("implement");
+      return EMPTY_ARRAY;
     }
 
     public short signatureSizeInBytes() {
-      throw new RuntimeException("implement");
+      return (short)EMPTY_ARRAY.length;
     }
 
     public void verify(IdImpl id, byte[] msg, int moff, int mlen,
         byte[] signature, int soff, int slen) throws InvalidKeyException,
         NoSuchAlgorithmException, NoSuchProviderException, SignatureException,
         UnknownCertificateException {
-      throw new RuntimeException("implement");
+      // do nothing, implies always accept
     }
+    
 
     public void acceptMessages(boolean b) {
       throw new RuntimeException("implement");
@@ -427,7 +470,7 @@ public class CommitmentTest {
       return null;
     }
 
-    TransportLayerCallback<HandleImpl, ByteBuffer> callback;
+    IdentityTransportCallback<HandleImpl, IdImpl> callback;
     
     private void receiveMessage(HandleImpl i, ByteBuffer m) {
       try {
@@ -439,7 +482,7 @@ public class CommitmentTest {
 
     public void setCallback(
         TransportLayerCallback<HandleImpl, ByteBuffer> callback) {
-      this.callback = callback;
+      this.callback = (IdentityTransportCallback<HandleImpl, IdImpl>)callback;
     }
 
     public void setErrorHandler(ErrorHandler<HandleImpl> handler) {
@@ -451,19 +494,19 @@ public class CommitmentTest {
     }
 
     public byte[] getEmptyHash() {
-      throw new RuntimeException("implement");
+      return EMPTY_ARRAY;
     }
 
     public short getHashSizeBytes() {
-      throw new RuntimeException("implement");
+      return (short)EMPTY_ARRAY.length;
     }
 
     public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
-      throw new RuntimeException("implement");
+      return EMPTY_ARRAY;
     }
 
     public byte[] hash(ByteBuffer... hashMe) {
-      throw new RuntimeException("implement");
+      return EMPTY_ARRAY;
     }    
   }
   
@@ -513,17 +556,44 @@ public class CommitmentTest {
   }
 
   static class Player {
+    static final CATool caTool;
+    static final KeyPairGenerator keyPairGen;
+    static {
+      try {
+        SecureRandom random = new SecureRandom();
+        caTool = CAToolImpl.getCATool("CommitmentTest","foo".toCharArray());
+        
+        // make a KeyPair
+        keyPairGen =
+          KeyPairGenerator.getInstance("RSA", "BC");
+        keyPairGen.initialize(
+            new RSAKeyGenParameterSpec(768,
+                RSAKeyGenParameterSpec.F4),
+            random);
+      } catch (Exception ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+    
     HandleImpl localHandle;
     
     BogusPR pr;
     IdentityTransport<HandleImpl, IdImpl> transport;
 
-    public Player(String name, int id, Environment env) throws IOException {
+    public Player(String name, int id, Environment env) throws Exception {
       super();
-      this.localHandle = new HandleImpl(name, new IdImpl(id));
+      File f = new File(name+".data");
+      if (f.exists()) f.delete();
+      f = new File(name+".index");
+      if (f.exists()) f.delete();
       
-      transport = new BogusTransport(localHandle);
-      pr = new BogusPR(transport, env);
+      this.localHandle = new HandleImpl(name, new IdImpl(id));
+      KeyPair pair = keyPairGen.generateKeyPair();    
+      X509Certificate cert = caTool.sign(name,pair.getPublic());
+      
+      transport = new BogusTransport(localHandle, cert);
+      pr = new BogusPR(name, transport, env);
+      pr.setCallback(new BogusApp());
 
     }
   }
@@ -531,15 +601,34 @@ public class CommitmentTest {
   private static HashProvider hasher;
   private static SecureHistoryFactory historyFactory;
   
-  public static void main(String[] agrs) throws IOException {
+  public static void main(String[] agrs) throws Exception {
     Environment env = new Environment();
-    hasher = new NullHashProvider();
-    historyFactory = new SecureHistoryFactoryImpl(hasher,env);
-    
-    Player alice = new Player("alice",1,env);
-    Player bob = new Player("bob",2,env);    
-        
-    alice.pr.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), null, null);
-//    alice.transport.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), null, null);
+    try {      
+      hasher = new NullHashProvider();
+      historyFactory = new SecureHistoryFactoryImpl(hasher,env);
+      
+      Player alice = new Player("alice",1,env);
+      Player bob = new Player("bob",2,env);    
+          
+      alice.pr.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
+      
+        public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
+            Exception reason) {
+          System.out.println("sendFailed("+msg+")");
+          reason.printStackTrace();
+        }
+      
+        public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
+          System.out.println("ack("+msg+")");
+        }
+      
+      }, null);
+  //    alice.transport.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), null, null);
+    } catch (Exception e) {
+      env.destroy();      
+      throw e;
+    }
+    Thread.sleep(5000);
+    env.destroy();
   }
 }

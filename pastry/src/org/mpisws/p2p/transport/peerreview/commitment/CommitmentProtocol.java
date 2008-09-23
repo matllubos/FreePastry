@@ -42,6 +42,8 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.peerreview.message.AckMessage;
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
@@ -51,7 +53,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  * be held while acknowledgments are pending, and it can retransmit messages a
  * few times when an acknowledgment is not received.
  */
-public interface CommitmentProtocol<Handle extends RawSerializable, Identifier> {
+public interface CommitmentProtocol<Handle extends RawSerializable, Identifier extends RawSerializable> {
 //  int lookupPeer(Identifier handle);
 //  PacketInfo *enqueueTail(struct packetInfo *queue, unsigned char *message, int msglen);
 //  void makeProgress(int idx);
@@ -62,6 +64,9 @@ public interface CommitmentProtocol<Handle extends RawSerializable, Identifier> 
   public MessageRequestHandle<Handle, ByteBuffer> handleOutgoingMessage(
       Handle target, ByteBuffer message, 
       MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
-      Map<String, Object> options) throws IOException;
+      Map<String, Object> options);
+  public void handleIncomingAck(Handle source, AckMessage<Identifier> ackMessage, Map<String, Object> options) throws IOException;
+  public void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException;
+  public void notifyCertificateAvailable(Identifier id);
 
 }

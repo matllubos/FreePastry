@@ -66,7 +66,11 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
   Logger logger;
   Serializer<Identifier> idSerializer;
   AuthenticatorSerializer authenticatorSerializer;
-  
+
+  public AuthenticatorStoreImpl(PeerReview<?, Identifier> peerreview) {
+    this(peerreview,false);
+  }
+
   public AuthenticatorStoreImpl(PeerReview<?, Identifier> peerreview, boolean allowDuplicateSeqs) {
     this.allowDuplicateSeqs = allowDuplicateSeqs;
     this.authenticators = new HashMap<Identifier, SortedSet<Authenticator>>();

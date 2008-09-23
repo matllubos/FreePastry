@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.pki.x509;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -84,6 +85,11 @@ import rice.pastry.standard.RandomNodeIdFactory;
 
 public class CAToolImpl implements CATool {
 
+  static {
+    // install BC
+    Security.addProvider(new BouncyCastleProvider());
+  }
+  
   static SecureRandom random = new SecureRandom();
   public static final String DEFAULT_SIGNATURE_ALGORITHM = "SHA1withRSA";
   
@@ -117,13 +123,18 @@ public class CAToolImpl implements CATool {
    * @throws InvalidAlgorithmParameterException
    */
   public static CAToolImpl getCATool(String CN, char[] pw) throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, FileNotFoundException, IOException, UnrecoverableKeyException, InvalidKeyException, IllegalStateException, SignatureException, InvalidAlgorithmParameterException {
+
     X509Certificate caCert;
     KeyPair caPair;
     
     File caStoreFile = new File(CA_STORE_FILENAME);
     if (caStoreFile.exists()) {
       KeyStore store = KeyStore.getInstance("UBER", "BC");
-      store.load(new FileInputStream(caStoreFile), pw);        
+      try {
+        store.load(new FileInputStream(caStoreFile), pw);        
+      } catch (EOFException eof) {
+        throw new RuntimeException("Invalid password for "+caStoreFile);
+      }
       PublicKey pub = (PublicKey)store.getKey(CA_STORE_PUBLIC, null);
       PrivateKey priv = (PrivateKey)store.getKey(CA_STORE_PRIVATE, null);
       caPair = new KeyPair(pub,priv);
@@ -266,9 +277,6 @@ public class CAToolImpl implements CATool {
       CN = id.toStringFull();
     }
         
-    // install BC
-    Security.addProvider(new BouncyCastleProvider());
-
     CATool caTool = getCATool(caName,pw);
    
     // make a KeyPair

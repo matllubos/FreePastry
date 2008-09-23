@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.peerreview;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -55,12 +56,21 @@ import rice.environment.Environment;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends 
-    IdentityTransportCallback<Handle, ByteBuffer>, IdentityTransport<Handle, Identifier>, PeerReviewConstants {
+    IdentityTransportCallback<Handle, Identifier>, IdentityTransport<Handle, Identifier>, PeerReviewConstants {
 
   /**
    * Option should map to an int < 255 to record the relevant length of the message.
    */
   public static final String RELEVANT_LENGTH = "PeerReview_Relevant_length";  
+
+  /**
+   * -> Boolean, tell peer review to not bother committing this message.  Don't sign it, log it, expect an ack
+   */
+  public static final String DONT_COMMIT = "PeerReview_ignore_commit";  
+
+  public static final byte PEER_REVIEW_PASSTHROUGH = 0;
+  public static final byte PEER_REVIEW_COMMIT = 1;
+  
   
   public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException;
 
@@ -74,8 +84,13 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
 
   void challengeSuspectedNode(Handle h);
 
-  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest, boolean b, PeerReviewMessage message, MessageCallback<Handle, PeerReviewMessage> deliverAckToMe);
+//  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest, boolean b, PeerReviewMessage message, MessageCallback<Handle, PeerReviewMessage> deliverAckToMe);
   
+  public MessageRequestHandle<Handle, ByteBuffer> transmit(Handle dest, 
+      ByteBuffer message,
+      MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
+      Map<String, Object> options);
+
   /**
    * Current time in millis, however, we depend on there being a timesource that is more discritized
    * than the "wall" clock.  It is only advanced on a timeout or a message receipt.

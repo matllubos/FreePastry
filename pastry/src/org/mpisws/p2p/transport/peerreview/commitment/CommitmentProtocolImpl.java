@@ -180,7 +180,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     return ret;
   }
   
-  protected void notifyCertificateAvailable(Identifier id) {
+  public void notifyCertificateAvailable(Identifier id) {
     makeProgress(id);
   }
   
@@ -284,7 +284,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     
     /* Get the public key. If we don't have it (yet), ask the peer to send it */
 
-    if (transport.hasCertificate(idx)) {
+    if (!transport.hasCertificate(idx)) {
       transport.requestCertificate(info.handle, idx, null, null);
       return;
     }
@@ -322,7 +322,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         info.currentTimeout = INITIAL_TIMEOUT_MICROS;
         info.retransmitsSoFar = 0;
         OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
-        peerreview.transmit(info.getHandle(), false, oudm, oudm);
+        try {
+          peerreview.transmit(info.getHandle(), oudm.serialize(), null, oudm.getOptions());
+        } catch (IOException ioe) {
+          info.xmitQueue.removeFirst();
+          oudm.sendFailed(ioe);
+          return;
+        }
       } else if (peerreview.getTime() > (info.lastTransmit + info.currentTimeout)) {
       
         /* Otherwise, retransmit the current packet a few times, up to the specified limit */
@@ -336,7 +342,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           info.currentTimeout = RETRANSMIT_TIMEOUT_MICROS;
           info.lastTransmit = peerreview.getTime();
           OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
-          peerreview.transmit(info.handle, false, oudm, oudm);
+          try {
+            peerreview.transmit(info.handle, oudm.serialize(), null, oudm.getOptions());
+          } catch (IOException ioe) {
+            info.xmitQueue.removeFirst();
+            oudm.sendFailed(ioe);
+            return;
+          }
         } else {
         
           /* If the peer still won't acknowledge the message, file a SEND challenge with its witnesses */
@@ -417,7 +429,11 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         /* Send the ACK */
 
         if (logger.level <= Logger.FINE) logger.log("Returning ACK to"+info.getHandle());
-        peerreview.transmit(info.handle, false, ret.a(), null);
+        try {
+          peerreview.transmit(info.handle, ret.a().serialize(), null, ret.a().getOptions());
+        } catch (IOException ioe) {
+          throw new RuntimeException("Major problem, ack couldn't be serialized." +ret.a(),ioe);
+        }
       } else {
         if (logger.level <= Logger.WARNING) logger.log("Cannot verify signature on message "+udm.getTopSeq()+" from "+info.getHandle()+"; discarding");
       }
@@ -442,7 +458,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   /**
    * Handle an incoming USERDATA message 
    */
-  protected void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException {
+  public void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException {
 //    char buf1[256];    
 
     /* Check whether the timestamp (in the sequence number) is close enough to our local time.
@@ -549,7 +565,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   }
   /* This is called if we receive an acknowledgment from another node */
 
-  protected void handleIncomingAck(Handle source, AckMessage<Identifier> ackMessage, Map<String, Object> options) throws IOException {
+  public void handleIncomingAck(Handle source, AckMessage<Identifier> ackMessage, Map<String, Object> options) throws IOException {
 //  AckMessage<Identifier> ackMessage = AckMessage.build(sib, peerreview.getIdSerializer(), hasher.getHashSizeBytes(), transport.signatureSizeInBytes());
 
     /* Acknowledgment: Log it (if we don't have it already) and send the next message, if any */

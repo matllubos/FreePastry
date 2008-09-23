@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -54,6 +55,8 @@ public abstract class PeerReviewMessage implements PeerReviewConstants, RawSeria
   
   public ByteBuffer serialize() throws IOException {
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    sob.writeByte(PeerReview.PEER_REVIEW_COMMIT);
+    sob.writeByte((byte)getType());
     serialize(sob);
     return sob.getByteBuffer();
   }

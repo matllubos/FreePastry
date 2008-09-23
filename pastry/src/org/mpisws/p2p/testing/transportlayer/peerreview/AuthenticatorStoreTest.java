@@ -203,12 +203,6 @@ public class AuthenticatorStoreTest {
       
     }
 
-    public void transmit(MyInetSocketAddress dest, boolean b,
-        PeerReviewMessage message) {
-      // TODO Auto-generated method stub
-      
-    }
-
     public long getEvidenceSeq() {
       // TODO Auto-generated method stub
       return 0;
@@ -220,19 +214,12 @@ public class AuthenticatorStoreTest {
       
     }
 
-    public MessageRequestHandle<MyInetSocketAddress, PeerReviewMessage> transmit(
-        MyInetSocketAddress dest, boolean b, PeerReviewMessage message,
-        MessageCallback<MyInetSocketAddress, PeerReviewMessage> deliverAckToMe) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    public void notifyCertificateAvailable(ByteBuffer id) {
+    public void notifyCertificateAvailable(MyInetSocketAddress id) {
       // TODO Auto-generated method stub
       
     }
 
-    public void statusChange(ByteBuffer id, int newStatus) {
+    public void statusChange(MyInetSocketAddress id, int newStatus) {
       // TODO Auto-generated method stub
       
     }
@@ -347,6 +334,14 @@ public class AuthenticatorStoreTest {
     }
 
     public PeerReviewCallback<MyInetSocketAddress, MyInetSocketAddress> getApp() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public MessageRequestHandle<MyInetSocketAddress, ByteBuffer> transmit(
+        MyInetSocketAddress dest, ByteBuffer message,
+        MessageCallback<MyInetSocketAddress, ByteBuffer> deliverAckToMe,
+        Map<String, Object> options) {
       // TODO Auto-generated method stub
       return null;
     }

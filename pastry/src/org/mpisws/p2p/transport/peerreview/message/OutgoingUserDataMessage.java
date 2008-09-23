@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.message;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -45,7 +46,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.PeerInfo;
 
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public class OutgoingUserDataMessage<Handle extends RawSerializable> extends UserDataMessage<Handle> implements MessageRequestHandle<Handle, ByteBuffer>, MessageCallback<Handle, PeerReviewMessage> {
+public class OutgoingUserDataMessage<Handle extends RawSerializable> extends UserDataMessage<Handle> implements MessageRequestHandle<Handle, ByteBuffer> {
   PeerInfo<Handle> pi;
   MessageCallback<Handle, ByteBuffer> deliverAckToMe;
   
@@ -81,13 +82,7 @@ public class OutgoingUserDataMessage<Handle extends RawSerializable> extends Use
     if (deliverAckToMe != null) deliverAckToMe.ack(this);
   }
 
-  public void ack(MessageRequestHandle<Handle, PeerReviewMessage> msg) {
-    // nothing, we don't actually ack until ack until we get back an AckMessage
-  }
-
-  public void sendFailed(MessageRequestHandle<Handle, PeerReviewMessage> msg,
-      Exception reason) {
-//    if (deliverAckToMe.sendFailed(msg, reason));
-    // just use retry?
+  public void sendFailed(IOException ioe) {
+    if (deliverAckToMe != null) deliverAckToMe.sendFailed(this, ioe);
   }
 }

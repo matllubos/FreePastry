@@ -56,6 +56,7 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
@@ -68,6 +69,8 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStoreImpl;
+import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
@@ -110,6 +113,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
   SecureHistoryFactory historyFactory;
   SecureHistory history;
+  long lastLogEntry = -1;
   
   public PeerReviewImpl(IdentityTransport<Handle, Identifier> transport,
       Environment env, Serializer<Handle> handleSerializer,
@@ -118,19 +122,29 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       AuthenticatorSerializer authenticatorSerialilzer) {
     super();
     this.transport = transport;
+    this.transport.setCallback(this);
     this.env = env;
     this.logger = env.getLogManager().getLogger(PeerReviewImpl.class, null);
     this.idSerializer = idSerializer;
     this.handleSerializer = handleSerializer;
     this.identifierExtractor = identifierExtractor;
+
     this.authenticatorSerialilzer = authenticatorSerialilzer; 
 
     this.historyFactory = new SecureHistoryFactoryImpl(transport, env);
   }
-  
+
+  boolean initialized = false;
   public void init(String historyName) throws IOException {    
+    authOutStore = new AuthenticatorStoreImpl<Identifier>(this);
+
     this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());
+    updateLogTime();
+
+    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport);
+
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
+    initialized = true;
   }
     
   public PeerReviewCallback<Handle, Identifier> getApp() {
@@ -145,15 +159,130 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     callback.incomingSocket(s);
   }
 
-  public MessageRequestHandle<Handle, ByteBuffer> sendMessage(Handle i, ByteBuffer m, MessageCallback<Handle, ByteBuffer> deliverAckToMe, Map<String, Object> options) {
-    throw new RuntimeException("todo: implement");
-//    return commitmentProtocol.handleOutgoingMessage(i, m, m.remaining(), deliverAckToMe, options);
-//    transport.sendMessage(i, m, deliverAckToMe, options);
-//    return ret;
+  public MessageRequestHandle<Handle, ByteBuffer> sendMessage(Handle target,
+      ByteBuffer message,
+      final MessageCallback<Handle, ByteBuffer> deliverAckToMe,
+      Map<String, Object> options) {
+    
+    /*
+     * If the 'datagram' flag is set, the message is passed through to the
+     * transport layer. This is used e.g. for liveness/proximity pings in
+     * Pastry.
+     */
+    if (options != null && options.containsKey(DONT_COMMIT)) {
+      final MessageRequestHandleImpl<Handle, ByteBuffer> ret = new MessageRequestHandleImpl<Handle, ByteBuffer>(
+          target, message, options);
+      ByteBuffer msg = ByteBuffer.allocate(message.remaining() + 1);
+      msg.put(PEER_REVIEW_PASSTHROUGH);
+      msg.put(message);
+      msg.flip();
+      ret.setSubCancellable(transport.sendMessage(target, msg,
+          new MessageCallback<Handle, ByteBuffer>() {
+
+            public void ack(MessageRequestHandle<Handle, ByteBuffer> msg) {
+              if (deliverAckToMe != null)
+                deliverAckToMe.ack(ret);
+            }
+
+            public void sendFailed(
+                MessageRequestHandle<Handle, ByteBuffer> msg, Exception reason) {
+              if (deliverAckToMe != null)
+                deliverAckToMe.sendFailed(ret, reason);
+            }
+          }, options));
+      return ret;
+    }
+
+    assert(initialized);
+
+    /* Maybe do some mischief for testing? */
+
+    // if (misbehavior)
+    // misbehavior.maybeTamperWithData((unsigned char*)message, msglen);
+    updateLogTime();
+
+    /* Pass the message to the Commitment protocol */
+    return commitmentProtocol.handleOutgoingMessage(target, message,
+        deliverAckToMe, options);
   }
 
-  public void messageReceived(Handle i, ByteBuffer m, Map<String, Object> options) throws IOException {
-    callback.messageReceived(i, m, options);
+  /* PeerReview only updates its internal clock when it returns to the main loop, but not
+  in between (e.g. while it is handling messages). When the clock needs to be
+  updated, this function is called. */
+
+  private void updateLogTime() {
+    long now = env.getTimeSource().currentTimeMillis();
+  
+    if (now > lastLogEntry) {
+      if (!history.setNextSeq(now * 1000000))
+        panic("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
+        
+      lastLogEntry = now;
+    }
+  }
+
+  public void messageReceived(Handle handle, ByteBuffer message, Map<String, Object> options) throws IOException {
+//    char buf1[256];
+    assert(initialized);
+    
+    /* Maybe do some mischief for testing */
+    
+//    if (misbehavior.dropIncomingMessage(handle, datagram, message, msglen))
+//      return;
+
+//    plog(1, "Received %s from %s (%d bytes)", datagram ? "DATAGRAM" : "MESSAGE", handle->render(buf1), msglen);
+//    dump(2, message, msglen);
+    
+    /* Deliver datagrams */
+    byte passthrough = message.get();
+    switch(passthrough) {
+    case PEER_REVIEW_PASSTHROUGH:
+//      switch (message.get()) {
+//      case MSG_AUTHPUSH :
+//        authPushProtocol.handleIncomingAuthenticators(handle, message, msglen);
+//        break;
+//      case MSG_AUTHREQ :
+//      case MSG_AUTHRESP :
+//        auditProtocol.handleIncomingDatagram(handle, message, msglen);
+//        break;
+//      case MSG_USERDGRAM :
+//        app.receive(handle, true, &message[1], msglen-1);
+//        break;
+//      default:
+//        panic("Unknown datagram type in PeerReview: #%d", message[0]);
+//        break;
+//      }
+      callback.messageReceived(handle, message, options);
+      break;
+    case PEER_REVIEW_COMMIT:
+      updateLogTime();
+      byte type = message.get();
+      switch (type) {
+      case MSG_ACK:
+        commitmentProtocol.handleIncomingAck(handle, AckMessage.build(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.signatureSizeInBytes(),options), options);
+        break;
+//      case MSG_CHALLENGE:
+//        challengeProtocol.handleChallenge(handle, message);
+//        break;
+//      case MSG_ACCUSATION:
+//      case MSG_RESPONSE:
+//        statementProtocol.handleIncomingStatement(handle, message);
+//        break;
+      case MSG_USERDATA:
+        UserDataMessage<Handle> udm = UserDataMessage.build(new SimpleInputBuffer(message), handleSerializer, transport.getHashSizeBytes(), transport.signatureSizeInBytes(), options);
+//      challengeProtocol.handleIncomingMessage(handle, message);
+        commitmentProtocol.handleIncomingMessage(handle, udm, options);
+        break;
+      default:
+        panic("Unknown message type in PeerReview: #"+ type);
+        break;
+      }
+    }    
+  }
+  
+  public void panic(String s) {
+    if (logger.level <= Logger.SEVERE) logger.log("panic:"+s);
+    env.destroy();
   }
   
   public void acceptMessages(boolean b) {
@@ -320,10 +449,6 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     throw new RuntimeException("todo: implement");
   }
 
-  public void transmit(Handle dest, boolean b, PeerReviewMessage message) {
-    throw new RuntimeException("todo: implement");
-  }
-
   /**
    * Called internally by other classes if they have found evidence against one of our peers.
    * We ask the EvidenceTransferProtocol to send it to the corresponding witness set. 
@@ -349,17 +474,29 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 //    free(accusation);
   }
 
-  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest,
-      boolean b, PeerReviewMessage message,
-      MessageCallback<Handle, PeerReviewMessage> deliverAckToMe) {
-    throw new RuntimeException("implement");
+  /**
+   * Note, must include PEER_REVIEW_COMMIT and the type
+   * 
+   * @param dest
+   * @param message
+   * @param deliverAckToMe
+   * @param options
+   * @return
+   */
+  public MessageRequestHandle<Handle, ByteBuffer> transmit(Handle dest, 
+      ByteBuffer message,
+      MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
+      Map<String, Object> options) {
+    return transport.sendMessage(dest, message, deliverAckToMe, options);
   }
 
-  public void notifyCertificateAvailable(ByteBuffer id) {
-    throw new RuntimeException("implement");
+  public void notifyCertificateAvailable(Identifier id) {
+    commitmentProtocol.notifyCertificateAvailable(id); 
+//    authPushProtocol.notifyCertificateAvailable(id);
+//    statementProtocol.notifyCertificateAvailable(id);
   }
 
-  public void statusChange(ByteBuffer id, int newStatus) {
+  public void statusChange(Identifier id, int newStatus) {
     throw new RuntimeException("implement");
   }
 

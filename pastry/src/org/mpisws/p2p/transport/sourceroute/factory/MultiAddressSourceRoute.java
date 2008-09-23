@@ -66,7 +66,7 @@ public class MultiAddressSourceRoute extends SourceRoute<MultiInetSocketAddress>
   }
 
   public int getSerializedLength() {
-    int ret = 5; // version+numhops
+    int ret = 1; // numhops
 
     // the size of all the EISAs
     for (MultiInetSocketAddress i : path) {
