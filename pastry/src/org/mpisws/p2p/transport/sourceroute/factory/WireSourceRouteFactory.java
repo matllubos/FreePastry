@@ -48,9 +48,14 @@ import org.mpisws.p2p.transport.sourceroute.SourceRouteFactory;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 
+/**
+ * TODO: may be a good idea to special case the single hop, as is done in multi-inet.
+ * @author Jeff Hoye
+ *
+ */
 public class WireSourceRouteFactory implements SourceRouteFactory<InetSocketAddress> {
 
-  public SourceRoute<InetSocketAddress> build(InputBuffer buf) throws IOException {
+  public SourceRoute<InetSocketAddress> build(InputBuffer buf, InetSocketAddress localAddr, InetSocketAddress lastHop) throws IOException {
     byte numInPath = buf.readByte();
     ArrayList<InetSocketAddress> path = new ArrayList<InetSocketAddress>(numInPath);
     for (int i = 0; i < numInPath; i++) {

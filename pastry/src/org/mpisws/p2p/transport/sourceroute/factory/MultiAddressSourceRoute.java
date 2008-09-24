@@ -60,14 +60,16 @@ public class MultiAddressSourceRoute extends SourceRoute<MultiInetSocketAddress>
 
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeByte((byte) path.size());
+    if (path.size() == 2) return; // special case direct connection
     for (MultiInetSocketAddress i : path) {
       i.serialize(buf);
     }
   }
 
   public int getSerializedLength() {
+    if (path.size() == 2) return 1;
     int ret = 1; // numhops
-
+    
     // the size of all the EISAs
     for (MultiInetSocketAddress i : path) {
       ret += i.getSerializedLength();

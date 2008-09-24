@@ -232,7 +232,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
         if (logger.level <= Logger.FINER) logger.log("incomingSocket("+socket+"):receiveSelectResult()");
         if (canWrite || !canRead) throw new IOException("Expected to read! "+canRead+","+canWrite);
         try {
-          final SourceRoute<Identifier> sr = srFactory.build(sib);
+          final SourceRoute<Identifier> sr = srFactory.build(sib, etl.getLocalIdentifier(), socka.getIdentifier());
           
           if (logger.level <= Logger.FINEST) logger.log("Read socket "+sr);
           if (sr.getLastHop().equals(etl.getLocalIdentifier())) {    
@@ -395,7 +395,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
 
     SourceRoute<Identifier> tempSr;
     try {
-      tempSr = srFactory.build(sib);
+      tempSr = srFactory.build(sib, etl.getLocalIdentifier(), i);
     } catch (Exception e) {
       // Got NegativeArrayException from serialized message
       errorHandler.receivedException(srFactory.getSourceRoute(etl.getLocalIdentifier(), i), e);

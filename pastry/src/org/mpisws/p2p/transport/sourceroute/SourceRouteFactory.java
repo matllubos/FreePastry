@@ -46,7 +46,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 public interface SourceRouteFactory<Identifier> {
   public SourceRoute<Identifier> getSourceRoute(List<Identifier> route);
   public SourceRoute<Identifier> reverse(SourceRoute<Identifier> route);
-  public SourceRoute<Identifier> build(InputBuffer buf) throws IOException;
+  public SourceRoute<Identifier> build(InputBuffer buf, Identifier local, Identifier lastHop) throws IOException;
   public SourceRoute<Identifier> getSourceRoute(Identifier local, Identifier dest);  
   public SourceRoute<Identifier> getSourceRoute(Identifier local);  
 }

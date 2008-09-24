@@ -49,8 +49,15 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public class MultiAddressSourceRouteFactory implements SourceRouteFactory<MultiInetSocketAddress> {
 
-  public SourceRoute<MultiInetSocketAddress> build(InputBuffer buf) throws IOException {
+  /**
+   * 2 in the path is a special case, and we can just generate it from the local and last hops
+   */
+  public SourceRoute<MultiInetSocketAddress> build(InputBuffer buf, MultiInetSocketAddress local, MultiInetSocketAddress lastHop) throws IOException {
     byte numInPath = buf.readByte();
+    if (numInPath == 2) {
+      return new MultiAddressSourceRoute(lastHop, local);
+    }
+    
     ArrayList<MultiInetSocketAddress> path = new ArrayList<MultiInetSocketAddress>(numInPath);
     for (int i = 0; i < numInPath; i++) {
       path.add(MultiInetSocketAddress.build(buf));
