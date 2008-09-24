@@ -74,8 +74,8 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   Handle senderHandle;
   byte[] hTopMinusOne;
   byte[] signature;
-  short relevantLen; // = message.remaining() or < 255
-  ByteBuffer payload;
+  int relevantLen; 
+  private byte[] payload;
   
   Map<String, Object> options;
   short type = MSG_USERDATA;
@@ -88,11 +88,22 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
     this.senderHandle = senderHandle;
     hTopMinusOne = topMinusOne;
     this.signature = sig;
+    this.relevantLen = relevantlen;
 
-    assert((relevantlen == message.remaining()) || (relevantlen < 255));    
-    this.payload = message;
+    assert((relevantlen == message.remaining()) || (relevantlen < 255));        
+    if (message.remaining() == message.array().length) {
+      this.payload = message.array();
+    } else {
+      this.payload = new byte[message.remaining()];
+      System.arraycopy(message.array(), message.position(), payload, 0, payload.length);
+    }
+//    System.out.println("Ctor:"+toString());
   }
 
+  public String toString() {
+    return "UDM:"+topSeq+","+senderHandle+","+MathUtils.toHex(hTopMinusOne)+","+MathUtils.toHex(signature)+","+relevantLen+","+payload.length;
+  }
+  
   public short getType() {
     return type;
   }
@@ -102,13 +113,14 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
     senderHandle.serialize(buf);
     buf.write(hTopMinusOne, 0, hTopMinusOne.length);
     buf.write(signature, 0, signature.length); 
-    byte relevantCode = (relevantLen == payload.remaining()) ? (byte)0xFF : (byte)relevantLen;
+    byte relevantCode = (relevantLen == payload.length) ? (byte)0xFF : (byte)relevantLen;
     buf.writeByte(relevantCode);
-    if (relevantCode == 0xFF) {
-      buf.write(payload.array(), payload.position(), payload.remaining());
-    } else {
-      buf.write(payload.array(), payload.position(), relevantLen);      
-    }
+//    if (relevantCode == 0xFF) {
+//    System.out.println("serializing payload:"+payload.length);
+      buf.write(payload, 0, payload.length);
+//    } else {
+//      buf.write(payload.array(), payload.position(), relevantLen);      
+//    }
   }
 
   public static <H extends RawSerializable> UserDataMessage<H> build(InputBuffer buf, Serializer<H> serializer, int hashSize, int sigSize, Map<String, Object> options) throws IOException {
@@ -120,8 +132,15 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
     buf.read(sig);
     byte relevantCode = buf.readByte();
     int len = MathUtils.uByteToInt(relevantCode);
+//    System.out.println("deserializing payload:"+buf.bytesRemaining());
+
     byte[] msg = new byte[buf.bytesRemaining()];
-    buf.read(msg);
+    buf.read(msg);    
+    
+    if (len == 0xFF) {
+      len = msg.length;
+    }
+    
     return new UserDataMessage<H>(seq, handle, hash, sig, ByteBuffer.wrap(msg), len, options);
   }
 
@@ -141,12 +160,12 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
     return signature;
   }
 
-  public short getRelevantLen() {
+  public int getRelevantLen() {
     return relevantLen;
   }
 
   public ByteBuffer getPayload() {
-    return payload;
+    return ByteBuffer.wrap(payload);
   }
   
   public EvtRecv<Handle> getReceiveEvent(HashProvider hasher) {
@@ -162,21 +181,21 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
    * @param hasher
    * @return
    */
-  public byte[] getInnerHash(Serializer<Handle> serializer, HashProvider hasher) throws IOException {
+  public byte[] getInnerHash(ByteBuffer header, HashProvider hasher) throws IOException {
     /* The peer will have logged a RECV entry, and the signature is calculated over that
     entry. To verify the signature, we must reconstruct that RECV entry locally */
 
-    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    serializer.serialize(senderHandle, sob);
-    sob.writeLong(topSeq);
-    sob.writeByte((relevantLen < payload.remaining()) ? 1 : 0);
-    ByteBuffer recvEntryHeader = sob.getByteBuffer();
+//    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+//    serializer.serialize(senderHandle, sob);
+//    sob.writeLong(topSeq);
+//    sob.writeByte((relevantLen < payload.remaining()) ? 1 : 0);
+//    ByteBuffer recvEntryHeader = sob.getByteBuffer();
 
-    if (relevantLen < payload.remaining()) {
-      byte[] irrelevantHash = hasher.hash(ByteBuffer.wrap(payload.array(), relevantLen, payload.remaining()-relevantLen));
-      return hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload.array(), payload.position(), relevantLen), ByteBuffer.wrap(irrelevantHash));
+    if (relevantLen < payload.length) {
+      byte[] irrelevantHash = hasher.hash(ByteBuffer.wrap(payload, relevantLen, payload.length-relevantLen));
+      return hasher.hash(header, ByteBuffer.wrap(payload, 0, relevantLen), ByteBuffer.wrap(irrelevantHash));
     } else {
-      return hasher.hash(recvEntryHeader, ByteBuffer.wrap(payload.array(), payload.position(), payload.remaining()));
+      return hasher.hash(header, ByteBuffer.wrap(payload));
     }
     
   }
@@ -186,7 +205,7 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   }
 
   public int getPayloadLen() {
-    return payload.remaining();
+    return payload.length;
   }
 
   public Map<String, Object> getOptions() {

@@ -59,7 +59,7 @@ public class EvtRecv<Handle extends RawSerializable> extends HistoryEvent {
   }
   
   public EvtRecv(Handle senderHandle, long topSeq, ByteBuffer payload,
-      short relevantLen, HashProvider hasher) {
+      int relevantLen, HashProvider hasher) {
     this.senderHandle = senderHandle;
     this.senderSeq = topSeq;
     this.payload = new byte[payload.remaining()];

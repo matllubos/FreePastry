@@ -34,30 +34,63 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.identity;
+package org.mpisws.p2p.transport.peerreview.history.hasher;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SignatureException;
-import java.security.cert.X509Certificate;
-import java.util.Map;
 
+import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
+import rice.p2p.util.MathUtils;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-/**
- * Stores some Certificates, sign/verify, can fetch Certificates
- * @author Jeff Hoye
- *
- * @param <Identifier>
- */
-public interface CertificateManager<Handle, Identifier> {
-  public byte[] sign(byte[] bytes);
-  public void verify(Identifier id, ByteBuffer msg, ByteBuffer signature) throws SignatureException, UnknownCertificateException ;
-  public boolean hasCertificate(Identifier id);
-  public Cancellable requestCertificate(Handle source, Identifier certHolder, Continuation<X509Certificate, Exception> c, Map<String, Object> options);
-  public short signatureSizeInBytes();
+public class SHA1HashProvider implements HashProvider {
+  private MessageDigest md;
+  
+  public SHA1HashProvider() throws NoSuchAlgorithmException {
+//    try {
+      md = MessageDigest.getInstance("SHA");
+//    } catch ( NoSuchAlgorithmException e ) {
+//      Logger logger = env.getLogManager().getLogger(getClass(), null);
+//      if (logger.level <= Logger.SEVERE) logger.log(
+//        "No SHA support!" );
+//    }
+
+  }
+  
+  public byte[] getEmptyHash() {
+    return new byte[getHashSizeBytes()];
+  }
+
+  public short getHashSizeBytes() {
+    return 20;
+  }
+
+  public synchronized byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
+//    System.out.println("Hashing "+seq+","+type+","+MathUtils.toBase64(nodeHash)+","+MathUtils.toBase64(contentHash));
+    try {
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      sob.writeLong(seq);
+      sob.writeShort(type);
+      sob.write(nodeHash);
+      sob.write(contentHash);
+      return hash(sob.getByteBuffer());
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
+
+  public synchronized byte[] hash(ByteBuffer... hashMe) {    
+//    System.out.println("Hashing "+hashMe.length);
+    for (ByteBuffer bb : hashMe) {
+//      System.out.println(MathUtils.toHex(bb.array()));
+      md.update(bb);
+    }
+    byte[] ret = md.digest();
+//    System.out.println("hash: "+MathUtils.toBase64(ret));
+    return ret;
+  }
+  
 }

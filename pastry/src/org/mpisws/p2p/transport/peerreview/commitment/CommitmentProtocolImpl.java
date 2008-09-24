@@ -278,7 +278,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
    */    
   protected void makeProgress(Identifier idx) {
     PeerInfo<Handle> info = peer.get(idx);
-    if (info.xmitQueue.isEmpty() && info.recvQueue.isEmpty()) {
+    if (info == null || (info.xmitQueue.isEmpty() && info.recvQueue.isEmpty())) {
       return;
     }
     
@@ -382,10 +382,12 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
       UserDataMessage<Handle> udm = info.recvQueue.removeFirst();
       
       /* Extract the authenticator */
-      byte[] innerHash;
       Authenticator authenticator;
       try {
-        innerHash = udm.getInnerHash(peerreview.getHandleSerializer(), transport);
+        SimpleOutputBuffer sob = new SimpleOutputBuffer();
+        peerreview.getIdentifierExtractor().extractIdentifier(myHandle).serialize(sob);
+        sob.writeByte((udm.getRelevantLen() < udm.getPayloadLen()) ? 1 : 0);
+        byte[] innerHash = udm.getInnerHash(sob.getByteBuffer(), transport);
       
         authenticator = peerreview.extractAuthenticator(
             peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), 
@@ -520,7 +522,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     }
     
     /* Sign the authenticator */
-      
+//    System.out.println("Signing: "+top.getSeq()+" "+MathUtils.toBase64(top.getHash()));
     hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(top.getSeq())), ByteBuffer.wrap(top.getHash()));
 
     byte[] signature = transport.sign(hToSign);
@@ -530,6 +532,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     ByteBuffer relevantMsg = message;
     if (relevantlen < message.remaining()) {
       relevantMsg = ByteBuffer.wrap(message.array(), message.position(), relevantlen);
+    } else {
+      relevantMsg = ByteBuffer.wrap(message.array(), message.position(), message.remaining());
     }
     try {
       history.appendEntry(EVT_SENDSIGN, true, relevantMsg, ByteBuffer.wrap(signature));
@@ -585,7 +589,17 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         
         /* Now we're ready to check the signature */
 
-        byte[] innerHash = udm.getInnerHash(peerreview.getHandleSerializer(), transport);
+        /* The peer will have logged a RECV entry, and the signature is calculated over that
+        entry. To verify the signature, we must reconstruct that RECV entry locally */
+
+        SimpleOutputBuffer sob = new SimpleOutputBuffer();
+        peerreview.getHandleSerializer().serialize(udm.getSenderHandle(), sob);
+        sob.writeLong(udm.getTopSeq());
+        sob.writeByte((udm.getRelevantLen() < udm.getPayloadLen()) ? 1 : 0);
+        ByteBuffer recvEntryHeader = sob.getByteBuffer();
+
+        byte[] innerHash = udm.getInnerHash(recvEntryHeader, transport);
+
         
         Authenticator authenticator = peerreview.extractAuthenticator(
             ackMessage.getNodeId(), ackMessage.getRecvEntrySeq(), EVT_RECV, innerHash, 

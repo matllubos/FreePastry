@@ -345,6 +345,13 @@ public class AuthenticatorStoreTest {
       // TODO Auto-generated method stub
       return null;
     }
+
+    public void verify(MyInetSocketAddress id, ByteBuffer msg,
+        ByteBuffer signature) throws SignatureException,
+        UnknownCertificateException {
+      // TODO Auto-generated method stub
+      
+    }
   }
 
   class TestAuthenticatorStore extends AuthenticatorStoreImpl<MyInetSocketAddress> {

@@ -114,7 +114,7 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
       Map<String, Object> options) {
     
     if (knownValues.containsKey(principal)) {
-      c.receiveResult(knownValues.get(principal));
+      if (c != null) c.receiveResult(knownValues.get(principal));
       return null;
     }
     

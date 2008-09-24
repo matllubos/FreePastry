@@ -53,12 +53,15 @@ import java.util.Map;
 
 import org.mpisws.p2p.pki.x509.CATool;
 import org.mpisws.p2p.pki.x509.CAToolImpl;
+import org.mpisws.p2p.pki.x509.X509Serializer;
+import org.mpisws.p2p.pki.x509.X509SerializerImpl;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
@@ -74,9 +77,11 @@ import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
+import org.mpisws.p2p.transport.peerreview.history.hasher.SHA1HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransprotLayerImpl;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
@@ -392,57 +397,37 @@ public class CommitmentTest {
     
   }
   
-  static class BogusTransport implements IdentityTransport<HandleImpl, IdImpl>{
+  static class BogusTransport implements TransportLayer<HandleImpl, ByteBuffer>{
     public static Map<HandleImpl, BogusTransport> peerTable = new HashMap<HandleImpl, BogusTransport>();
     
-    public Map<IdImpl, X509Certificate> certs = new HashMap<IdImpl, X509Certificate>();
+//    public Map<IdImpl, X509Certificate> certs = new HashMap<IdImpl, X509Certificate>();
     
     HandleImpl localIdentifier;
     
     public BogusTransport(HandleImpl handle, X509Certificate cert) {
       peerTable.put(handle, this);
       this.localIdentifier = handle;
-      certs.put(handle.id, cert);
+//      certs.put(handle.id, cert);
     }
     
-    public boolean hasCertificate(IdImpl id) {
-      return certs.containsKey(id);
-    }
-
-    public Cancellable requestCertificate(HandleImpl source, IdImpl certHolder,
-        Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-      System.out.println("requestCert("+source+")");
-      X509Certificate cert = peerTable.get(source).certs.get(certHolder);
-      if (cert != null) {
-        certs.put(certHolder, cert);
-        if (c != null) c.receiveResult(cert);
-        callback.notifyCertificateAvailable(certHolder);
-      } else {
-        UnknownValueException ex = new UnknownValueException(source, certHolder);
-        if (c != null) {
-          c.receiveException(ex);
-        } else {
-          ex.printStackTrace();
-        }
-      }
-      return null;
-    }
-
-    public byte[] sign(byte[] bytes) {
-      return EMPTY_ARRAY;
-    }
-
-    public short signatureSizeInBytes() {
-      return (short)EMPTY_ARRAY.length;
-    }
-
-    public void verify(IdImpl id, byte[] msg, int moff, int mlen,
-        byte[] signature, int soff, int slen) throws InvalidKeyException,
-        NoSuchAlgorithmException, NoSuchProviderException, SignatureException,
-        UnknownCertificateException {
-      // do nothing, implies always accept
-    }
-    
+//    public Cancellable requestCertificate(HandleImpl source, IdImpl certHolder,
+//        Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
+//      System.out.println("requestCert("+source+")");
+//      X509Certificate cert = peerTable.get(source).certs.get(certHolder);
+//      if (cert != null) {
+//        certs.put(certHolder, cert);
+//        if (c != null) c.receiveResult(cert);
+//        callback.notifyCertificateAvailable(certHolder);
+//      } else {
+//        UnknownValueException ex = new UnknownValueException(source, certHolder);
+//        if (c != null) {
+//          c.receiveException(ex);
+//        } else {
+//          ex.printStackTrace();
+//        }
+//      }
+//      return null;
+//    }
 
     public void acceptMessages(boolean b) {
       throw new RuntimeException("implement");
@@ -470,7 +455,7 @@ public class CommitmentTest {
       return null;
     }
 
-    IdentityTransportCallback<HandleImpl, IdImpl> callback;
+    TransportLayerCallback<HandleImpl, ByteBuffer> callback;
     
     private void receiveMessage(HandleImpl i, ByteBuffer m) {
       try {
@@ -482,7 +467,7 @@ public class CommitmentTest {
 
     public void setCallback(
         TransportLayerCallback<HandleImpl, ByteBuffer> callback) {
-      this.callback = (IdentityTransportCallback<HandleImpl, IdImpl>)callback;
+      this.callback = callback;
     }
 
     public void setErrorHandler(ErrorHandler<HandleImpl> handler) {
@@ -492,22 +477,6 @@ public class CommitmentTest {
     public void destroy() {
       throw new RuntimeException("implement");
     }
-
-    public byte[] getEmptyHash() {
-      return EMPTY_ARRAY;
-    }
-
-    public short getHashSizeBytes() {
-      return (short)EMPTY_ARRAY.length;
-    }
-
-    public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
-      return EMPTY_ARRAY;
-    }
-
-    public byte[] hash(ByteBuffer... hashMe) {
-      return EMPTY_ARRAY;
-    }    
   }
   
   static class BogusApp implements PeerReviewCallback<HandleImpl, IdImpl> {
@@ -555,6 +524,8 @@ public class CommitmentTest {
     
   }
 
+  static Map<HandleImpl, IdentityTransprotLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransprotLayerImpl<HandleImpl,IdImpl>>();
+  
   static class Player {
     static final CATool caTool;
     static final KeyPairGenerator keyPairGen;
@@ -578,7 +549,7 @@ public class CommitmentTest {
     HandleImpl localHandle;
     
     BogusPR pr;
-    IdentityTransport<HandleImpl, IdImpl> transport;
+    IdentityTransprotLayerImpl<HandleImpl, IdImpl> transport;
 
     public Player(String name, int id, Environment env) throws Exception {
       super();
@@ -590,8 +561,42 @@ public class CommitmentTest {
       this.localHandle = new HandleImpl(name, new IdImpl(id));
       KeyPair pair = keyPairGen.generateKeyPair();    
       X509Certificate cert = caTool.sign(name,pair.getPublic());
-      
-      transport = new BogusTransport(localHandle, cert);
+      BogusTransport t1 = new BogusTransport(localHandle, cert);
+      transport = new IdentityTransprotLayerImpl<HandleImpl, IdImpl>(
+          new IdSerializer(), new X509SerializerImpl(),this.localHandle.id,
+          cert,pair.getPrivate(),t1,new SHA1HashProvider(),env) {
+        @Override
+        public Cancellable requestCertificate(HandleImpl source, final IdImpl certHolder,
+            final Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
+//          System.out.println("requestCert("+source+")");
+          return idTLTable.get(source).requestValue(source, certHolder, new Continuation<X509Certificate, Exception>() {
+          
+            public void receiveResult(X509Certificate result) {
+              knownValues.put(certHolder, result);
+              if (c != null) c.receiveResult(result);
+            }
+          
+            public void receiveException(Exception exception) {
+              if (c != null) c.receiveException(exception);
+            }
+          
+          }, options);
+//          if (cert != null) {
+//            knownValues.put(certHolder, cert);
+//            if (c != null) c.receiveResult(cert);
+//            callback.notifyCertificateAvailable(certHolder);
+//          } else {
+//            UnknownValueException ex = new UnknownValueException(source, certHolder);
+//            if (c != null) {
+//              c.receiveException(ex);
+//            } else {
+//              ex.printStackTrace();
+//            }
+//          }
+//          return null;
+        }        
+      };
+      idTLTable.put(localHandle, transport);
       pr = new BogusPR(name, transport, env);
       pr.setCallback(new BogusApp());
 
@@ -607,9 +612,30 @@ public class CommitmentTest {
       hasher = new NullHashProvider();
       historyFactory = new SecureHistoryFactoryImpl(hasher,env);
       
-      Player alice = new Player("alice",1,env);
-      Player bob = new Player("bob",2,env);    
+      final Player alice = new Player("alice",1,env);
+      final Player bob = new Player("bob",2,env);    
           
+//      bob.pr.requestCertificate(alice.localHandle, alice.localHandle.id, new Continuation<X509Certificate, Exception>() {
+//      
+//        public void receiveResult(X509Certificate result) {
+//          try {            
+//            byte[] msg = alice.transport.hash(ByteBuffer.wrap("foo".getBytes()));
+////            byte[] msg = "foo".getBytes();
+//            byte[] signature = alice.transport.sign(msg);
+//            bob.transport.verify(alice.localHandle.id, ByteBuffer.wrap(msg), ByteBuffer.wrap(signature));      
+//          } catch (Exception e) {
+//            e.printStackTrace();
+//          }
+//        }
+//      
+//        public void receiveException(Exception exception) {
+//          // TODO Auto-generated method stub
+//      
+//        }
+//      
+//      }, null);
+      
+      
       alice.pr.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
       
         public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,

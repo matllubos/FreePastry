@@ -74,6 +74,7 @@ import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
@@ -86,15 +87,8 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 public class IdentityTransprotLayerImpl<Identifier, I> extends 
      TableTransprotLayerImpl<Identifier, I, X509Certificate> 
      implements IdentityTransport<Identifier, I> {
-  @Override
-  public void setCallback(
-      TransportLayerCallback<Identifier, ByteBuffer> callback) {
-    ((MyStore<Identifier, I>)knownValues).callback = (IdentityTransportCallback<Identifier, I>)callback;
-    super.setCallback(callback);
-  }
-
   public static final String DEFAULT_SIGNATURE_ALGORITHM = "SHA1withRSA";
-    
+  public static final short DEFAULT_SIGNATURE_SIZE = 96;
   String signatureAlgorithm = DEFAULT_SIGNATURE_ALGORITHM;
   String signatureImpl = "BC";
   
@@ -127,7 +121,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     @Override
     public X509Certificate put(I key, X509Certificate value) {
       X509Certificate ret = super.put(key, value);     
-      if (ret == null) {
+      if (ret == null && callback != null) {
         callback.notifyCertificateAvailable(key);
       }
       return ret;
@@ -136,6 +130,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
   public IdentityTransprotLayerImpl(Serializer<I> iSerializer, X509Serializer cSerializer, I localId, X509Certificate localCert, PrivateKey localPrivate, TransportLayer<Identifier, ByteBuffer> tl, HashProvider hasher, Environment env) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
     super(iSerializer, cSerializer, getTableStore(localId, localCert, iSerializer, cSerializer, null), tl, env);
     this.tl = tl;
+    tl.setCallback(this);
     this.hasher = hasher;
     
     this.logger = env.getLogManager().getLogger(IdentityTransprotLayerImpl.class, null);
@@ -145,6 +140,13 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     signer.initSign(localPrivate);
   }
   
+  @Override
+  public void setCallback(
+      TransportLayerCallback<Identifier, ByteBuffer> callback) {
+    ((MyStore<Identifier, I>)knownValues).callback = (IdentityTransportCallback<Identifier, I>)callback;
+    super.setCallback(callback);
+  }
+
   /**
    * CERT_REQUEST, int requestId, Identifier
    */
@@ -161,7 +163,9 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
   public byte[] sign(byte[] bytes) {
     try {
       signer.update(bytes);
-      return signer.sign();
+      byte[] ret = signer.sign();
+//      System.out.println("Signature of "+MathUtils.toBase64(bytes)+" was "+MathUtils.toBase64(ret));
+      return ret;
     } catch (SignatureException se) {
       RuntimeException throwMe = new RuntimeException("Couldn't sign "+bytes);
       throwMe.initCause(se);
@@ -169,13 +173,20 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     }
   }
 
-  public void verify(I id, byte[] msg, int moff, int mlen, byte[] signature, int soff, int slen) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException, UnknownCertificateException {
+  public void verify(I id, ByteBuffer msg, ByteBuffer signature) throws SignatureException, UnknownCertificateException {
     Signature verifier = getVerifier(id);
     if (verifier == null) throw new UnknownCertificateException(getLocalIdentifier(),id);
+//    msg.array()[0] = 55;
+//    System.out.println("Verifiying of "+MathUtils.toBase64(msg.array())+" was "+MathUtils.toBase64(signature.array()));
+//    System.out.println("Verifiying of "+msg+" was "+signature);
+
     synchronized(verifier) {
-      verifier.update(msg, moff, mlen);
-      verifier.verify(signature, soff, slen);
+      verifier.update(msg);
+      if (!verifier.verify(signature.array(), signature.position(), signature.remaining())) {
+        throw new SignatureException("Signature by "+id+" failed.");
+      }
     }
+//    System.out.println("Signature success by "+id);
   }
   
   /**
@@ -187,21 +198,25 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
    * @throws NoSuchProviderException
    * @throws InvalidKeyException
    */
-  public Signature getVerifier(I i) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException {
+  public Signature getVerifier(I i) {
     Signature ret = verifiers.get(i);
-    if (ret == null) {
-      if (knownValues.containsKey(i)) {
-        X509Certificate cert = knownValues.get(i);
-        ret = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM, "BC");
-        ret.initVerify(cert);
-        verifiers.put(i, ret);
+    try {
+      if (ret == null) {
+        if (knownValues.containsKey(i)) {
+          X509Certificate cert = knownValues.get(i);
+          ret = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM, "BC");
+          ret.initVerify(cert);
+          verifiers.put(i, ret);
+        }
       }
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
     return ret;
   }
 
   public short signatureSizeInBytes() {
-    throw new RuntimeException("implement me.");
+    return DEFAULT_SIGNATURE_SIZE;
   }
 
   public byte[] getEmptyHash() {

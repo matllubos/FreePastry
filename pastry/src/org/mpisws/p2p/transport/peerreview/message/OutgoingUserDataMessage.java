@@ -64,7 +64,7 @@ public class OutgoingUserDataMessage<Handle extends RawSerializable> extends Use
   }
 
   public ByteBuffer getMessage() {
-    return payload;
+    return getPayload();
   }
 
   public Map<String, Object> getOptions() {

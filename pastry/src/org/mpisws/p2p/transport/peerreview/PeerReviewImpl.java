@@ -81,6 +81,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
@@ -339,12 +340,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException {
 //    *(long long*)&authenticator[0] = seq;
     
-    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    sob.writeLong(seq);
-    sob.writeShort(entryType);
-    sob.write(hTopMinusOne);
-    sob.write(entryHash);
-    byte[] hash = transport.hash(sob.getByteBuffer());
+    byte[] hash = transport.hash(seq,entryType,hTopMinusOne, entryHash);
     Authenticator ret = new Authenticator(seq,hash,signature);
     if (addAuthenticatorIfValid(authOutStore, id, ret)) {
       return ret;
@@ -374,11 +370,12 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
      assert(transport.hasCertificate(subject));
 
      try {
+//       System.out.println("Verifying "+auth.getSeq()+" "+MathUtils.toBase64(auth.getHash()));
        SimpleOutputBuffer sob = new SimpleOutputBuffer();
        sob.writeLong(auth.getSeq());
        sob.write(auth.getHash());
        byte[] signedHash = transport.hash(sob.getByteBuffer());
-       transport.verify(subject, signedHash, 0, signedHash.length, auth.getSignature(), 0, auth.getSignature().length);
+       transport.verify(subject, ByteBuffer.wrap(signedHash), ByteBuffer.wrap(auth.getSignature()));
        
 //    char buf1[1000];
        
@@ -415,8 +412,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
        store.addAuthenticator(subject, auth);
        return true;
        
-    } catch (Exception e) {
+    } catch (SignatureException e) {
       return false;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
    
@@ -501,43 +500,41 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
   public boolean hasCertificate(Identifier id) {
-    throw new RuntimeException("implement");
+    return transport.hasCertificate(id);
   }
 
   public Cancellable requestCertificate(Handle source, Identifier certHolder,
       Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-    throw new RuntimeException("implement");
+    return transport.requestCertificate(source, certHolder, c, options);
   }
 
   public byte[] sign(byte[] bytes) {
-    throw new RuntimeException("implement");
+    return transport.sign(bytes);
   }
 
   public short signatureSizeInBytes() {
-    throw new RuntimeException("implement");
+    return transport.signatureSizeInBytes();
   }
 
-  public void verify(Identifier id, byte[] msg, int moff, int mlen,
-      byte[] signature, int soff, int slen) throws InvalidKeyException,
-      NoSuchAlgorithmException, NoSuchProviderException, SignatureException,
+  public void verify(Identifier id, ByteBuffer msg, ByteBuffer signature) throws SignatureException,
       UnknownCertificateException {
-    throw new RuntimeException("implement");
+    transport.verify(id, msg, signature);
   }
 
   public byte[] getEmptyHash() {
-    throw new RuntimeException("implement");
+    return transport.getEmptyHash();
   }
 
   public short getHashSizeBytes() {
-    throw new RuntimeException("implement");
+    return transport.getHashSizeBytes();
   }
 
   public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
-    throw new RuntimeException("implement");
+    return transport.hash(seq, type, nodeHash, contentHash);
   }
 
   public byte[] hash(ByteBuffer... hashMe) {
-    throw new RuntimeException("implement");
+    return transport.hash(hashMe);
   }
 
 
