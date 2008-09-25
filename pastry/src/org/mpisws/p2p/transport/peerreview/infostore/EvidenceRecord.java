@@ -36,10 +36,22 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+public class EvidenceRecord<Handle, Identifier> {
+  public Identifier originator;
+  public long timestamp;
+  int evidenceLen;
+  Handle interestedParty;
+  boolean isProof;
+  boolean hasResponse;
+  
+  public EvidenceRecord(Identifier originator, long timestamp, boolean isProof,
+      boolean hasResponse, int evidenceLen, Handle interestedParty) {
+    this.originator = originator;
+    this.timestamp = timestamp;
+    this.isProof = isProof;
+    this.hasResponse = hasResponse;
+    this.evidenceLen = evidenceLen;
+    this.interestedParty = interestedParty;
+  }
 
-public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
-  public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence);
-  int getStatus(Identifier id);
 }

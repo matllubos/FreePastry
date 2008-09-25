@@ -36,6 +36,8 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
-public interface Evidence {
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
+public interface Evidence extends PeerReviewConstants {
+  public short getType();
 }

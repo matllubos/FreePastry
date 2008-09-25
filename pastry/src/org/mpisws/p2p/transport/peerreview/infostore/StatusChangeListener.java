@@ -36,10 +36,6 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-
-public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
-  public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence);
-  int getStatus(Identifier id);
+public interface StatusChangeListener<Identifier> {
+  void notifyStatusChange(Identifier id, int newStatus);
 }

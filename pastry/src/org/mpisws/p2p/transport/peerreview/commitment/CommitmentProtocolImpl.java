@@ -76,12 +76,12 @@ import rice.selector.TimerTask;
 public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements 
     CommitmentProtocol<Handle, Identifier>, PeerReviewConstants {
   public int MAX_PEERS = 250;
-  public int INITIAL_TIMEOUT_MICROS = 1000000;
-  public int RETRANSMIT_TIMEOUT_MICROS = 1000000;
+  public int INITIAL_TIMEOUT_MILLIS = 1000;
+  public int RETRANSMIT_TIMEOUT_MILLIS = 1000;
   public int RECEIVE_CACHE_SIZE = 100;
   public int MAX_RETRANSMISSIONS = 2;
   public int TI_PROGRESS = 1;
-  public int PROGRESS_INTERVAL_MICROS = 1000000;
+  public int PROGRESS_INTERVAL_MILLIS = 1000;
   public int MAX_ENTRIES_PER_MS = 1000000;      /* Max number of entries per millisecond */
 
   /**
@@ -141,7 +141,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
       }    
     };
     
-    peerreview.getEnvironment().getSelectorManager().schedule(makeProgressTask, PROGRESS_INTERVAL_MICROS, PROGRESS_INTERVAL_MICROS);    
+    peerreview.getEnvironment().getSelectorManager().schedule(makeProgressTask, PROGRESS_INTERVAL_MILLIS, PROGRESS_INTERVAL_MILLIS);    
   }
   
   /**
@@ -319,7 +319,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
       if (info.numOutstandingPackets == 0) {
         info.numOutstandingPackets++;
         info.lastTransmit = peerreview.getTime();
-        info.currentTimeout = INITIAL_TIMEOUT_MICROS;
+        info.currentTimeout = INITIAL_TIMEOUT_MILLIS;
         info.retransmitsSoFar = 0;
         OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
         try {
@@ -339,7 +339,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
               " (lastxmit="+info.lastTransmit+", timeout="+info.currentTimeout+", type="+
               info.xmitQueue.getFirst().getType()+")");
           info.retransmitsSoFar++;
-          info.currentTimeout = RETRANSMIT_TIMEOUT_MICROS;
+          info.currentTimeout = RETRANSMIT_TIMEOUT_MILLIS;
           info.lastTransmit = peerreview.getTime();
           OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
           try {

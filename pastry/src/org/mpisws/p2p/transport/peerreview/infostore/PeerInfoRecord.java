@@ -36,10 +36,24 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
-public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
-  public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence);
-  int getStatus(Identifier id);
+public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
+  Identifier id;
+  byte lastCheckedAuth;
+  int status;
+  List<EvidenceRecord<Handle, Identifier>> evidence;
+  LinkedList<EvidenceRecord<Handle, Identifier>> unansweredEvidence;
+
+  public PeerInfoRecord(Identifier id) {
+    this.id = id;
+    //rec->lastCheckedAuth = NULL;
+    evidence = new ArrayList<EvidenceRecord<Handle,Identifier>>();
+    unansweredEvidence = new LinkedList<EvidenceRecord<Handle,Identifier>>();
+    status = STATUS_TRUSTED;
+  }
 }
