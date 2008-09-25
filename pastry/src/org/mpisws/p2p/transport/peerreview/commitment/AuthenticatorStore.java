@@ -57,7 +57,7 @@ public interface AuthenticatorStore<Identifier> {
    * @param authenticator
    * @throws IOException 
    */
-  public void addAuthenticator(Identifier id, Authenticator authenticator) throws IOException;
+  public void addAuthenticator(Identifier id, Authenticator authenticator);
   
   /**
    * Commits the Authenticators in memory to disk, overwriting the old store.
@@ -74,6 +74,7 @@ public interface AuthenticatorStore<Identifier> {
   public int numAuthenticatorsFor(Identifier id, long minseq, long maxseq);
   
   public void flushAuthenticatorsFor(Identifier id, long minseq, long maxseq);
+  public void flushAuthenticatorsFor(Identifier id);
 
   public Authenticator statAuthenticator(Identifier id, long seq);
 
@@ -81,6 +82,7 @@ public interface AuthenticatorStore<Identifier> {
    * Retrieve all the authenticators within a given range of sequence numbers
    */
   public List<Authenticator> getAuthenticators(Identifier id, long minseq, long maxseq);
+  public List<Authenticator> getAuthenticators(Identifier id);
   public List<Identifier> getSubjects();
   public int getNumSubjects();
   

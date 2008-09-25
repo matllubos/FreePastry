@@ -34,30 +34,11 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.identity;
+package org.mpisws.p2p.transport.peerreview.evidence;
 
-import java.nio.ByteBuffer;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SignatureException;
-import java.security.cert.X509Certificate;
-import java.util.Map;
+import java.util.List;
 
-
-import rice.Continuation;
-import rice.p2p.commonapi.Cancellable;
-
-/**
- * Stores some Certificates, sign/verify, can fetch Certificates
- * @author Jeff Hoye
- *
- * @param <Identifier>
- */
-public interface CertificateManager<Handle, Identifier> {
-  public byte[] sign(byte[] bytes);
-  public void verify(Identifier id, ByteBuffer msg, ByteBuffer signature) throws SignatureException, UnknownCertificateException ;
-  public boolean hasCertificate(Identifier id);
-  public Cancellable requestCertificate(Handle source, Identifier certHolder, Continuation<X509Certificate, Exception> c, Map<String, Object> options);
-  public short getSignatureSizeBytes();
+public interface EvidenceTransferProtocol<Handle, Identifier> {
+  public void requestWitnesses(List<Identifier> subjects);
+  public void sendEvidence(Handle source, Identifier id);
 }

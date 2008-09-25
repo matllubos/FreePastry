@@ -260,7 +260,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       byte type = message.get();
       switch (type) {
       case MSG_ACK:
-        commitmentProtocol.handleIncomingAck(handle, AckMessage.build(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.signatureSizeInBytes(),options), options);
+        commitmentProtocol.handleIncomingAck(handle, AckMessage.build(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes(),options), options);
         break;
 //      case MSG_CHALLENGE:
 //        challengeProtocol.handleChallenge(handle, message);
@@ -270,7 +270,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 //        statementProtocol.handleIncomingStatement(handle, message);
 //        break;
       case MSG_USERDATA:
-        UserDataMessage<Handle> udm = UserDataMessage.build(new SimpleInputBuffer(message), handleSerializer, transport.getHashSizeBytes(), transport.signatureSizeInBytes(), options);
+        UserDataMessage<Handle> udm = UserDataMessage.build(new SimpleInputBuffer(message), handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes(), options);
 //      challengeProtocol.handleIncomingMessage(handle, message);
         commitmentProtocol.handleIncomingMessage(handle, udm, options);
         break;
@@ -353,7 +353,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
    * new) authenticator and adds it to our local store if (a) it hasn't been
    * recorded before, and (b) its signature is valid.
    */
-  boolean addAuthenticatorIfValid(AuthenticatorStore<Identifier> store, Identifier subject, Authenticator auth) {
+  public boolean addAuthenticatorIfValid(AuthenticatorStore<Identifier> store, Identifier subject, Authenticator auth) {
     // see if we can exit early
     Authenticator existingAuth = store.statAuthenticator(subject, auth.getSeq());
     if (existingAuth != null) {       
@@ -437,7 +437,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
   public int getSignatureSizeInBytes() {
-    return transport.signatureSizeInBytes();
+    return transport.getSignatureSizeBytes();
   }
 
   public IdentifierExtractor<Handle, Identifier> getIdentifierExtractor() {
@@ -512,8 +512,8 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     return transport.sign(bytes);
   }
 
-  public short signatureSizeInBytes() {
-    return transport.signatureSizeInBytes();
+  public short getSignatureSizeBytes() {
+    return transport.getSignatureSizeBytes();
   }
 
   public void verify(Identifier id, ByteBuffer msg, ByteBuffer signature) throws SignatureException,

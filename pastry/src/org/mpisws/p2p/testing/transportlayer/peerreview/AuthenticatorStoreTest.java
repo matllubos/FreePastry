@@ -253,7 +253,7 @@ public class AuthenticatorStoreTest {
       return null;
     }
 
-    public short signatureSizeInBytes() {
+    public short getSignatureSizeBytes() {
       // TODO Auto-generated method stub
       return 0;
     }
@@ -351,6 +351,13 @@ public class AuthenticatorStoreTest {
         UnknownCertificateException {
       // TODO Auto-generated method stub
       
+    }
+
+    public boolean addAuthenticatorIfValid(
+        AuthenticatorStore<MyInetSocketAddress> store,
+        MyInetSocketAddress subject, Authenticator auth) {
+      // TODO Auto-generated method stub
+      return false;
     }
   }
 

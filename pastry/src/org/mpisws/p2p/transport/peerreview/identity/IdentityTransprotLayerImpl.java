@@ -215,7 +215,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     return ret;
   }
 
-  public short signatureSizeInBytes() {
+  public short getSignatureSizeBytes() {
     return DEFAULT_SIGNATURE_SIZE;
   }
 

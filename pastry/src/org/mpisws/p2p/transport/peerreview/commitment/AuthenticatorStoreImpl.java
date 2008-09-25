@@ -178,17 +178,26 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
     return authenticators.get(id);
   }
 
-  public void addAuthenticator(Identifier id, Authenticator authenticator) throws IOException {
-    if (authFile != null) {
-      idSerializer.serialize(id,authFile);
-      authenticator.serialize(authFile);
+  public void addAuthenticator(Identifier id, Authenticator authenticator) {
+    try {
+      if (authFile != null) {
+        idSerializer.serialize(id,authFile);
+        authenticator.serialize(authFile);
+      }
+      addAuthenticatorToMemory(id, authenticator);
+    } catch (IOException ioe) {
+      throw new RuntimeException("Error in addAuthenticator("+id+","+authenticator+","+authFile+")",ioe);
     }
-    addAuthenticatorToMemory(id, authenticator);
   }
 
   public void flushAuthenticatorsFor(Identifier id, long minseq, long maxseq) {
     flushAuthenticatorsFromMemory(id, minseq, maxseq);
   }
+
+  public void flushAuthenticatorsFor(Identifier id) {
+    flushAuthenticatorsFor(id, Long.MIN_VALUE, Long.MAX_VALUE);
+  }
+  
 
   public void garbageCollect() throws IOException {
     if (authFile == null) return;
@@ -220,6 +229,10 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
       return new ArrayList<Authenticator>(subList);
     }    
     return Collections.emptyList();
+  }
+
+  public List<Authenticator> getAuthenticators(Identifier id) {
+    return getAuthenticators(id,Long.MIN_VALUE, Long.MAX_VALUE);
   }
 
   public Authenticator getLastAuthenticatorBefore(Identifier id, long seq) {
