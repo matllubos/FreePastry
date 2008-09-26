@@ -89,9 +89,11 @@ public class ProcessingRequest implements Runnable,
 
   public int compareTo(ProcessingRequest request) {
     if (priority == request.getPriority()) {
-      return (int)(seq-request.seq);
+      if (seq > request.seq) return 1;
+      return -1;
     }
-    return priority - request.getPriority();
+    if (priority > request.getPriority()) return 1;
+    return -1;
   }
 
   public void run() {
