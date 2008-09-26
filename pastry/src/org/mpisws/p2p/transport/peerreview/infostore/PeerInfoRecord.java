@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
@@ -116,23 +117,21 @@ public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
   public class EvidenceRecordImpl implements EvidenceRecord<Handle, Identifier> {
     public Identifier originator;
     public long timestamp;
-    int evidenceLen;
     Handle interestedParty;
     boolean isProof;
 
     public EvidenceRecordImpl(Identifier originator, long timestamp) {
-      this(originator,timestamp, false, -1, null);
+      this(originator,timestamp, false, null);
     }
 
-    public EvidenceRecordImpl(Identifier originator, long timestamp, boolean isProof, int evidenceLen, Handle interestedParty) {
+    public EvidenceRecordImpl(Identifier originator, long timestamp, boolean isProof, Handle interestedParty) {
       this.originator = originator;
       this.timestamp = timestamp;
       this.isProof = isProof;
-      this.evidenceLen = evidenceLen;
       this.interestedParty = interestedParty;
     }
     
-    boolean hasResponse() {      
+    public boolean hasResponse() {      
       Map<Long, EvidenceRecordImpl> foo = answeredEvidence.get(originator);
       if (foo == null) return false;
       return foo.containsKey(timestamp);
@@ -148,10 +147,6 @@ public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
         status = STATUS_SUSPECTED;
         store.notifyStatusChanged(subject, STATUS_SUSPECTED);
       }
-    }
-
-    public void setEvidenceLen(int length) {
-      this.evidenceLen = length;
     }
 
     public void setInterestedParty(Handle interestedParty) {
@@ -204,5 +199,31 @@ public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
     auth.serialize(buf);
     buf.close();
     lastCheckedAuth = auth;    
+  }
+
+  public EvidenceRecord<Handle, Identifier> getFirstUnansweredChallenge() {
+    return getFirstUnansweredChallenge(false);
+  }
+  
+  /**
+   * 
+   * @param proof only return proofs
+   * @return
+   */
+  protected EvidenceRecord<Handle, Identifier> getFirstUnansweredChallenge(boolean proof) {
+    for (Map<Long, EvidenceRecordImpl> foo : unansweredEvidence.values()) {
+      for (EvidenceRecordImpl bar : foo.values()) {
+        if (proof) {
+          if (bar.isProof) return bar;
+        } else {
+          return bar;
+        }
+      }
+    }
+    return null;
+  }
+
+  public EvidenceRecord<Handle, Identifier> getFirstProof() {
+    return getFirstUnansweredChallenge(true);
   }
 }

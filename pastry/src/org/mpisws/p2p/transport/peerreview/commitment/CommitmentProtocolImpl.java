@@ -360,10 +360,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           long evidenceSeq = peerreview.getEvidenceSeq();
           challenge.setType(CHAL_SEND);
 
-          infoStore.addEvidence(peerreview.getIdentifierExtractor().extractIdentifier(myHandle), 
-              peerreview.getIdentifierExtractor().extractIdentifier(info.handle), 
-              evidenceSeq, challenge);
-          
+          try {
+            infoStore.addEvidence(peerreview.getIdentifierExtractor().extractIdentifier(myHandle), 
+                peerreview.getIdentifierExtractor().extractIdentifier(info.handle), 
+                evidenceSeq, challenge, null);
+          } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+          }
           peerreview.sendEvidenceToWitnesses(peerreview.getIdentifierExtractor().extractIdentifier(info.handle), 
               evidenceSeq, challenge);
           

@@ -68,6 +68,7 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
 import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStoreImpl;
@@ -117,13 +118,15 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   SecureHistory history;
   long lastLogEntry = -1;
   IdStrTranslator<Identifier> stringTranslator;
+  EvidenceSerializer evidenceSerializer;
   
   public PeerReviewImpl(IdentityTransport<Handle, Identifier> transport,
       Environment env, Serializer<Handle> handleSerializer,
       Serializer<Identifier> idSerializer,      
       IdentifierExtractor<Handle, Identifier> identifierExtractor,
       IdStrTranslator<Identifier> stringTranslator,
-      AuthenticatorSerializer authenticatorSerialilzer) {
+      AuthenticatorSerializer authenticatorSerialilzer,
+      EvidenceSerializer evidenceSerializer) {
     super();
     this.transport = transport;
     this.transport.setCallback(this);
@@ -133,6 +136,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.idSerializer = idSerializer;
     this.handleSerializer = handleSerializer;
     this.identifierExtractor = identifierExtractor;
+    this.evidenceSerializer = evidenceSerializer;
 
     this.authenticatorSerialilzer = authenticatorSerialilzer; 
 
@@ -146,7 +150,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());
     updateLogTime();
 
-    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport, stringTranslator, authenticatorSerialilzer, env);
+    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport, stringTranslator, authenticatorSerialilzer, evidenceSerializer, env);
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
     initialized = true;
@@ -406,7 +410,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
               */
              ProofInconsistent proof = new ProofInconsistent(auth,existingAuth);
         long evidenceSeq = getEvidenceSeq();
-        infoStore.addEvidence(identifierExtractor.extractIdentifier(transport.getLocalIdentifier()), subject, evidenceSeq, proof);
+        infoStore.addEvidence(identifierExtractor.extractIdentifier(transport.getLocalIdentifier()), subject, evidenceSeq, proof, null);
         sendEvidenceToWitnesses(subject, evidenceSeq, proof);
          return false;
        }

@@ -34,12 +34,15 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.infostore;
+package org.mpisws.p2p.transport.peerreview.evidence;
 
-public interface EvidenceRecord<Handle, Identifier> {
-  void setInterestedParty(Handle interestedParty);
-  void setIsProof(boolean isProof);
-  boolean isProof();
-  void setHasResponse();
-  boolean hasResponse();
+import java.io.IOException;
+
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+
+public interface Response {
+
+  short getType();
+  public void serialize(OutputBuffer buf) throws IOException;
+
 }

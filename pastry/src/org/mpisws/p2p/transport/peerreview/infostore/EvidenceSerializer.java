@@ -36,10 +36,13 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
-public interface EvidenceRecord<Handle, Identifier> {
-  void setInterestedParty(Handle interestedParty);
-  void setIsProof(boolean isProof);
-  boolean isProof();
-  void setHasResponse();
-  boolean hasResponse();
+import java.io.IOException;
+
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+
+
+public interface EvidenceSerializer {
+
+  Evidence deserialize(InputBuffer buf) throws IOException;
+
 }

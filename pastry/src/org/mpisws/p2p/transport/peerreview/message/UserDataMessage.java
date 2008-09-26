@@ -70,6 +70,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  *
  */
 public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewMessage implements Evidence {
+  public static final short TYPE = MSG_USERDATA;
   long topSeq;
   Handle senderHandle;
   byte[] hTopMinusOne;

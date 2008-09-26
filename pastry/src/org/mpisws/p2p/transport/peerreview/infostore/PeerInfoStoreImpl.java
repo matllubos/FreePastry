@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.infostore;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,7 +47,9 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
+import org.mpisws.p2p.transport.peerreview.evidence.Response;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.FileInputBuffer;
 import org.mpisws.p2p.transport.util.FileOutputBuffer;
 
@@ -75,8 +78,11 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   protected Logger logger;
   IdStrTranslator<Identifier> stringTranslator;
   AuthenticatorSerializer authSerializer;
+
+  EvidenceSerializer evidenceSerializer;
   
-  public PeerInfoStoreImpl(IdentityTransport<Handle, Identifier> transport, IdStrTranslator<Identifier> stringTranslator, AuthenticatorSerializer authSerializer, Environment env) {
+  
+  public PeerInfoStoreImpl(IdentityTransport<Handle, Identifier> transport, IdStrTranslator<Identifier> stringTranslator, AuthenticatorSerializer authSerializer, EvidenceSerializer evidenceSerializer, Environment env) {
     this.authenticatorSizeBytes = -1;
     this.peerInfoRecords = new HashMap<Identifier, PeerInfoRecord<Handle, Identifier>>();
     this.directory = null;
@@ -86,6 +92,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     this.stringTranslator = stringTranslator;
     this.authSerializer = authSerializer;
     this.environment = env;
+    this.evidenceSerializer = evidenceSerializer;
     this.logger = env.getLogManager().getLogger(PeerInfoStoreImpl.class, null);
   }
   
@@ -115,7 +122,9 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   }
 
   /* Locates evidence, or creates a new entry if 'create' is set to true */
-
+  public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp) {
+    return findEvidence(originator, subject, timestamp, false);
+  }
   public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp, boolean create) {
     PeerInfoRecord<Handle, Identifier> rec = find(subject, create);
     if (rec == null)
@@ -130,7 +139,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
    */
 
   public void markEvidenceAvailable(Identifier originator, Identifier subject,
-      long timestamp, int length, boolean isProof, Handle interestedParty) {
+      long timestamp, boolean isProof, Handle interestedParty) {
     PeerInfoRecord<Handle, Identifier> rec = find(subject, true);
     EvidenceRecord<Handle, Identifier> evi = rec.findEvidence(originator,
         timestamp, true);
@@ -138,7 +147,6 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     assert (rec != null && evi != null);
     /* Create or update metadata */
 
-    evi.setEvidenceLen(length);
     if (interestedParty != null) {
       evi.setInterestedParty(interestedParty);
     }
@@ -160,7 +168,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   
   /* Add a new piece of evidence */
 
-  void addEvidence(Identifier originator, Identifier subject, long timestamp, Evidence evidence, int evidenceLen, Handle interestedParty) throws IOException {
+  public void addEvidence(Identifier originator, Identifier subject, long timestamp, Evidence evidence, Handle interestedParty) throws IOException {
 //    char namebuf[200], buf1[200], buf2[200];
     if (logger.level <= Logger.FINE) logger.log("addEvidence(orig="+originator+", subj="+subject+", seq="+timestamp+")");
 
@@ -168,15 +176,27 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
 
     /* Write the actual evidence to disk */
 //  sprintf(namebuf, "%s/%s-%s-%lld.%s", dirname, subject->render(buf1), originator->render(buf2), timestamp, proof ? "proof" : "challenge");
-    File outFile = new File(directory, stringTranslator.toString(subject)+"-"+stringTranslator.toString(originator)+"-"+timestamp+ (proof ? "proof" : "challenge"));
+
+    
+    File outFile = getFile(subject, originator, timestamp, (proof ? "proof" : "challenge"));
         
     FileOutputBuffer buf = new FileOutputBuffer(outFile);
+    if (evidence.getType() == UserDataMessage.TYPE) {
+      buf.writeByte((byte)CHAL_SEND);
+    } else {
+      buf.writeByte((byte)evidence.getType());      
+    }
     evidence.serialize(buf);
     buf.close();
     
     /* Update metadata in memory */
     
-    markEvidenceAvailable(originator, subject, timestamp, evidenceLen, proof, interestedParty);
+    markEvidenceAvailable(originator, subject, timestamp, proof, interestedParty);
+  }
+
+  protected File getFile(Identifier subject, Identifier originator, long timestamp, String suffix) {
+    File outFile = new File(directory, stringTranslator.toString(subject)+"-"+stringTranslator.toString(originator)+"-"+timestamp+"."+suffix);  
+    return outFile;
   }
   
   /* Find out whether a node is TRUSTED, SUSPECTED or EXPOSED */
@@ -242,9 +262,9 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
         long seq = Long.parseLong(parts[2]);
 
         if (suffix.equals("challenge")) {
-          markEvidenceAvailable(originator, subject, seq, (int)ent.length(), false, null);
+          markEvidenceAvailable(originator, subject, seq, false, null);
         } else if (suffix.equals("proof")) {
-          markEvidenceAvailable(originator, subject, seq, (int)ent.length(), true, null);
+          markEvidenceAvailable(originator, subject, seq, true, null);
         } else if (suffix.equals("response")){
           markResponseAvailable(originator, subject, seq);
         }
@@ -284,15 +304,74 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
       throw new RuntimeException(ioe);
     }
   }
+  
+  /* Retrieve some information about a given piece of evidence */
+  // Use findEvidence()
+//  bool PeerInfoStore::statEvidence(Identifier *originator, Identifier *subject, long long timestamp, int *evidenceLen, bool *isProof, bool *haveResponse, NodeHandle **interestedParty)
 
-  public void addEvidence(Identifier localIdentifier, Identifier subject,
-      long evidenceSeq, Evidence evidence) {
-    throw new RuntimeException("todo: implement");
+  /**
+   * Get the actual bytes of a piece of evidence
+   */
+  public Evidence getEvidence(Identifier originator, Identifier subject, long timestamp) throws IOException {
+    EvidenceRecord<Handle, Identifier> evi = findEvidence(originator, subject, timestamp, false);
+    
+    assert(evi != null);
+    
+    File infile = getFile(subject, originator, timestamp, evi.isProof() ? "proof" : "challenge");
+    // done automatically by FIB
+//    if (!infile.exists()) throw new FileNotFoundException("Cannot read '"+infile+"'");
+
+    FileInputBuffer buf = new FileInputBuffer(infile, logger);
+    Evidence e = evidenceSerializer.deserialize(buf);
+    buf.close();
+    return e;
   }
 
+  /**
+   * Record a response to a challenge
+   */
+  void addResponse(Identifier originator, Identifier subject, long timestamp, Response response) throws IOException {
+    EvidenceRecord<Handle, Identifier> evi = findEvidence(originator, subject, timestamp);
+    assert(evi != null && !evi.isProof() && !evi.hasResponse());
+    
+//    char namebuf[200], buf1[200], buf2[200];
+//    sprintf(namebuf, "%s/%s-%s-%lld.response", dirname, subject->render(buf1), originator->render(buf2), timestamp);
+//    
+//    FILE *outfile = fopen(namebuf, "w+");
+//    if (!outfile) 
+//      panic("Cannot create '%s'", namebuf);
+//      
+    FileOutputBuffer outfile = new FileOutputBuffer(getFile(subject, originator, timestamp, "response"));
+    outfile.writeByte((byte)response.getType());
+    response.serialize(outfile);
+    outfile.close();
+    
+    markResponseAvailable(originator, subject, timestamp);
+  }
+
+  public String getHistoryName(Identifier subject) {
+    return new File(directory,stringTranslator.toString(subject)+"-log").toString();
+  }
+  
   public void notifyStatusChanged(Identifier subject, int newStatus) {
     if (!notificationEnabled || listener == null) return;
     listener.notifyStatusChange(subject, newStatus);
+  }
+
+  /**
+   * Look up the first unanswered challenge to a given node
+   */
+  EvidenceRecord<Handle, Identifier> statFirstUnansweredChallenge(Identifier subject) {
+    PeerInfoRecord<Handle, Identifier> rec = find(subject);
+    if (rec == null)
+      return null;
+    return rec.getFirstUnansweredChallenge();
+  }
+
+  public EvidenceRecord<Handle, Identifier> statProof(Identifier subject) {
+    PeerInfoRecord<Handle, Identifier> rec = find(subject);
+    if (rec == null) return null;
+    return rec.getFirstProof();
   }
 
 }

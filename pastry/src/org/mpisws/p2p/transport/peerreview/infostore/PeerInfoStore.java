@@ -36,11 +36,13 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
+import java.io.IOException;
+
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
 public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
   public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence);
+  void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence, Handle interestedParty) throws IOException;
   int getStatus(Identifier id);
   public void notifyStatusChanged(Identifier subject, int value);
 }
