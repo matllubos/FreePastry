@@ -36,22 +36,11 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
-public class EvidenceRecord<Handle, Identifier> {
-  public Identifier originator;
-  public long timestamp;
-  int evidenceLen;
-  Handle interestedParty;
-  boolean isProof;
-  boolean hasResponse;
-  
-  public EvidenceRecord(Identifier originator, long timestamp, boolean isProof,
-      boolean hasResponse, int evidenceLen, Handle interestedParty) {
-    this.originator = originator;
-    this.timestamp = timestamp;
-    this.isProof = isProof;
-    this.hasResponse = hasResponse;
-    this.evidenceLen = evidenceLen;
-    this.interestedParty = interestedParty;
-  }
+public interface EvidenceRecord<Handle, Identifier> {
 
+  void setEvidenceLen(int length);
+  void setInterestedParty(Handle interestedParty);
+  void setIsProof(boolean isProof);
+  boolean isProof();
+  void setHasResponse();
 }

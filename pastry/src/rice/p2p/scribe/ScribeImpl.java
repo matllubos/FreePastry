@@ -963,7 +963,7 @@ public class ScribeImpl implements Scribe, MaintainableScribe, Application, Obse
    *
    * @param topic The topic
    * @param child THe child to add
-   * @param id THe seuqnce number
+   * @param id The seuqnce number
    * @return true if we need to subscribe to this topic because implicitly subscribing
    */
   protected boolean addChildHelper(Topic topic, NodeHandle child) {

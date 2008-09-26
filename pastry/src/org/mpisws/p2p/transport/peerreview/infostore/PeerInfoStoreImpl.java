@@ -37,10 +37,22 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.infostore;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.util.FileInputBuffer;
+import org.mpisws.p2p.transport.util.FileOutputBuffer;
+
+import rice.environment.Environment;
+import rice.environment.logging.Logger;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 /**
  * In this class, the PeerReview library keeps information about its peers.
@@ -52,20 +64,29 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   IdentityTransport<Handle, Identifier> transport;
 
   File directory;
-  // so far this should be a Map<Identifier,PeerInfoRecord>
-  List<PeerInfoRecord<Handle, Identifier>> peerInfoRecords;
+  // Subject -> PeerInfoRecord
+  Map<Identifier, PeerInfoRecord<Handle, Identifier>> peerInfoRecords;
   int authenticatorSizeBytes;
   StatusChangeListener<Identifier> listener;
   boolean notificationEnabled;
 
+  protected Environment environment;
+
+  protected Logger logger;
+  IdStrTranslator<Identifier> stringTranslator;
+  AuthenticatorSerializer authSerializer;
   
-  public PeerInfoStoreImpl(IdentityTransport<Handle, Identifier> transport) {
+  public PeerInfoStoreImpl(IdentityTransport<Handle, Identifier> transport, IdStrTranslator<Identifier> stringTranslator, AuthenticatorSerializer authSerializer, Environment env) {
     this.authenticatorSizeBytes = -1;
-    this.peerInfoRecords = new ArrayList<PeerInfoRecord<Handle,Identifier>>();
+    this.peerInfoRecords = new HashMap<Identifier, PeerInfoRecord<Handle, Identifier>>();
     this.directory = null;
     this.notificationEnabled = true;
     this.transport = transport;
     this.listener = null;
+    this.stringTranslator = stringTranslator;
+    this.authSerializer = authSerializer;
+    this.environment = env;
+    this.logger = env.getLogManager().getLogger(PeerInfoStoreImpl.class, null);
   }
   
   public static boolean isProof(Evidence e) {
@@ -83,9 +104,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
 //        panic("Cannot evaluate isProof("+e.getType()+")");
     }    
   }
-  
-
-  
+    
   public void setStatusChangeListener(StatusChangeListener<Identifier> listener) {
     this.listener = listener;
   }
@@ -101,56 +120,179 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     PeerInfoRecord<Handle, Identifier> rec = find(subject, create);
     if (rec == null)
       return null;
-      
-    for (EvidenceRecord<Handle, Identifier> er : rec.evidence) {      
-      if ((er.originator.equals(originator)) && (er.timestamp == timestamp)) {
-        return er;
-      }
+    return rec.findEvidence(originator, timestamp, create);
+  }
+  
+  /**
+   * This is called when new evidence becomes available, or (during startup) for
+   * all evidence files on disk. We only keep some metadata in memory; the
+   * actual evidence is stored in a separate file on disk.
+   */
+
+  public void markEvidenceAvailable(Identifier originator, Identifier subject,
+      long timestamp, int length, boolean isProof, Handle interestedParty) {
+    PeerInfoRecord<Handle, Identifier> rec = find(subject, true);
+    EvidenceRecord<Handle, Identifier> evi = rec.findEvidence(originator,
+        timestamp, true);
+
+    assert (rec != null && evi != null);
+    /* Create or update metadata */
+
+    evi.setEvidenceLen(length);
+    if (interestedParty != null) {
+      evi.setInterestedParty(interestedParty);
     }
 
-    if (!create)
-      return null;
-      
-    EvidenceRecord<Handle, Identifier> evi = new EvidenceRecord<Handle, Identifier>(originator, timestamp,false,false,-1,null);
-//    evi->next = rec->evidence;
-//    evi->nextUnanswered = rec->unansweredEvidence;
-//    evi->prevUnanswered = NULL;
+    evi.setIsProof(isProof);
+  }
 
-//    if (rec.unansweredEvidence != null) {
-//      assert(rec.unansweredEvidence.prevUnanswered == NULL);
-      rec.unansweredEvidence.add(evi);
+  /**
+   * This is called when another node answers one of our challenges. Again, we
+   * only update the metadata in memory; the actual response is kept in a file
+   * on disk.
+   */
+  public void markResponseAvailable(Identifier originator, Identifier subject, long timestamp) {
+   PeerInfoRecord<Handle, Identifier> rec = find(subject, true);
+   EvidenceRecord<Handle, Identifier> evi = rec.findEvidence(originator, timestamp, true);
+
+   evi.setHasResponse(); 
+  }
+  
+  /* Add a new piece of evidence */
+
+  void addEvidence(Identifier originator, Identifier subject, long timestamp, Evidence evidence, int evidenceLen, Handle interestedParty) throws IOException {
+//    char namebuf[200], buf1[200], buf2[200];
+    if (logger.level <= Logger.FINE) logger.log("addEvidence(orig="+originator+", subj="+subject+", seq="+timestamp+")");
+
+    boolean proof = isProof(evidence);
+
+    /* Write the actual evidence to disk */
+//  sprintf(namebuf, "%s/%s-%s-%lld.%s", dirname, subject->render(buf1), originator->render(buf2), timestamp, proof ? "proof" : "challenge");
+    File outFile = new File(directory, stringTranslator.toString(subject)+"-"+stringTranslator.toString(originator)+"-"+timestamp+ (proof ? "proof" : "challenge"));
+        
+    FileOutputBuffer buf = new FileOutputBuffer(outFile);
+    evidence.serialize(buf);
+    buf.close();
+    
+    /* Update metadata in memory */
+    
+    markEvidenceAvailable(originator, subject, timestamp, evidenceLen, proof, interestedParty);
+  }
+  
+  /* Find out whether a node is TRUSTED, SUSPECTED or EXPOSED */
+
+  public int getStatus(Identifier id) {
+    PeerInfoRecord<Handle, Identifier> rec = find(id, false);
+    return (rec != null) ? rec.getStatus() : STATUS_TRUSTED;
+  }
+
+  /* Called during startup to inform the store where its files are located */
+
+  boolean setStorageDirectory(File directory) throws IOException {
+    /* Create the directory if it doesn't exist yet */
+    if (! directory.exists()) {
+      directory.createNewFile();
+    }
+    
+//    if (!dir) {
+//      if (mkdir(dirname, 0755) < 0)
+//        return false;
+//      if ((dir = opendir(dirname)) == NULL)
+//        return false;
 //    }
+      
+//    strncpy(this->dirname, dirname, sizeof(this->dirname));
+
+    /* To prevent a flood of status updates, we temporarily disable updates
+       while we inspect the existing evidence on disk */
+
+    boolean notificationWasEnabled = notificationEnabled;
+    notificationEnabled = false;
+      
+    /* Read the entire directory */
     
-    rec.evidence.add(evi);
-//    rec->unansweredEvidence = evi;
-    
-    return evi;
-  }
-  
-  PeerInfoRecord<Handle, Identifier> find(Identifier id, boolean create) {
-    for (PeerInfoRecord<Handle, Identifier> r : peerInfoRecords) {
-      if (r.id.equals(id)) {
-        return r;
+    for (File ent : directory.listFiles()) {
+      if (ent.isDirectory()) continue;
+      String d_name = ent.getName();
+      String[] foo = d_name.split(".");
+      if (foo.length != 2) continue;
+      String first = foo[0];
+      String suffix = foo[1];
+      if (suffix.equals("info")) {
+        /* INFO files contain the last checked authenticator */
+        Identifier id = stringTranslator.readIdentifierFromString(first);
+        FileInputBuffer buf = new FileInputBuffer(ent, logger);
+        Authenticator lastAuth = authSerializer.deserialize(buf);
+        buf.close();
+        setLastCheckedAuth(id, lastAuth);
+      } else if (suffix.equals("challenge") || suffix.equals("response") || suffix.equals("proof")) {
+//        char namebuf[200];
+//        struct stat statbuf;
+//        sprintf(namebuf, "%s/%s", dirname, ent->d_name);
+//        int statRes = stat(namebuf, &statbuf);
+//        assert(statRes == 0);
+
+
+        
+        /* PROOF, CHALLENGE and RESPONSE files */
+        String[] parts = first.split("-");
+        if (parts.length != 3) throw new IOException("Error reading filename :"+ent+" did not split into 3 parts:"+Arrays.toString(parts));
+        Identifier subject = stringTranslator.readIdentifierFromString(parts[0]);
+        Identifier originator = stringTranslator.readIdentifierFromString(parts[1]);
+        long seq = Long.parseLong(parts[2]);
+
+        if (suffix.equals("challenge")) {
+          markEvidenceAvailable(originator, subject, seq, (int)ent.length(), false, null);
+        } else if (suffix.equals("proof")) {
+          markEvidenceAvailable(originator, subject, seq, (int)ent.length(), true, null);
+        } else if (suffix.equals("response")){
+          markResponseAvailable(originator, subject, seq);
+        }
       }
     }
     
-    if (create) {
-      PeerInfoRecord<Handle, Identifier> rec = new PeerInfoRecord<Handle, Identifier>(id);
-      peerInfoRecords.add(rec);
-      return rec;
-    } else {
-      return null;
+    notificationEnabled = notificationWasEnabled;
+    
+    return true;
+  }
+  
+  public PeerInfoRecord<Handle, Identifier> find(Identifier id) {
+    return find(id,false);
+  }
+  public PeerInfoRecord<Handle, Identifier> find(Identifier id, boolean create) {
+    PeerInfoRecord<Handle, Identifier> ret = peerInfoRecords.get(id);
+    
+    if (ret == null && create) {
+      ret = new PeerInfoRecord<Handle, Identifier>(id, this);
+      peerInfoRecords.put(id, ret);
+    }
+    return ret;
+  }
+  
+  Authenticator getLastCheckedAuth(Identifier id) {
+    PeerInfoRecord<Handle, Identifier> rec = find(id, false);
+    if (rec == null) return null;
+      
+    return rec.getLastCheckedAuth();
+  }
+
+  void setLastCheckedAuth(Identifier id, Authenticator auth) {
+    PeerInfoRecord<Handle, Identifier> rec = find(id, true);
+    try {
+      rec.setLastCheckedAuth(auth, directory, stringTranslator);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
     }
   }
 
-  
   public void addEvidence(Identifier localIdentifier, Identifier subject,
       long evidenceSeq, Evidence evidence) {
     throw new RuntimeException("todo: implement");
   }
 
-  public int getStatus(Identifier id) {
-    return STATUS_TRUSTED;
+  public void notifyStatusChanged(Identifier subject, int newStatus) {
+    if (!notificationEnabled || listener == null) return;
+    listener.notifyStatusChange(subject, newStatus);
   }
 
 }

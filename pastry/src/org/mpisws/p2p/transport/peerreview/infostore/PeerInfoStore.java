@@ -42,4 +42,5 @@ public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
   public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
   void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence);
   int getStatus(Identifier id);
+  public void notifyStatusChanged(Identifier subject, int value);
 }

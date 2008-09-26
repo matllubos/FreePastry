@@ -47,6 +47,10 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 public class FileOutputBuffer extends DataOutputStream implements OutputBuffer {
 
+  public FileOutputBuffer(File f, boolean append) throws FileNotFoundException {
+    super(new FileOutputStream(f, append));
+  }
+
   public FileOutputBuffer(File f) throws FileNotFoundException {
     super(new FileOutputStream(f));
   }
@@ -69,5 +73,5 @@ public class FileOutputBuffer extends DataOutputStream implements OutputBuffer {
 
   public void writeShort(short v) throws IOException {
     writeShort((int) v);
-  }
+  }  
 }

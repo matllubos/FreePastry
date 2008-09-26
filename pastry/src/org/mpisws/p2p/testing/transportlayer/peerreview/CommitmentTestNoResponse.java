@@ -207,7 +207,7 @@ public class CommitmentTestNoResponse {
 //        Serializer<IdImpl> idSerializer,
 //        IdentifierExtractor<HandleImpl, IdImpl> identifierExtractor,
 //        AuthenticatorSerializer authenticatorSerialilzer) {
-      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(),
+      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), null,
           new AuthenticatorSerializerImpl(0,0));
       init(name);
     }

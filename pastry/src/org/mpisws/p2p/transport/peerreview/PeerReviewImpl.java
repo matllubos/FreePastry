@@ -68,6 +68,7 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStoreImpl;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
@@ -115,15 +116,18 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   SecureHistoryFactory historyFactory;
   SecureHistory history;
   long lastLogEntry = -1;
+  IdStrTranslator<Identifier> stringTranslator;
   
   public PeerReviewImpl(IdentityTransport<Handle, Identifier> transport,
       Environment env, Serializer<Handle> handleSerializer,
       Serializer<Identifier> idSerializer,      
       IdentifierExtractor<Handle, Identifier> identifierExtractor,
+      IdStrTranslator<Identifier> stringTranslator,
       AuthenticatorSerializer authenticatorSerialilzer) {
     super();
     this.transport = transport;
     this.transport.setCallback(this);
+    this.stringTranslator = stringTranslator;
     this.env = env;
     this.logger = env.getLogManager().getLogger(PeerReviewImpl.class, null);
     this.idSerializer = idSerializer;
@@ -142,7 +146,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());
     updateLogTime();
 
-    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport);
+    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport, stringTranslator, authenticatorSerialilzer, env);
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
     initialized = true;

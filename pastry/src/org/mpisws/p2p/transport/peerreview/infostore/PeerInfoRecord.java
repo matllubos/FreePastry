@@ -36,24 +36,173 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.infostore;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
+import org.mpisws.p2p.transport.util.FileOutputBuffer;
 
+/**
+ * This is just an index to the real evidence which is on disk
+ * 
+ * @author Jeff Hoye
+ *
+ * @param <Handle>
+ * @param <Identifier>
+ */
 public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
-  Identifier id;
-  byte lastCheckedAuth;
-  int status;
-  List<EvidenceRecord<Handle, Identifier>> evidence;
-  LinkedList<EvidenceRecord<Handle, Identifier>> unansweredEvidence;
+  private Identifier subject;
+  private Authenticator lastCheckedAuth;
+  private int status;
+  private PeerInfoStore<Handle, Identifier> store;
+  
+  /**
+   * answeredEvidence contains challenges that have been responded to
+   * unansweredEvidence contains proofs and unAnswered evidence
+   * 
+   * Originator -> TimeStamp -> Record
+   */
+  Map<Identifier, Map<Long, EvidenceRecordImpl>> answeredEvidence;
+  Map<Identifier, Map<Long, EvidenceRecordImpl>> unansweredEvidence;
 
-  public PeerInfoRecord(Identifier id) {
-    this.id = id;
-    //rec->lastCheckedAuth = NULL;
-    evidence = new ArrayList<EvidenceRecord<Handle,Identifier>>();
-    unansweredEvidence = new LinkedList<EvidenceRecord<Handle,Identifier>>();
+  public PeerInfoRecord(Identifier id, PeerInfoStore<Handle, Identifier> store) {
+    this.subject = id;
+    this.store = store;
+
+    unansweredEvidence = new HashMap<Identifier, Map<Long, EvidenceRecordImpl>>();
+    answeredEvidence = new HashMap<Identifier, Map<Long, EvidenceRecordImpl>>();
     status = STATUS_TRUSTED;
+  }
+  
+  /* Locates evidence, or creates a new entry if 'create' is set to true */
+
+  public EvidenceRecordImpl findEvidence(Identifier originator, long timestamp, boolean create) {    
+    // first check answeredEvidence, then check unansweredEvidence, and add it there if necessary    
+    Map<Long,EvidenceRecordImpl> foo = answeredEvidence.get(originator);
+    if (foo != null) {
+      EvidenceRecordImpl bar = foo.get(timestamp);
+      if (bar != null) {
+        return bar;
+      }
+    }
+    
+    foo = unansweredEvidence.get(originator);
+    if (foo == null) {
+      if (create) {
+        foo = new HashMap<Long, EvidenceRecordImpl>();
+        unansweredEvidence.put(originator,foo);
+        EvidenceRecordImpl bar = new EvidenceRecordImpl(originator,timestamp);
+        foo.put(timestamp, bar);
+        return bar;
+      }
+      return null;
+    } else {
+      EvidenceRecordImpl bar = foo.get(timestamp);
+      if (bar == null && create) {
+        bar = new EvidenceRecordImpl(originator,timestamp);
+      }
+      return bar;
+    }    
+  }
+
+  
+  public class EvidenceRecordImpl implements EvidenceRecord<Handle, Identifier> {
+    public Identifier originator;
+    public long timestamp;
+    int evidenceLen;
+    Handle interestedParty;
+    boolean isProof;
+
+    public EvidenceRecordImpl(Identifier originator, long timestamp) {
+      this(originator,timestamp, false, -1, null);
+    }
+
+    public EvidenceRecordImpl(Identifier originator, long timestamp, boolean isProof, int evidenceLen, Handle interestedParty) {
+      this.originator = originator;
+      this.timestamp = timestamp;
+      this.isProof = isProof;
+      this.evidenceLen = evidenceLen;
+      this.interestedParty = interestedParty;
+    }
+    
+    boolean hasResponse() {      
+      Map<Long, EvidenceRecordImpl> foo = answeredEvidence.get(originator);
+      if (foo == null) return false;
+      return foo.containsKey(timestamp);
+    }
+
+    public void setIsProof(boolean isProof) {
+      this.isProof = isProof;
+      /* This may cause the node to become SUSPECTED or EXPOSED */ 
+      if (isProof && (status != STATUS_EXPOSED)) {
+        status = STATUS_EXPOSED;
+        store.notifyStatusChanged(subject, STATUS_EXPOSED);
+      } else if (!isProof && (status == STATUS_TRUSTED)) {
+        status = STATUS_SUSPECTED;
+        store.notifyStatusChanged(subject, STATUS_SUSPECTED);
+      }
+    }
+
+    public void setEvidenceLen(int length) {
+      this.evidenceLen = length;
+    }
+
+    public void setInterestedParty(Handle interestedParty) {
+      this.interestedParty = interestedParty;
+    }
+    
+    public void setHasResponse() {
+      assert(!isProof());
+      
+      // pull from unanswered (if it's there)
+      Map<Long, EvidenceRecordImpl> foo = unansweredEvidence.get(originator);
+      if (foo != null) {
+        Map<Long, EvidenceRecordImpl> bar = unansweredEvidence.remove(timestamp);
+        if (foo.isEmpty()) {
+          unansweredEvidence.remove(originator);
+        }
+      }
+      
+      // put into answered
+      foo = answeredEvidence.get(originator);
+      if (foo == null) {
+        foo = new HashMap<Long, EvidenceRecordImpl>();
+        answeredEvidence.put(originator, foo);
+      }
+      foo.put(timestamp, this);
+      
+      /* If this was the last unanswered challenge to a SUSPECTED node, it goes back to TRUSTED */      
+      if ((status == STATUS_SUSPECTED) && unansweredEvidence.isEmpty()) {
+        status = STATUS_TRUSTED;
+        store.notifyStatusChanged(subject, STATUS_TRUSTED);
+      }    
+    }
+
+    public boolean isProof() {
+      return isProof;
+    }
+  }
+
+
+  public int getStatus() {
+    return status;
+  }
+
+  public Authenticator getLastCheckedAuth() {
+    return lastCheckedAuth;
+  }
+
+  public void setLastCheckedAuth(Authenticator auth, File dir, IdStrTranslator<Identifier> translator) throws IOException {
+    FileOutputBuffer buf = new FileOutputBuffer(new File(dir,translator.toString(subject)+".info"));
+    auth.serialize(buf);
+    buf.close();
+    lastCheckedAuth = auth;    
   }
 }
