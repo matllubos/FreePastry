@@ -262,7 +262,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     }
   }
   
-  protected void notifyStatusChange(Identifier id, int newStatus) {
+  public void notifyStatusChange(Identifier id, int newStatus) {
     makeProgressAllPeers();
   }
 

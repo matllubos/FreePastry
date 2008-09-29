@@ -84,6 +84,7 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransprotLayerImpl;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.table.UnknownValueException;
@@ -207,7 +208,15 @@ public class CommitmentTestNoResponse {
 //        Serializer<IdImpl> idSerializer,
 //        IdentifierExtractor<HandleImpl, IdImpl> identifierExtractor,
 //        AuthenticatorSerializer authenticatorSerialilzer) {
-      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), null,
+      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), new IdStrTranslator<IdImpl>(){
+
+        public IdImpl readIdentifierFromString(String s) {
+          return new IdImpl(Integer.parseInt(s));
+        }
+
+        public String toString(IdImpl id) {
+          return Integer.toString(id.id);
+        }},
           new AuthenticatorSerializerImpl(0,0), null);
       init(name);
     }

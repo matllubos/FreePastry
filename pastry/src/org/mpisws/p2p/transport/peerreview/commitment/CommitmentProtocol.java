@@ -42,6 +42,7 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
@@ -53,7 +54,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  * be held while acknowledgments are pending, and it can retransmit messages a
  * few times when an acknowledgment is not received.
  */
-public interface CommitmentProtocol<Handle extends RawSerializable, Identifier extends RawSerializable> {
+public interface CommitmentProtocol<Handle extends RawSerializable, Identifier extends RawSerializable> extends StatusChangeListener<Identifier> {
 //  int lookupPeer(Identifier handle);
 //  PacketInfo *enqueueTail(struct packetInfo *queue, unsigned char *message, int msglen);
 //  void makeProgress(int idx);

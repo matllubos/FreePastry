@@ -69,7 +69,6 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   File directory;
   // Subject -> PeerInfoRecord
   Map<Identifier, PeerInfoRecord<Handle, Identifier>> peerInfoRecords;
-  int authenticatorSizeBytes;
   StatusChangeListener<Identifier> listener;
   boolean notificationEnabled;
 
@@ -83,7 +82,6 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   
   
   public PeerInfoStoreImpl(IdentityTransport<Handle, Identifier> transport, IdStrTranslator<Identifier> stringTranslator, AuthenticatorSerializer authSerializer, EvidenceSerializer evidenceSerializer, Environment env) {
-    this.authenticatorSizeBytes = -1;
     this.peerInfoRecords = new HashMap<Identifier, PeerInfoRecord<Handle, Identifier>>();
     this.directory = null;
     this.notificationEnabled = true;
@@ -114,11 +112,6 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     
   public void setStatusChangeListener(StatusChangeListener<Identifier> listener) {
     this.listener = listener;
-  }
-
-  public void setAuthenticatorSize(int sizeBytes) {
-    assert((authenticatorSizeBytes < 0) && (sizeBytes > 0));
-    authenticatorSizeBytes = sizeBytes; 
   }
 
   /* Locates evidence, or creates a new entry if 'create' is set to true */
@@ -208,11 +201,16 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
 
   /* Called during startup to inform the store where its files are located */
 
-  boolean setStorageDirectory(File directory) throws IOException {
+  public boolean setStorageDirectory(File directory) throws IOException {
     /* Create the directory if it doesn't exist yet */
     if (! directory.exists()) {
-      directory.createNewFile();
+      directory.mkdirs();
+    } else {
+      if (!directory.isDirectory()) {
+        throw new IllegalArgumentException(directory.getAbsolutePath()+" is not a directory.");
+      }
     }
+    this.directory = directory;
     
 //    if (!dir) {
 //      if (mkdir(dirname, 0755) < 0)
@@ -230,47 +228,48 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     notificationEnabled = false;
       
     /* Read the entire directory */
-    
-    for (File ent : directory.listFiles()) {
-      if (ent.isDirectory()) continue;
-      String d_name = ent.getName();
-      String[] foo = d_name.split(".");
-      if (foo.length != 2) continue;
-      String first = foo[0];
-      String suffix = foo[1];
-      if (suffix.equals("info")) {
-        /* INFO files contain the last checked authenticator */
-        Identifier id = stringTranslator.readIdentifierFromString(first);
-        FileInputBuffer buf = new FileInputBuffer(ent, logger);
-        Authenticator lastAuth = authSerializer.deserialize(buf);
-        buf.close();
-        setLastCheckedAuth(id, lastAuth);
-      } else if (suffix.equals("challenge") || suffix.equals("response") || suffix.equals("proof")) {
-//        char namebuf[200];
-//        struct stat statbuf;
-//        sprintf(namebuf, "%s/%s", dirname, ent->d_name);
-//        int statRes = stat(namebuf, &statbuf);
-//        assert(statRes == 0);
-
-
-        
-        /* PROOF, CHALLENGE and RESPONSE files */
-        String[] parts = first.split("-");
-        if (parts.length != 3) throw new IOException("Error reading filename :"+ent+" did not split into 3 parts:"+Arrays.toString(parts));
-        Identifier subject = stringTranslator.readIdentifierFromString(parts[0]);
-        Identifier originator = stringTranslator.readIdentifierFromString(parts[1]);
-        long seq = Long.parseLong(parts[2]);
-
-        if (suffix.equals("challenge")) {
-          markEvidenceAvailable(originator, subject, seq, false, null);
-        } else if (suffix.equals("proof")) {
-          markEvidenceAvailable(originator, subject, seq, true, null);
-        } else if (suffix.equals("response")){
-          markResponseAvailable(originator, subject, seq);
+    File[] bar = directory.listFiles();
+    if (bar != null) {
+      for (File ent : bar) {
+        if (ent.isDirectory()) continue;
+        String d_name = ent.getName();
+        String[] foo = d_name.split("\\.");
+        if (foo.length != 2) continue;
+        String first = foo[0];
+        String suffix = foo[1];
+        if (suffix.equals("info")) {
+          /* INFO files contain the last checked authenticator */
+          Identifier id = stringTranslator.readIdentifierFromString(first);
+          FileInputBuffer buf = new FileInputBuffer(ent, logger);
+          Authenticator lastAuth = authSerializer.deserialize(buf);
+          buf.close();
+          setLastCheckedAuth(id, lastAuth);
+        } else if (suffix.equals("challenge") || suffix.equals("response") || suffix.equals("proof")) {
+  //        char namebuf[200];
+  //        struct stat statbuf;
+  //        sprintf(namebuf, "%s/%s", dirname, ent->d_name);
+  //        int statRes = stat(namebuf, &statbuf);
+  //        assert(statRes == 0);
+  
+  
+          
+          /* PROOF, CHALLENGE and RESPONSE files */
+          String[] parts = first.split("-");
+          if (parts.length != 3) throw new IOException("Error reading filename :"+ent+" did not split into 3 parts:"+Arrays.toString(parts));
+          Identifier subject = stringTranslator.readIdentifierFromString(parts[0]);
+          Identifier originator = stringTranslator.readIdentifierFromString(parts[1]);
+          long seq = Long.parseLong(parts[2]);
+  
+          if (suffix.equals("challenge")) {
+            markEvidenceAvailable(originator, subject, seq, false, null);
+          } else if (suffix.equals("proof")) {
+            markEvidenceAvailable(originator, subject, seq, true, null);
+          } else if (suffix.equals("response")){
+            markResponseAvailable(originator, subject, seq);
+          }
         }
       }
     }
-    
     notificationEnabled = notificationWasEnabled;
     
     return true;

@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
@@ -72,6 +73,7 @@ import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
 import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStoreImpl;
+import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
@@ -97,7 +99,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements 
     TransportLayer<Handle, ByteBuffer>,
     TransportLayerCallback<Handle, ByteBuffer>,
-    PeerReview<Handle, Identifier> {
+    PeerReview<Handle, Identifier>, StatusChangeListener<Identifier> {
 
   PeerReviewCallback<Handle, Identifier> callback;
 
@@ -110,7 +112,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   PeerInfoStore<Handle, Identifier> infoStore;
 
   CommitmentProtocol<Handle, Identifier> commitmentProtocol;
-  
+
   IdentifierExtractor<Handle, Identifier> identifierExtractor;
   Logger logger;
 
@@ -143,14 +145,55 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.historyFactory = new SecureHistoryFactoryImpl(transport, env);
   }
 
+  public void notifyStatusChange(Identifier id, int newStatus) {
+//    char buf1[256];
+    if (logger.level <= Logger.FINE) logger.log("Status change: <"+id+"> becomes "+newStatus);
+//    challengeProtocol.notifyStatusChange(id, newStatus);
+    commitmentProtocol.notifyStatusChange(id, newStatus);
+    
+//    if (numStatusInfo >= MAX_STATUS_INFO) {
+//      panic("Too many pending status notifications");
+//    }
+//    
+//    statusInfo[numStatusInfo].id = id->clone();
+//    statusInfo[numStatusInfo].newStatus = newStatus;
+//    numStatusInfo ++;
+//    transport->scheduleTimer(this, TI_STATUS_INFO, transport->getTime() + 3);
+  }
+  
   boolean initialized = false;
-  public void init(String historyName) throws IOException {    
+  public void init(String dirname) throws IOException {    
+    File dir = new File(dirname);
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new IllegalStateException("Cannot open PeerReview directory: "+dir.getAbsolutePath());
+      }
+    }
+    if (!dir.isDirectory()) throw new IllegalStateException("Cannot open PeerReview directory: "+dir.getAbsolutePath());
+    
+    File namebuf = new File(dir,"peers");
+    
+    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport, stringTranslator, authenticatorSerialilzer, evidenceSerializer, env);
+    infoStore.setStatusChangeListener(this);
+
+    /* Open history */
+
+    String historyName = dirname+"/local";
+    try {
+      this.history = historyFactory.open(historyName, "w");
+    } catch (IOException ioe) {
+      this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());      
+    }
+    
+    updateLogTime();
+    
+    if (!infoStore.setStorageDirectory(namebuf)) {
+      throw new IllegalStateException("Cannot open info storage directory '"+namebuf+"'");
+    }
+    
     authOutStore = new AuthenticatorStoreImpl<Identifier>(this);
 
-    this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());
-    updateLogTime();
 
-    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport, stringTranslator, authenticatorSerialilzer, evidenceSerializer, env);
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
     initialized = true;
@@ -544,6 +587,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   public byte[] hash(ByteBuffer... hashMe) {
     return transport.hash(hashMe);
   }
+
 
 
 }

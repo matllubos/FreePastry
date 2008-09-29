@@ -101,9 +101,9 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
   public SecureHistory open(String name, String mode) throws IOException {
     boolean readOnly = false;
     
-    if (!mode.equals("r")) {
+    if (mode.equals("r")) {
       readOnly = true;
-    } else if (mode.equals("w")) {
+    } else if (!mode.equals("w")) {
       return null;
     }
     
