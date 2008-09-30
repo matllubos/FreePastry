@@ -183,6 +183,14 @@ public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
     public boolean isProof() {
       return isProof;
     }
+    
+    public long getTimeStamp() {
+      return timestamp;
+    }
+    
+    public Identifier getOriginator() {
+      return originator;
+    }
   }
 
 

@@ -42,4 +42,7 @@ public interface EvidenceRecord<Handle, Identifier> {
   boolean isProof();
   void setHasResponse();
   boolean hasResponse();
+  public long getTimeStamp();
+  public Identifier getOriginator();
+
 }

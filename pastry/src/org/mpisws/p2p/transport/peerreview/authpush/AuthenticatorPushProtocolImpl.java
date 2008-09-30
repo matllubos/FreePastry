@@ -38,6 +38,7 @@ package org.mpisws.p2p.transport.peerreview.authpush;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -55,6 +56,7 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.AuthPushMessage;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
@@ -125,14 +127,28 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
   public void push() {
     if (logger.level <= Logger.FINE) logger.log("Authenticator push initiated with "+authOutStore.getNumSubjects()+" subjects");
 
-    evidenceTransferProtocol.requestWitnesses(authOutStore.getSubjects());
+    evidenceTransferProtocol.requestWitnesses(authOutStore.getSubjects(), 
+        new Continuation<Map<Identifier,Collection<Handle>>, Exception>() {
+
+          public void receiveException(Exception exception) {
+            logger.logException("Error requesting witnesses "+authOutStore.getSubjects(), exception);
+          }
+
+          public void receiveResult(Map<Identifier, Collection<Handle>> result) {
+            continuePush(result);
+          }
+        });
+    
   }
 
   /*
    * Once we have all the witness sets, we bundle up all of our authenticators
    * in AUTHPUSH messages and send them to the witnesses.
+   * 
+   * NOTE: in the c++ impl, this was done via peerreview, now it's done via 
+   * a continuation.
    */
-  public void continuePush(Map<Identifier, List<Handle>> subjects) {
+  protected void continuePush(Map<Identifier, Collection<Handle>> subjects) {
 
     if (logger.level <= Logger.FINE) logger.log("Continuing authenticator push with "+subjects.size()+" subjects");
 
@@ -144,7 +160,7 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
      */
 
     Map<Handle, Map<Identifier, List<Authenticator>>> witnesses = new HashMap<Handle, Map<Identifier, List<Authenticator>>>();
-    for (Entry<Identifier, List<Handle>> i : subjects.entrySet()) {
+    for (Entry<Identifier, Collection<Handle>> i : subjects.entrySet()) {
       for (Handle h : i.getValue()) {
         Map<Identifier, List<Authenticator>> m = witnesses.get(h);
         if (m == null) {

@@ -67,6 +67,7 @@ import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
+import org.mpisws.p2p.transport.peerreview.WitnessListener;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
@@ -520,6 +521,11 @@ public class CommitmentTest {
     public void messageReceived(HandleImpl i, ByteBuffer m,
         Map<String, Object> options) throws IOException {
       System.out.println("Message received.");
+    }
+
+    public void getWitnesses(IdImpl subject,
+        WitnessListener<HandleImpl, IdImpl> callback) {
+      throw new RuntimeException("implement");
     }
     
   }

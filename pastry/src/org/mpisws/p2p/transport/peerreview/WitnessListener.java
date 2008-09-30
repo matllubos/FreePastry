@@ -34,23 +34,10 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.infostore;
+package org.mpisws.p2p.transport.peerreview;
 
-import java.io.File;
-import java.io.IOException;
+import java.util.Collection;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-
-public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
-  public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence, Handle interestedParty) throws IOException;
-  int getStatus(Identifier id);
-  public void notifyStatusChanged(Identifier subject, int value);
-  public boolean setStorageDirectory(File file) throws IOException;
-  
-  public Evidence getEvidence(Identifier originator, Identifier subject, long timestamp) throws IOException;
-
-  public EvidenceRecord<Handle, Identifier> statFirstUnansweredChallenge(Identifier subject);
-  public EvidenceRecord<Handle, Identifier> statProof(Identifier subject);
-
+public interface WitnessListener<Handle, Identifier> {
+  void notifyWitnessSet(Identifier subject, Collection<Handle> witnesses);
 }

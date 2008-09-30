@@ -36,11 +36,54 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.message;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import java.io.IOException;
+import java.util.Map;
 
-public class AccusationMessage implements PeerReviewConstants {
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.EvidenceRecord;
+
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
+/**
+    MSG_ACCUSATION
+    byte type = MSG_ACCUSATION
+    nodeID originator
+    nodeID subject
+    long long evidenceSeq
+    [evidence bytes follow]
+*/
+public class AccusationMessage<Handle, Identifier extends RawSerializable> extends PeerReviewMessage {
+
+  Identifier originator;
+  Identifier subject;
+  long evidenceSeq;
+  Evidence evidence;
+  Map<String, Object> options;
   
+  public AccusationMessage(Identifier subject,
+      EvidenceRecord<Handle, Identifier> evidenceRecord, Evidence evidence, Map<String, Object> options) {
+    this.originator = evidenceRecord.getOriginator();
+    this.subject = subject;
+    this.evidenceSeq = evidenceRecord.getTimeStamp();
+    this.evidence = evidence;
+    this.options = options;
+  }
+
   public short getType() {
     return MSG_ACCUSATION;
+  }
+
+  @Override
+  public Map<String, Object> getOptions() {
+    return options;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    originator.serialize(buf);
+    subject.serialize(buf);
+    buf.writeLong(evidenceSeq);
+    evidence.serialize(buf);
   }
 }

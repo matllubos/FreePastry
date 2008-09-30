@@ -55,6 +55,8 @@ import org.mpisws.p2p.pki.x509.CATool;
 import org.mpisws.p2p.pki.x509.CAToolImpl;
 import org.mpisws.p2p.pki.x509.X509Serializer;
 import org.mpisws.p2p.pki.x509.X509SerializerImpl;
+import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.HandleImpl;
+import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.IdImpl;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -67,6 +69,7 @@ import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
+import org.mpisws.p2p.transport.peerreview.WitnessListener;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
@@ -531,6 +534,10 @@ public class CommitmentTestNoResponse {
       System.out.println("Message received.");
     }
     
+    public void getWitnesses(IdImpl subject,
+        WitnessListener<HandleImpl, IdImpl> callback) {
+      throw new RuntimeException("implement");
+    }
   }
 
   static Map<HandleImpl, IdentityTransprotLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransprotLayerImpl<HandleImpl,IdImpl>>();

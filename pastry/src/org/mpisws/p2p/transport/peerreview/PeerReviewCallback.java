@@ -52,7 +52,7 @@ public interface PeerReviewCallback<Handle, Identifier> extends Destructable, Id
   public void init();
   void storeCheckpoint(OutputBuffer buffer);
   boolean loadCheckpoint(InputBuffer buffer);
-//  void getWitnesses(Identifier subject, WitnessListener callback);
+  void getWitnesses(Identifier subject, WitnessListener<Handle, Identifier> callback);
 //  int getMyWitnessedNodes(NodeHandle **nodes, int maxResults);
 //  PeerReviewCallback getReplayInstance(ReplayWrapper replayWrapper);
 }

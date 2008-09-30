@@ -313,7 +313,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
    */
   public Evidence getEvidence(Identifier originator, Identifier subject, long timestamp) throws IOException {
     EvidenceRecord<Handle, Identifier> evi = findEvidence(originator, subject, timestamp, false);
-    
+  
     assert(evi != null);
     
     File infile = getFile(subject, originator, timestamp, evi.isProof() ? "proof" : "challenge");
@@ -325,6 +325,8 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     buf.close();
     return e;
   }
+  
+  
 
   /**
    * Record a response to a challenge
@@ -360,7 +362,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   /**
    * Look up the first unanswered challenge to a given node
    */
-  EvidenceRecord<Handle, Identifier> statFirstUnansweredChallenge(Identifier subject) {
+  public EvidenceRecord<Handle, Identifier> statFirstUnansweredChallenge(Identifier subject) {
     PeerInfoRecord<Handle, Identifier> rec = find(subject);
     if (rec == null)
       return null;

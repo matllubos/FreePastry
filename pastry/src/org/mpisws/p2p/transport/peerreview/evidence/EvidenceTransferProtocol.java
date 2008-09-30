@@ -36,9 +36,16 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.evidence;
 
+import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
-public interface EvidenceTransferProtocol<Handle, Identifier> {
-  public void requestWitnesses(List<Identifier> subjects);
+import org.mpisws.p2p.transport.peerreview.WitnessListener;
+
+import rice.Continuation;
+
+public interface EvidenceTransferProtocol<Handle, Identifier> extends WitnessListener<Handle, Identifier> {
+  public void requestWitnesses(Collection<Identifier> subjects, Continuation<Map<Identifier,Collection<Handle>>, Exception> c);
   public void sendEvidence(Handle source, Identifier id);
 }
