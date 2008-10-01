@@ -586,9 +586,9 @@ public class CommitmentTestNoResponse {
         t1 = new BogusTransport(localHandle, cert) {
           @Override
           protected void receiveMessage(HandleImpl i, ByteBuffer m) {
-            super.receiveMessage(i, m);
-//            System.out.println("Dropping message "+m);
-//            return;
+//            super.receiveMessage(i, m);
+            System.out.println("Dropping message "+m);
+            return;
           }
           
         };

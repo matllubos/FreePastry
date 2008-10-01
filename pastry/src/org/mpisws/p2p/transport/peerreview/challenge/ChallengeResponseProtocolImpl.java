@@ -71,7 +71,6 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
   AuthenticatorStore<Identifier> authOutStore; 
   Object auditProtocol;
   CommitmentProtocol<Handle, Identifier> commitmentProtocol;
-  PeerReviewCallback<Handle, Identifier> app;
   private Logger logger;
 
   public ChallengeResponseProtocolImpl(
@@ -79,8 +78,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       IdentityTransport<Handle, Identifier> transport,
       PeerInfoStore<Handle, Identifier> infoStore, SecureHistory history,
       AuthenticatorStore<Identifier> authOutStore, Object auditProtocol,
-      CommitmentProtocol<Handle, Identifier> commitmentProtocol,
-      PeerReviewCallback<Handle, Identifier> callback) {
+      CommitmentProtocol<Handle, Identifier> commitmentProtocol) {
     this.peerreview = peerReviewImpl;
     this.transport = transport;
     this.infoStore = infoStore;
@@ -88,7 +86,6 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     this.authOutStore = authOutStore;
     this.auditProtocol = auditProtocol;
     this.commitmentProtocol = commitmentProtocol;
-    this.app = callback;
     
     this.logger = peerreview.getEnvironment().getLogManager().getLogger(ChallengeResponseProtocolImpl.class, null);
   }
@@ -264,7 +261,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
           
         if (!loggedPreviously) {
           if (logger.level <= Logger.FINER) logger.log( "Delivering message in CHAL_SEND "+udm);
-          app.messageReceived(udm.getSenderHandle(), udm.getPayload(), options);
+          peerreview.getApp().messageReceived(udm.getSenderHandle(), udm.getPayload(), options);
         }
   
         /* Put together a RESPONSE with an authenticator for the message in the challenge */
@@ -274,7 +271,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
         /* ... and send it back to the challenger */
         
         if (logger.level <= Logger.FINER) logger.log( "Returning a  response");
-        peerreview.transmit(source, rMsg.serialize(), null, options);        
+        peerreview.transmit(source, rMsg, null, options);        
         break;
       }
       
@@ -312,7 +309,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
             infoStore.getEvidence(record.getOriginator(), tIdentifier, record.getTimeStamp())
             );
       /* ... and send it */
-      peerreview.transmit(target, challenge.serialize(), null, null);
+      peerreview.transmit(target, challenge, null, null);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }        

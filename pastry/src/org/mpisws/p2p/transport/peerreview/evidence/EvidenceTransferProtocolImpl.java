@@ -57,6 +57,7 @@ import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceRecord;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.AccusationMessage;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.priority.MessageInfo;
 
 import rice.Continuation;
@@ -140,7 +141,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
    * first
    */
 
-  void sendMessageToWitnesses(Identifier subject, ByteBuffer message,
+  void sendMessageToWitnesses(Identifier subject, PeerReviewMessage message,
       MessageCallback<Handle, ByteBuffer> deliverAckToMe,
       Map<String, Object> options) {
     MessageInfo m = new MessageInfo(subject, message, deliverAckToMe, options);
@@ -233,11 +234,11 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
    */
   public class MessageInfo {
     public Identifier subject; // deliver to my witnesses
-    public ByteBuffer message; 
+    public PeerReviewMessage message; 
     public MessageCallback<Handle, ByteBuffer> deliverAckToMe;
     public Map<String, Object> options;
     
-    public MessageInfo(Identifier subject, ByteBuffer message,
+    public MessageInfo(Identifier subject, PeerReviewMessage message,
         MessageCallback<Handle, ByteBuffer> deliverAckToMe,
         Map<String, Object> options) {
       this.subject = subject;

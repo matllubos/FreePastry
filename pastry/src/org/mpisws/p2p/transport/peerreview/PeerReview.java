@@ -88,8 +88,8 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
 
 //  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest, boolean b, PeerReviewMessage message, MessageCallback<Handle, PeerReviewMessage> deliverAckToMe);
   
-  public MessageRequestHandle<Handle, ByteBuffer> transmit(Handle dest, 
-      ByteBuffer message,
+  public void transmit(Handle dest, 
+      PeerReviewMessage message,
       MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
       Map<String, Object> options);
 

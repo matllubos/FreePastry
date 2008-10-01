@@ -322,13 +322,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         info.currentTimeout = INITIAL_TIMEOUT_MILLIS;
         info.retransmitsSoFar = 0;
         OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
-        try {
-          peerreview.transmit(info.getHandle(), oudm.serialize(), null, oudm.getOptions());
-        } catch (IOException ioe) {
-          info.xmitQueue.removeFirst();
-          oudm.sendFailed(ioe);
-          return;
-        }
+//        try {
+          peerreview.transmit(info.getHandle(), oudm, null, oudm.getOptions());
+//        } catch (IOException ioe) {
+//          info.xmitQueue.removeFirst();
+//          oudm.sendFailed(ioe);
+//          return;
+//        }
       } else if (peerreview.getTime() > (info.lastTransmit + info.currentTimeout)) {
       
         /* Otherwise, retransmit the current packet a few times, up to the specified limit */
@@ -342,13 +342,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           info.currentTimeout = RETRANSMIT_TIMEOUT_MILLIS;
           info.lastTransmit = peerreview.getTime();
           OutgoingUserDataMessage<Handle> oudm = info.xmitQueue.getFirst();
-          try {
-            peerreview.transmit(info.handle, oudm.serialize(), null, oudm.getOptions());
-          } catch (IOException ioe) {
-            info.xmitQueue.removeFirst();
-            oudm.sendFailed(ioe);
-            return;
-          }
+//          try {
+            peerreview.transmit(info.handle, oudm, null, oudm.getOptions());
+//          } catch (IOException ioe) {
+//            info.xmitQueue.removeFirst();
+//            oudm.sendFailed(ioe);
+//            return;
+//          }
         } else {
         
           /* If the peer still won't acknowledge the message, file a SEND challenge with its witnesses */
@@ -435,11 +435,11 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         /* Send the ACK */
 
         if (logger.level <= Logger.FINE) logger.log("Returning ACK to"+info.getHandle());
-        try {
-          peerreview.transmit(info.handle, ret.a().serialize(), null, t.b());
-        } catch (IOException ioe) {
-          throw new RuntimeException("Major problem, ack couldn't be serialized." +ret.a(),ioe);
-        }
+//        try {
+          peerreview.transmit(info.handle, ret.a(), null, t.b());
+//        } catch (IOException ioe) {
+//          throw new RuntimeException("Major problem, ack couldn't be serialized." +ret.a(),ioe);
+//        }
       } else {
         if (logger.level <= Logger.WARNING) logger.log("Cannot verify signature on message "+udm.getTopSeq()+" from "+info.getHandle()+"; discarding");
       }

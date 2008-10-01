@@ -55,6 +55,7 @@ import org.mpisws.p2p.pki.x509.CATool;
 import org.mpisws.p2p.pki.x509.CAToolImpl;
 import org.mpisws.p2p.pki.x509.X509Serializer;
 import org.mpisws.p2p.pki.x509.X509SerializerImpl;
+import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.IdImpl;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -74,6 +75,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImp
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
+import org.mpisws.p2p.transport.peerreview.evidence.EvidenceSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
@@ -85,6 +87,7 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransprotLayerImpl;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.table.UnknownValueException;
@@ -208,8 +211,16 @@ public class CommitmentTest {
 //        Serializer<IdImpl> idSerializer,
 //        IdentifierExtractor<HandleImpl, IdImpl> identifierExtractor,
 //        AuthenticatorSerializer authenticatorSerialilzer) {
-      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), null,
-          new AuthenticatorSerializerImpl(0,0), null);
+      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), new IdStrTranslator<IdImpl>(){
+
+        public IdImpl readIdentifierFromString(String s) {
+          return new IdImpl(Integer.parseInt(s));
+        }
+
+        public String toString(IdImpl id) {
+          return Integer.toString(id.id);
+        }},
+          new AuthenticatorSerializerImpl(0,0), new EvidenceSerializerImpl<HandleImpl>(new HandleSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
       init(name);
     }
 

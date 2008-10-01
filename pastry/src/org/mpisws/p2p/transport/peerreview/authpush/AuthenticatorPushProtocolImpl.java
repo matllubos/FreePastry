@@ -216,7 +216,7 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
       }
     }
 
-    peerreview.transmit(h, new AuthPushMessage<Identifier>(authenticators).serialize(), null, null);
+    peerreview.transmit(h, new AuthPushMessage<Identifier>(authenticators), null, null);
   }
   
   /**

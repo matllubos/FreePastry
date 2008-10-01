@@ -338,14 +338,6 @@ public class AuthenticatorStoreTest {
       return null;
     }
 
-    public MessageRequestHandle<MyInetSocketAddress, ByteBuffer> transmit(
-        MyInetSocketAddress dest, ByteBuffer message,
-        MessageCallback<MyInetSocketAddress, ByteBuffer> deliverAckToMe,
-        Map<String, Object> options) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
     public void verify(MyInetSocketAddress id, ByteBuffer msg,
         ByteBuffer signature) throws SignatureException,
         UnknownCertificateException {
@@ -358,6 +350,13 @@ public class AuthenticatorStoreTest {
         MyInetSocketAddress subject, Authenticator auth) {
       // TODO Auto-generated method stub
       return false;
+    }
+
+    public void transmit(
+        MyInetSocketAddress dest, PeerReviewMessage message,
+        MessageCallback<MyInetSocketAddress, ByteBuffer> deliverAckToMe,
+        Map<String, Object> options) {
+      // TODO Auto-generated method stub
     }
   }
 

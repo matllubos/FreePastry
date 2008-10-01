@@ -199,7 +199,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
     Object auditProtocol = null;
-    this.challengeProtocol = new ChallengeResponseProtocolImpl(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol, callback);
+    this.challengeProtocol = new ChallengeResponseProtocolImpl(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
     initialized = true;
   }
     
@@ -322,7 +322,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
         break;
 //      case MSG_ACCUSATION:
 //      case MSG_RESPONSE:
-//        statementProtocol.handleIncomingStatement(handle, message);
+//        statementProtocol.handleIncomingStatement(handle, message, options);
 //        break;
       case MSG_USERDATA:
         UserDataMessage<Handle> udm = UserDataMessage.build(new SimpleInputBuffer(message), handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes());
@@ -358,6 +358,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
   public void setApp(PeerReviewCallback<Handle, Identifier> callback) {
+    logger.log("setApp("+callback+")");
     this.callback = callback;
   }
   
@@ -541,11 +542,17 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
    * @param options
    * @return
    */
-  public MessageRequestHandle<Handle, ByteBuffer> transmit(Handle dest, 
-      ByteBuffer message,
+  public void transmit(Handle dest, 
+      PeerReviewMessage message,
       MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
       Map<String, Object> options) {
-    return transport.sendMessage(dest, message, deliverAckToMe, options);
+    try {
+      ByteBuffer buf = message.serialize();
+      
+      transport.sendMessage(dest, buf, deliverAckToMe, options);
+    } catch (IOException ioe) {
+      throw new RuntimeException("Error serializing:"+message,ioe);
+    }
   }
 
   public void notifyCertificateAvailable(Identifier id) {
