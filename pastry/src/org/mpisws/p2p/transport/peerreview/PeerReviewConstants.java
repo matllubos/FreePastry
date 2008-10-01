@@ -101,6 +101,13 @@ public interface PeerReviewConstants {
   public static final int TI_MAX_RESERVED = TI_AUTH_PUSH;
   public static final int TI_STATUS_INFO = 101;
   public static final int MAX_STATUS_INFO = 100;
+  
+  /* Flags for AUDIT challenges */
+
+  public static final byte FLAG_INCLUDE_CHECKPOINT = 1;                /* Include a full checkpoint */
+  public static final byte FLAG_FULL_MESSAGES_SENDER = 2; /* Don't hash outgoing messages to sender */
+  public static final byte FLAG_FULL_MESSAGES_ALL = 4;          /* Don't hash any outgoing messages */
+
 
 
 }

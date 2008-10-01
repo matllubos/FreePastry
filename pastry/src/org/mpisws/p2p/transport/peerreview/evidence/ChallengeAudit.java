@@ -34,75 +34,51 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.history.logentry;
+package org.mpisws.p2p.transport.peerreview.evidence;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
-import org.mpisws.p2p.transport.util.Serializer;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
-import rice.p2p.commonapi.rawserialization.RawSerializable;
-
 
 /**
  * 
-  EVT_SEND
-  nodeID receiverID
-  bool hashed
-
-  data payload   - or -  relevantPayload, hash
+ * CHAL_AUDIT
+  byte type
+  byte flags                 // 1=includePrevCheckpoint 2=fullMessagesToSender 4=fullMessagesAll [bitfield]
+  authenticator from
+  authenticator to
 
  * @author Jeff Hoye
  *
- * @param <Identifier>
  */
-public class EvtSend<Identifier extends RawSerializable> extends HistoryEvent implements PeerReviewConstants {
-  Identifier receiverId;
-  ByteBuffer payload;
-  byte[] hash;
+public class ChallengeAudit implements Evidence {
+  public static final short TYPE = CHAL_AUDIT;
+
+  public byte type;
+  public byte flags;
+  public Authenticator from;
+  public Authenticator to;
   
-  public EvtSend(Identifier receiverId, ByteBuffer payload, int relevantPayload, HashProvider hasher) {
-    this.receiverId = receiverId;
-    this.payload = ByteBuffer.wrap(payload.array(), payload.position(), relevantPayload);
-    hash = hasher.hash(this.payload);
+  public short getType() {
+    return TYPE;
   }
-  
-  public EvtSend(Identifier receiverId, ByteBuffer payload) {
-    this.receiverId = receiverId;
-    this.payload = ByteBuffer.wrap(payload.array(), payload.position(), payload.remaining());
-  }
-  
-  public EvtSend(InputBuffer buf, Serializer<Identifier> idSerializer, int hashSize) throws IOException {
-    receiverId = idSerializer.deserialize(buf);
-    boolean hasHash = buf.readBoolean();    
-    byte[] payload_bytes;
-    if (hasHash) {
-      payload_bytes = new byte[buf.bytesRemaining()-hashSize];
-    } else {
-      payload_bytes = new byte[hashSize];      
-    }
-    buf.read(payload_bytes);
-    payload = ByteBuffer.wrap(payload_bytes);
-    if (hasHash) {
-      hash = new byte[hashSize];
-      buf.read(hash);   
-    }
+
+  public ChallengeAudit(InputBuffer buf, int hashSize, int signatureSize) throws IOException {
+    type = buf.readByte();
+    flags = buf.readByte();
+    from = new Authenticator(buf,hashSize,signatureSize);
+    to = new Authenticator(buf,hashSize,signatureSize);    
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    receiverId.serialize(buf);
-    buf.writeBoolean(hash != null);
-    buf.write(payload.array(), payload.position(), payload.remaining());
-    if (hash != null) {
-      buf.write(hash, 0, hash.length);      
-    }
+    buf.writeByte(type);
+    buf.writeByte(flags);
+    from.serialize(buf);
+    to.serialize(buf);
   }
-  
-  public short getType() {
-    return EVT_SEND;
-  }
+
 }

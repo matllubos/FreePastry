@@ -78,13 +78,10 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   int relevantLen; 
   private byte[] payload;
   
-  Map<String, Object> options;
   short type = MSG_USERDATA;
 
   public UserDataMessage(long topSeq, Handle senderHandle, byte[] topMinusOne,
-      byte[] sig, ByteBuffer message, int relevantlen, Map<String, Object> options) {
-    this.options = options;
-    
+      byte[] sig, ByteBuffer message, int relevantlen) {
     this.topSeq = topSeq;
     this.senderHandle = senderHandle;
     hTopMinusOne = topMinusOne;
@@ -124,7 +121,8 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
 //    }
   }
 
-  public static <H extends RawSerializable> UserDataMessage<H> build(InputBuffer buf, Serializer<H> serializer, int hashSize, int sigSize, Map<String, Object> options) throws IOException {
+  public static <H extends RawSerializable> UserDataMessage<H> build(
+      InputBuffer buf, Serializer<H> serializer, int hashSize, int sigSize) throws IOException {
     long seq = buf.readLong();
     H handle = serializer.deserialize(buf); 
     byte[] hash = new byte[hashSize]; 
@@ -142,7 +140,7 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
       len = msg.length;
     }
     
-    return new UserDataMessage<H>(seq, handle, hash, sig, ByteBuffer.wrap(msg), len, options);
+    return new UserDataMessage<H>(seq, handle, hash, sig, ByteBuffer.wrap(msg), len);
   }
 
   public long getTopSeq() {
@@ -209,7 +207,11 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
     return payload.length;
   }
 
-  public Map<String, Object> getOptions() {
-    return options;
+  public void setIsEvidence(boolean b) {
+    if (b) {
+      type = CHAL_SEND;
+    } else {
+      type = MSG_USERDATA;
+    }
   }
 }

@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -60,23 +61,21 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  *
  * @param <Identifier>
  */
-public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMessage {
+public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMessage implements Evidence {
 
   Identifier nodeId;
   long sendEntrySeq;
   long recvEntrySeq;
   byte[] hashTopMinusOne;
   byte[] signature;
-  Map<String, Object> options;
   
   public AckMessage(Identifier nodeId, long sendEntrySeq, long recvEntrySeq,
-      byte[] hashTopMinusOne, byte[] signature, Map<String, Object> options) {
+      byte[] hashTopMinusOne, byte[] signature) {
     this.nodeId = nodeId;
     this.sendEntrySeq = sendEntrySeq;
     this.recvEntrySeq = recvEntrySeq;
     this.hashTopMinusOne = hashTopMinusOne;
     this.signature = signature;
-    this.options = options;
   }
   
   public short getType() {
@@ -91,7 +90,7 @@ public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMe
     buf.write(signature,0,signature.length);
   }
   
-  public static <Identifier extends RawSerializable> AckMessage<Identifier> build(InputBuffer sib, Serializer<Identifier> serializer, int hashSizeInBytes, int signatureSizeInBytes, Map<String, Object> options) throws IOException {
+  public static <Identifier extends RawSerializable> AckMessage<Identifier> build(InputBuffer sib, Serializer<Identifier> serializer, int hashSizeInBytes, int signatureSizeInBytes) throws IOException {
     Identifier remoteId = serializer.deserialize(sib);
     long ackedSeq = sib.readLong();
     long hisSeq = sib.readLong();    
@@ -99,7 +98,7 @@ public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMe
     sib.read(hTopMinusOne);
     byte[] signature = new byte[signatureSizeInBytes];
     sib.read(signature);
-    return new AckMessage<Identifier>(remoteId, ackedSeq, hisSeq, hTopMinusOne, signature, options);
+    return new AckMessage<Identifier>(remoteId, ackedSeq, hisSeq, hTopMinusOne, signature);
   }
 
   public Identifier getNodeId() {
@@ -120,9 +119,5 @@ public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMe
 
   public byte[] getSignature() {
     return signature;
-  }
-
-  public Map<String, Object> getOptions() {
-    return options;
   }
 }

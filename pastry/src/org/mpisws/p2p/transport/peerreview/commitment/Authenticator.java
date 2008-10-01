@@ -58,7 +58,16 @@ public class Authenticator implements Comparable<Authenticator> {
     hashCode = (int)(seq ^ (seq >>> 32))^Arrays.hashCode(hash)^Arrays.hashCode(signature);
 //    System.out.println("Auth:"+this);
   }
-    
+   
+  public Authenticator(InputBuffer buf, int hashSize, int signatureSize) throws IOException {
+    seq = buf.readLong();
+    hash = new byte[hashSize];
+    buf.read(hash);
+    signature = new byte[signatureSize];
+    buf.read(signature);
+    hashCode = (int)(seq ^ (seq >>> 32))^Arrays.hashCode(hash)^Arrays.hashCode(signature);    
+  }
+  
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeLong(seq);
     buf.write(hash, 0, hash.length);

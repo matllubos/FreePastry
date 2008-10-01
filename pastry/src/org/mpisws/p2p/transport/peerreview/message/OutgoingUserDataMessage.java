@@ -49,12 +49,13 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
 public class OutgoingUserDataMessage<Handle extends RawSerializable> extends UserDataMessage<Handle> implements MessageRequestHandle<Handle, ByteBuffer> {
   PeerInfo<Handle> pi;
   MessageCallback<Handle, ByteBuffer> deliverAckToMe;
+  Map<String, Object> options;
   
   public OutgoingUserDataMessage(long topSeq, Handle senderHandle,
       byte[] topMinusOne, byte[] sig, ByteBuffer message, int relevantlen,
       Map<String, Object> options, PeerInfo<Handle> pi, MessageCallback<Handle, ByteBuffer> deliverAckToMe) {
-    super(topSeq, senderHandle, topMinusOne, sig, message, relevantlen, options);
-    
+    super(topSeq, senderHandle, topMinusOne, sig, message, relevantlen);
+    this.options = options;
     this.pi = pi;
     this.deliverAckToMe = deliverAckToMe;
   }

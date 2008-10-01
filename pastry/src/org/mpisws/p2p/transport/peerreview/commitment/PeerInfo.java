@@ -37,11 +37,13 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.commitment;
 
 import java.util.LinkedList;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.message.OutgoingUserDataMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.tuples.Tuple;
 
 /**
  * We need to keep some state for each peer, including separate transmit and
@@ -65,14 +67,14 @@ public class PeerInfo<Handle extends RawSerializable> {
    * The first message hasn't been acknowledged, the rest haven't been sent.
    */
   LinkedList<OutgoingUserDataMessage<Handle>> xmitQueue;
-  LinkedList<UserDataMessage<Handle>> recvQueue;
+  LinkedList<Tuple<UserDataMessage<Handle>, Map<String, Object>>> recvQueue;
   boolean isReceiving;
   
   public PeerInfo(Handle handle) {
     this.handle = handle;
     lastTransmit = 0;
     xmitQueue = new LinkedList<OutgoingUserDataMessage<Handle>>();
-    recvQueue = new LinkedList<UserDataMessage<Handle>>();
+    recvQueue = new LinkedList<Tuple<UserDataMessage<Handle>,Map<String,Object>>>();
     currentTimeout = 0;
     retransmitsSoFar = 0;
     lastChallenge = -1;
@@ -108,7 +110,7 @@ public class PeerInfo<Handle extends RawSerializable> {
     return xmitQueue;
   }
 
-  public LinkedList<UserDataMessage<Handle>> getRecvQueue() {
+  public LinkedList<Tuple<UserDataMessage<Handle>,Map<String,Object>>> getRecvQueue() {
     return recvQueue;
   }
 

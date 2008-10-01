@@ -83,6 +83,9 @@ public interface SecureHistory /* extends Iterable<IndexEntry> */ {
    */
   public void close() throws IOException;
  
+  
+  public long findSeq(long seq) throws IOException;// { return findSeqOrHigher(seq, false); };
+
   /**
    * Look up a given sequence number, or the first sequence number that is 
    * not lower than a given number. The return value is the number of

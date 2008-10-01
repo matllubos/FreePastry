@@ -34,75 +34,58 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.history.logentry;
+package org.mpisws.p2p.transport.peerreview.message;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.Map;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
-import org.mpisws.p2p.transport.util.Serializer;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
-import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-
 /**
  * 
-  EVT_SEND
-  nodeID receiverID
-  bool hashed
-
-  data payload   - or -  relevantPayload, hash
+ * MSG_RESPONSE
+  byte type = MSG_RESPONSE
+  nodeID originator
+  nodeID subject
+  long long evidenceSeq
+  byte challengeType = {CHAL_AUDIT|CHAL_SEND}
+  [response payload follows]
 
  * @author Jeff Hoye
  *
- * @param <Identifier>
  */
-public class EvtSend<Identifier extends RawSerializable> extends HistoryEvent implements PeerReviewConstants {
-  Identifier receiverId;
-  ByteBuffer payload;
-  byte[] hash;
+public class ResponseMessage<Identifier extends RawSerializable> extends PeerReviewMessage {
+  Identifier originator;
+  Identifier subject;
+  long evidenceSeq;
+  byte challengeType;
+  Evidence response;
   
-  public EvtSend(Identifier receiverId, ByteBuffer payload, int relevantPayload, HashProvider hasher) {
-    this.receiverId = receiverId;
-    this.payload = ByteBuffer.wrap(payload.array(), payload.position(), relevantPayload);
-    hash = hasher.hash(this.payload);
+  
+  public ResponseMessage(Identifier originator, Identifier subject,
+      long evidenceSeq, byte challengeType, Evidence response) {
+    super();
+    this.originator = originator;
+    this.subject = subject;
+    this.evidenceSeq = evidenceSeq;
+    this.challengeType = challengeType;
+    this.response = response;
   }
-  
-  public EvtSend(Identifier receiverId, ByteBuffer payload) {
-    this.receiverId = receiverId;
-    this.payload = ByteBuffer.wrap(payload.array(), payload.position(), payload.remaining());
-  }
-  
-  public EvtSend(InputBuffer buf, Serializer<Identifier> idSerializer, int hashSize) throws IOException {
-    receiverId = idSerializer.deserialize(buf);
-    boolean hasHash = buf.readBoolean();    
-    byte[] payload_bytes;
-    if (hasHash) {
-      payload_bytes = new byte[buf.bytesRemaining()-hashSize];
-    } else {
-      payload_bytes = new byte[hashSize];      
-    }
-    buf.read(payload_bytes);
-    payload = ByteBuffer.wrap(payload_bytes);
-    if (hasHash) {
-      hash = new byte[hashSize];
-      buf.read(hash);   
-    }
-  }
-  
-  public void serialize(OutputBuffer buf) throws IOException {
-    receiverId.serialize(buf);
-    buf.writeBoolean(hash != null);
-    buf.write(payload.array(), payload.position(), payload.remaining());
-    if (hash != null) {
-      buf.write(hash, 0, hash.length);      
-    }
-  }
-  
+
+  @Override
   public short getType() {
-    return EVT_SEND;
+    return MSG_RESPONSE;
   }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    originator.serialize(buf);
+    subject.serialize(buf);
+    buf.writeLong(evidenceSeq);
+    buf.writeByte(challengeType);
+    response.serialize(buf);
+  }
+
 }

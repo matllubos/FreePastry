@@ -81,7 +81,12 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   EvidenceSerializer evidenceSerializer;
   
   
-  public PeerInfoStoreImpl(IdentityTransport<Handle, Identifier> transport, IdStrTranslator<Identifier> stringTranslator, AuthenticatorSerializer authSerializer, EvidenceSerializer evidenceSerializer, Environment env) {
+  public PeerInfoStoreImpl(
+      IdentityTransport<Handle, Identifier> transport, 
+      IdStrTranslator<Identifier> stringTranslator, 
+      AuthenticatorSerializer authSerializer, 
+      EvidenceSerializer evidenceSerializer, 
+      Environment env) {
     this.peerInfoRecords = new HashMap<Identifier, PeerInfoRecord<Handle, Identifier>>();
     this.directory = null;
     this.notificationEnabled = true;
@@ -321,7 +326,8 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
 //    if (!infile.exists()) throw new FileNotFoundException("Cannot read '"+infile+"'");
 
     FileInputBuffer buf = new FileInputBuffer(infile, logger);
-    Evidence e = evidenceSerializer.deserialize(buf);
+    byte type = buf.readByte();
+    Evidence e = evidenceSerializer.deserialize(buf, type);
     buf.close();
     return e;
   }

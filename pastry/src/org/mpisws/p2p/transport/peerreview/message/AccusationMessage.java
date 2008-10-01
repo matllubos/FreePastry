@@ -60,26 +60,19 @@ public class AccusationMessage<Handle, Identifier extends RawSerializable> exten
   Identifier subject;
   long evidenceSeq;
   Evidence evidence;
-  Map<String, Object> options;
   
   public AccusationMessage(Identifier subject,
-      EvidenceRecord<Handle, Identifier> evidenceRecord, Evidence evidence, Map<String, Object> options) {
+      EvidenceRecord<Handle, Identifier> evidenceRecord, Evidence evidence) {
     this.originator = evidenceRecord.getOriginator();
     this.subject = subject;
     this.evidenceSeq = evidenceRecord.getTimeStamp();
     this.evidence = evidence;
-    this.options = options;
   }
 
   public short getType() {
     return MSG_ACCUSATION;
   }
 
-  @Override
-  public Map<String, Object> getOptions() {
-    return options;
-  }
-  
   public void serialize(OutputBuffer buf) throws IOException {
     originator.serialize(buf);
     subject.serialize(buf);

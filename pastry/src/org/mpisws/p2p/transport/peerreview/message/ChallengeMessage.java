@@ -34,75 +34,68 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.history.logentry;
+package org.mpisws.p2p.transport.peerreview.message;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.Map;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-
 /**
- * 
-  EVT_SEND
-  nodeID receiverID
-  bool hashed
-
-  data payload   - or -  relevantPayload, hash
+ * MSG_CHALLENGE
+  byte type = MSG_CHALLENGE
+  nodeID originator
+  long long evidenceSeq
+  byte chalType = {CHAL_AUDIT|CHAL_SEND}
+  [challenge payload follows]
 
  * @author Jeff Hoye
  *
- * @param <Identifier>
  */
-public class EvtSend<Identifier extends RawSerializable> extends HistoryEvent implements PeerReviewConstants {
-  Identifier receiverId;
-  ByteBuffer payload;
-  byte[] hash;
+public class ChallengeMessage<Identifier extends RawSerializable> extends PeerReviewMessage {
+  public static short TYPE = MSG_CHALLENGE;
+    
+  public Identifier originator;
+  public long evidenceSeq;
+  Evidence challenge;
   
-  public EvtSend(Identifier receiverId, ByteBuffer payload, int relevantPayload, HashProvider hasher) {
-    this.receiverId = receiverId;
-    this.payload = ByteBuffer.wrap(payload.array(), payload.position(), relevantPayload);
-    hash = hasher.hash(this.payload);
+  public ChallengeMessage(Identifier originator, long evidenceSeq, Evidence challenge) {
+    this.originator = originator;
+    this.evidenceSeq = evidenceSeq;
+    this.challenge = challenge;
+  }
+
+  @Override
+  public short getType() {
+    return TYPE;
   }
   
-  public EvtSend(Identifier receiverId, ByteBuffer payload) {
-    this.receiverId = receiverId;
-    this.payload = ByteBuffer.wrap(payload.array(), payload.position(), payload.remaining());
+  public short getChallengeType() {
+    return challenge.getType();
   }
-  
-  public EvtSend(InputBuffer buf, Serializer<Identifier> idSerializer, int hashSize) throws IOException {
-    receiverId = idSerializer.deserialize(buf);
-    boolean hasHash = buf.readBoolean();    
-    byte[] payload_bytes;
-    if (hasHash) {
-      payload_bytes = new byte[buf.bytesRemaining()-hashSize];
-    } else {
-      payload_bytes = new byte[hashSize];      
-    }
-    buf.read(payload_bytes);
-    payload = ByteBuffer.wrap(payload_bytes);
-    if (hasHash) {
-      hash = new byte[hashSize];
-      buf.read(hash);   
-    }
+
+  public ChallengeMessage(InputBuffer buf, Serializer<Identifier> idSerializer, EvidenceSerializer evidenceSerializer) throws IOException {
+    originator = idSerializer.deserialize(buf);
+    evidenceSeq = buf.readLong();
+    byte chalType = buf.readByte();
+    challenge = evidenceSerializer.deserialize(buf,chalType);
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    receiverId.serialize(buf);
-    buf.writeBoolean(hash != null);
-    buf.write(payload.array(), payload.position(), payload.remaining());
-    if (hash != null) {
-      buf.write(hash, 0, hash.length);      
-    }
+    originator.serialize(buf);
+    buf.writeLong(evidenceSeq);
+    buf.writeByte((byte)challenge.getType());
+    challenge.serialize(buf);
   }
-  
-  public short getType() {
-    return EVT_SEND;
+
+  public Evidence getChallenge() {
+    return challenge;
   }
+
 }

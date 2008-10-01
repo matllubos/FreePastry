@@ -51,8 +51,6 @@ public abstract class PeerReviewMessage implements PeerReviewConstants, RawSeria
 
   public abstract short getType();
   
-  public abstract Map<String, Object> getOptions();
-  
   public ByteBuffer serialize() throws IOException {
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     sob.writeByte(PeerReview.PEER_REVIEW_COMMIT);

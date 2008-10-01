@@ -252,7 +252,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           udm.getTopSeq(),
           seqOfRecvEntry,
           myHashTopMinusOne,
-          transport.sign(hToSign), udm.getOptions());
+          transport.sign(hToSign));
       
       return new Tuple<AckMessage<Identifier>,Boolean>(ack, loggedPreviously);
     } catch (IOException ioe) {
@@ -382,7 +382,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     
       /* Dequeue the packet. After this point, we must either deliver it or discard it */
 
-      UserDataMessage<Handle> udm = info.recvQueue.removeFirst();
+      Tuple<UserDataMessage<Handle>, Map<String, Object>> t = info.recvQueue.removeFirst();
+      UserDataMessage<Handle> udm = t.a();
       
       /* Extract the authenticator */
       Authenticator authenticator;
@@ -422,7 +423,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
               "Delivering message from "+udm.getSenderHandle()+" via "+info.handle+" ("+
               udm.getPayloadLen()+" bytes; "+udm.getRelevantLen()+"/"+udm.getPayloadLen()+" relevant)");
           try {
-            peerreview.getApp().messageReceived(udm.getSenderHandle(), udm.getPayload(), udm.getOptions()); 
+            peerreview.getApp().messageReceived(udm.getSenderHandle(), udm.getPayload(), t.b()); 
           } catch (IOException ioe) {
             logger.logException("Error handling "+udm, ioe);
           }
@@ -435,7 +436,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
 
         if (logger.level <= Logger.FINE) logger.log("Returning ACK to"+info.getHandle());
         try {
-          peerreview.transmit(info.handle, ret.a().serialize(), null, ret.a().getOptions());
+          peerreview.transmit(info.handle, ret.a().serialize(), null, t.b());
         } catch (IOException ioe) {
           throw new RuntimeException("Major problem, ack couldn't be serialized." +ret.a(),ioe);
         }
@@ -480,7 +481,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
      * trusted, the message is going to be delivered directly by makeProgress();
      * otherwise a challenge is sent.
      */
-    lookupPeer(source).recvQueue.addLast(msg);
+    lookupPeer(source).recvQueue.addLast(new Tuple<UserDataMessage<Handle>, Map<String,Object>>(msg,options));
 
     makeProgress(peerreview.getIdentifierExtractor().extractIdentifier(source));
   }

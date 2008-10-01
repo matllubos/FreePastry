@@ -54,6 +54,8 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocol;
+import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
@@ -112,7 +114,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   PeerInfoStore<Handle, Identifier> infoStore;
 
   CommitmentProtocol<Handle, Identifier> commitmentProtocol;
-
+  ChallengeResponseProtocol<Handle, Identifier> challengeProtocol;
   IdentifierExtractor<Handle, Identifier> identifierExtractor;
   Logger logger;
 
@@ -196,6 +198,8 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
+    Object auditProtocol = null;
+    this.challengeProtocol = new ChallengeResponseProtocolImpl(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol, callback);
     initialized = true;
   }
     
@@ -311,19 +315,19 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       byte type = message.get();
       switch (type) {
       case MSG_ACK:
-        commitmentProtocol.handleIncomingAck(handle, AckMessage.build(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes(),options), options);
+        commitmentProtocol.handleIncomingAck(handle, AckMessage.build(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes()), options);
         break;
-//      case MSG_CHALLENGE:
-//        challengeProtocol.handleChallenge(handle, message);
-//        break;
+      case MSG_CHALLENGE:
+        challengeProtocol.handleChallenge(handle, message, options);
+        break;
 //      case MSG_ACCUSATION:
 //      case MSG_RESPONSE:
 //        statementProtocol.handleIncomingStatement(handle, message);
 //        break;
       case MSG_USERDATA:
-        UserDataMessage<Handle> udm = UserDataMessage.build(new SimpleInputBuffer(message), handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes(), options);
-//      challengeProtocol.handleIncomingMessage(handle, message);
-        commitmentProtocol.handleIncomingMessage(handle, udm, options);
+        UserDataMessage<Handle> udm = UserDataMessage.build(new SimpleInputBuffer(message), handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes());
+        challengeProtocol.handleIncomingMessage(handle, udm, options);
+//        commitmentProtocol.handleIncomingMessage(handle, udm, options);
         break;
       default:
         panic("Unknown message type in PeerReview: #"+ type);
@@ -345,6 +349,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     transport.acceptSockets(b);
   }
 
+  public Identifier getLocalId() {
+    return identifierExtractor.extractIdentifier(transport.getLocalIdentifier());
+  }
+  
   public Handle getLocalIdentifier() {
     return transport.getLocalIdentifier();
   }
@@ -495,8 +503,8 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     return identifierExtractor;
   }
 
-  public void challengeSuspectedNode(Handle h) {
-    throw new RuntimeException("todo: implement");
+  public void challengeSuspectedNode(Handle handle) {
+    challengeProtocol.challengeSuspectedNode(handle);
   }
 
   /**
@@ -586,6 +594,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
   public byte[] hash(ByteBuffer... hashMe) {
     return transport.hash(hashMe);
+  }
+
+  public EvidenceSerializer getEvidenceSerializer() {
+    return evidenceSerializer;
   }
 
 

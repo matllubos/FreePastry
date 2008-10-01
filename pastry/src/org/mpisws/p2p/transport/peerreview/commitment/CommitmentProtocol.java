@@ -47,6 +47,7 @@ import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.tuples.Tuple;
 
 /**
  * This protocol attaches signatures to outgoing messages and acknowledges
@@ -69,5 +70,6 @@ public interface CommitmentProtocol<Handle extends RawSerializable, Identifier e
   public void handleIncomingAck(Handle source, AckMessage<Identifier> ackMessage, Map<String, Object> options) throws IOException;
   public void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException;
   public void notifyCertificateAvailable(Identifier id);
+  public Tuple<AckMessage<Identifier>,Boolean> logMessageIfNew(UserDataMessage<Handle> udm);
 
 }

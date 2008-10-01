@@ -34,65 +34,19 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.message;
+package org.mpisws.p2p.transport.peerreview.challenge;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.Map.Entry;
 
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
-import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
-import org.mpisws.p2p.transport.util.Serializer;
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
-import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
-import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-/**
- * Builds the message to a target size.
- * 
- * @author Jeff Hoye
- */
-public class AuthPushMessage<Identifier extends RawSerializable> extends PeerReviewMessage {
-    
-  public Map<Identifier, List<Authenticator>> authenticators;
-  
-  public AuthPushMessage(Map<Identifier, List<Authenticator>> authenticators) {
-    this.authenticators = authenticators;
-  }
+public interface ChallengeResponseProtocol<Handle extends RawSerializable, Identifier> {
+  public void challengeSuspectedNode(Handle handle);  
+  public void handleChallenge(Handle source, ByteBuffer challenge, Map<String, Object> options) throws IOException;
+  public void handleIncomingMessage(Handle source, UserDataMessage<Handle> udm, Map<String, Object> options) throws IOException;
 
-  @Override
-  public short getType() {
-    return MSG_AUTHPUSH;
-  }
-
-  public static <I extends RawSerializable> AuthPushMessage<I> build(InputBuffer buf, Serializer<I> idSerializer, AuthenticatorSerializer authSerializer) throws IOException {
-    Map<I, List<Authenticator>> authenticators = new HashMap<I, List<Authenticator>>();
-    int numIds = buf.readShort();
-    for (int i = 0; i < numIds; i++) {
-      I id = idSerializer.deserialize(buf);
-      int numAuths = buf.readShort();
-      List<Authenticator> l = new ArrayList<Authenticator>();
-      authenticators.put(id, l);
-      for (int a = 0; a < numAuths; a++) {
-        l.add(authSerializer.deserialize(buf));
-      }
-    }
-    return new AuthPushMessage<I>(authenticators);
-  }
-  
-  public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeShort((short)authenticators.size());
-    for (Entry<Identifier, List<Authenticator>> e : authenticators.entrySet()) {
-      e.getKey().serialize(buf);
-      buf.writeShort((short)e.getValue().size());
-      for (Authenticator a : e.getValue()) {
-        a.serialize(buf);
-      }
-    }
-  }  
 }

@@ -36,8 +36,14 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.history;
 
+/**
+ * Policy given to a SecureHistory to tell it which event types to hash when
+ * serializing a sequence of events. For example, such a policy might tell the
+ * SecureHistory to hash all SEND and SENDSIGN events, plus all CHECKPOINT
+ * events except for the first one.
+ */
 public interface HashPolicy {
 
-  boolean hashEntry(short type, byte[] buffer, long sizeInFile);
+  boolean hashEntry(short type, byte[] content);
 
 }

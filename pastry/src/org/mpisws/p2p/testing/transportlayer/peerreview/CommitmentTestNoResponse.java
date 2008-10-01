@@ -76,6 +76,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImp
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
+import org.mpisws.p2p.transport.peerreview.evidence.EvidenceSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
@@ -220,7 +221,7 @@ public class CommitmentTestNoResponse {
         public String toString(IdImpl id) {
           return Integer.toString(id.id);
         }},
-          new AuthenticatorSerializerImpl(0,0), null);
+          new AuthenticatorSerializerImpl(0,0), new EvidenceSerializerImpl<HandleImpl>(new HandleSerializer(), transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
       init(name);
     }
 
@@ -583,11 +584,11 @@ public class CommitmentTestNoResponse {
       BogusTransport t1;
       if (dropMessages) {
         t1 = new BogusTransport(localHandle, cert) {
-  
           @Override
           protected void receiveMessage(HandleImpl i, ByteBuffer m) {
-            System.out.println("Dropping message "+m);
-            return;
+            super.receiveMessage(i, m);
+//            System.out.println("Dropping message "+m);
+//            return;
           }
           
         };

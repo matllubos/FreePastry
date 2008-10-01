@@ -252,6 +252,10 @@ public class SecureHistoryImpl implements SecureHistory {
     dataFile = null;
   }
   
+  public long findSeq(long seq) throws IOException { 
+    return findSeqOrHigher(seq, false); 
+  }
+
   /**
    * Look up a given sequence number, or the first sequence number that is 
    * not lower than a given number. The return value is the number of
@@ -392,7 +396,7 @@ public class SecureHistoryImpl implements SecureHistory {
       
       // The entry is hashed if (a) it is already hashed in the log file,
       // or (b) the hash policy tells us to.   
-      boolean hashIt = (ie.sizeInFile<0) || (hashPolicy != null && hashPolicy.hashEntry(ie.type, buffer, ie.sizeInFile));
+      boolean hashIt = (ie.sizeInFile<0) || (hashPolicy != null && hashPolicy.hashEntry(ie.type, buffer));
 
       // Encode the size of the entry
 
