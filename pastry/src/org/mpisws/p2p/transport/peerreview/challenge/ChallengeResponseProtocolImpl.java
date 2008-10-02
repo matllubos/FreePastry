@@ -38,13 +38,17 @@ package org.mpisws.p2p.transport.peerreview.challenge;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
+import org.mpisws.p2p.transport.peerreview.audit.AuditProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
+import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
 import org.mpisws.p2p.transport.peerreview.evidence.ChallengeAudit;
 import org.mpisws.p2p.transport.peerreview.history.HashPolicy;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
@@ -53,6 +57,7 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceRecord;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStoreImpl;
 import org.mpisws.p2p.transport.peerreview.message.AccusationMessage;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
@@ -63,6 +68,7 @@ import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.Tuple;
 
 public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> 
@@ -72,15 +78,16 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
   PeerInfoStore<Handle, Identifier> infoStore;
   SecureHistory history;
   AuthenticatorStore<Identifier> authOutStore; 
-  Object auditProtocol;
+  AuditProtocol<Identifier> auditProtocol;
   CommitmentProtocol<Handle, Identifier> commitmentProtocol;
-  private Logger logger;
-
+  protected Logger logger;
+  Map<Handle, LinkedList<PacketInfo<Handle, Identifier>>> queue = new HashMap<Handle,LinkedList<PacketInfo<Handle, Identifier>>>();
+  
   public ChallengeResponseProtocolImpl(
       PeerReviewImpl<Handle, Identifier> peerReviewImpl,
       IdentityTransport<Handle, Identifier> transport,
       PeerInfoStore<Handle, Identifier> infoStore, SecureHistory history,
-      AuthenticatorStore<Identifier> authOutStore, Object auditProtocol,
+      AuthenticatorStore<Identifier> authOutStore, AuditProtocol<Identifier> auditProtocol,
       CommitmentProtocol<Handle, Identifier> commitmentProtocol) {
     this.peerreview = peerReviewImpl;
     this.transport = transport;
@@ -91,6 +98,47 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     this.commitmentProtocol = commitmentProtocol;
     
     this.logger = peerreview.getEnvironment().getLogManager().getLogger(ChallengeResponseProtocolImpl.class, null);
+  }
+  
+  protected void copyAndEnqueueTail(Handle source, Evidence evidence, 
+      boolean isAccusation, Identifier subject, Identifier originator, long evidenceSeq, 
+      Map<String, Object> options) {
+    LinkedList<PacketInfo<Handle, Identifier>> list = queue.get(source);
+    if (list == null) {
+      list = new LinkedList<PacketInfo<Handle,Identifier>>();
+      queue.put(source, list);
+    }    
+    list.addLast(new PacketInfo<Handle, Identifier>(source,evidence,isAccusation,subject,originator,evidenceSeq,options));
+  }
+  
+  protected void deliver(PacketInfo<Handle, Identifier> pi) {
+    try {
+      if (pi.isAccusation) {
+        infoStore.addEvidence(pi.originator, pi.subject, pi.evidenceSeq, pi.message, pi.source);
+      } else {
+        commitmentProtocol.handleIncomingMessage(pi.source, (UserDataMessage<Handle>)pi.message, pi.options);
+      } 
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
+  /* If a node goes back to TRUSTED, we deliver all pending messages */
+
+  public void notifyStatusChange(Identifier id, int newStatus) {
+    switch (newStatus) {
+    case STATUS_TRUSTED:
+      LinkedList<PacketInfo<Handle, Identifier>> list = queue.remove(id);
+      for (PacketInfo<Handle, Identifier> pi : list) {
+        deliver(pi);
+      }
+      break;
+    case STATUS_EXPOSED:
+      queue.remove(id);
+      break;
+    case STATUS_SUSPECTED:
+      break;
+    }
   }
   
   /**
@@ -105,16 +153,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       case CHAL_AUDIT:
       {
         ChallengeAudit audit = (ChallengeAudit)challenge.getChallenge();
-        /* Some sanity checking */
-      
-//        if (bodyLen != (1+2*authenticatorSizeBytes)) {
-//          if (logger.level <= Logger.WARNING) logger.log("Received an AUDIT challenge with an invalid length (%d)", bodyLen);
-//          return;
-//        }
-//        
-//        unsigned char flags = body[0];
-//        long long seqFrom = *(long long*)&body[1];
-//        long long seqTo = *(long long*)&body[1+authenticatorSizeBytes];
+
         byte flags = audit.flags;
         long seqFrom = audit.from.getSeq();
         long seqTo = audit.to.getSeq();
@@ -185,50 +224,21 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
           /* Serialize the requested log snippet */
         
           HashPolicy hashPolicy = new ChallengeHashPolicy(flags, challenge.originator, peerreview.getIdSerializer());
-          throw new RuntimeException("todo: implement.");
-//          FILE *outfile = tmpfile();
-//          if (history->serializeRange(idxFrom, idxTo, hashPolicy, outfile)) {
-//            int size = ftell(outfile);
-//            
-//            unsigned char extInfo[255];
-//            unsigned int extInfoLen = extInfoPolicy ? extInfoPolicy->storeExtInfo(history, followingSeq, extInfo, sizeof(extInfo)) : 0;
-//            if (extInfoLen < 0)
-//              extInfoLen = 0;
-//            if (extInfoLen > sizeof(extInfo))
-//              extInfoLen = sizeof(extInfo);
-//            
-//            unsigned int maxHeaderLen = 1+2*MAX_ID_SIZE+sizeof(long long)+1+MAX_HANDLE_SIZE+sizeof(long long)+1+extInfoLen;
-//            unsigned char *buffer = (unsigned char*) malloc(maxHeaderLen+size);
-//            unsigned int headerLen = 0;
-//            
-//            /* Put together a RESPONSE message */
-//            
-//            writeByte(buffer, &headerLen, MSG_RESPONSE);
-//            writeBytes(buffer, &headerLen, originatorAsBytes, identifierSizeBytes);
-//            transport->getLocalHandle()->getIdentifier()->write(buffer, &headerLen, maxHeaderLen);
-//            writeLongLong(buffer, &headerLen, evidenceSeq);
-//            writeByte(buffer, &headerLen, type);
-//            peerreview->getLocalHandle()->write(buffer, &headerLen, maxHeaderLen);
-//            writeLongLong(buffer, &headerLen, beginSeq);
-//            writeByte(buffer, &headerLen, extInfoLen);
-//            if (extInfoLen>0)
-//              writeBytes(buffer, &headerLen, extInfo, extInfoLen);
-//            assert(headerLen <= maxHeaderLen);
-//  
-//            fseek(outfile, 0, SEEK_SET);
-//            fread(&buffer[headerLen], size, 1, outfile);
-//  
-//            /* ... and send it back to the challenger */
-//  
-//            if (logger.level <= Logger.FINER) logger.log( "Answering AUDIT challenge with %d-byte log snippet", size); 
-//            peerreview->transmit(source, false, buffer, headerLen+size);
-//            free(buffer);
-//          } else {
-//            if (logger.level <= Logger.WARNING) logger.log("Error accessing history");
-//          }
-//  
-//          fclose(outfile);
-//          delete hashPolicy;
+          SimpleOutputBuffer sob = new SimpleOutputBuffer();
+          if (history.serializeRange(idxFrom, idxTo, hashPolicy, sob)) {
+            ByteBuffer buf = sob.getByteBuffer();
+            int size = buf.remaining();
+            /* Put together a RESPONSE message */
+            ResponseMessage<Identifier> response = new ResponseMessage<Identifier>(
+                challenge.originator,peerreview.getLocalId(),challenge.evidenceSeq,new AuditResponse(buf));
+            
+            /* ... and send it back to the challenger */
+  
+            if (logger.level <= Logger.FINER) logger.log("Answering AUDIT challenge with "+size+"-byte log snippet"); 
+            peerreview.transmit(source, response, null, options);
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log("Error accessing history in handleChallenge("+source+","+challenge+")");
+          }
         } else {
           if (logger.level <= Logger.WARNING) logger.log(
               "Cannot respond to AUDIT challenge ["+seqFrom+"-"+seqTo+",flags="+flags+
@@ -280,7 +290,88 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
 
   }
 
+  /* Called when we've challenged another node, and it has sent us a response */
 
+  protected void handleResponse(ResponseMessage<Identifier> message, Map<String, Object> options) {
+    /* If this is a response to an AUDIT, we let the AuditProtocol handle it */
+
+    if (message.originator.equals(peerreview.getLocalId())) {
+      Evidence auditEvidence = auditProtocol.statOngoingAudit(message.subject, message.evidenceSeq); 
+      if (auditEvidence != null) {
+        if (isValidResponse(message.subject, auditEvidence, message.payload, true)) {
+          if (logger.level <= Logger.FINE) logger.log( "Received response to ongoing AUDIT from "+message.subject);
+          auditProtocol.processAuditResponse(message.subject, message.evidenceSeq, message.payload);
+        } else {
+          if (logger.level <= Logger.WARNING) logger.log("Invalid response to ongoing audit of "+message.subject);
+        }
+        
+        return;
+      }
+    }
+    
+    /* It's not an AUDIT, so let's see whether it matches any of our evidence (if not, the
+       sender is responding to a challenge we haven't even made) */
+    
+//    int evidenceLen = 0;
+//    bool isProof = false;
+//    bool haveResponse = false;
+    Handle interestedParty = null;
+    
+    EvidenceRecord<Handle, Identifier> record = infoStore.findEvidence(message.originator, message.subject, message.evidenceSeq);
+    if (record == null) {
+      if (logger.level <= Logger.WARNING) logger.log("Received response, but matching request is missing; discarding");
+      return;
+    }
+    
+    /* The evidence has to be a CHALLENGE; for PROOFs there is no valid response */
+    
+    if (record.isProof()) {
+      if (logger.level <= Logger.WARNING) logger.log("Received an alleged response to a proof; discarding");
+      return;
+    }
+    
+    /* If we get a duplicate response, discard it */
+    
+    if (record.hasResponse()) {
+      if (logger.level <= Logger.WARNING) logger.log("Received duplicate response; discarding");
+      return;
+    }
+    
+    /* Retrieve the evidence */
+    try {
+      Evidence evidence = infoStore.getEvidence(message.originator, message.subject, message.evidenceSeq);
+      
+      /* Check the response against the evidence; if it is valid, add it to our store */
+      
+      if (isValidResponse(message.subject, evidence, message.payload)) {
+        if (logger.level <= Logger.FINE) logger.log(
+            "Received valid response (orig="+message.originator+", subject="+message.subject+", t="+message.evidenceSeq+"); adding");
+        infoStore.addResponse(message.originator, message.subject, message.evidenceSeq, message.payload);
+        
+        /* If we've only relayed this challenge for another node (probably in our
+           capacity as a witness), we need to forward the response back to
+           the original challenger. */
+        
+        if (interestedParty != null) {
+          if (logger.level <= Logger.FINE) logger.log("Relaying response to interested party "+interestedParty);
+          peerreview.transmit(interestedParty, message, null, options);
+        }
+      } else {
+        if (logger.level <= Logger.WARNING) logger.log("Invalid response; discarding");
+      }
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
+
+  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response) {
+    return isValidResponse(subject, evidence, response, false);
+  }
+  
+  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response, boolean extractAuthsFromResponse) {
+    throw new RuntimeException("implememnt");
+  }
+  
   /**
    * Looks up the first unanswered challenge to a SUSPECTED node, and sends it to that node 
    */
@@ -325,16 +416,11 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     /* If the status is SUSPECTED, we queue the message for later delivery */
 
     if (logger.level <= Logger.WARNING) logger.log("Incoming message from SUSPECTED node "+source+"; queueing and challenging the node");
-    copyAndEnqueueTail(source, message, false, null, null, 0);
+    copyAndEnqueueTail(source, message, false, null, null, 0, options);
 
     /* Furthermore, we must have an unanswered challenge, which we send to the remote node */
 
     challengeSuspectedNode(source);
-  }
-
-  protected void copyAndEnqueueTail(Handle source,
-      Evidence evidence, boolean isAccusation, Identifier subject, Identifier originator, long evidenceSeq) {
-    throw new RuntimeException("implement me");
   }
 
   /**
@@ -360,7 +446,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
         if (logger.level <= Logger.FINE) 
           logger.log("Statement completed: RESPONSE  (orig="+message.originator+
               ", subject="+message.subject+", ts="+message.evidenceSeq+")");
-        handleResponse(message.originator, message.subject, message.evidenceSeq, message.response);
+        handleResponse(message, options);
         if (infoStore.getStatus(peerreview.getIdentifierExtractor().extractIdentifier(source)) == STATUS_SUSPECTED) {
           if (logger.level <= Logger.FINE) logger.log( "RECHALLENGE "+source);
           challengeSuspectedNode(source);
@@ -395,7 +481,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
           /* If the status is SUSPECTED, we queue the message for later delivery */
   
           if (logger.level <= Logger.WARNING) logger.log("Incoming accusation from SUSPECTED node "+source+"; queueing and challenging the node");
-          copyAndEnqueueTail(source, message.evidence, true, message.subject, message.originator, message.evidenceSeq);
+          copyAndEnqueueTail(source, message.evidence, true, message.subject, message.originator, message.evidenceSeq, options);
   
           /* Furthermore, we must have an unanswered challenge, which we send to the remote node */
   
@@ -408,9 +494,4 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     }
   }
 
-  protected void handleResponse(Identifier originator, Identifier subject,
-      long evidenceSeq, Evidence response) {
-    // TODO Auto-generated method stub
-    
-  }
 }

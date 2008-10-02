@@ -33,29 +33,32 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
-*******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.infostore;
+ *******************************************************************************/
+package org.mpisws.p2p.transport.peerreview.challenge;
 
-import java.io.File;
-import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
-public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
-  public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  public void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence, Handle interestedParty) throws IOException;
-  public void addResponse(Identifier originator, Identifier subject, long timestamp, Evidence response) throws IOException;
-  int getStatus(Identifier id);
-  public void notifyStatusChanged(Identifier subject, int value);
-  public boolean setStorageDirectory(File file) throws IOException;
+public class PacketInfo<Handle, Identifier> {
+  Handle source;
+  Evidence message;
+  boolean isAccusation;
+  Identifier subject;
+  Identifier originator;
+  long evidenceSeq;
+  Map<String, Object> options;
   
-  public Evidence getEvidence(Identifier originator, Identifier subject, long timestamp) throws IOException;
-
-  public EvidenceRecord<Handle, Identifier> statFirstUnansweredChallenge(Identifier subject);
-  public EvidenceRecord<Handle, Identifier> statProof(Identifier subject);
-  
-  public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp);
-  public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp, boolean create);
-
+  public PacketInfo(Handle source, Evidence message, boolean isAccusation,
+      Identifier subject, Identifier originator, long evidenceSeq, Map<String, Object> options) {
+    this.source = source;
+    this.message = message;
+    this.isAccusation = isAccusation;
+    this.subject = subject;
+    this.originator = originator;
+    this.evidenceSeq = evidenceSeq;
+    this.options = options;
+  }
 
 }

@@ -47,7 +47,6 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
-import org.mpisws.p2p.transport.peerreview.evidence.Response;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.FileInputBuffer;
@@ -333,7 +332,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   /**
    * Record a response to a challenge
    */
-  void addResponse(Identifier originator, Identifier subject, long timestamp, Response response) throws IOException {
+  public void addResponse(Identifier originator, Identifier subject, long timestamp, Evidence response) throws IOException {
     EvidenceRecord<Handle, Identifier> evi = findEvidence(originator, subject, timestamp);
     assert(evi != null && !evi.isProof() && !evi.hasResponse());
     
@@ -345,7 +344,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
 //      panic("Cannot create '%s'", namebuf);
 //      
     FileOutputBuffer outfile = new FileOutputBuffer(getFile(subject, originator, timestamp, "response"));
-    outfile.writeByte((byte)response.getType());
+    outfile.writeByte((byte)response.getEvidenceType());
     response.serialize(outfile);
     outfile.close();
     

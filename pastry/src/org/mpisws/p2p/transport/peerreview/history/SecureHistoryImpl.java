@@ -325,7 +325,7 @@ public class SecureHistoryImpl implements SecureHistory {
    * Note that the idxFrom and idxTo arguments are record numbers, NOT sequence numbers.
    * Use findSeqOrHigher() to get these if only sequence numbers are known. 
    */
-  public boolean serializeRange(int idxFrom, int idxTo, HashPolicy hashPolicy, RandomAccessFileIOBuffer outfile) throws IOException {
+  public boolean serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy, OutputBuffer outfile) throws IOException {
     assert((0 < idxFrom) && (idxFrom <= idxTo) && (idxTo < numEntries));
 
     IndexEntry ie;
@@ -335,11 +335,11 @@ public class SecureHistoryImpl implements SecureHistory {
     pointerAtEnd = false;  
     indexFile.seek((idxFrom-1) * indexFactory.getSerializedSize());
     ie = indexFactory.build(indexFile);
-    outfile.write(ie.nodeHash);
+    outfile.write(ie.nodeHash, 0, ie.nodeHash.length);
     
     // Go through entries one by one    
     long previousSeq = -1;
-    for (int idx=idxFrom; idx<=idxTo; idx++) {
+    for (long idx=idxFrom; idx<=idxTo; idx++) {
     
       // Read index entry
     
@@ -360,7 +360,7 @@ public class SecureHistoryImpl implements SecureHistory {
       
       if (previousSeq >= 0) {
         if (ie.seq == (previousSeq+1)) {
-          outfile.writeByte(0);
+          outfile.writeByte((byte)0);
 //          header[bytesInHeader++] = 0;
         } else {
           long dhigh = (ie.seq/1000) - (previousSeq/1000);
@@ -368,7 +368,7 @@ public class SecureHistoryImpl implements SecureHistory {
             outfile.writeByte((byte)(dhigh & 0xFF));
 //            header[bytesInHeader++] = (byte)(dhigh & 0xFF);
           } else {
-            outfile.writeByte(0xFF);
+            outfile.writeByte((byte)0xFF);
 //            header[bytesInHeader++] = (byte)0xFF;
             outfile.writeLong(ie.seq);
 //          *(long*)&header[bytesInHeader] = ie.seq; 
@@ -401,23 +401,23 @@ public class SecureHistoryImpl implements SecureHistory {
       // Encode the size of the entry
 
       if (hashIt) {
-        outfile.writeByte(0);
+        outfile.writeByte((byte)0);
 //        header[bytesInHeader++] = 0;
-        outfile.write(ie.contentHash); 
+        outfile.write(ie.contentHash,0,ie.contentHash.length); 
 //        for (int i=0; i<hashProv.getSizeOfHash(); i++)
 //          header[bytesInHeader++] = ie.contentHash[i];
       } else if (ie.sizeInFile < 255) {
         outfile.writeByte((byte)(ie.sizeInFile & 0xFF));
 //        header[bytesInHeader++] = (unsigned char) ie.sizeInFile;
       } else if (ie.sizeInFile < 65536) {
-        outfile.writeByte(0xFF);
+        outfile.writeByte((byte)0xFF);
 //        header[bytesInHeader++] = 0xFF;
         outfile.writeShort((short)(ie.sizeInFile & 0xFFFF));
 //        *(unsigned short*)&header[bytesInHeader] = (unsigned short) ie.sizeInFile;
 //        bytesInHeader += sizeof(unsigned short);
       } else {
 //  panic("A");    
-        outfile.writeByte(0xFE);
+        outfile.writeByte((byte)0xFE);
         //header[bytesInHeader++] = 0xFE;
         outfile.writeLong(ie.sizeInFile);
 //        *(unsigned int*)&header[bytesInHeader] = (unsigned int) ie.sizeInFile;
@@ -430,7 +430,7 @@ public class SecureHistoryImpl implements SecureHistory {
 //      fwrite(&header, bytesInHeader, 1, outfile);
 
       if (!hashIt) { 
-        outfile.write(buffer);
+        outfile.write(buffer,0,buffer.length);
         //fwrite(buffer, ie.sizeInFile, 1, outfile);
       }        
     } // for

@@ -34,28 +34,27 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.infostore;
+package org.mpisws.p2p.transport.peerreview.evidence;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
-public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
-  public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  public void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence, Handle interestedParty) throws IOException;
-  public void addResponse(Identifier originator, Identifier subject, long timestamp, Evidence response) throws IOException;
-  int getStatus(Identifier id);
-  public void notifyStatusChanged(Identifier subject, int value);
-  public boolean setStorageDirectory(File file) throws IOException;
-  
-  public Evidence getEvidence(Identifier originator, Identifier subject, long timestamp) throws IOException;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
-  public EvidenceRecord<Handle, Identifier> statFirstUnansweredChallenge(Identifier subject);
-  public EvidenceRecord<Handle, Identifier> statProof(Identifier subject);
-  
-  public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp);
-  public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp, boolean create);
+public class AuditResponse implements Evidence {
 
+  public AuditResponse(ByteBuffer byteBuffer) {
+    throw new RuntimeException("implement");
+  }
+
+  public short getEvidenceType() {
+    return RESP_AUDIT;
+  }
+
+  public void serialize(OutputBuffer buf) throws IOException {
+    throw new RuntimeException("implement");
+  }
 
 }

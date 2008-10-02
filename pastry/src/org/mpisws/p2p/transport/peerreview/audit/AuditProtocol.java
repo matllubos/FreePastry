@@ -34,15 +34,11 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.evidence;
+package org.mpisws.p2p.transport.peerreview.audit;
 
-import java.io.IOException;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
-
-public interface Response {
-
-  short getType();
-  public void serialize(OutputBuffer buf) throws IOException;
-
+public interface AuditProtocol<Identifier> {
+  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq);
+  public void processAuditResponse(Identifier subject, long evidenceSeq, Evidence payload);
 }

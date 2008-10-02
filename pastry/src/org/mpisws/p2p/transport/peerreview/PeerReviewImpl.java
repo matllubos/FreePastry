@@ -54,6 +54,7 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.peerreview.audit.AuditProtocol;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocol;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
@@ -201,7 +202,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
-    Object auditProtocol = null;
+    AuditProtocol<Identifier> auditProtocol = null;
     this.challengeProtocol = new ChallengeResponseProtocolImpl(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
     initialized = true;
   }

@@ -64,16 +64,15 @@ public class ResponseMessage<Identifier extends RawSerializable> implements Peer
   public Identifier originator;
   public Identifier subject;
   public long evidenceSeq;
-  public Evidence response;
+  public Evidence payload;
   
   
   public ResponseMessage(Identifier originator, Identifier subject,
       long evidenceSeq, Evidence response) {
-    super();
     this.originator = originator;
     this.subject = subject;
     this.evidenceSeq = evidenceSeq;
-    this.response = response;
+    this.payload = response;
   }
 
   public short getType() {
@@ -84,15 +83,15 @@ public class ResponseMessage<Identifier extends RawSerializable> implements Peer
     originator = idSerializer.deserialize(buf);
     subject = idSerializer.deserialize(buf);
     evidenceSeq = buf.readLong();
-    response = evSerializer.deserialize(buf, buf.readByte(),true);
+    payload = evSerializer.deserialize(buf, buf.readByte(),true);
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
     originator.serialize(buf);
     subject.serialize(buf);
     buf.writeLong(evidenceSeq);
-    buf.writeByte((byte)response.getEvidenceType());
-    response.serialize(buf);
+    buf.writeByte((byte)payload.getEvidenceType());
+    payload.serialize(buf);
   }
 
 }
