@@ -63,7 +63,7 @@ public class ChallengeAudit implements Evidence {
   public Authenticator from;
   public Authenticator to;
   
-  public short getType() {
+  public short getEvidenceType() {
     return TYPE;
   }
 

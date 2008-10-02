@@ -221,7 +221,7 @@ public class CommitmentTestNoResponse {
         public String toString(IdImpl id) {
           return Integer.toString(id.id);
         }},
-          new AuthenticatorSerializerImpl(0,0), new EvidenceSerializerImpl<HandleImpl>(new HandleSerializer(), transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
+          new AuthenticatorSerializerImpl(0,0), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(), new IdSerializer(), transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
       init(name);
     }
 

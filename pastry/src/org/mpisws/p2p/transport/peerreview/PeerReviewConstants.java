@@ -81,6 +81,8 @@ public interface PeerReviewConstants {
   /* Evidence types (challenges and proofs) */
   public static final byte CHAL_AUDIT = 1;    
   public static final byte CHAL_SEND = 2;
+  public static final byte RESP_SEND = CHAL_SEND;
+  public static final byte RESP_AUDIT = CHAL_AUDIT;
   public static final byte PROOF_INCONSISTENT = 3;
   public static final byte PROOF_NONCONFORMANT = 4;
 

@@ -50,10 +50,13 @@ import org.mpisws.p2p.transport.peerreview.history.HashPolicy;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceRecord;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.message.AccusationMessage;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.ResponseMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
@@ -93,16 +96,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
   /**
    * Called when another node sends us a challenge. If the challenge is valid, we respond. 
    */
-  public void handleChallenge(Handle source, ByteBuffer buf, Map<String, Object> options) throws IOException {
-    ChallengeMessage<Identifier> challenge;
-    try {
-      SimpleInputBuffer sib = new SimpleInputBuffer(buf);
-      challenge = new ChallengeMessage<Identifier>(sib,peerreview.getIdSerializer(),peerreview.getEvidenceSerializer());
-    } catch (IOException ioe) {
-      if (logger.level <= Logger.WARNING) logger.log("Frivolous challenge from "+source);
-      throw ioe;
-    }
-    
+  public void handleChallenge(Handle source, ChallengeMessage<Identifier> challenge, Map<String, Object> options) throws IOException {
     short type = challenge.getChallengeType(); 
     switch (type) {
 
@@ -266,7 +260,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
   
         /* Put together a RESPONSE with an authenticator for the message in the challenge */
 
-        ResponseMessage rMsg = new ResponseMessage(challenge.originator,peerreview.getLocalIdentifier(),challenge.evidenceSeq,CHAL_SEND,ret.a());
+        ResponseMessage<Identifier> rMsg = new ResponseMessage<Identifier>(challenge.originator,peerreview.getLocalId(),challenge.evidenceSeq,ret.a());
 
         /* ... and send it back to the challenger */
         
@@ -331,16 +325,92 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     /* If the status is SUSPECTED, we queue the message for later delivery */
 
     if (logger.level <= Logger.WARNING) logger.log("Incoming message from SUSPECTED node "+source+"; queueing and challenging the node");
-    copyAndEnqueueTail(source, message, false);
+    copyAndEnqueueTail(source, message, false, null, null, 0);
 
     /* Furthermore, we must have an unanswered challenge, which we send to the remote node */
 
     challengeSuspectedNode(source);
   }
 
-  private void copyAndEnqueueTail(Handle source,
-      UserDataMessage<Handle> message, boolean b) {
+  protected void copyAndEnqueueTail(Handle source,
+      Evidence evidence, boolean isAccusation, Identifier subject, Identifier originator, long evidenceSeq) {
     throw new RuntimeException("implement me");
   }
 
+  /**
+   *  Handle an incoming RESPONSE or ACCUSATION from another node */
+
+  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) {
+    assert(m.getType() == MSG_ACCUSATION || m.getType() == MSG_RESPONSE);
+
+//    unsigned int pos = 1;
+//    Identifier originator = peerreview->readIdentifier(statement, &pos, statementLen);
+//    Identifier subject = peerreview->readIdentifier(statement, &pos, statementLen);
+//    long long evidenceSeq = readLongLong(statement, &pos);
+//    unsigned char *payload = &statement[pos];
+//    int payloadLen = statementLen - pos;
+
+    /* We get called from the StatementProtocol, so we already know that the statement
+       is well-formed, and that we have acquired all the necessary supplementary material,
+       such as certificates or hash maps */
+       
+    switch(m.getType()) {
+    case MSG_RESPONSE: {
+        ResponseMessage<Identifier> message = (ResponseMessage<Identifier>)m;
+        if (logger.level <= Logger.FINE) 
+          logger.log("Statement completed: RESPONSE  (orig="+message.originator+
+              ", subject="+message.subject+", ts="+message.evidenceSeq+")");
+        handleResponse(message.originator, message.subject, message.evidenceSeq, message.response);
+        if (infoStore.getStatus(peerreview.getIdentifierExtractor().extractIdentifier(source)) == STATUS_SUSPECTED) {
+          if (logger.level <= Logger.FINE) logger.log( "RECHALLENGE "+source);
+          challengeSuspectedNode(source);
+        }
+        return;
+      }
+    case MSG_ACCUSATION:
+      AccusationMessage<Handle, Identifier> message = (AccusationMessage<Handle, Identifier>)m;
+      if (logger.level <= Logger.FINE) 
+        logger.log("Statement completed: ACCUSATION  (orig="+message.originator+
+            ", subject="+message.subject+", ts="+message.evidenceSeq+")");
+       
+      int status = infoStore.getStatus(peerreview.getIdentifierExtractor().extractIdentifier(source));
+        switch (status) {
+        case STATUS_EXPOSED:
+          if (logger.level <= Logger.FINE) logger.log( "Got an accusation from exposed node "+source+"; discarding");
+          break;
+        case STATUS_TRUSTED:
+          try {
+            Evidence foo = infoStore.getEvidence(message.originator, message.subject, message.evidenceSeq);
+            if (foo == null) {
+              infoStore.addEvidence(message.originator, message.subject, message.evidenceSeq, message.evidence, source);
+            } else {
+              if (logger.level <= Logger.FINE) logger.log( "We already have a copy of that challenge; discarding");
+            }
+          } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+          }
+          break;
+        case STATUS_SUSPECTED:
+        {
+          /* If the status is SUSPECTED, we queue the message for later delivery */
+  
+          if (logger.level <= Logger.WARNING) logger.log("Incoming accusation from SUSPECTED node "+source+"; queueing and challenging the node");
+          copyAndEnqueueTail(source, message.evidence, true, message.subject, message.originator, message.evidenceSeq);
+  
+          /* Furthermore, we must have an unanswered challenge, which we send to the remote node */
+  
+          challengeSuspectedNode(source);
+          break;
+        }
+        default:
+          throw new RuntimeException("Unknown status: #"+status);
+      }
+    }
+  }
+
+  protected void handleResponse(Identifier originator, Identifier subject,
+      long evidenceSeq, Evidence response) {
+    // TODO Auto-generated method stub
+    
+  }
 }

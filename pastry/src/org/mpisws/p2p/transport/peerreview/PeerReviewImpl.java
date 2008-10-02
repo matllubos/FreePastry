@@ -76,8 +76,11 @@ import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStoreImpl;
 import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
+import org.mpisws.p2p.transport.peerreview.message.AccusationMessage;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
+import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
+import org.mpisws.p2p.transport.peerreview.message.ResponseMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
@@ -310,22 +313,28 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 //      }
       callback.messageReceived(handle, message, options);
       break;
+      
     case PEER_REVIEW_COMMIT:
       updateLogTime();
-      byte type = message.get();
-      switch (type) {
-      case MSG_ACK:
-        commitmentProtocol.handleIncomingAck(handle, AckMessage.build(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes()), options);
+      byte type = message.get();      
+      SimpleInputBuffer sib = new SimpleInputBuffer(message);
+      switch (type) {      
+      case MSG_ACK:        
+        commitmentProtocol.handleIncomingAck(handle, AckMessage.build(sib,idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes()), options);
         break;
       case MSG_CHALLENGE:
-        challengeProtocol.handleChallenge(handle, message, options);
+        ChallengeMessage<Identifier> challenge = new ChallengeMessage<Identifier>(sib,idSerializer,evidenceSerializer);
+        challengeProtocol.handleChallenge(handle, challenge, options);
         break;
-//      case MSG_ACCUSATION:
-//      case MSG_RESPONSE:
-//        statementProtocol.handleIncomingStatement(handle, message, options);
-//        break;
+      case MSG_ACCUSATION:        
+        PeerReviewMessage m = new AccusationMessage<Handle, Identifier>(sib, idSerializer, evidenceSerializer);
+      case MSG_RESPONSE:
+        m = new ResponseMessage<Identifier>(sib, idSerializer, evidenceSerializer);
+        challengeProtocol.handleStatement(handle, m, options);
+//        statementProtocol.handleIncomingStatement(handle, m, options);
+        break;
       case MSG_USERDATA:
-        UserDataMessage<Handle> udm = UserDataMessage.build(new SimpleInputBuffer(message), handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes());
+        UserDataMessage<Handle> udm = UserDataMessage.build(sib, handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes());
         challengeProtocol.handleIncomingMessage(handle, udm, options);
 //        commitmentProtocol.handleIncomingMessage(handle, udm, options);
         break;
@@ -547,7 +556,13 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       MessageCallback<Handle, ByteBuffer> deliverAckToMe, 
       Map<String, Object> options) {
     try {
-      ByteBuffer buf = message.serialize();
+      
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      sob.writeByte(PeerReview.PEER_REVIEW_COMMIT);
+      sob.writeByte((byte)message.getType());
+      message.serialize(sob);
+      
+      ByteBuffer buf = sob.getByteBuffer();
       
       transport.sendMessage(dest, buf, deliverAckToMe, options);
     } catch (IOException ioe) {

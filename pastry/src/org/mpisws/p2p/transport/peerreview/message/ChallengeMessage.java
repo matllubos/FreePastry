@@ -58,7 +58,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  * @author Jeff Hoye
  *
  */
-public class ChallengeMessage<Identifier extends RawSerializable> extends PeerReviewMessage {
+public class ChallengeMessage<Identifier extends RawSerializable> implements PeerReviewMessage {
   public static short TYPE = MSG_CHALLENGE;
     
   public Identifier originator;
@@ -71,26 +71,25 @@ public class ChallengeMessage<Identifier extends RawSerializable> extends PeerRe
     this.challenge = challenge;
   }
 
-  @Override
   public short getType() {
     return TYPE;
   }
   
   public short getChallengeType() {
-    return challenge.getType();
+    return challenge.getEvidenceType();
   }
 
   public ChallengeMessage(InputBuffer buf, Serializer<Identifier> idSerializer, EvidenceSerializer evidenceSerializer) throws IOException {
     originator = idSerializer.deserialize(buf);
     evidenceSeq = buf.readLong();
     byte chalType = buf.readByte();
-    challenge = evidenceSerializer.deserialize(buf,chalType);
+    challenge = evidenceSerializer.deserialize(buf,chalType,false);
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
     originator.serialize(buf);
     buf.writeLong(evidenceSeq);
-    buf.writeByte((byte)challenge.getType());
+    buf.writeByte((byte)challenge.getEvidenceType());
     challenge.serialize(buf);
   }
 

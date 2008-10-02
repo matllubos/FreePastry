@@ -358,7 +358,6 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
               " retransmissions; filing as evidence");
           UserDataMessage<Handle> challenge = info.xmitQueue.removeFirst();
           long evidenceSeq = peerreview.getEvidenceSeq();
-          challenge.setType(CHAL_SEND);
 
           try {
             infoStore.addEvidence(peerreview.getIdentifierExtractor().extractIdentifier(myHandle), 

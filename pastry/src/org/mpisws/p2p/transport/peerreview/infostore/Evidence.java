@@ -43,6 +43,6 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 public interface Evidence extends PeerReviewConstants {
-  public short getType();
+  public short getEvidenceType();
   public void serialize(OutputBuffer buf) throws IOException;
 }

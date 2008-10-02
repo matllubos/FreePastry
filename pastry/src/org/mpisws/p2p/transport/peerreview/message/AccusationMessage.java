@@ -42,7 +42,10 @@ import java.util.Map;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceRecord;
+import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
+import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
@@ -54,12 +57,12 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
     long long evidenceSeq
     [evidence bytes follow]
 */
-public class AccusationMessage<Handle, Identifier extends RawSerializable> extends PeerReviewMessage {
+public class AccusationMessage<Handle, Identifier extends RawSerializable> implements PeerReviewMessage {
 
-  Identifier originator;
-  Identifier subject;
-  long evidenceSeq;
-  Evidence evidence;
+  public Identifier originator;
+  public Identifier subject;
+  public long evidenceSeq;
+  public Evidence evidence;
   
   public AccusationMessage(Identifier subject,
       EvidenceRecord<Handle, Identifier> evidenceRecord, Evidence evidence) {
@@ -73,10 +76,18 @@ public class AccusationMessage<Handle, Identifier extends RawSerializable> exten
     return MSG_ACCUSATION;
   }
 
+  public AccusationMessage(InputBuffer buf, Serializer<Identifier> idSerializer, EvidenceSerializer evSerializer) throws IOException {
+    originator = idSerializer.deserialize(buf);
+    subject = idSerializer.deserialize(buf);
+    evidenceSeq = buf.readLong();
+    evidence = evSerializer.deserialize(buf, buf.readByte(),false);
+  }
+  
   public void serialize(OutputBuffer buf) throws IOException {
     originator.serialize(buf);
     subject.serialize(buf);
     buf.writeLong(evidenceSeq);
+    buf.writeByte((byte)evidence.getEvidenceType());
     evidence.serialize(buf);
   }
 }

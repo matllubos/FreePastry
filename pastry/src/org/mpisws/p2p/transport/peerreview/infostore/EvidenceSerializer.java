@@ -43,6 +43,6 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 
 public interface EvidenceSerializer {
 
-  Evidence deserialize(InputBuffer buf, byte type) throws IOException;
+  Evidence deserialize(InputBuffer buf, byte type, boolean isResponse) throws IOException;
 
 }

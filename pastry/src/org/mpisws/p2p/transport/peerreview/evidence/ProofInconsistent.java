@@ -75,7 +75,7 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
     this.auth2 = auth2;
   }
   
-  public short getType() {
+  public short getEvidenceType() {
     return PROOF_INCONSISTENT;
   }
   

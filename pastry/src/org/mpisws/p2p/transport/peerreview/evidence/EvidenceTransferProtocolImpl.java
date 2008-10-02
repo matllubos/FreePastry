@@ -332,7 +332,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
   
       if (logger.level <= Logger.FINER)
         logger.log("Sending "+accusation+" "+((status == STATUS_EXPOSED) ? "proof" : "challenge")+" to "+target);
-      transport.sendMessage(target, accusation.serialize(), null, null);
+      peerreview.transmit(target, accusation, null, null);
     } catch (IOException ioe) {
       if (logger.level <= Logger.WARNING) logger.log("Error sending evidence.");
     }

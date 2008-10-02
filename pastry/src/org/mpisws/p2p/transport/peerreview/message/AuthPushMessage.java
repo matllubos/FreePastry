@@ -57,7 +57,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * 
  * @author Jeff Hoye
  */
-public class AuthPushMessage<Identifier extends RawSerializable> extends PeerReviewMessage {
+public class AuthPushMessage<Identifier extends RawSerializable> implements PeerReviewMessage {
     
   public Map<Identifier, List<Authenticator>> authenticators;
   
@@ -65,7 +65,6 @@ public class AuthPushMessage<Identifier extends RawSerializable> extends PeerRev
     this.authenticators = authenticators;
   }
 
-  @Override
   public short getType() {
     return MSG_AUTHPUSH;
   }

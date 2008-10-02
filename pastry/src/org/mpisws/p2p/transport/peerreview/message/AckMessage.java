@@ -61,7 +61,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  *
  * @param <Identifier>
  */
-public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMessage implements Evidence {
+public class AckMessage<Identifier extends RawSerializable> implements PeerReviewMessage, Evidence {
 
   Identifier nodeId;
   long sendEntrySeq;
@@ -80,6 +80,10 @@ public class AckMessage<Identifier extends RawSerializable> extends PeerReviewMe
   
   public short getType() {
     return MSG_ACK;
+  }
+  
+  public short getEvidenceType() {
+    return RESP_SEND;
   }
 
   public void serialize(OutputBuffer buf) throws IOException {

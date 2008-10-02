@@ -69,7 +69,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @author Jeff Hoye
  *
  */
-public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewMessage implements Evidence {
+public class UserDataMessage<Handle extends RawSerializable> implements PeerReviewMessage, Evidence {
   public static final short TYPE = MSG_USERDATA;
   long topSeq;
   Handle senderHandle;
@@ -78,8 +78,6 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   int relevantLen; 
   private byte[] payload;
   
-  short type = MSG_USERDATA;
-
   public UserDataMessage(long topSeq, Handle senderHandle, byte[] topMinusOne,
       byte[] sig, ByteBuffer message, int relevantlen) {
     this.topSeq = topSeq;
@@ -103,7 +101,7 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
   }
   
   public short getType() {
-    return type;
+    return TYPE;
   }
 
   public void serialize(OutputBuffer buf) throws IOException {
@@ -199,19 +197,11 @@ public class UserDataMessage<Handle extends RawSerializable> extends PeerReviewM
     
   }
 
-  public void setType(short newType) {
-    type = newType;
-  }
-
   public int getPayloadLen() {
     return payload.length;
   }
 
-  public void setIsEvidence(boolean b) {
-    if (b) {
-      type = CHAL_SEND;
-    } else {
-      type = MSG_USERDATA;
-    }
+  public short getEvidenceType() {
+    return CHAL_SEND;
   }
 }

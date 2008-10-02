@@ -47,15 +47,15 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public abstract class PeerReviewMessage implements PeerReviewConstants, RawSerializable {
+public interface PeerReviewMessage extends PeerReviewConstants, RawSerializable {
 
-  public abstract short getType();
+  public short getType();
   
-  public ByteBuffer serialize() throws IOException {
-    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    sob.writeByte(PeerReview.PEER_REVIEW_COMMIT);
-    sob.writeByte((byte)getType());
-    serialize(sob);
-    return sob.getByteBuffer();
-  }
+//  public ByteBuffer serialize() throws IOException {
+//    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+//    sob.writeByte(PeerReview.PEER_REVIEW_COMMIT);
+//    sob.writeByte((byte)getType());
+//    serialize(sob);
+//    return sob.getByteBuffer();
+//  }
 }

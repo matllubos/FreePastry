@@ -100,7 +100,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   }
   
   public static boolean isProof(Evidence e) {
-    switch (e.getType()) {
+    switch (e.getEvidenceType()) {
       case CHAL_AUDIT:
         return false;
       case CHAL_SEND:
@@ -110,7 +110,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
       case PROOF_NONCONFORMANT:
         return true;
       default:
-        throw new IllegalArgumentException("Cannot evaluate isProof("+e+"):"+e.getType());
+        throw new IllegalArgumentException("Cannot evaluate isProof("+e+"):"+e.getEvidenceType());
 //        panic("Cannot evaluate isProof("+e.getType()+")");
     }    
   }
@@ -179,11 +179,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     File outFile = getFile(subject, originator, timestamp, (proof ? "proof" : "challenge"));
         
     FileOutputBuffer buf = new FileOutputBuffer(outFile);
-    if (evidence.getType() == UserDataMessage.TYPE) {
-      buf.writeByte((byte)CHAL_SEND);
-    } else {
-      buf.writeByte((byte)evidence.getType());      
-    }
+    buf.writeByte((byte)evidence.getEvidenceType());      
     evidence.serialize(buf);
     buf.close();
     
@@ -327,7 +323,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
 
     FileInputBuffer buf = new FileInputBuffer(infile, logger);
     byte type = buf.readByte();
-    Evidence e = evidenceSerializer.deserialize(buf, type);
+    Evidence e = evidenceSerializer.deserialize(buf, type, false);
     buf.close();
     return e;
   }

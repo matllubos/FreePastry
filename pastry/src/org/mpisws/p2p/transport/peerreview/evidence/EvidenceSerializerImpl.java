@@ -41,33 +41,38 @@ import java.io.IOException;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
+import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public class EvidenceSerializerImpl<Handle extends RawSerializable> implements EvidenceSerializer, PeerReviewConstants {
+public class EvidenceSerializerImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements EvidenceSerializer, PeerReviewConstants {
   int hashSize;
   int signatureSize;
   Serializer<Handle> handleSerializer;
+  Serializer<Identifier> idSerializer;
   
-  public EvidenceSerializerImpl(Serializer<Handle> handleSerializer, int hashSize, int signatureSize) {
+  public EvidenceSerializerImpl(Serializer<Handle> handleSerializer, Serializer<Identifier> idSerializer, int hashSize, int signatureSize) {
     super();
     this.handleSerializer = handleSerializer;
-    this.hashSize = hashSize;
+    this.idSerializer = idSerializer;
+      this.hashSize = hashSize;
     this.signatureSize = signatureSize;
   }
   
-  public Evidence deserialize(InputBuffer buf, byte type) throws IOException {
+  public Evidence deserialize(InputBuffer buf, byte type, boolean response) throws IOException {
     switch(type) {
     case CHAL_AUDIT:
       return new ChallengeAudit(buf, hashSize, signatureSize);
     case CHAL_SEND:
     case (byte)MSG_USERDATA:
-      UserDataMessage udm = UserDataMessage.build(buf, handleSerializer, hashSize, signatureSize);
-      udm.setIsEvidence(true);
-      return udm;
+      if (response) {
+        return AckMessage.build(buf, idSerializer, hashSize, signatureSize);
+      } else {
+        return UserDataMessage.build(buf, handleSerializer, hashSize, signatureSize);
+      }
     }
     throw new IllegalArgumentException("Unknown type:"+type);
   }
