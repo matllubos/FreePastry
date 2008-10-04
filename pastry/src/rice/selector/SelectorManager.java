@@ -300,6 +300,13 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     loopObservers = null;
     cancelledKeys = null;
     timerQueue = null;
+    try {
+      if (selector != null) {
+        selector.close();
+      }
+    } catch (IOException ioe) {
+      if (logger.level <= Logger.WARNING) logger.logException("Error cancelling selector:",ioe);
+    }
     if (logger.level <= Logger.INFO) logger.log("Selector "+instance+" shutting down.");
   }
   
