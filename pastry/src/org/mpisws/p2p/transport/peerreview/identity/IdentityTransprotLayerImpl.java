@@ -164,7 +164,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     try {
       signer.update(bytes);
       byte[] ret = signer.sign();
-//      System.out.println("Signature of "+MathUtils.toBase64(bytes)+" was "+MathUtils.toBase64(ret));
+//      logger.log("Signature of "+MathUtils.toBase64(bytes)+" was "+MathUtils.toBase64(ret));
       return ret;
     } catch (SignatureException se) {
       RuntimeException throwMe = new RuntimeException("Couldn't sign "+bytes);
@@ -174,6 +174,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
   }
 
   public void verify(I id, ByteBuffer msg, ByteBuffer signature) throws SignatureException, UnknownCertificateException {
+//    logger.log("Verify:"+id+" "+msg+" "+MathUtils.toBase64(msg.array())+" == "+signature+" "+MathUtils.toBase64(signature.array()));
     Signature verifier = getVerifier(id);
     if (verifier == null) throw new UnknownCertificateException(getLocalIdentifier(),id);
 //    msg.array()[0] = 55;

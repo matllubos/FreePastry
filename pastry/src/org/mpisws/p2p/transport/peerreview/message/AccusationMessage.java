@@ -66,11 +66,17 @@ public class AccusationMessage<Handle, Identifier extends RawSerializable> imple
   
   public AccusationMessage(Identifier subject,
       EvidenceRecord<Handle, Identifier> evidenceRecord, Evidence evidence) {
-    this.originator = evidenceRecord.getOriginator();
+    this(evidenceRecord.getOriginator(),subject,evidenceRecord.getTimeStamp(),evidence);
+  }
+
+  public AccusationMessage(Identifier originator, Identifier subject,
+      long evidenceSeq, Evidence evidence) {
+    this.originator = originator;
     this.subject = subject;
-    this.evidenceSeq = evidenceRecord.getTimeStamp();
+    this.evidenceSeq = evidenceSeq;
     this.evidence = evidence;
   }
+
 
   public short getType() {
     return MSG_ACCUSATION;

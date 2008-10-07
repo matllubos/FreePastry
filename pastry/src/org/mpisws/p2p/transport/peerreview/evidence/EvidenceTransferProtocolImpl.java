@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -78,17 +79,15 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
   PeerReview<Handle, Identifier> peerreview;
   IdentityTransport<Handle, Identifier> transport;
   PeerInfoStore<Handle, Identifier> infoStore;
-  PeerReviewCallback<Handle, Identifier> app;
 
-  Map<Identifier, CacheInfo> witnessCache;
-  Map<Identifier, LinkedList<MessageInfo>> pendingMessage;
-  Collection<QueryInfo> pendingQuery;
+  Map<Identifier, CacheInfo> witnessCache = new HashMap<Identifier, CacheInfo>();
+  Map<Identifier, LinkedList<MessageInfo>> pendingMessage = new HashMap<Identifier, LinkedList<MessageInfo>>();
+  Collection<QueryInfo> pendingQuery = new HashSet<QueryInfo>();
 
   Logger logger;
   
-  public EvidenceTransferProtocolImpl(PeerReview<Handle, Identifier> peerreview, PeerReviewCallback<Handle, Identifier> app, IdentityTransport<Handle, Identifier> transport, PeerInfoStore<Handle, Identifier> infoStore) {
+  public EvidenceTransferProtocolImpl(PeerReview<Handle, Identifier> peerreview, IdentityTransport<Handle, Identifier> transport, PeerInfoStore<Handle, Identifier> infoStore) {
     this.peerreview = peerreview;
-    this.app = app;
     this.transport = transport;
     this.infoStore = infoStore;
     
@@ -141,7 +140,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
    * first
    */
 
-  void sendMessageToWitnesses(Identifier subject, PeerReviewMessage message,
+  public void sendMessageToWitnesses(Identifier subject, PeerReviewMessage message,
       MessageCallback<Handle, ByteBuffer> deliverAckToMe,
       Map<String, Object> options) {
     MessageInfo m = new MessageInfo(subject, message, deliverAckToMe, options);
@@ -192,7 +191,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
     
     foo = new CacheInfo(subject);
     witnessCache.put(subject, foo);
-    app.getWitnesses(subject,this);
+    peerreview.getApp().getWitnesses(subject,this);
   }
   
   /**

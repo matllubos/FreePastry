@@ -130,8 +130,10 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     switch (newStatus) {
     case STATUS_TRUSTED:
       LinkedList<PacketInfo<Handle, Identifier>> list = queue.remove(id);
-      for (PacketInfo<Handle, Identifier> pi : list) {
-        deliver(pi);
+      if (list != null) {
+        for (PacketInfo<Handle, Identifier> pi : list) {
+          deliver(pi);
+        }
       }
       break;
     case STATUS_EXPOSED:
@@ -319,6 +321,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     Handle interestedParty = null;
     
     EvidenceRecord<Handle, Identifier> record = infoStore.findEvidence(message.originator, message.subject, message.evidenceSeq);
+    interestedParty = record.getInterestedParty();
     if (record == null) {
       if (logger.level <= Logger.WARNING) logger.log("Received response, but matching request is missing; discarding");
       return;
@@ -474,57 +477,6 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     }
     return true;
   }
-  
-  /**
-   * Looks up the first unanswered challenge to a SUSPECTED node, and sends it to that node 
-   */
-  public void challengeSuspectedNode(Handle target) {    
-//    Identifier originator;
-//    long evidenceSeq;
-//    int evidenceLen;
-    
-    Identifier tIdentifier = peerreview.getIdentifierExtractor().extractIdentifier(target);
-    EvidenceRecord<Handle, Identifier> record = infoStore.statFirstUnansweredChallenge(tIdentifier);
-    if (record == null) {
-      throw new RuntimeException("Node "+target+" is SUSPECTED, but I cannot retrieve an unanswered challenge?!?");      
-    }
-    
-    try {
-      /* Construct a CHALLENGE message ... */
-      ChallengeMessage<Identifier> challenge = 
-        new ChallengeMessage<Identifier>(
-            record.getOriginator(),record.getTimeStamp(),
-            infoStore.getEvidence(record.getOriginator(), tIdentifier, record.getTimeStamp())
-            );
-      /* ... and send it */
-      peerreview.transmit(target, challenge, null, null);
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }        
-  }
-  
-  public void handleIncomingMessage(Handle source, UserDataMessage<Handle> message, Map<String, Object> options) throws IOException {
-    int status = infoStore.getStatus(peerreview.getIdentifierExtractor().extractIdentifier(source));
-    switch (status) {
-      case STATUS_EXPOSED:
-        if (logger.level <= Logger.FINE) logger.log("Got a user message from exposed node "+source+"; discarding");
-        return;
-      case STATUS_TRUSTED:
-        commitmentProtocol.handleIncomingMessage(source, message, options);
-        return;
-    }
-
-    assert(status == STATUS_SUSPECTED);
-    
-    /* If the status is SUSPECTED, we queue the message for later delivery */
-
-    if (logger.level <= Logger.WARNING) logger.log("Incoming message from SUSPECTED node "+source+"; queueing and challenging the node");
-    copyAndEnqueueTail(source, message, false, null, null, 0, options);
-
-    /* Furthermore, we must have an unanswered challenge, which we send to the remote node */
-
-    challengeSuspectedNode(source);
-  }
 
   /**
    *  Handle an incoming RESPONSE or ACCUSATION from another node 
@@ -597,5 +549,58 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       }
     }
   }
+  
+  
+  /**
+   * Looks up the first unanswered challenge to a SUSPECTED node, and sends it to that node 
+   */
+  public void challengeSuspectedNode(Handle target) {    
+//    Identifier originator;
+//    long evidenceSeq;
+//    int evidenceLen;
+    
+    Identifier tIdentifier = peerreview.getIdentifierExtractor().extractIdentifier(target);
+    EvidenceRecord<Handle, Identifier> record = infoStore.statFirstUnansweredChallenge(tIdentifier);
+    if (record == null) {
+      throw new RuntimeException("Node "+target+" is SUSPECTED, but I cannot retrieve an unanswered challenge?!?");      
+    }
+    
+    try {
+      /* Construct a CHALLENGE message ... */
+      ChallengeMessage<Identifier> challenge = 
+        new ChallengeMessage<Identifier>(
+            record.getOriginator(),record.getTimeStamp(),
+            infoStore.getEvidence(record.getOriginator(), tIdentifier, record.getTimeStamp())
+            );
+      /* ... and send it */
+      peerreview.transmit(target, challenge, null, null);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }        
+  }
+  
+  public void handleIncomingMessage(Handle source, UserDataMessage<Handle> message, Map<String, Object> options) throws IOException {
+    int status = infoStore.getStatus(peerreview.getIdentifierExtractor().extractIdentifier(source));
+    switch (status) {
+      case STATUS_EXPOSED:
+        if (logger.level <= Logger.FINE) logger.log("Got a user message from exposed node "+source+"; discarding");
+        return;
+      case STATUS_TRUSTED:
+        commitmentProtocol.handleIncomingMessage(source, message, options);
+        return;
+    }
+
+    assert(status == STATUS_SUSPECTED);
+    
+    /* If the status is SUSPECTED, we queue the message for later delivery */
+
+    if (logger.level <= Logger.WARNING) logger.log("Incoming message from SUSPECTED node "+source+"; queueing and challenging the node");
+    copyAndEnqueueTail(source, message, false, null, null, 0, options);
+
+    /* Furthermore, we must have an unanswered challenge, which we send to the remote node */
+
+    challengeSuspectedNode(source);
+  }
+
 
 }

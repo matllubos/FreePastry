@@ -65,6 +65,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocol;
+import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
@@ -96,6 +97,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+import rice.selector.TimerTask;
 
 /**
  * 
@@ -158,20 +160,31 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.historyFactory = new SecureHistoryFactoryImpl(transport, env);
   }
 
-  public void notifyStatusChange(Identifier id, int newStatus) {
+  public static String getStatusString(int status) {
+    switch(status) {
+    case STATUS_EXPOSED:
+      return "exposed";
+    case STATUS_TRUSTED:
+      return "trusted";
+    case STATUS_SUSPECTED:
+      return "suspected";
+    }
+    return "unknown status:"+status;
+  }
+  
+  public void notifyStatusChange(final Identifier id, final int newStatus) {
 //    char buf1[256];
-    if (logger.level <= Logger.FINE) logger.log("Status change: <"+id+"> becomes "+newStatus);
-//    challengeProtocol.notifyStatusChange(id, newStatus);
+    if (logger.level <= Logger.INFO) logger.log("Status change: <"+id+"> becomes "+getStatusString(newStatus));
+    challengeProtocol.notifyStatusChange(id, newStatus);
     commitmentProtocol.notifyStatusChange(id, newStatus);
     
-//    if (numStatusInfo >= MAX_STATUS_INFO) {
-//      panic("Too many pending status notifications");
-//    }
-//    
-//    statusInfo[numStatusInfo].id = id->clone();
-//    statusInfo[numStatusInfo].newStatus = newStatus;
-//    numStatusInfo ++;
-//    transport->scheduleTimer(this, TI_STATUS_INFO, transport->getTime() + 3);
+    // let pr finish first
+    env.getSelectorManager().schedule(new TimerTask() {    
+      public void run() {
+        callback.notifyStatusChange(id, newStatus);
+      }    
+    }, 3);
+    
   }
   
   boolean initialized = false;
@@ -219,7 +232,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     authCacheStore.setFilename(new File(dir,"authenticators.cache"));
 
     /* Remaining protocols */
-
+    this.evidenceTransferProtocol = new EvidenceTransferProtocolImpl<Handle, Identifier>(this,transport,infoStore);
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
     auditProtocol = new AuditProtocolImpl<Identifier>(this, history, infoStore, authInStore, transport, authOutStore, evidenceTransferProtocol, authCacheStore);
@@ -336,6 +349,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       break;
       
     case PEER_REVIEW_COMMIT:
+      PeerReviewMessage m = null;
       updateLogTime();
       byte type = message.get();      
       SimpleInputBuffer sib = new SimpleInputBuffer(message);
@@ -348,9 +362,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
         challengeProtocol.handleChallenge(handle, challenge, options);
         break;
       case MSG_ACCUSATION:        
-        PeerReviewMessage m = new AccusationMessage<Handle, Identifier>(sib, idSerializer, evidenceSerializer);
+        m = new AccusationMessage<Handle, Identifier>(sib, idSerializer, evidenceSerializer);
       case MSG_RESPONSE:
-        m = new ResponseMessage<Identifier>(sib, idSerializer, evidenceSerializer);
+        if (m == null) m = new ResponseMessage<Identifier>(sib, idSerializer, evidenceSerializer);
         challengeProtocol.handleStatement(handle, m, options);
 //        statementProtocol.handleIncomingStatement(handle, m, options);
         break;
@@ -542,25 +556,12 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
    * Called internally by other classes if they have found evidence against one of our peers.
    * We ask the EvidenceTransferProtocol to send it to the corresponding witness set. 
    */
-  public void sendEvidenceToWitnesses(Identifier subject, long timestamp,
+  public void sendEvidenceToWitnesses(Identifier subject, long evidenceSeq,
       Evidence evidence) {
-    throw new RuntimeException("todo: implement.");
-//    unsigned int accusationMaxlen = 1 + 2*MAX_ID_SIZE + sizeof(long long) + evidenceLen + signatureSizeBytes;
-//    unsigned char *accusation = (unsigned char*) malloc(accusationMaxlen);
-//    unsigned int accusationLen = 0;
-//    char buf1[256];
-//  
-//    accusation[accusationLen++] = MSG_ACCUSATION;
-//    transport->getLocalHandle()->getIdentifier()->write(accusation, &accusationLen, accusationMaxlen);
-//    subject->write(accusation, &accusationLen, accusationMaxlen);
-//    writeLongLong(accusation, &accusationLen, evidenceSeq);
-//    memcpy(&accusation[accusationLen], evidence, evidenceLen);
-//    accusationLen += evidenceLen;
-//   
-//    plog(2, "Relaying evidence to <%s>'s witnesses", subject->render(buf1));
-//    evidenceTransferProtocol->sendMessageToWitnesses(subject, false, accusation, accusationLen);
-//  
-//    free(accusation);
+    AccusationMessage<Handle, Identifier> accusation = new AccusationMessage<Handle, Identifier>(getLocalId(),subject,evidenceSeq,evidence);
+   
+    if (logger.level <= Logger.FINE) logger.log("Relaying evidence to <"+subject+">'s witnesses");
+    evidenceTransferProtocol.sendMessageToWitnesses(subject, accusation, null, null);  
   }
 
   /**

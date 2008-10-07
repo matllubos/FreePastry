@@ -192,6 +192,10 @@ public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
     public Identifier getOriginator() {
       return originator;
     }
+
+    public Handle getInterestedParty() {
+      return interestedParty;
+    }
   }
 
 

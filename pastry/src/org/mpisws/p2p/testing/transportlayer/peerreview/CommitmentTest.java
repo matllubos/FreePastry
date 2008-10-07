@@ -96,6 +96,7 @@ import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.Continuation;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -223,224 +224,18 @@ public class CommitmentTest {
           new AuthenticatorSerializerImpl(0,0), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
       init(name);
     }
-
-//    public void challengeSuspectedNode(HandleImpl h) {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public Authenticator extractAuthenticator(IdImpl id, long seq,
-//        short entryType, byte[] entryHash, byte[] topMinusOne, byte[] signature)
-//        throws IOException {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public AuthenticatorSerializer getAuthenticatorSerializer() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public long getEvidenceSeq() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public Serializer<HandleImpl> getHandleSerializer() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public int getHashSizeInBytes() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public Serializer<IdImpl> getIdSerializer() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public IdentifierExtractor<HandleImpl, IdImpl> getIdentifierExtractor() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public int getSignatureSizeInBytes() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public long getTime() {
-//      throw new RuntimeException("implement");
-//    }
-//
-//    public void sendEvidenceToWitnesses(IdImpl subject, long timestamp,
-//        Evidence evidence) {
-//      throw new RuntimeException("implement");
-//    }
-
-//    public MessageRequestHandle<HandleImpl, PeerReviewMessage> transmit(HandleImpl dest, boolean b, PeerReviewMessage message, MessageCallback<HandleImpl, PeerReviewMessage> deliverAckToMe) {
-//      MessageRequestHandleImpl<HandleImpl, PeerReviewMessage> ret = new MessageRequestHandleImpl<HandleImpl, PeerReviewMessage>(dest, message, message.getOptions());
-//      try {
-//        SimpleOutputBuffer sob = new SimpleOutputBuffer();
-//        sob.writeByte(message.getType());
-//        message.serialize();
-//        transport.sendMessage(dest, sob.getByteBuffer(), null, message.getOptions());
-//      } catch (IOException ioe) {
-//        deliverAckToMe.sendFailed(ret, ioe);
-//      }
-//      return ret;
-//    }
-
-//    public void notifyCertificateAvailable(ByteBuffer id) {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public void statusChange(ByteBuffer id, int newStatus) {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public void incomingSocket(P2PSocket<HandleImpl> s) throws IOException {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public void messageReceived(HandleImpl i, ByteBuffer m,
-//        Map<String, Object> options) throws IOException {
-//      app.messageReceived(i, m, options);
-//    }
-//
-//    public boolean hasCertificate(IdImpl id) {
-//      // TODO Auto-generated method stub
-//      return false;
-//    }
-//
-//    public Cancellable requestCertificate(HandleImpl source, IdImpl certHolder,
-//        Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//
-//    public byte[] sign(byte[] bytes) {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//
-//    public short signatureSizeInBytes() {
-//      // TODO Auto-generated method stub
-//      return 0;
-//    }
-//
-//    public void verify(IdImpl id, byte[] msg, int moff, int mlen,
-//        byte[] signature, int soff, int slen) throws InvalidKeyException,
-//        NoSuchAlgorithmException, NoSuchProviderException, SignatureException,
-//        UnknownCertificateException {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public void acceptMessages(boolean b) {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public void acceptSockets(boolean b) {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public HandleImpl getLocalIdentifier() {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//
-//    public SocketRequestHandle<HandleImpl> openSocket(HandleImpl i,
-//        SocketCallback<HandleImpl> deliverSocketToMe,
-//        Map<String, Object> options) {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//
-//    public MessageRequestHandle<HandleImpl, ByteBuffer> sendMessage(
-//        HandleImpl i, ByteBuffer m,
-//        MessageCallback<HandleImpl, ByteBuffer> deliverAckToMe,
-//        Map<String, Object> options) {
-//      try {
-//        return commitmentProtocol.handleOutgoingMessage(i, m, deliverAckToMe, options);
-//      } catch (IOException ioe) {
-//        if (deliverAckToMe == null) {
-//          ioe.printStackTrace();
-//        } else {
-//          deliverAckToMe.sendFailed(null, ioe);          
-//        }
-//        return null;
-//      }
-//    }
-//
-//    public void setCallback(
-//        TransportLayerCallback<HandleImpl, ByteBuffer> callback) {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public void setErrorHandler(ErrorHandler<HandleImpl> handler) {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public void destroy() {
-//      // TODO Auto-generated method stub
-//      
-//    }
-//
-//    public byte[] getEmptyHash() {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//
-//    public short getHashSizeBytes() {
-//      // TODO Auto-generated method stub
-//      return 0;
-//    }
-//
-//    public byte[] hash(long seq, short type, byte[] nodeHash, byte[] contentHash) {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//
-//    public byte[] hash(ByteBuffer... hashMe) {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-    
   }
   
-  static class BogusTransport implements TransportLayer<HandleImpl, ByteBuffer>{
+  static class BogusTransport implements TransportLayer<HandleImpl, ByteBuffer> {
     public static Map<HandleImpl, BogusTransport> peerTable = new HashMap<HandleImpl, BogusTransport>();
-    
-//    public Map<IdImpl, X509Certificate> certs = new HashMap<IdImpl, X509Certificate>();
     
     HandleImpl localIdentifier;
     
     public BogusTransport(HandleImpl handle, X509Certificate cert) {
       peerTable.put(handle, this);
       this.localIdentifier = handle;
-//      certs.put(handle.id, cert);
     }
     
-//    public Cancellable requestCertificate(HandleImpl source, IdImpl certHolder,
-//        Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-//      System.out.println("requestCert("+source+")");
-//      X509Certificate cert = peerTable.get(source).certs.get(certHolder);
-//      if (cert != null) {
-//        certs.put(certHolder, cert);
-//        if (c != null) c.receiveResult(cert);
-//        callback.notifyCertificateAvailable(certHolder);
-//      } else {
-//        UnknownValueException ex = new UnknownValueException(source, certHolder);
-//        if (c != null) {
-//          c.receiveException(ex);
-//        } else {
-//          ex.printStackTrace();
-//        }
-//      }
-//      return null;
-//    }
-
     public void acceptMessages(boolean b) {
       throw new RuntimeException("implement");
     }
@@ -493,6 +288,13 @@ public class CommitmentTest {
   
   static class BogusApp implements PeerReviewCallback<HandleImpl, IdImpl> {
 
+    Logger logger;
+    public BogusApp(Logger logger) {
+      super();
+      this.logger = logger;
+    }
+    
+
     public void init() {
       throw new RuntimeException("implement");
     }
@@ -538,7 +340,13 @@ public class CommitmentTest {
         WitnessListener<HandleImpl, IdImpl> callback) {
       throw new RuntimeException("implement");
     }
-    
+
+    public void notifyStatusChange(
+        IdImpl id,
+        int newStatus) {
+      logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
+    }
+
   }
 
   static Map<HandleImpl, IdentityTransprotLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransprotLayerImpl<HandleImpl,IdImpl>>();
@@ -616,7 +424,7 @@ public class CommitmentTest {
       };
       idTLTable.put(localHandle, transport);
       pr = new BogusPR(name, transport, env);
-      pr.setCallback(new BogusApp());
+      pr.setCallback(new BogusApp(env.getLogManager().getLogger(BogusApp.class, null)));
 
     }
   }

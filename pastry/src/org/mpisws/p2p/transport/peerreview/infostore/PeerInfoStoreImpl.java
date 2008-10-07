@@ -313,8 +313,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
    */
   public Evidence getEvidence(Identifier originator, Identifier subject, long timestamp) throws IOException {
     EvidenceRecord<Handle, Identifier> evi = findEvidence(originator, subject, timestamp, false);
-  
-    assert(evi != null);
+    if (evi == null) return null;
     
     File infile = getFile(subject, originator, timestamp, evi.isProof() ? "proof" : "challenge");
     // done automatically by FIB

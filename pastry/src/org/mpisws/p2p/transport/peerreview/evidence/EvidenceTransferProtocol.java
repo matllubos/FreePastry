@@ -37,15 +37,22 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.evidence;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.peerreview.WitnessListener;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 
 import rice.Continuation;
 
 public interface EvidenceTransferProtocol<Handle, Identifier> extends WitnessListener<Handle, Identifier> {
+  public void sendMessageToWitnesses(Identifier subject, PeerReviewMessage message,
+      MessageCallback<Handle, ByteBuffer> deliverAckToMe,
+      Map<String, Object> options);
+
   public void requestWitnesses(Collection<Identifier> subjects, Continuation<Map<Identifier,Collection<Handle>>, Exception> c);
   public void sendEvidence(Handle source, Identifier id);
 }

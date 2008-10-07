@@ -277,6 +277,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
    * has become TRUSTED, or after it has sent us an acknowledgment 
    */    
   protected void makeProgress(Identifier idx) {
+//    logger.log("makeProgress("+idx+")");
     PeerInfo<Handle> info = peer.get(idx);
     if (info == null || (info.xmitQueue.isEmpty() && info.recvQueue.isEmpty())) {
       return;
@@ -352,11 +353,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         } else {
         
           /* If the peer still won't acknowledge the message, file a SEND challenge with its witnesses */
-        
+          
           if (logger.level <= Logger.WARNING) logger.log(info.handle+
               " has not acknowledged our message after "+info.retransmitsSoFar+
               " retransmissions; filing as evidence");
-          UserDataMessage<Handle> challenge = info.xmitQueue.removeFirst();
+          OutgoingUserDataMessage<Handle> challenge = info.xmitQueue.removeFirst();
+          challenge.sendFailed(new IOException("Peer Review Giving Up."));
+          
           long evidenceSeq = peerreview.getEvidenceSeq();
 
           try {
@@ -559,7 +562,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     
     assert((relevantlen == message.remaining()) || (relevantlen < 255));    
 
-    PeerInfo pi = lookupPeer(target);
+    PeerInfo<Handle> pi = lookupPeer(target);
 
     OutgoingUserDataMessage<Handle> udm = new OutgoingUserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen, options, pi, deliverAckToMe);
     

@@ -44,5 +44,6 @@ public interface EvidenceRecord<Handle, Identifier> {
   boolean hasResponse();
   public long getTimeStamp();
   public Identifier getOriginator();
+  Handle getInterestedParty();
 
 }
