@@ -36,7 +36,10 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.ssl;
 
+import java.nio.ByteBuffer;
+
 import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.multiaddress.MultiInetAddressTransportLayer;
 
 import rice.pastry.socket.EpochInetSocketAddress;
@@ -46,7 +49,7 @@ import rice.pastry.socket.EpochInetSocketAddress;
  * @author Jeff Hoye
  *
  */
-public interface SSLTransportLayer extends MultiInetAddressTransportLayer {
+public interface SSLTransportLayer<Identifier, MessageType> extends TransportLayer<Identifier, MessageType>, TransportLayerCallback<Identifier, MessageType> {
   public static final String OPTION_ENCRYPTION = "encrypt";
   public static final String OPTION_AUTHENTICATION = "authenticate";
 

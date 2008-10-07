@@ -104,12 +104,17 @@ public class UserDataMessage<Handle extends RawSerializable> implements PeerRevi
     return TYPE;
   }
 
+  public byte getRelevantCode() {
+    byte relevantCode = (relevantLen == payload.length) ? (byte)0xFF : (byte)relevantLen;
+    return relevantCode;
+  }
+  
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeLong(topSeq);
     senderHandle.serialize(buf);
     buf.write(hTopMinusOne, 0, hTopMinusOne.length);
     buf.write(signature, 0, signature.length); 
-    byte relevantCode = (relevantLen == payload.length) ? (byte)0xFF : (byte)relevantLen;
+    byte relevantCode = getRelevantCode();
     buf.writeByte(relevantCode);
 //    if (relevantCode == 0xFF) {
 //    System.out.println("serializing payload:"+payload.length);

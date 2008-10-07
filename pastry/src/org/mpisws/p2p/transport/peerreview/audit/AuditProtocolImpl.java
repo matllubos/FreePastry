@@ -34,47 +34,38 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.evidence;
+package org.mpisws.p2p.transport.peerreview.audit;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
+import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocol;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-/**
- * RESP_AUDIT
-  byte type
-  nodehandle myHandle
-  long long firstSeq
-  byte extInfoLen
-  [extInfo follows]
-  hash baseHash
-  --entry begin--
-  char type
-  char sizeCode  // 0=hashed, 1-FE=size, FF=size follows
- {short size}
-  char content[] 
-  char seqCode   // 0=+1, 1=(idx=0,us+=1), 2=(idx=0,us+=2), ..., FF=full seq
- {long long seq}
-  --entry end--
+public class AuditProtocolImpl<Identifier extends RawSerializable> implements AuditProtocol<Identifier> {
 
- * @author Jeff Hoye
- *
- */
-public class AuditResponse implements Evidence {
-
-  public AuditResponse(ByteBuffer byteBuffer) {
-    throw new RuntimeException("implement");
+  public AuditProtocolImpl(PeerReviewImpl<?, Identifier> peerReviewImpl,
+      SecureHistory history, PeerInfoStore<?, Identifier> infoStore,
+      AuthenticatorStore<Identifier> authInStore,
+      IdentityTransport<?, Identifier> transport,
+      AuthenticatorStore<Identifier> authOutStore,
+      EvidenceTransferProtocol<?, Identifier> evidenceTransferProtocol,
+      AuthenticatorStore<Identifier> authCacheStore) {
+    // TODO Auto-generated constructor stub
   }
 
-  public short getEvidenceType() {
-    return RESP_AUDIT;
+  public void processAuditResponse(Identifier subject, long evidenceSeq,
+      Evidence payload) {
+    // TODO Auto-generated method stub
+    
   }
 
-  public void serialize(OutputBuffer buf) throws IOException {
-    throw new RuntimeException("implement");
+  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq) {
+    return null;
   }
 
 }

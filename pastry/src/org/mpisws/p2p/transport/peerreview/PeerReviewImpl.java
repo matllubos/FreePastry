@@ -55,6 +55,7 @@ import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.audit.AuditProtocol;
+import org.mpisws.p2p.transport.peerreview.audit.AuditProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocol;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
@@ -63,6 +64,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
+import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocol;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
@@ -113,11 +115,16 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   Serializer<Identifier> idSerializer;
   Serializer<Handle> handleSerializer;
   AuthenticatorSerializer authenticatorSerialilzer;
+  AuthenticatorStore<Identifier> authInStore;
   AuthenticatorStore<Identifier> authOutStore;
+  AuthenticatorStore<Identifier> authCacheStore;
+  AuthenticatorStore<Identifier> authPendingStore;
   IdentityTransport<Handle, Identifier> transport;
   PeerInfoStore<Handle, Identifier> infoStore;
 
   CommitmentProtocol<Handle, Identifier> commitmentProtocol;
+  EvidenceTransferProtocol<Handle, Identifier> evidenceTransferProtocol;
+  AuditProtocol<Identifier> auditProtocol;
   ChallengeResponseProtocol<Handle, Identifier> challengeProtocol;
   IdentifierExtractor<Handle, Identifier> identifierExtractor;
   Logger logger;
@@ -197,13 +204,26 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       throw new IllegalStateException("Cannot open info storage directory '"+namebuf+"'");
     }
     
-    authOutStore = new AuthenticatorStoreImpl<Identifier>(this);
+    /* Initialize authenticator store */
+    
+    authInStore = new AuthenticatorStoreImpl<Identifier>(this);
+    authInStore.setFilename(new File(dir,"authenticators.in"));
 
+    authOutStore = new AuthenticatorStoreImpl<Identifier>(this);
+    authOutStore.setFilename(new File(dir,"authenticators.out"));
+
+    authPendingStore = new AuthenticatorStoreImpl<Identifier>(this, true);
+    authPendingStore.setFilename(new File(dir,"authenticators.pending"));
+
+    authCacheStore = new AuthenticatorStoreImpl<Identifier>(this, true);
+    authCacheStore.setFilename(new File(dir,"authenticators.cache"));
+
+    /* Remaining protocols */
 
 
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, null, DEFAULT_TIME_TOLERANCE_MICROS);    
-    AuditProtocol<Identifier> auditProtocol = null;
-    this.challengeProtocol = new ChallengeResponseProtocolImpl(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
+    auditProtocol = new AuditProtocolImpl<Identifier>(this, history, infoStore, authInStore, transport, authOutStore, evidenceTransferProtocol, authCacheStore);
+    this.challengeProtocol = new ChallengeResponseProtocolImpl<Handle, Identifier>(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
     initialized = true;
   }
     

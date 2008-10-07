@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.commitment;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -105,13 +106,13 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
    *  mixed. This method sets the name of the file and reads its current contents
    *  into memory. 
    */
-  boolean setFilename(String filename) throws IOException {
+  public void setFilename(File file) throws IOException {
     if (authFile != null) {
       authFile.close();
       authFile = null;
     }
     
-    authFile = new RandomAccessFileIOBuffer(filename, "rw"); //O_RDWR | O_CREAT, 0644);
+    authFile = new RandomAccessFileIOBuffer(file, "rw"); //O_RDWR | O_CREAT, 0644);
     
     // read in authenticators
     int authenticatorsRead = 0;
@@ -133,8 +134,6 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
     // clobber anything in the file after the ioexception
     authFile.setLength(pos);
     authFile.seek(authFile.length());
-    
-    return true;
   }
 
   /**

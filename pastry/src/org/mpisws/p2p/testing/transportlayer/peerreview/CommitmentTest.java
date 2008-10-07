@@ -568,8 +568,9 @@ public class CommitmentTest {
     BogusPR pr;
     IdentityTransprotLayerImpl<HandleImpl, IdImpl> transport;
 
-    public Player(String name, int id, Environment env) throws Exception {
+    public Player(String name, int id, Environment env2) throws Exception {
       super();
+      Environment env = env2.cloneEnvironment(name);
       File f = new File(name+".data");
       if (f.exists()) f.delete();
       f = new File(name+".index");

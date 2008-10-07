@@ -46,6 +46,7 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
 import org.mpisws.p2p.transport.peerreview.audit.AuditProtocol;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
@@ -292,7 +293,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
 
   /* Called when we've challenged another node, and it has sent us a response */
 
-  protected void handleResponse(ResponseMessage<Identifier> message, Map<String, Object> options) {
+  protected void handleResponse(ResponseMessage<Identifier> message, Map<String, Object> options) throws IOException {
     /* If this is a response to an AUDIT, we let the AuditProtocol handle it */
 
     if (message.originator.equals(peerreview.getLocalId())) {
@@ -364,12 +365,114 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     }
   }
 
-  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response) {
+  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response) throws IOException {
     return isValidResponse(subject, evidence, response, false);
   }
   
-  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response, boolean extractAuthsFromResponse) {
-    throw new RuntimeException("implememnt");
+  /**
+   * This method takes a challenge and a response, and it checks whether the
+   * response is valid, i.e. is well-formed and answers the challenge.
+   */
+  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response, boolean extractAuthsFromResponse) throws IOException {
+    if (evidence.getEvidenceType() != response.getEvidenceType()) {
+      return false;
+    }
+    
+    switch(evidence.getEvidenceType()) {
+    case CHAL_AUDIT: {
+      ChallengeAudit evidenceAudit = (ChallengeAudit)evidence;
+      AuditResponse responseAudit = (AuditResponse)response;
+      long requestedBeginSeq = evidenceAudit.from.getSeq();
+      long finalSeq = evidenceAudit.to.getSeq();
+      byte includePrevCheckpoint = evidenceAudit.flags;
+
+      throw new RuntimeException("TODO: implement");
+//      int readptr = 0;
+//      readByte(response, (unsigned int*)&readptr); /* RESP_AUDIT */
+//      Handle subjectHandle = peerreview->readNodeHandle(response, (unsigned int*)&readptr, responseLen);
+//      long firstSeq = readLongLong(response, (unsigned int*)&readptr);
+//      readptr += 1 + response[readptr]; /* skip extInfo */
+//      unsigned char baseHash[hashSizeBytes];
+//      memcpy(baseHash, &response[readptr], hashSizeBytes);
+//      readptr += hashSizeBytes;
+//
+//      unsigned char subjectHandleInBytes[MAX_HANDLE_SIZE];
+//      unsigned int subjectHandleInBytesLen = 0;
+//      subjectHandle->write(subjectHandleInBytes, &subjectHandleInBytesLen, sizeof(subjectHandleInBytes));
+//
+//      if ((requestedBeginSeq % 1000) > 0)
+//        requestedBeginSeq -= requestedBeginSeq % 1000;
+//
+//      long long fromNodeMaxSeq = requestedBeginSeq + 999;
+//
+//      if ((firstSeq > requestedBeginSeq) || (!includePrevCheckpoint && (firstSeq < requestedBeginSeq))) {
+//        if (logger.level <= Logger.WARNING) logger.log("Log snippet starts at %lld, but we asked for %lld (ilc=%s); flagging invalid", firstSeq, requestedBeginSeq, includePrevCheckpoint ? "yes" : "no");
+//        delete subjectHandle;
+//        return false;
+//      }
+//
+//      bool snippetOK = EvidenceTool::checkSnippetSignatures(&response[readptr], responseLen - readptr, firstSeq, baseHash, subjectHandle, extractAuthsFromResponse ? authOutStore : NULL, includePrevCheckpoint, peerreview, peerreview, commitmentProtocol, &evidence[2+sizeof(long long)], fromNodeMaxSeq);
+//      delete subjectHandle;
+//      
+//      if (!snippetOK)
+//        return false;
+//      
+//      break;
+    }
+    case CHAL_SEND: {
+      UserDataMessage<Handle> evidenceUDM = (UserDataMessage<Handle>)evidence;
+      long senderSeq = evidenceUDM.getTopSeq(); //readLongLong(evidence, &pos);
+      Handle senderHandle = evidenceUDM.getSenderHandle(); //peerreview->readNodeHandle(evidence, &pos, evidenceLen);
+      byte[] senderHtopMinusOne = evidenceUDM.getHTopMinusOne();
+      byte[] senderSignature = evidenceUDM.getSignature();      
+//      byte relevantCode = evidenceUDM.getRelevantCode(); //readByte(evidence, &pos);
+      int relevantLen = evidenceUDM.getRelevantLen(); 
+      
+      AckMessage<Identifier> responseAck = (AckMessage<Identifier>)response;
+      
+//      unsigned int pos2 = 0;
+//      readByte(response, &pos2); // CHAL_SEND
+      Identifier receiverID = responseAck.getNodeId(); //peerreview->readIdentifier(response, &pos2, responseLen);
+      long ackSenderSeq = responseAck.getSendEntrySeq();
+      long ackReceiverSeq = responseAck.getRecvEntrySeq();
+      byte[] receiverHtopMinusOne = responseAck.getHashTopMinusOne();
+      byte[] receiverSignature = responseAck.getSignature();
+      
+      boolean okay = true;
+      if (ackSenderSeq != senderSeq) {
+        if (logger.level <= Logger.WARNING) logger.log(
+            "RESP.SEND: ACK contains sender seq "+ackSenderSeq+", but challenge contains "+senderSeq+"; flagging invalid");
+        okay = false;
+      }
+
+      if (okay) {      
+        SimpleOutputBuffer sob = new SimpleOutputBuffer();
+        senderHandle.serialize(sob);
+        sob.writeLong(senderSeq);
+        sob.writeBoolean(relevantLen < evidenceUDM.getPayloadLen());
+                
+        byte[] innerHash = evidenceUDM.getInnerHash(sob.getByteBuffer(), transport);
+        
+        //unsigned char authenticator[sizeof(long long) + hashSizeBytes + signatureSizeBytes];
+        Authenticator authenticator = peerreview.extractAuthenticator(receiverID, ackReceiverSeq, EVT_RECV, innerHash, receiverHtopMinusOne, receiverSignature);
+        if (authenticator != null) {
+          if (logger.level <= Logger.FINE) logger.log( "Auth OK");
+        } else {
+          if (logger.level <= Logger.WARNING) logger.log("RESP.SEND: Signature on ACK is invalid");
+          okay = false;
+        }
+      }
+      
+      if (!okay)
+        return false;
+
+      break;
+    }
+    default:
+      if (logger.level <= Logger.WARNING) logger.log("Cannot check whether response type #"+evidence.getEvidenceType()+" is valid; answering no");
+      throw new RuntimeException("Cannot check whether response type #"+evidence.getEvidenceType()+" is valid; answering no");
+    }
+    return true;
   }
   
   /**
@@ -424,9 +527,10 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
   }
 
   /**
-   *  Handle an incoming RESPONSE or ACCUSATION from another node */
+   *  Handle an incoming RESPONSE or ACCUSATION from another node 
+   * @throws IOException */
 
-  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) {
+  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) throws IOException {
     assert(m.getType() == MSG_ACCUSATION || m.getType() == MSG_RESPONSE);
 
 //    unsigned int pos = 1;

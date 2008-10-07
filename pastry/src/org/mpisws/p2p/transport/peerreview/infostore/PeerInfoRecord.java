@@ -159,7 +159,8 @@ public class PeerInfoRecord<Handle, Identifier> implements PeerReviewConstants {
       // pull from unanswered (if it's there)
       Map<Long, EvidenceRecordImpl> foo = unansweredEvidence.get(originator);
       if (foo != null) {
-        Map<Long, EvidenceRecordImpl> bar = unansweredEvidence.remove(timestamp);
+        // remove this from 
+        foo.remove(timestamp);
         if (foo.isEmpty()) {
           unansweredEvidence.remove(originator);
         }
