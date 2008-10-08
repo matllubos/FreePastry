@@ -38,7 +38,9 @@ package org.mpisws.p2p.transport.peerreview.statement;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
@@ -64,7 +66,8 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
 
   protected Logger logger;
   
-  protected Map<Identifier, Collection<IncompleteStatementInfo<Handle, Identifier>>> incompleteStatement;
+  protected Map<Identifier, LinkedList<IncompleteStatementInfo<Handle, Identifier>>> incompleteStatement = 
+    new HashMap<Identifier, LinkedList<IncompleteStatementInfo<Handle, Identifier>>>();
   
   protected ChallengeResponseProtocol<Handle, Identifier> challengeProtocol;
   protected IdentityTransport<Handle, Identifier> transport;
@@ -106,9 +109,9 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
    */
   public void cleanupIncompleteStatements() {    
     long now = peerreview.getTime();
-    Iterator<Collection<IncompleteStatementInfo<Handle, Identifier>>> fooIter = incompleteStatement.values().iterator();
+    Iterator<LinkedList<IncompleteStatementInfo<Handle, Identifier>>> fooIter = incompleteStatement.values().iterator();
     while(fooIter.hasNext()) {
-      Collection<IncompleteStatementInfo<Handle, Identifier>> foo = fooIter.next();
+      LinkedList<IncompleteStatementInfo<Handle, Identifier>> foo = fooIter.next();
       Iterator<IncompleteStatementInfo<Handle, Identifier>> barIter = foo.iterator();
       while(barIter.hasNext()) {
         IncompleteStatementInfo<Handle, Identifier> bar = barIter.next();
@@ -144,7 +147,13 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
     
     /* Find an empty spot in our message buffer and store the message there */
     IncompleteStatementInfo<Handle, Identifier> idx = new IncompleteStatementInfo<Handle, Identifier>(false,source,peerreview.getTime() + STATEMENT_COMPLETION_TIMEOUT_MILLIS,statement,false,null,options);
-     
+    LinkedList<IncompleteStatementInfo<Handle, Identifier>> foo = incompleteStatement.get(statement.subject);
+    if (foo == null) {
+      foo = new LinkedList<IncompleteStatementInfo<Handle,Identifier>>();
+      incompleteStatement.put(statement.subject, foo);
+    }
+    foo.add(idx);
+    
     /* Then call our central do-something-useful function */
      
     makeProgressOnStatement(idx);

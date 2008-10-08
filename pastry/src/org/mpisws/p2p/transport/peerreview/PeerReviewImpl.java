@@ -203,6 +203,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   public void notifyStatusChange(final Identifier id, final int newStatus) {
 //    char buf1[256];
     if (logger.level <= Logger.INFO) logger.log("Status change: <"+id+"> becomes "+getStatusString(newStatus));
+//    logger.logException("Status change: <"+id+"> becomes "+getStatusString(newStatus),new Exception("Stack Trace"));
     challengeProtocol.notifyStatusChange(id, newStatus);
     commitmentProtocol.notifyStatusChange(id, newStatus);
     
@@ -394,8 +395,8 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
         m = new AccusationMessage<Identifier>(sib, idSerializer, evidenceSerializer);
       case MSG_RESPONSE:
         if (m == null) m = new ResponseMessage<Identifier>(sib, idSerializer, evidenceSerializer);
-//        challengeProtocol.handleStatement(handle, m, options);
-        statementProtocol.handleIncomingStatement(handle, m, options);
+        challengeProtocol.handleStatement(handle, m, options);
+//        statementProtocol.handleIncomingStatement(handle, m, options);
         break;
       case MSG_USERDATA:
         UserDataMessage<Handle> udm = UserDataMessage.build(sib, handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes());
@@ -627,7 +628,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   public void notifyCertificateAvailable(Identifier id) {
     commitmentProtocol.notifyCertificateAvailable(id); 
 //    authPushProtocol.notifyCertificateAvailable(id);
-//    statementProtocol.notifyCertificateAvailable(id);
+    statementProtocol.notifyCertificateAvailable(id);
   }
 
   public void statusChange(Identifier id, int newStatus) {

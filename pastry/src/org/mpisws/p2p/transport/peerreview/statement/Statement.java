@@ -65,7 +65,7 @@ public abstract class Statement<Identifier extends RawSerializable> implements P
     originator = idSerializer.deserialize(buf);
     subject = idSerializer.deserialize(buf);
     evidenceSeq = buf.readLong();
-    evidence = evSerializer.deserialize(buf, buf.readByte(),false);
+    evidence = evSerializer.deserialize(buf, buf.readByte(),isResponse());
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
@@ -75,4 +75,6 @@ public abstract class Statement<Identifier extends RawSerializable> implements P
     buf.writeByte((byte)evidence.getEvidenceType());
     evidence.serialize(buf);
   }
+  
+  protected abstract boolean isResponse();
 }

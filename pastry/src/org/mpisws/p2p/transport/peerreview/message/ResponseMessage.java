@@ -75,4 +75,9 @@ public class ResponseMessage<Identifier extends RawSerializable> extends Stateme
   public short getType() {
     return MSG_RESPONSE;
   }
+  
+  @Override
+  protected boolean isResponse() {
+    return true;
+  }
 }

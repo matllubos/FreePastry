@@ -84,4 +84,10 @@ public class AccusationMessage<Identifier extends RawSerializable> extends State
     return MSG_ACCUSATION;
   }
 
+
+  @Override
+  protected boolean isResponse() {
+    return false;
+  }
+
 }
