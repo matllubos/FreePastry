@@ -179,11 +179,40 @@ public class UserDataMessage<Handle extends RawSerializable> implements PeerRevi
   }
 
   /**
-   * recvEntryHeader is the SendHandle, topSeq, (relevantLen < payload)?
+   * Identifier myId
+   * @param myHandle
+   * @param hasher
+   * @return
+   * @throws IOException
+   */
+  public byte[] getInnerHash(RawSerializable myId, HashProvider hasher) {
+    try {
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();    
+      myId.serialize(sob);
+      sob.writeBoolean(getRelevantLen() < getPayloadLen());
+      return getInnerHash(sob.getByteBuffer(), hasher);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
+  
+  /**
    * @param hasher
    * @return
    */
-  public byte[] getInnerHash(ByteBuffer header, HashProvider hasher) throws IOException {
+  public byte[] getInnerHash(HashProvider hasher) {
+    try {
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      senderHandle.serialize(sob);
+      sob.writeLong(topSeq);
+      sob.writeBoolean(relevantLen < getPayloadLen());
+      return getInnerHash(sob.getByteBuffer(),hasher);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
+  
+  public byte[] getInnerHash(ByteBuffer header, HashProvider hasher) {
     /* The peer will have logged a RECV entry, and the signature is calculated over that
     entry. To verify the signature, we must reconstruct that RECV entry locally */
 

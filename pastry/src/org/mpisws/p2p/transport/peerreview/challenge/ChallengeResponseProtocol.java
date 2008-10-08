@@ -51,6 +51,6 @@ public interface ChallengeResponseProtocol<Handle extends RawSerializable, Ident
   public void challengeSuspectedNode(Handle handle);  
   public void handleChallenge(Handle source, ChallengeMessage<Identifier> challenge, Map<String, Object> options) throws IOException;
   public void handleIncomingMessage(Handle source, UserDataMessage<Handle> udm, Map<String, Object> options) throws IOException;
-  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) throws IOException;
+  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options);
 
 }

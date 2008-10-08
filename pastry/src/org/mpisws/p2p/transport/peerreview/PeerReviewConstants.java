@@ -92,10 +92,10 @@ public interface PeerReviewConstants {
   public static final int STATUS_SUSPECTED = 1;
   public static final int STATUS_EXPOSED = 2;
   
-  public static final int DEFAULT_AUTH_PUSH_INTERVAL_MICROS = 5000000;
-  public static final long DEFAULT_CHECKPOINT_INTERVAL_MICROS = 10000000L;
-  public static final int MAINTENANCE_INTERVAL_MICROS = 10000000;
-  public static final int DEFAULT_TIME_TOLERANCE_MICROS = 60000000;
+  public static final long DEFAULT_AUTH_PUSH_INTERVAL_MILLIS = 5000;
+  public static final long DEFAULT_CHECKPOINT_INTERVAL_MILLIS = 10000L;
+  public static final long MAINTENANCE_INTERVAL_MILLIS = 10000;
+  public static final long DEFAULT_TIME_TOLERANCE_MILLIS = 60000;
 
   public static final int TI_CHECKPOINT = 99;
   public static final int TI_MAINTENANCE = 6;
@@ -110,6 +110,12 @@ public interface PeerReviewConstants {
   public static final byte FLAG_FULL_MESSAGES_SENDER = 2; /* Don't hash outgoing messages to sender */
   public static final byte FLAG_FULL_MESSAGES_ALL = 4;          /* Don't hash any outgoing messages */
 
+  /**
+   * Enum for EvidenceTool
+   */
+  public static final int VALID = 1;
+  public static final int INVALID = 2;
+  public static final int CERT_MISSING = 3;
 
 
 }

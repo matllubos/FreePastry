@@ -324,8 +324,8 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
     try {
       /* Put together an ACCUSATION message */
       Evidence evidence = infoStore.getEvidence(evidenceRecord.getOriginator(),subject, evidenceRecord.getTimeStamp());
-      AccusationMessage<Handle, Identifier> accusation = 
-        new AccusationMessage<Handle, Identifier>(subject, evidenceRecord, evidence);
+      AccusationMessage<Identifier> accusation = 
+        new AccusationMessage<Identifier>(subject, evidenceRecord, evidence);
   
       /* ... and send it */
   

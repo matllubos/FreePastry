@@ -43,6 +43,7 @@ import java.util.Map;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.TransportLayerCallback;
+import org.mpisws.p2p.transport.peerreview.audit.EvidenceTool;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
@@ -57,7 +58,7 @@ import rice.environment.Environment;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends 
-    IdentityTransportCallback<Handle, Identifier>, IdentityTransport<Handle, Identifier>, PeerReviewConstants {
+    IdentityTransportCallback<Handle, Identifier>, PeerReviewConstants {
 
   /**
    * Option should map to an int < 255 to record the relevant length of the message.
@@ -73,7 +74,7 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
   public static final byte PEER_REVIEW_COMMIT = 1;
   
   
-  public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) throws IOException;
+  public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature);
   public boolean addAuthenticatorIfValid(AuthenticatorStore<Identifier> store, Identifier subject, Authenticator auth);
 
   
@@ -86,6 +87,9 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
 
   void challengeSuspectedNode(Handle h);
 
+  public Identifier getLocalId();
+  public Handle getLocalHandle();
+  
 //  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest, boolean b, PeerReviewMessage message, MessageCallback<Handle, PeerReviewMessage> deliverAckToMe);
   
   public void transmit(Handle dest, 
@@ -118,5 +122,15 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
 
 
   public PeerReviewCallback<Handle, Identifier> getApp();
+  
+  public EvidenceTool<Handle, Identifier> getEvidenceTool();
+  
+  /**
+   * Throws exception if called w/o the cert for the subject
+   * @param subject
+   * @param auth
+   * @return
+   */
+  public boolean verify(Identifier subject, Authenticator auth);
 
 }

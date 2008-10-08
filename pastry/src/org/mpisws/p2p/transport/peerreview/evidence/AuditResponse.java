@@ -39,6 +39,7 @@ package org.mpisws.p2p.transport.peerreview.evidence;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -67,13 +68,25 @@ public class AuditResponse implements Evidence {
 
   public AuditResponse(ByteBuffer byteBuffer) {
     throw new RuntimeException("implement");
+//  int readptr = 0;
+//  readByte(payload, (unsigned int*)&readptr); /* RESP_AUDIT */
+//  NodeHandle *subjectHandle = peerreview->readNodeHandle(payload, (unsigned int*)&readptr, payloadLen);
+//  readptr += sizeof(long long);
+//  readptr += 1 + payload[readptr];
+//  readptr += hashSizeBytes;
+
   }
 
   public short getEvidenceType() {
     return RESP_AUDIT;
   }
 
+  
   public void serialize(OutputBuffer buf) throws IOException {
+    throw new RuntimeException("implement");
+  }
+
+  public LogSnippit getLogSnippit() {
     throw new RuntimeException("implement");
   }
 

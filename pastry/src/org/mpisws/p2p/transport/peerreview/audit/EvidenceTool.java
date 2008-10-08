@@ -34,61 +34,29 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.evidence;
+package org.mpisws.p2p.transport.peerreview.audit;
 
-import java.io.IOException;
+import java.util.Collection;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
-import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.util.tuples.Tuple;
 
-/**
- * PROOF_INCONSISTENT
- * byte type = PROOF_INCONSISTENT
- * authenticator auth1
- * char whichInconsistency   // 0=another auth, 1=a log snippet
- * -----------------------
- * authenticator auth2       // if whichInconsistency==0
- * -----------------------
- * long long firstSeq        // if whichInconsistency==1
- * hash baseHash
- * [entries]
- * 
- * @author Jeff Hoye
- */
-public class ProofInconsistent implements PeerReviewConstants, Evidence {
-  public static final byte ANOTHER_AUTH = 0;
-  public static final byte LOG_SNIPPET = 1;
+public interface EvidenceTool<Handle, Identifier> extends PeerReviewConstants {
   
-  
-  public Authenticator auth1;
-  
-  public Authenticator auth2;
-  
-  long firstSeq;
-  byte[] baseHash;
+  /**
+   * 
+   * @param snippet
+   * @return VALID|INVALID|CERT_MISSING, missingCertID 
+   */
+  Tuple<Integer, Identifier> checkSnippet(LogSnippit snippet);
+  int isAuthenticatorValid(Authenticator authenticator, Identifier subject);
+  boolean checkSnippetSignatures(
+      LogSnippit snippet, long firstSeq, byte[] baseHash, Handle subjectHandle, 
+      AuthenticatorStore<Identifier> authStoreOrNull, byte flags, byte[] keyNodeHash, long keyNodeMaxSeq);
+  boolean checkNoEntriesHashed(LogSnippit snippet, Collection<Short> typesToIgnore, int numTypesToIgnore);
+  void appendSnippetToHistory(LogSnippit snippet, long firstSeq, long skipEverythingBeforeSeq);
 
-  public ProofInconsistent(Authenticator auth1, Authenticator auth2) {
-    this.auth1 = auth1;
-    this.auth2 = auth2;
-  }
-  
-  public short getEvidenceType() {
-    return PROOF_INCONSISTENT;
-  }
-  
-  public void serialize(OutputBuffer buf) throws IOException {
-    auth1.serialize(buf);
-    if (auth2 != null) {
-      buf.writeByte(ANOTHER_AUTH);
-      auth2.serialize(buf);
-    } else {
-      buf.writeByte(LOG_SNIPPET);
-      buf.writeLong(firstSeq);
-      buf.write(baseHash, 0, baseHash.length);
-      throw new RuntimeException("todo implement entries");
-    }
-  }
 }

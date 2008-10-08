@@ -295,15 +295,15 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
 
   /* Called when we've challenged another node, and it has sent us a response */
 
-  protected void handleResponse(ResponseMessage<Identifier> message, Map<String, Object> options) throws IOException {
+  protected void handleResponse(ResponseMessage<Identifier> message, Map<String, Object> options) {
     /* If this is a response to an AUDIT, we let the AuditProtocol handle it */
 
     if (message.originator.equals(peerreview.getLocalId())) {
       Evidence auditEvidence = auditProtocol.statOngoingAudit(message.subject, message.evidenceSeq); 
       if (auditEvidence != null) {
-        if (isValidResponse(message.subject, auditEvidence, message.payload, true)) {
+        if (isValidResponse(message.subject, auditEvidence, message.evidence, true)) {
           if (logger.level <= Logger.FINE) logger.log( "Received response to ongoing AUDIT from "+message.subject);
-          auditProtocol.processAuditResponse(message.subject, message.evidenceSeq, message.payload);
+          auditProtocol.processAuditResponse(message.subject, message.evidenceSeq, message.evidence);
         } else {
           if (logger.level <= Logger.WARNING) logger.log("Invalid response to ongoing audit of "+message.subject);
         }
@@ -347,10 +347,10 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       
       /* Check the response against the evidence; if it is valid, add it to our store */
       
-      if (isValidResponse(message.subject, evidence, message.payload)) {
+      if (isValidResponse(message.subject, evidence, message.evidence)) {
         if (logger.level <= Logger.FINE) logger.log(
             "Received valid response (orig="+message.originator+", subject="+message.subject+", t="+message.evidenceSeq+"); adding");
-        infoStore.addResponse(message.originator, message.subject, message.evidenceSeq, message.payload);
+        infoStore.addResponse(message.originator, message.subject, message.evidenceSeq, message.evidence);
         
         /* If we've only relayed this challenge for another node (probably in our
            capacity as a witness), we need to forward the response back to
@@ -376,7 +376,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
    * This method takes a challenge and a response, and it checks whether the
    * response is valid, i.e. is well-formed and answers the challenge.
    */
-  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response, boolean extractAuthsFromResponse) throws IOException {
+  boolean isValidResponse(Identifier subject, Evidence evidence, Evidence response, boolean extractAuthsFromResponse) {
     if (evidence.getEvidenceType() != response.getEvidenceType()) {
       return false;
     }
@@ -449,12 +449,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       }
 
       if (okay) {      
-        SimpleOutputBuffer sob = new SimpleOutputBuffer();
-        senderHandle.serialize(sob);
-        sob.writeLong(senderSeq);
-        sob.writeBoolean(relevantLen < evidenceUDM.getPayloadLen());
-                
-        byte[] innerHash = evidenceUDM.getInnerHash(sob.getByteBuffer(), transport);
+        byte[] innerHash = evidenceUDM.getInnerHash(transport);
         
         //unsigned char authenticator[sizeof(long long) + hashSizeBytes + signatureSizeBytes];
         Authenticator authenticator = peerreview.extractAuthenticator(receiverID, ackReceiverSeq, EVT_RECV, innerHash, receiverHtopMinusOne, receiverSignature);
@@ -482,7 +477,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
    *  Handle an incoming RESPONSE or ACCUSATION from another node 
    * @throws IOException */
 
-  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) throws IOException {
+  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) {
     assert(m.getType() == MSG_ACCUSATION || m.getType() == MSG_RESPONSE);
 
 //    unsigned int pos = 1;
@@ -510,7 +505,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
         return;
       }
     case MSG_ACCUSATION:
-      AccusationMessage<Handle, Identifier> message = (AccusationMessage<Handle, Identifier>)m;
+      AccusationMessage<Identifier> message = (AccusationMessage<Identifier>)m;
       if (logger.level <= Logger.FINE) 
         logger.log("Statement completed: ACCUSATION  (orig="+message.originator+
             ", subject="+message.subject+", ts="+message.evidenceSeq+")");

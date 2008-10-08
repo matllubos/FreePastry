@@ -71,5 +71,6 @@ public interface CommitmentProtocol<Handle extends RawSerializable, Identifier e
   public void handleIncomingMessage(Handle source, UserDataMessage<Handle> msg, Map<String, Object> options) throws IOException;
   public void notifyCertificateAvailable(Identifier id);
   public Tuple<AckMessage<Identifier>,Boolean> logMessageIfNew(UserDataMessage<Handle> udm);
+  public void setTimeToleranceMillis(long timeToleranceMicros);
 
 }

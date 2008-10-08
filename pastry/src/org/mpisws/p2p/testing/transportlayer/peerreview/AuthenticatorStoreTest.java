@@ -57,6 +57,7 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.IdentifierExtractor;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
+import org.mpisws.p2p.transport.peerreview.audit.EvidenceTool;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
@@ -192,8 +193,7 @@ public class AuthenticatorStoreTest {
     }
 
     public Authenticator extractAuthenticator(MyInetSocketAddress id, long seq,
-        short entryType, byte[] entryHash, byte[] topMinusOne, byte[] signature)
-        throws IOException {
+        short entryType, byte[] entryHash, byte[] topMinusOne, byte[] signature) {
       // TODO Auto-generated method stub
       return null;
     }
@@ -357,6 +357,26 @@ public class AuthenticatorStoreTest {
         MessageCallback<MyInetSocketAddress, ByteBuffer> deliverAckToMe,
         Map<String, Object> options) {
       // TODO Auto-generated method stub
+    }
+
+    public EvidenceTool<MyInetSocketAddress, MyInetSocketAddress> getEvidenceTool() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public MyInetSocketAddress getLocalId() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public boolean verify(MyInetSocketAddress subject, Authenticator auth) {
+      // TODO Auto-generated method stub
+      return false;
+    }
+
+    public MyInetSocketAddress getLocalHandle() {
+      // TODO Auto-generated method stub
+      return null;
     }
   }
 

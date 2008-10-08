@@ -41,6 +41,7 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
+import org.mpisws.p2p.transport.peerreview.statement.Statement;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -60,38 +61,18 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  * @author Jeff Hoye
  *
  */
-public class ResponseMessage<Identifier extends RawSerializable> implements PeerReviewMessage {
-  public Identifier originator;
-  public Identifier subject;
-  public long evidenceSeq;
-  public Evidence payload;
-  
+public class ResponseMessage<Identifier extends RawSerializable> extends Statement<Identifier> {
   
   public ResponseMessage(Identifier originator, Identifier subject,
       long evidenceSeq, Evidence response) {
-    this.originator = originator;
-    this.subject = subject;
-    this.evidenceSeq = evidenceSeq;
-    this.payload = response;
-  }
-
-  public short getType() {
-    return MSG_RESPONSE;
+    super(originator, subject, evidenceSeq, response);
   }
 
   public ResponseMessage(InputBuffer buf, Serializer<Identifier> idSerializer, EvidenceSerializer evSerializer) throws IOException {
-    originator = idSerializer.deserialize(buf);
-    subject = idSerializer.deserialize(buf);
-    evidenceSeq = buf.readLong();
-    payload = evSerializer.deserialize(buf, buf.readByte(),true);
+    super(buf, idSerializer, evSerializer);
   }
   
-  public void serialize(OutputBuffer buf) throws IOException {
-    originator.serialize(buf);
-    subject.serialize(buf);
-    buf.writeLong(evidenceSeq);
-    buf.writeByte((byte)payload.getEvidenceType());
-    payload.serialize(buf);
+  public short getType() {
+    return MSG_RESPONSE;
   }
-
 }

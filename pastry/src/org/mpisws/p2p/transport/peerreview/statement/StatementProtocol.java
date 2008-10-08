@@ -34,61 +34,27 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.evidence;
+package org.mpisws.p2p.transport.peerreview.statement;
 
-import java.io.IOException;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
-import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
- * PROOF_INCONSISTENT
- * byte type = PROOF_INCONSISTENT
- * authenticator auth1
- * char whichInconsistency   // 0=another auth, 1=a log snippet
- * -----------------------
- * authenticator auth2       // if whichInconsistency==0
- * -----------------------
- * long long firstSeq        // if whichInconsistency==1
- * hash baseHash
- * [entries]
- * 
- * @author Jeff Hoye
+ * The purpose of this protocol is to make sure that we have all the nodeID
+ * certificates we need. For each incoming message, it checks whether any
+ * additional certificates are needed, e.g. to check evidence about another
+ * node. If yes, it temporarily queues the message and requests the certificate
+ * from the sender.
  */
-public class ProofInconsistent implements PeerReviewConstants, Evidence {
-  public static final byte ANOTHER_AUTH = 0;
-  public static final byte LOG_SNIPPET = 1;
-  
-  
-  public Authenticator auth1;
-  
-  public Authenticator auth2;
-  
-  long firstSeq;
-  byte[] baseHash;
+public interface StatementProtocol<Handle, Identifier extends RawSerializable> extends PeerReviewConstants {
+  static final int MAX_INCOMPLETE_STATEMENTS = 250;
+  static final int PROGRESS_INTERVAL_MICROS = 1000000;
+  static final int STATEMENT_COMPLETION_TIMEOUT_MILLIS = 1000;
+  static final int TI_MAKE_PROGRESS = 5;
 
-  public ProofInconsistent(Authenticator auth1, Authenticator auth2) {
-    this.auth1 = auth1;
-    this.auth2 = auth2;
-  }
-  
-  public short getEvidenceType() {
-    return PROOF_INCONSISTENT;
-  }
-  
-  public void serialize(OutputBuffer buf) throws IOException {
-    auth1.serialize(buf);
-    if (auth2 != null) {
-      buf.writeByte(ANOTHER_AUTH);
-      auth2.serialize(buf);
-    } else {
-      buf.writeByte(LOG_SNIPPET);
-      buf.writeLong(firstSeq);
-      buf.write(baseHash, 0, baseHash.length);
-      throw new RuntimeException("todo implement entries");
-    }
-  }
+  public void handleIncomingStatement(Handle source, Statement<Identifier> statement, Map<String, Object> options);
+
 }

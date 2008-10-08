@@ -41,15 +41,12 @@ import java.nio.ByteBuffer;
 import java.security.SignatureException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
-import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.HashSeq;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
@@ -62,14 +59,12 @@ import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.OutgoingUserDataMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
-import org.mpisws.p2p.transport.peerreview.misbehavior.Misbehavior;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
-import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.Tuple;
 import rice.selector.TimerTask;
 
@@ -102,8 +97,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   PeerReview<Handle, Identifier> peerreview;
   PeerInfoStore<Handle, Identifier> infoStore;
   IdentityTransport<Handle, Identifier> transport;
-  Handle myHandle;
-  Misbehavior<Handle> misbehavior;
+  
   /**
    * If the time is more different than this from a peer, we discard the message
    */
@@ -118,15 +112,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   public CommitmentProtocolImpl(PeerReview<Handle,Identifier> peerreview,
       IdentityTransport<Handle, Identifier> transport,
       PeerInfoStore<Handle, Identifier> infoStore, AuthenticatorStore<Identifier> authStore,
-      SecureHistory history, Misbehavior<Handle> misbehavior,
+      SecureHistory history,
       long timeToleranceMillis) throws IOException {
     this.peerreview = peerreview;
-    this.myHandle = transport.getLocalIdentifier();
     this.transport = transport;
     this.infoStore = infoStore;
     this.authStore = authStore;
     this.history = history;
-    this.misbehavior = misbehavior;
     this.nextReceiveCacheEntry = 0;
 //    this.numPeers = 0;
     this.timeToleranceMillis = timeToleranceMillis;
@@ -248,7 +240,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
       byte[] hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(seqOfRecvEntry)), ByteBuffer.wrap(myHashTop));
   
       AckMessage<Identifier> ack = new AckMessage<Identifier>(
-          peerreview.getIdentifierExtractor().extractIdentifier(myHandle),
+          peerreview.getLocalId(),
           udm.getTopSeq(),
           seqOfRecvEntry,
           myHashTopMinusOne,
@@ -363,7 +355,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           long evidenceSeq = peerreview.getEvidenceSeq();
 
           try {
-            infoStore.addEvidence(peerreview.getIdentifierExtractor().extractIdentifier(myHandle), 
+            infoStore.addEvidence(peerreview.getLocalId(), 
                 peerreview.getIdentifierExtractor().extractIdentifier(info.handle), 
                 evidenceSeq, challenge, null);
           } catch (IOException ioe) {
@@ -389,23 +381,14 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
       
       /* Extract the authenticator */
       Authenticator authenticator;
-      try {
-        SimpleOutputBuffer sob = new SimpleOutputBuffer();
-        peerreview.getIdentifierExtractor().extractIdentifier(myHandle).serialize(sob);
-        sob.writeByte((udm.getRelevantLen() < udm.getPayloadLen()) ? 1 : 0);
-        byte[] innerHash = udm.getInnerHash(sob.getByteBuffer(), transport);
+      byte[] innerHash = udm.getInnerHash(peerreview.getLocalId(), transport);
+    
+      authenticator = peerreview.extractAuthenticator(
+          peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), 
+          udm.getTopSeq(), 
+          EVT_SEND, 
+          innerHash, udm.getHTopMinusOne(), udm.getSignature());
       
-        authenticator = peerreview.extractAuthenticator(
-            peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), 
-            udm.getTopSeq(), 
-            EVT_SEND, 
-            innerHash, udm.getHTopMinusOne(), udm.getSignature());
-      } catch (IOException ioe) {
-        RuntimeException throwMe = new RuntimeException("Unexpeced serialization problem building authenticator for "+udm);
-        throwMe.initCause(ioe);
-        throw throwMe;
-      }
-
       if (authenticator != null) {
 
         /* At this point, we are convinced that:
@@ -521,12 +504,6 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     //  hTop, &topSeq
     HashSeq top = history.getTopLevelEntry();
     
-    /* Maybe we need to do some mischief for testing? */
-    
-    if (misbehavior != null) {
-      misbehavior.maybeChangeSeqInUserMessage(top.getSeq());
-    }
-    
     /* Sign the authenticator */
 //    System.out.println("Signing: "+top.getSeq()+" "+MathUtils.toBase64(top.getHash()));
     hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(top.getSeq())), ByteBuffer.wrap(top.getHash()));
@@ -549,22 +526,13 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
       return ret;
     }
     
-    /* Maybe do some more mischief for testing? */
-
-    if (misbehavior != null) {
-      MessageRequestHandle<Handle, ByteBuffer> ret = misbehavior.dropAfterLogging(target, message, options);
-      if (ret != null) {
-        return ret;
-      }
-    }
-    
     /* Construct a USERDATA message... */
     
     assert((relevantlen == message.remaining()) || (relevantlen < 255));    
 
     PeerInfo<Handle> pi = lookupPeer(target);
 
-    OutgoingUserDataMessage<Handle> udm = new OutgoingUserDataMessage<Handle>(top.getSeq(), myHandle, hTopMinusOne, signature, message, relevantlen, options, pi, deliverAckToMe);
+    OutgoingUserDataMessage<Handle> udm = new OutgoingUserDataMessage<Handle>(top.getSeq(), peerreview.getLocalHandle(), hTopMinusOne, signature, message, relevantlen, options, pi, deliverAckToMe);
     
     /* ... and put it into the send queue. If the node is trusted and does not have any
        unacknowledged messages, makeProgress() will simply send it out. */
@@ -598,13 +566,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
         /* The peer will have logged a RECV entry, and the signature is calculated over that
         entry. To verify the signature, we must reconstruct that RECV entry locally */
 
-        SimpleOutputBuffer sob = new SimpleOutputBuffer();
-        peerreview.getHandleSerializer().serialize(udm.getSenderHandle(), sob);
-        sob.writeLong(udm.getTopSeq());
-        sob.writeByte((udm.getRelevantLen() < udm.getPayloadLen()) ? 1 : 0);
-        ByteBuffer recvEntryHeader = sob.getByteBuffer();
-
-        byte[] innerHash = udm.getInnerHash(recvEntryHeader, transport);
+        byte[] innerHash = udm.getInnerHash(transport);
 
         
         Authenticator authenticator = peerreview.extractAuthenticator(
@@ -641,5 +603,9 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     } else {
       if (logger.level <= Logger.WARNING) logger.log("We got an ACK from <"+ackMessage.getNodeId()+">, but we don't have the certificate; discarding");     
     }
+  }
+
+  public void setTimeToleranceMillis(long timeToleranceMillis) {
+    this.timeToleranceMillis = timeToleranceMillis;
   }
 }

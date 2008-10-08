@@ -34,61 +34,45 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.evidence;
+package org.mpisws.p2p.transport.peerreview.statement;
 
 import java.io.IOException;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
+import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-/**
- * PROOF_INCONSISTENT
- * byte type = PROOF_INCONSISTENT
- * authenticator auth1
- * char whichInconsistency   // 0=another auth, 1=a log snippet
- * -----------------------
- * authenticator auth2       // if whichInconsistency==0
- * -----------------------
- * long long firstSeq        // if whichInconsistency==1
- * hash baseHash
- * [entries]
- * 
- * @author Jeff Hoye
- */
-public class ProofInconsistent implements PeerReviewConstants, Evidence {
-  public static final byte ANOTHER_AUTH = 0;
-  public static final byte LOG_SNIPPET = 1;
-  
-  
-  public Authenticator auth1;
-  
-  public Authenticator auth2;
-  
-  long firstSeq;
-  byte[] baseHash;
+public abstract class Statement<Identifier extends RawSerializable> implements PeerReviewMessage {
+  public Identifier originator;
+  public Identifier subject;
+  public long evidenceSeq;
+  public Evidence evidence;
 
-  public ProofInconsistent(Authenticator auth1, Authenticator auth2) {
-    this.auth1 = auth1;
-    this.auth2 = auth2;
+  public Statement(Identifier originator, Identifier subject,
+      long evidenceSeq, Evidence evidence) {
+    this.originator = originator;
+    this.subject = subject;
+    this.evidenceSeq = evidenceSeq;
+    this.evidence = evidence;
   }
-  
-  public short getEvidenceType() {
-    return PROOF_INCONSISTENT;
+
+  public Statement(InputBuffer buf, Serializer<Identifier> idSerializer, EvidenceSerializer evSerializer) throws IOException {
+    originator = idSerializer.deserialize(buf);
+    subject = idSerializer.deserialize(buf);
+    evidenceSeq = buf.readLong();
+    evidence = evSerializer.deserialize(buf, buf.readByte(),false);
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    auth1.serialize(buf);
-    if (auth2 != null) {
-      buf.writeByte(ANOTHER_AUTH);
-      auth2.serialize(buf);
-    } else {
-      buf.writeByte(LOG_SNIPPET);
-      buf.writeLong(firstSeq);
-      buf.write(baseHash, 0, baseHash.length);
-      throw new RuntimeException("todo implement entries");
-    }
+    originator.serialize(buf);
+    subject.serialize(buf);
+    buf.writeLong(evidenceSeq);
+    buf.writeByte((byte)evidence.getEvidenceType());
+    evidence.serialize(buf);
   }
 }

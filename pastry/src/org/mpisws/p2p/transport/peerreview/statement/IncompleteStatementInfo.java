@@ -34,22 +34,41 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.misbehavior;
+package org.mpisws.p2p.transport.peerreview.statement;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 
-import org.mpisws.p2p.transport.MessageRequestHandle;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public interface Misbehavior<Handle> {
+public class IncompleteStatementInfo<Handle, Identifier extends RawSerializable> {
+  public boolean finished;
+  public Handle sender;
+  public long currentTimeout;
+  public Statement<Identifier> statement;
+  public boolean isMissingCertificate;
+  public Identifier missingCertificateID;
+  public Map<String, Object> options;
 
-  void maybeChangeSeqInUserMessage(long seq);
-  /**
-   * 
-   * @param target
-   * @param message
-   * @param options
-   * @return a non-null MRE if you want it to be dropped
-   */      
-  MessageRequestHandle<Handle, ByteBuffer> dropAfterLogging(Handle target, ByteBuffer message, Map<String, Object> options);
+  public IncompleteStatementInfo(boolean finished, Handle source, long currentTimeout,
+      Statement<Identifier> statement, boolean isMissingCertificate, Identifier missingCertificateId, Map<String, Object> options) {
+    this.finished = finished;
+    this.sender = source;
+    this.currentTimeout = currentTimeout;
+    this.statement = statement;
+    this.isMissingCertificate = isMissingCertificate;
+    this.missingCertificateID = missingCertificateId;
+    this.options = options;
+  }
+
+  public boolean isMissingCertificate() {
+    return isMissingCertificate;
+  }
+  
+  public boolean isFinished() {
+    return finished;
+  }
+
+  public long getCurrentTimeout() {
+    return currentTimeout;
+  }
 }

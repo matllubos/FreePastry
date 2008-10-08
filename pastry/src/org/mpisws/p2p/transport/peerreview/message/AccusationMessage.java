@@ -43,6 +43,7 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceRecord;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
+import org.mpisws.p2p.transport.peerreview.statement.Statement;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -57,24 +58,25 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
     long long evidenceSeq
     [evidence bytes follow]
 */
-public class AccusationMessage<Handle, Identifier extends RawSerializable> implements PeerReviewMessage {
-
-  public Identifier originator;
-  public Identifier subject;
-  public long evidenceSeq;
-  public Evidence evidence;
-  
-  public AccusationMessage(Identifier subject,
-      EvidenceRecord<Handle, Identifier> evidenceRecord, Evidence evidence) {
-    this(evidenceRecord.getOriginator(),subject,evidenceRecord.getTimeStamp(),evidence);
-  }
+public class AccusationMessage<Identifier extends RawSerializable> extends Statement<Identifier> {
 
   public AccusationMessage(Identifier originator, Identifier subject,
       long evidenceSeq, Evidence evidence) {
-    this.originator = originator;
-    this.subject = subject;
-    this.evidenceSeq = evidenceSeq;
-    this.evidence = evidence;
+    super(originator, subject, evidenceSeq, evidence);
+  }
+
+
+  public AccusationMessage(InputBuffer buf,
+      Serializer<Identifier> idSerializer, EvidenceSerializer evSerializer)
+      throws IOException {
+    super(buf, idSerializer, evSerializer);
+    // TODO Auto-generated constructor stub
+  }
+
+
+  public AccusationMessage(Identifier subject,
+      EvidenceRecord<?, Identifier> evidenceRecord, Evidence evidence) {
+    this(evidenceRecord.getOriginator(),subject,evidenceRecord.getTimeStamp(),evidence);
   }
 
 
@@ -82,18 +84,4 @@ public class AccusationMessage<Handle, Identifier extends RawSerializable> imple
     return MSG_ACCUSATION;
   }
 
-  public AccusationMessage(InputBuffer buf, Serializer<Identifier> idSerializer, EvidenceSerializer evSerializer) throws IOException {
-    originator = idSerializer.deserialize(buf);
-    subject = idSerializer.deserialize(buf);
-    evidenceSeq = buf.readLong();
-    evidence = evSerializer.deserialize(buf, buf.readByte(),false);
-  }
-  
-  public void serialize(OutputBuffer buf) throws IOException {
-    originator.serialize(buf);
-    subject.serialize(buf);
-    buf.writeLong(evidenceSeq);
-    buf.writeByte((byte)evidence.getEvidenceType());
-    evidence.serialize(buf);
-  }
 }
