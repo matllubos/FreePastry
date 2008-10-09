@@ -48,6 +48,7 @@ import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAKeyGenParameterSpec;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -345,6 +346,12 @@ public class CommitmentTest {
         IdImpl id,
         int newStatus) {
       logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
+    }
+
+
+    public Collection<HandleImpl> getMyWitnessedNodes() {
+      // TODO Auto-generated method stub
+      return null;
     }
 
   }

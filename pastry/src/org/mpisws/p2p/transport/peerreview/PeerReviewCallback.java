@@ -36,6 +36,8 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview;
 
+import java.util.Collection;
+
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
 
@@ -54,6 +56,6 @@ public interface PeerReviewCallback<Handle, Identifier> extends Destructable, Id
   void storeCheckpoint(OutputBuffer buffer);
   boolean loadCheckpoint(InputBuffer buffer);
   void getWitnesses(Identifier subject, WitnessListener<Handle, Identifier> callback);
-//  int getMyWitnessedNodes(NodeHandle **nodes, int maxResults);
 //  PeerReviewCallback getReplayInstance(ReplayWrapper replayWrapper);
+  public Collection<Handle> getMyWitnessedNodes();
 }

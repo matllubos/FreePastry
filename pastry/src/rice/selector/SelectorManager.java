@@ -573,13 +573,15 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * 
    * @param task The task to run
    */
-  public void schedule(TimerTask task) {
+  public TimerTask schedule(TimerTask task) {
     addTask(task);
+    return task;
   }
   
-  public void schedule(TimerTask task, long delay) {
+  public TimerTask schedule(TimerTask task, long delay) {
     task.setNextExecutionTime(timeSource.currentTimeMillis() + delay);
     addTask(task);
+    return task;
   }
 
   /**
@@ -590,10 +592,11 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @param delay The delay before first running, in milliseconds
    * @param period The period with which to run in milliseconds
    */
-  public void schedule(TimerTask task, long delay, long period) {
+  public TimerTask schedule(TimerTask task, long delay, long period) {
     task.setNextExecutionTime(timeSource.currentTimeMillis() + delay);
     task.period = (int) period;
     addTask(task);
+    return task;
   }
 
   /**
@@ -604,11 +607,12 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @param delay The delay before first running in milliseconds
    * @param period The period with which to run in milliseconds
    */
-  public void scheduleAtFixedRate(TimerTask task, long delay, long period) {
+  public TimerTask scheduleAtFixedRate(TimerTask task, long delay, long period) {
     task.setNextExecutionTime(timeSource.currentTimeMillis() + delay);
     task.period = (int) period;
     task.fixedRate = true;
     addTask(task);
+    return task;
   }
 
   /**

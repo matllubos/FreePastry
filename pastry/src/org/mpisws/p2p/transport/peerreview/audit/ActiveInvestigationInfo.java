@@ -36,11 +36,15 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.audit;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
-import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 
-public interface AuditProtocol<Handle, Identifier> extends PeerReviewConstants {
-  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq);
-  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse auditResponse);
+/**
+ * Here we remember calls to investigate() that have not been resolved yet 
+ */
+public class ActiveInvestigationInfo<Handle> {
+  Handle target;
+  long since;
+  long currentTimeout;
+  Authenticator authFrom;
+  Authenticator authTo;
 }

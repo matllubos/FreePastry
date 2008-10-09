@@ -60,7 +60,7 @@ public abstract class Verifier<Identifier> implements PeerReviewConstants {
 
   protected Identifier localHandle;
   protected SecureHistory history;
-  PeerReviewCallback app;
+  PeerReviewCallback<?, Identifier> app;
   int numEventCallbacks;
   boolean foundFault;
   

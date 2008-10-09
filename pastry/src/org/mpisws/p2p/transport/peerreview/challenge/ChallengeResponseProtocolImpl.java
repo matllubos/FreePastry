@@ -79,7 +79,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
   PeerInfoStore<Handle, Identifier> infoStore;
   SecureHistory history;
   AuthenticatorStore<Identifier> authOutStore; 
-  AuditProtocol<Identifier> auditProtocol;
+  AuditProtocol<Handle, Identifier> auditProtocol;
   CommitmentProtocol<Handle, Identifier> commitmentProtocol;
   protected Logger logger;
   Map<Handle, LinkedList<PacketInfo<Handle, Identifier>>> queue = new HashMap<Handle,LinkedList<PacketInfo<Handle, Identifier>>>();
@@ -88,7 +88,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       PeerReviewImpl<Handle, Identifier> peerReviewImpl,
       IdentityTransport<Handle, Identifier> transport,
       PeerInfoStore<Handle, Identifier> infoStore, SecureHistory history,
-      AuthenticatorStore<Identifier> authOutStore, AuditProtocol<Identifier> auditProtocol,
+      AuthenticatorStore<Identifier> authOutStore, AuditProtocol<Handle, Identifier> auditProtocol,
       CommitmentProtocol<Handle, Identifier> commitmentProtocol) {
     this.peerreview = peerReviewImpl;
     this.transport = transport;
@@ -303,7 +303,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       if (auditEvidence != null) {
         if (isValidResponse(message.subject, auditEvidence, message.evidence, true)) {
           if (logger.level <= Logger.FINE) logger.log( "Received response to ongoing AUDIT from "+message.subject);
-          auditProtocol.processAuditResponse(message.subject, message.evidenceSeq, message.evidence);
+          auditProtocol.processAuditResponse(message.subject, message.evidenceSeq, (AuditResponse)message.evidence);
         } else {
           if (logger.level <= Logger.WARNING) logger.log("Invalid response to ongoing audit of "+message.subject);
         }

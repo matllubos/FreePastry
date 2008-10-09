@@ -335,6 +335,10 @@ public class MathUtils {
     return (int) b & 0xFF;
   }
   
+  public static int uShortToInt(short b) {
+    return (int) b & 0xFFFF;
+  }
+  
   public static byte intToUByte(int i) {
     if ((i > 255) || (i < 0)) throw new RuntimeException("can't convert "+i+" to an unsigned byte");
     return (byte)i;

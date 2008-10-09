@@ -36,6 +36,29 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.audit;
 
-public interface LogSnippit {
+import java.util.List;
+
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
+/**
+  Nodehandle logHandle
+  long long firstSeq
+  byte extInfoLen
+  [extInfo follows]
+  hash baseHash
+  --entry begin--           // 1 or more of these entries follow
+  char type
+  char sizeCode             // 0=hashed, 1-FD=size, FE=32-bit size follows, FF=16-bit size follows
+ {short/int size}
+  char content[] 
+  char nextSeqCode          // 0=+1, 1=(idx=0,us+=1), 2=(idx=0,us+=2), ..., FF=full seq  [does not exist for the last one]
+ {long long seq}
+  --entry end--
+ * @author Jeff Hoye
+ *
+ */
+public class LogSnippit<Handle extends RawSerializable> {
+  Handle logHandle;
   
+  List<SnippitEntry> entries;
 }

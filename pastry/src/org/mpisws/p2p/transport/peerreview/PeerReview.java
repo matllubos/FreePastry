@@ -55,7 +55,9 @@ import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import static org.mpisws.p2p.transport.peerreview.Basics.renderStatus;
 
 public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends 
     IdentityTransportCallback<Handle, Identifier>, PeerReviewConstants {
@@ -132,5 +134,6 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
    * @return
    */
   public boolean verify(Identifier subject, Authenticator auth);
+  public RandomSource getRandomSource();
 
 }

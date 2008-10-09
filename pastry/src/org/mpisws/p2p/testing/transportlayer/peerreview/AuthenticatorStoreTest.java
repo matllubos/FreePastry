@@ -71,6 +71,7 @@ import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.Continuation;
 import rice.environment.Environment;
+import rice.environment.random.RandomSource;
 import rice.p2p.commonapi.Cancellable;
 
 
@@ -375,6 +376,11 @@ public class AuthenticatorStoreTest {
     }
 
     public MyInetSocketAddress getLocalHandle() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public RandomSource getRandomSource() {
       // TODO Auto-generated method stub
       return null;
     }

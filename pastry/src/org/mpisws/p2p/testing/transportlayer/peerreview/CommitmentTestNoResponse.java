@@ -329,6 +329,11 @@ public class CommitmentTestNoResponse {
         WitnessListener<HandleImpl, IdImpl> callback) {
       callback.notifyWitnessSet(subject, Collections.singletonList(carol.localHandle));
     }
+
+    public Collection<org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.HandleImpl> getMyWitnessedNodes() {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
 
   static Map<HandleImpl, IdentityTransprotLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransprotLayerImpl<HandleImpl,IdImpl>>();

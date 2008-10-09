@@ -40,9 +40,11 @@ import java.io.File;
 import java.io.IOException;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 
 public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
   public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
+  public void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence) throws IOException;
   public void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence, Handle interestedParty) throws IOException;
   public void addResponse(Identifier originator, Identifier subject, long timestamp, Evidence response) throws IOException;
   int getStatus(Identifier id);
@@ -56,6 +58,8 @@ public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
   
   public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp);
   public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp, boolean create);
+
+  public Authenticator getLastCheckedAuth(Identifier id);
 
 
 }

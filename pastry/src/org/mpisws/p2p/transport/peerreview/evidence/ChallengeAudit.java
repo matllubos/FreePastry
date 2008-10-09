@@ -58,24 +58,27 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 public class ChallengeAudit implements Evidence {
   public static final short TYPE = CHAL_AUDIT;
 
-  public byte type;
   public byte flags;
   public Authenticator from;
   public Authenticator to;
   
+  public ChallengeAudit(byte flags, Authenticator from, Authenticator to) {
+    this.flags = flags;
+    this.from = from;
+    this.to = to;
+  }
+
   public short getEvidenceType() {
     return TYPE;
   }
 
   public ChallengeAudit(InputBuffer buf, int hashSize, int signatureSize) throws IOException {
-    type = buf.readByte();
     flags = buf.readByte();
     from = new Authenticator(buf,hashSize,signatureSize);
     to = new Authenticator(buf,hashSize,signatureSize);    
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    buf.writeByte(type);
     buf.writeByte(flags);
     from.serialize(buf);
     to.serialize(buf);

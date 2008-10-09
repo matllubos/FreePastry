@@ -34,13 +34,20 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.audit;
+package org.mpisws.p2p.transport.peerreview;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
-import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+public class Basics implements PeerReviewConstants {
+  public static String renderStatus(int status) {
+    switch (status) {
+      case STATUS_TRUSTED:
+        return "TRUSTED";
+      case STATUS_SUSPECTED:
+        return "SUSPECTED";
+      case STATUS_EXPOSED:
+        return "EXPOSED";
+      default:
+        return "UNKNOWN";
+    }
+  }
 
-public interface AuditProtocol<Handle, Identifier> extends PeerReviewConstants {
-  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq);
-  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse auditResponse);
 }

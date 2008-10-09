@@ -63,7 +63,7 @@ public class ChallengeMessage<Identifier extends RawSerializable> implements Pee
     
   public Identifier originator;
   public long evidenceSeq;
-  Evidence challenge;
+  public Evidence challenge;
   
   public ChallengeMessage(Identifier originator, long evidenceSeq, Evidence challenge) {
     this.originator = originator;

@@ -117,5 +117,21 @@ public interface PeerReviewConstants {
   public static final int INVALID = 2;
   public static final int CERT_MISSING = 3;
 
+  public static final long DEFAULT_AUDIT_INTERVAL_MILLIS = 10000L;
+  public static final int PROGRESS_INTERVAL_MILLIS = 100;
+  public static final int INVESTIGATION_INTERVAL_MILLIS = 250;
+  public static final int DEFAULT_LOG_DOWNLOAD_TIMEOUT = 2000;
+  public static final int MAX_WITNESSED_NODES = 110;
+  public static final int MAX_ACTIVE_AUDITS = 500;
+  public static final int MAX_ACTIVE_INVESTIGATIONS = 10;
+  public static final int MAX_ENTRIES_BETWEEN_CHECKPOINTS = 100;
+  public static final int AUTH_CACHE_INTERVAL = 500000;
+  
+  public static final int TI_START_AUDITS = 3;
+  public static final int TI_MAKE_PROGRESS = 4;
+
+  public static final int STATE_SEND_AUDIT = 1;
+  public static final int STATE_WAIT_FOR_LOG = 2;
+
 
 }

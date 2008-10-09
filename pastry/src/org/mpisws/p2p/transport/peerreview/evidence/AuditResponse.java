@@ -45,22 +45,23 @@ import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 /**
- * RESP_AUDIT
+ * Snippit is the contents (everything but the type)
+ * 
+RESP_AUDIT
   byte type
   nodehandle myHandle
   long long firstSeq
-  byte extInfoLen
+  byte extInfoLen  // always 0 in first version
   [extInfo follows]
   hash baseHash
-  --entry begin--
+  --entry begin--           // 1 or more of these entries follow
   char type
-  char sizeCode  // 0=hashed, 1-FE=size, FF=size follows
- {short size}
+  char sizeCode             // 0=hashed, 1-FD=size, FE=32-bit size follows, FF=16-bit size follows
+ {short/int size}
   char content[] 
-  char seqCode   // 0=+1, 1=(idx=0,us+=1), 2=(idx=0,us+=2), ..., FF=full seq
+  char nextSeqCode          // 0=+1, 1=(idx=0,us+=1), 2=(idx=0,us+=2), ..., FF=full seq  [does not exist for the last one]
  {long long seq}
   --entry end--
-
  * @author Jeff Hoye
  *
  */

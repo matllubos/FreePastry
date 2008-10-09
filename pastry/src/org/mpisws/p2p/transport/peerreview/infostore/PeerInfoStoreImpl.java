@@ -165,6 +165,9 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
   
   /* Add a new piece of evidence */
 
+  public void addEvidence(Identifier originator, Identifier subject, long timestamp, Evidence evidence) throws IOException {
+    addEvidence(originator, subject, timestamp, evidence, null);
+  }
   public void addEvidence(Identifier originator, Identifier subject, long timestamp, Evidence evidence, Handle interestedParty) throws IOException {
 //    char namebuf[200], buf1[200], buf2[200];
     if (logger.level <= Logger.FINE) logger.log("addEvidence(orig="+originator+", subj="+subject+", seq="+timestamp+")");
@@ -288,7 +291,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     return ret;
   }
   
-  Authenticator getLastCheckedAuth(Identifier id) {
+  public Authenticator getLastCheckedAuth(Identifier id) {
     PeerInfoRecord<Handle, Identifier> rec = find(id, false);
     if (rec == null) return null;
       

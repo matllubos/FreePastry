@@ -95,6 +95,8 @@ import org.mpisws.p2p.transport.util.Serializer;
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.random.RandomSource;
+import rice.environment.random.simple.SimpleRandomSource;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.MathUtils;
@@ -143,11 +145,15 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   // protocols
   protected CommitmentProtocol<Handle, Identifier> commitmentProtocol;
   protected EvidenceTransferProtocol<Handle, Identifier> evidenceTransferProtocol;
-  protected AuditProtocol<Identifier> auditProtocol;
+  protected AuditProtocol<Handle, Identifier> auditProtocol;
   protected ChallengeResponseProtocol<Handle, Identifier> challengeProtocol;
   protected StatementProtocolImpl<Handle, Identifier> statementProtocol;
 
+  protected RandomSource random;
 
+  public RandomSource getRandomSource() {
+    return random;
+  }
   
   long lastLogEntry = -1;
   boolean initialized = false;
@@ -174,6 +180,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.authenticatorSerialilzer = authenticatorSerialilzer; 
 
     this.historyFactory = new SecureHistoryFactoryImpl(transport, env);
+    random = new SimpleRandomSource(env.getLogManager(),"peerreview");
   }
   
   /**
@@ -262,7 +269,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     /* Remaining protocols */
     this.evidenceTransferProtocol = new EvidenceTransferProtocolImpl<Handle, Identifier>(this,transport,infoStore);
     this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, timeToleranceMillis);    
-    this.auditProtocol = new AuditProtocolImpl<Identifier>(this, history, infoStore, authInStore, transport, authOutStore, evidenceTransferProtocol, authCacheStore);
+    this.auditProtocol = new AuditProtocolImpl<Handle, Identifier>(this, history, infoStore, authInStore, transport, authOutStore, evidenceTransferProtocol, authCacheStore);
     this.challengeProtocol = new ChallengeResponseProtocolImpl<Handle, Identifier>(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
     this.statementProtocol = new StatementProtocolImpl<Handle, Identifier>(this, challengeProtocol, infoStore, transport);
     
@@ -698,4 +705,5 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   public EvidenceTool<Handle, Identifier> getEvidenceTool() {
     return evidenceTool;
   }
+  
 }

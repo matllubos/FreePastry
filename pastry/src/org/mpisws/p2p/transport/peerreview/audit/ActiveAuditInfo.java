@@ -36,11 +36,32 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.audit;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
-import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.peerreview.Verifier;
+import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
 
-public interface AuditProtocol<Handle, Identifier> extends PeerReviewConstants {
-  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq);
-  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse auditResponse);
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
+/* Here we keep state about audits for which (a) we have not received a
+response yet, or (b) we are currently replaying the log */
+public class ActiveAuditInfo<Handle, Identifier extends RawSerializable> {
+  public Handle target;
+  public boolean shouldBeReplayed;
+  public boolean isReplaying;
+  public long currentTimeout;
+  public ChallengeMessage<Identifier> request;
+  public long evidenceSeq;
+  public Verifier<Identifier> verifier;
+  
+  public ActiveAuditInfo(Handle target, boolean shouldBeReplayed,
+      boolean isReplaying, long currentTimeout,
+      ChallengeMessage<Identifier> request, long evidenceSeq,
+      Verifier<Identifier> verifier) {
+    this.target = target;
+    this.shouldBeReplayed = shouldBeReplayed;
+    this.isReplaying = isReplaying;
+    this.currentTimeout = currentTimeout;
+    this.request = request;
+    this.evidenceSeq = evidenceSeq;
+    this.verifier = verifier;
+  }
 }
