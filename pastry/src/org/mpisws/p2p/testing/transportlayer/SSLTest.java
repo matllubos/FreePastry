@@ -94,7 +94,7 @@ public class SSLTest {
 
       public void incomingSocket(P2PSocket<InetSocketAddress> s)
           throws IOException {
-        System.out.println("Incoming Socket:"+s);
+        System.out.println("Alice: Incoming Socket "+s);
       }
 
       public void messageReceived(InetSocketAddress i, ByteBuffer m,
@@ -106,22 +106,24 @@ public class SSLTest {
     bobSSL.openSocket(aliceAddr, new SocketCallback<InetSocketAddress>() {    
       public void receiveResult(SocketRequestHandle<InetSocketAddress> cancellable,
           P2PSocket<InetSocketAddress> sock) {
-        sock.register(false, true, new P2PSocketReceiver<InetSocketAddress>() {
-          ByteBuffer writeMe = ByteBuffer.wrap(new String("foo").getBytes());
-          public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
-              boolean canRead, boolean canWrite) throws IOException {            
-            socket.write(writeMe);
-            if (writeMe.hasRemaining()) {
-              socket.register(false, true, this);
-            }
-            System.out.println("done writing");
-          }
+        System.out.println("bob opened socket "+sock);
         
-          public void receiveException(P2PSocket<InetSocketAddress> socket,
-              Exception ioe) {
-            ioe.printStackTrace();
-          }        
-        });
+//        sock.register(false, true, new P2PSocketReceiver<InetSocketAddress>() {
+//          ByteBuffer writeMe = ByteBuffer.wrap(new String("foo").getBytes());
+//          public void receiveSelectResult(P2PSocket<InetSocketAddress> socket,
+//              boolean canRead, boolean canWrite) throws IOException {            
+//            socket.write(writeMe);
+//            if (writeMe.hasRemaining()) {
+//              socket.register(false, true, this);
+//            }
+//            System.out.println("done writing");
+//          }
+//        
+//          public void receiveException(P2PSocket<InetSocketAddress> socket,
+//              Exception ioe) {
+//            ioe.printStackTrace();
+//          }        
+//        });
       }
     
       public void receiveException(SocketRequestHandle<InetSocketAddress> s,

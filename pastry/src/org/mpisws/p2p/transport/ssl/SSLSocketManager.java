@@ -75,6 +75,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   LinkedList<ByteBuffer> unwrapMe = new LinkedList<ByteBuffer>();
   LinkedList<ByteBuffer> writeMe = new LinkedList<ByteBuffer>();
 
+//  public static final byte[] handshakePhrase = new byte[0]; //MathUtils.longToByteArray(-987);
   public static final byte[] handshakePhrase = MathUtils.longToByteArray(-987);
 
   int appBufferMax;
@@ -82,6 +83,8 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 
   private Continuation<SSLSocketManager<Identifier>, Exception> c;
 
+  boolean done = false;
+  
   /**
    * Called on incoming side
    * 
@@ -109,7 +112,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 
     encryptMe = ByteBuffer.wrap(handshakePhrase);
     decryptToMe = ByteBuffer.allocate(appBufferMax+handshakePhrase.length);
-
+    
     sslTL.logger.log("app:"+appBufferMax+" net:"+netBufferMax);
     socket.register(true, false, this);
 
@@ -119,7 +122,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   public void receiveSelectResult(P2PSocket<Identifier> socket,
       boolean canRead, boolean canWrite) throws IOException {
     sslTL.logger.log("receive select result r:"+canRead+" w:"+canWrite);
-    if (canRead) {
+    if (!done && canRead) {
       ByteBuffer foo = ByteBuffer.allocate(netBufferMax);
       socket.read(foo);
       if (foo.position() != 0) {
@@ -144,12 +147,21 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
 
   protected void go2() {
+//    if (done) {
+//      sslTL.logger.log("go2: done, quitting. "+writeMe.size());
+//      return;
+//    }
    try {
     sslTL.logger.log("================");
   
     ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
     result = engine.wrap(encryptMe, outgoing);
+    status = result.getHandshakeStatus();
     sslTL.logger.log("client wrap: "+encryptMe+" "+result);
+//    if (status == HandshakeStatus.FINISHED) {
+//      checkDone();
+//      return;
+//    }
     if (outgoing.position() != 0) {
       outgoing.flip();
       writeMe.addLast(outgoing);
@@ -165,7 +177,12 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       while (i.hasNext()) {
         ByteBuffer b = i.next();
         result = engine.unwrap(b, decryptToMe);
-        sslTL.logger.log("client unwrap: "+result);
+        status = result.getHandshakeStatus();
+        sslTL.logger.log("client unwrap: "+decryptToMe+" "+result);
+//        if (status == HandshakeStatus.FINISHED) {
+//          checkDone();
+//          return;
+//        }
         runDelegatedTasks(result, engine);
         if (decryptToMe.position() != 0) {
           sslTL.logger.log("reading into " +decryptToMe);
@@ -176,40 +193,28 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       }
     }
     
-    /*
-     * After we've transfered all application data between the client and
-     * server, we close the clientEngine's outbound stream. This generates a
-     * close_notify handshake message, which the server engine receives and
-     * responds by closing itself.
-     * 
-     * In normal operation, each SSLEngine should call closeOutbound(). To
-     * protect against truncation attacks, SSLEngine.closeInbound() should be
-     * called whenever it has determined that no more input data will ever be
-     * available (say a closed input stream).
-     */
-//    if (!dataDone && (clientOut.limit() == serverIn.position())
-//        && (serverOut.limit() == clientIn.position())) {
-//  
-//      /*
-//       * A sanity check to ensure we got what was sent.
-//       */
-//      checkTransfer(serverOut, clientIn);
-//      checkTransfer(clientOut, serverIn);
-//  
-//      sslTL.logger.log("\tClosing clientEngine's *OUTBOUND*...");
-//      clientEngine.closeOutbound();
-//      // serverEngine.closeOutbound();
-//      dataDone = true;
-//    }
    } catch (Exception e) {
      throw new RuntimeException(e);
    }
-   
+
+   checkDone();
+
    if (!unwrapMe.isEmpty() || 
        (result.getHandshakeStatus() == HandshakeStatus.NEED_WRAP) ||
        (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK)) go2();
   }
 
+  protected void checkDone() {
+    sslTL.logger.log("checkDone():"+status+" "+decryptToMe+" "+encryptMe);
+    if (((status == HandshakeStatus.FINISHED) || (status == HandshakeStatus.NOT_HANDSHAKING)) &&
+        decryptToMe.position() >= handshakePhrase.length &&
+        !encryptMe.hasRemaining()) {
+      done = true;
+      sslTL.logger.log("Done:"+decryptToMe+" "+encryptMe);
+      c.receiveResult(this);
+    }
+  }
+  
   
   /*
    * If the result indicates that we have outstanding tasks to do, go ahead and
@@ -223,11 +228,11 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
         sslTL.logger.log("\trunning delegated task...");
         runnable.run();
       }
-      HandshakeStatus hsStatus = engine.getHandshakeStatus();
-      if (hsStatus == HandshakeStatus.NEED_TASK) {
+      status = engine.getHandshakeStatus();
+      if (status == HandshakeStatus.NEED_TASK) {
         throw new RuntimeException("handshake shouldn't need additional tasks");
       }
-      sslTL.logger.log("\tnew HandshakeStatus: " + hsStatus);
+      sslTL.logger.log("\tnew HandshakeStatus: " + status);
     }
   }
 
