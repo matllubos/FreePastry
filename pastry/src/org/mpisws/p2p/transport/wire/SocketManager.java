@@ -352,8 +352,8 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     tcp.wire.environment.getSelectorManager().modifyKey(key);
   }
 
-  Exception regWriteEx;
-  long regWriteExTime;
+//  Exception regWriteEx;
+//  long regWriteExTime;
   public synchronized void register(final boolean wantToRead, final boolean wantToWrite, P2PSocketReceiver<InetSocketAddress> receiver) {
     if (logger.level <= Logger.FINER) logger.log(this+".register("+(wantToRead?"r":"")+(wantToWrite?"w":"")+","+receiver+")");
     if (key == null) {
@@ -377,7 +377,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       }
       if (writer != null) {
         if (writer != receiver) {
-          logger.logException("Already registered "+regWriteExTime,regWriteEx);
+//          logger.logException("Already registered "+regWriteExTime,regWriteEx);
           throw new IllegalStateException("Already registered "+writer+" for writing, you can't register "+receiver+" for writing as well! SM:"+this);
 //          receiver.receiveException(this, 
 //              new IOException(
@@ -386,8 +386,8 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         }
       }
     }
-    regWriteEx = new Exception("regWriteEx Stack Trace "+this);
-    regWriteExTime = tcp.wire.environment.getTimeSource().currentTimeMillis();
+//    regWriteEx = new Exception("regWriteEx Stack Trace "+this);
+//    regWriteExTime = tcp.wire.environment.getTimeSource().currentTimeMillis();
     
     if (wantToRead) {
       if (reader != null) {
