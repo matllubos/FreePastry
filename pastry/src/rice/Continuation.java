@@ -96,7 +96,7 @@ public interface Continuation<R, E extends Exception> {
     }
 
     /**
-     * Called when an execption occured as a result of the
+     * Called when an exception occurred as a result of the
      * previous command.  Simply calls the parent continuation's
      * receiveResult() method.
      *
@@ -131,7 +131,7 @@ public interface Continuation<R, E extends Exception> {
     }
     
     /**
-     * Called when an the result is availble.  Simply passes the result
+     * Called when an the result is available.  Simply passes the result
      * to the parent;
      *
      * @param result The result
@@ -144,7 +144,7 @@ public interface Continuation<R, E extends Exception> {
   /**
    * This class is a Continuation provided for simplicity which
    * listens for any errors and ignores any success values.  This
-   * Continuation is provided for testing convience only and should *NOT* be
+   * Continuation is provided for testing convenience only and should *NOT* be
    * used in production environment.
    */
   public static class ListenerContinuation implements Continuation {
@@ -159,7 +159,7 @@ public interface Continuation<R, E extends Exception> {
     /**
      * Constructor which takes in a name
      *
-     * @param name A name which uniquely identifies this contiuation for
+     * @param name A name which uniquely identifies this continuation for
      *   debugging purposes
      */
     public ListenerContinuation(String name, Environment env) {
@@ -168,7 +168,7 @@ public interface Continuation<R, E extends Exception> {
     }
     
     /**
-     * Called when a previously requested result is now availble. Does
+     * Called when a previously requested result is now available. Does
      * absolutely nothing.
      *
      * @param result The result
@@ -177,7 +177,7 @@ public interface Continuation<R, E extends Exception> {
     }
 
     /**
-     * Called when an execption occured as a result of the
+     * Called when an exception occurred as a result of the
      * previous command.  Simply prints an error message to the screen.
      *
      * @param result The exception which was caused.
@@ -195,7 +195,7 @@ public interface Continuation<R, E extends Exception> {
   public abstract static class SimpleContinuation implements Continuation {
     
     /**
-     * Called when an execption occured as a result of the
+     * Called when an exception occurred as a result of the
      * previous command.  Simply prints an error message to the screen.
      *
      * @param result The exception which was caused.
@@ -210,7 +210,7 @@ public interface Continuation<R, E extends Exception> {
    * an external thread.  Applications should construct this continuation pass it
    * in to the appropriate method, and then call sleep().  Once the thread is woken
    * up, the user should check exceptionThrown() to determine if an error was
-   * caused, and then call getException() or getResult() as apprpritate.
+   * caused, and then call getException() or getResult() as appropriate.
    */
   public static class ExternalContinuation implements Continuation {
 
@@ -260,7 +260,7 @@ public interface Continuation<R, E extends Exception> {
   /**
    * This class is used when you want to run some task on the selector thread
    * and wait for it to return its result in a Continuation.  It is essentially
-   * a covnenience object which combines the functionality of a Runnable that
+   * a convenience object which combines the functionality of a Runnable that
    * can be invoked on the Selector with an ExternalContinuation that it will
    * wait on.  Override the run(Continuation) method then call invoke() to
    * get the result or Exception from the operation.  The current thread will
@@ -396,7 +396,7 @@ public interface Continuation<R, E extends Exception> {
      * If we are done and the subclass wishes to return an exception to the
      * calling application, it may throw an Exception, which will be caught
      * and returned to the parent via the receiveException() method.  This
-     * will cause this continaution to be permanently marked as done.
+     * will cause this continuation to be permanently marked as done.
      */
     public boolean isDone() throws Exception {
       for (int i=0; i<haveResult.length; i++) 
@@ -407,7 +407,7 @@ public interface Continuation<R, E extends Exception> {
     }
     
     /**
-     * Method which can also be overriden to change what result should be 
+     * Method which can also be overridden to change what result should be 
      * returned to the parent continuation.  This defaults to the Object[]
      * containing results or exceptions.
      *
@@ -443,7 +443,7 @@ public interface Continuation<R, E extends Exception> {
     }
     
     /**
-     * Called when an the result is availble.  Simply passes the result
+     * Called when an the result is available.  Simply passes the result
      * to the parent;
      *
      * @param result The result
@@ -453,7 +453,7 @@ public interface Continuation<R, E extends Exception> {
     }
     
     /**
-     * Called when an execption occured as a result of the
+     * Called when an exception occurred as a result of the
      * previous command.  Simply calls the parent continuation's
      * receiveException() method.
      *
