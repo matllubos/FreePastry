@@ -33,15 +33,18 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
-*******************************************************************************/ 
+ *******************************************************************************/
 package org.mpisws.p2p.transport.ssl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 
@@ -50,9 +53,10 @@ import org.mpisws.p2p.transport.P2PSocketReceiver;
 
 import rice.Continuation;
 import rice.Executable;
+import rice.p2p.util.MathUtils;
 
-
-public class SSLSocketManager<Identifier> implements P2PSocket<Identifier> {
+public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
+    P2PSocketReceiver<Identifier> {
   P2PSocket<Identifier> socket;
 
   SSLEngine engine;
@@ -60,115 +64,158 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier> {
 
   boolean handshaking = true;
 
+  SSLEngineResult result;
+  HandshakeStatus status;
+
+  // plaintext
+  ByteBuffer encryptMe;
+  ByteBuffer decryptToMe;
+
+  // ciphertext
+  LinkedList<ByteBuffer> unwrapMe = new LinkedList<ByteBuffer>();
+  LinkedList<ByteBuffer> writeMe = new LinkedList<ByteBuffer>();
+
+  public static final byte[] handshakePhrase = MathUtils.longToByteArray(-987);
+
+  int appBufferMax;
+  int netBufferMax;
+
   private Continuation<SSLSocketManager<Identifier>, Exception> c;
+
   /**
    * Called on incoming side
+   * 
    * @param transportLayerImpl
    * @param s
    */
-  public SSLSocketManager(SSLTransportLayerImpl<Identifier, ?> sslTL, P2PSocket<Identifier> s, Continuation<SSLSocketManager<Identifier>, Exception> c, boolean server) {
+  public SSLSocketManager(SSLTransportLayerImpl<Identifier, ?> sslTL,
+      P2PSocket<Identifier> s,
+      Continuation<SSLSocketManager<Identifier>, Exception> c, boolean server) {
     this.sslTL = sslTL;
     this.socket = s;
     this.c = c;
-    engine = sslTL.context.createSSLEngine(s.getIdentifier().toString(),0);
+
+    engine = sslTL.context.createSSLEngine(s.getIdentifier().toString(), 0);
     engine.setUseClientMode(!server);
-//    System.out.println(Arrays.toString(engine.getSupportedCipherSuites()));
-//    engine.setEnabledCipherSuites(new String[] {"TLS_DHE_DSS_WITH_AES_256_CBC_SHA"});
-    engine.setEnabledCipherSuites(engine.getSupportedCipherSuites());
-    try {
-      engine.beginHandshake();
-    } catch (Exception e) {
-      c.receiveException(e);
-      return;
-    }
+    if (server) engine.setNeedClientAuth(true);
+
+    // System.out.println(Arrays.toString(engine.getSupportedCipherSuites()));
+    // engine.setEnabledCipherSuites(new String[]
+    // {"TLS_DHE_DSS_WITH_AES_256_CBC_SHA"});
+//    engine.setEnabledCipherSuites(engine.getSupportedCipherSuites());
+
+    appBufferMax = engine.getSession().getApplicationBufferSize();
+    netBufferMax = engine.getSession().getPacketBufferSize();
+
+    encryptMe = ByteBuffer.wrap(handshakePhrase);
+    decryptToMe = ByteBuffer.allocate(appBufferMax+handshakePhrase.length);
+
+    sslTL.logger.log("app:"+appBufferMax+" net:"+netBufferMax);
+    socket.register(true, false, this);
+
     go();
+  }
+
+  public void receiveSelectResult(P2PSocket<Identifier> socket,
+      boolean canRead, boolean canWrite) throws IOException {
+    sslTL.logger.log("receive select result r:"+canRead+" w:"+canWrite);
+    if (canRead) {
+      ByteBuffer foo = ByteBuffer.allocate(netBufferMax);
+      socket.read(foo);
+      if (foo.position() != 0) {
+        foo.flip();
+        unwrapMe.addLast(foo);
+        unwrap();
+      }
+      // always be reading
+      socket.register(true, false, this);
+    }
+    if (canWrite) {
+      Iterator<ByteBuffer> i = writeMe.iterator();
+      while (i.hasNext()) {
+        ByteBuffer b = i.next();
+        socket.write(b);
+        if (b.hasRemaining()) break;
+        i.remove();
+      }
+      if (!writeMe.isEmpty()) socket.register(false, true, this);
+    }
+  }
+
+  protected void unwrap() throws SSLException {
+    sslTL.logger.log("unwrap()");
+    if (!unwrapMe.isEmpty()) {
+      Iterator<ByteBuffer> i = unwrapMe.iterator();
+      while (i.hasNext()) {
+        ByteBuffer b = i.next();
+        updateStatus(engine.unwrap(b, decryptToMe));
+        if (decryptToMe.position() != 0) {
+          sslTL.logger.log("reading into " +decryptToMe);
+        }
+        sslTL.logger.log("unwrapped:"+b);
+        if (b.hasRemaining()) break;
+        i.remove();
+      }
+      go();
+    }
   }
 
   protected void go() {
     try {
-      HandshakeStatus status = engine.getHandshakeStatus();
-      sslTL.logger.log("Status:"+status);
-      if (status == HandshakeStatus.NEED_UNWRAP) {
-        socket.register(true,false,new P2PSocketReceiver<Identifier>() {
-          ByteBuffer incoming = ByteBuffer.allocate(65535);
-          public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
-            c.receiveException(ioe);
-          }
-  
-          public void receiveSelectResult(P2PSocket<Identifier> socket,
-              boolean canRead, boolean canWrite) throws IOException {
-            sslTL.logger.log("rsr1("+canRead+","+canWrite+")");
-            if (canRead) {
-              socket.read(incoming);
-              incoming.flip();
-              sslTL.logger.log("read: "+incoming);
-              ByteBuffer foo = ByteBuffer.allocate(1024);
-              engine.unwrap(incoming, foo);
-              foo.flip();
-              if (foo.hasRemaining()) sslTL.logger.log("after read: "+foo);
-            }
-            go();
-          }
-        
-        });
-      } else if (status == HandshakeStatus.NEED_WRAP) {
-        sslTL.logger.log("before wrap");
-        final ByteBuffer outgoing = ByteBuffer.allocate(65535);
-        engine.wrap(ByteBuffer.allocate(0), outgoing);
+      ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
+      updateStatus(engine.wrap(encryptMe, outgoing));
+      if (outgoing.position() != 0) {
         outgoing.flip();
-        sslTL.logger.log("registering to write"+outgoing);
-        if (outgoing.remaining() == 0) throw new RuntimeException("outgoing:"+outgoing);
-        socket.register(false,true,new P2PSocketReceiver<Identifier>() {
-          public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
-            c.receiveException(ioe);
-          }
-  
-          public void receiveSelectResult(P2PSocket<Identifier> socket,
-              boolean canRead, boolean canWrite) throws IOException {
-            sslTL.logger.log("rsr2("+canRead+","+canWrite+")");
-            if (canWrite) {
-              socket.write(outgoing);
-            }
-            if (outgoing.hasRemaining()) {
-              socket.register(false, true, this);
-            } else {
-              sslTL.logger.log("after write: ");
-              go();
-            }
-          }        
-        });
-      } else if (status == HandshakeStatus.NEED_TASK) {
-        final Runnable r = engine.getDelegatedTask();
-        sslTL.environment.getProcessor().process(
-            new Executable<Object, Exception>() {
-
-              public Object execute() {
-                sslTL.logger.log("Executing "+r);
-                r.run();
-                sslTL.logger.log("Done executing "+r);                
-                return null;
-              }}, 
-            new Continuation<Object, Exception>() {
-
-              public void receiveException(Exception exception) {
-                c.receiveException(exception);
-              }
-
-              public void receiveResult(Object result) {
-                sslTL.logger.log("Calling go() after "+r);
-                go();
-              }}, 
-            sslTL.environment.getSelectorManager(), sslTL.environment.getTimeSource(), sslTL.environment.getLogManager());
+        writeMe.addLast(outgoing);
+        sslTL.logger.log("registering to write:"+outgoing);
+        socket.register(false, true, this);
+        unwrap();
       }
+      if (!encryptMe.hasRemaining()) sslTL.logger.log("Done writing " + this);
     } catch (IOException ioe) {
       c.receiveException(ioe);
     }
   }
-  
+
+  private void updateStatus(SSLEngineResult wrap) {
+    sslTL.logger.log(wrap.toString());
+    status = wrap.getHandshakeStatus();
+    sslTL.logger.log(" unwrap:"+unwrapMe.size()+" write:"+writeMe.size());
+    
+    if (wrap.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+      final Runnable r = engine.getDelegatedTask();
+      if (r != null) {
+        sslTL.environment.getProcessor().process(
+          new Executable<Object, Exception>() {
+
+            public Object execute() {
+              sslTL.logger.log("Executing " + r);
+              r.run();
+              sslTL.logger.log("Done executing " + r);
+              return null;
+            }
+          }, new Continuation<Object, Exception>() {
+
+            public void receiveException(Exception exception) {
+              c.receiveException(exception);
+            }
+
+            public void receiveResult(Object result) {
+              sslTL.logger.log("Calling go() after " + r);
+              go();
+            }
+          }, sslTL.environment.getSelectorManager(),
+          sslTL.environment.getTimeSource(), sslTL.environment.getLogManager());
+      }
+    } else {
+      sslTL.logger.log("engine.getDelegatedTask() was null!!!");
+    }
+  }
+
   public void register(boolean wantToRead, boolean wantToWrite,
       P2PSocketReceiver<Identifier> receiver) {
     throw new RuntimeException("implement");
-//    socket.register(wantToRead, wantToWrite, )
+    // socket.register(wantToRead, wantToWrite, )
   }
 
   public long read(ByteBuffer dsts) throws IOException {
@@ -180,7 +227,6 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier> {
     // TODO Auto-generated method stub
     return 0;
   }
-
 
   public void close() {
     socket.close();
@@ -196,6 +242,10 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier> {
 
   public void shutdownOutput() {
     engine.closeOutbound();
+  }
+
+  public void receiveException(P2PSocket<Identifier> socket, Exception ioe) {
+    c.receiveException(ioe);
   }
 
 }

@@ -89,65 +89,65 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
   protected SSLContext context;
   
-  X509Certificate caCert;
-  KeyPair keyPair;
-
-  TrustManager[] tm = new TrustManager[]{
-      new X509TrustManager() {
-
-          public X509Certificate[] getAcceptedIssuers() {
-            logger.log("getAcceptedIssuers");
-            
-              return new X509Certificate[] { caCert };
-          }
-
-          public void checkClientTrusted(
-                  java.security.cert.X509Certificate[] certs, String authType) {
-            logger.log("checkClientTrusted "+authType);
-          }
-
-          public void checkServerTrusted(
-                  java.security.cert.X509Certificate[] certs, String authType) {            
-            logger.log("checkServerTrusted "+authType);
-          }
-      }};
-        
-  KeyManager[] km = new KeyManager[] {
-      new X509KeyManager() {
-      
-        public String[] getServerAliases(String keyType, Principal[] issuers) {
-          logger.log("getServerAlieses");
-          return null;
-        }
-      
-        public PrivateKey getPrivateKey(String alias) {
-          logger.log("getPrivateKey("+alias);
-          return keyPair.getPrivate();
-        }
-      
-        public String[] getClientAliases(String keyType, Principal[] issuers) {
-          logger.log("getClientAliases");
-          return null;
-        }
-      
-        public X509Certificate[] getCertificateChain(String alias) {
-          logger.log("getCertificateChain");
-          return null;
-        }
-      
-        public String chooseServerAlias(String keyType, Principal[] issuers,
-            Socket socket) {
-          logger.log("chooseServerAlias");
-          return null;
-        }
-      
-        public String chooseClientAlias(String[] keyType, Principal[] issuers,
-            Socket socket) {
-          logger.log("chooseServerAlias");
-          return null;
-        }
-      
-      }};
+//  X509Certificate caCert;
+//  KeyPair keyPair;
+//
+//  TrustManager[] tm = new TrustManager[]{
+//      new X509TrustManager() {
+//
+//          public X509Certificate[] getAcceptedIssuers() {
+//            logger.log("getAcceptedIssuers");
+//            
+//              return new X509Certificate[] { caCert };
+//          }
+//
+//          public void checkClientTrusted(
+//                  java.security.cert.X509Certificate[] certs, String authType) {
+//            logger.log("checkClientTrusted "+authType);
+//          }
+//
+//          public void checkServerTrusted(
+//                  java.security.cert.X509Certificate[] certs, String authType) {            
+//            logger.log("checkServerTrusted "+authType);
+//          }
+//      }};
+//        
+//  KeyManager[] km = new KeyManager[] {
+//      new X509KeyManager() {
+//      
+//        public String[] getServerAliases(String keyType, Principal[] issuers) {
+//          logger.log("getServerAlieses");
+//          return null;
+//        }
+//      
+//        public PrivateKey getPrivateKey(String alias) {
+//          logger.log("getPrivateKey("+alias);
+//          return keyPair.getPrivate();
+//        }
+//      
+//        public String[] getClientAliases(String keyType, Principal[] issuers) {
+//          logger.log("getClientAliases");
+//          return null;
+//        }
+//      
+//        public X509Certificate[] getCertificateChain(String alias) {
+//          logger.log("getCertificateChain");
+//          return null;
+//        }
+//      
+//        public String chooseServerAlias(String keyType, Principal[] issuers,
+//            Socket socket) {
+//          logger.log("chooseServerAlias");
+//          return null;
+//        }
+//      
+//        public String chooseClientAlias(String[] keyType, Principal[] issuers,
+//            Socket socket) {
+//          logger.log("chooseServerAlias");
+//          return null;
+//        }
+//      
+//      }};
   
   private static String keyStoreFile = "testkeys";
   private static String trustStoreFile = "testkeys";
@@ -155,8 +155,8 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
   public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyPair keyPair, X509Certificate caCert, Environment env) throws Exception {
     this.environment = env;
-    this.keyPair = keyPair;
-    this.caCert = caCert;
+//    this.keyPair = keyPair;
+//    this.caCert = caCert;
     this.logger = env.getLogManager().getLogger(SSLTransportLayerImpl.class, null);
     this.tl = tl;
     errorHandler = new DefaultErrorHandler<Identifier>(logger, Logger.WARNING);
