@@ -50,7 +50,6 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
-  Nodehandle logHandle
   long long firstSeq
   byte extInfoLen
   [extInfo follows]
@@ -66,20 +65,17 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  * @author Jeff Hoye
  *
  */
-public class LogSnippit<Handle extends RawSerializable> {
-  Handle logHandle;
+public class LogSnippit {
   byte[] baseHash;
   List<SnippitEntry> entries;
   
-  public LogSnippit(Handle logHandle, byte[] baseHash, List<SnippitEntry> entries) {
-    this.logHandle = logHandle;
+  public LogSnippit(byte[] baseHash, List<SnippitEntry> entries) {
     this.baseHash = baseHash;
     this.entries = entries;
   }
   
   public boolean equals(Object o) {
-    LogSnippit<Handle> that = (LogSnippit<Handle>)o;
-    if (!this.logHandle.equals(that.logHandle)) return false;
+    LogSnippit that = (LogSnippit)o;
     if (!Arrays.equals(this.baseHash, that.baseHash)) return false;
     if (this.entries.size() != that.entries.size()) return false;
     Iterator<SnippitEntry> i1 = this.entries.iterator();
@@ -91,7 +87,6 @@ public class LogSnippit<Handle extends RawSerializable> {
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    logHandle.serialize(buf);
     buf.writeLong(entries.get(0).seq);
     buf.writeByte((byte)0);
     buf.write(baseHash, 0, baseHash.length);
@@ -105,8 +100,7 @@ public class LogSnippit<Handle extends RawSerializable> {
     }
   }
   
-  public LogSnippit(InputBuffer buf, Serializer<Handle> hSerializer, int hashSize) throws IOException {
-    logHandle = hSerializer.deserialize(buf);
+  public LogSnippit(InputBuffer buf, int hashSize) throws IOException {
     long firstSeq = buf.readLong();
     if (buf.readByte() != 0) throw new IOException("Unexpected extInfo");
     baseHash = new byte[hashSize];

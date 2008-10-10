@@ -53,48 +53,10 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 public class LogSnippitTest {
 
-  static class MyHandle implements RawSerializable {
-    int id;
-
-    public MyHandle(int i) {
-      this.id = i;
-    }
-    
-    public void serialize(OutputBuffer buf) throws IOException {
-      buf.writeInt(id);
-    }
-    
-    public boolean equals(Object o) {
-      MyHandle that = (MyHandle)o;
-      return this.id == that.id;
-    }
-    
-  }
-  
-  static class MyHandleSerializer implements Serializer<MyHandle> {
-
-    public MyHandle deserialize(InputBuffer buf) throws IOException {
-      return new MyHandle(buf.readInt());
-    }
-
-    public void serialize(MyHandle i, OutputBuffer buf) throws IOException {
-      i.serialize(buf);
-    }
-    
-  }
-  
   /**
    * @param args
    */
   public static void main(String[] args) throws Exception {
-//    int foo = 253;
-//    byte b = (byte)253;
-//    System.out.println(MathUtils.uByteToInt(b));
-//    System.out.println((b == (byte)0xFD));
-//
-//    if (true) return;
-    
-    
     Random r = new Random();
     int hashSize = r.nextInt(100)+1;
 
@@ -153,13 +115,13 @@ public class LogSnippitTest {
     
     byte[] baseHash = new byte[hashSize];
     r.nextBytes(baseHash);
-    LogSnippit<MyHandle> ls = new LogSnippit<MyHandle>(new MyHandle(r.nextInt()),baseHash,list);
+    LogSnippit ls = new LogSnippit(baseHash,list);
     
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     ls.serialize(sob);
     
     SimpleInputBuffer sib = new SimpleInputBuffer(sob.getBytes());
-    LogSnippit<MyHandle> ls2 = new LogSnippit<MyHandle>(sib,new MyHandleSerializer(),hashSize);
+    LogSnippit ls2 = new LogSnippit(sib,hashSize);
     
     if (ls2.equals(ls)) {
       System.out.println("success");

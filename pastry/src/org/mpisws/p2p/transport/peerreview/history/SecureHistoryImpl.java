@@ -40,7 +40,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
+import org.mpisws.p2p.transport.peerreview.audit.SnippitEntry;
 import org.mpisws.p2p.transport.util.FileInputBuffer;
 import org.mpisws.p2p.transport.util.FileOutputBuffer;
 
@@ -325,7 +328,62 @@ public class SecureHistoryImpl implements SecureHistory {
    * Note that the idxFrom and idxTo arguments are record numbers, NOT sequence numbers.
    * Use findSeqOrHigher() to get these if only sequence numbers are known. 
    */
-  public boolean serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy, OutputBuffer outfile) throws IOException {
+  public LogSnippit serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy) throws IOException {
+    assert((0 < idxFrom) && (idxFrom <= idxTo) && (idxTo < numEntries));
+
+    IndexEntry ie;
+
+    // Write base hash value
+
+    pointerAtEnd = false;  
+    indexFile.seek((idxFrom-1) * indexFactory.getSerializedSize());
+    ie = indexFactory.build(indexFile);
+    byte[] baseHash = ie.nodeHash;
+    ArrayList<SnippitEntry> entryList = new ArrayList<SnippitEntry>();
+    
+    // Go through entries one by one    
+    long previousSeq = -1;
+    for (long idx=idxFrom; idx<=idxTo; idx++) {
+      // Read index entry
+      
+      ie = indexFactory.build(indexFile);
+      if (ie == null) 
+        throw new IOException("History read error");
+        
+      // we're going to write directly to outfile, in the c++ impl it used header[]/bytesInHeader
+//      byte[] header = new byte[200];
+//      int bytesInHeader = 0;
+      
+      assert((previousSeq == -1) || (ie.seq > previousSeq));
+      
+      // If entry is not hashed, read contents from the data file       
+      byte[] buffer = null;
+      if (ie.sizeInFile > 0) {
+        buffer = new byte[(int)ie.sizeInFile]; // grumble...  This needs to be long eventually...
+//        buffer = (unsigned char*) malloc(ie.sizeInFile);
+        assert(ie.fileIndex >= 0);
+        dataFile.seek(ie.fileIndex);
+        dataFile.read(buffer);
+      }
+      
+      // The entry is hashed if (a) it is already hashed in the log file,
+      // or (b) the hash policy tells us to.   
+      boolean hashIt = (ie.sizeInFile<0) || (hashPolicy != null && hashPolicy.hashEntry(ie.type, buffer));
+      
+      // Encode the size of the entry
+
+      if (hashIt) {        
+        buffer = ie.contentHash;
+      }        
+
+      SnippitEntry entry = new SnippitEntry((byte)ie.type, ie.seq, hashIt, buffer);
+      entryList.add(entry);
+    }
+    
+    return new LogSnippit(baseHash,entryList);
+  }
+  
+  public boolean serializeRange2(long idxFrom, long idxTo, HashPolicy hashPolicy, OutputBuffer outfile) throws IOException {
     assert((0 < idxFrom) && (idxFrom <= idxTo) && (idxTo < numEntries));
 
     IndexEntry ie;

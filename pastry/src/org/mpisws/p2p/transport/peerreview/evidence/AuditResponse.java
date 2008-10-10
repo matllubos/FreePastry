@@ -43,6 +43,7 @@ import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
  * Snippit is the contents (everything but the type)
@@ -50,41 +51,25 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 RESP_AUDIT
   byte type
   nodehandle myHandle
-  long long firstSeq
-  byte extInfoLen  // always 0 in first version
-  [extInfo follows]
-  hash baseHash
-  --entry begin--           // 1 or more of these entries follow
-  char type
-  char sizeCode             // 0=hashed, 1-FD=size, FE=32-bit size follows, FF=16-bit size follows
- {short/int size}
-  char content[] 
-  char nextSeqCode          // 0=+1, 1=(idx=0,us+=1), 2=(idx=0,us+=2), ..., FF=full seq  [does not exist for the last one]
- {long long seq}
-  --entry end--
+  LogSnippit logSnippit
  * @author Jeff Hoye
  *
  */
-public class AuditResponse implements Evidence {
-
-  public AuditResponse(ByteBuffer byteBuffer) {
-    throw new RuntimeException("implement");
-//  int readptr = 0;
-//  readByte(payload, (unsigned int*)&readptr); /* RESP_AUDIT */
-//  NodeHandle *subjectHandle = peerreview->readNodeHandle(payload, (unsigned int*)&readptr, payloadLen);
-//  readptr += sizeof(long long);
-//  readptr += 1 + payload[readptr];
-//  readptr += hashSizeBytes;
-
+public class AuditResponse<Handle extends RawSerializable> implements Evidence {
+  Handle logOwner;
+  LogSnippit logSnippit;
+  
+  public AuditResponse(Handle logOwner, LogSnippit logSnippit) {
+    this.logOwner = logOwner;
+    this.logSnippit = logSnippit;
   }
 
   public short getEvidenceType() {
     return RESP_AUDIT;
   }
-
   
   public void serialize(OutputBuffer buf) throws IOException {
-    throw new RuntimeException("implement");
+    
   }
 
   public LogSnippit getLogSnippit() {

@@ -39,6 +39,8 @@ package org.mpisws.p2p.transport.peerreview.history;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
+
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.RandomAccessFileIOBuffer;
 
@@ -112,7 +114,8 @@ public interface SecureHistory /* extends Iterable<IndexEntry> */ {
    * Note that the idxFrom and idxTo arguments are record numbers, NOT sequence numbers.
    * Use findSeqOrHigher() to get these if only sequence numbers are known. 
    */
-  public boolean serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy, OutputBuffer outfile) throws IOException;
+  public LogSnippit serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy) throws IOException;
+//  public boolean serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy, OutputBuffer outfile) throws IOException;
 
   /**
    *  Retrieve information about a given record 

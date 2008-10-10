@@ -344,7 +344,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
   }
   
   /**
-   * While some audits haven't finished, we must call makeProgress() regularly 
+   * While some audits haven't finished, we must call makeProgress() regularly
    */
   protected void makeProgressTimerExpired() {
     progressTimer.cancel();
@@ -365,7 +365,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
    * an AUDIT challenge. At this point, we already know that we have all the
    * necessary certificates (because of the statement protocol).
    */
-  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse response) {
+  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse<Handle> response) {
 //    LogSnippit snippet = response.getLogSnippit();
 //    ActiveAuditInfo<Handle, Identifier> aai = findOngoingAudit(subject, timestamp);
     

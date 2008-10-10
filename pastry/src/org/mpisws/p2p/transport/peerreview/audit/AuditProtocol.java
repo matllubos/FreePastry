@@ -40,7 +40,9 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
-public interface AuditProtocol<Handle, Identifier> extends PeerReviewConstants {
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
+public interface AuditProtocol<Handle extends RawSerializable, Identifier> extends PeerReviewConstants {
   public Evidence statOngoingAudit(Identifier subject, long evidenceSeq);
-  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse auditResponse);
+  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse<Handle> auditResponse);
 }

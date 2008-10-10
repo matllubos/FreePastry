@@ -46,6 +46,7 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
 import org.mpisws.p2p.transport.peerreview.audit.AuditProtocol;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
@@ -226,14 +227,15 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
   
           /* Serialize the requested log snippet */
         
-          HashPolicy hashPolicy = new ChallengeHashPolicy(flags, challenge.originator, peerreview.getIdSerializer());
+          HashPolicy hashPolicy = new ChallengeHashPolicy<Identifier>(flags, challenge.originator, peerreview.getIdSerializer());
           SimpleOutputBuffer sob = new SimpleOutputBuffer();
-          if (history.serializeRange(idxFrom, idxTo, hashPolicy, sob)) {
+          LogSnippit snippit;
+          if ((snippit = history.serializeRange(idxFrom, idxTo, hashPolicy)) != null) {
             ByteBuffer buf = sob.getByteBuffer();
             int size = buf.remaining();
             /* Put together a RESPONSE message */
             ResponseMessage<Identifier> response = new ResponseMessage<Identifier>(
-                challenge.originator,peerreview.getLocalId(),challenge.evidenceSeq,new AuditResponse(buf));
+                challenge.originator,peerreview.getLocalId(),challenge.evidenceSeq,new AuditResponse<Handle>(peerreview.getLocalHandle(),snippit));
             
             /* ... and send it back to the challenger */
   
