@@ -94,10 +94,18 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
       ErrorHandler<InetSocketAddress> errorHandler) throws IOException {
     this(bindAddress, env, errorHandler, false);
   }
+  
   public WireTransportLayerImpl(
       InetSocketAddress bindAddress, 
       Environment env, 
       ErrorHandler<InetSocketAddress> errorHandler, boolean disableServer) throws IOException {
+    this(bindAddress,env,errorHandler,disableServer,disableServer);
+  }
+  
+  public WireTransportLayerImpl(
+      InetSocketAddress bindAddress, 
+      Environment env, 
+      ErrorHandler<InetSocketAddress> errorHandler, boolean disableTCPServer, boolean disableUDPServer) throws IOException {
     this.logger = env.getLogManager().getLogger(WireTransportLayer.class, null);
     this.bindAddress = bindAddress;
     this.environment = env;
@@ -109,13 +117,13 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
       this.errorHandler = new DefaultErrorHandler<InetSocketAddress>(logger); 
     }
     
-    if (disableServer) {
+    if (disableUDPServer) {
       udp = new BogusUDPLayerImpl();
     } else {
       udp = new UDPLayerImpl(this);      
     }
     try {
-      tcp = new TCPLayer(this, !disableServer);
+      tcp = new TCPLayer(this, !disableTCPServer);
     } catch (IOException ioe) {
       udp.destroy();
       throw ioe;

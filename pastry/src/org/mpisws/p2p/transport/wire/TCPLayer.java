@@ -84,6 +84,7 @@ public class TCPLayer extends SelectionKeyHandler {
   
   // the size of the buffers for the socket
   public final int SOCKET_BUFFER_SIZE;
+  public boolean TCP_NO_DELAY = false;
   
   WireTransportLayerImpl wire;
     
@@ -108,7 +109,9 @@ public class TCPLayer extends SelectionKeyHandler {
     Parameters p = wire.environment.getParameters();
     MAX_OPEN_SOCKETS = p.getInt("pastry_socket_scm_max_open_sockets");
     SOCKET_BUFFER_SIZE = p.getInt("pastry_socket_scm_socket_buffer_size"); // 32768
-
+    if (p.contains("transport_tcp_no_delay")) {
+      TCP_NO_DELAY = p.getBoolean("transport_tcp_no_delay");
+    }
     ServerSocketChannel temp = null; // just to clean up after the exception
 //    sockets = new LinkedHashMap<SocketManager, SocketManager>(10,0.75f,true);    
 //    pending = new HashSet<SocketAcceptor>();

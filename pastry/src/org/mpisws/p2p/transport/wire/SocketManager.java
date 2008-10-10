@@ -99,6 +99,8 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     channel = (SocketChannel) ((ServerSocketChannel) serverKey.channel()).accept();
     channel.socket().setSendBufferSize(tcp.SOCKET_BUFFER_SIZE);
     channel.socket().setReceiveBufferSize(tcp.SOCKET_BUFFER_SIZE);
+    channel.socket().setTcpNoDelay(tcp.TCP_NO_DELAY);
+
     channel.configureBlocking(false);    
     addr = (InetSocketAddress)channel.socket().getRemoteSocketAddress();
     
