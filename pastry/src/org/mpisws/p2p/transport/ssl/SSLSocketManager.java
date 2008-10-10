@@ -75,8 +75,8 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   LinkedList<ByteBuffer> unwrapMe = new LinkedList<ByteBuffer>();
   LinkedList<ByteBuffer> writeMe = new LinkedList<ByteBuffer>();
 
-//  public static final byte[] handshakePhrase = new byte[0]; //MathUtils.longToByteArray(-987);
-  public static final byte[] handshakePhrase = MathUtils.longToByteArray(-987);
+  public static final byte[] handshakePhrase = new byte[0]; //MathUtils.longToByteArray(-987);
+//  public static final byte[] handshakePhrase = MathUtils.longToByteArray(-987);
 
   int appBufferMax;
   int netBufferMax;
@@ -158,25 +158,27 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
    try {
     sslTL.logger.log("================");
   
-    ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
-    result = engine.wrap(encryptMe, outgoing);
-    status = result.getHandshakeStatus();
-    sslTL.logger.log("client wrap: "+encryptMe+" "+result);
-//    if (status == HandshakeStatus.FINISHED) {
-//      checkDone();
-//      return;
-//    }
-    if (outgoing.position() != 0) {
-      outgoing.flip();
-      writeMe.addLast(outgoing);
-      sslTL.logger.log("registering to write:"+outgoing);
-      socket.register(false, true, this);
-    }
-    runDelegatedTasks(result);
-      
+    if (status == HandshakeStatus.NEED_WRAP || status == null) {
+      ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
+      result = engine.wrap(encryptMe, outgoing);
+      status = result.getHandshakeStatus();
+      sslTL.logger.log("client wrap: "+encryptMe+" "+result);
+  //    if (status == HandshakeStatus.FINISHED) {
+  //      checkDone();
+  //      return;
+  //    }
+      if (outgoing.position() != 0) {
+        outgoing.flip();
+        writeMe.addLast(outgoing);
+        sslTL.logger.log("registering to write:"+outgoing);
+        socket.register(false, true, this);
+      }
+      runDelegatedTasks(result);
+      return;
+    }      
     sslTL.logger.log("----");
   
-    if (!unwrapMe.isEmpty()) {
+    if (!unwrapMe.isEmpty() && status == HandshakeStatus.NEED_UNWRAP) {
       Iterator<ByteBuffer> i = unwrapMe.iterator();
       while (i.hasNext()) {
         ByteBuffer b = i.next();
@@ -187,7 +189,6 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 //          checkDone();
 //          return;
 //        }
-        runDelegatedTasks(result);
         if (decryptToMe.position() != 0) {
           sslTL.logger.log("reading into " +decryptToMe);
         }
@@ -195,8 +196,10 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
         if (b.hasRemaining()) break;
         i.remove();
       }
+      runDelegatedTasks(result);
     }
-    
+
+
    } catch (Exception e) {
      throw new RuntimeException(e);
    }
