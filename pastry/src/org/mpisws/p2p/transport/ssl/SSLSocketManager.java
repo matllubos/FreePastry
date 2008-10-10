@@ -140,7 +140,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier> {
       } else if (status == HandshakeStatus.NEED_TASK) {
         final Runnable r = engine.getDelegatedTask();
         sslTL.environment.getProcessor().process(
-            new Executable<Object>() {
+            new Executable<Object, Exception>() {
 
               public Object execute() {
                 sslTL.logger.log("Executing "+r);

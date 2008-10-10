@@ -45,13 +45,13 @@ package rice;
  *
  * @author Alan Mislove
  */
-public interface Executable<R> {
+public interface Executable<R,E extends Exception> {
 
   /**
    * Executes the potentially expensive task and returns the result.
    *
    * @param result The result of the command.
    */
-  public R execute();
+  public R execute() throws E;
 
 }

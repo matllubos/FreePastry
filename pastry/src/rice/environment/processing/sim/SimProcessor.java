@@ -54,12 +54,12 @@ public class SimProcessor implements Processor {
     this.selector = selector;
   }
 
-  public <R, E extends Exception> Cancellable process(Executable<R> task, Continuation<R, E> command,
+  public <R, E extends Exception> Cancellable process(Executable<R,E> task, Continuation<R, E> command,
       SelectorManager selector, TimeSource ts, LogManager log) {
     return process(task, command, 0, selector, ts, log);
   }
 
-  public <R, E extends Exception> Cancellable process(Executable<R> task, Continuation<R, E> command, int priority,
+  public <R, E extends Exception> Cancellable process(Executable<R,E> task, Continuation<R, E> command, int priority,
       SelectorManager selector, TimeSource ts, LogManager log) {
     ProcessingRequest ret = new ProcessingRequest(task, command, 0, 0, log, ts, selector);
     selector.invoke(ret);
