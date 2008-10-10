@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.audit;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -63,6 +64,43 @@ public class SnippitEntry {
   boolean isHash = false;
   byte[] content; // may be a hash
   
+  public static final int NUM_INDEXES = 1000000;
+  
+  public SnippitEntry(byte type, long seq, boolean isHash, byte[] content) {
+    if (content.length == 0) throw new IllegalArgumentException("Content can't be zero-length");
+    this.type = type;
+    this.seq = seq;
+    this.isHash = isHash;
+    this.content = content;
+  }
+  
+  public SnippitEntry(InputBuffer buf, int hashSize, SnippitEntry prev) throws IOException {
+    this(buf, decodeSeq(buf, prev.seq), hashSize);
+  }
+  
+  public boolean equals(Object o) {
+    SnippitEntry that = (SnippitEntry)o;
+    if (this.type != that.type) return false;
+    if (this.seq != that.seq) return false;
+    if (this.isHash != that.isHash) return false;
+    return Arrays.equals(content, content);
+  }
+  
+  public SnippitEntry(InputBuffer buf, long seq, int hashSize) throws IOException {
+//    System.out.println(","+seq);
+    type = buf.readByte();
+    this.seq = seq;
+    int size = decodeSize(buf);
+//    System.out.println("decodeSize:"+size);
+    isHash = false;
+    if (size == 0) {
+      isHash = true;
+      size = hashSize;
+    }
+    content = new byte[size];
+    buf.read(content);
+  }
+  
   public void serialize(OutputBuffer buf, SnippitEntry prev) throws IOException {
     if (prev != null) {
       encodeSeq(buf, prev.seq);
@@ -72,45 +110,36 @@ public class SnippitEntry {
     buf.write(content, 0, content.length);
   }
   
-  public SnippitEntry build(InputBuffer buf, int hashSize, SnippitEntry prev) throws IOException {
-    long seq = decodeSeq(buf, prev.seq);
-    return build(buf,seq, hashSize);
-  }
-  
-  public SnippitEntry build(InputBuffer buf, long seq, int hashSize) throws IOException {
-    byte type = buf.readByte();
-    int size = decodeSize(buf);
-    boolean isHash = false;
-    if (size == 0) {
-      isHash = true;
-      size = hashSize;
-    }
-    byte[] content = new byte[size];
-    buf.read(content);
-    return new SnippitEntry(type,seq,isHash,content);
-  }
-  
-  protected long decodeSeq(InputBuffer buf, long prevSeq) throws IOException {
+  protected static long decodeSeq(InputBuffer buf, long prevSeq) throws IOException {
+//    if (true) return buf.readLong();
+//    System.out.print("decodeSeq:"+prevSeq);
     byte b = buf.readByte();
     if (b == (byte)0) return prevSeq+1;
     if (b == (byte)0xFF) return buf.readLong();
-    long howMuchBigger = MathUtils.uByteToInt(b)*1000;
-    long prevSeqUS = ((prevSeq/1000)*1000);
-    return prevSeqUS+howMuchBigger;
+    long howMuchBigger = MathUtils.uByteToInt(b)*NUM_INDEXES;
+    long prevSeqMS = ((prevSeq/NUM_INDEXES)*NUM_INDEXES);
+    return prevSeqMS+howMuchBigger;
   }
   
   protected void encodeSeq(OutputBuffer buf, long prevSeq) throws IOException {
+//    System.out.print("encodeSeq "+prevSeq+","+seq);
+//    if (true) {
+//      buf.writeLong(seq);
+//      return;
+//    }
     if (seq == prevSeq+1) {
+//      System.out.println(" "+0);
       buf.writeByte((byte)0);
       return;
     }
     
-    // If I end with 1000
-    if ((seq/1000)*1000 == seq) {
-      long foo = ((seq/1000) - (prevSeq/1000));
+    // If I end with 1000000
+    if ((seq%NUM_INDEXES == 0)) {
+      long foo = ((seq/NUM_INDEXES) - (prevSeq/NUM_INDEXES));
       if (foo < 0xFF) {
         if (foo < 0) throw new IOException("bug in encodeSeq.  foo:"+foo+" seq:"+seq+" prevSeq:"+prevSeq);
         buf.writeByte((byte)foo);
+        return;
       }
     }
     
@@ -131,9 +160,11 @@ public class SnippitEntry {
   
   public void encodeSize(OutputBuffer buf) throws IOException {
     if (isHash) {
+//      System.out.println("encodeHash");
       buf.writeByte((byte)0);
       return;
     }
+//    System.out.println("encodeSize:"+content.length);
     if (content.length < 254) {
       buf.writeByte((byte)content.length);
       return;
@@ -154,15 +185,10 @@ public class SnippitEntry {
     if (b == (byte)0xFF) {
       return MathUtils.uShortToInt(buf.readShort());
     }
-    if (b == (byte)0xFE) return buf.readInt();
+    if (b == (byte)0xFE) {
+      return buf.readInt();
+    }
     return MathUtils.uByteToInt(b);
   }
 
-  public SnippitEntry(byte type, long seq, boolean isHash, byte[] content) {
-    super();
-    this.type = type;
-    this.seq = seq;
-    this.isHash = isHash;
-    this.content = content;
-  }
 }

@@ -36,8 +36,17 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.audit;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
+import org.mpisws.p2p.transport.util.Serializer;
+
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
@@ -59,6 +68,55 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  */
 public class LogSnippit<Handle extends RawSerializable> {
   Handle logHandle;
-  
+  byte[] baseHash;
   List<SnippitEntry> entries;
+  
+  public LogSnippit(Handle logHandle, byte[] baseHash, List<SnippitEntry> entries) {
+    this.logHandle = logHandle;
+    this.baseHash = baseHash;
+    this.entries = entries;
+  }
+  
+  public boolean equals(Object o) {
+    LogSnippit<Handle> that = (LogSnippit<Handle>)o;
+    if (!this.logHandle.equals(that.logHandle)) return false;
+    if (!Arrays.equals(this.baseHash, that.baseHash)) return false;
+    if (this.entries.size() != that.entries.size()) return false;
+    Iterator<SnippitEntry> i1 = this.entries.iterator();
+    Iterator<SnippitEntry> i2 = that.entries.iterator();
+    while(i1.hasNext()) {
+      if (!i1.next().equals(i2.next())) return false;
+    }
+    return true;
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    logHandle.serialize(buf);
+    buf.writeLong(entries.get(0).seq);
+    buf.writeByte((byte)0);
+    buf.write(baseHash, 0, baseHash.length);
+    Iterator<SnippitEntry> i = entries.iterator();
+    SnippitEntry prev = i.next();
+    prev.serialize(buf, null);
+    while(i.hasNext()) {
+      SnippitEntry cur = i.next();
+      cur.serialize(buf, prev);
+      prev = cur;
+    }
+  }
+  
+  public LogSnippit(InputBuffer buf, Serializer<Handle> hSerializer, int hashSize) throws IOException {
+    logHandle = hSerializer.deserialize(buf);
+    long firstSeq = buf.readLong();
+    if (buf.readByte() != 0) throw new IOException("Unexpected extInfo");
+    baseHash = new byte[hashSize];
+    buf.read(baseHash);
+    entries = new ArrayList<SnippitEntry>();
+    SnippitEntry prev = new SnippitEntry(buf,firstSeq,hashSize);
+    entries.add(prev);
+    while(buf.bytesRemaining() == -2 || buf.bytesRemaining() > 0) {
+      prev = new SnippitEntry(buf,hashSize,prev);
+      entries.add(prev);
+    }      
+  }
 }

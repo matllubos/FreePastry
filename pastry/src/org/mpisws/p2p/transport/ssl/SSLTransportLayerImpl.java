@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.ssl;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.security.KeyPair;
@@ -148,6 +149,10 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
       
       }};
   
+  private static String keyStoreFile = "testkeys";
+  private static String trustStoreFile = "testkeys";
+  private static String passwd = "passphrase";
+
   public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyPair keyPair, X509Certificate caCert, Environment env) throws Exception {
     this.environment = env;
     this.keyPair = keyPair;
@@ -165,9 +170,23 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 //      TrustManagerFactory.getInstance("SunX509");
 //    tmf.init(ksTrust);
 
-    this.context = SSLContext.getInstance("SSL");
-//    context.
-    context.init(km,tm, null);
+    KeyStore ks = KeyStore.getInstance("JKS");
+    KeyStore ts = KeyStore.getInstance("JKS");
+
+    char[] passphrase = "passphrase".toCharArray();
+
+    ks.load(new FileInputStream(keyStoreFile), passphrase);
+    ts.load(new FileInputStream(trustStoreFile), passphrase);
+
+    KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+    kmf.init(ks, passphrase);
+
+    TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+    tmf.init(ts);
+
+    this.context = SSLContext.getInstance("TLS");
+
+    context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
     
     tl.setCallback(this);
     
