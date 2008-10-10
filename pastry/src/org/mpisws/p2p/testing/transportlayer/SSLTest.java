@@ -94,7 +94,7 @@ public class SSLTest {
 
       public void incomingSocket(P2PSocket<InetSocketAddress> s)
           throws IOException {
-        System.out.println("Alice: Incoming Socket "+s);
+        System.out.println("************* Alice: Incoming Socket "+s);
       }
 
       public void messageReceived(InetSocketAddress i, ByteBuffer m,
@@ -106,7 +106,7 @@ public class SSLTest {
     bobSSL.openSocket(aliceAddr, new SocketCallback<InetSocketAddress>() {    
       public void receiveResult(SocketRequestHandle<InetSocketAddress> cancellable,
           P2PSocket<InetSocketAddress> sock) {
-        System.out.println("bob opened socket "+sock);
+        System.out.println("*************** Bob: Opened Socket "+sock);
         
 //        sock.register(false, true, new P2PSocketReceiver<InetSocketAddress>() {
 //          ByteBuffer writeMe = ByteBuffer.wrap(new String("foo").getBytes());

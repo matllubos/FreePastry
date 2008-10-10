@@ -147,6 +147,10 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
 
   protected void go2() {
+    if (lock) {
+      sslTL.logger.log("go2: processing... bye.");
+      return;
+    }
 //    if (done) {
 //      sslTL.logger.log("go2: done, quitting. "+writeMe.size());
 //      return;
@@ -168,7 +172,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       sslTL.logger.log("registering to write:"+outgoing);
       socket.register(false, true, this);
     }
-    runDelegatedTasks(result, engine);
+    runDelegatedTasks(result);
       
     sslTL.logger.log("----");
   
@@ -183,7 +187,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 //          checkDone();
 //          return;
 //        }
-        runDelegatedTasks(result, engine);
+        runDelegatedTasks(result);
         if (decryptToMe.position() != 0) {
           sslTL.logger.log("reading into " +decryptToMe);
         }
@@ -220,19 +224,38 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
    * If the result indicates that we have outstanding tasks to do, go ahead and
    * run them in this thread.
    */
-  private void runDelegatedTasks(SSLEngineResult result, SSLEngine engine) {
+  boolean lock = false;
 
+  private void runDelegatedTasks(SSLEngineResult result) {
     if (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
-      Runnable runnable;
-      while ((runnable = engine.getDelegatedTask()) != null) {
-        sslTL.logger.log("\trunning delegated task...");
-        runnable.run();
+      lock = true;
+      sslTL.environment.getProcessor().process(new Executable() {
+        
+        public Object execute() throws Exception {
+          // TODO Auto-generated method 
+          Runnable runnable;
+          while ((runnable = engine.getDelegatedTask()) != null) {
+            sslTL.logger.log("\trunning delegated task...");
+            runnable.run();
+          }
+          status = engine.getHandshakeStatus();
+          if (status == HandshakeStatus.NEED_TASK) {
+            throw new RuntimeException("handshake shouldn't need additional tasks");
+          }
+          sslTL.logger.log("\tnew HandshakeStatus: " + status);
+          return null;
+        }
+      },new Continuation() {
+        public void receiveException(Exception exception) {
+          exception.printStackTrace();
+        };
+        public void receiveResult(Object result) {          
+          sslTL.logger.log("Done executing, calling go2");          
+          lock = false;
+          go2();
+        };
       }
-      status = engine.getHandshakeStatus();
-      if (status == HandshakeStatus.NEED_TASK) {
-        throw new RuntimeException("handshake shouldn't need additional tasks");
-      }
-      sslTL.logger.log("\tnew HandshakeStatus: " + status);
+      , sslTL.environment.getSelectorManager(), sslTL.environment.getTimeSource(), sslTL.environment.getLogManager());
     }
   }
 
