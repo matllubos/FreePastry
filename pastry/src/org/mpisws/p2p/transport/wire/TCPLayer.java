@@ -228,41 +228,19 @@ public class TCPLayer extends SelectionKeyHandler {
    * @param key The key which is acceptable.
    */
   public void accept(SelectionKey key) {
-//    logger.log("accept("+key+")");
     try {
-//      final SocketChannel channel = (SocketChannel) ((ServerSocketChannel) key.channel()).accept();
-//      channel.socket().setSendBufferSize(SOCKET_BUFFER_SIZE);
-//      channel.socket().setReceiveBufferSize(SOCKET_BUFFER_SIZE);
-//      channel.configureBlocking(false);
-//      InetSocketAddress addr = (InetSocketAddress)channel.socket().getRemoteSocketAddress();
       SocketManager sm = new SocketManager(this, key); 
       synchronized (sockets) {
         sockets.add(sm);
       }
-      wire.incomingSocket(sm);
-      
-//      pastryNode.broadcastChannelOpened((InetSocketAddress)channel.socket().getRemoteSocketAddress(), NetworkListener.REASON_ACC_NORMAL);
-
-//      key = wire.environment.getSelectorManager().register(channel, this, SelectionKey.OP_READ);
-
-//      pending.add(new SocketAccepter(key));
+      wire.incomingSocket(sm);      
     } catch (IOException e) {
       if (logger.level <= Logger.WARNING) logger.log( "ERROR (accepting connection): " + e);
+      wire.errorHandler.receivedException(null, e);
     }
   }
 
   public boolean isDestroyed() {
     return wire.isDestroyed();
   }
-
-//  private void putSM(SocketManager sm) {
-//    sockets.put(sm, sm);
-//  }
-//  
-//  private void killSM() {
-//    Iterator<SocketManager> i = sockets.values().iterator();
-//    SocketManager sm = i.next();
-//    i.remove();    
-//    sm.close();
-//  }
 }
