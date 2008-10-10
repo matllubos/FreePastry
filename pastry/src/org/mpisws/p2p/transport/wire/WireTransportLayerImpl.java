@@ -92,20 +92,20 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
       InetSocketAddress bindAddress, 
       Environment env, 
       ErrorHandler<InetSocketAddress> errorHandler) throws IOException {
-    this(bindAddress, env, errorHandler, false);
+    this(bindAddress, env, errorHandler, true);
   }
   
   public WireTransportLayerImpl(
       InetSocketAddress bindAddress, 
       Environment env, 
-      ErrorHandler<InetSocketAddress> errorHandler, boolean disableServer) throws IOException {
-    this(bindAddress,env,errorHandler,disableServer,disableServer);
+      ErrorHandler<InetSocketAddress> errorHandler, boolean enableServer) throws IOException {
+    this(bindAddress,env,errorHandler,enableServer,enableServer);
   }
   
   public WireTransportLayerImpl(
       InetSocketAddress bindAddress, 
       Environment env, 
-      ErrorHandler<InetSocketAddress> errorHandler, boolean disableTCPServer, boolean disableUDPServer) throws IOException {
+      ErrorHandler<InetSocketAddress> errorHandler, boolean enableTCPServer, boolean enableUDPServer) throws IOException {
     this.logger = env.getLogManager().getLogger(WireTransportLayer.class, null);
     this.bindAddress = bindAddress;
     this.environment = env;
@@ -117,13 +117,13 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
       this.errorHandler = new DefaultErrorHandler<InetSocketAddress>(logger); 
     }
     
-    if (disableUDPServer) {
-      udp = new BogusUDPLayerImpl();
-    } else {
+    if (enableUDPServer) {
       udp = new UDPLayerImpl(this);      
+    } else {
+      udp = new BogusUDPLayerImpl();
     }
     try {
-      tcp = new TCPLayer(this, !disableTCPServer);
+      tcp = new TCPLayer(this, enableTCPServer);
     } catch (IOException ioe) {
       udp.destroy();
       throw ioe;

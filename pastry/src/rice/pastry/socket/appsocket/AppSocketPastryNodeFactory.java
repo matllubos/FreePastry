@@ -375,7 +375,7 @@ public class AppSocketPastryNodeFactory extends SocketPastryNodeFactory {
   @Override
   protected TransportLayer<InetSocketAddress, ByteBuffer> getWireTransportLayer(InetSocketAddress innermostAddress, final PastryNode pn) throws IOException {
     Environment environment = pn.getEnvironment();    
-    WireTransportLayerImpl wtl = new WireTransportLayerImpl(innermostAddress,environment, null, (pn instanceof BogusTLPastryNode));    
+    WireTransportLayerImpl wtl = new WireTransportLayerImpl(innermostAddress,environment, null, !(pn instanceof BogusTLPastryNode));    
     wtl.addSocketCountListener(getSocketCountListener(pn));
     
     if (pn instanceof BogusTLPastryNode) {
