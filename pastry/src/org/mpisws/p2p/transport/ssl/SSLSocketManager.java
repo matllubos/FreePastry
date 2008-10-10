@@ -113,7 +113,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     sslTL.logger.log("app:"+appBufferMax+" net:"+netBufferMax);
     socket.register(true, false, this);
 
-    go();
+    go2();
   }
 
   public void receiveSelectResult(P2PSocket<Identifier> socket,
@@ -125,11 +125,11 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       if (foo.position() != 0) {
         foo.flip();
         unwrapMe.addLast(foo);
-        unwrap();
       }
       // always be reading
       socket.register(true, false, this);
     }
+    
     if (canWrite) {
       Iterator<ByteBuffer> i = writeMe.iterator();
       while (i.hasNext()) {
@@ -140,15 +140,33 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       }
       if (!writeMe.isEmpty()) socket.register(false, true, this);
     }
+    go2();
   }
 
-  protected void unwrap() throws SSLException {
-    sslTL.logger.log("unwrap()");
+  protected void go2() {
+   try {
+    sslTL.logger.log("================");
+  
+    ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
+    result = engine.wrap(encryptMe, outgoing);
+    sslTL.logger.log("client wrap: "+encryptMe+" "+result);
+    if (outgoing.position() != 0) {
+      outgoing.flip();
+      writeMe.addLast(outgoing);
+      sslTL.logger.log("registering to write:"+outgoing);
+      socket.register(false, true, this);
+    }
+    runDelegatedTasks(result, engine);
+      
+    sslTL.logger.log("----");
+  
     if (!unwrapMe.isEmpty()) {
       Iterator<ByteBuffer> i = unwrapMe.iterator();
       while (i.hasNext()) {
         ByteBuffer b = i.next();
-        updateStatus(engine.unwrap(b, decryptToMe));
+        result = engine.unwrap(b, decryptToMe);
+        sslTL.logger.log("client unwrap: "+result);
+        runDelegatedTasks(result, engine);
         if (decryptToMe.position() != 0) {
           sslTL.logger.log("reading into " +decryptToMe);
         }
@@ -156,60 +174,65 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
         if (b.hasRemaining()) break;
         i.remove();
       }
-      go();
     }
-  }
-
-  protected void go() {
-    try {
-      ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
-      updateStatus(engine.wrap(encryptMe, outgoing));
-      if (outgoing.position() != 0) {
-        outgoing.flip();
-        writeMe.addLast(outgoing);
-        sslTL.logger.log("registering to write:"+outgoing);
-        socket.register(false, true, this);
-        unwrap();
-      }
-      if (!encryptMe.hasRemaining()) sslTL.logger.log("Done writing " + this);
-    } catch (IOException ioe) {
-      c.receiveException(ioe);
-    }
-  }
-
-  private void updateStatus(SSLEngineResult wrap) {
-    sslTL.logger.log(wrap.toString());
-    status = wrap.getHandshakeStatus();
-    sslTL.logger.log(" unwrap:"+unwrapMe.size()+" write:"+writeMe.size());
     
-    if (wrap.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
-      final Runnable r = engine.getDelegatedTask();
-      if (r != null) {
-        sslTL.environment.getProcessor().process(
-          new Executable<Object, Exception>() {
+    /*
+     * After we've transfered all application data between the client and
+     * server, we close the clientEngine's outbound stream. This generates a
+     * close_notify handshake message, which the server engine receives and
+     * responds by closing itself.
+     * 
+     * In normal operation, each SSLEngine should call closeOutbound(). To
+     * protect against truncation attacks, SSLEngine.closeInbound() should be
+     * called whenever it has determined that no more input data will ever be
+     * available (say a closed input stream).
+     */
+//    if (!dataDone && (clientOut.limit() == serverIn.position())
+//        && (serverOut.limit() == clientIn.position())) {
+//  
+//      /*
+//       * A sanity check to ensure we got what was sent.
+//       */
+//      checkTransfer(serverOut, clientIn);
+//      checkTransfer(clientOut, serverIn);
+//  
+//      sslTL.logger.log("\tClosing clientEngine's *OUTBOUND*...");
+//      clientEngine.closeOutbound();
+//      // serverEngine.closeOutbound();
+//      dataDone = true;
+//    }
+   } catch (Exception e) {
+     throw new RuntimeException(e);
+   }
+   
+   if (!unwrapMe.isEmpty() || 
+       (result.getHandshakeStatus() == HandshakeStatus.NEED_WRAP) ||
+       (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK)) go2();
+  }
 
-            public Object execute() {
-              sslTL.logger.log("Executing " + r);
-              r.run();
-              sslTL.logger.log("Done executing " + r);
-              return null;
-            }
-          }, new Continuation<Object, Exception>() {
+  
+  /*
+   * If the result indicates that we have outstanding tasks to do, go ahead and
+   * run them in this thread.
+   */
+  private void runDelegatedTasks(SSLEngineResult result, SSLEngine engine) {
 
-            public void receiveException(Exception exception) {
-              c.receiveException(exception);
-            }
-
-            public void receiveResult(Object result) {
-              sslTL.logger.log("Calling go() after " + r);
-              go();
-            }
-          }, sslTL.environment.getSelectorManager(),
-          sslTL.environment.getTimeSource(), sslTL.environment.getLogManager());
+    if (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+      Runnable runnable;
+      while ((runnable = engine.getDelegatedTask()) != null) {
+        sslTL.logger.log("\trunning delegated task...");
+        runnable.run();
       }
-    } else {
-      sslTL.logger.log("engine.getDelegatedTask() was null!!!");
+      HandshakeStatus hsStatus = engine.getHandshakeStatus();
+      if (hsStatus == HandshakeStatus.NEED_TASK) {
+        throw new RuntimeException("handshake shouldn't need additional tasks");
+      }
+      sslTL.logger.log("\tnew HandshakeStatus: " + hsStatus);
     }
+  }
+
+  private static boolean isEngineClosed(SSLEngine engine) {
+    return (engine.isOutboundDone() && engine.isInboundDone());
   }
 
   public void register(boolean wantToRead, boolean wantToWrite,
