@@ -217,7 +217,7 @@ public class CAToolImpl implements CATool {
     return sign(CN,key,exp,System.currentTimeMillis());
   }
   
-  public X509Certificate sign(String CN, PublicKey publicKey, Date expiryDate, long serialNumber) throws CertificateParsingException, CertificateEncodingException, InvalidKeyException, IllegalStateException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException {
+  public static X509Certificate sign(String CN, PublicKey publicKey, Date expiryDate, long serialNumber, X509Certificate caCert, KeyPair caPair) throws CertificateParsingException, CertificateEncodingException, InvalidKeyException, IllegalStateException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException {
 //    Date expiryDate = ...;               // time after which certificate is not valid
 //    BigInteger serialNumber = ...;       // serial number for certificate
 //    PrivateKey caKey = ...;              // private key of the certifying authority (ca) certificate
@@ -228,7 +228,7 @@ public class CAToolImpl implements CATool {
     X500Principal subjectName = new X500Principal("CN="+CN);
 
     certGen.setSerialNumber(BigInteger.valueOf(serialNumber));
-    certGen.setIssuerDN(cert.getSubjectX500Principal());
+    certGen.setIssuerDN(caCert.getSubjectX500Principal());
     certGen.setNotBefore(new Date());
     certGen.setNotAfter(expiryDate);
     certGen.setSubjectDN(subjectName);
@@ -236,14 +236,18 @@ public class CAToolImpl implements CATool {
     certGen.setSignatureAlgorithm(DEFAULT_SIGNATURE_ALGORITHM);
 
     certGen.addExtension(X509Extensions.AuthorityKeyIdentifier, false,
-                            new AuthorityKeyIdentifierStructure(cert));
+                            new AuthorityKeyIdentifierStructure(caCert));
     certGen.addExtension(X509Extensions.SubjectKeyIdentifier, false,
                             new SubjectKeyIdentifierStructure(publicKey));
 
-    X509Certificate cert = certGen.generate(keyPair.getPrivate(), "BC");   // note: private key of CA
+    X509Certificate cert = certGen.generate(caPair.getPrivate(), "BC");   // note: private key of CA
     return cert;        
   }
-
+  
+  public X509Certificate sign(String CN, PublicKey publicKey, Date expiryDate, long serialNumber) throws CertificateParsingException, CertificateEncodingException, InvalidKeyException, IllegalStateException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException {
+    return sign(CN,publicKey,expiryDate,serialNumber,cert,keyPair);
+  }
+  
 //  public static final String CA_STORE_FILENAME = "ca-store";
   public static final String CA_STORE_PRIVATE = "private";
   public static final String CA_STORE_PUBLIC = "public";

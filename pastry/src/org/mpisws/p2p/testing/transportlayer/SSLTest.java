@@ -47,6 +47,7 @@ import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAKeyGenParameterSpec;
+import java.util.Date;
 import java.util.Map;
 
 import org.mpisws.p2p.pki.x509.CATool;
@@ -75,6 +76,7 @@ public class SSLTest {
         new RSAKeyGenParameterSpec(768,
             RSAKeyGenParameterSpec.F4),
         sRandom);
+
     
     
     CATool bogus = CAToolImpl.getCATool("Bogus", "bar".toCharArray());
@@ -83,14 +85,29 @@ public class SSLTest {
     InetSocketAddress aliceAddr = new InetSocketAddress(addr,9001); 
     KeyPair alicePair = keyPairGen.generateKeyPair();    
     X509Certificate aliceCert = caTool.sign("alice",alicePair.getPublic());
+    
+//    Alice trys to self-sign    
+//    Date exp = new Date();
+//    exp.setYear(exp.getYear()+10);
+//    X509Certificate aliceCert = CAToolImpl.generateNewCA("alice", new Date(), exp, 66, alicePair, CAToolImpl.DEFAULT_SIGNATURE_ALGORITHM);
+    
+    
     KeyStore aliceStore = KeyStore.getInstance("UBER", "BC");
     aliceStore.load(null, null);
     aliceStore.setKeyEntry("private",alicePair.getPrivate(), "".toCharArray(), new Certificate[] {aliceCert});
     aliceStore.setCertificateEntry("cert", caTool.getCertificate());
 
+//  Carol trys to sign alice
+//    KeyPair carolPair = keyPairGen.generateKeyPair();    
+//    X509Certificate carolCert = caTool.sign("carol",carolPair.getPublic());
+//    Date exp = new Date();
+//    exp.setYear(exp.getYear()+10);
+//    X509Certificate aliceCert = CAToolImpl.generateNewCA("alice", new Date(), exp, 66, carolPair, CAToolImpl.DEFAULT_SIGNATURE_ALGORITHM);
+//    aliceStore.setKeyEntry("private",alicePair.getPrivate(), "".toCharArray(), new Certificate[] {carolCert, aliceCert});
+
     WireTransportLayer aliceWire = new WireTransportLayerImpl(aliceAddr,aliceEnv,null);
     SSLTransportLayerImpl<InetSocketAddress, ByteBuffer> aliceSSL = new SSLTransportLayerImpl<InetSocketAddress, ByteBuffer>(
-        aliceWire,aliceStore,caTool.getCertificate(),aliceEnv);
+        aliceWire,aliceStore,aliceEnv);
     
     Environment bobEnv = rootEnv.cloneEnvironment("bob");
     InetSocketAddress bobAddr = new InetSocketAddress(addr,9002); 
@@ -99,11 +116,12 @@ public class SSLTest {
     KeyStore bobStore = KeyStore.getInstance("UBER", "BC");
     bobStore.load(null, null);
     bobStore.setKeyEntry("private",bobPair.getPrivate(), "".toCharArray(), new Certificate[] {bobCert});
+//    bobStore.setCertificateEntry("cert", aliceCert);
     bobStore.setCertificateEntry("cert", caTool.getCertificate());
 
     WireTransportLayer bobWire = new WireTransportLayerImpl(bobAddr,bobEnv,null);
     SSLTransportLayerImpl<InetSocketAddress, ByteBuffer> bobSSL = new SSLTransportLayerImpl<InetSocketAddress, ByteBuffer>(
-        bobWire,bobStore,caTool.getCertificate(),bobEnv);
+        bobWire,bobStore,bobEnv);
 
     aliceSSL.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {
 
@@ -157,14 +175,14 @@ public class SSLTest {
         
           public void receiveException(P2PSocket<InetSocketAddress> socket,
               Exception ioe) {
-            System.out.println("bob2: ex:"+ioe);
+            System.out.println("bob: ex:"+ioe);
           }        
         });
       }
     
       public void receiveException(SocketRequestHandle<InetSocketAddress> s,
           Exception ex) {
-        System.out.println("bob: ex:"+ex);
+        System.out.println("bob2: ex:"+ex);
       }    
     }, null);
     

@@ -89,7 +89,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
   protected SSLContext context;
   
-  X509Certificate caCert;
+//  X509Certificate caCert;
   KeyPair keyPair;
 
 //  TrustManager[] tm = new TrustManager[]{
@@ -153,10 +153,10 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
   private static String trustStoreFile = "testkeys";
   private static String passwd = "passphrase";
 
-  public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyStore ks, X509Certificate caCert, Environment env) throws Exception {
+  public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyStore ks, Environment env) throws Exception {
     this.environment = env;
 //    this.keyPair = keyPair;
-    this.caCert = caCert;
+//    this.caCert = caCert;
     this.logger = env.getLogManager().getLogger(SSLTransportLayerImpl.class, null);
     this.tl = tl;
     errorHandler = new DefaultErrorHandler<Identifier>(logger, Logger.WARNING);
