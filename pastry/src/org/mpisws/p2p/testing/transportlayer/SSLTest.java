@@ -42,7 +42,9 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.Map;
@@ -74,21 +76,33 @@ public class SSLTest {
             RSAKeyGenParameterSpec.F4),
         sRandom);
     
+    
+    
     Environment aliceEnv = rootEnv.cloneEnvironment("alice");
     InetSocketAddress aliceAddr = new InetSocketAddress(addr,9001); 
     KeyPair alicePair = keyPairGen.generateKeyPair();    
     X509Certificate aliceCert = caTool.sign("alice",alicePair.getPublic());
+    KeyStore aliceStore = KeyStore.getInstance("UBER", "BC");
+    aliceStore.load(null, null);
+    aliceStore.setKeyEntry("private",alicePair.getPrivate(), "".toCharArray(), new Certificate[] {aliceCert});
+    aliceStore.setCertificateEntry("cert", caTool.getCertificate());
+
     WireTransportLayer aliceWire = new WireTransportLayerImpl(aliceAddr,aliceEnv,null);
     SSLTransportLayerImpl<InetSocketAddress, ByteBuffer> aliceSSL = new SSLTransportLayerImpl<InetSocketAddress, ByteBuffer>(
-        aliceWire,alicePair,caTool.getCertificate(),aliceEnv);
+        aliceWire,aliceStore,caTool.getCertificate(),aliceEnv);
     
     Environment bobEnv = rootEnv.cloneEnvironment("bob");
     InetSocketAddress bobAddr = new InetSocketAddress(addr,9002); 
     KeyPair bobPair = keyPairGen.generateKeyPair();    
     X509Certificate bobCert = caTool.sign("bob",bobPair.getPublic());
+    KeyStore bobStore = KeyStore.getInstance("UBER", "BC");
+    bobStore.load(null, null);
+    bobStore.setKeyEntry("private",bobPair.getPrivate(), "".toCharArray(), new Certificate[] {bobCert});
+    bobStore.setCertificateEntry("cert", caTool.getCertificate());
+
     WireTransportLayer bobWire = new WireTransportLayerImpl(bobAddr,bobEnv,null);
     SSLTransportLayerImpl<InetSocketAddress, ByteBuffer> bobSSL = new SSLTransportLayerImpl<InetSocketAddress, ByteBuffer>(
-        bobWire,bobPair,caTool.getCertificate(),bobEnv);
+        bobWire,bobStore,caTool.getCertificate(),bobEnv);
 
     aliceSSL.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {
 

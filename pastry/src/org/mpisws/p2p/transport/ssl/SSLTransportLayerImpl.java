@@ -89,9 +89,9 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
   protected SSLContext context;
   
-//  X509Certificate caCert;
-//  KeyPair keyPair;
-//
+  X509Certificate caCert;
+  KeyPair keyPair;
+
 //  TrustManager[] tm = new TrustManager[]{
 //      new X509TrustManager() {
 //
@@ -153,14 +153,16 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
   private static String trustStoreFile = "testkeys";
   private static String passwd = "passphrase";
 
-  public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyPair keyPair, X509Certificate caCert, Environment env) throws Exception {
+  public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyStore ks, X509Certificate caCert, Environment env) throws Exception {
     this.environment = env;
 //    this.keyPair = keyPair;
-//    this.caCert = caCert;
+    this.caCert = caCert;
     this.logger = env.getLogManager().getLogger(SSLTransportLayerImpl.class, null);
     this.tl = tl;
     errorHandler = new DefaultErrorHandler<Identifier>(logger, Logger.WARNING);
-    
+
+    this.context = SSLContext.getInstance("TLS");
+
 //    KeyManagerFactory kmf =
 //      KeyManagerFactory.getInstance("SunX509");
 //    kmf.init(ksKeys, passphrase);
@@ -170,23 +172,29 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 //      TrustManagerFactory.getInstance("SunX509");
 //    tmf.init(ksTrust);
 
-    KeyStore ks = KeyStore.getInstance("JKS");
-    KeyStore ts = KeyStore.getInstance("JKS");
+//    context.init(km, tm, null);
 
-    char[] passphrase = "passphrase".toCharArray();
+    KeyStore ts = ks;
+    char[] passphrase = "".toCharArray();
+    
+//    KeyStore ks = KeyStore.getInstance("JKS");
+//    KeyStore ts = KeyStore.getInstance("JKS");
 
-    ks.load(new FileInputStream(keyStoreFile), passphrase);
-    ts.load(new FileInputStream(trustStoreFile), passphrase);
+//    char[] passphrase = passwd.toCharArray();
 
+//    ks.load(new FileInputStream(keyStoreFile), passphrase);
+//    ts.load(new FileInputStream(trustStoreFile), passphrase);
+
+    
+//    KeyStore ks = KeyStore.
+    
     KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
     kmf.init(ks, passphrase);
 
     TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
     tmf.init(ts);
-
-    this.context = SSLContext.getInstance("TLS");
-
     context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
     
     tl.setCallback(this);
     
