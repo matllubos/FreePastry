@@ -127,7 +127,7 @@ public class CAToolImpl implements CATool {
     X509Certificate caCert;
     KeyPair caPair;
     
-    File caStoreFile = new File(CA_STORE_FILENAME);
+    File caStoreFile = new File(CN+"-store");
     if (caStoreFile.exists()) {
       KeyStore store = KeyStore.getInstance("UBER", "BC");
       try {
@@ -159,7 +159,7 @@ public class CAToolImpl implements CATool {
       store.setKeyEntry(CA_STORE_PUBLIC, caPair.getPublic(), null, null);
       store.setCertificateEntry(CA_STORE_CERT, caCert);
   
-      store.store(new FileOutputStream(CA_STORE_FILENAME), pw);    
+      store.store(new FileOutputStream(CN+"-store"), pw);    
     }    
     return new CAToolImpl(caCert, caPair);
   }
@@ -244,7 +244,7 @@ public class CAToolImpl implements CATool {
     return cert;        
   }
 
-  public static final String CA_STORE_FILENAME = "ca-store";
+//  public static final String CA_STORE_FILENAME = "ca-store";
   public static final String CA_STORE_PRIVATE = "private";
   public static final String CA_STORE_PUBLIC = "public";
   public static final String CA_STORE_CERT = "cert";

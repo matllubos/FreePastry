@@ -77,6 +77,7 @@ public class SSLTest {
         sRandom);
     
     
+    CATool bogus = CAToolImpl.getCATool("Bogus", "bar".toCharArray());
     
     Environment aliceEnv = rootEnv.cloneEnvironment("alice");
     InetSocketAddress aliceAddr = new InetSocketAddress(addr,9001); 
@@ -126,8 +127,7 @@ public class SSLTest {
         
           public void receiveException(P2PSocket<InetSocketAddress> socket,
               Exception ioe) {
-            // TODO Auto-generated method stub
-        
+            System.out.println("alice: ex:"+ioe);
           }
         
         });
@@ -157,14 +157,14 @@ public class SSLTest {
         
           public void receiveException(P2PSocket<InetSocketAddress> socket,
               Exception ioe) {
-            ioe.printStackTrace();
+            System.out.println("bob2: ex:"+ioe);
           }        
         });
       }
     
       public void receiveException(SocketRequestHandle<InetSocketAddress> s,
           Exception ex) {
-        ex.printStackTrace();
+        System.out.println("bob: ex:"+ex);
       }    
     }, null);
     

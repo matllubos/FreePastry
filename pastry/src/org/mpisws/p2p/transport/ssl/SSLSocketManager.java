@@ -48,6 +48,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 
+import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
 
@@ -122,9 +123,12 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     this.result = result;
     this.status = result.getHandshakeStatus();
   }
+
+  boolean handshakeFail = false;
   
   public void receiveSelectResult(P2PSocket<Identifier> socket,
       boolean canRead, boolean canWrite) throws IOException {
+    if (handshakeFail) return;
     sslTL.logger.log("receive select result r:"+canRead+" w:"+canWrite);
     if (canWrite) {
       Iterator<ByteBuffer> i = writeMe.iterator();
@@ -162,7 +166,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 
   protected boolean read() throws IOException {
     ByteBuffer foo = ByteBuffer.allocate(netBufferMax);
-    socket.read(foo);
+    if (socket.read(foo) < 0) fail(new ClosedChannelException("Unexpected socket closure "+this));
     if (foo.position() != 0) {
       foo.flip();
       unwrapMe.addLast(foo);
@@ -225,7 +229,10 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
   
   protected void fail(Exception e) {
+    sslTL.logger.log("fail:"+e);
+    handshakeFail = true;
     c.receiveException(e);
+    socket.close();
     doneHandshaking = true;
   }
   
