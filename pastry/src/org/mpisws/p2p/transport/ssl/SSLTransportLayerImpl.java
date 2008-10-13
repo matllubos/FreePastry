@@ -45,7 +45,9 @@ import java.security.KeyStoreSpi;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Map;
 
 import javax.net.ssl.KeyManager;
@@ -91,24 +93,28 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
   
 //  X509Certificate caCert;
   KeyPair keyPair;
-
+//  X509TrustManager innerTM;
+//  
 //  TrustManager[] tm = new TrustManager[]{
 //      new X509TrustManager() {
 //
 //          public X509Certificate[] getAcceptedIssuers() {
 //            logger.log("getAcceptedIssuers");
+//            return innerTM.getAcceptedIssuers();
 //            
-//              return new X509Certificate[] { caCert };
+////              return new X509Certificate[] { caCert };
 //          }
 //
 //          public void checkClientTrusted(
-//                  java.security.cert.X509Certificate[] certs, String authType) {
-//            logger.log("checkClientTrusted "+authType);
+//                  java.security.cert.X509Certificate[] certs, String authType) throws CertificateException {
+//            logger.log("checkClientTrusted "+authType+" "+certs[0].getSubjectDN()); //+" "+Arrays.toString(certs));
+//            innerTM.checkClientTrusted(certs,authType);
 //          }
 //
 //          public void checkServerTrusted(
-//                  java.security.cert.X509Certificate[] certs, String authType) {            
-//            logger.log("checkServerTrusted "+authType);
+//                  java.security.cert.X509Certificate[] certs, String authType) throws CertificateException {            
+//            logger.log("checkServerTrusted "+authType+" "+certs[0].getSubjectDN());//+" "+Arrays.toString(certs));
+//            innerTM.checkServerTrusted(certs, authType);
 //          }
 //      }};
 //        
@@ -192,10 +198,14 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
     kmf.init(ks, passphrase);
 
     TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-    tmf.init(ts);
-    context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-
+    tmf.init(ts);    
     
+    TrustManager[] tms = tmf.getTrustManagers();
+//    innerTM = (X509TrustManager)tms[0];
+//    tms = tm;
+//    System.out.println(Arrays.toString(tms));
+    context.init(kmf.getKeyManagers(), tms, null);
+
     tl.setCallback(this);
     
   }

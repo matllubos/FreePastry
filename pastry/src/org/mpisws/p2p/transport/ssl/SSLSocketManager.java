@@ -38,7 +38,7 @@ package org.mpisws.p2p.transport.ssl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -51,10 +51,10 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import org.mpisws.p2p.transport.ClosedChannelException;
 import org.mpisws.p2p.transport.P2PSocket;
 import org.mpisws.p2p.transport.P2PSocketReceiver;
+import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.Continuation;
 import rice.Executable;
-import rice.p2p.util.MathUtils;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
 
 public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
@@ -83,6 +83,8 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   private Continuation<SSLSocketManager<Identifier>, Exception> c;
 
   boolean doneHandshaking = false;
+  
+  Map<String, Object> options;
   
   /**
    * Called on incoming side
@@ -113,13 +115,14 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     bogusEncryptMe = ByteBuffer.allocate(0);
     readMe = new LinkedList<ByteBuffer>();
     
-    sslTL.logger.log("app:"+appBufferMax+" net:"+netBufferMax);
+//    sslTL.logger.log("app:"+appBufferMax+" net:"+netBufferMax);
     socket.register(true, false, this);
 
     handshakeWrap();
   }
 
   protected void handleResult(SSLEngineResult result) {
+//    sslTL.logger.log("handleResult:"+result);
     this.result = result;
     this.status = result.getHandshakeStatus();
   }
@@ -129,7 +132,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   public void receiveSelectResult(P2PSocket<Identifier> socket,
       boolean canRead, boolean canWrite) throws IOException {
     if (handshakeFail) return;
-    sslTL.logger.log("receive select result r:"+canRead+" w:"+canWrite);
+//    sslTL.logger.log("receive select result r:"+canRead+" w:"+canWrite);
     if (canWrite) {
       Iterator<ByteBuffer> i = writeMe.iterator();
       while (i.hasNext()) {
@@ -183,7 +186,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
         if (outgoing.position() != 0) {
           outgoing.flip();
           writeMe.addLast(outgoing);
-          sslTL.logger.log("registering to write:"+outgoing);
+//          sslTL.logger.log("registering to write:"+outgoing);
           socket.register(false, true, this);
         }    
       } catch (SSLException e) {
@@ -199,13 +202,13 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       ByteBuffer b = i.next();
       ByteBuffer foo = ByteBuffer.allocate(appBufferMax);
       handleResult(engine.unwrap(b, foo));
-      sslTL.logger.log("client unwrap: "+foo+" "+result);
+//      sslTL.logger.log("client unwrap: "+foo+" "+result);
       if (foo.position() != 0) {
         foo.flip();
         readMe.addLast(foo);
 //        sslTL.logger.log("reading into " +decryptToMe);
       }
-      sslTL.logger.log("unwrapped:"+b);
+//      sslTL.logger.log("unwrapped:"+b);
       if (b.hasRemaining()) break;
       i.remove();
     }
@@ -260,6 +263,22 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 
   protected void checkDone() {
     if (((status == HandshakeStatus.FINISHED) || (status == HandshakeStatus.NOT_HANDSHAKING))) {
+      try {
+        
+        X509Certificate crt = ((X509Certificate) engine.getSession().getPeerCertificates()[0]);
+        String name = crt.getSubjectDN().getName();
+        if (name.startsWith("CN=")) {
+          name = name.substring(3);
+          options = OptionsFactory.addOption(socket.getOptions(), SSLTransportLayer.OPTION_CERT_SUBJECT, name);
+///          sslTL.logger.log("Talking to:"+name);
+        } else {
+          fail(new IllegalArgumentException("CN must start with CN= "+name+" "+this));
+          return;          
+        }
+      } catch (Exception e) {
+        fail(e);
+        return;
+      }
       doneHandshaking = true;
       c.receiveResult(this);
     }
@@ -393,7 +412,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
 
   public Map<String, Object> getOptions() {
-    return socket.getOptions();
+    return options;
   }
 
   public void shutdownOutput() {

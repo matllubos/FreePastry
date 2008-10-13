@@ -52,6 +52,7 @@ import rice.pastry.socket.EpochInetSocketAddress;
 public interface SSLTransportLayer<Identifier, MessageType> extends TransportLayer<Identifier, MessageType>, TransportLayerCallback<Identifier, MessageType> {
   public static final String OPTION_ENCRYPTION = "encrypt";
   public static final String OPTION_AUTHENTICATION = "authenticate";
+  public static final String OPTION_CERT_SUBJECT = "ssl_certificate_subject";
 
   public static final int NO = 0;
   public static final int YES = 1;
