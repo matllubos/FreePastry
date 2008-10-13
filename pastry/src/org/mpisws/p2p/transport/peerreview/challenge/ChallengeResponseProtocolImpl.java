@@ -46,7 +46,7 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
 import org.mpisws.p2p.transport.peerreview.audit.AuditProtocol;
-import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
@@ -229,7 +229,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
         
           HashPolicy hashPolicy = new ChallengeHashPolicy<Identifier>(flags, challenge.originator, peerreview.getIdSerializer());
           SimpleOutputBuffer sob = new SimpleOutputBuffer();
-          LogSnippit snippit;
+          LogSnippet snippit;
           if ((snippit = history.serializeRange(idxFrom, idxTo, hashPolicy)) != null) {
             ByteBuffer buf = sob.getByteBuffer();
             int size = buf.remaining();

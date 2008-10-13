@@ -51,12 +51,23 @@ public interface EvidenceTool<Handle, Identifier> extends PeerReviewConstants {
    * @param snippet
    * @return VALID|INVALID|CERT_MISSING, missingCertID 
    */
-  Tuple<Integer, Identifier> checkSnippet(LogSnippit snippet);
+  Tuple<Integer, Identifier> checkSnippet(LogSnippet snippet);
   int isAuthenticatorValid(Authenticator authenticator, Identifier subject);
   boolean checkSnippetSignatures(
-      LogSnippit snippet, long firstSeq, byte[] baseHash, Handle subjectHandle, 
+      LogSnippet snippet, long firstSeq, byte[] baseHash, Handle subjectHandle, 
       AuthenticatorStore<Identifier> authStoreOrNull, byte flags, byte[] keyNodeHash, long keyNodeMaxSeq);
-  boolean checkNoEntriesHashed(LogSnippit snippet, Collection<Short> typesToIgnore, int numTypesToIgnore);
-  void appendSnippetToHistory(LogSnippit snippet, long firstSeq, long skipEverythingBeforeSeq);
+  boolean checkNoEntriesHashed(LogSnippet snippet, Collection<Short> typesToIgnore, int numTypesToIgnore);
+  
+  /**
+   * This is called when (a) we have obtained a new log segment from some node,
+   * and (b) we are convinced that the log segment is genuine. We append any new
+   * entries to our local copy of the node's log. Note that sometimes AUDIT
+   * responses overlap (e.g. because a checkpoint has been requested), so it's
+   * perfectly legitimate to sometimes receive certain entries twice. Also, it's
+   * okay if some of the entries are hashed.
+   * 
+   * Added to history
+   */
+//  void appendSnippetToHistory(LogSnippit snippet, long firstSeq, long skipEverythingBeforeSeq);
 
 }

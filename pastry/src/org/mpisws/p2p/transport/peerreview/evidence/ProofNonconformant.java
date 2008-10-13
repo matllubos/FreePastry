@@ -34,33 +34,60 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.infostore;
+package org.mpisws.p2p.transport.peerreview.evidence;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.util.Serializer;
 
-public interface PeerInfoStore<Handle, Identifier> extends PeerReviewConstants {
-  public void setStatusChangeListener(StatusChangeListener<Identifier> listener);
-  public void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence) throws IOException;
-  public void addEvidence(Identifier localIdentifier, Identifier subject, long evidenceSeq, Evidence evidence, Handle interestedParty) throws IOException;
-  public void addResponse(Identifier originator, Identifier subject, long timestamp, Evidence response) throws IOException;
-  int getStatus(Identifier id);
-  public void notifyStatusChanged(Identifier subject, int value);
-  public boolean setStorageDirectory(File file) throws IOException;
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
+/**
+PROOF_NONCONFORMANT
+byte type = PROOF_NONCONFORMANT
+authenticator to
+nodehandle myHandle
+long long firstSeq
+hash baseHash
+[snippet; see RESP_AUDIT]  
+*/
+
+public class ProofNonconformant<Handle extends RawSerializable> implements PeerReviewConstants, Evidence {
+  /**
+   * Authenticates the last entry in the snippet
+   */
+  Authenticator to;
+  Handle myHandle;
+  LogSnippet snippet;
   
-  public Evidence getEvidence(Identifier originator, Identifier subject, long timestamp) throws IOException;
-
-  public EvidenceRecord<Handle, Identifier> statFirstUnansweredChallenge(Identifier subject);
-  public EvidenceRecord<Handle, Identifier> statProof(Identifier subject);
+  public ProofNonconformant(Authenticator to, Handle myHandle,
+      LogSnippet snippet) {
+    this.to = to;
+    this.myHandle = myHandle;
+    this.snippet = snippet;
+  }
   
-  public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp);
-  public EvidenceRecord<Handle, Identifier> findEvidence(Identifier originator, Identifier subject, long timestamp, boolean create);
+  public short getEvidenceType() {
+    return PROOF_NONCONFORMANT;
+  }
+  
+  public ProofNonconformant(InputBuffer buf, Serializer<Handle> serializer, int hashSize, int signatureSize) throws IOException {
+    to = new Authenticator(buf, hashSize, signatureSize);
+    myHandle = serializer.deserialize(buf);
+    snippet = new LogSnippet(buf,hashSize);    
+  }
+   
+  public void serialize(OutputBuffer buf) throws IOException {
+    to.serialize(buf);
+    myHandle.serialize(buf);
+    snippet.serialize(buf);    
+  }
 
-  public Authenticator getLastCheckedAuth(Identifier id);
-  public void setLastCheckedAuth(Identifier id, Authenticator auth);
-
-  public String getHistoryName(Identifier subject);
+  
 }

@@ -87,6 +87,7 @@ import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.ResponseMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
+import org.mpisws.p2p.transport.peerreview.replay.playback.VerifierFactory;
 import org.mpisws.p2p.transport.peerreview.statement.Statement;
 import org.mpisws.p2p.transport.peerreview.statement.StatementProtocolImpl;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
@@ -704,6 +705,14 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
   public EvidenceTool<Handle, Identifier> getEvidenceTool() {
     return evidenceTool;
+  }
+
+  public SecureHistoryFactory getHistoryFactory() {
+    return historyFactory;
+  }
+  
+  public VerifierFactory<Handle, Identifier> getVerifierFactory() {
+    return null;
   }
   
 }

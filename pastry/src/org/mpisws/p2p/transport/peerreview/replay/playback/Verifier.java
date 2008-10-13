@@ -34,7 +34,7 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.transport.peerreview.replay.playback;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -45,6 +45,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
+import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
+import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
@@ -60,7 +62,7 @@ public abstract class Verifier<Identifier> implements PeerReviewConstants {
 
   protected Identifier localHandle;
   protected SecureHistory history;
-  PeerReviewCallback<?, Identifier> app;
+  PeerReviewCallback<Identifier, ?> app;
   int numEventCallbacks;
   boolean foundFault;
   
@@ -85,7 +87,7 @@ public abstract class Verifier<Identifier> implements PeerReviewConstants {
   boolean useLogHashFlag = false;
 //  boolean useBeginInitialized = true;
   
-  public Verifier(
+  public Verifier(      
       Serializer<Identifier> serializer, 
       HashProvider hashProv,
       SecureHistory history, 
@@ -162,6 +164,9 @@ public abstract class Verifier<Identifier> implements PeerReviewConstants {
 
   protected abstract void socketException(int socketId, IOException ioe) throws IOException;
 
+  public void setApplication(PeerReviewCallback<Identifier,?> app) {
+    this.app = app;
+  }
   
   /**
    * Fetch the next log entry, or set the EOF flag 

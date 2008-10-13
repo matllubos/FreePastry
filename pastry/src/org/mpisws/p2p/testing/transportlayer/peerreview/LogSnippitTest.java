@@ -40,8 +40,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
-import org.mpisws.p2p.transport.peerreview.audit.SnippitEntry;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
+import org.mpisws.p2p.transport.peerreview.audit.SnippetEntry;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -60,7 +60,7 @@ public class LogSnippitTest {
     Random r = new Random();
     int hashSize = r.nextInt(100)+1;
 
-    ArrayList<SnippitEntry> list = new ArrayList<SnippitEntry>(100);
+    ArrayList<SnippetEntry> list = new ArrayList<SnippetEntry>(100);
 //    list.add(new SnippitEntry((byte)4,5L,false,new byte[117]));
 //    list.add(new SnippitEntry((byte)4,6L,false,new byte[253]));
     
@@ -105,23 +105,23 @@ public class LogSnippitTest {
         seq++; // increment the index
       } else if (seqChoice < 8) {
         // increment it to the next round timestamp
-        seq-= (seq%SnippitEntry.NUM_INDEXES);
-        seq+= SnippitEntry.NUM_INDEXES;
+        seq-= (seq%SnippetEntry.NUM_INDEXES);
+        seq+= SnippetEntry.NUM_INDEXES;
       } else {
         seq+=r.nextInt(Integer.MAX_VALUE);
       }
-      list.add(new SnippitEntry((byte)r.nextInt(256),seq,isHash,content));
+      list.add(new SnippetEntry((byte)r.nextInt(256),seq,isHash,content));
     }
     
     byte[] baseHash = new byte[hashSize];
     r.nextBytes(baseHash);
-    LogSnippit ls = new LogSnippit(baseHash,list);
+    LogSnippet ls = new LogSnippet(baseHash,list);
     
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     ls.serialize(sob);
     
     SimpleInputBuffer sib = new SimpleInputBuffer(sob.getBytes());
-    LogSnippit ls2 = new LogSnippit(sib,hashSize);
+    LogSnippet ls2 = new LogSnippet(sib,hashSize);
     
     if (ls2.equals(ls)) {
       System.out.println("success");

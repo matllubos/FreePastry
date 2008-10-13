@@ -47,11 +47,13 @@ import org.mpisws.p2p.transport.peerreview.audit.EvidenceTool;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
+import org.mpisws.p2p.transport.peerreview.replay.playback.VerifierFactory;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
@@ -135,5 +137,8 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
    */
   public boolean verify(Identifier subject, Authenticator auth);
   public RandomSource getRandomSource();
+  
+  public SecureHistoryFactory getHistoryFactory();
+  public VerifierFactory<Handle, Identifier> getVerifierFactory();
 
 }

@@ -42,8 +42,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
-import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
-import org.mpisws.p2p.transport.peerreview.audit.SnippitEntry;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
+import org.mpisws.p2p.transport.peerreview.audit.SnippetEntry;
 import org.mpisws.p2p.transport.util.FileInputBuffer;
 import org.mpisws.p2p.transport.util.FileOutputBuffer;
 
@@ -328,7 +328,7 @@ public class SecureHistoryImpl implements SecureHistory {
    * Note that the idxFrom and idxTo arguments are record numbers, NOT sequence numbers.
    * Use findSeqOrHigher() to get these if only sequence numbers are known. 
    */
-  public LogSnippit serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy) throws IOException {
+  public LogSnippet serializeRange(long idxFrom, long idxTo, HashPolicy hashPolicy) throws IOException {
     assert((0 < idxFrom) && (idxFrom <= idxTo) && (idxTo < numEntries));
 
     IndexEntry ie;
@@ -339,7 +339,7 @@ public class SecureHistoryImpl implements SecureHistory {
     indexFile.seek((idxFrom-1) * indexFactory.getSerializedSize());
     ie = indexFactory.build(indexFile);
     byte[] baseHash = ie.nodeHash;
-    ArrayList<SnippitEntry> entryList = new ArrayList<SnippitEntry>();
+    ArrayList<SnippetEntry> entryList = new ArrayList<SnippetEntry>();
     
     // Go through entries one by one    
     long previousSeq = -1;
@@ -376,11 +376,11 @@ public class SecureHistoryImpl implements SecureHistory {
         buffer = ie.contentHash;
       }        
 
-      SnippitEntry entry = new SnippitEntry((byte)ie.type, ie.seq, hashIt, buffer);
+      SnippetEntry entry = new SnippetEntry((byte)ie.type, ie.seq, hashIt, buffer);
       entryList.add(entry);
     }
     
-    return new LogSnippit(baseHash,entryList);
+    return new LogSnippet(baseHash,entryList);
   }
   
   public boolean serializeRange2(long idxFrom, long idxTo, HashPolicy hashPolicy, OutputBuffer outfile) throws IOException {
@@ -474,7 +474,7 @@ public class SecureHistoryImpl implements SecureHistory {
 //        *(unsigned short*)&header[bytesInHeader] = (unsigned short) ie.sizeInFile;
 //        bytesInHeader += sizeof(unsigned short);
       } else {
-//  panic("A");    
+//  throw new RuntimeException("A");    
         outfile.writeByte((byte)0xFE);
         //header[bytesInHeader++] = 0xFE;
         outfile.writeLong(ie.sizeInFile);
@@ -597,4 +597,65 @@ public class SecureHistoryImpl implements SecureHistory {
     }   
     return -1;
   }
+
+  public void appendSnippetToHistory(LogSnippet snippet) throws IOException {
+    long currentSeq = snippet.getFirstSeq();
+    for (SnippetEntry sEntry : snippet.entries) {
+//    int readptr = 0;
+//
+//    while (readptr < snippetLen) {
+//      unsigned char entryType = snippet[readptr++];
+//      unsigned char sizeCode = snippet[readptr++];
+//      unsigned int entrySize = sizeCode;
+//      bool entryIsHashed = (sizeCode == 0);
+//
+//      if (sizeCode == 0xFF) {
+//        entrySize = *(unsigned short*)&snippet[readptr];
+//        readptr += 2;
+//      } else if (sizeCode == 0xFE) {
+//        entrySize = *(unsigned int*)&snippet[readptr];
+//        readptr += 4;
+//      } else if (sizeCode == 0) {
+//        entrySize = transport->getHashSizeBytes();
+//      }
+
+//  #ifdef VERBOSE
+//      plog(3, "Entry type %d, size=%d, seq=%lld", entryType, entrySize, currentSeq);
+//  #endif
+
+      if (currentSeq > getLastSeq()) {
+        if (!setNextSeq(currentSeq))
+          throw new RuntimeException("Audit: Cannot set history sequence number?!?");
+          
+        if (!sEntry.isHash) {
+          appendEntry(sEntry.type, true, ByteBuffer.wrap(sEntry.content));
+        } else { 
+          appendHash(sEntry.type, sEntry.content);
+        }
+      } else {
+//  #ifdef VERBOSE
+//        if (currentSeq >= skipEverythingBeforeSeq)
+//          warning("Skipped entry because it is already present (top=%lld)", history->getLastSeq());
+//  #endif
+      }
+
+//      readptr += entrySize;
+//      if (readptr == snippetLen) // legitimate end
+//        break;
+
+//      unsigned char dseqCode = snippet[readptr++];
+//      if (dseqCode == 0xFF) {
+//        currentSeq = *(long long*)&snippet[readptr];
+//        readptr += sizeof(long long);
+//      } else if (dseqCode == 0) {
+//        currentSeq ++;
+//      } else {
+//        currentSeq = currentSeq - (currentSeq%1000) + (dseqCode * 1000LL);
+//      }
+//
+//      assert(readptr <= snippetLen);
+    }
+  }
+  
+  
 }

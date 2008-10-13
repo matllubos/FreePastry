@@ -38,7 +38,6 @@ package org.mpisws.p2p.transport.peerreview.replay.playback;
 
 import java.io.IOException;
 
-import org.mpisws.p2p.transport.peerreview.Verifier;
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;

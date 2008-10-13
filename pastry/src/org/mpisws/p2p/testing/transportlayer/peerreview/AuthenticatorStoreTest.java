@@ -63,10 +63,12 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
+import org.mpisws.p2p.transport.peerreview.replay.playback.VerifierFactory;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.Continuation;
@@ -381,6 +383,16 @@ public class AuthenticatorStoreTest {
     }
 
     public RandomSource getRandomSource() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public SecureHistoryFactory getHistoryFactory() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public VerifierFactory<MyInetSocketAddress, MyInetSocketAddress> getVerifierFactory() {
       // TODO Auto-generated method stub
       return null;
     }

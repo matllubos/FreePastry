@@ -65,21 +65,21 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  * @author Jeff Hoye
  *
  */
-public class LogSnippit {
+public class LogSnippet {
   byte[] baseHash;
-  List<SnippitEntry> entries;
+  public List<SnippetEntry> entries;
   
-  public LogSnippit(byte[] baseHash, List<SnippitEntry> entries) {
+  public LogSnippet(byte[] baseHash, List<SnippetEntry> entries) {
     this.baseHash = baseHash;
     this.entries = entries;
   }
   
   public boolean equals(Object o) {
-    LogSnippit that = (LogSnippit)o;
+    LogSnippet that = (LogSnippet)o;
     if (!Arrays.equals(this.baseHash, that.baseHash)) return false;
     if (this.entries.size() != that.entries.size()) return false;
-    Iterator<SnippitEntry> i1 = this.entries.iterator();
-    Iterator<SnippitEntry> i2 = that.entries.iterator();
+    Iterator<SnippetEntry> i1 = this.entries.iterator();
+    Iterator<SnippetEntry> i2 = that.entries.iterator();
     while(i1.hasNext()) {
       if (!i1.next().equals(i2.next())) return false;
     }
@@ -90,27 +90,35 @@ public class LogSnippit {
     buf.writeLong(entries.get(0).seq);
     buf.writeByte((byte)0);
     buf.write(baseHash, 0, baseHash.length);
-    Iterator<SnippitEntry> i = entries.iterator();
-    SnippitEntry prev = i.next();
+    Iterator<SnippetEntry> i = entries.iterator();
+    SnippetEntry prev = i.next();
     prev.serialize(buf, null);
     while(i.hasNext()) {
-      SnippitEntry cur = i.next();
+      SnippetEntry cur = i.next();
       cur.serialize(buf, prev);
       prev = cur;
     }
   }
   
-  public LogSnippit(InputBuffer buf, int hashSize) throws IOException {
+  public LogSnippet(InputBuffer buf, int hashSize) throws IOException {
     long firstSeq = buf.readLong();
     if (buf.readByte() != 0) throw new IOException("Unexpected extInfo");
     baseHash = new byte[hashSize];
     buf.read(baseHash);
-    entries = new ArrayList<SnippitEntry>();
-    SnippitEntry prev = new SnippitEntry(buf,firstSeq,hashSize);
+    entries = new ArrayList<SnippetEntry>();
+    SnippetEntry prev = new SnippetEntry(buf,firstSeq,hashSize);
     entries.add(prev);
     while(buf.bytesRemaining() == -2 || buf.bytesRemaining() > 0) {
-      prev = new SnippitEntry(buf,hashSize,prev);
+      prev = new SnippetEntry(buf,hashSize,prev);
       entries.add(prev);
     }      
+  }
+
+  public long getFirstSeq() {
+    return entries.get(0).seq;
+  }
+
+  public Object getExtInfo() {
+    return null;
   }
 }

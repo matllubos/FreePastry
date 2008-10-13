@@ -40,6 +40,8 @@ import java.util.Collection;
 
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
 import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
+import org.mpisws.p2p.transport.peerreview.replay.playback.Verifier;
 
 import rice.Destructable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
@@ -58,4 +60,5 @@ public interface PeerReviewCallback<Handle, Identifier> extends Destructable, Id
   void getWitnesses(Identifier subject, WitnessListener<Handle, Identifier> callback);
 //  PeerReviewCallback getReplayInstance(ReplayWrapper replayWrapper);
   public Collection<Handle> getMyWitnessedNodes();
+  PeerReviewCallback<Handle, Identifier> getReplayInstance(Verifier<Handle> v);
 }

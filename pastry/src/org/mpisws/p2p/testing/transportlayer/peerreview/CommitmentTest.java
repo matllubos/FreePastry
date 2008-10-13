@@ -91,6 +91,7 @@ import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
+import org.mpisws.p2p.transport.peerreview.replay.playback.Verifier;
 import org.mpisws.p2p.transport.table.UnknownValueException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
@@ -350,6 +351,13 @@ public class CommitmentTest {
 
 
     public Collection<HandleImpl> getMyWitnessedNodes() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+
+    public PeerReviewCallback<HandleImpl, org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.IdImpl> getReplayInstance(
+        Verifier<HandleImpl> v) {
       // TODO Auto-generated method stub
       return null;
     }

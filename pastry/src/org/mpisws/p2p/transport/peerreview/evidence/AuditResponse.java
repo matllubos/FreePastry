@@ -39,7 +39,7 @@ package org.mpisws.p2p.transport.peerreview.evidence;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -57,9 +57,9 @@ RESP_AUDIT
  */
 public class AuditResponse<Handle extends RawSerializable> implements Evidence {
   Handle logOwner;
-  LogSnippit logSnippit;
+  LogSnippet logSnippit;
   
-  public AuditResponse(Handle logOwner, LogSnippit logSnippit) {
+  public AuditResponse(Handle logOwner, LogSnippet logSnippit) {
     this.logOwner = logOwner;
     this.logSnippit = logSnippit;
   }
@@ -72,8 +72,12 @@ public class AuditResponse<Handle extends RawSerializable> implements Evidence {
     
   }
 
-  public LogSnippit getLogSnippit() {
+  public LogSnippet getLogSnippit() {
     throw new RuntimeException("implement");
+  }
+
+  public Handle getLogOwner() {
+    return logOwner;
   }
 
 }

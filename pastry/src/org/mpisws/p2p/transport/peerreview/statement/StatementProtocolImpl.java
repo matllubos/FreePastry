@@ -45,7 +45,7 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
-import org.mpisws.p2p.transport.peerreview.audit.LogSnippit;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
@@ -166,7 +166,7 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
    * Also, it checks if the snipped is malformed in any way. That way, the other
    * protocols won't have to do all these sanity checks later.
    */
-  int checkSnippetAndRequestCertificates(LogSnippit snippet, IncompleteStatementInfo<Handle, Identifier> idx) {
+  int checkSnippetAndRequestCertificates(LogSnippet snippet, IncompleteStatementInfo<Handle, Identifier> idx) {
     Tuple<Integer,Identifier> ret = peerreview.getEvidenceTool().checkSnippet(snippet);
     int code = ret.a();
     Identifier missingCertID = ret.b();

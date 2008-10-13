@@ -57,16 +57,16 @@ import rice.p2p.util.MathUtils;
  * @author Jeff Hoye
  *
  */
-public class SnippitEntry {
+public class SnippetEntry {
 
-  byte type;
-  long seq;
-  boolean isHash = false;
-  byte[] content; // may be a hash
+  public byte type;
+  public long seq;
+  public boolean isHash = false;
+  public byte[] content; // may be a hash
   
   public static final int NUM_INDEXES = 1000000;
   
-  public SnippitEntry(byte type, long seq, boolean isHash, byte[] content) {
+  public SnippetEntry(byte type, long seq, boolean isHash, byte[] content) {
     if (content.length == 0) throw new IllegalArgumentException("Content can't be zero-length");
     this.type = type;
     this.seq = seq;
@@ -74,19 +74,19 @@ public class SnippitEntry {
     this.content = content;
   }
   
-  public SnippitEntry(InputBuffer buf, int hashSize, SnippitEntry prev) throws IOException {
+  public SnippetEntry(InputBuffer buf, int hashSize, SnippetEntry prev) throws IOException {
     this(buf, decodeSeq(buf, prev.seq), hashSize);
   }
   
   public boolean equals(Object o) {
-    SnippitEntry that = (SnippitEntry)o;
+    SnippetEntry that = (SnippetEntry)o;
     if (this.type != that.type) return false;
     if (this.seq != that.seq) return false;
     if (this.isHash != that.isHash) return false;
     return Arrays.equals(content, content);
   }
   
-  public SnippitEntry(InputBuffer buf, long seq, int hashSize) throws IOException {
+  public SnippetEntry(InputBuffer buf, long seq, int hashSize) throws IOException {
 //    System.out.println(","+seq);
     type = buf.readByte();
     this.seq = seq;
@@ -101,7 +101,7 @@ public class SnippitEntry {
     buf.read(content);
   }
   
-  public void serialize(OutputBuffer buf, SnippitEntry prev) throws IOException {
+  public void serialize(OutputBuffer buf, SnippetEntry prev) throws IOException {
     if (prev != null) {
       encodeSeq(buf, prev.seq);
     }

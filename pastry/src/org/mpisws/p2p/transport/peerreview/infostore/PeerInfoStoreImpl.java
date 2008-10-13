@@ -298,7 +298,7 @@ public class PeerInfoStoreImpl<Handle, Identifier> implements
     return rec.getLastCheckedAuth();
   }
 
-  void setLastCheckedAuth(Identifier id, Authenticator auth) {
+  public void setLastCheckedAuth(Identifier id, Authenticator auth) {
     PeerInfoRecord<Handle, Identifier> rec = find(id, true);
     try {
       rec.setLastCheckedAuth(auth, directory, stringTranslator);

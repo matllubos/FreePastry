@@ -37,27 +37,35 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.audit;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
+import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
-import org.mpisws.p2p.transport.peerreview.Verifier;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
 import org.mpisws.p2p.transport.peerreview.evidence.ChallengeAudit;
 import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocol;
+import org.mpisws.p2p.transport.peerreview.evidence.ProofNonconformant;
+import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
+import org.mpisws.p2p.transport.peerreview.replay.playback.Verifier;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.MathUtils;
 import rice.selector.TimerTask;
 import static org.mpisws.p2p.transport.peerreview.Basics.renderStatus;
 
@@ -80,7 +88,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
   /**
    * Here we remember calls to investigate() that have not been resolved yet 
    */
-  Map<Handle,ActiveAuditInfo<Handle, Identifier>> activeAudit = new HashMap<Handle, ActiveAuditInfo<Handle,Identifier>>();
+  Map<Identifier,ActiveAuditInfo<Handle, Identifier>> activeAudit = new HashMap<Identifier, ActiveAuditInfo<Handle,Identifier>>();
 
   int logDownloadTimeout;
   boolean replayEnabled;
@@ -148,7 +156,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
 
     ActiveAuditInfo<Handle, Identifier> aai = new ActiveAuditInfo<Handle, Identifier>(
         target,replayAnswer,false,peerreview.getTime()+logDownloadTimeout,auditRequest,evidenceSeq,null);
-    activeAudit.put(target,aai);
+    activeAudit.put(peerreview.getIdentifierExtractor().extractIdentifier(target),aai);
     
     /* Send the AUDIT challenge to the target node */
 
@@ -366,26 +374,27 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
    * necessary certificates (because of the statement protocol).
    */
   public void processAuditResponse(Identifier subject, long timestamp, AuditResponse<Handle> response) {
-//    LogSnippit snippet = response.getLogSnippit();
-//    ActiveAuditInfo<Handle, Identifier> aai = findOngoingAudit(subject, timestamp);
+    try {
+    LogSnippet snippet = response.getLogSnippit();
+    ActiveAuditInfo<Handle, Identifier> aai = findOngoingAudit(subject, timestamp);
     
     /* Read the header of the log snippet */
     
 //    int reqHdrSize = 1+peerreview->getIdentifierSizeBytes()+sizeof(long long);
-//    ChallengeAudit challengeAudit = aai.request.challenge;
-//    long fromSeq = challengeAudit.from.getSeq();
-//    Authenticator toAuthenticator = challengeAudit.to; 
-//    long toSeq = toAuthenticator.getSeq();
-//    unsigned char currentNodeHash[hashSizeBytes];
-//    unsigned char initialNodeHash[hashSizeBytes];
+    ChallengeAudit challengeAudit = (ChallengeAudit)aai.request.challenge;
+    long fromSeq = challengeAudit.from.getSeq();
+    Authenticator toAuthenticator = challengeAudit.to; 
+    long toSeq = toAuthenticator.getSeq();
+    byte[] currentNodeHash = snippet.baseHash;
+    byte[] initialNodeHash = snippet.baseHash;
 //    int readptr = 0;
-//    Handle subjectHandle = peerreview->readNodeHandle(snippet, (unsigned int*)&readptr, snippetLen);
-//    long long currentSeq = readLongLong(snippet, (unsigned int*)&readptr);
+    Handle subjectHandle = response.getLogOwner(); //peerreview->readNodeHandle(snippet, (unsigned int*)&readptr, snippetLen);
+    long currentSeq = snippet.getFirstSeq();
 //    int extInfoLen = snippet[readptr++];
 //    unsigned char *extInfo = &snippet[readptr];
 //    readptr += extInfoLen;
 //    
-//    long long initialCurrentSeq = currentSeq;
+    long initialCurrentSeq = currentSeq;
 //    memcpy(currentNodeHash, &snippet[readptr], hashSizeBytes);
 //    memcpy(initialNodeHash, &snippet[readptr], hashSizeBytes);
 //    readptr += hashSizeBytes;
@@ -395,43 +404,41 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
     
     /* Retrieve all the authenticators we have for this node */
     
-//    unsigned char *auths = NULL;
-//    int numAuths = authInStore->numAuthenticatorsFor(subject, fromSeq, toSeq);
-//    if (numAuths > 0) {
-//      auths = (unsigned char*) malloc(numAuths * authenticatorSizeBytes);
-//      int ret = authInStore->getAuthenticators(subject, auths, numAuths * authenticatorSizeBytes, fromSeq, toSeq);
-//      assert(ret == (numAuths * authenticatorSizeBytes));
-//    }
+    List<Authenticator> auths = authInStore.getAuthenticators(subject, fromSeq, toSeq);
 
-//    /* We have to keep a small fraction of the authenticators around so we can later
-//       answer AUTHREQ messages from other nodes. */
-//
-//    plog(2, "Checking of AUDIT response against %d authenticators [%lld-%lld]", numAuths, fromSeq, toSeq);
-//
+    /* We have to keep a small fraction of the authenticators around so we can later
+       answer AUTHREQ messages from other nodes. */
+
+    if (logger.level <= Logger.FINE) logger.log("Checking of AUDIT response against "+auths.size()+" authenticators ["+fromSeq+"-"+toSeq+"]");
+
 //    unsigned char mrauth[authenticatorSizeBytes];
-//    long long mostRecentAuthInCache = -1;
-//    if (authCacheStore->getMostRecentAuthenticator(subject, mrauth)) 
-//      mostRecentAuthInCache = *(long long*)&mrauth;
-//      
-//    for (int i=numAuths-1; i>=0; i--) {
-//      unsigned char *thisAuth = &auths[authenticatorSizeBytes * i];
-//      long long thisSeq = *(long long*)thisAuth;
-//      if (thisSeq > (mostRecentAuthInCache + (AUTH_CACHE_INTERVAL*1000LL))) {
-//        plog(3, "Caching auth %lld for %s", thisSeq, subject->render(buf1));
-//        authCacheStore->addAuthenticator(subject, thisAuth);
-//        mostRecentAuthInCache = thisSeq;
-//      }
-//    }
-//
-//    /* We read the entries one by one, calculating the node hashes as we go, and we compare
-//       the node hashes to our (sorted) list of authenticators. If there is any divergence,
-//       we have proof that the node is misbehaving. */
-//
-//    int authPtr = numAuths - 1;
-//    unsigned char *nextAuth = (authPtr<0) ? NULL : &auths[authPtr*authenticatorSizeBytes];
-//    long long nextAuthSeq = (authPtr<0) ? -1 : *(long long*)nextAuth;
-//    plog(3, "  NA #%d %lld", authPtr, nextAuthSeq);
-//
+    long mostRecentAuthInCache = -1;
+    Authenticator mrauth = authCacheStore.getMostRecentAuthenticator(subject);
+    if (mrauth != null) { 
+      mostRecentAuthInCache = mrauth.getSeq();
+    }
+      
+    for (int i=auths.size()-1; i>=0; i--) {
+      Authenticator thisAuth = auths.get(i);
+      long thisSeq = thisAuth.getSeq();
+      if (thisSeq > (mostRecentAuthInCache + (AUTH_CACHE_INTERVAL*1000L))) {
+        if (logger.level <= Logger.FINER) logger.log( "Caching auth "+thisSeq+" for "+subject);
+        authCacheStore.addAuthenticator(subject, thisAuth);
+        mostRecentAuthInCache = thisSeq;
+      }
+    }
+
+    /* We read the entries one by one, calculating the node hashes as we go, and we compare
+       the node hashes to our (sorted) list of authenticators. If there is any divergence,
+       we have proof that the node is misbehaving. */
+
+    int authPtr = auths.size() - 1;
+    Authenticator nextAuth = (authPtr<0) ? null : auths.get(authPtr);
+    long nextAuthSeq = (authPtr<0) ? -1 : nextAuth.getSeq();
+    if (logger.level <= Logger.FINER) logger.log("  NA #"+authPtr+" "+nextAuthSeq);
+
+    for (SnippetEntry sEntry : snippet.entries) {
+      currentSeq = sEntry.seq;
 //    while (readptr < snippetLen) {
 //      unsigned char entryType = snippet[readptr++];
 //      unsigned char sizeCode = snippet[readptr++];
@@ -448,172 +455,151 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
 //        entrySize = hashSizeBytes;
 //      }
 //
-//      vlog(3, "[2] Entry type %d, size=%d, seq=%lld%s", entryType, entrySize, currentSeq, entryIsHashed ? " (hashed)" : "");
+      if (logger.level <= Logger.FINER) logger.log("[2] Entry type "+sEntry.type+", size="+sEntry.content.length+
+          ", seq="+currentSeq+(sEntry.isHash ? " (hashed)" : ""));
+
+      byte[] entry = sEntry.content;
+
+      /* Calculate the node hash from the entry */
+
+      byte[] contentHash;
+      if (sEntry.isHash) {
+        contentHash = sEntry.content;
+        assert(contentHash.length == peerreview.getHashSizeInBytes());
+      } else {
+        contentHash = transport.hash(ByteBuffer.wrap(entry));
+      }
+      
+      currentNodeHash = transport.hash(currentSeq, sEntry.type, currentNodeHash, contentHash);
+      if (logger.level <= Logger.FINEST) logger.log("NH ["+MathUtils.toBase64(currentNodeHash)+"]");
+
+      /* If we have an authenticator for this entry (matched by sequence number), the hash in the
+         authenticator must match the node hash. If not, we have a proof of misbehavior. */
+
+      if (authPtr >= 0) {
+        if (currentSeq == nextAuthSeq) {
+          
+          if (!Arrays.equals(currentNodeHash, nextAuth.getHash())) {
+            if (logger.level <= Logger.WARNING) logger.log("Found a divergence for node <"+subject+">'s authenticator #"+currentSeq);
+            throw new RuntimeException("Cannot file PROOF yet");
+          }
+
+          if (logger.level <= Logger.FINEST) logger.log("Authenticator verified OK");
+
+          authPtr --;
+          nextAuth = (authPtr<0) ? null : auths.get(authPtr);
+          nextAuthSeq = (authPtr<0) ? -1 : nextAuth.getSeq();
+          if (logger.level <= Logger.FINEST) logger.log( "NA #"+authPtr+" "+ nextAuthSeq);
+        } else if (currentSeq > nextAuthSeq) {
+          if (logger.level <= Logger.WARNING) logger.log("Node "+subject+" is trying to hide authenticator #"+nextAuthSeq);
+          throw new RuntimeException("Cannot file PROOF yet");
+        }
+      }
+    }
+
+    /* All these authenticators for this segment checked out okay. We don't need them any more,
+       so we can remove them from our local store. */
 //
-//      const unsigned char *entry = &snippet[readptr];
-//
-//      /* Calculate the node hash from the entry */
-//
-//      unsigned char contentHash[hashSizeBytes];
-//      if (entryIsHashed)
-//        memcpy(contentHash, entry, hashSizeBytes);
-//      else
-//        transport->hash(contentHash, entry, entrySize);
-//
-//      transport->hash(currentNodeHash, (const unsigned char*)&currentSeq, sizeof(currentSeq), &entryType, sizeof(entryType), currentNodeHash, hashSizeBytes, contentHash, hashSizeBytes);
-//
-//      char buf1[256];
-//      vlog(4, "NH [%s]", renderBytes(currentNodeHash, hashSizeBytes, buf1));
-//
-//      /* If we have an authenticator for this entry (matched by sequence number), the hash in the
-//         authenticator must match the node hash. If not, we have a proof of misbehavior. */
-//
-//      if (authPtr >= 0) {
-//        if (currentSeq == nextAuthSeq) {
-//          if (memcmp(currentNodeHash, &nextAuth[sizeof(long long)], hashSizeBytes)) {
-//            warning("Found a divergence for node <%08X>'s authenticator #%lld", subject, currentSeq);
-//            panic("Cannot file PROOF yet");
-//          }
-//
-//          plog(4,"Authenticator verified OK");
-//
-//          authPtr --;
-//          nextAuth = (authPtr<0) ? NULL : &auths[authPtr*authenticatorSizeBytes];
-//          nextAuthSeq = (authPtr<0) ? -1 : *(long long*)nextAuth;
-//          plog(4, "NA #%d %lld", authPtr, nextAuthSeq);
-//        } else if (currentSeq > nextAuthSeq) {
-//          warning("Node %s is trying to hide authenticator #%lld", subject->render(buf1), nextAuthSeq);
-//          panic("Cannot file PROOF yet");
-//        }
-//      }
-//
-//      readptr += entrySize;
-//      if (readptr == snippetLen) // legitimate end
-//        break;
-//
-//      unsigned char dseqCode = snippet[readptr++];
-//      if (dseqCode == 0xFF) {
-//        currentSeq = *(long long*)&snippet[readptr];
-//        readptr += sizeof(long long);
-//      } else if (dseqCode == 0) {
-//        currentSeq ++;
-//      } else {
-//        currentSeq = currentSeq - (currentSeq%1000) + (dseqCode * 1000LL);
-//      }
-//
-//      assert(readptr <= snippetLen);
-//    }
-//
-//    /* All these authenticators for this segment checked out okay. We don't need them any more,
-//       so we can remove them from our local store. */
-//
-//    plog(2, "All authenticators in range [%lld,%lld] check out OK; flushing", fromSeq, toSeq);
+    if (logger.level <= Logger.FINE) logger.log( "All authenticators in range ["+fromSeq+","+toSeq+"] check out OK; flushing");
 //  #warning must check the old auths; flush from fromSeq only!
-//    authInStore->flushAuthenticatorsFor(subject, LONG_LONG_MIN, toSeq);
-//    if (auths)
-//      free(auths);
-//
-//    /* Find out if the log snipped is 'useful', i.e. if we can append it to our local history */
-//
-//    char namebuf[200];
-//    infoStore->getHistoryName(subject, namebuf);
-//    SecureHistory *subjectHistory = SecureHistory::open(namebuf, "w", transport);
-//    
-//    bool logCanBeAppended = false;
-//    long long topSeq = 0;
-//    if (subjectHistory) {
-//      subjectHistory->getTopLevelEntry(NULL, &topSeq);
-//      if (topSeq >= fromSeq) 
-//        logCanBeAppended = true;
-//    } else {
-//      logCanBeAppended = true;
-//    }
-//
-//    /* If it should not be replayed (e.g. because it was retrieved during an investigation), 
-//       we stop here */
-//    
-//    if (!aai.shouldBeReplayed/* && !logCanBeAppended*/) {
-//      plog(2, "This audit response does not need to be replayed; discarding");
-//      delete subjectHandle;
-//      if (subjectHistory)
-//        delete subjectHistory;
-//      terminateAudit(idx);
-//      return;
-//    }
-//
-//    /* Add entries to our local copy of the subject's history */
-//    
-//    plog(2, "Adding entries in snippet to log '%s'", namebuf);
-//    if (!logCanBeAppended)
-//      panic("Cannot append snippet to local copy of node's history; there appears to be a gap (%lld-%lld)!", topSeq, fromSeq);
-//    
-//    if (!subjectHistory) {
-//      subjectHistory = SecureHistory::create(namebuf, initialCurrentSeq-1, initialNodeHash, transport);
-//      if (!subjectHistory)
-//        panic("Cannot create subject history: '%s'", namebuf);
-//    }
-//    
-//    long long firstNewSeq = currentSeq - (currentSeq%1000) + 1000;
-//    EvidenceTool::appendSnippetToHistory(&snippet[initialReadPtr], snippetLen - initialReadPtr, subjectHistory, peerreview, initialCurrentSeq, firstNewSeq);
+    authInStore.flushAuthenticatorsFor(subject, Long.MIN_VALUE, toSeq);
+
+    /* Find out if the log snipped is 'useful', i.e. if we can append it to our local history */
+
+    String namebuf = infoStore.getHistoryName(subject);
+    SecureHistory subjectHistory = peerreview.getHistoryFactory().open(namebuf, "w");
+    
+    boolean logCanBeAppended = false;
+    long topSeq = 0;
+    if (subjectHistory != null) {
+      topSeq = subjectHistory.getTopLevelEntry().getSeq();
+      if (topSeq >= fromSeq) 
+        logCanBeAppended = true;
+    } else {
+      logCanBeAppended = true;
+    }
+
+    /* If it should not be replayed (e.g. because it was retrieved during an investigation), 
+       we stop here */
+    
+    if (!aai.shouldBeReplayed/* && !logCanBeAppended*/) {
+      if (logger.level <= Logger.FINE) logger.log( "This audit response does not need to be replayed; discarding");
+      terminateAudit(aai.target);
+      return;
+    }
+
+    /* Add entries to our local copy of the subject's history */
+    
+    if (logger.level <= Logger.FINE) logger.log( "Adding entries in snippet to log '"+namebuf+"'");
+    if (!logCanBeAppended)
+      throw new RuntimeException("Cannot append snippet to local copy of node's history; there appears to be a gap ("+topSeq+"-"+fromSeq+")!");
+    
+    if (subjectHistory == null) {
+      subjectHistory = peerreview.getHistoryFactory().create(namebuf, initialCurrentSeq-1, initialNodeHash);
+      if (subjectHistory == null)
+        throw new RuntimeException("Cannot create subject history: '"+namebuf+"'");
+    }
+    
+    long firstNewSeq = currentSeq - (currentSeq%1000000) + 1000000;
+    subjectHistory.appendSnippetToHistory(snippet); //, , peerreview, initialCurrentSeq, firstNewSeq);
 //  #warning need to verify older authenticators against history
-//
-//    if (replayEnabled) {
-//
-//      /* We need to replay the log segment, so let's find the last checkpoint */
-//
-//      unsigned char markerTypes[1] = { EVT_CHECKPOINT };
-//      int lastCheckpointIdx = subjectHistory->findLastEntry(markerTypes, 1, fromSeq);
-//
-//      plog(4, "LastCheckpointIdx=%d (up to %lld)", lastCheckpointIdx, fromSeq);
-//
-//      if (lastCheckpointIdx < 0) {
-//        warning("Cannot find last checkpoint in subject history %s", namebuf);
-//    //    if (subjectHistory->getNumEntries() >= MAX_ENTRIES_BETWEEN_CHECKPOINTS)
-//    //      panic("TODO: Must generate proof due to lack of checkpoints");
-//
-//        delete subjectHistory;
-//        delete subjectHandle;
-//        terminateAudit(idx);
-//        return;
-//      }
-//
-//      /* Create a Verifier instance and get a Replay instance from the application */
-//
-//      Verifier *verifier = new Verifier(peerreview, subjectHistory, subjectHandle, signatureSizeBytes, hashSizeBytes, lastCheckpointIdx, fromSeq/1000, extInfo, extInfoLen);
-//      PeerReviewCallback *replayApp = app->getReplayInstance(verifier);
-//      if (!replayApp)
-//        panic("Application returned NULL when getReplayInstance() was called");
-//
-//      verifier->setApplication(replayApp);
-//
-//      aai.verifier = verifier;
-//      aai.isReplaying = true;
-//
-//      plog(1, "REPLAY ============================================");
-//      plog(2, "Node being replayed: %s", subjectHandle->render(buf1));
-//      plog(2, "Range in log       : %lld-%lld", fromSeq, toSeq);
-//
-//      /* Do the replay */
-//
-//      while (verifier->makeProgress());
-//
-//      bool verifiedOK = verifier->verifiedOK(); 
-//      plog(1, "END OF REPLAY: %s =================", verifiedOK ? "VERIFIED OK" : "VERIFICATION FAILED");
-//
-//      /* If there was a divergence, we have a proof of misbehavior */
-//
-//      if (!verifiedOK) {
+
+    if (replayEnabled) {
+
+      /* We need to replay the log segment, so let's find the last checkpoint */
+
+      short[] markerTypes = new short[]{ EVT_CHECKPOINT };
+      long lastCheckpointIdx = subjectHistory.findLastEntry(markerTypes, fromSeq);
+
+      if (logger.level <= Logger.FINEST) logger.log( "LastCheckpointIdx="+lastCheckpointIdx+" (up to "+fromSeq+")");
+
+      if (lastCheckpointIdx < 0) {
+        if (logger.level <= Logger.WARNING) logger.log("Cannot find last checkpoint in subject history "+namebuf);
+    //    if (subjectHistory->getNumEntries() >= MAX_ENTRIES_BETWEEN_CHECKPOINTS)
+    //      throw new RuntimeException("TODO: Must generate proof due to lack of checkpoints");
+
+        terminateAudit(subjectHandle);
+        return;
+      }
+
+      /* Create a Verifier instance and get a Replay instance from the application */
+
+      Verifier<Handle> verifier = peerreview.getVerifierFactory().getVerifier(subjectHistory, subjectHandle, lastCheckpointIdx, fromSeq/1000, snippet.getExtInfo());
+      PeerReviewCallback<Handle, Identifier> replayApp = peerreview.getApp().getReplayInstance(verifier);
+      if (replayApp == null) throw new RuntimeException("Application returned NULL when getReplayInstance() was called");
+
+      verifier.setApplication(replayApp);
+
+      aai.verifier = verifier;
+      aai.isReplaying = true;
+
+      if (logger.level <= Logger.INFO) logger.log( "REPLAY ============================================");
+      if (logger.level <= Logger.FINE) logger.log( "Node being replayed: "+subjectHandle);
+      if (logger.level <= Logger.FINE) logger.log( "Range in log       : "+fromSeq+"-"+toSeq);
+
+      /* Do the replay */
+
+      while (verifier.makeProgress());
+
+      boolean verifiedOK = verifier.verifiedOK(); 
+      if (logger.level <= Logger.INFO) logger.log( "END OF REPLAY: %s ================="+ (verifiedOK ? "VERIFIED OK" : "VERIFICATION FAILED"));
+
+      /* If there was a divergence, we have a proof of misbehavior */
+
+      if (!verifiedOK) {
 //        FILE *outfile = tmpfile();
-//        if (!subjectHistory->serializeRange(lastCheckpointIdx, subjectHistory->getNumEntries()-1, NULL, outfile))
-//          panic("Cannot serialize range for PROOF");
-//
+        snippet = subjectHistory.serializeRange(lastCheckpointIdx, subjectHistory.getNumEntries()-1, null);
+        if (snippet == null) throw new RuntimeException("Cannot serialize range for PROOF "+subject);
+
 //        int snippet2size = ftell(outfile);
-//        long long lastCheckpointSeq;
-//        if (!subjectHistory->statEntry(lastCheckpointIdx, &lastCheckpointSeq, NULL, NULL, NULL, NULL))
-//          panic("Cannot stat checkpoint entry");
-//
-//        warning("Audit revealed a protocol violation; filing evidence (snippet from %lld)", lastCheckpointSeq);
-//
+        long lastCheckpointSeq;
+        IndexEntry foo = subjectHistory.statEntry(lastCheckpointIdx);
+        if (foo == null) throw new RuntimeException("Cannot stat checkpoint entry");
+        lastCheckpointSeq = foo.getSeq();
+        
+        if (logger.level <= Logger.WARNING) logger.log("Audit revealed a protocol violation; filing evidence (snippet from "+lastCheckpointSeq+")");
+
+        ProofNonconformant<Handle> proof = new ProofNonconformant<Handle>(toAuthenticator,subjectHandle,snippet);
 //        unsigned int maxProofLen = 1+authenticatorSizeBytes+MAX_HANDLE_SIZE+sizeof(long long)+snippet2size;
 //        unsigned char *proof = (unsigned char*)malloc(maxProofLen);
 //        unsigned int proofLen = 0;
@@ -626,23 +612,34 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
 //        proofLen += snippet2size;
 //        assert(proofLen <= maxProofLen);
 //
-//        long long evidenceSeq = peerreview->getEvidenceSeq();
-//        infoStore->addEvidence(transport->getLocalHandle()->getIdentifier(), subject, evidenceSeq, proof, proofLen);
-//        peerreview->sendEvidenceToWitnesses(subject, evidenceSeq, proof, proofLen);
-//      } 
-//    }
-//
-//    /* Terminate the audit, and remember the last authenticator for further reference */
-//
-//    plog(2, "Audit completed; terminating");  
-//    infoStore->setLastCheckedAuth(aai.target->getIdentifier(), &aai.request[reqHdrSize+2+authenticatorSizeBytes]);
-//    terminateAudit(idx);
-//    delete subjectHandle;
-//    delete subjectHistory;
+        long evidenceSeq = peerreview.getEvidenceSeq();
+        infoStore.addEvidence(peerreview.getLocalId(), subject, evidenceSeq, proof);
+        peerreview.sendEvidenceToWitnesses(subject, evidenceSeq, proof);
+      } 
+    }
+
+    /* Terminate the audit, and remember the last authenticator for further reference */
+
+    if (logger.level <= Logger.FINE) logger.log( "Audit completed; terminating");  
+    infoStore.setLastCheckedAuth(peerreview.getIdentifierExtractor().extractIdentifier(aai.target), ((ChallengeAudit)aai.request.challenge).to);
+    terminateAudit(aai.target);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
   }
 
-  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq) {
+  public ActiveAuditInfo<Handle, Identifier> findOngoingAudit(Identifier subject, long evidenceSeq) {
+    ActiveAuditInfo<Handle, Identifier> ret = activeAudit.get(subject);
+      if (!ret.isReplaying && ret.evidenceSeq == evidenceSeq) {
+        return ret;
+    }
     return null;
   }
 
+  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq) {
+    
+    ActiveAuditInfo<Handle, Identifier> aii = findOngoingAudit(subject, evidenceSeq);
+    if (aii == null) return null;
+    return aii.request.challenge;
+  }
 }
