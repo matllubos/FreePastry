@@ -50,7 +50,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
 
   protected Identifier identifier;
   protected int socketId;
-  protected Verifier<Identifier> verifier;
+  protected ReplayVerifier<Identifier> verifier;
   boolean closed = false;
   boolean outputShutdown = false;
   Map<String, Object> options;
@@ -62,7 +62,7 @@ public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRe
    * @param socketId
    * @param verifier
    */
-  public ReplaySocket(Identifier identifier, int socketId, Verifier<Identifier> verifier, Map<String, Object> options) {
+  public ReplaySocket(Identifier identifier, int socketId, ReplayVerifier<Identifier> verifier, Map<String, Object> options) {
     this.identifier = identifier;
     this.socketId = socketId;
     this.verifier = verifier;

@@ -34,7 +34,7 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.replay.playback;
+package org.mpisws.p2p.transport.peerreview.replay;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -58,7 +58,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public abstract class Verifier<Identifier> implements PeerReviewConstants {
+public abstract class VerifierImpl<Identifier> implements PeerReviewConstants {
 
   protected Identifier localHandle;
   protected SecureHistory history;
@@ -87,7 +87,7 @@ public abstract class Verifier<Identifier> implements PeerReviewConstants {
   boolean useLogHashFlag = false;
 //  boolean useBeginInitialized = true;
   
-  public Verifier(      
+  public VerifierImpl(      
       Serializer<Identifier> serializer, 
       HashProvider hashProv,
       SecureHistory history, 

@@ -37,7 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.audit;
 
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
-import org.mpisws.p2p.transport.peerreview.replay.playback.Verifier;
+import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
@@ -50,12 +50,12 @@ public class ActiveAuditInfo<Handle, Identifier extends RawSerializable> {
   public long currentTimeout;
   public ChallengeMessage<Identifier> request;
   public long evidenceSeq;
-  public Verifier<Handle> verifier;
+  public Verifier<Handle, Identifier> verifier;
   
   public ActiveAuditInfo(Handle target, boolean shouldBeReplayed,
       boolean isReplaying, long currentTimeout,
       ChallengeMessage<Identifier> request, long evidenceSeq,
-      Verifier<Handle> verifier) {
+      Verifier<Handle, Identifier> verifier) {
     this.target = target;
     this.shouldBeReplayed = shouldBeReplayed;
     this.isReplaying = isReplaying;

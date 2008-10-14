@@ -69,7 +69,7 @@ import rice.p2p.util.MathUtils;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
-public class ReplayLayer<Identifier> extends Verifier<Identifier> implements 
+public class ReplayLayer<Identifier> extends ReplayVerifier<Identifier> implements 
   TransportLayer<Identifier, ByteBuffer> {
 
   TransportLayerCallback<Identifier, ByteBuffer> callback;

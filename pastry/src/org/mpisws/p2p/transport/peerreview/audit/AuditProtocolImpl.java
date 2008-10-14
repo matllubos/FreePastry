@@ -61,7 +61,7 @@ import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
-import org.mpisws.p2p.transport.peerreview.replay.playback.Verifier;
+import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
@@ -564,7 +564,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
 
       /* Create a Verifier instance and get a Replay instance from the application */
 
-      Verifier<Handle> verifier = peerreview.getVerifierFactory().getVerifier(subjectHistory, subjectHandle, lastCheckpointIdx, fromSeq/1000, snippet.getExtInfo());
+      Verifier<Handle, Identifier> verifier = peerreview.getVerifierFactory().getVerifier(subjectHistory, subjectHandle, lastCheckpointIdx, fromSeq/1000, snippet.getExtInfo());
       PeerReviewCallback<Handle, Identifier> replayApp = peerreview.getApp().getReplayInstance(verifier);
       if (replayApp == null) throw new RuntimeException("Application returned NULL when getReplayInstance() was called");
 

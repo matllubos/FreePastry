@@ -59,7 +59,7 @@ import rice.selector.TimerTask;
  *
  */
 public class ReplaySM extends SelectorManager {
-  Verifier verifier;
+  ReplayVerifier verifier;
   DirectTimeSource simTime;
   
   public ReplaySM(String instance, DirectTimeSource timeSource, LogManager log) {
@@ -68,7 +68,7 @@ public class ReplaySM extends SelectorManager {
     setSelect(false);
   }
   
-  public void setVerifier(Verifier v) {
+  public void setVerifier(ReplayVerifier v) {
     this.verifier = v;
   }
 

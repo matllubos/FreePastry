@@ -34,13 +34,16 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.replay.playback;
+package org.mpisws.p2p.transport.peerreview.replay;
 
-import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
-import org.mpisws.p2p.transport.peerreview.replay.Verifier;
+import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 
-import rice.p2p.commonapi.rawserialization.RawSerializable;
+public interface Verifier<Handle, Identifier> {
 
-public interface VerifierFactory<Handle extends RawSerializable, Identifier extends RawSerializable> {
-  public Verifier<Handle, Identifier> getVerifier(SecureHistory history, Handle localHandle, long firstEntryToReplay, long initialTime, Object extInfo);
+  public boolean makeProgress();
+
+  public boolean verifiedOK();
+  
+  public void setApplication(PeerReviewCallback<Handle, Identifier> app);
+
 }
