@@ -57,9 +57,6 @@ import org.mpisws.p2p.pki.x509.CATool;
 import org.mpisws.p2p.pki.x509.CAToolImpl;
 import org.mpisws.p2p.pki.x509.X509Serializer;
 import org.mpisws.p2p.pki.x509.X509SerializerImpl;
-import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.BogusApp;
-import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.HandleImpl;
-import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.IdImpl;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -94,7 +91,7 @@ import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
-import org.mpisws.p2p.transport.peerreview.replay.playback.Verifier;
+import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 import org.mpisws.p2p.transport.table.UnknownValueException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
@@ -331,13 +328,13 @@ public class CommitmentTestNoResponse {
       callback.notifyWitnessSet(subject, Collections.singletonList(carol.localHandle));
     }
 
-    public Collection<org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.HandleImpl> getMyWitnessedNodes() {
+    public Collection<HandleImpl> getMyWitnessedNodes() {
       // TODO Auto-generated method stub
       return null;
     }
 
-    public PeerReviewCallback<org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.HandleImpl, org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.IdImpl> getReplayInstance(
-        Verifier<org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.HandleImpl> v) {
+    public PeerReviewCallback<HandleImpl, IdImpl> getReplayInstance(
+        Verifier<HandleImpl, IdImpl> v) {
       // TODO Auto-generated method stub
       return null;
     }

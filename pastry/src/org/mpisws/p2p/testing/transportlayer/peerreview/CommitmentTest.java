@@ -91,7 +91,7 @@ import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
-import org.mpisws.p2p.transport.peerreview.replay.playback.Verifier;
+import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 import org.mpisws.p2p.transport.table.UnknownValueException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
@@ -356,12 +356,11 @@ public class CommitmentTest {
     }
 
 
-    public PeerReviewCallback<HandleImpl, org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.IdImpl> getReplayInstance(
-        Verifier<HandleImpl> v) {
+    public PeerReviewCallback<HandleImpl, IdImpl> getReplayInstance(
+        Verifier<HandleImpl, IdImpl> v) {
       // TODO Auto-generated method stub
       return null;
     }
-
   }
 
   static Map<HandleImpl, IdentityTransprotLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransprotLayerImpl<HandleImpl,IdImpl>>();
