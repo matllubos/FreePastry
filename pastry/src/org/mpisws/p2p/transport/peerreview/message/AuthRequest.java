@@ -34,26 +34,45 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.audit;
+package org.mpisws.p2p.transport.peerreview.message;
 
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import java.io.IOException;
+
+import org.mpisws.p2p.transport.util.Serializer;
+
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
- * Here we remember calls to investigate() that have not been resolved yet 
+ * MSG_AUTHREQ
+  byte type = MSG_AUTHREQ
+  long long timestamp
+  nodeID subject
+
+ * @author Jeff Hoye
+ *
  */
-public class ActiveInvestigationInfo<Handle> {
-  public Handle target;
-  public long since; // in nanoseconds
-  public long currentTimeout;
-  public Authenticator authFrom;
-  public Authenticator authTo;
+public class AuthRequest<Identifier extends RawSerializable> implements PeerReviewMessage {
+  public long timestamp;
+  public Identifier subject;
   
-  public ActiveInvestigationInfo(Handle target, long since,
-      long currentTimeout, Authenticator authFrom, Authenticator authTo) {
-    this.target = target;
-    this.since = since;
-    this.currentTimeout = currentTimeout;
-    this.authFrom = authFrom;
-    this.authTo = authTo;
+  public AuthRequest(long timestamp, Identifier subject) {
+    this.timestamp = timestamp;
+    this.subject = subject;
+  }
+  
+  public short getType() {
+    return MSG_AUTHREQ;
+  }
+
+  public AuthRequest(InputBuffer buf, Serializer<Identifier> serializer) throws IOException {
+    timestamp = buf.readLong();
+    subject = serializer.deserialize(buf);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    buf.writeLong(timestamp);
+    subject.serialize(buf);
   }
 }

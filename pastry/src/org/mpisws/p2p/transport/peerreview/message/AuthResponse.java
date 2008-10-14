@@ -34,26 +34,52 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.audit;
+package org.mpisws.p2p.transport.peerreview.message;
+
+import java.io.IOException;
 
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import org.mpisws.p2p.transport.util.Serializer;
+
+import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
- * Here we remember calls to investigate() that have not been resolved yet 
+ *MSG_AUTHRESP
+  byte type = MSG_AUTHRESP
+  nodeID subject
+  authenticator a1           // newest authenticator before timestamp in AUTHREQ
+  authenticator a2           // most recent authenticator
+ 
+ * @author Jeff Hoye
+ *
+ * @param <Identifier>
  */
-public class ActiveInvestigationInfo<Handle> {
-  public Handle target;
-  public long since; // in nanoseconds
-  public long currentTimeout;
+public class AuthResponse<Identifier extends RawSerializable> implements PeerReviewMessage {
+  public Identifier subject;
   public Authenticator authFrom;
   public Authenticator authTo;
   
-  public ActiveInvestigationInfo(Handle target, long since,
-      long currentTimeout, Authenticator authFrom, Authenticator authTo) {
-    this.target = target;
-    this.since = since;
-    this.currentTimeout = currentTimeout;
+  public AuthResponse(Identifier subject, Authenticator authFrom, Authenticator authTo) {
+    this.subject = subject;
     this.authFrom = authFrom;
     this.authTo = authTo;
+  }
+  
+  public short getType() {
+    return MSG_AUTHREQ;
+  }
+
+  public AuthResponse(InputBuffer buf, Serializer<Identifier> serializer, int hashSize, int signatureSize) throws IOException {
+    subject = serializer.deserialize(buf);
+    authFrom = new Authenticator(buf,hashSize,signatureSize);
+    authTo = new Authenticator(buf,hashSize,signatureSize);
+  }
+  
+  public void serialize(OutputBuffer buf) throws IOException {
+    subject.serialize(buf);
+    authFrom.serialize(buf);
+    authTo.serialize(buf);
   }
 }

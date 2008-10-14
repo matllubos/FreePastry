@@ -60,7 +60,10 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.message.AuthRequest;
+import org.mpisws.p2p.transport.peerreview.message.AuthResponse;
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
+import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 
 import rice.environment.logging.Logger;
@@ -83,7 +86,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
   /**
    * Here we remember calls to investigate() that have not been resolved yet 
    */
-  Map<Handle,ActiveInvestigationInfo<Handle>> activeInvestigation = new HashMap<Handle, ActiveInvestigationInfo<Handle>>();
+  Map<Identifier,ActiveInvestigationInfo<Handle>> activeInvestigation = new HashMap<Identifier, ActiveInvestigationInfo<Handle>>();
 
   /**
    * Here we remember calls to investigate() that have not been resolved yet 
@@ -228,7 +231,10 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
     }
     
     /* Make sure that makeProgressOnAudits() is called regularly */
-    
+    scheduleProgressTimer();
+  }
+
+  protected void scheduleProgressTimer() {
     if (progressTimer == null) {
       progressTimer = peerreview.getEnvironment().getSelectorManager().schedule(new TimerTask() {
 
@@ -236,9 +242,9 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
         public void run() {
           makeProgressTimerExpired();
         }}, peerreview.getTime() + PROGRESS_INTERVAL_MILLIS);
-    }    
+    }        
   }
-
+  
   /**
    * Called periodically to check if all audits have finished. An audit may not
    * finish if either (a) the target does not respond, or (b) the target's
@@ -636,10 +642,157 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
     return null;
   }
 
-  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq) {
-    
+  public Evidence statOngoingAudit(Identifier subject, long evidenceSeq) {    
     ActiveAuditInfo<Handle, Identifier> aii = findOngoingAudit(subject, evidenceSeq);
     if (aii == null) return null;
     return aii.request.challenge;
   }
+  
+  /* Handle an incoming datagram, which could be either a request for autheticators, or a response to such a request */
+
+  public void handleIncomingDatagram(Handle handle, PeerReviewMessage message) {
+    
+    switch (message.getType()) {
+      case MSG_AUTHREQ: { /* Request for authenticators */
+        AuthRequest<Identifier> request = (AuthRequest<Identifier>)message;
+        
+//        if (msglen == (int)(1+sizeof(long long)+peerreview->getIdentifierSizeBytes())) {
+
+          /* The request contains a timestamp T; we're being asked to return two authenticators,
+             one has to be older than T, and the other must be as recent as possible */
+          
+//          unsigned int pos = 1;
+//          long long since = readLongLong(message, &pos);
+//          Identifier *id = peerreview->readIdentifier(message, &pos, msglen);
+          if (logger.level <= Logger.INFO) logger.log("Received authenticator request for "+request.subject+" (since "+request.timestamp+")");
+          
+//          unsigned char response[1+peerreview->getIdentifierSizeBytes()+2*authenticatorSizeBytes];
+//          boolean canRespond = true;
+//          pos = 0;
+//          writeByte(response, &pos, MSG_AUTHRESP);
+//          id->write(response, &pos, sizeof(response));
+          
+          /* There are several places we might find 'old' authenticators. Check all of them,
+             and pick the authenticator that is closest to T */
+          
+//          unsigned char a1[authenticatorSizeBytes];
+          Authenticator a1 = authInStore.getLastAuthenticatorBefore(request.subject, request.timestamp);
+//          long long seq1 = *(long long*)&a1;
+//          unsigned char a2[authenticatorSizeBytes];
+          Authenticator a2 = authCacheStore.getLastAuthenticatorBefore(request.subject, request.timestamp);
+//          long long seq2 = *(long long*)&a2;
+//          unsigned char a3[authenticatorSizeBytes];
+          Authenticator a3 = authInStore.getOldestAuthenticator(request.subject);
+//          long long seq3 = *(long long*)&a3;
+          
+          Authenticator best = null;
+//          boolean haveBest = false;
+//          long seqBest = -1;
+          
+          if (a1 != null && (best == null || (!(best.getSeq()<request.timestamp) && (a1.getSeq()<request.timestamp)) || ((best.getSeq()<request.timestamp) && (a1.getSeq()<request.timestamp) && (best.getSeq()<a1.getSeq())))) {
+            best = a1;
+          }
+
+          if (a2 != null && (best == null || (!(best.getSeq()<request.timestamp) && (a2.getSeq()<request.timestamp)) || ((best.getSeq()<request.timestamp) && (a2.getSeq()<request.timestamp) && (best.getSeq()<a2.getSeq())))) {
+            best = a2;
+          }
+
+          if (a3 != null && (best == null || (!(best.getSeq()<request.timestamp) && (a3.getSeq()<request.timestamp)) || ((best.getSeq()<request.timestamp) && (a3.getSeq()<request.timestamp) && (best.getSeq()<a3.getSeq())))) {
+            best = a3;
+          }
+          
+//          if (best != null) {
+////            memcpy(&response[pos], best, authenticatorSizeBytes);
+//          } else {
+//            canRespond = false;
+//          }
+          
+          /* Recent authenticators can be found in two places; check both */
+          
+          Authenticator foo = authInStore.getMostRecentAuthenticator(request.subject);
+          if (foo == null) {
+            foo = authCacheStore.getMostRecentAuthenticator(request.subject);
+          }
+          
+//          pos += 2*authenticatorSizeBytes;
+//          assert(pos == sizeof(response));
+          
+          if (best != null && foo != null) {
+            AuthResponse<Identifier> response = new AuthResponse<Identifier>(request.subject,best,foo);
+            peerreview.transmit(handle, response, null, null);
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log("Cannot respond to this request; we don't have any authenticators for "+request.subject);
+          }
+        }
+        
+        break;
+      case MSG_AUTHRESP: { /* Response to a request for authenticators */
+        AuthResponse<Identifier> response = (AuthResponse<Identifier>)message;
+//        if (msglen == (int)(1+peerreview->getIdentifierSizeBytes()+2*authenticatorSizeBytes)) {
+//          unsigned int pos = 1;
+//          Identifier *id = peerreview->readIdentifier(message, &pos, msglen);
+//          unsigned char *authFrom = &message[pos];
+//          unsigned char *authTo = &message[pos+authenticatorSizeBytes];
+          if (logger.level <= Logger.FINE) logger.log("Received AUTHRESP(<"+response.subject+">, "+response.authFrom+".."+response.authTo+") from "+handle);
+
+//  #warning must check signatures here        
+          int idx = -1;
+          ActiveInvestigationInfo<Handle> investigation = activeInvestigation.get(response.subject);
+          if (idx >= 0) {
+            if (investigation.authFrom == null || (response.authFrom.getSeq()<investigation.authFrom.getSeq())) {
+              investigation.authFrom =  response.authFrom;
+            }
+            
+            if (investigation.authTo == null || (response.authTo.getSeq()>investigation.authTo.getSeq())) {
+              investigation.authTo = response.authTo;
+            }
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log("AUTH response does not match any ongoing investigations; ignoring");
+          }
+        }
+        
+        break;
+      default:
+        throw new RuntimeException("AuditProtocol cannot handle incoming datagram type #"+message.getType());
+    }
+  }
+
+  /**
+   * Starts an investigation by sending authenticator requests to all the
+   * witnesses. Most of them are (hopefully) going to respond; we're going to
+   * pick the authenticators that work best for us.
+   */
+  protected void sendInvestigation(ActiveInvestigationInfo<Handle> investigation) {
+    Identifier id = peerreview.getIdentifierExtractor().extractIdentifier(investigation.target);
+    AuthRequest<Identifier> request = new AuthRequest<Identifier>(investigation.since,id);
+   
+    evidenceTransferProtocol.sendMessageToWitnesses(id, request, null, null);
+  }
+
+  /**
+   * Start an investigation 
+   * since is in millis
+   */
+  public void investigate(Handle target, long since) {
+    Identifier id = peerreview.getIdentifierExtractor().extractIdentifier(
+        target);
+    ActiveInvestigationInfo<Handle> investigation = activeInvestigation.get(id);
+    if (investigation != null) {
+      if (since * 1000000 > investigation.since) {
+        if (logger.level <= Logger.FINE) logger.log("Skipping investigation request for " + target + " at "
+              + since + ", since an investigation at " + investigation.since + " is already ongoing");
+        return;
+      }
+
+      if (logger.level <= Logger.FINE)
+        logger.log("Extending existing investigation from "+ investigation.since + " to " + since * 1000000);
+      investigation.since = since * 1000000; /* log granularity */
+    } else {
+      investigation = new ActiveInvestigationInfo<Handle>(target, since * 1000000,
+          peerreview.getTime() + INVESTIGATION_INTERVAL_MILLIS, null, null);
+      activeInvestigation.put(id, investigation);
+    }
+    sendInvestigation(investigation);
+    scheduleProgressTimer();
+  }  
 }
