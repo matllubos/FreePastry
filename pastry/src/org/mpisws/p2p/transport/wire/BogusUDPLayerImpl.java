@@ -53,7 +53,7 @@ public class BogusUDPLayerImpl implements UDPLayer {
       Map<String, Object> options) {
     MessageRequestHandle<InetSocketAddress, ByteBuffer> ret = 
       new MessageRequestHandleImpl<InetSocketAddress, ByteBuffer>(destination, m, options);
-    if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, new IOException("This transport layer is bogus."));
+    if (deliverAckToMe != null) deliverAckToMe.sendFailed(ret, new IOException("UDP is disabled.  To use this feature, enable UDP in the WireTransportLayer constructor."));
     return ret;
   }
 
