@@ -123,4 +123,8 @@ public class IndexEntry {
   public String toString() {
     return "IE{#"+seq+" t:"+type+" s:"+sizeInFile+"}";
   }
+
+  public boolean isHashed() {
+    return sizeInFile < 0;
+  }
 }

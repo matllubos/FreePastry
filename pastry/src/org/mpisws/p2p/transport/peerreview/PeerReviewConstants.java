@@ -45,19 +45,23 @@ public interface PeerReviewConstants {
   public static final short EVT_CHECKPOINT = 4;                 /* Checkpoint of the state machine */
   public static final short EVT_INIT = 5;                    /* State machine is (re)started */
   public static final short EVT_SENDSIGN = 6;                   /* Signature on outgoing message */
-  
-  public static final short EVT_SOCKET_OPEN_INCOMING = 9; 
-  public static final short EVT_SOCKET_OPEN_OUTGOING = 10; 
-  public static final short EVT_SOCKET_OPENED_OUTGOING = 18; 
-  public static final short EVT_SOCKET_EXCEPTION = 19; 
-  public static final short EVT_SOCKET_CLOSE = 11; 
-  public static final short EVT_SOCKET_SHUTDOWN_OUTPUT = 20; 
-  public static final short EVT_SOCKET_CLOSED = 12; 
-  public static final short EVT_SOCKET_CAN_READ = 13; 
-  public static final short EVT_SOCKET_CAN_WRITE = 14; 
-  public static final short EVT_SOCKET_CAN_RW = 15; 
-  public static final short EVT_SOCKET_READ = 16; 
-  public static final short EVT_SOCKET_WRITE = 17;   
+  public static final short EVT_VRF = 7;                         /* New Si value in the VRF */
+  public static final short EVT_CHOOSE_Q = 8;                           /* Choose Q array in VRF */
+  public static final short EVT_CHOOSE_RAND = 9;                        /* Choose randomness in VRF */
+  public static final short EVT_MAX_RESERVED = EVT_CHOOSE_RAND;    /* User defined events start here */
+
+  public static final short EVT_SOCKET_OPEN_INCOMING = 30; 
+  public static final short EVT_SOCKET_OPEN_OUTGOING = 31; 
+  public static final short EVT_SOCKET_OPENED_OUTGOING = 32; 
+  public static final short EVT_SOCKET_EXCEPTION = 33; 
+  public static final short EVT_SOCKET_CLOSE = 34; 
+  public static final short EVT_SOCKET_SHUTDOWN_OUTPUT = 35; 
+  public static final short EVT_SOCKET_CLOSED = 36; 
+  public static final short EVT_SOCKET_CAN_READ = 37; 
+  public static final short EVT_SOCKET_CAN_WRITE = 38; 
+  public static final short EVT_SOCKET_CAN_RW = 39; 
+  public static final short EVT_SOCKET_READ = 40; 
+  public static final short EVT_SOCKET_WRITE = 41;   
   
   public static final short EVT_MIN_SOCKET_EVT = EVT_SOCKET_OPEN_INCOMING;
   public static final short EVT_MAX_SOCKET_EVT = EVT_SOCKET_SHUTDOWN_OUTPUT;

@@ -36,15 +36,23 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.replay;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
-public interface Verifier<Handle, Identifier> extends PeerReviewConstants {
+import org.mpisws.p2p.transport.MessageCallback;
+import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 
-  public boolean makeProgress();
+public class VerifierMRH<Handle> extends MessageRequestHandleImpl<Handle, ByteBuffer> {
 
-  public boolean verifiedOK();
-  
-  public void setApplication(PeerReviewCallback<Handle, Identifier> app);
+  public MessageCallback<Handle, ByteBuffer> callback;
+
+  public VerifierMRH(Handle i, ByteBuffer m, MessageCallback<Handle, ByteBuffer> callback, Map<String, Object> options) {
+    super(i, m, options);
+    this.callback = callback;
+  }
+
+  public void ack() {
+    if (callback != null) callback.ack(this);
+  }
 
 }
