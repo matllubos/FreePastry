@@ -51,13 +51,10 @@ import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
-import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.logging.Logger;
@@ -83,7 +80,7 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
   PeerReviewCallback<Handle, Identifier> app;
   boolean foundFault;
   
-  long nextEventIndex;
+  int nextEventIndex;
   IndexEntry next;
   InputBuffer nextEvent;
   
@@ -194,48 +191,10 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
     return next;
   }
   
-  /**
-   * Callback when a message has arrived.
-   * 
-   * @param from
-   * @param msg
-   * @throws IOException
-   */
-//  protected abstract void receive(Handle from, ByteBuffer msg) throws IOException;
-  
-  /**
-   * Callback when a socket comes in from a remote node.
-   * 
-   * @param from
-   * @param socketId
-   * @throws IOException
-   */
-//  protected abstract void incomingSocket(Handle from, int socketId) throws IOException;
-  
-  /**
-   * Callback when a socket is ready to read/write.
-   * 
-   * Note that the simulated node should have already registered for this event, even though it is
-   * not logged.  If the node is not registred for the event, it is an error.
-   * 
-   * @param socketId
-   * @param canRead
-   * @param canWrite
-   * @throws IOException
-   */
-//  protected abstract void socketIO(int socketId, boolean canRead, boolean canWrite) throws IOException;
-  
-//  protected abstract void socketOpened(int socketId) throws IOException;
-
-//  protected abstract void socketException(int socketId, IOException ioe) throws IOException;
-
   public void setApplication(PeerReviewCallback<Handle,Identifier> app) {
     this.app = app;
   }
-  
-  
-
-  
+    
   /**
    * This binds specific event types to one of the handlers 
    */
@@ -372,79 +331,76 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
         fetchNextEvent();
         break;
       case EVT_CHECKPOINT : /* Verify CHECKPOINTs */
-//        if (!initialized) {
-//          if (!next.isHashed()) {
-//          
-//            /* If the state machine hasn't been initialized yet, we can use this checkpoint */
-//          
-//            initialized = true;
-//            if (!app.loadCheckpoint(nextEvent, next.getSizeInFile())) {
-//              if (logger.level <= Logger.WARNING) logger.log("Cannot load checkpoint");
-//              foundFault = true;
-//            }
-//          } else {
-//            if (logger.level <= Logger.WARNING) logger.log("Replay: Initial checkpoint is hashed; marking as invalid");
-//            foundFault = true;
-//          }
-//        } else {
-//        
-//          /* Ask the state machine to do a checkpoint now ... */
-//        
+        if (!initialized) {
+          if (!next.isHashed()) {
+          
+            /* If the state machine hasn't been initialized yet, we can use this checkpoint */
+          
+            initialized = true;
+            
+            if (!app.loadCheckpoint(nextEvent)) {
+              if (logger.level <= Logger.WARNING) logger.log("Cannot load checkpoint");
+              foundFault = true;
+            }
+          } else {
+            if (logger.level <= Logger.WARNING) logger.log("Replay: Initial checkpoint is hashed; marking as invalid");
+            foundFault = true;
+          }
+        } else {
+        
+          /* Ask the state machine to do a checkpoint now ... */
+        
 //          int maxlen = 1048576*4;
-//          unsigned char *buf = (unsigned char *)malloc(maxlen);
-//          int actualCheckpointSize = app->storeCheckpoint(buf, maxlen);
-//
-//          /* ... and compare it to the contents of the CHECKPOINT entry */
-//
-//          if (!next.isHashed()) {
-//            if (actualCheckpointSize != nextEventSize) {
-//              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint has different size (expected %d bytes, but got %d); marking as invalid", nextEventSize, actualCheckpointSize);
-//              plog(2, "Expected:");
-//              transport->dump(2, nextEvent, nextEventSize);
-//              plog(2, "Found:");
-//              transport->dump(2, buf, actualCheckpointSize);
-//              foundFault = true;
-//              free(buf);
-//              return false;
-//            }
-//          
-//            if (memcmp(buf, nextEvent, nextEventSize) != 0) {
-//              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint does not match");
-//              plog(2, "Expected:");
-//              transport->dump(2, nextEvent, nextEventSize);
-//              plog(2, "Found:");
-//              transport->dump(2, buf, nextEventSize);
-//
-//              foundFault = true;
-//              free(buf);
-//              return false;
-//            }
-//          } else {
-//            if (nextEventSize != transport.getHashSizeBytes()) {
-//              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed but has the wrong length?!?");
-//              foundFault = true;
-//              free(buf);
-//              return false;
-//            }
-//          
+          SimpleOutputBuffer buf = new SimpleOutputBuffer();
+          app.storeCheckpoint(buf);
+          int actualCheckpointSize = buf.getWritten();
+                    
+          /* ... and compare it to the contents of the CHECKPOINT entry */
+
+          if (!next.isHashed()) {
+            if (actualCheckpointSize != next.getSizeInFile()) {
+              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint has different size (expected "+next.getSizeInFile()+" bytes, but got "+actualCheckpointSize+"); marking as invalid");
+              if (logger.level <= Logger.FINE) logger.log( "Expected:"+nextEvent);
+              if (logger.level <= Logger.FINE) logger.log( "Found:"+actualCheckpointSize);
+              foundFault = true;
+              return false;
+            }
+          
+            
+            // compare the checkpoints
+            byte[] bar = new byte[actualCheckpointSize];
+            nextEvent.read(bar);
+            
+            if (!Arrays.equals(bar, buf.getBytes())) {
+              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint does not match");
+              if (logger.level <= Logger.FINE) logger.log("Expected:"+next.getSizeInFile());
+              if (logger.level <= Logger.FINE) logger.log("Found:"+buf.getWritten());
+
+              foundFault = true;
+              return false;
+            }
+          } else {
+            if (next.getSizeInFile() != transport.getHashSizeBytes()) {
+              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed but has the wrong length?!?");
+              foundFault = true;
+              return false;
+            }
+          
 //            unsigned char checkpointHash[transport.getHashSizeBytes()];
-//            hash(checkpointHash, buf, actualCheckpointSize);
-//            if (memcmp(checkpointHash, nextEvent, transport.getHashSizeBytes()) != 0) {
-//              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed, but does not match hash value in the log");
-//              foundFault = true;
-//              free(buf);
-//              return false;
-//            }
-//
-//            vlog(4, "Hashed checkpoint is OK");
-//            history->upgradeHashedEntry(nextEventIndex, buf, actualCheckpointSize);
-//          }
-//          
-//          free(buf);
-//        }
-//          
-//        fetchNextEvent();
-//        break;
+            byte[] checkpointHash = transport.hash(buf.getByteBuffer());
+            if (!Arrays.equals(checkpointHash, next.getContentHash())) {
+              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed, but does not match hash value in the log");
+              foundFault = true;
+              return false;
+            }
+
+            if (logger.level <= Logger.FINEST) logger.log( "Hashed checkpoint is OK");
+            history.upgradeHashedEntry(nextEventIndex, buf.getByteBuffer());
+          }
+        }
+          
+        fetchNextEvent();
+        break;
       case EVT_INIT: /* State machine is reinitialized; issue upcall */
         initialized = true;
 //        app->init();
