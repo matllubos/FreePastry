@@ -251,6 +251,21 @@ public class MathUtils {
     return result;
   }
 
+  public static short byteArrayToShort(byte[] input) {
+    return byteArrayToShort(input,0);
+  }
+  
+  public static short byteArrayToShort(byte[] input, int offset) {
+    input = correctLength(input, offset+2);
+
+    short result;
+    result  = (short)((input[offset+0] & 0xFF) << 8);
+    result |= (short)((input[offset+1] & 0xFF));
+
+    return result;
+  }
+
+
   /**
    * Utility method for converting a long into a byte[]
    *
