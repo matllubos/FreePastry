@@ -66,7 +66,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * This protocol collects authenticators from incoming messages and, once in a
  * while, batches them together and sends them to the witnesses.
  */
-public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements PeerReviewConstants {
+public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements AuthenticatorPushProtocol<Handle, Identifier> {
 
   static final int MAX_SUBJECTS_PER_WITNESS = 110;
   static final int MAX_WITNESSES_PER_SUBJECT = 110;
@@ -79,12 +79,8 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
   AuthenticatorStore<Identifier> authInStore;
   AuthenticatorStore<Identifier> authPendingStore;
   PeerInfoStore<Handle, Identifier> infoStore;
-  int authenticatorSizeBytes;
-  int signatureSizeBytes;
-  int hashSizeBytes;
   PeerReview<Handle, Identifier> peerreview;
   IdentityTransport<Handle, Identifier> transport;
-  PeerReviewCallback<Handle, Identifier> app;
   EvidenceTransferProtocol<Handle, Identifier> evidenceTransferProtocol;
   boolean probabilistic;
   double pXmit;
@@ -96,19 +92,15 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
   public AuthenticatorPushProtocolImpl(
       PeerReview<Handle, Identifier> peerreview, AuthenticatorStore<Identifier> inStore, 
       AuthenticatorStore<Identifier> outStore, AuthenticatorStore<Identifier> pendingStore, 
-      IdentityTransport<Handle, Identifier> transport, PeerReviewCallback<Handle, Identifier> app, 
-      PeerInfoStore<Handle, Identifier> infoStore, int hashSizeBytes, 
+      IdentityTransport<Handle, Identifier> transport, 
+      PeerInfoStore<Handle, Identifier> infoStore,
       EvidenceTransferProtocol<Handle, Identifier> evidenceTransferProtocol, Environment env) {
     this.authInStore = inStore;
     this.authOutStore = outStore;
     this.authPendingStore = pendingStore;
     this.transport = transport;
-    this.app = app;
     this.infoStore = infoStore;
-    this.signatureSizeBytes = transport.getSignatureSizeBytes();
-    this.hashSizeBytes = hashSizeBytes;
     this.peerreview = peerreview;
-    this.authenticatorSizeBytes = 8 + signatureSizeBytes + hashSizeBytes;
     this.evidenceTransferProtocol = evidenceTransferProtocol;
     this.probabilistic = false;
     this.pXmit = 1.0;
@@ -148,7 +140,7 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
    * NOTE: in the c++ impl, this was done via peerreview, now it's done via 
    * a continuation.
    */
-  protected void continuePush(Map<Identifier, Collection<Handle>> subjects) {
+  public void continuePush(Map<Identifier, Collection<Handle>> subjects) {
 
     if (logger.level <= Logger.FINE) logger.log("Continuing authenticator push with "+subjects.size()+" subjects");
 

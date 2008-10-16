@@ -44,6 +44,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -57,6 +58,9 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.audit.AuditProtocol;
 import org.mpisws.p2p.transport.peerreview.audit.AuditProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.audit.EvidenceTool;
+import org.mpisws.p2p.transport.peerreview.audit.EvidenceToolImpl;
+import org.mpisws.p2p.transport.peerreview.authpush.AuthenticatorPushProtocol;
+import org.mpisws.p2p.transport.peerreview.authpush.AuthenticatorPushProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocol;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
@@ -83,6 +87,9 @@ import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStoreImpl;
 import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
 import org.mpisws.p2p.transport.peerreview.message.AccusationMessage;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
+import org.mpisws.p2p.transport.peerreview.message.AuthPushMessage;
+import org.mpisws.p2p.transport.peerreview.message.AuthRequest;
+import org.mpisws.p2p.transport.peerreview.message.AuthResponse;
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.ResponseMessage;
@@ -122,8 +129,8 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   protected IdentityTransport<Handle, Identifier> transport;
 
   // strategies for management of Generics
-  protected Serializer<Identifier> idSerializer;
   protected Serializer<Handle> handleSerializer;
+  protected Serializer<Identifier> idSerializer;
   protected IdentifierExtractor<Handle, Identifier> identifierExtractor;
   protected IdStrTranslator<Identifier> stringTranslator;
   protected EvidenceSerializer evidenceSerializer;
@@ -142,10 +149,12 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   protected PeerInfoStore<Handle, Identifier> infoStore;
   protected SecureHistoryFactory historyFactory;
   protected SecureHistory history;
+  protected VerifierFactory<Handle, Identifier> verifierFactory;
 
   // protocols
   protected CommitmentProtocol<Handle, Identifier> commitmentProtocol;
   protected EvidenceTransferProtocol<Handle, Identifier> evidenceTransferProtocol;
+  protected AuthenticatorPushProtocol<Handle, Identifier> authPushProtocol;
   protected AuditProtocol<Handle, Identifier> auditProtocol;
   protected ChallengeResponseProtocol<Handle, Identifier> challengeProtocol;
   protected StatementProtocolImpl<Handle, Identifier> statementProtocol;
@@ -196,107 +205,53 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
 
-  public static String getStatusString(int status) {
-    switch(status) {
-    case STATUS_EXPOSED:
-      return "exposed";
-    case STATUS_TRUSTED:
-      return "trusted";
-    case STATUS_SUSPECTED:
-      return "suspected";
+  /* Gets a fresh, unique sequence number for evidence */
+  long nextEvidenceSeq = 0L;
+  public long getEvidenceSeq() {
+    if (nextEvidenceSeq < getTime()) {
+      nextEvidenceSeq = getTime();
     }
-    return "unknown status:"+status;
+    return nextEvidenceSeq++;
   }
+
+  /* PeerReview only updates its internal clock when it returns to the main loop, but not
+  in between (e.g. while it is handling messages). When the clock needs to be
+  updated, this function is called. */
+
+  protected void updateLogTime() {
+    long now = env.getTimeSource().currentTimeMillis();
   
-  public void notifyStatusChange(final Identifier id, final int newStatus) {
-//    char buf1[256];
-    if (logger.level <= Logger.INFO) logger.log("Status change: <"+id+"> becomes "+getStatusString(newStatus));
-//    logger.logException("Status change: <"+id+"> becomes "+getStatusString(newStatus),new Exception("Stack Trace"));
-    challengeProtocol.notifyStatusChange(id, newStatus);
-    commitmentProtocol.notifyStatusChange(id, newStatus);
-    
-    // let pr finish first
-    env.getSelectorManager().schedule(new TimerTask() {    
-      public void run() {
-        callback.notifyStatusChange(id, newStatus);
-      }    
-    }, 3);
-    
+    if (now > lastLogEntry) {
+      if (!history.setNextSeq(now * 1000000))
+        panic("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
+        
+      lastLogEntry = now;
+    }
   }
-  
-  public void init(String dirname) throws IOException {    
-    File dir = new File(dirname);
-    if (!dir.exists()) {
-      if (!dir.mkdirs()) {
-        throw new IllegalStateException("Cannot open PeerReview directory: "+dir.getAbsolutePath());
-      }
-    }
-    if (!dir.isDirectory()) throw new IllegalStateException("Cannot open PeerReview directory: "+dir.getAbsolutePath());
-    
-    File namebuf = new File(dir,"peers");
-    
-    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport, stringTranslator, authenticatorSerialilzer, evidenceSerializer, env);
-    infoStore.setStatusChangeListener(this);
 
-    /* Open history */
+  /* Called by applications to log some application-specific event, such as PAST_GET. */
 
-    String historyName = dirname+"/local";
-    try {
-      this.history = historyFactory.open(historyName, "w");
-    } catch (IOException ioe) {
-      this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());      
-    }
-    
+  void logEvent(short type, ByteBuffer entry) throws IOException {
+    assert(initialized && (type > EVT_MAX_RESERVED));
     updateLogTime();
-    
-    if (!infoStore.setStorageDirectory(namebuf)) {
-      throw new IllegalStateException("Cannot open info storage directory '"+namebuf+"'");
-    }
-    
-    /* Initialize authenticator store */
-    
-    authInStore = new AuthenticatorStoreImpl<Identifier>(this);
-    authInStore.setFilename(new File(dir,"authenticators.in"));
-
-    authOutStore = new AuthenticatorStoreImpl<Identifier>(this);
-    authOutStore.setFilename(new File(dir,"authenticators.out"));
-
-    authPendingStore = new AuthenticatorStoreImpl<Identifier>(this, true);
-    authPendingStore.setFilename(new File(dir,"authenticators.pending"));
-
-    authCacheStore = new AuthenticatorStoreImpl<Identifier>(this, true);
-    authCacheStore.setFilename(new File(dir,"authenticators.cache"));
-
-    /* Remaining protocols */
-    this.evidenceTransferProtocol = new EvidenceTransferProtocolImpl<Handle, Identifier>(this,transport,infoStore);
-    this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, timeToleranceMillis);    
-    this.auditProtocol = new AuditProtocolImpl<Handle, Identifier>(this, history, infoStore, authInStore, transport, authOutStore, evidenceTransferProtocol, authCacheStore);
-    this.challengeProtocol = new ChallengeResponseProtocolImpl<Handle, Identifier>(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
-    this.statementProtocol = new StatementProtocolImpl<Handle, Identifier>(this, challengeProtocol, infoStore, transport);
-    
-    this.evidenceTool = null; // TODO: implement
-    initialized = true;
+    history.appendEntry(type, true, entry);   
   }
-    
-  public PeerReviewCallback<Handle, Identifier> getApp() {
-    return callback;
+
+  /* Called internally to log events */
+
+  void logEventInternal(short type, ByteBuffer entry) throws IOException {
+    assert(initialized && (type <= EVT_MAX_RESERVED));
+    updateLogTime();
+    history.appendEntry(type, true, entry);   
   }
   
-  public SocketRequestHandle<Handle> openSocket(Handle i, SocketCallback<Handle> deliverSocketToMe, Map<String, Object> options) {
-    return transport.openSocket(i, deliverSocketToMe, options);
-  }
-
-  public void incomingSocket(P2PSocket<Handle> s) throws IOException {
-    callback.incomingSocket(s);
-  }
-
   public MessageRequestHandle<Handle, ByteBuffer> sendMessage(Handle target,
       ByteBuffer message,
       final MessageCallback<Handle, ByteBuffer> deliverAckToMe,
       Map<String, Object> options) {
     
     /*
-     * If the 'datagram' flag is set, the message is passed through to the
+     * If the 'DON_TCOMMIT' flag is set, the message is passed through to the
      * transport layer. This is used e.g. for liveness/proximity pings in
      * Pastry.
      */
@@ -336,56 +291,39 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     return commitmentProtocol.handleOutgoingMessage(target, message,
         deliverAckToMe, options);
   }
-
-  /* PeerReview only updates its internal clock when it returns to the main loop, but not
-  in between (e.g. while it is handling messages). When the clock needs to be
-  updated, this function is called. */
-
-  private void updateLogTime() {
-    long now = env.getTimeSource().currentTimeMillis();
   
-    if (now > lastLogEntry) {
-      if (!history.setNextSeq(now * 1000000))
-        panic("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
-        
-      lastLogEntry = now;
-    }
+  public void setApp(PeerReviewCallback<Handle, Identifier> callback) {
+    logger.log("setApp("+callback+")");
+    this.callback = callback;
+  }
+  
+  /**
+   * 
+   */
+  public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
+    setApp((PeerReviewCallback<Handle, Identifier>)callback);
   }
 
   public void messageReceived(Handle handle, ByteBuffer message, Map<String, Object> options) throws IOException {
-//    char buf1[256];
     assert(initialized);
     
     /* Maybe do some mischief for testing */
     
-//    if (misbehavior.dropIncomingMessage(handle, datagram, message, msglen))
-//      return;
-
-//    plog(1, "Received %s from %s (%d bytes)", datagram ? "DATAGRAM" : "MESSAGE", handle->render(buf1), msglen);
-//    dump(2, message, msglen);
-    
     /* Deliver datagrams */
-    byte passthrough = message.get();
+    byte passthrough = message.get();    
     switch(passthrough) {
     case PEER_REVIEW_PASSTHROUGH:
-//      switch (message.get()) {
-//      case MSG_AUTHPUSH :
-//        authPushProtocol.handleIncomingAuthenticators(handle, message, msglen);
-//        break;
-//      case MSG_AUTHREQ :
-//      case MSG_AUTHRESP :
-//        auditProtocol.handleIncomingDatagram(handle, message, msglen);
-//        break;
-//      case MSG_USERDGRAM :
-//        app.receive(handle, true, &message[1], msglen-1);
-//        break;
-//      default:
-//        panic("Unknown datagram type in PeerReview: #%d", message[0]);
-//        break;
-//      }
       callback.messageReceived(handle, message, options);
+      break;      
+    case MSG_AUTHPUSH :
+      authPushProtocol.handleIncomingAuthenticators(handle, AuthPushMessage.build(new SimpleInputBuffer(message),idSerializer,authenticatorSerialilzer));
       break;
-      
+    case MSG_AUTHREQ :
+      auditProtocol.handleIncomingDatagram(handle, new AuthRequest<Identifier>(new SimpleInputBuffer(message),idSerializer));      
+      break;
+    case MSG_AUTHRESP :      
+      auditProtocol.handleIncomingDatagram(handle, new AuthResponse<Identifier>(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
+      break;
     case PEER_REVIEW_COMMIT:
       Statement<Identifier> m = null;
       updateLogTime();
@@ -400,16 +338,14 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
         challengeProtocol.handleChallenge(handle, challenge, options);
         break;
       case MSG_ACCUSATION:        
-        m = new AccusationMessage<Identifier>(sib, idSerializer, evidenceSerializer);
+        statementProtocol.handleIncomingStatement(handle, new AccusationMessage<Identifier>(sib, idSerializer, evidenceSerializer), options);
       case MSG_RESPONSE:
-        if (m == null) m = new ResponseMessage<Identifier>(sib, idSerializer, evidenceSerializer);
-        challengeProtocol.handleStatement(handle, m, options);
-//        statementProtocol.handleIncomingStatement(handle, m, options);
+        statementProtocol.handleIncomingStatement(handle, new ResponseMessage<Identifier>(sib, idSerializer, evidenceSerializer), options);
         break;
       case MSG_USERDATA:
         UserDataMessage<Handle> udm = UserDataMessage.build(sib, handleSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes());
         challengeProtocol.handleIncomingMessage(handle, udm, options);
-//        commitmentProtocol.handleIncomingMessage(handle, udm, options);
+  //      commitmentProtocol.handleIncomingMessage(handle, udm, options);
         break;
       default:
         panic("Unknown message type in PeerReview: #"+ type);
@@ -417,83 +353,19 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       }
     }    
   }
-  
-  public void panic(String s) {
-    if (logger.level <= Logger.SEVERE) logger.log("panic:"+s);
-    env.destroy();
-  }
-  
-  public void acceptMessages(boolean b) {
-    transport.acceptMessages(b);
-  }
 
-  public void acceptSockets(boolean b) {
-    transport.acceptSockets(b);
-  }
-
-  public Identifier getLocalId() {
-    return identifierExtractor.extractIdentifier(transport.getLocalIdentifier());
-  }
-  
-  public Handle getLocalHandle() {
-    return transport.getLocalIdentifier();
-  }
-
-  public Handle getLocalIdentifier() {
-    return transport.getLocalIdentifier();
-  }
-
-  public void setApp(PeerReviewCallback<Handle, Identifier> callback) {
-    logger.log("setApp("+callback+")");
-    this.callback = callback;
-  }
-  
-  /**
-   * 
-   */
-  public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
-    setApp((PeerReviewCallback<Handle, Identifier>)callback);
-  }
-
-  public void setErrorHandler(ErrorHandler<Handle> handler) {
-    // TODO Auto-generated method stub
-    
-  }
-
-  public void destroy() {
-    transport.destroy();
-  }
-
-  public AuthenticatorSerializer getAuthenticatorSerializer() {
-    return authenticatorSerialilzer;
-  }
-
-  public Environment getEnvironment() {
-    return env;
-  }
-
-  public Serializer<Identifier> getIdSerializer() {
-    return idSerializer;
-  }
-
-  public long getTime() {
-    return env.getTimeSource().currentTimeMillis();
-  }
-  
-  /** 
-   * A helper function that extracts an authenticator from an incoming message and adds it to our local store. 
-   */
-  public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) {
-//    *(long long*)&authenticator[0] = seq;
-    
-    byte[] hash = transport.hash(seq,entryType,hTopMinusOne, entryHash);
-    Authenticator ret = new Authenticator(seq,hash,signature);
-    if (addAuthenticatorIfValid(authOutStore, id, ret)) {
-      return ret;
+  public static String getStatusString(int status) {
+    switch(status) {
+    case STATUS_EXPOSED:
+      return "exposed";
+    case STATUS_TRUSTED:
+      return "trusted";
+    case STATUS_SUSPECTED:
+      return "suspected";
     }
-    return null;
+    return "unknown status:"+status;
   }
-
+  
   /**
    * Helper function called internally from the library. It takes a (potentially
    * new) authenticator and adds it to our local store if (a) it hasn't been
@@ -564,13 +436,186 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     }
   }
    
-  /* Gets a fresh, unique sequence number for evidence */
-  long nextEvidenceSeq = 0L;
-  public long getEvidenceSeq() {
-    if (nextEvidenceSeq < getTime()) {
-      nextEvidenceSeq = getTime();
+  public void notifyCertificateAvailable(Identifier id) {
+    commitmentProtocol.notifyCertificateAvailable(id); 
+    authPushProtocol.notifyCertificateAvailable(id);
+    statementProtocol.notifyCertificateAvailable(id);
+  }
+
+  public void writeCheckpoint() throws IOException {
+//    const int maxlen = 1048576*96;
+//    unsigned char *buffer = (unsigned char*) malloc(maxlen);
+    int size = 0;
+
+//    if (prng != null)
+//      size += prng->storeCheckpoint(&buffer[size], maxlen - size);
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();;
+    callback.storeCheckpoint(sob); //&buffer[size], maxlen - size);
+
+//    if ((size < 0) || (size >= maxlen))
+//      panic("Cannot write checkpoint (size=%d)", size);
+
+    updateLogTime();
+    if (logger.level <= Logger.INFO) logger.log( "Writing checkpoint ("+sob.getWritten()+" bytes)");
+    history.appendEntry(EVT_CHECKPOINT, true, sob.getByteBuffer());
+  }  
+  
+  public void notifyStatusChange(final Identifier id, final int newStatus) {
+//    char buf1[256];
+    if (logger.level <= Logger.INFO) logger.log("Status change: <"+id+"> becomes "+getStatusString(newStatus));
+//    logger.logException("Status change: <"+id+"> becomes "+getStatusString(newStatus),new Exception("Stack Trace"));
+    challengeProtocol.notifyStatusChange(id, newStatus);
+    commitmentProtocol.notifyStatusChange(id, newStatus);
+    
+    // let pr finish first
+    env.getSelectorManager().schedule(new TimerTask() {    
+      public void run() {
+        callback.notifyStatusChange(id, newStatus);
+      }    
+    }, 3);
+    
+  }
+  
+  public void init(String dirname) throws IOException {    
+    File dir = new File(dirname);
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new IllegalStateException("Cannot open PeerReview directory: "+dir.getAbsolutePath());
+      }
     }
-    return nextEvidenceSeq++;
+    if (!dir.isDirectory()) throw new IllegalStateException("Cannot open PeerReview directory: "+dir.getAbsolutePath());
+    
+    File namebuf = new File(dir,"peers");
+    
+    infoStore = new PeerInfoStoreImpl<Handle, Identifier>(transport, stringTranslator, authenticatorSerialilzer, evidenceSerializer, env);
+    infoStore.setStatusChangeListener(this);
+
+    /* Open history */
+
+    String historyName = dirname+"/local";
+    try {
+      this.history = historyFactory.open(historyName, "w");
+    } catch (IOException ioe) {
+      this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());      
+    }
+    
+    updateLogTime();
+    
+    if (!infoStore.setStorageDirectory(namebuf)) {
+      throw new IllegalStateException("Cannot open info storage directory '"+namebuf+"'");
+    }
+    
+    /* Initialize authenticator store */
+    
+    authInStore = new AuthenticatorStoreImpl<Identifier>(this);
+    authInStore.setFilename(new File(dir,"authenticators.in"));
+
+    authOutStore = new AuthenticatorStoreImpl<Identifier>(this);
+    authOutStore.setFilename(new File(dir,"authenticators.out"));
+
+    authPendingStore = new AuthenticatorStoreImpl<Identifier>(this, true);
+    authPendingStore.setFilename(new File(dir,"authenticators.pending"));
+
+    authCacheStore = new AuthenticatorStoreImpl<Identifier>(this, true);
+    authCacheStore.setFilename(new File(dir,"authenticators.cache"));
+
+    /* Remaining protocols */
+    this.evidenceTransferProtocol = new EvidenceTransferProtocolImpl<Handle, Identifier>(this,transport,infoStore);
+    this.commitmentProtocol = new CommitmentProtocolImpl<Handle, Identifier>(this,transport,infoStore,authOutStore,history, timeToleranceMillis);    
+    this.authPushProtocol = new AuthenticatorPushProtocolImpl<Handle, Identifier>(this, authInStore, authOutStore, authPendingStore, transport, infoStore, evidenceTransferProtocol, env);
+    this.auditProtocol = new AuditProtocolImpl<Handle, Identifier>(this, history, infoStore, authInStore, transport, authOutStore, evidenceTransferProtocol, authCacheStore);
+    this.challengeProtocol = new ChallengeResponseProtocolImpl<Handle, Identifier>(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
+    this.statementProtocol = new StatementProtocolImpl<Handle, Identifier>(this, challengeProtocol, infoStore, transport);
+    
+    this.evidenceTool = new EvidenceToolImpl<Handle, Identifier>(env.getLogManager()); // TODO: implement
+        
+    initialized = true;
+
+    if (true) throw new RuntimeException("implement");
+    
+    /* Append an INIT entry to the log */
+    SimpleOutputBuffer sob = new SimpleOutputBuffer();
+    transport.getLocalIdentifier().serialize(sob);
+    history.appendEntry(EVT_INIT, true, sob.getByteBuffer());
+
+    callback.init();
+    writeCheckpoint();    
+  }
+    
+  public PeerReviewCallback<Handle, Identifier> getApp() {
+    return callback;
+  }
+  
+  public SocketRequestHandle<Handle> openSocket(Handle i, SocketCallback<Handle> deliverSocketToMe, Map<String, Object> options) {
+    return transport.openSocket(i, deliverSocketToMe, options);
+  }
+
+  public void incomingSocket(P2PSocket<Handle> s) throws IOException {
+    callback.incomingSocket(s);
+  }
+
+  public void panic(String s) {
+    if (logger.level <= Logger.SEVERE) logger.log("panic:"+s);
+    env.destroy();
+  }
+  
+  public void acceptMessages(boolean b) {
+    transport.acceptMessages(b);
+  }
+
+  public void acceptSockets(boolean b) {
+    transport.acceptSockets(b);
+  }
+
+  public Identifier getLocalId() {
+    return identifierExtractor.extractIdentifier(transport.getLocalIdentifier());
+  }
+  
+  public Handle getLocalHandle() {
+    return transport.getLocalIdentifier();
+  }
+
+  public Handle getLocalIdentifier() {
+    return transport.getLocalIdentifier();
+  }
+
+  public void setErrorHandler(ErrorHandler<Handle> handler) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  public void destroy() {
+    transport.destroy();
+  }
+
+  public AuthenticatorSerializer getAuthenticatorSerializer() {
+    return authenticatorSerialilzer;
+  }
+
+  public Environment getEnvironment() {
+    return env;
+  }
+
+  public Serializer<Identifier> getIdSerializer() {
+    return idSerializer;
+  }
+
+  public long getTime() {
+    return env.getTimeSource().currentTimeMillis();
+  }
+  
+  /** 
+   * A helper function that extracts an authenticator from an incoming message and adds it to our local store. 
+   */
+  public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) {
+//    *(long long*)&authenticator[0] = seq;
+    
+    byte[] hash = transport.hash(seq,entryType,hTopMinusOne, entryHash);
+    Authenticator ret = new Authenticator(seq,hash,signature);
+    if (addAuthenticatorIfValid(authOutStore, id, ret)) {
+      return ret;
+    }
+    return null;
   }
 
   public Serializer<Handle> getHandleSerializer() {
@@ -633,23 +678,17 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     }
   }
 
-  public void notifyCertificateAvailable(Identifier id) {
-    commitmentProtocol.notifyCertificateAvailable(id); 
-//    authPushProtocol.notifyCertificateAvailable(id);
-    statementProtocol.notifyCertificateAvailable(id);
-  }
-
   public void statusChange(Identifier id, int newStatus) {
     throw new RuntimeException("implement");
-  }
-
-  public boolean hasCertificate(Identifier id) {
-    return transport.hasCertificate(id);
   }
 
   public Cancellable requestCertificate(Handle source, Identifier certHolder,
       Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
     return transport.requestCertificate(source, certHolder, c, options);
+  }
+
+  public boolean hasCertificate(Identifier id) {
+    return transport.hasCertificate(id);
   }
 
   public byte[] sign(byte[] bytes) {
@@ -712,7 +751,12 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
   
   public VerifierFactory<Handle, Identifier> getVerifierFactory() {
-    return null;
+    return verifierFactory;
   }
   
+//  void notifyWitnessesExt(int numSubjects, Identifier **subjects, int *witnessesPerSubject, Handle witnesses) {
+  protected void continuePush(Map<Identifier, Collection<Handle>> subjects) {
+    authPushProtocol.continuePush(subjects);
+  }
+
 }

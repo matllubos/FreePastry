@@ -36,38 +36,36 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.audit;
 
-import java.util.Collection;
-
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
-import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
-
+import rice.environment.logging.LogManager;
+import rice.environment.logging.Logger;
 import rice.p2p.util.tuples.Tuple;
 
-public interface EvidenceTool<Handle, Identifier> extends PeerReviewConstants {
+public class EvidenceToolImpl<Handle, Identifier> implements EvidenceTool<Handle, Identifier> {
+
+  Logger logger;
+  
+  public EvidenceToolImpl(LogManager manager) {
+    this.logger = manager.getLogger(EvidenceToolImpl.class, null);
+  }
   
   /**
+   * 1) is the log snippet well-formed, i.e. are the entries of the correct length, and do they have the correct format?
+   * 2) do we locally have the node certificate for each signature that occurs in the snippet?
    * 
-   * @param snippet
-   * @return VALID|INVALID|CERT_MISSING, missingCertID 
+   * if the former doesn't hold, it returns INVALID
+   * if the latter doesn't hold, it returns CERT_MISSING, and returns the nodeID of the node whose certificate we need to request
    */
-  Tuple<Integer, Identifier> checkSnippet(LogSnippet snippet);
-//  int isAuthenticatorValid(Authenticator authenticator, Identifier subject);
-//  boolean checkSnippetSignatures(
-//      LogSnippet snippet, long firstSeq, byte[] baseHash, Handle subjectHandle, 
-//      AuthenticatorStore<Identifier> authStoreOrNull, byte flags, byte[] keyNodeHash, long keyNodeMaxSeq);
-//  boolean checkNoEntriesHashed(LogSnippet snippet, Collection<Short> typesToIgnore, int numTypesToIgnore);
-  
-  /**
-   * This is called when (a) we have obtained a new log segment from some node,
-   * and (b) we are convinced that the log segment is genuine. We append any new
-   * entries to our local copy of the node's log. Note that sometimes AUDIT
-   * responses overlap (e.g. because a checkpoint has been requested), so it's
-   * perfectly legitimate to sometimes receive certain entries twice. Also, it's
-   * okay if some of the entries are hashed.
-   * 
-   * Added to history
-   */
-//  void appendSnippetToHistory(LogSnippit snippet, long firstSeq, long skipEverythingBeforeSeq);
+  public Tuple<Integer, Identifier> checkSnippet(LogSnippet snippet) {
+    for (SnippetEntry entry : snippet.entries) {
+      if (entry.isHash && entry.type != EVT_CHECKPOINT && entry.type != EVT_SENDSIGN && entry.type != EVT_SEND) {
+        if (logger.level <= Logger.WARNING) logger.log("Malformed statement: Entry of type #"+entry.type+" is hashed");
+        return new Tuple<Integer, Identifier>(INVALID,null);
+      }
+      
+      
+    }
+    
+    throw new RuntimeException("implement");
+  }
 
 }

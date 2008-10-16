@@ -34,40 +34,19 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.audit;
+package org.mpisws.p2p.transport.peerreview.authpush;
 
 import java.util.Collection;
+import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
-import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.message.AuthPushMessage;
 
-import rice.p2p.util.tuples.Tuple;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public interface EvidenceTool<Handle, Identifier> extends PeerReviewConstants {
-  
-  /**
-   * 
-   * @param snippet
-   * @return VALID|INVALID|CERT_MISSING, missingCertID 
-   */
-  Tuple<Integer, Identifier> checkSnippet(LogSnippet snippet);
-//  int isAuthenticatorValid(Authenticator authenticator, Identifier subject);
-//  boolean checkSnippetSignatures(
-//      LogSnippet snippet, long firstSeq, byte[] baseHash, Handle subjectHandle, 
-//      AuthenticatorStore<Identifier> authStoreOrNull, byte flags, byte[] keyNodeHash, long keyNodeMaxSeq);
-//  boolean checkNoEntriesHashed(LogSnippet snippet, Collection<Short> typesToIgnore, int numTypesToIgnore);
-  
-  /**
-   * This is called when (a) we have obtained a new log segment from some node,
-   * and (b) we are convinced that the log segment is genuine. We append any new
-   * entries to our local copy of the node's log. Note that sometimes AUDIT
-   * responses overlap (e.g. because a checkpoint has been requested), so it's
-   * perfectly legitimate to sometimes receive certain entries twice. Also, it's
-   * okay if some of the entries are hashed.
-   * 
-   * Added to history
-   */
-//  void appendSnippetToHistory(LogSnippit snippet, long firstSeq, long skipEverythingBeforeSeq);
+public interface AuthenticatorPushProtocol<Handle, Identifier extends RawSerializable> extends PeerReviewConstants {
+  public void continuePush(Map<Identifier, Collection<Handle>> subjects);
+  public void handleIncomingAuthenticators(Handle source, AuthPushMessage<Identifier> msg);
+  public void notifyCertificateAvailable(Identifier id);
 
 }
