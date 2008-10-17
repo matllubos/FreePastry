@@ -114,10 +114,11 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
     idx.updateWitnesses(witnesses);
     
     Collection<MessageInfo> sendMe = pendingMessage.remove(subject);
-    for (MessageInfo m : sendMe) {
-      doSendMessageToWitnesses(idx.witness,m);
-    }
-        
+    if (sendMe != null) {
+      for (MessageInfo m : sendMe) {
+        doSendMessageToWitnesses(idx.witness,m);
+      }
+    }        
     /**
      *  If this witness set was part of a query, we update the results and answer if possible 
      */
@@ -260,6 +261,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
     public QueryInfo(Collection<Identifier> subjects, Continuation<Map<Identifier, Collection<Handle>>, Exception> c) {      
       subjectList = new HashMap<Identifier, Collection<Handle>>();
       numWitnessesWaitingFor = subjects.size();
+      this.c = c;
 
       pendingQuery.add(this); 
 

@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview;
 
+import java.io.IOException;
 import java.util.Collection;
 
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
@@ -55,8 +56,8 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
 public interface PeerReviewCallback<Handle, Identifier> extends Destructable, IdentityTransportCallback<Handle, Identifier>, StatusChangeListener<Identifier> {
   // PeerReviewCallback() : IdentityTransportCallback() {};
   public void init();
-  void storeCheckpoint(OutputBuffer buffer);
-  boolean loadCheckpoint(InputBuffer buffer);
+  void storeCheckpoint(OutputBuffer buffer) throws IOException;
+  boolean loadCheckpoint(InputBuffer buffer) throws IOException;
   void getWitnesses(Identifier subject, WitnessListener<Handle, Identifier> callback);
 //  PeerReviewCallback getReplayInstance(ReplayWrapper replayWrapper);
   public Collection<Handle> getMyWitnessedNodes();

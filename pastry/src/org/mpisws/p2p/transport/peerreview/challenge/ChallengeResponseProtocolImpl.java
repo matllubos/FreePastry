@@ -154,8 +154,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
 
       /* AUDIT challenges: We respond with a serialized log snippet */
         
-      case CHAL_AUDIT:
-      {
+      case CHAL_AUDIT: {
         ChallengeAudit audit = (ChallengeAudit)challenge.getChallenge();
 
         byte flags = audit.flags;
@@ -386,7 +385,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
     switch(evidence.getEvidenceType()) {
     case CHAL_AUDIT: {
       ChallengeAudit evidenceAudit = (ChallengeAudit)evidence;
-      AuditResponse responseAudit = (AuditResponse)response;
+      AuditResponse<Handle> responseAudit = (AuditResponse<Handle>)response;
       long requestedBeginSeq = evidenceAudit.from.getSeq();
       long finalSeq = evidenceAudit.to.getSeq();
       byte includePrevCheckpoint = evidenceAudit.flags;

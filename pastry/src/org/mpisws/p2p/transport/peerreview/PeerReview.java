@@ -42,6 +42,7 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
+import org.mpisws.p2p.transport.TransportLayer;
 import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.audit.EvidenceTool;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
@@ -62,7 +63,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
 import static org.mpisws.p2p.transport.peerreview.Basics.renderStatus;
 
 public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends 
-    IdentityTransportCallback<Handle, Identifier>, PeerReviewConstants {
+    IdentityTransportCallback<Handle, Identifier>, PeerReviewConstants, TransportLayer<Handle, ByteBuffer> {
 
   /**
    * Option should map to an int < 255 to record the relevant length of the message.
@@ -124,6 +125,9 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
    */
   public void sendEvidenceToWitnesses(Identifier subject, long timestamp, Evidence evidence);
 
+  public void init(String dirname) throws IOException;
+
+  public void setApp(PeerReviewCallback<Handle, Identifier> callback);
 
   public PeerReviewCallback<Handle, Identifier> getApp();
   

@@ -49,6 +49,7 @@ import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,6 +58,7 @@ import org.mpisws.p2p.pki.x509.CAToolImpl;
 import org.mpisws.p2p.pki.x509.X509Serializer;
 import org.mpisws.p2p.pki.x509.X509SerializerImpl;
 import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.IdImpl;
+import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.Player;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -160,6 +162,12 @@ public class CommitmentTest {
     public String toString() {
       return "HandleImpl<"+name+">";
     }
+    
+    public boolean equals(Object o) {
+      HandleImpl that = (HandleImpl)o;
+      if (!id.equals(that.id)) return false;
+      return name.equals(that.name);
+    }
   }
   
   static class IdImpl implements RawSerializable {
@@ -189,7 +197,7 @@ public class CommitmentTest {
     }
   }
   
-  static class BogusPR extends PeerReviewImpl<HandleImpl, IdImpl> {
+//  static class BogusPR extends PeerReviewImpl<HandleImpl, IdImpl> {
 //    Environment env;
 //    CommitmentProtocol<HandleImpl, IdImpl> commitmentProtocol;
 //    IdentityTransport<HandleImpl, IdImpl> transport;
@@ -208,25 +216,25 @@ public class CommitmentTest {
 //      commitmentProtocol = new CommitmentProtocolImpl<HandleImpl, IdImpl>(this,transport,store,authStore,history, app, null, 60000);       
 //    }
     
-    public BogusPR(String name, IdentityTransport<HandleImpl, IdImpl> transport,
-        Environment env) throws IOException {
-//      , Serializer<HandleImpl> handleSerializer,
-//        Serializer<IdImpl> idSerializer,
-//        IdentifierExtractor<HandleImpl, IdImpl> identifierExtractor,
-//        AuthenticatorSerializer authenticatorSerialilzer) {
-      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), new IdStrTranslator<IdImpl>(){
-
-        public IdImpl readIdentifierFromString(String s) {
-          return new IdImpl(Integer.parseInt(s));
-        }
-
-        public String toString(IdImpl id) {
-          return Integer.toString(id.id);
-        }},
-          new AuthenticatorSerializerImpl(0,0), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
-      init(name);
-    }
-  }
+//    public BogusPR(String name, IdentityTransport<HandleImpl, IdImpl> transport,
+//        Environment env) throws IOException {
+////      , Serializer<HandleImpl> handleSerializer,
+////        Serializer<IdImpl> idSerializer,
+////        IdentifierExtractor<HandleImpl, IdImpl> identifierExtractor,
+////        AuthenticatorSerializer authenticatorSerialilzer) {
+//      super(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), new IdStrTranslator<IdImpl>(){
+//
+//        public IdImpl readIdentifierFromString(String s) {
+//          return new IdImpl(Integer.parseInt(s));
+//        }
+//
+//        public String toString(IdImpl id) {
+//          return Integer.toString(id.id);
+//        }},
+//          new AuthenticatorSerializerImpl(0,0), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
+//      init(name);
+//    }
+//  }
   
   static class BogusTransport implements TransportLayer<HandleImpl, ByteBuffer> {
     public static Map<HandleImpl, BogusTransport> peerTable = new HashMap<HandleImpl, BogusTransport>();
@@ -288,7 +296,7 @@ public class CommitmentTest {
     }
   }
   
-  static class BogusApp implements PeerReviewCallback<HandleImpl, IdImpl> {
+  class BogusApp implements PeerReviewCallback<HandleImpl, IdImpl> {
 
     Logger logger;
     public BogusApp(Logger logger) {
@@ -298,15 +306,17 @@ public class CommitmentTest {
     
 
     public void init() {
-      throw new RuntimeException("implement");
+//      throw new RuntimeException("implement");
     }
 
-    public boolean loadCheckpoint(InputBuffer buffer) {
-      throw new RuntimeException("implement");
+    public boolean loadCheckpoint(InputBuffer buffer) throws IOException {
+      if (buffer.readInt() != 31173) throw new RuntimeException("invalid checkpoint");
+      return true;
     }
 
-    public void storeCheckpoint(OutputBuffer buffer) {
-      throw new RuntimeException("implement");
+    public void storeCheckpoint(OutputBuffer buffer) throws IOException {
+//      throw new RuntimeException("implement");
+      buffer.writeInt(31173);
     }
 
     public void destroy() {
@@ -340,7 +350,7 @@ public class CommitmentTest {
 
     public void getWitnesses(IdImpl subject,
         WitnessListener<HandleImpl, IdImpl> callback) {
-      throw new RuntimeException("implement");
+      callback.notifyWitnessSet(subject, Collections.singletonList(carol.localHandle));
     }
 
     public void notifyStatusChange(
@@ -349,50 +359,34 @@ public class CommitmentTest {
       logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
     }
 
-
-    public Collection<HandleImpl> getMyWitnessedNodes() {
-      // TODO Auto-generated method stub
-      return null;
+    public PeerReviewCallback<HandleImpl, IdImpl> getReplayInstance(
+        Verifier<HandleImpl, IdImpl> v) {
+      throw new RuntimeException("implement");
     }
 
 
-    public PeerReviewCallback<HandleImpl, IdImpl> getReplayInstance(
-        Verifier<HandleImpl, IdImpl> v) {
-      // TODO Auto-generated method stub
-      return null;
+    public Collection<HandleImpl> getMyWitnessedNodes() {
+      throw new RuntimeException("implement");
     }
   }
 
   static Map<HandleImpl, IdentityTransprotLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransprotLayerImpl<HandleImpl,IdImpl>>();
-  
-  static class Player {
-    static final CATool caTool;
-    static final KeyPairGenerator keyPairGen;
-    static {
-      try {
-        SecureRandom random = new SecureRandom();
-        caTool = CAToolImpl.getCATool("CommitmentTest","foo".toCharArray());
-        
-        // make a KeyPair
-        keyPairGen =
-          KeyPairGenerator.getInstance("RSA", "BC");
-        keyPairGen.initialize(
-            new RSAKeyGenParameterSpec(768,
-                RSAKeyGenParameterSpec.F4),
-            random);
-      } catch (Exception ioe) {
-        throw new RuntimeException(ioe);
-      }
-    }
+
+  CATool caTool;
+  KeyPairGenerator keyPairGen;
+
+  class Player {
     
+    Logger logger;
     HandleImpl localHandle;
     
-    BogusPR pr;
+    PeerReview<HandleImpl, IdImpl> pr;
     IdentityTransprotLayerImpl<HandleImpl, IdImpl> transport;
 
     public Player(String name, int id, Environment env2) throws Exception {
       super();
       Environment env = env2.cloneEnvironment(name);
+      this.logger = env.getLogManager().getLogger(Player.class, null);
       File f = new File(name+".data");
       if (f.exists()) f.delete();
       f = new File(name+".index");
@@ -437,23 +431,49 @@ public class CommitmentTest {
         }        
       };
       idTLTable.put(localHandle, transport);
-      pr = new BogusPR(name, transport, env);
-      pr.setCallback(new BogusApp(env.getLogManager().getLogger(BogusApp.class, null)));
+      pr = new PeerReviewImpl<HandleImpl, IdImpl>(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), new IdStrTranslator<IdImpl>(){
 
+        public IdImpl readIdentifierFromString(String s) {
+          return new IdImpl(Integer.parseInt(s));
+        }
+
+        public String toString(IdImpl id) {
+          return Integer.toString(id.id);
+        }},
+          new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
+      pr.setApp(new BogusApp(env.getLogManager().getLogger(BogusApp.class, null)));
+      pr.init(name);
     }
   }
 
-  private static HashProvider hasher;
-  private static SecureHistoryFactory historyFactory;
+  private HashProvider hasher;
+  private SecureHistoryFactory historyFactory;
   
-  public static void main(String[] agrs) throws Exception {
+  Player alice;
+  Player bob;
+  Player carol;
+
+  public CommitmentTest() throws Exception {
     Environment env = new Environment();
+    
+    SecureRandom random = new SecureRandom();
+    caTool = CAToolImpl.getCATool("CommitmentTest","foo".toCharArray());
+    
+    // make a KeyPair
+    keyPairGen =
+      KeyPairGenerator.getInstance("RSA", "BC");
+    keyPairGen.initialize(
+        new RSAKeyGenParameterSpec(768,
+            RSAKeyGenParameterSpec.F4),
+        random);
+    
     try {      
       hasher = new NullHashProvider();
       historyFactory = new SecureHistoryFactoryImpl(hasher,env);
       
-      final Player alice = new Player("alice",1,env);
-      final Player bob = new Player("bob",2,env);    
+      alice = new Player("alice",1,env);
+      bob = new Player("bob",2,env);    
+      carol = new Player("carol",3,env);    
           
 //      bob.pr.requestCertificate(alice.localHandle, alice.localHandle.id, new Continuation<X509Certificate, Exception>() {
 //      
@@ -475,6 +495,10 @@ public class CommitmentTest {
 //      
 //      }, null);
       
+      env.getSelectorManager().invoke(new Runnable() {
+      
+        public void run() {
+          // TODO Auto-generated method stub
       
       alice.pr.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
       
@@ -485,16 +509,23 @@ public class CommitmentTest {
         }
       
         public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
-          System.out.println("ack("+msg+")");
+          alice.logger.log("ack("+msg+")");
         }
       
       }, null);
+        }
+        
+      });
   //    alice.transport.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), null, null);
     } catch (Exception e) {
       env.destroy();      
       throw e;
     }
-    Thread.sleep(5000);
-    env.destroy();
+//    Thread.sleep(5000);
+//    env.destroy();
+  }
+  
+  public static void main(String[] agrs) throws Exception {
+    new CommitmentTest();
   }
 }

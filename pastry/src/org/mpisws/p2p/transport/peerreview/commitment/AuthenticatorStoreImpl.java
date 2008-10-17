@@ -120,6 +120,7 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
     int authenticatorsRead = 0;
     int bytesRead = 0;
     long pos = 0;
+    authFile.seek(pos);
     while (authFile.bytesRemaining() > 0) {
       
       try {

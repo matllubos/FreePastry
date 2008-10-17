@@ -396,6 +396,17 @@ public class AuthenticatorStoreTest {
       // TODO Auto-generated method stub
       return null;
     }
+
+    public void init(String dirname) throws IOException {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void setApp(
+        PeerReviewCallback<MyInetSocketAddress, MyInetSocketAddress> callback) {
+      // TODO Auto-generated method stub
+      
+    }
   }
 
   class TestAuthenticatorStore extends AuthenticatorStoreImpl<MyInetSocketAddress> {

@@ -228,7 +228,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   
     if (now > lastLogEntry) {
       if (!history.setNextSeq(now * 1000000))
-        panic("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
+        throw new RuntimeException("PeerReview: Cannot roll back history sequence number from "+history.getLastSeq()+" to "+now*1000000+"; did you change the local time?");
         
       lastLogEntry = now;
     }
@@ -320,21 +320,21 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     case PEER_REVIEW_PASSTHROUGH:
       callback.messageReceived(handle, message, options);
       break;      
-    case MSG_AUTHPUSH :
-      authPushProtocol.handleIncomingAuthenticators(handle, AuthPushMessage.build(new SimpleInputBuffer(message),idSerializer,authenticatorSerialilzer));
-      break;
-    case MSG_AUTHREQ :
-      auditProtocol.handleIncomingDatagram(handle, new AuthRequest<Identifier>(new SimpleInputBuffer(message),idSerializer));      
-      break;
-    case MSG_AUTHRESP :      
-      auditProtocol.handleIncomingDatagram(handle, new AuthResponse<Identifier>(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
-      break;
     case PEER_REVIEW_COMMIT:
       Statement<Identifier> m = null;
       updateLogTime();
       byte type = message.get();      
       SimpleInputBuffer sib = new SimpleInputBuffer(message);
       switch (type) {      
+      case MSG_AUTHPUSH :
+        authPushProtocol.handleIncomingAuthenticators(handle, AuthPushMessage.build(new SimpleInputBuffer(message),idSerializer,authenticatorSerialilzer));
+        break;
+      case MSG_AUTHREQ :
+        auditProtocol.handleIncomingDatagram(handle, new AuthRequest<Identifier>(new SimpleInputBuffer(message),idSerializer));      
+        break;
+      case MSG_AUTHRESP :      
+        auditProtocol.handleIncomingDatagram(handle, new AuthResponse<Identifier>(new SimpleInputBuffer(message),idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
+        break;
       case MSG_ACK:        
         commitmentProtocol.handleIncomingAck(handle, AckMessage.build(sib,idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes()), options);
         break;
@@ -353,8 +353,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   //      commitmentProtocol.handleIncomingMessage(handle, udm, options);
         break;
       default:
-        panic("Unknown message type in PeerReview: #"+ type);
-        break;
+        throw new RuntimeException("Unknown message type in PeerReview: #"+ type);
       }
     }    
   }
@@ -520,6 +519,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
   
   public void init(String dirname) throws IOException {    
+    assert(callback != null);
     File dir = new File(dirname);
     if (!dir.exists()) {
       if (!dir.mkdirs()) {
@@ -618,10 +618,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     callback.incomingSocket(s);
   }
 
-  public void panic(String s) {
-    if (logger.level <= Logger.SEVERE) logger.log("panic:"+s);
-    env.destroy();
-  }
+//  public void panic(String s) {
+//    if (logger.level <= Logger.SEVERE) logger.log("panic:"+s);
+//    env.destroy();
+//  }
   
   public void acceptMessages(boolean b) {
     transport.acceptMessages(b);
