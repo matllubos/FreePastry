@@ -68,6 +68,8 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
   Serializer<Identifier> idSerializer;
   AuthenticatorSerializer authenticatorSerializer;
 
+  boolean memoryBufferDisabled = false;
+  
   public AuthenticatorStoreImpl(PeerReview<?, Identifier> peerreview) {
     this(peerreview,false);
   }
@@ -183,7 +185,7 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
         idSerializer.serialize(id,authFile);
         authenticator.serialize(authFile);
       }
-      addAuthenticatorToMemory(id, authenticator);
+      if (!memoryBufferDisabled) addAuthenticatorToMemory(id, authenticator);
     } catch (IOException ioe) {
       throw new RuntimeException("Error in addAuthenticator("+id+","+authenticator+","+authFile+")",ioe);
     }
@@ -282,6 +284,10 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
 
   public void flushAll() {
     authenticators.clear();
+  }
+
+  public void disableMemoryBuffer() { 
+    this.memoryBufferDisabled = true; 
   }
 
 }

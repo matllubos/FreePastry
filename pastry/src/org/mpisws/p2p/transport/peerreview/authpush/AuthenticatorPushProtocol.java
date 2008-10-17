@@ -48,5 +48,6 @@ public interface AuthenticatorPushProtocol<Handle, Identifier extends RawSeriali
   public void continuePush(Map<Identifier, Collection<Handle>> subjects);
   public void handleIncomingAuthenticators(Handle source, AuthPushMessage<Identifier> msg);
   public void notifyCertificateAvailable(Identifier id);
+  public void push();
 
 }

@@ -53,6 +53,8 @@ public interface AuthenticatorStore<Identifier> {
   public Authenticator getOldestAuthenticator(Identifier id);
   public Authenticator getLastAuthenticatorBefore(Identifier id, long seq);
   
+  public void disableMemoryBuffer();
+
   /**
    * Also writes it to disk.
    * @param id

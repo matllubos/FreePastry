@@ -73,6 +73,7 @@ import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocol;
 import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
 import org.mpisws.p2p.transport.peerreview.history.HashProvider;
+import org.mpisws.p2p.transport.peerreview.history.HashSeq;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactoryImpl;
@@ -159,6 +160,11 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   protected ChallengeResponseProtocol<Handle, Identifier> challengeProtocol;
   protected StatementProtocolImpl<Handle, Identifier> statementProtocol;
 
+  long nextEvidenceSeq = 0L;
+  private TimerTask maintenanceTask;
+  private TimerTask authPushTask;
+  private TimerTask checkpointTask;
+  
   protected RandomSource random;
 
   public RandomSource getRandomSource() {
@@ -206,7 +212,6 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
 
   /* Gets a fresh, unique sequence number for evidence */
-  long nextEvidenceSeq = 0L;
   public long getEvidenceSeq() {
     if (nextEvidenceSeq < getTime()) {
       nextEvidenceSeq = getTime();
@@ -460,6 +465,44 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     history.appendEntry(EVT_CHECKPOINT, true, sob.getByteBuffer());
   }  
   
+  /**
+   * Periodic timer for pushing batches of authenticators to the witnesses 
+   */
+  protected void doAuthPush() {
+    if (logger.level <= Logger.INFO) logger.log("Doing authenticator push");
+    authPushProtocol.push();
+  }
+  
+  /**
+   * Periodic maintenance timer; used to garbage-collect old authenticators 
+   */
+  protected void doMaintenance() {
+    if (logger.level <= Logger.INFO) logger.log("Doing maintenance");
+    try {
+      authInStore.garbageCollect();
+      authOutStore.garbageCollect();
+      authPendingStore.garbageCollect();    
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
+  
+  /**
+   * Periodic timer for writing checkpoints 
+   */
+  protected void doCheckpoint() {
+    HashSeq foo = history.getTopLevelEntry();
+    long topSeq = foo.getSeq();
+    try {
+      long topIdx = history.findSeq(topSeq);
+      if (history.statEntry(topIdx).getType() != EVT_CHECKPOINT) {
+        writeCheckpoint();    
+      }
+    } catch (IOException ioe) {
+      throw new RuntimeException("Error during checkpoint",ioe);
+    }
+  }
+  
   public void notifyStatusChange(final Identifier id, final int newStatus) {
 //    char buf1[256];
     if (logger.level <= Logger.INFO) logger.log("Status change: <"+id+"> becomes "+getStatusString(newStatus));
@@ -492,11 +535,13 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
     /* Open history */
 
+    boolean newLogCreated = false;
     String historyName = dirname+"/local";
     try {
       this.history = historyFactory.open(historyName, "w");
     } catch (IOException ioe) {
       this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());      
+      newLogCreated = true;
     }
     
     updateLogTime();
@@ -531,8 +576,27 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
         
     initialized = true;
 
-    if (true) throw new RuntimeException("implement");
+    maintenanceTask = env.getSelectorManager().schedule(new TimerTask() {    
+      @Override
+      public void run() {
+        doMaintenance();
+      }    
+    },MAINTENANCE_INTERVAL_MILLIS, MAINTENANCE_INTERVAL_MILLIS);
     
+    authPushTask = env.getSelectorManager().schedule(new TimerTask() {    
+      @Override
+      public void run() {
+        doAuthPush();
+      }    
+    },DEFAULT_AUTH_PUSH_INTERVAL_MILLIS, DEFAULT_AUTH_PUSH_INTERVAL_MILLIS);
+    
+    checkpointTask = env.getSelectorManager().schedule(new TimerTask() {    
+      @Override
+      public void run() {
+        doCheckpoint();
+      }    
+    },newLogCreated ? 1 : DEFAULT_CHECKPOINT_INTERVAL_MILLIS, DEFAULT_CHECKPOINT_INTERVAL_MILLIS);
+        
     /* Append an INIT entry to the log */
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
     transport.getLocalIdentifier().serialize(sob);
@@ -758,5 +822,13 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   protected void continuePush(Map<Identifier, Collection<Handle>> subjects) {
     authPushProtocol.continuePush(subjects);
   }
+  
+  void disableAuthenticatorProcessing() {
+    assert(initialized);
 
+    maintenanceTask.cancel();
+    authInStore.disableMemoryBuffer();
+    authOutStore.disableMemoryBuffer();
+    authPendingStore.disableMemoryBuffer();
+  }
 }
