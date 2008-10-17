@@ -344,6 +344,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
         break;
       case MSG_ACCUSATION:        
         statementProtocol.handleIncomingStatement(handle, new AccusationMessage<Identifier>(sib, idSerializer, evidenceSerializer), options);
+        break;
       case MSG_RESPONSE:
         statementProtocol.handleIncomingStatement(handle, new ResponseMessage<Identifier>(sib, idSerializer, evidenceSerializer), options);
         break;
@@ -440,6 +441,19 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     }
   }
    
+  public Cancellable requestCertificate(final Handle source, final Identifier certHolder) {
+    return transport.requestCertificate(source, certHolder, new Continuation<X509Certificate, Exception>() {
+
+      public void receiveException(Exception exception) {
+        if (logger.level <= Logger.WARNING) logger.log("error receiving cert for "+certHolder+" from "+source);
+      }
+
+      public void receiveResult(X509Certificate result) {
+        notifyCertificateAvailable(certHolder);
+      }        
+    }, null);
+  }
+
   public void notifyCertificateAvailable(Identifier id) {
     commitmentProtocol.notifyCertificateAvailable(id); 
     authPushProtocol.notifyCertificateAvailable(id);
@@ -746,11 +760,6 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     throw new RuntimeException("implement");
   }
 
-  public Cancellable requestCertificate(Handle source, Identifier certHolder,
-      Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-    return transport.requestCertificate(source, certHolder, c, options);
-  }
-
   public boolean hasCertificate(Identifier id) {
     return transport.hasCertificate(id);
   }
@@ -819,9 +828,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
   
 //  void notifyWitnessesExt(int numSubjects, Identifier **subjects, int *witnessesPerSubject, Handle witnesses) {
-  protected void continuePush(Map<Identifier, Collection<Handle>> subjects) {
-    authPushProtocol.continuePush(subjects);
-  }
+//  protected void continuePush(Map<Identifier, Collection<Handle>> subjects) {
+//    authPushProtocol.continuePush(subjects);
+//  }
   
   void disableAuthenticatorProcessing() {
     assert(initialized);

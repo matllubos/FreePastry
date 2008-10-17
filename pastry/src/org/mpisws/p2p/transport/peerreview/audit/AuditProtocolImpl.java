@@ -133,7 +133,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
       @Override
       public void run() {
         auditsTimerExpired();
-      }},lastAuditStarted+auditIntervalMillis);
+      }},auditIntervalMillis);
   }
 
   
@@ -241,7 +241,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
         @Override
         public void run() {
           makeProgressTimerExpired();
-        }}, peerreview.getTime() + PROGRESS_INTERVAL_MILLIS);
+        }}, PROGRESS_INTERVAL_MILLIS);
     }        
   }
   
@@ -343,10 +343,12 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
   }
   
   protected void startAuditTimer() {
+    long now = peerreview.getTime();
     long nextTimeout = lastAuditStarted + (long)((500+(peerreview.getRandomSource().nextInt(1000)))*0.001*auditIntervalMillis);
-    if (nextTimeout <= peerreview.getTime()) {
-      nextTimeout = peerreview.getTime() + 1;
+    if (nextTimeout <= now) {
+      nextTimeout = now + 1;
     }
+    
     auditTimer = peerreview.getEnvironment().getSelectorManager().schedule(new TimerTask() {
     
       @Override
@@ -354,7 +356,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
         auditsTimerExpired();
       }
     
-    },nextTimeout);    
+    },nextTimeout-now);    
   }
   
   /**
@@ -370,7 +372,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
         public void run() {
           makeProgressTimerExpired();
         }        
-      }, peerreview.getTime() + PROGRESS_INTERVAL_MILLIS);
+      }, PROGRESS_INTERVAL_MILLIS);
     }
   }
   

@@ -257,6 +257,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
     Map<Identifier, Collection<Handle>> subjectList;
     Continuation<Map<Identifier, Collection<Handle>>, Exception> c;
     int numWitnessesWaitingFor = 0;
+    boolean done = false;
 
     public QueryInfo(Collection<Identifier> subjects, Continuation<Map<Identifier, Collection<Handle>>, Exception> c) {      
       subjectList = new HashMap<Identifier, Collection<Handle>>();
@@ -293,6 +294,9 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
     }
     
     public void done() {
+      if (done) return;
+      done = true;
+      logger.log(this+" done()");
       pendingQuery.remove(this);
       c.receiveResult(subjectList);       
     }

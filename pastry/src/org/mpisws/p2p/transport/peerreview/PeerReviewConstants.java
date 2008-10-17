@@ -121,7 +121,7 @@ public interface PeerReviewConstants {
   public static final int INVALID = 2;
   public static final int CERT_MISSING = 3;
 
-  public static final long DEFAULT_AUDIT_INTERVAL_MILLIS = 10000L;
+  public static final long DEFAULT_AUDIT_INTERVAL_MILLIS = 10000;
   public static final int PROGRESS_INTERVAL_MILLIS = 100;
   public static final int INVESTIGATION_INTERVAL_MILLIS = 250;
   public static final int DEFAULT_LOG_DOWNLOAD_TIMEOUT = 2000;

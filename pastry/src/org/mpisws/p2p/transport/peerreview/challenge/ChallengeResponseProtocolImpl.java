@@ -194,8 +194,8 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
              this properly, we need to start at the first such event, which we locate by rounding
              down to the closest multiple of 1000. */
             
-          if (((beginSeq % 1000) > 0) && !((flags & FLAG_INCLUDE_CHECKPOINT) == FLAG_INCLUDE_CHECKPOINT)) {
-            beginSeq -= (beginSeq % 1000);
+          if (((beginSeq % 1000000) > 0) && !((flags & FLAG_INCLUDE_CHECKPOINT) == FLAG_INCLUDE_CHECKPOINT)) {
+            beginSeq -= (beginSeq % 1000000);
             idxFrom = history.findSeq(beginSeq);
             if (logger.level <= Logger.FINEST) logger.log("Moving beginSeq to "+beginSeq+" (idx="+idxFrom+")");
             assert(idxFrom >= 0);
@@ -208,7 +208,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
           IndexEntry toEntry;
           while ((toEntry = history.statEntry(idxTo+1)) != null) {
             followingSeq = toEntry.getSeq();
-            if ((followingSeq % 1000) == 0)
+            if ((followingSeq % 1000000) == 0)
               break;
             
             idxTo++;
@@ -227,18 +227,18 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
           /* Serialize the requested log snippet */
         
           HashPolicy hashPolicy = new ChallengeHashPolicy<Identifier>(flags, challenge.originator, peerreview.getIdSerializer());
-          SimpleOutputBuffer sob = new SimpleOutputBuffer();
+//          SimpleOutputBuffer sob = new SimpleOutputBuffer();
           LogSnippet snippit;
           if ((snippit = history.serializeRange(idxFrom, idxTo, hashPolicy)) != null) {
-            ByteBuffer buf = sob.getByteBuffer();
-            int size = buf.remaining();
+//            ByteBuffer buf = sob.getByteBuffer();
+//            int size = buf.remaining();
             /* Put together a RESPONSE message */
             ResponseMessage<Identifier> response = new ResponseMessage<Identifier>(
                 challenge.originator,peerreview.getLocalId(),challenge.evidenceSeq,new AuditResponse<Handle>(peerreview.getLocalHandle(),snippit));
             
             /* ... and send it back to the challenger */
   
-            if (logger.level <= Logger.FINER) logger.log("Answering AUDIT challenge with "+size+"-byte log snippet"); 
+            if (logger.level <= Logger.FINER) logger.log("Answering AUDIT challenge with "+snippit.entries.size()+"-entry log snippet"); 
             peerreview.transmit(source, response, null, options);
           } else {
             if (logger.level <= Logger.WARNING) logger.log("Error accessing history in handleChallenge("+source+","+challenge+")");

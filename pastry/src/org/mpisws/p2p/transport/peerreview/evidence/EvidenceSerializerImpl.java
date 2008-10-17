@@ -65,7 +65,11 @@ public class EvidenceSerializerImpl<Handle extends RawSerializable, Identifier e
   public Evidence deserialize(InputBuffer buf, byte type, boolean response) throws IOException {
     switch(type) {
     case CHAL_AUDIT:
-      return new ChallengeAudit(buf, hashSize, signatureSize);
+      if (response) {
+        return new AuditResponse<Handle>(buf,handleSerializer,hashSize);
+      } else {
+        return new ChallengeAudit(buf, hashSize, signatureSize);
+      }
     case CHAL_SEND:
     case (byte)MSG_USERDATA:
       if (response) {

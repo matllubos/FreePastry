@@ -140,9 +140,9 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
    * NOTE: in the c++ impl, this was done via peerreview, now it's done via 
    * a continuation.
    */
-  public void continuePush(Map<Identifier, Collection<Handle>> subjects) {
+  public void continuePush(Map<Identifier, Collection<Handle>> subjectsToWitnesses) {
 
-    if (logger.level <= Logger.FINE) logger.log("Continuing authenticator push with "+subjects.size()+" subjects");
+    if (logger.level <= Logger.FINE) logger.log("Continuing authenticator push with "+subjectsToWitnesses.size()+" subjects");
 
     /*
      * We're given a list mapping subjects to witnesses, whereas what we really
@@ -152,14 +152,14 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
      */
 
     Map<Handle, Map<Identifier, List<Authenticator>>> witnesses = new HashMap<Handle, Map<Identifier, List<Authenticator>>>();
-    for (Entry<Identifier, Collection<Handle>> i : subjects.entrySet()) {
-      for (Handle h : i.getValue()) {
-        Map<Identifier, List<Authenticator>> m = witnesses.get(h);
+    for (Entry<Identifier, Collection<Handle>> entry : subjectsToWitnesses.entrySet()) {
+      for (Handle witness : entry.getValue()) {
+        Map<Identifier, List<Authenticator>> m = witnesses.get(witness);
         if (m == null) {
           m = new HashMap<Identifier, List<Authenticator>>();
-          witnesses.put(h, m);
+          witnesses.put(witness, m);
         }
-        m.put(i.getKey(), authOutStore.getAuthenticators(i.getKey()));
+        m.put(entry.getKey(), authOutStore.getAuthenticators(entry.getKey()));
       }
     }
 
@@ -181,7 +181,7 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
 
     /* Once all the messages are sent, we don't need the authenticators any more */
     if (logger.level <= Logger.FINER) logger.log("Push completed; releasing authenticators");
-    for (Identifier i : subjects.keySet()) {
+    for (Identifier i : subjectsToWitnesses.keySet()) {
       authOutStore.flush(i);
     }
   }
@@ -201,7 +201,7 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
          */
         Iterator<Authenticator> i = e.getValue().iterator();
         while (i.hasNext()) {
-          if (random.nextFloat() < pXmit) {
+          if (random.nextFloat() < 1.0-pXmit) {
             i.remove();
           }
         }
@@ -245,7 +245,7 @@ public class AuthenticatorPushProtocolImpl<Handle extends RawSerializable, Ident
         for (Authenticator a : e.getValue()) {
           authPendingStore.addAuthenticator(id, a);
         }         
-        transport.requestCertificate(source, id, null, null);
+        peerreview.requestCertificate(source, id);
       }           
       if (infoStore.getStatus(id) != STATUS_TRUSTED) {
         evidenceTransferProtocol.sendEvidence(source, id);

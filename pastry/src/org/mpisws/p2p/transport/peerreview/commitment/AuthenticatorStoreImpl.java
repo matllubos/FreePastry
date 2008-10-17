@@ -197,7 +197,7 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
   }
 
   public void flushAuthenticatorsFor(Identifier id) {
-    flushAuthenticatorsFor(id, Long.MIN_VALUE, Long.MAX_VALUE);
+    flushAuthenticatorsFor(id, Long.MIN_VALUE, Long.MAX_VALUE-1);
   }
   
 
@@ -234,7 +234,7 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
   }
 
   public List<Authenticator> getAuthenticators(Identifier id) {
-    return getAuthenticators(id,Long.MIN_VALUE, Long.MAX_VALUE);
+    return getAuthenticators(id,Long.MIN_VALUE, Long.MAX_VALUE-1);
   }
 
   public Authenticator getLastAuthenticatorBefore(Identifier id, long seq) {

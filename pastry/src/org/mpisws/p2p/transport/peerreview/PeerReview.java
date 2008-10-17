@@ -59,6 +59,7 @@ import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import static org.mpisws.p2p.transport.peerreview.Basics.renderStatus;
 
@@ -94,7 +95,8 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
 
   public Identifier getLocalId();
   public Handle getLocalHandle();
-  
+  public Cancellable requestCertificate(Handle source, Identifier certHolder);
+
 //  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest, boolean b, PeerReviewMessage message, MessageCallback<Handle, PeerReviewMessage> deliverAckToMe);
   
   public void transmit(Handle dest, 

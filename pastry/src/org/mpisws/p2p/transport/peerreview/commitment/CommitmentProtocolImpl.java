@@ -278,7 +278,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     /* Get the public key. If we don't have it (yet), ask the peer to send it */
 
     if (!transport.hasCertificate(idx)) {
-      transport.requestCertificate(info.handle, idx, null, null);
+      peerreview.requestCertificate(info.handle, idx);
       return;
     }
 

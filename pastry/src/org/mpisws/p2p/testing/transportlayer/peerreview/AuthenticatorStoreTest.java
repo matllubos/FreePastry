@@ -407,6 +407,12 @@ public class AuthenticatorStoreTest {
       // TODO Auto-generated method stub
       
     }
+
+    public Cancellable requestCertificate(MyInetSocketAddress source,
+        MyInetSocketAddress certHolder) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
 
   class TestAuthenticatorStore extends AuthenticatorStoreImpl<MyInetSocketAddress> {

@@ -37,6 +37,7 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.statement;
 
 import java.nio.ByteBuffer;
+import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -58,6 +59,7 @@ import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 
+import rice.Continuation;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.tuples.Tuple;
@@ -169,7 +171,7 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
   int checkSnippetAndRequestCertificates(LogSnippet snippet, IncompleteStatementInfo<Handle, Identifier> idx) {
     Tuple<Integer,Identifier> ret = peerreview.getEvidenceTool().checkSnippet(snippet);
     int code = ret.a();
-    Identifier missingCertID = ret.b();
+    final Identifier missingCertID = ret.b();
    
     if (code == CERT_MISSING) {
       assert(missingCertID != null);
@@ -177,7 +179,8 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
       idx.isMissingCertificate = true;
       idx.missingCertificateID = missingCertID;
       if (logger.level <= Logger.FINE) logger.log("AUDIT RESPONSE requires certificate for "+missingCertID+"; requesting");
-      transport.requestCertificate(idx.sender, missingCertID, null, null);  
+      peerreview.requestCertificate(idx.sender, missingCertID);  
+      
     }
   
     return code;
@@ -206,7 +209,7 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
       if (logger.level <= Logger.FINE) logger.log("Need subject's certificate to verify statement; asking source for it");
       idx.isMissingCertificate = true;
       idx.missingCertificateID = subject;
-      transport.requestCertificate(idx.sender, subject, null, null);
+      peerreview.requestCertificate(idx.sender, subject);
       return;
     }
  

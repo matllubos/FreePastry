@@ -48,6 +48,7 @@ import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAKeyGenParameterSpec;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -299,9 +300,12 @@ public class CommitmentTest {
   class BogusApp implements PeerReviewCallback<HandleImpl, IdImpl> {
 
     Logger logger;
-    public BogusApp(Logger logger) {
+    Player player;
+    
+    public BogusApp(Player player) {
       super();
-      this.logger = logger;
+      this.player = player;
+      this.logger = player.logger;
     }
     
 
@@ -366,7 +370,7 @@ public class CommitmentTest {
 
 
     public Collection<HandleImpl> getMyWitnessedNodes() {
-      throw new RuntimeException("implement");
+      return player.witnessed;
     }
   }
 
@@ -382,15 +386,35 @@ public class CommitmentTest {
     
     PeerReview<HandleImpl, IdImpl> pr;
     IdentityTransprotLayerImpl<HandleImpl, IdImpl> transport;
+    public Collection<HandleImpl> witnessed = new ArrayList<HandleImpl>();
 
     public Player(String name, int id, Environment env2) throws Exception {
       super();
       Environment env = env2.cloneEnvironment(name);
       this.logger = env.getLogManager().getLogger(Player.class, null);
-      File f = new File(name+".data");
-      if (f.exists()) f.delete();
-      f = new File(name+".index");
-      if (f.exists()) f.delete();
+      File f = new File(name);
+      if (f.exists()) {
+        File f2 = new File(f,"peers");
+        File[] foo = f2.listFiles();
+        if (foo != null) {
+          for (int c = 0; c < foo.length; c++) {
+            foo[c].delete();
+          }
+        }
+        
+        foo = f.listFiles();
+        if (foo != null) {
+          for (int c = 0; c < foo.length; c++) {
+            foo[c].delete();
+          }
+        }
+        
+        System.out.println("Delete "+f+","+f.delete());        
+      }
+//      File f = new File(name+".data");
+//      if (f.exists()) f.delete();
+//      f = new File(name+".index");
+//      if (f.exists()) f.delete();
       
       this.localHandle = new HandleImpl(name, new IdImpl(id));
       KeyPair pair = keyPairGen.generateKeyPair();    
@@ -399,18 +423,21 @@ public class CommitmentTest {
       transport = new IdentityTransprotLayerImpl<HandleImpl, IdImpl>(
           new IdSerializer(), new X509SerializerImpl(),this.localHandle.id,
           cert,pair.getPrivate(),t1,new SHA1HashProvider(),env) {
+        
         @Override
-        public Cancellable requestCertificate(HandleImpl source, final IdImpl certHolder,
+        public Cancellable requestCertificate(final HandleImpl source, final IdImpl certHolder,
             final Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-//          System.out.println("requestCert("+source+")");
+          logger.log("requestCert("+certHolder+" from "+source+")");
           return idTLTable.get(source).requestValue(source, certHolder, new Continuation<X509Certificate, Exception>() {
           
             public void receiveResult(X509Certificate result) {
+              logger.log("delivering cert for ("+certHolder+") c:"+c);
               knownValues.put(certHolder, result);
               if (c != null) c.receiveResult(result);
             }
           
             public void receiveException(Exception exception) {
+              logger.logException("exception when requesting cert for ("+certHolder+") c:"+c,exception);
               if (c != null) c.receiveException(exception);
             }
           
@@ -441,7 +468,7 @@ public class CommitmentTest {
           return Integer.toString(id.id);
         }},
           new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
-      pr.setApp(new BogusApp(env.getLogManager().getLogger(BogusApp.class, null)));
+      pr.setApp(new BogusApp(this));
       pr.init(name);
     }
   }
@@ -473,7 +500,11 @@ public class CommitmentTest {
       
       alice = new Player("alice",1,env);
       bob = new Player("bob",2,env);    
-      carol = new Player("carol",3,env);    
+      carol = new Player("carol",3,env);
+      
+      carol.witnessed.add(alice.localHandle);
+      carol.witnessed.add(bob.localHandle);
+      
           
 //      bob.pr.requestCertificate(alice.localHandle, alice.localHandle.id, new Continuation<X509Certificate, Exception>() {
 //      
@@ -521,6 +552,15 @@ public class CommitmentTest {
       env.destroy();      
       throw e;
     }
+    
+    env.getSelectorManager().invoke(new Runnable() {
+    
+      public void run() {
+        // TODO Auto-generated method stub
+    
+      }
+    
+    });
 //    Thread.sleep(5000);
 //    env.destroy();
   }

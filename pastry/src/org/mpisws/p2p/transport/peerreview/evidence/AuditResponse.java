@@ -41,7 +41,9 @@ import java.nio.ByteBuffer;
 
 import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
+import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
@@ -67,13 +69,19 @@ public class AuditResponse<Handle extends RawSerializable> implements Evidence {
   public short getEvidenceType() {
     return RESP_AUDIT;
   }
+
+  public AuditResponse(InputBuffer buf, Serializer<Handle> serializer, int hashSize) throws IOException {
+    logOwner = serializer.deserialize(buf);
+    logSnippit = new LogSnippet(buf, hashSize);
+  }
   
   public void serialize(OutputBuffer buf) throws IOException {
-    
+    logOwner.serialize(buf);
+    logSnippit.serialize(buf);
   }
 
   public LogSnippet getLogSnippit() {
-    throw new RuntimeException("implement");
+    return logSnippit;
   }
 
   public Handle getLogOwner() {
