@@ -94,14 +94,14 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
    */
   public SSLSocketManager(SSLTransportLayerImpl<Identifier, ?> sslTL,
       P2PSocket<Identifier> s,
-      Continuation<SSLSocketManager<Identifier>, Exception> c, boolean server) {
+      Continuation<SSLSocketManager<Identifier>, Exception> c, boolean server, boolean useClientAuth) {
     this.sslTL = sslTL;
     this.socket = s;
     this.c = c;
 
     engine = sslTL.context.createSSLEngine(s.getIdentifier().toString(), 0);
     engine.setUseClientMode(!server);
-    if (server) engine.setNeedClientAuth(true);
+    if (server && useClientAuth) engine.setNeedClientAuth(true);
 
     // System.out.println(Arrays.toString(engine.getSupportedCipherSuites()));
     // engine.setEnabledCipherSuites(new String[]

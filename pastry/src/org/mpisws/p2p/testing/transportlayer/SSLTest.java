@@ -107,7 +107,7 @@ public class SSLTest {
 
     WireTransportLayer aliceWire = new WireTransportLayerImpl(aliceAddr,aliceEnv,null);
     SSLTransportLayerImpl<InetSocketAddress, ByteBuffer> aliceSSL = new SSLTransportLayerImpl<InetSocketAddress, ByteBuffer>(
-        aliceWire,aliceStore,aliceEnv);
+        aliceWire,aliceStore,aliceStore,aliceEnv);
     
     Environment bobEnv = rootEnv.cloneEnvironment("bob");
     InetSocketAddress bobAddr = new InetSocketAddress(addr,9002); 
@@ -121,7 +121,7 @@ public class SSLTest {
 
     WireTransportLayer bobWire = new WireTransportLayerImpl(bobAddr,bobEnv,null);
     SSLTransportLayerImpl<InetSocketAddress, ByteBuffer> bobSSL = new SSLTransportLayerImpl<InetSocketAddress, ByteBuffer>(
-        bobWire,bobStore,bobEnv);
+        bobWire,bobStore,bobStore,bobEnv);
 
     aliceSSL.setCallback(new TransportLayerCallback<InetSocketAddress, ByteBuffer>() {
 

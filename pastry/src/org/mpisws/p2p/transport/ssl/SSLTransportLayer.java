@@ -54,6 +54,10 @@ public interface SSLTransportLayer<Identifier, MessageType> extends TransportLay
   public static final String OPTION_AUTHENTICATION = "authenticate";
   public static final String OPTION_CERT_SUBJECT = "ssl_certificate_subject";
 
+  public static final int CLIENT_AUTH_NONE = 0;
+  public static final int CLIENT_AUTH_REQUIRED = 1;
+  public static final int CLIENT_AUTH_OPTIONAL = 2;
+  
   public static final int NO = 0;
   public static final int YES = 1;
 }

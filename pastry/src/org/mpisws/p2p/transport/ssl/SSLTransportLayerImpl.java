@@ -154,59 +154,53 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 //        }
 //      
 //      }};
+  private int clientAuth;
   
-  private static String keyStoreFile = "testkeys";
-  private static String trustStoreFile = "testkeys";
-  private static String passwd = "passphrase";
-
-  public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyStore ks, Environment env) throws Exception {
+//  private static String keyStoreFile = "testkeys";
+//  private static String trustStoreFile = "testkeys";
+//  private static String passwd = "passphrase";
+  public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyStore keyStore, KeyStore trustStore, Environment env) throws IOException {
+    this(tl,keyStore,trustStore,CLIENT_AUTH_REQUIRED,env);
+  }
+  
+  /**
+   * 
+   * @param tl
+   * @param ks set a cert on the client, and optionally a keypair (if want clientauth), on the server, need a keypair, cert if want clientauth
+   * @param clientAuth NO, OPTIONAL, REQUIRED // on the server side
+   * @param env
+   * @throws Exception
+   */
+  public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyStore keyStore, KeyStore trustStore, int clientAuth, Environment env) throws IOException {
+    if (clientAuth != CLIENT_AUTH_NONE && clientAuth != CLIENT_AUTH_REQUIRED) throw new IllegalArgumentException("clientAuth type:"+clientAuth+" not supported.");
+    
     this.environment = env;
 //    this.keyPair = keyPair;
 //    this.caCert = caCert;
     this.logger = env.getLogManager().getLogger(SSLTransportLayerImpl.class, null);
     this.tl = tl;
     errorHandler = new DefaultErrorHandler<Identifier>(logger, Logger.WARNING);
+    this.clientAuth = clientAuth;
 
-    this.context = SSLContext.getInstance("TLS");
-
-//    KeyManagerFactory kmf =
-//      KeyManagerFactory.getInstance("SunX509");
-//    kmf.init(ksKeys, passphrase);
-//
-//    // TrustManager's decide whether to allow connections.
-//    TrustManagerFactory tmf =
-//      TrustManagerFactory.getInstance("SunX509");
-//    tmf.init(ksTrust);
-
-//    context.init(km, tm, null);
-
-    KeyStore ts = ks;
+    try {
+      this.context = SSLContext.getInstance("TLS");
     char[] passphrase = "".toCharArray();
     
-//    KeyStore ks = KeyStore.getInstance("JKS");
-//    KeyStore ts = KeyStore.getInstance("JKS");
-
-//    char[] passphrase = passwd.toCharArray();
-
-//    ks.load(new FileInputStream(keyStoreFile), passphrase);
-//    ts.load(new FileInputStream(trustStoreFile), passphrase);
-
-    
-//    KeyStore ks = KeyStore.
-    
     KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-    kmf.init(ks, passphrase);
+    kmf.init(keyStore, passphrase);
 
     TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-    tmf.init(ts);    
+    tmf.init(trustStore);    
     
     TrustManager[] tms = tmf.getTrustManagers();
-//    innerTM = (X509TrustManager)tms[0];
-//    tms = tm;
-//    System.out.println(Arrays.toString(tms));
     context.init(kmf.getKeyManagers(), tms, null);
 
     tl.setCallback(this);
+    } catch (RuntimeException re) {
+      throw re;
+    } catch (Exception nsae) {
+      throw new RuntimeException(nsae);
+    }
     
   }
   
@@ -230,7 +224,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
           public void receiveResult(SSLSocketManager<Identifier> result) {
             deliverSocketToMe.receiveResult(ret, result);
-          }}, false);
+          }}, false, clientAuth != CLIENT_AUTH_NONE);
       }
     
     }, options));
@@ -254,7 +248,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
           result.close();
           errorHandler.receivedException(s.getIdentifier(), ioe);
         }
-      }},true);
+      }},true, clientAuth != CLIENT_AUTH_NONE);
   }
 
   public void setCallback(TransportLayerCallback<Identifier, MessageType> callback) {
