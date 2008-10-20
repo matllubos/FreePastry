@@ -59,11 +59,11 @@ RESP_AUDIT
  */
 public class AuditResponse<Handle extends RawSerializable> implements Evidence {
   Handle logOwner;
-  LogSnippet logSnippit;
+  LogSnippet logSnippet;
   
-  public AuditResponse(Handle logOwner, LogSnippet logSnippit) {
+  public AuditResponse(Handle logOwner, LogSnippet logSnippet) {
     this.logOwner = logOwner;
-    this.logSnippit = logSnippit;
+    this.logSnippet = logSnippet;
   }
 
   public short getEvidenceType() {
@@ -72,20 +72,24 @@ public class AuditResponse<Handle extends RawSerializable> implements Evidence {
 
   public AuditResponse(InputBuffer buf, Serializer<Handle> serializer, int hashSize) throws IOException {
     logOwner = serializer.deserialize(buf);
-    logSnippit = new LogSnippet(buf, hashSize);
+    logSnippet = new LogSnippet(buf, hashSize);
   }
   
   public void serialize(OutputBuffer buf) throws IOException {
     logOwner.serialize(buf);
-    logSnippit.serialize(buf);
+    logSnippet.serialize(buf);
   }
 
-  public LogSnippet getLogSnippit() {
-    return logSnippit;
+  public LogSnippet getLogSnippet() {
+    return logSnippet;
   }
 
   public Handle getLogOwner() {
     return logOwner;
+  }
+
+  public long getFirstSeq() {
+    return logSnippet.getFirstSeq();
   }
 
 }

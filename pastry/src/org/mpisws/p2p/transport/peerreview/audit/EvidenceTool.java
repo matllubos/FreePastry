@@ -41,10 +41,12 @@ import java.util.Collection;
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.tuples.Tuple;
 
-public interface EvidenceTool<Handle, Identifier> extends PeerReviewConstants {
+public interface EvidenceTool<Handle extends RawSerializable, Identifier extends RawSerializable> extends PeerReviewConstants {
   
   /**
    * 
@@ -53,10 +55,12 @@ public interface EvidenceTool<Handle, Identifier> extends PeerReviewConstants {
    */
   Tuple<Integer, Identifier> checkSnippet(LogSnippet snippet);
 //  int isAuthenticatorValid(Authenticator authenticator, Identifier subject);
-//  boolean checkSnippetSignatures(
-//      LogSnippet snippet, long firstSeq, byte[] baseHash, Handle subjectHandle, 
-//      AuthenticatorStore<Identifier> authStoreOrNull, byte flags, byte[] keyNodeHash, long keyNodeMaxSeq);
+  boolean checkSnippetSignatures(
+      LogSnippet snippet, Handle subjectHandle, 
+      AuthenticatorStore<Identifier> authStoreOrNull, byte flags, CommitmentProtocol<Handle, Identifier> commitmentProtocol, 
+      byte[] keyNodeHash, long keyNodeMaxSeq);
 //  boolean checkNoEntriesHashed(LogSnippet snippet, Collection<Short> typesToIgnore, int numTypesToIgnore);
+
   
   /**
    * This is called when (a) we have obtained a new log segment from some node,

@@ -388,9 +388,9 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       AuditResponse<Handle> responseAudit = (AuditResponse<Handle>)response;
       long requestedBeginSeq = evidenceAudit.from.getSeq();
       long finalSeq = evidenceAudit.to.getSeq();
-      byte includePrevCheckpoint = evidenceAudit.flags;
+      boolean includePrevCheckpoint = evidenceAudit.isIncludePrevCheckpoint();
 
-      throw new RuntimeException("TODO: implement");
+      long firstSeq = responseAudit.getFirstSeq();
 //      int readptr = 0;
 //      readByte(response, (unsigned int*)&readptr); /* RESP_AUDIT */
 //      Handle subjectHandle = peerreview->readNodeHandle(response, (unsigned int*)&readptr, responseLen);
@@ -404,24 +404,27 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
 //      unsigned int subjectHandleInBytesLen = 0;
 //      subjectHandle->write(subjectHandleInBytes, &subjectHandleInBytesLen, sizeof(subjectHandleInBytes));
 //
-//      if ((requestedBeginSeq % 1000) > 0)
-//        requestedBeginSeq -= requestedBeginSeq % 1000;
+      if ((requestedBeginSeq % 1000000) > 0) {
+        requestedBeginSeq -= requestedBeginSeq % 1000000;
+      }
+
+      long fromNodeMaxSeq = requestedBeginSeq + 999999;
 //
-//      long long fromNodeMaxSeq = requestedBeginSeq + 999;
-//
-//      if ((firstSeq > requestedBeginSeq) || (!includePrevCheckpoint && (firstSeq < requestedBeginSeq))) {
-//        if (logger.level <= Logger.WARNING) logger.log("Log snippet starts at %lld, but we asked for %lld (ilc=%s); flagging invalid", firstSeq, requestedBeginSeq, includePrevCheckpoint ? "yes" : "no");
-//        delete subjectHandle;
-//        return false;
-//      }
-//
-//      bool snippetOK = EvidenceTool::checkSnippetSignatures(&response[readptr], responseLen - readptr, firstSeq, baseHash, subjectHandle, extractAuthsFromResponse ? authOutStore : NULL, includePrevCheckpoint, peerreview, peerreview, commitmentProtocol, &evidence[2+sizeof(long long)], fromNodeMaxSeq);
-//      delete subjectHandle;
-//      
-//      if (!snippetOK)
-//        return false;
-//      
-//      break;
+      if ((firstSeq > requestedBeginSeq) || (!includePrevCheckpoint && (firstSeq < requestedBeginSeq))) {
+        if (logger.level <= Logger.WARNING) logger.log("Log snippet starts at "+firstSeq+", but we asked for "+requestedBeginSeq+" (ilc="+(includePrevCheckpoint ? "yes" : "no")+"); flagging invalid");
+        return false;
+      }
+
+      boolean snippetOK = peerreview.getEvidenceTool().checkSnippetSignatures(
+          responseAudit.getLogSnippet(), responseAudit.getLogOwner(), extractAuthsFromResponse ? authOutStore : null,
+              evidenceAudit.flags,commitmentProtocol,evidenceAudit.from.getHash(),fromNodeMaxSeq); 
+      //&response[readptr], responseLen - readptr, firstSeq, baseHash, subjectHandle, extractAuthsFromResponse ? authOutStore : NULL, 
+      // includePrevCheckpoint, peerreview, peerreview, commitmentProtocol, &evidence[2+sizeof(long long)], fromNodeMaxSeq);
+
+      if (!snippetOK)
+        return false;
+      
+      break;
     }
     case CHAL_SEND: {
       UserDataMessage<Handle> evidenceUDM = (UserDataMessage<Handle>)evidence;

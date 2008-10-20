@@ -121,7 +121,6 @@ import rice.selector.TimerTask;
  * @param <Identifier> (Permanent Identifier), can get an Identifier from a Handle
  */
 public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements 
-    TransportLayer<Handle, ByteBuffer>,
     TransportLayerCallback<Handle, ByteBuffer>,
     PeerReview<Handle, Identifier>, StatusChangeListener<Identifier> {
 
@@ -440,7 +439,11 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       throw new RuntimeException(e);
     }
   }
-   
+
+  public Cancellable requestCertificate(Handle source, Identifier certHolder, Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
+    return transport.requestCertificate(source, certHolder, c, options);
+  }
+  
   public Cancellable requestCertificate(final Handle source, final Identifier certHolder) {
     return transport.requestCertificate(source, certHolder, new Continuation<X509Certificate, Exception>() {
 
@@ -839,5 +842,13 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     authInStore.disableMemoryBuffer();
     authOutStore.disableMemoryBuffer();
     authPendingStore.disableMemoryBuffer();
+  }
+
+  public SecureHistory getHistory() {
+    return history;
+  }
+
+  public long getTimeToleranceMillis() {
+    return timeToleranceMillis;
   }
 }

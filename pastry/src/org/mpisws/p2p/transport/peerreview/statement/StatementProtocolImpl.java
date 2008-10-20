@@ -385,7 +385,7 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
 //       readptr += hashSizeBytes;
 //       delete subjectHandle;
 
-       switch (checkSnippetAndRequestCertificates(auditResponse.getLogSnippit(), idx)) {
+       switch (checkSnippetAndRequestCertificates(auditResponse.getLogSnippet(), idx)) {
          case INVALID:
            if (logger.level <= Logger.WARNING) logger.log("AUDIT RESPONSE is not well-formed; discarding");
            idx.finished = true;

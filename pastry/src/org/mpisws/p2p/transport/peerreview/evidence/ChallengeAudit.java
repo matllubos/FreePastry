@@ -84,4 +84,8 @@ public class ChallengeAudit implements Evidence {
     to.serialize(buf);
   }
 
+  public boolean isIncludePrevCheckpoint() {
+    return (flags & FLAG_INCLUDE_CHECKPOINT) == FLAG_INCLUDE_CHECKPOINT;
+  }
+
 }

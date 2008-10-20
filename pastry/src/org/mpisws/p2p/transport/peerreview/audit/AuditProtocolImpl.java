@@ -383,7 +383,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
    */
   public void processAuditResponse(Identifier subject, long timestamp, AuditResponse<Handle> response) {
     try {
-    LogSnippet snippet = response.getLogSnippit();
+    LogSnippet snippet = response.getLogSnippet();
     ActiveAuditInfo<Handle, Identifier> aai = findOngoingAudit(subject, timestamp);
     
     /* Read the header of the log snippet */

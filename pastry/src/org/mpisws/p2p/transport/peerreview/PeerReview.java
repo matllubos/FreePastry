@@ -48,6 +48,7 @@ import org.mpisws.p2p.transport.peerreview.audit.EvidenceTool;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
@@ -64,7 +65,7 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
 import static org.mpisws.p2p.transport.peerreview.Basics.renderStatus;
 
 public interface PeerReview<Handle extends RawSerializable, Identifier extends RawSerializable> extends 
-    IdentityTransportCallback<Handle, Identifier>, PeerReviewConstants, TransportLayer<Handle, ByteBuffer> {
+    IdentityTransportCallback<Handle, Identifier>, PeerReviewConstants, IdentityTransport<Handle, Identifier> {
 
   /**
    * Option should map to an int < 255 to record the relevant length of the message.
@@ -147,5 +148,7 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
   
   public SecureHistoryFactory getHistoryFactory();
   public VerifierFactory<Handle, Identifier> getVerifierFactory();
-
+  public SecureHistory getHistory();
+  
+  public long getTimeToleranceMillis();
 }

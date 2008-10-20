@@ -63,6 +63,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistoryFactory;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
@@ -412,6 +413,16 @@ public class AuthenticatorStoreTest {
         MyInetSocketAddress certHolder) {
       // TODO Auto-generated method stub
       return null;
+    }
+
+    public SecureHistory getHistory() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public long getTimeToleranceMillis() {
+      // TODO Auto-generated method stub
+      return 0;
     }
   }
 
