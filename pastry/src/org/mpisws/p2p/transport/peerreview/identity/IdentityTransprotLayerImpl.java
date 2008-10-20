@@ -98,6 +98,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
   Map<I, Signature> verifiers = new HashMap<I, Signature>();
   
   HashProvider hasher;
+  private Environment environment;
   
   /**
    * TODO: Use a param to load the store from a file.
@@ -132,7 +133,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     this.tl = tl;
     tl.setCallback(this);
     this.hasher = hasher;
-    
+    this.environment = env;
     this.logger = env.getLogManager().getLogger(IdentityTransprotLayerImpl.class, null);
     this.errorHandler = new DefaultErrorHandler<Identifier>(this.logger);
     
@@ -234,6 +235,10 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
 
   public byte[] hash(ByteBuffer... hashMe) {
     return hasher.hash(hashMe);
+  }
+
+  public Environment getEnvironment() {
+    return environment;
   }
   
 }

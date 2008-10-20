@@ -37,77 +37,33 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.transport.peerreview.history.logentry;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
-import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
-import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 
-public class EvtRecv<Handle extends RawSerializable> extends HistoryEvent {
-  Handle senderHandle;
-  long senderSeq;
-  byte[] payload; // may be full, or just relevant
-  byte[] hash; // null if the whole payload is there (hashed == false)
-  
-  public EvtRecv(Handle senderHandle, long topSeq, ByteBuffer payload) {
-    this.senderHandle = senderHandle;
-    this.senderSeq = topSeq;
-    this.payload = new byte[payload.remaining()];
-    System.arraycopy(payload.array(), payload.position(), this.payload, 0, payload.remaining());    
+public class EvtInit<Handle extends RawSerializable> extends HistoryEvent {
+  Handle handle;
+
+  public EvtInit(Handle handle) {
+    this.handle = handle;
   }
   
-  public EvtRecv(Handle senderHandle, long topSeq, ByteBuffer payload,
-      int relevantLen, HashProvider hasher) {
-    this.senderHandle = senderHandle;
-    this.senderSeq = topSeq;
-    this.payload = new byte[payload.remaining()];
-    System.arraycopy(payload.array(), payload.position(), this.payload, 0, relevantLen);
-    hash = hasher.hash(ByteBuffer.wrap(this.payload));
-  }
-
   public short getType() {
-    return EVT_RECV;
-  }
-
-  public EvtRecv(InputBuffer buf, Serializer<Handle> serializer, int hashSize) throws IOException {
-    senderHandle = serializer.deserialize(buf);
-    senderSeq = buf.readLong();
-    boolean hashed = buf.readBoolean();
-    int payloadLength = buf.bytesRemaining();
-    if (hashed) payloadLength-=hashSize;
-    payload = new byte[payloadLength];
-    buf.read(payload);
-    if (hashed) {
-      hash = new byte[hashSize];
-      buf.read(hash);
-    }
+    return EVT_INIT;
   }
   
+  public EvtInit(InputBuffer buf, Serializer<Handle> handleSerializer) throws IOException {
+    super();
+    handle = handleSerializer.deserialize(buf);
+  }
+
+  @Override
   public void serialize(OutputBuffer buf) throws IOException {
-    senderHandle.serialize(buf);
-    buf.writeLong(senderSeq);
-    buf.writeBoolean(hash != null);  
-    buf.write(payload, 0, payload.length);
-    if (hash != null) buf.write(hash, 0, hash.length);
+    handle.serialize(buf);
   }
 
-  public Handle getSenderHandle() {
-    return senderHandle;
-  }
-
-  public long getSenderSeq() {
-    return senderSeq;
-  }
-
-  public byte[] getPayload() {
-    return payload;
-  }
-
-  public byte[] getHash() {
-    return hash;
-  }
 }

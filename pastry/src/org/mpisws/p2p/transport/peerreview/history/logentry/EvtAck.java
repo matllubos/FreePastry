@@ -39,9 +39,12 @@ package org.mpisws.p2p.transport.peerreview.history.logentry;
 import java.io.IOException;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 
 /**
   EVT_ACK
@@ -71,6 +74,16 @@ public class EvtAck<Identifier extends RawSerializable> extends HistoryEvent {
     this.signature = signature;
   }
   
+  public EvtAck(InputBuffer buf, Serializer<Identifier> idSerializer, int hashSize, int signatureSize) throws IOException {
+    remoteId = idSerializer.deserialize(buf);
+    ackedSeq = buf.readLong();
+    hisSeq = buf.readLong();
+    hTopMinusOne = new byte[hashSize];
+    buf.read(hTopMinusOne);
+    signature = new byte[signatureSize];
+    buf.read(signature);
+  }
+
   public short getType() {
     return EVT_SENDSIGN;
   }
@@ -81,5 +94,25 @@ public class EvtAck<Identifier extends RawSerializable> extends HistoryEvent {
     buf.writeLong(hisSeq);
     buf.write(hTopMinusOne,0,hTopMinusOne.length);
     buf.write(signature,0,signature.length);
+  }
+
+  public Identifier getRemoteId() {
+    return remoteId;
+  }
+
+  public long getAckedSeq() {
+    return ackedSeq;
+  }
+
+  public long getHisSeq() {
+    return hisSeq;
+  }
+
+  public byte[] getHTopMinusOne() {
+    return hTopMinusOne;
+  }
+
+  public byte[] getSignature() {
+    return signature;
   }
 }

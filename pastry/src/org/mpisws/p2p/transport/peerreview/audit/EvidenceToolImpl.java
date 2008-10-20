@@ -36,16 +36,41 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.audit;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import org.mpisws.p2p.transport.peerreview.PeerReview;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtAck;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtInit;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtRecv;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSend;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSign;
+import org.mpisws.p2p.transport.util.Serializer;
+
 import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
+import rice.p2p.commonapi.NodeHandle;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.tuples.Tuple;
 
-public class EvidenceToolImpl<Handle, Identifier> implements EvidenceTool<Handle, Identifier> {
+public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements EvidenceTool<Handle, Identifier> {
 
   Logger logger;
+  Serializer<Identifier> idSerializer;
+  Serializer<Handle> handleSerializer;
   
-  public EvidenceToolImpl(LogManager manager) {
-    this.logger = manager.getLogger(EvidenceToolImpl.class, null);
+  int hashSize;
+  int signatureSize;
+  private PeerReview<Handle, Identifier> peerreview;
+  
+  public EvidenceToolImpl(PeerReview<Handle, Identifier> peerreview, Serializer<Handle> handleSerializer, Serializer<Identifier> idSerializer, int hashSize, int signatureSize) {
+    this.peerreview = peerreview;
+    this.logger = peerreview.getEnvironment().getLogManager().getLogger(EvidenceToolImpl.class, null);
+    this.handleSerializer = handleSerializer;
+    this.idSerializer = idSerializer;
+    this.hashSize = hashSize;
+    this.signatureSize = signatureSize;
   }
   
   /**
@@ -62,10 +87,59 @@ public class EvidenceToolImpl<Handle, Identifier> implements EvidenceTool<Handle
         return new Tuple<Integer, Identifier>(INVALID,null);
       }
       
-      
+      /* Further processing depends on the entry type */
+      if (logger.level <= Logger.FINER) logger.log("Entry type "+entry.type+", size="+entry.content.length+" "+(entry.isHash ? " (hashed)" : ""));
+
+      try {
+        SimpleInputBuffer sib = new SimpleInputBuffer(entry.content);
+        switch (entry.type) {
+          case EVT_SEND : /* No certificates needed; just do syntax checking */
+            if (!entry.isHash) {
+              new EvtSend<Identifier>(sib, idSerializer, hashSize);
+            }
+            break;
+          case EVT_RECV : {/* We may need the certificate for the sender */          
+            EvtRecv<Handle> recv = new EvtRecv<Handle>(sib,handleSerializer,hashSize);
+            Identifier id = peerreview.getIdentifierExtractor().extractIdentifier(recv.getSenderHandle());
+            if (!peerreview.hasCertificate(id)) {
+              if (logger.level <= Logger.FINE) logger.log("AUDIT RESPONSE contains RECV from "+id+"; certificate needed");
+              return new Tuple<Integer, Identifier>(CERT_MISSING, id);
+            }
+            break;
+          }
+          case EVT_SIGN : /* No certificates needed */
+            new EvtSign(sib, signatureSize, hashSize);
+            break;
+          case EVT_ACK : /* We may need the certificate for the sender */
+            EvtAck<Identifier> evtAck = new EvtAck<Identifier>(sib,idSerializer,hashSize,signatureSize);
+            Identifier id = evtAck.getRemoteId();
+            if (!peerreview.hasCertificate(id)) {
+              if (logger.level <= Logger.FINE) logger.log("AUDIT RESPONSE contains RECV from "+id+"; certificate needed");
+              return new Tuple<Integer, Identifier>(CERT_MISSING, id);
+            }
+            break;
+          case EVT_CHECKPOINT : /* No certificates needed */
+          case EVT_VRF :
+          case EVT_CHOOSE_Q :
+          case EVT_CHOOSE_RAND :
+            break;
+          case EVT_INIT: {/* No certificates needed */          
+            new EvtInit(sib,handleSerializer);
+            break;
+          }
+          case EVT_SENDSIGN : /* No certificates needed */
+            break;
+          default : /* No certificates needed */
+            assert(entry.type > EVT_MAX_RESERVED); 
+            break;
+        }
+      } catch (IOException ioe) {
+        if (logger.level <= Logger.WARNING) logger.log("Malformed entry:"+entry);
+        return new Tuple<Integer, Identifier>(INVALID,null);
+      }
     }
     
-    throw new RuntimeException("implement");
+    return new Tuple<Integer, Identifier>(VALID,null);
   }
 
 }

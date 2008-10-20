@@ -586,7 +586,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.challengeProtocol = new ChallengeResponseProtocolImpl<Handle, Identifier>(this, transport, infoStore, history, authOutStore, auditProtocol, commitmentProtocol);
     this.statementProtocol = new StatementProtocolImpl<Handle, Identifier>(this, challengeProtocol, infoStore, transport);
     
-    this.evidenceTool = new EvidenceToolImpl<Handle, Identifier>(env.getLogManager()); // TODO: implement
+    this.evidenceTool = new EvidenceToolImpl<Handle, Identifier>(this, handleSerializer, idSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes()); // TODO: implement
         
     initialized = true;
 

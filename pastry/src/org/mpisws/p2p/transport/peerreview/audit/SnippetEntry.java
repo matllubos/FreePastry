@@ -39,6 +39,8 @@ package org.mpisws.p2p.transport.peerreview.audit;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.mpisws.p2p.transport.peerreview.history.logentry.HistoryEvent;
+
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.MathUtils;
@@ -63,6 +65,7 @@ public class SnippetEntry {
   public long seq;
   public boolean isHash = false;
   public byte[] content; // may be a hash
+//  public HistoryEvent deserializedEvent;
   
   public static final int NUM_INDEXES = 1000000;
   
@@ -99,6 +102,10 @@ public class SnippetEntry {
     }
     content = new byte[size];
     buf.read(content);
+  }
+  
+  public String toString() {
+    return "SEntry type:"+type+" seq:"+seq+" "+(isHash?"hash":"not hash")+" len:"+content.length;
   }
   
   public void serialize(OutputBuffer buf, SnippetEntry prev) throws IOException {

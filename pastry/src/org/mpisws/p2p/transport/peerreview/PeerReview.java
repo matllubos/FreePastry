@@ -83,6 +83,7 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
   public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature);
   public boolean addAuthenticatorIfValid(AuthenticatorStore<Identifier> store, Identifier subject, Authenticator auth);
 
+  public boolean hasCertificate(Identifier id);
   
   Environment getEnvironment();
 

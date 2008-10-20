@@ -46,7 +46,9 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
 public abstract class HistoryEvent implements PeerReviewConstants {
 
-  abstract void serialize(OutputBuffer buf) throws IOException;
+  
+  abstract public short getType();
+  abstract public void serialize(OutputBuffer buf) throws IOException;
   
   public ByteBuffer serialize() throws IOException {
     SimpleOutputBuffer sob = new SimpleOutputBuffer();
