@@ -75,6 +75,15 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     String indexName = name+".index";
     String dataName = name+".data";
     
+    File f = new File(indexName);
+    if (f.exists()) {
+      throw new RuntimeException("File "+f+" already exists.");
+    }
+    f = new File(dataName);
+    if (f.exists()) {
+      throw new RuntimeException("File "+f+" already exists.");
+    }
+    
     indexFile = new RandomAccessFileIOBuffer(indexName, "rw"); // may be rw
     
     try {
@@ -114,6 +123,17 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
       fileMode = "rw"; // may be "rw"
     }
     
+    File f = new File(name+".index");
+    if (!f.exists()) {
+      return null;
+    }
+
+    File f2 = new File(name+".data");
+    if (!f2.exists()) {
+      return null;
+    }
+    
+
     RandomAccessFileIOBuffer indexFile = new RandomAccessFileIOBuffer(name+".index",fileMode);
 
     RandomAccessFileIOBuffer dataFile;

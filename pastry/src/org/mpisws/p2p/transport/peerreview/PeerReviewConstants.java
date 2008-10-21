@@ -137,5 +137,8 @@ public interface PeerReviewConstants {
   public static final int STATE_SEND_AUDIT = 1;
   public static final int STATE_WAIT_FOR_LOG = 2;
 
+  public static final int NO_CERTIFICATE = -1;
+  public static final int SIGNATURE_BAD = 0;
+  public static final int SIGNATURE_OK = 1;
 
 }

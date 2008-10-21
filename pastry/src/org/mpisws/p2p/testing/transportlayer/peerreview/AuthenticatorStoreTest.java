@@ -342,11 +342,10 @@ public class AuthenticatorStoreTest {
       return null;
     }
 
-    public void verify(MyInetSocketAddress id, ByteBuffer msg,
-        ByteBuffer signature) throws SignatureException,
-        UnknownCertificateException {
+    public int verify(MyInetSocketAddress id, ByteBuffer msg,
+        ByteBuffer signature) {
       // TODO Auto-generated method stub
-      
+      return SIGNATURE_BAD;
     }
 
     public boolean addAuthenticatorIfValid(
@@ -421,6 +420,17 @@ public class AuthenticatorStoreTest {
     }
 
     public long getTimeToleranceMillis() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    public Authenticator extractAuthenticator(long seq, short entryType,
+        byte[] entryHash, byte[] topMinusOne, byte[] signature) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public int verify(MyInetSocketAddress id, byte[] msg, byte[] signature) {
       // TODO Auto-generated method stub
       return 0;
     }

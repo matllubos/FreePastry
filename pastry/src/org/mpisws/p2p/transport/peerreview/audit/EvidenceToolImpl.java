@@ -38,11 +38,13 @@ package org.mpisws.p2p.transport.peerreview.audit;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
+import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
@@ -51,13 +53,17 @@ import org.mpisws.p2p.transport.peerreview.history.logentry.EvtAck;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtInit;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtRecv;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSend;
+import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSendSign;
 import org.mpisws.p2p.transport.peerreview.history.logentry.EvtSign;
+import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
+import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.p2p.util.tuples.Tuple;
 
 public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements EvidenceTool<Handle, Identifier> {
@@ -140,7 +146,7 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
             break;
         }
       } catch (IOException ioe) {
-        if (logger.level <= Logger.WARNING) logger.log("Malformed entry:"+entry);
+        if (logger.level <= Logger.WARNING) logger.logException("Malformed entry:"+entry,ioe);
         return new Tuple<Integer, Identifier>(INVALID,null);
       }
     }
@@ -150,11 +156,29 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
 
   static class SendEntryRecord {
     long seq;
-    int hashedPlusPayloadIndex;
-    int hashedPlusPayloadLen;
+    ByteBuffer hashedPlusPayload;
+    public SendEntryRecord(long seq, ByteBuffer hashedPlusPayload) {
+      this.seq = seq;
+      this.hashedPlusPayload = hashedPlusPayload;
+    }
   }
 
   
+//  int isAuthenticatorValid(Authenticator authenticator, Identifier subject) {
+//    if (!peerreview.hasCertificate(subject)) return CERT_MISSING;
+//      
+////    unsigned char signedHash[hashSizeBytes];
+//    
+//    byte[] signedHash = peerreview.hash(authenticator.getPartToHashThenSign());
+//
+//    int sigResult = peerreview.verify(subject, signedHash, authenticator.getSignature());
+//    assert((sigResult == SIGNATURE_OK) || (sigResult == SIGNATURE_BAD));
+//    if (sigResult != SIGNATURE_OK)
+//      return INVALID;
+//      
+//    return VALID;
+//  }
+
   /**
    * The following method does several things: It verifies all the signatures in
    * a log snippet, it extracts all the authenticators for later forwarding to
@@ -175,7 +199,7 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
     byte[] prevNodeHash = null;
     byte[] prevPrevNodeHash = null;
     
-    long currentSeq = snippet.getFirstSeq();
+//    long currentSeq = snippet.getFirstSeq();
     
     boolean firstEntry = true;
     boolean keyNodeFound = false;
@@ -239,7 +263,7 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
     Map<Long, SendEntryRecord> secache = new HashMap<Long, SendEntryRecord>();
     
     
-    int numSendEntries = 0;
+//    int numSendEntries = 0;
 
     if (logger.level <= Logger.FINE) logger.log("Checking snippet (flags="+flags+")");
 //  #warning check for FLAG_FULL here?
@@ -251,8 +275,21 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
        Note that we do not do conformance/consistency checking here; all we care about is whether
        the snippet matches the two authenticators. */
 
-    int readptr = 0;
+//    int readptr = 0;
     for (SnippetEntry entry : snippet.entries) {
+
+      if (!firstEntry) {
+        if (entry.seq <= lastEntry.seq) {
+          if (logger.level <= Logger.WARNING) logger.log("Log snippet attempts to roll back the sequence number from "+lastEntry.seq+" to "+entry.seq+"; flagging invalid");
+          return false;
+        }
+  
+        if (keyNodeHash != null && !keyNodeFound && (entry.seq > keyNodeMaxSeq)) {
+          if (logger.level <= Logger.WARNING) logger.log("Hash of keyNode does not appear in ["+snippet.getFirstSeq()+","+keyNodeMaxSeq+"]; flagging invalid");
+          return false;
+        }
+      }
+
 //    while (readptr < snippetLen) {
 //      unsigned char entryType = snippet[readptr++];
 //      unsigned char sizeCode = snippet[readptr++];
@@ -271,7 +308,7 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
 
       if (logger.level <= Logger.FINER) logger.log("Entry type "+entry.type+", size="+entry.content.length+", seq="+entry.seq+" "+(entry.isHash ? " (hashed)" : ""));
 
-      if (lastEntry != null && (lastEntry.type == EVT_RECV) && ((entry.type != EVT_SIGN) || (currentSeq != (lastEntry.seq+1)))) {
+      if (lastEntry != null && (lastEntry.type == EVT_RECV) && ((entry.type != EVT_SIGN) || (entry.seq != (lastEntry.seq+1)))) {
         if (logger.level <= Logger.WARNING) logger.log("Log snipped omits the mandatory EVT_SIGN after an EVT_RECV; flagging invalid");
         return false;
       }
@@ -291,89 +328,96 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
         contentHash = peerreview.hash(ByteBuffer.wrap(entry.content));
       }
       
-      throw new RuntimeException("implement");
-      
-//      transport.hash(currentNodeHash, (const unsigned char*)&currentSeq, sizeof(currentSeq), &entryType, sizeof(entryType), currentNodeHash, hashSizeBytes, contentHash, hashSizeBytes);
-//
-//      /* Check signatures */
-//
-//      switch (entryType) {
-//        case EVT_SEND :
-//          if (!entryIsHashed) {
-//            if (numSendEntries >= maxSendEntries)
-//              panic("Too many pending SENDs without an ACK");
-//
-//            /* Add an entry to the send-entry cache */
-//
+      currentNodeHash = peerreview.hash(entry.seq, entry.type, currentNodeHash, contentHash);
+
+      /* Check signatures */
+
+      try {
+      SimpleInputBuffer sib = new SimpleInputBuffer(entry.content);
+      switch (entry.type) {
+        case EVT_SEND :
+          if (!entry.isHash) {
+            idSerializer.deserialize(sib);
+            /* Add an entry to the send-entry cache */
+            secache.put(entry.seq, new SendEntryRecord(entry.seq, ByteBuffer.wrap(entry.content, entry.content.length-sib.bytesRemaining(), sib.bytesRemaining())));
 //            secache[numSendEntries].seq = currentSeq;
 //            secache[numSendEntries].hashedPlusPayloadIndex = readptr + identifierSizeBytes;
 //            secache[numSendEntries].hashedPlusPayloadLen = entrySize - identifierSizeBytes;
 //            numSendEntries ++;
-//          }
-//          break;
-//        case EVT_RECV :
-//
-//          /* Do nothing. The processing for RECV will be done when we find the SIGN entry */
-//
-//          break;
-//        case EVT_SENDSIGN :
-//          if (!entryIsHashed) {
-//            assert(entrySize >= signatureSizeBytes);
-//            if (!firstEntry) {
-//              if (lastEntryType != EVT_SEND) {
-//                if (logger.level <= Logger.WARNING) logger.log("Spurious EVT_SENDSIGN in snippet; flagging invalid");
-//                return false;
-//              }
-//
-//              bool sendWasHashed = (snippet[lastEntryPos+identifierSizeBytes]>0);
-//              if (sendWasHashed) {
+          }
+          break;
+        case EVT_RECV :
+
+          /* Do nothing. The processing for RECV will be done when we find the SIGN entry */
+
+          break;
+        case EVT_SENDSIGN :
+          if (!entry.isHash) {
+            assert(entry.content.length >= signatureSize);
+            if (!firstEntry) {
+              if (lastEntry.type != EVT_SEND) {
+                if (logger.level <= Logger.WARNING) logger.log("Spurious EVT_SENDSIGN in snippet; flagging invalid");
+                return false;
+              }
+              EvtSendSign evtSendSign = new EvtSendSign(sib,signatureSize);
+              boolean sendWasHashed = lastEntry.isHash; //(snippet[lastEntryPos+identifierSizeBytes]>0);
+              if (sendWasHashed) {
 //                unsigned char actualHash[hashSizeBytes];
-//                transport.hash(actualHash, &entry[signatureSizeBytes], entrySize - signatureSizeBytes);
-//                if (memcmp(actualHash, &snippet[lastEntryPos+lastEntrySize-hashSizeBytes], hashSizeBytes)) {
-//                  if (logger.level <= Logger.WARNING) logger.log("EVT_SENDSIGN content does not match hash in EVT_SEND");
-//                  return false;
-//                }
-//              } else {
-//                if (entrySize > signatureSizeBytes) {
-//                  if (logger.level <= Logger.WARNING) logger.log("EVT_SENDSIGN contains extra bytes, but preceding EVT_SEND was not hashed");
-//                  return false;
-//                }
-//              }
-//
+                byte[] actualHash = peerreview.hash(ByteBuffer.wrap(evtSendSign.restOfMessage));
+                if (!Arrays.equals(lastEntry.content,actualHash)) {
+                  if (logger.level <= Logger.WARNING) logger.log("EVT_SENDSIGN content does not match hash in EVT_SEND");
+                  return false;
+                }
+              } else {
+                if (entry.content.length > signatureSize) {
+                  if (logger.level <= Logger.WARNING) logger.log("EVT_SENDSIGN contains extra bytes, but preceding EVT_SEND was not hashed");
+                  return false;
+                }
+              }
+
+              SimpleOutputBuffer authPrefix = new SimpleOutputBuffer();
+              authPrefix.writeLong(lastEntry.seq);
+              authPrefix.write(prevNodeHash);
 //              unsigned char authPrefix[sizeof(long long)+hashSizeBytes];
 //              *(long long*)&authPrefix[0] = lastEntrySeq;
 //              memcpy(&authPrefix[sizeof(long long)], prevNodeHash, hashSizeBytes);
-//
+
 //              unsigned char signedHash[hashSizeBytes];
-//              transport.hash(signedHash, authPrefix, sizeof(authPrefix));
-//
-//              int verifyResult = transport.verify(subjectHandle.getIdentifier(), signedHash, hashSizeBytes, &entry[0]);
-//              assert((verifyResult == IdentityTransport::SIGNATURE_OK) || (verifyResult == IdentityTransport::SIGNATURE_BAD));
-//              if (verifyResult != IdentityTransport::SIGNATURE_OK) {
-//                if (logger.level <= Logger.WARNING) logger.log("Signature in EVT_SENDSIGN does not match node hash of EVT_SEND");
-//                return false;
-//              }
-//
-//              /* If the message in the SEND entry was for the local node, we check whether we 
-//                 have previously delivered that message. If not, we deliver it now. */
-//
-//              if (commitmentProtocol && (flags & FLAG_FULL_MESSAGES_SENDER)) {
+              byte[] signedHash = peerreview.hash(authPrefix.getByteBuffer());
+
+              int verifyResult = peerreview.verify(peerreview.getIdentifierExtractor().extractIdentifier(subjectHandle), signedHash, evtSendSign.signature);
+              assert((verifyResult == SIGNATURE_OK) || (verifyResult == SIGNATURE_BAD));
+              if (verifyResult != SIGNATURE_OK) {
+                if (logger.level <= Logger.WARNING) logger.log("Signature in EVT_SENDSIGN does not match node hash of EVT_SEND");
+                return false;
+              }
+
+              /* If the message in the SEND entry was for the local node, we check whether we 
+                 have previously delivered that message. If not, we deliver it now. */
+
+              if (commitmentProtocol != null && (flags & FLAG_FULL_MESSAGES_SENDER) == FLAG_FULL_MESSAGES_SENDER) {
+                assert(!sendWasHashed);
+                EvtSend<Identifier> evtSend = new EvtSend<Identifier>(new SimpleInputBuffer(lastEntry.content),idSerializer,hashSize);
 //                unsigned int pos = 0;
-//                Identifier *dest = transport.readIdentifier(&snippet[lastEntryPos], &pos, snippetLen);
-//                if (dest.equals(transport.getLocalHandle().getIdentifier())) {
-//                  bool previouslyReceived = false;
-//                  for (int i=0; i<numSeqs; i++) {
-//                    if (seqBuf[i] == lastEntrySeq)
-//                      previouslyReceived = true;
-//                  }
-//
-//                  if (!previouslyReceived) {
-//                    transport.logText(SUBSYSTEM, 3, "XXX accepting new message %lld", lastEntrySeq);
-//
-//                    /* We're cheating a little bit here... essentially we reconstruct the original
-//                       USERDATA message as feed it to the commitment protocol, pretending that
-//                       it has just arrived from the network. This causes all the right things to happen. */
-//
+                Identifier dest = evtSend.receiverId; //transport.readIdentifier(&snippet[lastEntryPos], &pos, snippetLen);
+                if (dest.equals(peerreview.getLocalId())) {
+                  boolean previouslyReceived = false;
+                  if (seqBuf.contains(lastEntry.seq)) {
+                    previouslyReceived = true;
+                  }
+
+                  if (!previouslyReceived) {
+                    if (logger.level <= Logger.FINER) logger.log("XXX accepting new message "+lastEntry.seq);
+
+                    /* We're cheating a little bit here... essentially we reconstruct the original
+                       USERDATA message as feed it to the commitment protocol, pretending that
+                       it has just arrived from the network. This causes all the right things to happen. */
+
+                    SimpleOutputBuffer msg = new SimpleOutputBuffer();
+                    msg.write(evtSend.payload.array(),evtSend.payload.position(),evtSend.payload.remaining());
+                    msg.write(evtSendSign.restOfMessage);
+                    UserDataMessage<Handle> message = new UserDataMessage<Handle>(lastEntry.seq,subjectHandle,prevPrevNodeHash,evtSendSign.signature,msg.getByteBuffer(),evtSend.payload.remaining());
+                    
 //                    int relevantBytes = lastEntrySize-(identifierSizeBytes+1+(sendWasHashed ? hashSizeBytes : 0));
 //                    int irrelevantBytes = entrySize - signatureSizeBytes;
 //                    unsigned int messageMaxlen = 1+sizeof(long long)+MAX_HANDLE_SIZE+hashSizeBytes+signatureSizeBytes+1+relevantBytes+irrelevantBytes;
@@ -390,69 +434,80 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
 //                    if (irrelevantBytes)
 //                      writeBytes(message, &pos, &entry[signatureSizeBytes], irrelevantBytes);
 //                    assert(pos <= sizeof(message));
-//
-//                    commitmentProtocol.handleIncomingMessage(subjectHandle, message, pos);
-//                  }
-//                }
-//
-//                delete dest;
-//              }
-//            }
-//          }
-//          break;
-//        case EVT_SIGN :
-//          assert(entrySize == (hashSizeBytes + signatureSizeBytes));
-//          if (!firstEntry) {
-//
-//            /* RECV entries must ALWAYS be followed by a SIGN */
-//
-//            if (lastEntryType != EVT_RECV) {
-//              if (logger.level <= Logger.WARNING) logger.log("Spurious EVT_SIGN in snippet; flagging invalid");
-//              return false;
-//            }
-//
-//            /* Decode all the values */
-//
-//            unsigned int pos = lastEntryPos;
-//            NodeHandle *senderHandle = transport.readNodeHandle(snippet, &pos, snippetLen);
-//            long long senderSeq = readLongLong(snippet, &pos);
+
+                    commitmentProtocol.handleIncomingMessage(subjectHandle, message, null);
+                  }
+                }
+              }
+            }
+          }
+          break;
+        case EVT_SIGN :
+          assert(entry.content.length == (hashSize + signatureSize));
+          if (!firstEntry) {
+
+            /* RECV entries must ALWAYS be followed by a SIGN */
+
+            if (lastEntry.type != EVT_RECV) {
+              if (logger.level <= Logger.WARNING) logger.log("Spurious EVT_SIGN in snippet; flagging invalid");
+              return false;
+            }
+
+            /* Decode all the values */
+
+            EvtSign evtSign = new EvtSign(sib,hashSize,signatureSize);
+//            unsigned int pos = lastEntryPos;    
+            EvtRecv<Handle> evtRecv = new EvtRecv<Handle>(new SimpleInputBuffer(lastEntry.content),handleSerializer,hashSize);
+            
+            Handle senderHandle = evtRecv.getSenderHandle(); //transport.readNodeHandle(snippet, &pos, snippetLen);
+            long senderSeq = evtRecv.getSenderSeq(); //readLongLong(snippet, &pos);
 //            unsigned char *hashedPlusPayload = &snippet[pos];
 //            int hashedPlusPayloadLen = lastEntrySize - (pos - lastEntryPos);
-//
-//            unsigned int pos2 = 0;
-//            unsigned char receiverAsBytes[identifierSizeBytes];
+
+            //unsigned int pos2 = 0;
+            SimpleOutputBuffer sob = new SimpleOutputBuffer();
+            Identifier senderId = peerreview.getIdentifierExtractor().extractIdentifier(senderHandle);
+//            senderId.serialize(sob);
+
+            Identifier subjectId = peerreview.getIdentifierExtractor().extractIdentifier(subjectHandle);
+            subjectId.serialize(sob);
+
 //            subjectHandle.getIdentifier().write(receiverAsBytes, &pos2, sizeof(receiverAsBytes));
 //            assert(pos2 == identifierSizeBytes);
-//
+            sob.writeBoolean(evtRecv.getHash() != null);
+            sob.write(evtRecv.getPayload());
+            if (evtRecv.getHash() != null) sob.write(evtRecv.getHash());
 //            const unsigned char *senderHtopMinusOne = entry;
 //            const unsigned char *senderSignature = &entry[hashSizeBytes];
 //
-//            /* Extract the authenticator and check it */
+            /* Extract the authenticator and check it */
 //
 //            unsigned char senderContentHash[hashSizeBytes];
-//            transport.hash(senderContentHash, receiverAsBytes, identifierSizeBytes, hashedPlusPayload, hashedPlusPayloadLen);
-//
+            logger.log("XXX "+Arrays.toString(sob.getBytes()));
+            byte[] senderContentHash = peerreview.hash(sob.getByteBuffer());
+            Authenticator senderAuth = peerreview.extractAuthenticator(senderSeq, EVT_SEND, senderContentHash, evtSign.hTopMinusOne, evtSign.signature);
+            logger.log("evTool, extract auth from "+senderHandle+" seq:"+senderSeq+" "+
+                MathUtils.toBase64(senderContentHash)+" htop-1:"+MathUtils.toBase64(evtSign.hTopMinusOne)+" sig:"+MathUtils.toBase64(evtSign.signature));
 //            unsigned char senderAuth[sizeof(long long)+hashSizeBytes+signatureSizeBytes];
 //            unsigned char senderType = EVT_SEND;
 //            *(long long*)&senderAuth[0] = senderSeq;
 //            transport.hash(&senderAuth[sizeof(long long)], (const unsigned char*)&senderSeq, sizeof(senderSeq), &senderType, sizeof(senderType), senderHtopMinusOne, hashSizeBytes, senderContentHash, hashSizeBytes);
 //            memcpy(&senderAuth[sizeof(long long)+hashSizeBytes], senderSignature, signatureSizeBytes);
-//
-//            bool isGoodAuth = peerreview ? peerreview.addAuthenticatorIfValid(authStoreOrNull, senderHandle.getIdentifier(), senderAuth) : (isAuthenticatorValid(senderAuth, senderHandle.getIdentifier(), transport) == VALID);
-//            if (!isGoodAuth) {
-//              if (logger.level <= Logger.WARNING) logger.log("Snippet contains a RECV from %s whose signature does not match; flagging invalid", senderHandle.render(buf1));
-//              delete senderHandle;
-//              return false;
-//            }
-//
-//            delete senderHandle;
-//          }
-//
-//          break;
-//        case EVT_ACK :
-//        {
-//          /* Decode all the values */
-//
+
+//            boolean isGoodAuth = (peerreview != null) ? peerreview.addAuthenticatorIfValid(authStoreOrNull, senderId, senderAuth) : peerreview.verify(senderId,senderAuth);
+            boolean isGoodAuth = peerreview.addAuthenticatorIfValid(authStoreOrNull, senderId, senderAuth);// : peerreview.verify(senderId,senderAuth);
+            if (!isGoodAuth) {
+              if (logger.level <= Logger.WARNING) logger.log("Snippet contains a RECV from "+senderHandle+" whose signature does not match; flagging invalid");
+              return false;
+            }
+          }
+
+          break;
+        case EVT_ACK :
+        {
+          /* Decode all the values */
+
+          EvtAck<Identifier> evtAck = new EvtAck<Identifier>(sib,idSerializer,hashSize,signatureSize);
 //          assert(entrySize == (identifierSizeBytes + 2*sizeof(long long) + hashSizeBytes + signatureSizeBytes));
 //          unsigned int pos = 0;
 //          Identifier *receiverID = transport.readIdentifier(entry, &pos, entrySize);
@@ -466,95 +521,103 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
 //          unsigned int pos2 = 0;
 //          unsigned char senderAsBytes[identifierSizeBytes];
 //          subjectHandle.getIdentifier().write(senderAsBytes, &pos2, sizeof(senderAsBytes));
-//
-//          /* Look up the entry in the send-entry cache */
-//
-//          int seidx = -1;
+
+          /* Look up the entry in the send-entry cache */
+
+          SendEntryRecord seidx = secache.get(evtAck.getAckedSeq());
 //          for (int i=0; (seidx<0) && (i<numSendEntries); i++) {
 //            if (secache[i].seq == senderSeq)
 //              seidx = i;
 //          }
-//
-//          if (seidx < 0) {
+
+          if (seidx == null) {
 //  #if 0
 //            if (logger.level <= Logger.WARNING) logger.log("Snippet contains an ACK but not a SEND; maybe look in the log?");
 //  #endif          
 ////                return false;
 //  #warning here we should probably return false
-//          } else {
-//            /* Extract the authenticator and check it */
-//
+          } else {
+            /* Extract the authenticator and check it */
+            
 //            const unsigned char *hashedPlusPayload = &snippet[secache[seidx].hashedPlusPayloadIndex];
 //            int hashedPlusPayloadLen = secache[seidx].hashedPlusPayloadLen;
 //            secache[seidx] = secache[--numSendEntries];
-//
+            secache.remove(evtAck.getAckedSeq());
+
 //            unsigned char receiverContentHash[hashSizeBytes];
-//            transport.hash(receiverContentHash, subjectHandleInBytes, subjectHandleInBytesLen, (const unsigned char*)&senderSeq, sizeof(senderSeq), hashedPlusPayload, hashedPlusPayloadLen);
-//
+            SimpleOutputBuffer sob = new SimpleOutputBuffer();
+            subjectHandle.serialize(sob);
+            sob.writeLong(evtAck.getAckedSeq());
+            byte[] receiverContentHash = peerreview.hash(sob.getByteBuffer(),seidx.hashedPlusPayload);
+
 //            unsigned char receiverAuth[sizeof(long long)+hashSizeBytes+signatureSizeBytes];
 //            unsigned char receiverType = EVT_RECV;
 //            *(long long*)&receiverAuth[0] = receiverSeq;
-//            transport.hash(&receiverAuth[sizeof(long long)], (const unsigned char*)&receiverSeq, sizeof(receiverSeq), &receiverType, sizeof(receiverType), receiverHtopMinusOne, hashSizeBytes, receiverContentHash, hashSizeBytes);
-//            memcpy(&receiverAuth[sizeof(long long)+hashSizeBytes], receiverSignature, signatureSizeBytes);
-//
-//            bool isGoodAuth = peerreview ? peerreview.addAuthenticatorIfValid(authStoreOrNull, receiverID, receiverAuth) : (isAuthenticatorValid(receiverAuth, receiverID, transport) == VALID);
-//            if (!isGoodAuth) {
-//              if (logger.level <= Logger.WARNING) logger.log("Snippet contains an ACK from %08X whose signature does not match; flagging invalid", receiverID);
-//              delete receiverID;
-//              return false;
-//            }
-//          }
-//
-//          delete receiverID;
-//          break;
-//        }
-//        case EVT_CHECKPOINT :
-//        case EVT_VRF :
-//        case EVT_INIT :
-//        case EVT_CHOOSE_Q :
-//        case EVT_CHOOSE_RAND :
-//          break;
-//        default :
-//          assert(entryType > EVT_MAX_RESERVED); 
-//          break;
-//      }
-//
-//      /* Remember where the last RECV entry was */
-//
+            byte[] h = peerreview.hash(evtAck.getHisSeq(), EVT_RECV, evtAck.getHTopMinusOne(), receiverContentHash);
+            //memcpy(&receiverAuth[sizeof(long long)+hashSizeBytes], receiverSignature, signatureSizeBytes);
+            Authenticator receiverAuth = new Authenticator(evtAck.getHisSeq(),h,evtAck.getSignature());
+
+            boolean isGoodAuth = peerreview.addAuthenticatorIfValid(authStoreOrNull, evtAck.getRemoteId(), receiverAuth);// : (isAuthenticatorValid(receiverAuth, receiverID, transport) == VALID);
+            if (!isGoodAuth) {
+              if (logger.level <= Logger.WARNING) logger.log("Snippet contains an ACK from "+evtAck.getRemoteId()+" whose signature does not match; flagging invalid");
+              return false;
+            }
+          }
+          break;
+        }
+        case EVT_CHECKPOINT :
+        case EVT_VRF :
+        case EVT_INIT :
+        case EVT_CHOOSE_Q :
+        case EVT_CHOOSE_RAND :
+          break;
+        default :
+          assert(entry.type > EVT_MAX_RESERVED); 
+          break;
+      }
+      } catch (IOException ioe) {
+        if (logger.level <= Logger.WARNING) logger.logException("Error verifying SnippitEntry "+entry,ioe);
+        return false;
+      }
+
+      /* Remember where the last RECV entry was */
+
+      lastEntry = entry;
 //      lastEntryType = entryType;
 //      lastEntryPos = readptr;
 //      lastEntrySeq = currentSeq;
 //      lastEntrySize = entrySize;
-//
-//      /* If this is the first entry, its hash must match the first authenticator in the challenge */
-//
-//      if (keyNodeHash && !keyNodeFound) {
-//        if (!memcmp(currentNodeHash, keyNodeHash, hashSizeBytes))  
-//          keyNodeFound = true;
-//      }
-//
-//      if (firstEntry) {
-//        if (startWithCheckpoint) {
-//          if ((entryType != EVT_CHECKPOINT) && (entryType != EVT_INIT)) {
-//            if (logger.level <= Logger.WARNING) logger.log("Previous checkpoint requested, but not included; flagging invalid");
-//            return false;
-//          }
-//          if (entryIsHashed) {
-//            if (logger.level <= Logger.WARNING) logger.log("Previous checkpoint requested, but only hash is included; flagging invalid");
-//            return false;
-//          }
-//        } else {
-//        }
-//
-//        firstEntry = false;
-//      }
-//
-//      /* Skip ahead to the next entry in the snippet */
-//
+
+      /* If this is the first entry, its hash must match the first authenticator in the challenge */
+
+      if (keyNodeHash != null && !keyNodeFound) {
+        if (Arrays.equals(currentNodeHash, keyNodeHash)) { 
+          keyNodeFound = true;
+        }
+      }
+
+      if (firstEntry) {
+        if (startWithCheckpoint) {
+          if ((entry.type != EVT_CHECKPOINT) && (entry.type != EVT_INIT)) {
+            if (logger.level <= Logger.WARNING) logger.log("Previous checkpoint requested, but not included; flagging invalid");
+            return false;
+          }
+          if (entry.isHash) {
+            if (logger.level <= Logger.WARNING) logger.log("Previous checkpoint requested, but only hash is included; flagging invalid");
+            return false;
+          }
+        } else {
+        }
+
+        firstEntry = false;
+      }
+
+      /* Skip ahead to the next entry in the snippet */
+
 //      readptr += entrySize;
 //      if (readptr == snippetLen) // legitimate end
 //        break;
-//
+
 //      unsigned char dseqCode = snippet[readptr++];
 //      if (dseqCode == 0xFF) {
 //        currentSeq = *(long long*)&snippet[readptr];
@@ -564,18 +627,11 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
 //      } else {
 //        currentSeq = currentSeq - (currentSeq%1000) + (dseqCode * 1000LL);
 //      }
-//
-//      if (currentSeq <= lastEntrySeq) {
-//        if (logger.level <= Logger.WARNING) logger.log("Log snippet attempts to roll back the sequence number from %lld to %lld; flagging invalid", lastEntrySeq, currentSeq);
-//        return false;
-//      }
-//
-//      if (keyNodeHash && !keyNodeFound && (currentSeq > keyNodeMaxSeq)) {
-//        if (logger.level <= Logger.WARNING) logger.log("Hash of keyNode does not appear in [%lld,%lld]; flagging invalid", firstSeq, keyNodeMaxSeq);
-//        return false;
-//      }
-//
+
 //      assert(readptr <= snippetLen);
+//      throw new RuntimeException("implement");
+      
+
     }
 
     if (lastEntry.type == EVT_RECV) {

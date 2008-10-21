@@ -61,9 +61,9 @@ import rice.p2p.commonapi.rawserialization.RawSerializable;
  * @param <Identifier>
  */
 public class EvtSend<Identifier extends RawSerializable> extends HistoryEvent implements PeerReviewConstants {
-  Identifier receiverId;
-  ByteBuffer payload;
-  byte[] hash;
+  public Identifier receiverId;
+  public ByteBuffer payload;
+  public byte[] hash;
   
   public EvtSend(Identifier receiverId, ByteBuffer payload, int relevantPayload, HashProvider hasher) {
     this.receiverId = receiverId;

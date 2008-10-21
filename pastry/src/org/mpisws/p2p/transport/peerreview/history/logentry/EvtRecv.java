@@ -47,6 +47,19 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
+/**
+ * 
+ * EVT_RECV
+  handle senderHandle
+  long long senderSeq
+  bool hashed
+  
+  data payload   - or -  relevantPayload, hash
+  
+ * @author Jeff Hoye
+ *
+ * @param <Handle>
+ */
 public class EvtRecv<Handle extends RawSerializable> extends HistoryEvent {
   Handle senderHandle;
   long senderSeq;

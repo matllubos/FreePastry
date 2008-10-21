@@ -39,6 +39,7 @@ package org.mpisws.p2p.transport.peerreview.commitment;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.SignatureException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -217,7 +218,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
   
         /* Construct the SIGN entry and append it to the log */
         
-        history.appendEntry(EVT_RECV, true, new EvtSign(udm.getHTopMinusOne(),udm.getSignature()).serialize());
+        history.appendEntry(EVT_SIGN, true, new EvtSign(udm.getHTopMinusOne(),udm.getSignature()).serialize());
         loggedPreviously = false;
       } else {
         loggedPreviously = true;
@@ -388,7 +389,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           udm.getTopSeq(), 
           EVT_SEND, 
           innerHash, udm.getHTopMinusOne(), udm.getSignature());
-      
+      logger.log("received message, extract auth from "+udm.getSenderHandle()+" seq:"+udm.getTopSeq()+" "+
+          MathUtils.toBase64(innerHash)+" htop-1:"+MathUtils.toBase64(udm.getHTopMinusOne())+" sig:"+MathUtils.toBase64(udm.getSignature()));
       if (authenticator != null) {
 
         /* At this point, we are convinced that:
@@ -493,7 +495,10 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     } else {
       evtSend = new EvtSend<Identifier>(peerreview.getIdentifierExtractor().extractIdentifier(target),message);
     }
-    try {
+    
+
+    try {      
+      logger.log("XXXa "+Arrays.toString(evtSend.serialize().array()));
       history.appendEntry(evtSend.getType(), true, evtSend.serialize());
     } catch (IOException ioe) {
       MessageRequestHandle<Handle, ByteBuffer> ret = new MessageRequestHandleImpl<Handle, ByteBuffer>(target,message,options);
@@ -505,7 +510,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     HashSeq top = history.getTopLevelEntry();
     
     /* Sign the authenticator */
-//    System.out.println("Signing: "+top.getSeq()+" "+MathUtils.toBase64(top.getHash()));
+    logger.log("about to sign: "+top.getSeq()+" "+MathUtils.toBase64(top.getHash()));
     hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(top.getSeq())), ByteBuffer.wrap(top.getHash()));
 
     byte[] signature = transport.sign(hToSign);

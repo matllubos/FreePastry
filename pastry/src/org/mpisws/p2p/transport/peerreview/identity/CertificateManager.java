@@ -56,7 +56,7 @@ import rice.p2p.commonapi.Cancellable;
  */
 public interface CertificateManager<Handle, Identifier> {
   public byte[] sign(byte[] bytes);
-  public void verify(Identifier id, ByteBuffer msg, ByteBuffer signature) throws SignatureException, UnknownCertificateException ;
+  public int verify(Identifier id, byte[] msg, byte[] signature);
   public boolean hasCertificate(Identifier id);
   public Cancellable requestCertificate(Handle source, Identifier certHolder, Continuation<X509Certificate, Exception> c, Map<String, Object> options);
   public short getSignatureSizeBytes();

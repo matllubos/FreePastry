@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 /**
@@ -52,17 +53,25 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
  *
  */
 public class EvtSendSign implements PeerReviewConstants {
-  byte[] signature;
-  ByteBuffer restOfMessage;
+  public byte[] signature;
+  public byte[] restOfMessage;
   
-  public EvtSendSign(byte[] signature, ByteBuffer restOfMessage) {
+  public EvtSendSign(byte[] signature, byte[] restOfMessage) {
     this.signature = signature;
     this.restOfMessage = restOfMessage;
   }
   
+  public EvtSendSign(InputBuffer buf, int signatureSize) throws IOException {
+    signature = new byte[signatureSize];
+    buf.read(signature);
+    restOfMessage = new byte[buf.bytesRemaining()];
+    buf.read(restOfMessage);
+//    restOfMessage = ByteBuffer.wrap(restOfMessageBytes);
+  }
+  
   public void serialize(OutputBuffer buf) throws IOException {
     buf.write(signature, 0, signature.length);
-    buf.write(restOfMessage.array(), restOfMessage.position(), restOfMessage.remaining());
+    buf.write(restOfMessage,0,restOfMessage.length);
   }
   
   public short getType() {

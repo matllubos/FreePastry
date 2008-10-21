@@ -165,7 +165,7 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     try {
       signer.update(bytes);
       byte[] ret = signer.sign();
-//      logger.log("Signature of "+MathUtils.toBase64(bytes)+" was "+MathUtils.toBase64(ret));
+      logger.log("Signature of "+MathUtils.toBase64(bytes)+" was "+MathUtils.toBase64(ret));
       return ret;
     } catch (SignatureException se) {
       RuntimeException throwMe = new RuntimeException("Couldn't sign "+bytes);
@@ -174,21 +174,27 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
     }
   }
 
-  public void verify(I id, ByteBuffer msg, ByteBuffer signature) throws SignatureException, UnknownCertificateException {
-//    logger.log("Verify:"+id+" "+msg+" "+MathUtils.toBase64(msg.array())+" == "+signature+" "+MathUtils.toBase64(signature.array()));
+  public int verify(I id, byte[] msg, byte[] signature) {
+    logger.log("Verify:"+id+" "+msg.length+" "+MathUtils.toBase64(msg)+" == "+signature.length+" "+MathUtils.toBase64(signature));
     Signature verifier = getVerifier(id);
-    if (verifier == null) throw new UnknownCertificateException(getLocalIdentifier(),id);
+    if (verifier == null) return NO_CERTIFICATE; //throw new UnknownCertificateException(getLocalIdentifier(),id);
 //    msg.array()[0] = 55;
 //    System.out.println("Verifiying of "+MathUtils.toBase64(msg.array())+" was "+MathUtils.toBase64(signature.array()));
 //    System.out.println("Verifiying of "+msg+" was "+signature);
 
-    synchronized(verifier) {
-      verifier.update(msg);
-      if (!verifier.verify(signature.array(), signature.position(), signature.remaining())) {
-        throw new SignatureException("Signature by "+id+" failed.");
+    try {
+      synchronized(verifier) {      
+        verifier.update(msg);
+        if (verifier.verify(signature)) {
+          return SIGNATURE_OK;
+  //        throw new SignatureException("Signature by "+id+" failed.");
+        }
       }
+    } catch (SignatureException se) {
+      throw new RuntimeException(se);
     }
-//    System.out.println("Signature success by "+id);
+//    System.out.println("Signature success by "+id);   
+    return SIGNATURE_BAD;
   }
   
   /**

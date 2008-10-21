@@ -393,11 +393,11 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
      try {
 //       System.out.println("Verifying "+auth.getSeq()+" "+MathUtils.toBase64(auth.getHash()));
-       SimpleOutputBuffer sob = new SimpleOutputBuffer();
-       sob.writeLong(auth.getSeq());
-       sob.write(auth.getHash());
-       byte[] signedHash = transport.hash(sob.getByteBuffer());
-       transport.verify(subject, ByteBuffer.wrap(signedHash), ByteBuffer.wrap(auth.getSignature()));
+       byte[] signedHash = transport.hash(auth.getPartToHashThenSign());
+       int sigResult = transport.verify(subject, signedHash, auth.getSignature());
+       assert((sigResult == SIGNATURE_OK) || sigResult == SIGNATURE_BAD);
+       if (sigResult != SIGNATURE_OK) return false;
+       
        if (!verify(subject,auth)) {
          return false; 
        }
@@ -554,9 +554,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
     boolean newLogCreated = false;
     String historyName = dirname+"/local";
-    try {
-      this.history = historyFactory.open(historyName, "w");
-    } catch (IOException ioe) {
+    
+    this.history = historyFactory.open(historyName, "w");
+    if (this.history == null) {
       this.history = historyFactory.create(historyName, 0, transport.getEmptyHash());      
       newLogCreated = true;
     }
@@ -688,11 +688,17 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   /** 
    * A helper function that extracts an authenticator from an incoming message and adds it to our local store. 
    */
+  public Authenticator extractAuthenticator(long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) {
+    byte[] hash = transport.hash(seq,entryType,hTopMinusOne, entryHash);
+    Authenticator ret = new Authenticator(seq,hash,signature);    
+    return ret;
+  }
+  
   public Authenticator extractAuthenticator(Identifier id, long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature) {
 //    *(long long*)&authenticator[0] = seq;
     
-    byte[] hash = transport.hash(seq,entryType,hTopMinusOne, entryHash);
-    Authenticator ret = new Authenticator(seq,hash,signature);
+//    byte[] hash = transport.hash(seq,entryType,hTopMinusOne, entryHash);
+    Authenticator ret = extractAuthenticator(seq, entryType, entryHash, hTopMinusOne, signature); //new Authenticator(seq,hash,signature);
     if (addAuthenticatorIfValid(authOutStore, id, ret)) {
       return ret;
     }
@@ -781,21 +787,16 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       sob.writeLong(auth.getSeq());
       sob.write(auth.getHash());
       byte[] signedHash = transport.hash(sob.getByteBuffer());
-      transport.verify(id, ByteBuffer.wrap(signedHash), ByteBuffer.wrap(auth.getSignature()));
-      return true;
-    } catch (UnknownCertificateException uce) {
-      throw new RuntimeException(uce);
-    } catch (SignatureException se) {
-      return false;
+      int result = transport.verify(id, signedHash, auth.getSignature());
+      return result == SIGNATURE_OK;
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
  
   }
   
-  public void verify(Identifier id, ByteBuffer msg, ByteBuffer signature) throws SignatureException,
-      UnknownCertificateException {
-    transport.verify(id, msg, signature);
+  public int verify(Identifier id, byte[] msg, byte[] signature) {
+    return transport.verify(id, msg, signature);
   }
 
   public byte[] getEmptyHash() {

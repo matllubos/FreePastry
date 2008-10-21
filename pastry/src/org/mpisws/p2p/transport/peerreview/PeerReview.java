@@ -99,6 +99,8 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
   public Handle getLocalHandle();
   public Cancellable requestCertificate(Handle source, Identifier certHolder);
 
+  public Authenticator extractAuthenticator(long seq, short entryType, byte[] entryHash, byte[] hTopMinusOne, byte[] signature);
+
 //  public MessageRequestHandle<Handle, PeerReviewMessage> transmit(Handle dest, boolean b, PeerReviewMessage message, MessageCallback<Handle, PeerReviewMessage> deliverAckToMe);
   
   public void transmit(Handle dest, 

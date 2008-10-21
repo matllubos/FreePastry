@@ -44,8 +44,8 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 public class EvtSign extends HistoryEvent {
-  byte[] hTopMinusOne;
-  byte[] signature;
+  public byte[] hTopMinusOne;
+  public byte[] signature;
   public EvtSign(byte[] hTopMinusOne, byte[] signature) {
     this.hTopMinusOne = hTopMinusOne;
     this.signature = signature;

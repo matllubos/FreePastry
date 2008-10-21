@@ -515,6 +515,8 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
     /* Find out if the log snipped is 'useful', i.e. if we can append it to our local history */
 
     String namebuf = infoStore.getHistoryName(subject);
+    
+    if (logger.level <= Logger.FINE) logger.log("opening history for "+namebuf);
     SecureHistory subjectHistory = peerreview.getHistoryFactory().open(namebuf, "w");
     
     boolean logCanBeAppended = false;

@@ -47,6 +47,8 @@ import org.mpisws.p2p.transport.peerreview.audit.SnippetEntry;
 import org.mpisws.p2p.transport.util.FileInputBuffer;
 import org.mpisws.p2p.transport.util.FileOutputBuffer;
 
+import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry.Entry;
+
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.util.RandomAccessFileIOBuffer;
@@ -135,6 +137,10 @@ public class SecureHistoryImpl implements SecureHistory {
    */
   public void appendEntry(short type, boolean storeFullEntry, ByteBuffer ... entry) throws IOException {
     assert(indexFile != null && dataFile != null);
+    logger.log("appendEntry("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+")");
+    if (type == EVT_RECV) {
+      logger.log("recv("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+")");      
+    }
     
     // Sanity check (for debugging) 
 
@@ -599,7 +605,7 @@ public class SecureHistoryImpl implements SecureHistory {
   }
 
   public void appendSnippetToHistory(LogSnippet snippet) throws IOException {
-    long currentSeq = snippet.getFirstSeq();
+//    long currentSeq = snippet.getFirstSeq();
     for (SnippetEntry sEntry : snippet.entries) {
 //    int readptr = 0;
 //
@@ -622,9 +628,10 @@ public class SecureHistoryImpl implements SecureHistory {
 //  #ifdef VERBOSE
 //      plog(3, "Entry type %d, size=%d, seq=%lld", entryType, entrySize, currentSeq);
 //  #endif
-
-      if (currentSeq > getLastSeq()) {
-        if (!setNextSeq(currentSeq))
+      logger.log("ZZZ "+sEntry);
+      
+      if (sEntry.seq > getLastSeq()) {
+        if (!setNextSeq(sEntry.seq))
           throw new RuntimeException("Audit: Cannot set history sequence number?!?");
           
         if (!sEntry.isHash) {
