@@ -65,6 +65,7 @@ import org.mpisws.p2p.transport.peerreview.message.AuthResponse;
 import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.replay.Verifier;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
@@ -590,7 +591,8 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
       /* Do the replay */
 
 //      while (verifieverifier.makeProgress());
-      verifier.getEnvironment().getSelectorManager().run();
+      if (true) throw new RuntimeException("delme");
+      while(((ReplaySM)verifier.getEnvironment().getSelectorManager()).makeProgress());
       
       boolean verifiedOK = verifier.verifiedOK(); 
       if (logger.level <= Logger.INFO) logger.log( "END OF REPLAY: "+(verifiedOK ? "VERIFIED OK" : "VERIFICATION FAILED")+" =================");

@@ -95,13 +95,12 @@ public class ReplaySM extends SelectorManager {
     super.addTask(task);
   }
 
-  @Override
-  protected void executeDueTasks() {
+  public boolean makeProgress() {
     // Handle any pending timers. Note that we have to be sure to call them in the exact same
     // order as in the main code; otherwise there can be subtle bugs and side-effects. 
     if (logger.level <= Logger.FINER) logger.log("executeDueTasks()");
 
-    if (isSuccess()) return;
+    if (isSuccess()) return false;
     boolean timerProgress = true;
     long now = verifier.getNextEventTime();
     while (timerProgress) {
@@ -155,11 +154,12 @@ public class ReplaySM extends SelectorManager {
     simTime.setTime(now); // so we always make some progress
     super.doInvocations();
     
-    if (!verifier.makeProgress()) {
-      isSuccess();
-      if (!verifier.verifiedOK()) throw new RuntimeException("Verification failed.");
-    }
-  }  
+    return verifier.makeProgress();
+//    if (!verifier.makeProgress()) {
+//      isSuccess();
+////      if (!verifier.verifiedOK()) throw new RuntimeException("Verification failed.");
+//    }
+  }
 
   protected boolean isSuccess() {
     boolean ret = verifier.isSuccess();
