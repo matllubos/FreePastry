@@ -58,8 +58,6 @@ import org.mpisws.p2p.pki.x509.CATool;
 import org.mpisws.p2p.pki.x509.CAToolImpl;
 import org.mpisws.p2p.pki.x509.X509Serializer;
 import org.mpisws.p2p.pki.x509.X509SerializerImpl;
-import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.IdImpl;
-import org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTestNoResponse.Player;
 import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
@@ -95,6 +93,7 @@ import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.replay.Verifier;
+import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
 import org.mpisws.p2p.transport.table.UnknownValueException;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
@@ -107,6 +106,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+import rice.selector.TimerTask;
 
 public class CommitmentTest {
   public static final byte[] EMPTY_ARRAY = new byte[0];
@@ -301,16 +301,42 @@ public class CommitmentTest {
 
     Logger logger;
     Player player;
+    Environment env;
+    private TransportLayer<HandleImpl, ByteBuffer> tl;
     
-    public BogusApp(Player player) {
+    
+    public BogusApp(Player player, TransportLayer<HandleImpl, ByteBuffer> tl, Environment env) {
       super();
       this.player = player;
-      this.logger = player.logger;
+      this.logger = player.logger;      
+      this.tl = tl;
+      this.env = env;
     }
     
 
     public void init() {
-//      throw new RuntimeException("implement");
+      if (player.id == 1) {
+        env.getSelectorManager().schedule(new TimerTask() {
+        
+          @Override
+          public void run() {
+            tl.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
+              
+              public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
+                  Exception reason) {
+                System.out.println("sendFailed("+msg+")");
+                reason.printStackTrace();
+              }
+            
+              public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
+                alice.logger.log("ack("+msg+")");
+              }
+            
+            }, null);
+          }
+        
+        }, 1000);
+      }
     }
 
     public boolean loadCheckpoint(InputBuffer buffer) throws IOException {
@@ -363,14 +389,13 @@ public class CommitmentTest {
       logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
     }
 
-    public PeerReviewCallback<HandleImpl, IdImpl> getReplayInstance(
-        Verifier<HandleImpl, IdImpl> v) {
-      throw new RuntimeException("implement");
-    }
-
-
     public Collection<HandleImpl> getMyWitnessedNodes() {
       return player.witnessed;
+    }
+
+    public PeerReviewCallback<HandleImpl, org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.IdImpl> getReplayInstance(
+        Verifier<HandleImpl> v) {
+      return new BogusApp(player,v,v.getEnvironment());
     }
   }
 
@@ -388,9 +413,12 @@ public class CommitmentTest {
     IdentityTransprotLayerImpl<HandleImpl, IdImpl> transport;
     public Collection<HandleImpl> witnessed = new ArrayList<HandleImpl>();
 
+    int id;
+    
     public Player(String name, int id, Environment env2) throws Exception {
       super();
       Environment env = env2.cloneEnvironment(name);
+      this.id = id;
       this.logger = env.getLogManager().getLogger(Player.class, null);
       File f = new File(name);
       if (f.exists()) {
@@ -468,7 +496,7 @@ public class CommitmentTest {
           return Integer.toString(id.id);
         }},
           new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
-      pr.setApp(new BogusApp(this));
+      pr.setApp(new BogusApp(this,pr,env));
       pr.init(name);
     }
   }
@@ -481,7 +509,7 @@ public class CommitmentTest {
   Player carol;
 
   public CommitmentTest() throws Exception {
-    Environment env = new Environment();
+    final Environment env = RecordLayer.generateEnvironment(); //new Environment();
     
     SecureRandom random = new SecureRandom();
     caTool = CAToolImpl.getCATool("CommitmentTest","foo".toCharArray());
@@ -497,14 +525,21 @@ public class CommitmentTest {
     try {      
       hasher = new NullHashProvider();
       historyFactory = new SecureHistoryFactoryImpl(hasher,env);
-      
+      env.getSelectorManager().invoke(new Runnable() {
+        
+        public void run() {
+          try {
       alice = new Player("alice",1,env);
       bob = new Player("bob",2,env);    
       carol = new Player("carol",3,env);
       
       carol.witnessed.add(alice.localHandle);
       carol.witnessed.add(bob.localHandle);
-      
+          } catch (Exception ioe) {
+            throw new RuntimeException(ioe);
+          }
+        }
+      });
           
 //      bob.pr.requestCertificate(alice.localHandle, alice.localHandle.id, new Continuation<X509Certificate, Exception>() {
 //      
@@ -526,27 +561,29 @@ public class CommitmentTest {
 //      
 //      }, null);
       
-      env.getSelectorManager().invoke(new Runnable() {
+//      System.out.println("Done creating players.");
       
-        public void run() {
-          // TODO Auto-generated method stub
-      
-      alice.pr.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
-      
-        public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
-            Exception reason) {
-          System.out.println("sendFailed("+msg+")");
-          reason.printStackTrace();
-        }
-      
-        public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
-          alice.logger.log("ack("+msg+")");
-        }
-      
-      }, null);
-        }
-        
-      });
+//      env.getSelectorManager().invoke(new Runnable() {
+//      
+//        public void run() {
+//          // TODO Auto-generated method stub
+//      
+//      alice.pr.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
+//      
+//        public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
+//            Exception reason) {
+//          System.out.println("sendFailed("+msg+")");
+//          reason.printStackTrace();
+//        }
+//      
+//        public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
+//          alice.logger.log("ack("+msg+")");
+//        }
+//      
+//      }, null);
+//        }
+//        
+//      });
   //    alice.transport.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), null, null);
     } catch (Exception e) {
       env.destroy();      

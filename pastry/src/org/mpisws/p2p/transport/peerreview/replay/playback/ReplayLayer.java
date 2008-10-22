@@ -69,8 +69,7 @@ import rice.p2p.util.MathUtils;
 import rice.selector.SelectorManager;
 import rice.selector.TimerTask;
 
-public class ReplayLayer<Identifier> extends ReplayVerifier<Identifier> implements 
-  TransportLayer<Identifier, ByteBuffer> {
+public class ReplayLayer<Identifier> extends ReplayVerifier<Identifier> {
 
   TransportLayerCallback<Identifier, ByteBuffer> callback;
   Map<Integer, ReplaySocket<Identifier>> sockets = new HashMap<Integer, ReplaySocket<Identifier>>();
@@ -198,5 +197,9 @@ public class ReplayLayer<Identifier> extends ReplayVerifier<Identifier> implemen
     sockets.get(socketId).receiveException(ioe);
     // TODO Auto-generated method stub
     
-  }  
+  }
+
+  public Environment getEnvironment() {
+    return environment;
+  }
 }

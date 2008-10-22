@@ -483,11 +483,11 @@ public class EvidenceToolImpl<Handle extends RawSerializable, Identifier extends
             /* Extract the authenticator and check it */
 //
 //            unsigned char senderContentHash[hashSizeBytes];
-            logger.log("XXX "+Arrays.toString(sob.getBytes()));
+            //logger.log("XXX "+Arrays.toString(sob.getBytes()));
             byte[] senderContentHash = peerreview.hash(sob.getByteBuffer());
             Authenticator senderAuth = peerreview.extractAuthenticator(senderSeq, EVT_SEND, senderContentHash, evtSign.hTopMinusOne, evtSign.signature);
-            logger.log("evTool, extract auth from "+senderHandle+" seq:"+senderSeq+" "+
-                MathUtils.toBase64(senderContentHash)+" htop-1:"+MathUtils.toBase64(evtSign.hTopMinusOne)+" sig:"+MathUtils.toBase64(evtSign.signature));
+            //logger.log("evTool, extract auth from "+senderHandle+" seq:"+senderSeq+" "+
+            //    MathUtils.toBase64(senderContentHash)+" htop-1:"+MathUtils.toBase64(evtSign.hTopMinusOne)+" sig:"+MathUtils.toBase64(evtSign.signature));
 //            unsigned char senderAuth[sizeof(long long)+hashSizeBytes+signatureSizeBytes];
 //            unsigned char senderType = EVT_SEND;
 //            *(long long*)&senderAuth[0] = senderSeq;

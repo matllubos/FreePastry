@@ -45,25 +45,31 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
+import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
+import org.mpisws.p2p.transport.TransportLayerCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 import org.mpisws.p2p.transport.util.Serializer;
 
+import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identifier> {
+public class VerifierImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements Verifier<Handle> {
 
   /**
    * Maps EVT_XXX -> EventCallback
@@ -80,18 +86,20 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
   PeerReviewCallback<Handle, Identifier> app;
   boolean foundFault;
   
-  int nextEventIndex;
+  long nextEventIndex;
   IndexEntry next;
   InputBuffer nextEvent;
   
   boolean initialized;
   int[] eventToCallback = new int[256];
   protected Logger logger;
-  protected Serializer<Handle> handleSerializer; // was transport in c++ impl
-  protected Serializer<Identifier> idSerializer; // was transport in c++ impl
   protected IdentityTransport<Handle, Identifier> transport;
   
   RandomSource prng;
+  
+  PeerReview<Handle, Identifier> peerreview;
+  
+  Environment environment;
   
   // these are shortcuts in the Java impl, they would all be true in the c++ impl, but in some cases it's more efficient if we can turn them off
 //  boolean useSendSign = false;  // true if we're sending the signature after the message
@@ -101,23 +109,22 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
 
   Object extInfo;
   
-  public VerifierImpl(RandomSource prng,
-      Serializer<Handle> handleSerializer, 
-      Serializer<Identifier> idSerializer, 
-      IdentityTransport<Handle, Identifier> transport,
+  public VerifierImpl(
+      PeerReview<Handle, Identifier> peerreview,
+      Environment env,
       SecureHistory history, 
       Handle localHandle, 
-      int firstEntryToReplay, 
-      Object extInfo,
-      Logger logger) /* : ReplayWrapper() */ throws IOException {    
-    this.logger = logger;    
+      long firstEntryToReplay, 
+      Object extInfo) /* : ReplayWrapper() */ throws IOException {    
+    if (!(env.getSelectorManager() instanceof ReplaySM)) {
+      throw new IllegalArgumentException("Environment.getSelectorManager() must be a ReplaySM, was a "+env.getSelectorManager().getClass());          
+    }
+    this.environment = env;
+    this.logger = peerreview.getEnvironment().getLogManager().getLogger(VerifierImpl.class, localHandle.toString());    
     this.history = history;
     this.app = null;
-    this.prng = prng;
-//    this.transport = transport;
-    this.handleSerializer = handleSerializer;
-    this.idSerializer = idSerializer;
-    this.transport = transport;
+    this.transport = peerreview;
+    this.peerreview = peerreview;
     this.localHandle = localHandle;
     this.foundFault = false;
     this.nextEventIndex = firstEntryToReplay-1;
@@ -191,8 +198,8 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
     return next;
   }
   
-  public void setApplication(PeerReviewCallback<Handle,Identifier> app) {
-    this.app = app;
+  public void setApplication(PeerReviewCallback app) {
+    this.app = (PeerReviewCallback<Handle, Identifier>)app;
   }
     
   /**
@@ -279,8 +286,7 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
       }
         
       case EVT_RECV : /* Incoming message; feed it to the state machine */
-        Handle sender = handleSerializer.deserialize(nextEvent);
-
+        Handle sender = peerreview.getHandleSerializer().deserialize(nextEvent);
         long senderSeq = nextEvent.readLong();
         boolean hashed = nextEvent.readBoolean();
         
@@ -316,7 +322,7 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
         return false;
       case EVT_ACK : /* Skip ACKs */
   // warning there should be an upcall here
-        Identifier id = idSerializer.deserialize(nextEvent);
+        Identifier id = peerreview.getIdSerializer().deserialize(nextEvent);        
         long ackedSeq = nextEvent.readLong();
         VerifierMRH<Handle> foo = callbacks.remove(ackedSeq);
         if (foo == null) {
@@ -395,7 +401,7 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
             }
 
             if (logger.level <= Logger.FINEST) logger.log( "Hashed checkpoint is OK");
-            history.upgradeHashedEntry(nextEventIndex, buf.getByteBuffer());
+            history.upgradeHashedEntry((int)nextEventIndex, buf.getByteBuffer());
           }
         }
           
@@ -403,13 +409,13 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
         break;
       case EVT_INIT: /* State machine is reinitialized; issue upcall */
         initialized = true;
-//        app->init();
+        app.init();
         fetchNextEvent();
         break;
       case EVT_SOCKET_OPEN_INCOMING: {
 //        logger.log(next+" s:"+nextEvent.bytesRemaining());
         int socketId = nextEvent.readInt();
-        Handle opener = handleSerializer.deserialize(nextEvent);
+        Handle opener = peerreview.getHandleSerializer().deserialize(nextEvent);
         fetchNextEvent();
         incomingSocket(opener, socketId);          
         break;
@@ -523,7 +529,7 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
 //      assert(relevantLen < 1024);
 //      //unsigned char buf[MAX_ID_SIZE+1+1024+transport.getHashSizeBytes()];
 //      int pos = 0;
-      handleSerializer.serialize(target, buf);
+      peerreview.getHandleSerializer().serialize(target, buf);
 //      buf.write(bb.array(), bb.position(), bb.remaining());
 //      target->getIdentifier()->write(buf, &pos, sizeof(buf));
 //      buf[pos++] = (relevantlen<msglen) ? 1 : 0;
@@ -570,7 +576,7 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
     // Are we sending to the same destination? 
     Handle logReceiver;
 //    try {
-     logReceiver = handleSerializer.deserialize(nextEvent);
+     logReceiver = peerreview.getHandleSerializer().deserialize(nextEvent);
 //    } catch (IllegalArgumentException iae) {
 //      if (logger.level <= Logger.WARNING) logger.log("Error deserializing event "+nextEventIndex+". send("+target+","+message+")");
 //      throw iae;
@@ -806,7 +812,7 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
     int ret = nextEvent.readInt(); 
     
     Handle logReceiver;
-    logReceiver = handleSerializer.deserialize(nextEvent);
+    logReceiver = peerreview.getHandleSerializer().deserialize(nextEvent);
     if (!logReceiver.equals(target)) {
       if (logger.level <= Logger.WARNING) logger.log("Replay: SOCKET_OPEN_OUTGOING to "+target+" during replay, but log shows SOCKET_OPEN_OUTGOING to "+logReceiver+"; marking as invalid");
       foundFault = true;
@@ -1009,6 +1015,33 @@ public class VerifierImpl<Handle, Identifier> implements Verifier<Handle, Identi
     
     fetchNextEvent();
   }
-  
+
+  public Environment getEnvironment() {
+    return environment;
+  }
+
+  public void acceptMessages(boolean b) {
+    throw new RuntimeException("implement");
+  }
+
+  public void acceptSockets(boolean b) {
+    throw new RuntimeException("implement");
+  }
+
+  public Handle getLocalIdentifier() {
+    return localHandle;
+  }
+
+  public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
+    throw new RuntimeException("implement");
+  }
+
+  public void setErrorHandler(ErrorHandler<Handle> handler) {
+    throw new RuntimeException("implement");
+  }
+
+  public void destroy() {
+    throw new RuntimeException("implement");
+  }
 
 }

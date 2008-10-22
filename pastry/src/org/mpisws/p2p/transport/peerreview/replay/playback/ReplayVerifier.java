@@ -51,6 +51,7 @@ import org.mpisws.p2p.transport.peerreview.history.HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.replay.EventCallback;
+import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.logging.Logger;
@@ -58,7 +59,7 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 
-public abstract class ReplayVerifier<Identifier> implements PeerReviewConstants {
+public abstract class ReplayVerifier<Identifier> implements Verifier<Identifier>,  PeerReviewConstants {
 
   protected Identifier localHandle;
   protected SecureHistory history;
@@ -164,7 +165,7 @@ public abstract class ReplayVerifier<Identifier> implements PeerReviewConstants 
 
   protected abstract void socketException(int socketId, IOException ioe) throws IOException;
 
-  public void setApplication(PeerReviewCallback<Identifier,?> app) {
+  public void setApplication(PeerReviewCallback app) {
     this.app = app;
   }
   

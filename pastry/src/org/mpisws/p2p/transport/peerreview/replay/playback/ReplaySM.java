@@ -38,6 +38,8 @@ package org.mpisws.p2p.transport.peerreview.replay.playback;
 
 import java.io.IOException;
 
+import org.mpisws.p2p.transport.peerreview.replay.Verifier;
+
 
 import rice.environment.Environment;
 import rice.environment.logging.LogManager;
@@ -59,7 +61,7 @@ import rice.selector.TimerTask;
  *
  */
 public class ReplaySM extends SelectorManager {
-  ReplayVerifier verifier;
+  Verifier verifier;
   DirectTimeSource simTime;
   
   public ReplaySM(String instance, DirectTimeSource timeSource, LogManager log) {
@@ -68,7 +70,7 @@ public class ReplaySM extends SelectorManager {
     setSelect(false);
   }
   
-  public void setVerifier(ReplayVerifier v) {
+  public void setVerifier(Verifier v) {
     this.verifier = v;
   }
 

@@ -498,7 +498,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     
 
     try {      
-      logger.log("XXXa "+Arrays.toString(evtSend.serialize().array()));
+//      logger.log("XXXa "+Arrays.toString(evtSend.serialize().array()));
       history.appendEntry(evtSend.getType(), true, evtSend.serialize());
     } catch (IOException ioe) {
       MessageRequestHandle<Handle, ByteBuffer> ret = new MessageRequestHandleImpl<Handle, ByteBuffer>(target,message,options);
@@ -510,7 +510,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     HashSeq top = history.getTopLevelEntry();
     
     /* Sign the authenticator */
-    logger.log("about to sign: "+top.getSeq()+" "+MathUtils.toBase64(top.getHash()));
+//    logger.log("about to sign: "+top.getSeq()+" "+MathUtils.toBase64(top.getHash()));
     hToSign = transport.hash(ByteBuffer.wrap(MathUtils.longToByteArray(top.getSeq())), ByteBuffer.wrap(top.getHash()));
 
     byte[] signature = transport.sign(hToSign);

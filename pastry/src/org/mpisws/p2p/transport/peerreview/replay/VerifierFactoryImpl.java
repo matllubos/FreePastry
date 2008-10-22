@@ -34,13 +34,31 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.replay.playback;
+package org.mpisws.p2p.transport.peerreview.replay;
 
+import java.io.IOException;
+
+import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
-import org.mpisws.p2p.transport.peerreview.replay.Verifier;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 
+import rice.environment.Environment;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-public interface VerifierFactory<Handle extends RawSerializable, Identifier extends RawSerializable> {
-  public Verifier<Handle, Identifier> getVerifier(SecureHistory history, Handle localHandle, long firstEntryToReplay, long initialTime, Object extInfo);
+public class VerifierFactoryImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements VerifierFactory<Handle, Identifier>{
+
+  PeerReview<Handle, Identifier> peerreview;
+  
+  public VerifierFactoryImpl(PeerReview<Handle, Identifier> peerreview) {
+    this.peerreview = peerreview;
+  }
+
+  public Verifier getVerifier(SecureHistory history,
+      Handle localHandle, long firstEntryToReplay, long initialTime,
+      Object extInfo) throws IOException {
+    
+    Environment env = ReplayLayer.generateEnvironment(localHandle.toString(), initialTime, 0);
+    return new VerifierImpl<Handle, Identifier>(peerreview,env,history,localHandle,firstEntryToReplay,extInfo);
+  }
+
 }

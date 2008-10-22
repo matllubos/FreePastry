@@ -95,7 +95,9 @@ import org.mpisws.p2p.transport.peerreview.message.ChallengeMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.ResponseMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
-import org.mpisws.p2p.transport.peerreview.replay.playback.VerifierFactory;
+import org.mpisws.p2p.transport.peerreview.replay.VerifierFactory;
+import org.mpisws.p2p.transport.peerreview.replay.VerifierFactoryImpl;
+import org.mpisws.p2p.transport.peerreview.replay.record.RecordSM;
 import org.mpisws.p2p.transport.peerreview.statement.Statement;
 import org.mpisws.p2p.transport.peerreview.statement.StatementProtocolImpl;
 import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
@@ -106,6 +108,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.MathUtils;
@@ -182,6 +185,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       AuthenticatorSerializer authenticatorSerialilzer,
       EvidenceSerializer evidenceSerializer) {
     super();
+    if (!(env.getSelectorManager() instanceof RecordSM)) {
+      throw new IllegalArgumentException("Environment.getSelectorManager() must return a RecordSM");
+    }
     this.transport = transport;
     this.transport.setCallback(this);
     this.stringTranslator = stringTranslator;
@@ -530,7 +536,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     env.getSelectorManager().schedule(new TimerTask() {    
       public void run() {
         callback.notifyStatusChange(id, newStatus);
-      }    
+      }
+      public String toString() {
+        return "NotifyStatusChangeTask: "+id+"=>"+newStatus;
+      }
     }, 3);
     
   }
@@ -590,7 +599,8 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.statementProtocol = new StatementProtocolImpl<Handle, Identifier>(this, challengeProtocol, infoStore, transport);
     
     this.evidenceTool = new EvidenceToolImpl<Handle, Identifier>(this, handleSerializer, idSerializer, transport.getHashSizeBytes(), transport.getSignatureSizeBytes()); // TODO: implement
-        
+    this.verifierFactory = new VerifierFactoryImpl<Handle, Identifier>(this);
+    
     initialized = true;
 
     maintenanceTask = env.getSelectorManager().schedule(new TimerTask() {    
@@ -598,6 +608,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       public void run() {
         doMaintenance();
       }    
+      public String toString() {
+        return "DoMaintenanceTask";
+      }
     },MAINTENANCE_INTERVAL_MILLIS, MAINTENANCE_INTERVAL_MILLIS);
     
     authPushTask = env.getSelectorManager().schedule(new TimerTask() {    
@@ -605,6 +618,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       public void run() {
         doAuthPush();
       }    
+      public String toString() {
+        return "AuthPushTask";
+      }
     },DEFAULT_AUTH_PUSH_INTERVAL_MILLIS, DEFAULT_AUTH_PUSH_INTERVAL_MILLIS);
     
     checkpointTask = env.getSelectorManager().schedule(new TimerTask() {    
@@ -612,6 +628,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       public void run() {
         doCheckpoint();
       }    
+      public String toString() {
+        return "CheckpointTask";
+      }
     },newLogCreated ? 1 : DEFAULT_CHECKPOINT_INTERVAL_MILLIS, DEFAULT_CHECKPOINT_INTERVAL_MILLIS);
         
     /* Append an INIT entry to the log */

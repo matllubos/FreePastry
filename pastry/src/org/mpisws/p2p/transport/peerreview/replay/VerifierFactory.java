@@ -34,32 +34,14 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package org.mpisws.p2p.transport.peerreview.replay;
 
 import java.io.IOException;
-import java.util.Collection;
 
-import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
-import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
-import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
-import org.mpisws.p2p.transport.peerreview.replay.Verifier;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 
-import rice.Destructable;
-import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
-/**
- * Callback interface that all PeerReview-enabled applications must implement. 
- * During normal operation, PeerReview uses this interface to checkpoint the
- * application, and to inquire about the witness set of another node. 
- */
-public interface PeerReviewCallback<Handle, Identifier> extends Destructable, IdentityTransportCallback<Handle, Identifier>, StatusChangeListener<Identifier> {
-  // PeerReviewCallback() : IdentityTransportCallback() {};
-  public void init();
-  void storeCheckpoint(OutputBuffer buffer) throws IOException;
-  boolean loadCheckpoint(InputBuffer buffer) throws IOException;
-  void getWitnesses(Identifier subject, WitnessListener<Handle, Identifier> callback);
-//  PeerReviewCallback getReplayInstance(ReplayWrapper replayWrapper);
-  public Collection<Handle> getMyWitnessedNodes();
-  PeerReviewCallback<Handle, Identifier> getReplayInstance(Verifier<Handle> v);
+public interface VerifierFactory<Handle extends RawSerializable, Identifier extends RawSerializable> {
+  public Verifier getVerifier(SecureHistory history, Handle localHandle, long firstEntryToReplay, long initialTime, Object extInfo) throws IOException;
 }

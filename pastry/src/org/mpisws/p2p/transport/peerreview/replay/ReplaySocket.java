@@ -46,7 +46,9 @@ import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 
-public class ReplaySocket<Identifier> implements P2PSocket<Identifier>, SocketRequestHandle<Identifier> {
+import rice.p2p.commonapi.rawserialization.RawSerializable;
+
+public class ReplaySocket<Identifier extends RawSerializable> implements P2PSocket<Identifier>, SocketRequestHandle<Identifier> {
 
   protected Identifier identifier;
   protected int socketId;

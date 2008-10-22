@@ -50,12 +50,12 @@ public class ActiveAuditInfo<Handle, Identifier extends RawSerializable> {
   public long currentTimeout;
   public ChallengeMessage<Identifier> request;
   public long evidenceSeq;
-  public Verifier<Handle, Identifier> verifier;
+  public Verifier verifier;
   
   public ActiveAuditInfo(Handle target, boolean shouldBeReplayed,
       boolean isReplaying, long currentTimeout,
       ChallengeMessage<Identifier> request, long evidenceSeq,
-      Verifier<Handle, Identifier> verifier) {
+      Verifier verifier) {
     this.target = target;
     this.shouldBeReplayed = shouldBeReplayed;
     this.isReplaying = isReplaying;
