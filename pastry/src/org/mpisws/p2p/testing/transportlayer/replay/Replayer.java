@@ -90,7 +90,7 @@ public class Replayer implements MyEvents, EventCallback {
   
   public Replayer(final Id id, final InetSocketAddress addr, InetSocketAddress bootaddress, final long startTime, final long randSeed) throws Exception {
     this.bootaddress = bootaddress;
-    Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed);
+    Environment env = ReplayLayer.generateEnvironment(id.toString(), startTime, randSeed, null);
     
     final Parameters params = env.getParameters();
     

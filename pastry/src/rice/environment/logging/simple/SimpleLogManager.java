@@ -127,7 +127,10 @@ public class SimpleLogManager extends AbstractLogManager implements CloneableLog
    * @see rice.environment.logging.CloneableLogManager#clone(java.lang.String)
    */
   public LogManager clone(String detail) {
-    return new SimpleLogManager(ps, time, params, detail, dateFormat);
+    return clone(detail,time);
+  }
+  public LogManager clone(String detail, TimeSource ts) {
+    return new SimpleLogManager(ps, ts, params, detail, dateFormat);
   }
   
   @Override

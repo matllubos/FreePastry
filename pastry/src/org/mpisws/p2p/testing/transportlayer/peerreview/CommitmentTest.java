@@ -164,6 +164,10 @@ public class CommitmentTest {
       return "HandleImpl<"+name+">";
     }
     
+    public int hashCode() {
+      return id.hashCode()^name.hashCode();
+    }
+    
     public boolean equals(Object o) {
       HandleImpl that = (HandleImpl)o;
       if (!id.equals(that.id)) return false;
@@ -308,9 +312,9 @@ public class CommitmentTest {
     public BogusApp(Player player, TransportLayer<HandleImpl, ByteBuffer> tl, Environment env) {
       super();
       this.player = player;
-      this.logger = player.logger;      
       this.tl = tl;
       this.env = env;
+      this.logger = env.getLogManager().getLogger(BogusApp.class, null);      
     }
     
 
@@ -398,9 +402,8 @@ public class CommitmentTest {
       return player.witnessed;
     }
 
-    public PeerReviewCallback<HandleImpl, org.mpisws.p2p.testing.transportlayer.peerreview.CommitmentTest.IdImpl> getReplayInstance(
-        Verifier<HandleImpl> v) {
-      return new BogusApp(player,v,v.getEnvironment());
+    public PeerReviewCallback<HandleImpl, IdImpl> getReplayInstance(Verifier<HandleImpl> v) {
+      return new BogusApp(playerTable.get(v.getLocalIdentifier()),v,v.getEnvironment());
     }
   }
 
@@ -409,6 +412,9 @@ public class CommitmentTest {
   CATool caTool;
   KeyPairGenerator keyPairGen;
 
+  Map<HandleImpl,Player> playerTable = new HashMap<HandleImpl, Player>();
+
+  
   class Player {
     
     Logger logger;
@@ -420,7 +426,7 @@ public class CommitmentTest {
 
     int id;
     
-    public Player(String name, int id, Environment env2) throws Exception {
+    public Player(final String name, int id, final Environment env2) throws Exception {
       super();
       Environment env = env2.cloneEnvironment(name);
       this.id = id;
@@ -450,6 +456,7 @@ public class CommitmentTest {
 //      if (f.exists()) f.delete();
       
       this.localHandle = new HandleImpl(name, new IdImpl(id));
+      playerTable.put(localHandle, this);
       KeyPair pair = keyPairGen.generateKeyPair();    
       X509Certificate cert = caTool.sign(name,pair.getPublic());
       BogusTransport t1 = new BogusTransport(localHandle, cert);
@@ -502,7 +509,16 @@ public class CommitmentTest {
         }},
           new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
       pr.setApp(new BogusApp(this,pr,env));
-      pr.init(name);
+      env.getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          try {
+            pr.init(name);
+          } catch (IOException ioe) {
+            ioe.printStackTrace();
+            env2.destroy();
+          }
+        }
+      });
     }
   }
 

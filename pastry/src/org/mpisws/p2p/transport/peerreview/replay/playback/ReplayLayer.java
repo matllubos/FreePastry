@@ -56,6 +56,7 @@ import org.mpisws.p2p.transport.util.MessageRequestHandleImpl;
 import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.Environment;
+import rice.environment.logging.CloneableLogManager;
 import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
@@ -170,10 +171,17 @@ public class ReplayLayer<Identifier> extends ReplayVerifier<Identifier> {
     callback.incomingSocket(socket);
   }
   
-  public static Environment generateEnvironment(String name, long startTime, long randSeed) {
+  public static Environment generateEnvironment(String name, long startTime, long randSeed, LogManager lm2) {
     Parameters params = new SimpleParameters(Environment.defaultParamFileArray,null);
     DirectTimeSource dts = new DirectTimeSource(startTime);
-    LogManager lm = Environment.generateDefaultLogManager(dts,params);
+    
+    LogManager lm;
+    if ((lm2 != null) && (lm2 instanceof CloneableLogManager)) {      
+      CloneableLogManager clm = (CloneableLogManager)lm2;
+      lm = clm.clone(clm.getPrefix()+"-"+name, dts);      
+    } else {
+      lm = Environment.generateDefaultLogManager(dts,params);
+    }
     RandomSource rs = new SimpleRandomSource(randSeed, lm);
     dts.setLogManager(lm);
     SelectorManager selector = new ReplaySM("Replay "+name, dts, lm);

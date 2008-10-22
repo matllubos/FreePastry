@@ -502,7 +502,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * @return DESCRIBE THE RETURN VALUE
    * @exception IOException DESCRIBE THE EXCEPTION
    */
-  int select(int time) throws IOException {
+  protected int select(int time) throws IOException {
     if (logger.level <= Logger.FINEST) logger.log("SM.select("+time+")");
 
     if (time > TIMEOUT)

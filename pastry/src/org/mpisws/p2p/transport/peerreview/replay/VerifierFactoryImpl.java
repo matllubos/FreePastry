@@ -41,6 +41,7 @@ import java.io.IOException;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
+import org.mpisws.p2p.transport.peerreview.replay.playback.ReplaySM;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -56,12 +57,14 @@ public class VerifierFactoryImpl<Handle extends RawSerializable, Identifier exte
     this.logger = peerreview.getEnvironment().getLogManager().getLogger(VerifierFactoryImpl.class, null);
   }
 
-  public Verifier getVerifier(SecureHistory history,
+  public Verifier<Handle> getVerifier(SecureHistory history,
       Handle localHandle, long firstEntryToReplay, long initialTime,
       Object extInfo) throws IOException {
     logger.log("getVerifier("+localHandle+","+initialTime+")");
-    Environment env = ReplayLayer.generateEnvironment(localHandle.toString(), initialTime, 0);
-    return new VerifierImpl<Handle, Identifier>(peerreview,env,history,localHandle,firstEntryToReplay,extInfo);
+    Environment env = ReplayLayer.generateEnvironment(localHandle.toString(), 0, 0,peerreview.getEnvironment().getLogManager());
+    VerifierImpl<Handle, Identifier> ret = new VerifierImpl<Handle, Identifier>(peerreview,env,history,localHandle,firstEntryToReplay,extInfo);
+    ((ReplaySM)env.getSelectorManager()).setVerifier(ret);
+    return ret;
   }
 
 }

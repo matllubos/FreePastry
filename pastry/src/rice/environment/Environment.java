@@ -319,16 +319,18 @@ public class Environment implements Destructable {
   public Environment cloneEnvironment(String prefix, boolean cloneSelector, boolean cloneProcessor) {
     // new logManager
     LogManager lman = cloneLogManager(prefix);
-    
-    // new selector
-    SelectorManager sman = cloneSelectorManager(prefix, lman, cloneSelector);
-    
-    // new processor
-    Processor proc = cloneProcessor(prefix, lman, cloneProcessor);
+
+    TimeSource ts = cloneTimeSource(lman);
     
     // new random source
     RandomSource rand = cloneRandomSource(lman);
     
+    // new selector
+    SelectorManager sman = cloneSelectorManager(prefix, ts, rand, lman, cloneSelector);
+    
+    // new processor
+    Processor proc = cloneProcessor(prefix, lman, cloneProcessor);
+        
     // build the environment
     Environment ret = new Environment(sman, proc, rand, getTimeSource(), lman,
         getParameters(), getExceptionStrategy());
@@ -339,6 +341,10 @@ public class Environment implements Destructable {
     return ret;
   }
 
+  protected TimeSource cloneTimeSource(LogManager lman) {
+    return getTimeSource();
+  }
+  
   protected LogManager cloneLogManager(String prefix) {
     LogManager lman = getLogManager();
     if (lman instanceof CloneableLogManager) {
@@ -347,11 +353,11 @@ public class Environment implements Destructable {
     return lman;
   }
   
-  protected SelectorManager cloneSelectorManager(String prefix, LogManager lman, boolean cloneSelector) {
+  protected SelectorManager cloneSelectorManager(String prefix, TimeSource ts, RandomSource rs, LogManager lman, boolean cloneSelector) {
     SelectorManager sman = getSelectorManager();
     if (cloneSelector) {
       sman = new SelectorManager(prefix + " Selector",
-          getTimeSource(), lman, getRandomSource());
+          ts, lman, rs);
     }
     return sman;
   }

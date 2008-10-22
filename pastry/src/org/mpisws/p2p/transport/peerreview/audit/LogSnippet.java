@@ -74,6 +74,10 @@ public class LogSnippet {
     this.entries = entries;
   }
   
+  public String toString() {
+    return "LogSnippet["+entries.get(0).seq+"-"+entries.get(entries.size()-1).seq+"]";
+  }
+  
   public boolean equals(Object o) {
     LogSnippet that = (LogSnippet)o;
     if (!Arrays.equals(this.baseHash, that.baseHash)) return false;

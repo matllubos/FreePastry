@@ -120,7 +120,7 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
       throw new IllegalArgumentException("Environment.getSelectorManager() must be a ReplaySM, was a "+env.getSelectorManager().getClass());          
     }
     this.environment = env;
-    this.logger = peerreview.getEnvironment().getLogManager().getLogger(VerifierImpl.class, localHandle.toString());    
+    this.logger = environment.getLogManager().getLogger(VerifierImpl.class, localHandle.toString());    
     this.history = history;
     this.app = null;
     this.transport = peerreview;
@@ -490,7 +490,7 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
 //    assert(!datagram);
 
     int relevantLen = message.remaining();
-    if (options.containsKey(PeerReview.RELEVANT_LENGTH)) {
+    if (options != null && options.containsKey(PeerReview.RELEVANT_LENGTH)) {
       relevantLen = (Integer)options.get(PeerReview.RELEVANT_LENGTH);
     }
     
@@ -529,7 +529,8 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
 //      assert(relevantLen < 1024);
 //      //unsigned char buf[MAX_ID_SIZE+1+1024+transport.getHashSizeBytes()];
 //      int pos = 0;
-      peerreview.getHandleSerializer().serialize(target, buf);
+      Identifier targetId = peerreview.getIdentifierExtractor().extractIdentifier(target);
+      targetId.serialize(buf);
 //      buf.write(bb.array(), bb.position(), bb.remaining());
 //      target->getIdentifier()->write(buf, &pos, sizeof(buf));
 //      buf[pos++] = (relevantlen<msglen) ? 1 : 0;

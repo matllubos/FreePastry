@@ -229,6 +229,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   updated, this function is called. */
 
   protected void updateLogTime() {
+    logger.log("updateLogTime()");
     long now = env.getTimeSource().currentTimeMillis();
   
     if (now > lastLogEntry) {
@@ -239,21 +240,21 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     }
   }
 
-  /* Called by applications to log some application-specific event, such as PAST_GET. */
-
-  void logEvent(short type, ByteBuffer entry) throws IOException {
-    assert(initialized && (type > EVT_MAX_RESERVED));
-    updateLogTime();
-    history.appendEntry(type, true, entry);   
-  }
-
-  /* Called internally to log events */
-
-  void logEventInternal(short type, ByteBuffer entry) throws IOException {
-    assert(initialized && (type <= EVT_MAX_RESERVED));
-    updateLogTime();
-    history.appendEntry(type, true, entry);   
-  }
+//  /* Called by applications to log some application-specific event, such as PAST_GET. */
+//
+//  void logEvent(short type, ByteBuffer entry) throws IOException {
+//    assert(initialized && (type > EVT_MAX_RESERVED));
+//    updateLogTime();
+//    history.appendEntry(type, true, entry);   
+//  }
+//
+//  /* Called internally to log events */
+//
+//  void logEventInternal(short type, ByteBuffer entry) throws IOException {
+//    assert(initialized && (type <= EVT_MAX_RESERVED));
+//    updateLogTime();
+//    history.appendEntry(type, true, entry);   
+//  }
   
   public MessageRequestHandle<Handle, ByteBuffer> sendMessage(Handle target,
       ByteBuffer message,
@@ -315,6 +316,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
   public void messageReceived(Handle handle, ByteBuffer message, Map<String, Object> options) throws IOException {
+    
     assert(initialized);
     
     /* Maybe do some mischief for testing */

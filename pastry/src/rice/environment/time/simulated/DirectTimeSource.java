@@ -100,7 +100,7 @@ public class DirectTimeSource implements TimeSource {
       return;
 //      throw new RuntimeException("Attempted to set time from "+time+" to "+newTime+".");
     }
-    if (logger.level <= Logger.FINER) logger.log("DirectTimeSource.setTime("+time+"=>"+newTime+")");
+    if ((newTime > time) && (logger.level <= Logger.FINER)) logger.log("DirectTimeSource.setTime("+time+"=>"+newTime+")");
     time = newTime;
   }
 

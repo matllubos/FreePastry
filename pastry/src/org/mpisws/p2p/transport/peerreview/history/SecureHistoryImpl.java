@@ -137,7 +137,7 @@ public class SecureHistoryImpl implements SecureHistory {
    */
   public void appendEntry(short type, boolean storeFullEntry, ByteBuffer ... entry) throws IOException {
     assert(indexFile != null && dataFile != null);
-    logger.log("appendEntry("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+")");
+    logger.log("appendEntry("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+"):"+nextSeq);
     if (type == EVT_RECV) {
       logger.log("recv("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+")");      
     }
@@ -386,7 +386,9 @@ public class SecureHistoryImpl implements SecureHistory {
       entryList.add(entry);
     }
     
-    return new LogSnippet(baseHash,entryList);
+    LogSnippet ret = new LogSnippet(baseHash,entryList);
+    logger.log("serializeRange("+idxFrom+","+idxTo+"):"+ret);
+    return ret;
   }
   
   public boolean serializeRange2(long idxFrom, long idxTo, HashPolicy hashPolicy, OutputBuffer outfile) throws IOException {
@@ -628,7 +630,7 @@ public class SecureHistoryImpl implements SecureHistory {
 //  #ifdef VERBOSE
 //      plog(3, "Entry type %d, size=%d, seq=%lld", entryType, entrySize, currentSeq);
 //  #endif
-      logger.log("ZZZ "+sEntry);
+//      logger.log("ZZZ "+sEntry);
       
       if (sEntry.seq > getLastSeq()) {
         if (!setNextSeq(sEntry.seq))

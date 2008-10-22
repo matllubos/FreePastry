@@ -58,6 +58,7 @@ import org.mpisws.p2p.transport.util.Serializer;
 import org.mpisws.p2p.transport.util.SocketRequestHandleImpl;
 
 import rice.environment.Environment;
+import rice.environment.logging.CloneableLogManager;
 import rice.environment.logging.LogManager;
 import rice.environment.logging.Logger;
 import rice.environment.params.Parameters;
@@ -66,6 +67,7 @@ import rice.environment.processing.Processor;
 import rice.environment.processing.sim.SimProcessor;
 import rice.environment.random.RandomSource;
 import rice.environment.random.simple.SimpleRandomSource;
+import rice.environment.time.TimeSource;
 import rice.environment.time.simple.SimpleTimeSource;
 import rice.environment.time.simulated.DirectTimeSource;
 import rice.p2p.util.MathUtils;
@@ -328,7 +330,58 @@ public class RecordLayer<Identifier> implements PeerReviewConstants,
     dts.setSelectorManager(selector);
     Processor proc = new SimProcessor(selector);
     Environment ret = new Environment(selector,proc,rs,dts,lm,
-        params, Environment.generateDefaultExceptionStrategy(lm));
+        params, Environment.generateDefaultExceptionStrategy(lm)) {
+      
+      public Environment cloneEnvironment(String prefix, boolean cloneSelector, boolean cloneProcessor) {
+        // new logManager
+        DirectTimeSource dts = new DirectTimeSource(getTimeSource().currentTimeMillis());
+        LogManager lman = getLogManager();
+        if (lman instanceof CloneableLogManager) {
+          lman = ((CloneableLogManager) getLogManager()).clone(prefix,dts);          
+        }                
+        dts.setLogManager(lman);
+        
+        // new random source
+        RandomSource rand = cloneRandomSource(lman);
+        
+        // new selector
+        SelectorManager sman = cloneSelectorManager(prefix, dts, rand, lman, cloneSelector);
+        
+        // new processor
+        Processor proc = cloneProcessor(prefix, lman, cloneProcessor);
+            
+        // build the environment
+        Environment ret = new Environment(sman, proc, rand, dts, lman,
+            getParameters(), getExceptionStrategy());
+      
+        // gain shared fate with the rootEnvironment
+        addDestructable(ret);     
+          
+        return ret;
+      }
+
+
+      
+      // get the new environment to be separate from the old one
+      @Override
+      public Environment cloneEnvironment(String prefix) {
+        return cloneEnvironment(prefix, true, true);
+      }
+      
+      @Override
+      protected SelectorManager cloneSelectorManager(String prefix, TimeSource ts, RandomSource rs, LogManager lman, boolean cloneSelector) {
+        SelectorManager sman = getSelectorManager();
+        if (cloneSelector) {
+          sman = new RecordSM(prefix + " Selector", new SimpleTimeSource(), (DirectTimeSource)ts,lman,rs);
+        }
+        return sman;
+      }
+
+      @Override
+      protected TimeSource cloneTimeSource(LogManager manager) {
+        throw new RuntimeException("Operation not allowed.  Use the overridden clone method.");
+      }
+    };
     return ret;
   }
   

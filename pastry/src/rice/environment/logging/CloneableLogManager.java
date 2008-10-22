@@ -39,6 +39,8 @@ advised of the possibility of such damage.
  */
 package rice.environment.logging;
 
+import rice.environment.time.TimeSource;
+
 /**
  * If you implement this interface, then your log manager can be cloned.
  * This is usually used so different nodes can have different log managers.
@@ -65,4 +67,6 @@ public interface CloneableLogManager extends LogManager {
    * @return a new LogManager 
    */
   LogManager clone(String detail);
+  LogManager clone(String detail, TimeSource ts);
+  String getPrefix();
 }
