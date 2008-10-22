@@ -42,6 +42,7 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.p2p.util.tuples.Tuple;
@@ -60,7 +61,6 @@ public interface EvidenceTool<Handle extends RawSerializable, Identifier extends
       AuthenticatorStore<Identifier> authStoreOrNull, byte flags, CommitmentProtocol<Handle, Identifier> commitmentProtocol, 
       byte[] keyNodeHash, long keyNodeMaxSeq);
 //  boolean checkNoEntriesHashed(LogSnippet snippet, Collection<Short> typesToIgnore, int numTypesToIgnore);
-
   
   /**
    * This is called when (a) we have obtained a new log segment from some node,

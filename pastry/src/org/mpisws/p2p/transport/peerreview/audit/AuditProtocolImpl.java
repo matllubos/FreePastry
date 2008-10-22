@@ -592,7 +592,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
       while (verifier.makeProgress());
 
       boolean verifiedOK = verifier.verifiedOK(); 
-      if (logger.level <= Logger.INFO) logger.log( "END OF REPLAY: %s ================="+ (verifiedOK ? "VERIFIED OK" : "VERIFICATION FAILED"));
+      if (logger.level <= Logger.INFO) logger.log( "END OF REPLAY: "+(verifiedOK ? "VERIFIED OK" : "VERIFICATION FAILED")+" =================");
 
       /* If there was a divergence, we have a proof of misbehavior */
 

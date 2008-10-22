@@ -62,9 +62,9 @@ public class ProofNonconformant<Handle extends RawSerializable> implements PeerR
   /**
    * Authenticates the last entry in the snippet
    */
-  Authenticator to;
-  Handle myHandle;
-  LogSnippet snippet;
+  public Authenticator to;
+  public Handle myHandle;
+  public LogSnippet snippet;
   
   public ProofNonconformant(Authenticator to, Handle myHandle,
       LogSnippet snippet) {
@@ -88,6 +88,4 @@ public class ProofNonconformant<Handle extends RawSerializable> implements PeerR
     myHandle.serialize(buf);
     snippet.serialize(buf);    
   }
-
-  
 }

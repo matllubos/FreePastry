@@ -801,17 +801,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
 
   public boolean verify(Identifier id, Authenticator auth) {
-    try {
-      SimpleOutputBuffer sob = new SimpleOutputBuffer();
-      sob.writeLong(auth.getSeq());
-      sob.write(auth.getHash());
-      byte[] signedHash = transport.hash(sob.getByteBuffer());
-      int result = transport.verify(id, signedHash, auth.getSignature());
-      return result == SIGNATURE_OK;
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
- 
+    byte[] signedHash = transport.hash(auth.getPartToHashThenSign());
+    int result = transport.verify(id, signedHash, auth.getSignature());
+    return result == SIGNATURE_OK; 
   }
   
   public int verify(Identifier id, byte[] msg, byte[] signature) {

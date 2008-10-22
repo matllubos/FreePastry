@@ -36,6 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview.statement;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
@@ -45,6 +46,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.peerreview.PeerReview;
+import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
 import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocol;
@@ -52,12 +54,15 @@ import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
 import org.mpisws.p2p.transport.peerreview.evidence.ChallengeAudit;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
+import org.mpisws.p2p.transport.peerreview.evidence.ProofNonconformant;
+import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.message.UserDataMessage;
+import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 
 import rice.Continuation;
 import rice.environment.logging.Logger;
@@ -277,8 +282,8 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
        break;
      }
      case PROOF_NONCONFORMANT: {
-       throw new RuntimeException("todo: implement");
-//       char buf1[200];
+       ProofNonconformant<Handle> pn = (ProofNonconformant<Handle>)payload;
+       
 //       unsigned int pos = 1;
 //       unsigned char *auth = &payload[pos];
 //       pos += authenticatorSizeBytes;
@@ -287,69 +292,67 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
 //       unsigned char *baseHash = &payload[pos];
 //       pos += hashSizeBytes;
 //
-//       /* Is the authenticator properly signed? */
-//
-//       unsigned char signedHash[hashSizeBytes];
-//       transport->hash(signedHash, auth, sizeof(long long)+hashSizeBytes);
-//       if (transport->verify(subject, signedHash, hashSizeBytes, &auth[sizeof(long long)+hashSizeBytes]) != IdentityTransport::SIGNATURE_OK) {
-//         if (logger.level <= Logger.WARNING) logger.log("NONCONFORMANT proof's authenticator has an invalid signature");
-//         idx.finished = true;
-//         delete subjectHandle;
-//         return;
-//       }
-//
-//       /* Is the snippet well-formed, and do we have all the certificates? */
-//
-//       switch (checkSnippetAndRequestCertificates(&payload[pos], payloadLen - pos, idx)) {
-//         case EvidenceTool::INVALID:
-//           if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT is not well-formed; discarding");
-//           idx.finished = true;
-//           delete subjectHandle;
-//           return;
-//         case EvidenceTool::CERT_MISSING:
-//           delete subjectHandle;
-//           return;
-//         default:
-//           break;
-//       }
-//
-//       /* Are the signatures in the snippet okay, and does int contain the authenticated node? */
-//       
-//       if (!EvidenceTool::checkSnippetSignatures(&payload[pos], payloadLen - pos, firstSeq, baseHash, subjectHandle, NULL, FLAG_INCLUDE_CHECKPOINT, peerreview, peerreview, NULL, &auth[sizeof(long long)], *(long long*)&auth[0])) {
-//         if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT cannot be validated (signatures or authenticator)");
-//         delete subjectHandle;
-//         return;
-//       }
-//       
-//       /* Now we are convinced that 
-//            - the authenticator is valid
-//            - the snippet is well-formed, and we have all the certificates
-//            - the snippet starts with a checkpoint and contains the authenticated node 
-//          We must now replay the log; if the proof is valid, it won't check out. */
-//
-//       SecureHistory *subjectHistory = SecureHistory::createTemp(firstSeq-1, baseHash, transport);
-//       EvidenceTool::appendSnippetToHistory(&payload[pos], payloadLen - pos, subjectHistory, peerreview, firstSeq, -1);
-//
-//#warning ext info missing
-//       Verifier *verifier = new Verifier(peerreview, subjectHistory, subjectHandle, signatureSizeBytes, hashSizeBytes, 1, firstSeq/1000, NULL, 0);
-//       PeerReviewCallback *replayApp = app->getReplayInstance(verifier);
-//       verifier->setApplication(replayApp);
-//
-//       plog(1, "REPLAY ============================================");
-//       if (logger.level <= Logger.FINE) logger.log("Node being replayed: %s", subjectHandle->render(buf1));
-//       if (logger.level <= Logger.FINE) logger.log("Range in log       : %lld-?", firstSeq);
-//
-//       while (verifier->makeProgress());
-//       bool verifiedOK = verifier->verifiedOK();
-//       delete verifier;
-//       delete subjectHandle;
-//       
-//       if (verifiedOK) {
-//         if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT contains a log snippet that actually is conformant; discarding");
-//         return;
-//       }
-//       
-//       break;        
+       /* Is the authenticator properly signed? */
+
+//       unsigned char signedHash[hashSizeBytes];       
+       if (!peerreview.verify(subject, pn.to)) {
+         if (logger.level <= Logger.WARNING) logger.log("NONCONFORMANT proof's authenticator has an invalid signature");
+         idx.finished = true;
+         return;
+       }
+
+       /* Is the snippet well-formed, and do we have all the certificates? */
+
+       switch (checkSnippetAndRequestCertificates(pn.snippet, idx)) {
+         case INVALID:
+           if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT is not well-formed; discarding");
+           idx.finished = true;
+           return;
+         case CERT_MISSING:
+           return;
+         default:
+           break;
+       }
+
+       /* Are the signatures in the snippet okay, and does int contain the authenticated node? */
+       
+       if (!peerreview.getEvidenceTool().checkSnippetSignatures(
+           pn.snippet,pn.myHandle,null, FLAG_INCLUDE_CHECKPOINT,null,pn.to.getHash(),pn.to.getSeq())) {
+         if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT cannot be validated (signatures or authenticator)");
+         return;
+       }
+       
+       /* Now we are convinced that 
+            - the authenticator is valid
+            - the snippet is well-formed, and we have all the certificates
+            - the snippet starts with a checkpoint and contains the authenticated node 
+          We must now replay the log; if the proof is valid, it won't check out. */
+       try {
+         SecureHistory subjectHistory = peerreview.getHistoryFactory().createTemp(pn.snippet.getFirstSeq()-1, pn.snippet.getBaseHash());
+         subjectHistory.appendSnippetToHistory(pn.snippet);
+//         peerreview.getEvidenceTool().appendSnippetToHistory(pn.snippet, subjectHistory, -1);
+  
+  //#warning ext info missing
+         Verifier<Handle> verifier = peerreview.getVerifierFactory().getVerifier(subjectHistory, pn.myHandle, 1, pn.snippet.getFirstSeq()/1000000, null);
+         PeerReviewCallback<Handle, Identifier> replayApp = peerreview.getApp().getReplayInstance(verifier);
+         verifier.setApplication(replayApp);
+  
+         if (logger.level <= Logger.INFO) logger.log("REPLAY ============================================");
+         if (logger.level <= Logger.FINE) logger.log("Node being replayed: "+pn.myHandle);
+         if (logger.level <= Logger.FINE) logger.log("Range in log       : "+pn.snippet.getFirstSeq()+"-?");
+  
+         while (verifier.makeProgress());
+         boolean verifiedOK = verifier.verifiedOK();
+         
+         if (verifiedOK) {
+           if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT contains a log snippet that actually is conformant; discarding");
+           return;
+         }
+       } catch (IOException ioe) {
+         if (logger.level <= Logger.WARNING) logger.logException("Couldn't replay!!! "+pn, ioe);
+       }
+       break;        
+//       throw new RuntimeException("todo: implement");
      }
      default: {
        if (logger.level <= Logger.WARNING) logger.log("Unknown payload type #"+payload.getEvidenceType()+" in accusation; discarding");

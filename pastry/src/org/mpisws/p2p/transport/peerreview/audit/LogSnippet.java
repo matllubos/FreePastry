@@ -113,6 +113,10 @@ public class LogSnippet {
       entries.add(prev);
     }      
   }
+  
+  public byte[] getBaseHash() {
+    return baseHash;
+  }
 
   public long getFirstSeq() {
     return entries.get(0).seq;

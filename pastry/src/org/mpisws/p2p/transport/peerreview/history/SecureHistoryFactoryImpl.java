@@ -163,4 +163,9 @@ public class SecureHistoryFactoryImpl implements SecureHistoryFactory, IndexEntr
     return 8+8+4+2+hashProv.getHashSizeBytes()*2;
   }
 
+  public SecureHistory createTemp(long baseSeq, byte[] baseHash)
+      throws IOException {
+    return create(null, baseSeq, baseHash);
+  }
+
 }

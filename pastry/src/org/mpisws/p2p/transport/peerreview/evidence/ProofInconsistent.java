@@ -39,9 +39,12 @@ package org.mpisws.p2p.transport.peerreview.evidence;
 import java.io.IOException;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.audit.LogSnippet;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 
+import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 
 /**
@@ -66,9 +69,8 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
   public Authenticator auth1;
   
   public Authenticator auth2;
-  
-  long firstSeq;
-  byte[] baseHash;
+
+  public LogSnippet snippet;
 
   public ProofInconsistent(Authenticator auth1, Authenticator auth2) {
     this.auth1 = auth1;
@@ -79,6 +81,21 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
     return PROOF_INCONSISTENT;
   }
   
+  public ProofInconsistent(InputBuffer buf, AuthenticatorSerializer serializer, int hashSize) throws IOException {
+    auth1 = serializer.deserialize(buf);
+    byte type = buf.readByte();
+    switch(type) {
+    case ANOTHER_AUTH:
+      auth2 = serializer.deserialize(buf);
+      break;
+    case LOG_SNIPPET:
+      snippet = new LogSnippet(buf, hashSize);
+      break;
+    default:
+      throw new IOException("unknown type:"+type);
+    }
+  }
+  
   public void serialize(OutputBuffer buf) throws IOException {
     auth1.serialize(buf);
     if (auth2 != null) {
@@ -86,9 +103,7 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
       auth2.serialize(buf);
     } else {
       buf.writeByte(LOG_SNIPPET);
-      buf.writeLong(firstSeq);
-      buf.write(baseHash, 0, baseHash.length);
-      throw new RuntimeException("todo implement entries");
+      snippet.serialize(buf);
     }
   }
 }

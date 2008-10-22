@@ -43,20 +43,23 @@ import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
 import org.mpisws.p2p.transport.peerreview.replay.playback.ReplayLayer;
 
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 public class VerifierFactoryImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements VerifierFactory<Handle, Identifier>{
 
   PeerReview<Handle, Identifier> peerreview;
+  Logger logger;
   
   public VerifierFactoryImpl(PeerReview<Handle, Identifier> peerreview) {
     this.peerreview = peerreview;
+    this.logger = peerreview.getEnvironment().getLogManager().getLogger(VerifierFactoryImpl.class, null);
   }
 
   public Verifier getVerifier(SecureHistory history,
       Handle localHandle, long firstEntryToReplay, long initialTime,
       Object extInfo) throws IOException {
-    
+    logger.log("getVerifier("+localHandle+","+initialTime+")");
     Environment env = ReplayLayer.generateEnvironment(localHandle.toString(), initialTime, 0);
     return new VerifierImpl<Handle, Identifier>(peerreview,env,history,localHandle,firstEntryToReplay,extInfo);
   }

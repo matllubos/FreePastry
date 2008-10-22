@@ -39,6 +39,8 @@ package org.mpisws.p2p.transport.peerreview.evidence;
 import java.io.IOException;
 
 import org.mpisws.p2p.transport.peerreview.PeerReviewConstants;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.EvidenceSerializer;
 import org.mpisws.p2p.transport.peerreview.message.AckMessage;
@@ -49,10 +51,11 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 public class EvidenceSerializerImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements EvidenceSerializer, PeerReviewConstants {
-  int hashSize;
-  int signatureSize;
-  Serializer<Handle> handleSerializer;
-  Serializer<Identifier> idSerializer;
+  protected int hashSize;
+  protected int signatureSize;
+  protected Serializer<Handle> handleSerializer;
+  protected Serializer<Identifier> idSerializer;
+  protected AuthenticatorSerializerImpl authSerializer;
   
   public EvidenceSerializerImpl(Serializer<Handle> handleSerializer, Serializer<Identifier> idSerializer, int hashSize, int signatureSize) {
     super();
@@ -60,6 +63,7 @@ public class EvidenceSerializerImpl<Handle extends RawSerializable, Identifier e
     this.idSerializer = idSerializer;
       this.hashSize = hashSize;
     this.signatureSize = signatureSize;
+    this.authSerializer = new AuthenticatorSerializerImpl(hashSize,signatureSize);
   }
   
   public Evidence deserialize(InputBuffer buf, byte type, boolean response) throws IOException {
@@ -77,7 +81,11 @@ public class EvidenceSerializerImpl<Handle extends RawSerializable, Identifier e
       } else {
         return UserDataMessage.build(buf, handleSerializer, hashSize, signatureSize);
       }
-    }
+    case PROOF_INCONSISTENT:
+      return new ProofInconsistent(buf, authSerializer, hashSize);
+    case PROOF_NONCONFORMANT:
+      return new ProofNonconformant<Handle>(buf,handleSerializer,hashSize,signatureSize);
+    }      
     throw new IllegalArgumentException("Unknown type:"+type);
   }
 

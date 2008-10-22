@@ -48,5 +48,6 @@ public interface SecureHistoryFactory {
    * number of the first log entry, which forms the base of the hash chain.
    */
   SecureHistory create(String name, long baseSeq, byte[] baseHash) throws IOException;
+  SecureHistory createTemp(long baseSeq, byte[] baseHash) throws IOException;
   SecureHistory open(String name, String mode) throws IOException;
 }

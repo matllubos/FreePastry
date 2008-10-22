@@ -317,7 +317,10 @@ public class CommitmentTest {
     public void init() {
       if (player.id == 1) {
         env.getSelectorManager().schedule(new TimerTask() {
-        
+          public String toString() {
+            return "SendMessageTask "+scheduledExecutionTime();
+          }
+          
           @Override
           public void run() {
             tl.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
@@ -340,7 +343,9 @@ public class CommitmentTest {
     }
 
     public boolean loadCheckpoint(InputBuffer buffer) throws IOException {
+      logger.log("loadCheckpoint");
       if (buffer.readInt() != 31173) throw new RuntimeException("invalid checkpoint");
+      init();
       return true;
     }
 

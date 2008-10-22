@@ -245,7 +245,7 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
 
   public Authenticator getMostRecentAuthenticator(Identifier id) {
     SortedSet<Authenticator> list = authenticators.get(id);    
-    if (list == null) return null;
+    if (list == null || list.isEmpty()) return null;
     return list.last();
   }
 
