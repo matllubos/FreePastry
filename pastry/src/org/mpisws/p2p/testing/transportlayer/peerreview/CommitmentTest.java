@@ -36,8 +36,12 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.testing.transportlayer.peerreview;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -53,6 +57,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import org.mpisws.p2p.pki.x509.CATool;
 import org.mpisws.p2p.pki.x509.CAToolImpl;
@@ -105,6 +110,7 @@ import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.selector.TimerTask;
 
@@ -306,6 +312,9 @@ public class CommitmentTest {
     Logger logger;
     Player player;
     Environment env;
+    Random rand;
+    long nextSendTime = 0;
+    
     private TransportLayer<HandleImpl, ByteBuffer> tl;
     
     
@@ -320,43 +329,79 @@ public class CommitmentTest {
     
 
     public void init() {
+      rand = new Random();
       if (player.id == 1) {
-        env.getSelectorManager().schedule(new TimerTask() {
-          public String toString() {
-            return "SendMessageTask "+scheduledExecutionTime();
-          }
-          
-          @Override
-          public void run() {
-            tl.sendMessage(bob.localHandle, ByteBuffer.wrap("foo".getBytes()), new MessageCallback<HandleImpl, ByteBuffer>() {
-              
-              public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
-                  Exception reason) {
-                System.out.println("sendFailed("+msg+")");
-                reason.printStackTrace();
-              }
-            
-              public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
-                alice.logger.log("ack("+msg+")");
-              }
-            
-            }, null);
-          }
-        
-        }, 1000);
+        scheduleMessageToBeSent();
       }
     }
 
-    public boolean loadCheckpoint(InputBuffer buffer) throws IOException {
-      logger.log("loadCheckpoint");
-      if (buffer.readInt() != 31173) throw new RuntimeException("invalid checkpoint");
-      init();
-      return true;
+    public void scheduleMessageToBeSent() {
+      scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+rand.nextInt(19999)+1);
+    }
+    
+    public void scheduleMessageToBeSent(long time) {
+      nextSendTime = time;
+      logger.log("scheduling message to be sent at:"+time);
+      env.getSelectorManager().schedule(new TimerTask() {
+        public String toString() {
+          return "SendMessageTask "+scheduledExecutionTime();
+        }
+        
+        @Override
+        public void run() {
+          sendMessage();
+        }      
+      }, nextSendTime-env.getTimeSource().currentTimeMillis());      
+    }
+    
+    public void sendMessage() {
+      byte[] msg = new byte[rand.nextInt(31)+1];
+      rand.nextBytes(msg);
+      logger.log("sending message "+msg.length+" "+MathUtils.toBase64(msg));
+      tl.sendMessage(bob.localHandle, ByteBuffer.wrap(msg), new MessageCallback<HandleImpl, ByteBuffer>() {
+        
+        public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
+            Exception reason) {
+          System.out.println("sendFailed("+msg+")");
+          reason.printStackTrace();
+        }
+      
+        public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
+          alice.logger.log("ack("+msg+")");
+        }
+      
+      }, null);      
+      scheduleMessageToBeSent();
     }
 
+    public boolean loadCheckpoint(InputBuffer buffer) throws IOException {
+      if (buffer.readInt() != 31173) throw new RuntimeException("invalid checkpoint");
+      nextSendTime = buffer.readLong();
+      logger.log("loadCheckpoint "+nextSendTime);
+      byte[] bytes = new byte[buffer.readInt()];
+      buffer.read(bytes);
+      ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+      try {
+        rand = (Random)new ObjectInputStream(bais).readObject();
+      } catch (ClassNotFoundException cnfe) {
+        IOException ioe = new IOException("Error reading random number from checkpoint");
+        ioe.initCause(cnfe);
+      }
+      if (nextSendTime > 0) {
+        scheduleMessageToBeSent(nextSendTime);
+      }
+      return true;
+    }
+    
     public void storeCheckpoint(OutputBuffer buffer) throws IOException {
-//      throw new RuntimeException("implement");
+      logger.log("storeCheckpoint "+nextSendTime);
       buffer.writeInt(31173);
+      buffer.writeLong(nextSendTime);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      new ObjectOutputStream(baos).writeObject(rand);
+      byte[] bytes = baos.toByteArray();
+      buffer.writeInt(bytes.length);
+      buffer.write(bytes, 0, bytes.length);
     }
 
     public void destroy() {
@@ -385,7 +430,7 @@ public class CommitmentTest {
 
     public void messageReceived(HandleImpl i, ByteBuffer m,
         Map<String, Object> options) throws IOException {
-      logger.log("Message received.");
+      logger.log("Message received: "+MathUtils.toBase64(m.array()));
     }
 
     public void getWitnesses(IdImpl subject,
