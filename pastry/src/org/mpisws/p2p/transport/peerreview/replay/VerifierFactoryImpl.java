@@ -60,7 +60,7 @@ public class VerifierFactoryImpl<Handle extends RawSerializable, Identifier exte
   public Verifier<Handle> getVerifier(SecureHistory history,
       Handle localHandle, long firstEntryToReplay, long initialTime,
       Object extInfo) throws IOException {
-    logger.log("getVerifier("+localHandle+","+initialTime+")");
+//    logger.log("getVerifier("+localHandle+","+initialTime+")");
     Environment env = ReplayLayer.generateEnvironment(localHandle.toString(), 0, 0,peerreview.getEnvironment().getLogManager());
     VerifierImpl<Handle, Identifier> ret = new VerifierImpl<Handle, Identifier>(peerreview,env,history,localHandle,firstEntryToReplay,extInfo);
     ((ReplaySM)env.getSelectorManager()).setVerifier(ret);

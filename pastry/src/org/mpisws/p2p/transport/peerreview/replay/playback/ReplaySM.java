@@ -165,7 +165,7 @@ public class ReplaySM extends SelectorManager {
     boolean ret = verifier.isSuccess();
     if (ret) {
       // success!
-      logger.log("success!");
+//      logger.log("success!");
       // TODO: do something different 
       environment.destroy();    
     }

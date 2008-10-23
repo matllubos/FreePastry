@@ -296,7 +296,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
     public void done() {
       if (done) return;
       done = true;
-      logger.log(this+" done()");
+//      logger.log(this+" done()");
       pendingQuery.remove(this);
       c.receiveResult(subjectList);       
     }

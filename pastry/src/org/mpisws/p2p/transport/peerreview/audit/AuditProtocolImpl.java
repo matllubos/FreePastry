@@ -591,7 +591,7 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
       /* Do the replay */
 
 //      while (verifieverifier.makeProgress());
-      if (true) throw new RuntimeException("delme");
+//      if (true) throw new RuntimeException("delme");
       while(((ReplaySM)verifier.getEnvironment().getSelectorManager()).makeProgress());
       
       boolean verifiedOK = verifier.verifiedOK(); 

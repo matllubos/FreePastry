@@ -137,11 +137,7 @@ public class SecureHistoryImpl implements SecureHistory {
    */
   public void appendEntry(short type, boolean storeFullEntry, ByteBuffer ... entry) throws IOException {
     assert(indexFile != null && dataFile != null);
-    logger.log("appendEntry("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+"):"+nextSeq);
-    if (type == EVT_RECV) {
-      logger.log("recv("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+")");      
-    }
-    
+    if (logger.level <= Logger.FINER) logger.log("appendEntry("+type+","+storeFullEntry+","+entry.length+","+entry[0].remaining()+"):"+nextSeq);
     // Sanity check (for debugging) 
 
     if (readOnly) throw new IllegalStateException("Cannot append entry to readonly history");
@@ -387,7 +383,7 @@ public class SecureHistoryImpl implements SecureHistory {
     }
     
     LogSnippet ret = new LogSnippet(baseHash,entryList);
-    logger.log("serializeRange("+idxFrom+","+idxTo+"):"+ret);
+//    logger.log("serializeRange("+idxFrom+","+idxTo+"):"+ret);
     return ret;
   }
   

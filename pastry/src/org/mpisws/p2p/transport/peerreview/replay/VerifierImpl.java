@@ -1034,7 +1034,7 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
   }
 
   public void setCallback(TransportLayerCallback<Handle, ByteBuffer> callback) {
-    throw new RuntimeException("implement");
+    this.app = (PeerReviewCallback<Handle, Identifier>)callback;
   }
 
   public void setErrorHandler(ErrorHandler<Handle> handler) {

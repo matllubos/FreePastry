@@ -389,8 +389,8 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
           udm.getTopSeq(), 
           EVT_SEND, 
           innerHash, udm.getHTopMinusOne(), udm.getSignature());
-      logger.log("received message, extract auth from "+udm.getSenderHandle()+" seq:"+udm.getTopSeq()+" "+
-          MathUtils.toBase64(innerHash)+" htop-1:"+MathUtils.toBase64(udm.getHTopMinusOne())+" sig:"+MathUtils.toBase64(udm.getSignature()));
+//      logger.log("received message, extract auth from "+udm.getSenderHandle()+" seq:"+udm.getTopSeq()+" "+
+//          MathUtils.toBase64(innerHash)+" htop-1:"+MathUtils.toBase64(udm.getHTopMinusOne())+" sig:"+MathUtils.toBase64(udm.getSignature()));
       if (authenticator != null) {
 
         /* At this point, we are convinced that:

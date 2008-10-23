@@ -314,7 +314,8 @@ public class CommitmentTest {
       this.player = player;
       this.tl = tl;
       this.env = env;
-      this.logger = env.getLogManager().getLogger(BogusApp.class, null);      
+      this.logger = env.getLogManager().getLogger(BogusApp.class, null);
+      tl.setCallback(this);
     }
     
 
@@ -384,7 +385,7 @@ public class CommitmentTest {
 
     public void messageReceived(HandleImpl i, ByteBuffer m,
         Map<String, Object> options) throws IOException {
-      System.out.println("Message received.");
+      logger.log("Message received.");
     }
 
     public void getWitnesses(IdImpl subject,
@@ -448,7 +449,7 @@ public class CommitmentTest {
           }
         }
         
-        System.out.println("Delete "+f+","+f.delete());        
+//        System.out.println("Delete "+f+","+f.delete());        
       }
 //      File f = new File(name+".data");
 //      if (f.exists()) f.delete();
@@ -467,17 +468,17 @@ public class CommitmentTest {
         @Override
         public Cancellable requestCertificate(final HandleImpl source, final IdImpl certHolder,
             final Continuation<X509Certificate, Exception> c, Map<String, Object> options) {
-          logger.log("requestCert("+certHolder+" from "+source+")");
+          //logger.log("requestCert("+certHolder+" from "+source+")");
           return idTLTable.get(source).requestValue(source, certHolder, new Continuation<X509Certificate, Exception>() {
           
             public void receiveResult(X509Certificate result) {
-              logger.log("delivering cert for ("+certHolder+") c:"+c);
+              //logger.log("delivering cert for ("+certHolder+") c:"+c);
               knownValues.put(certHolder, result);
               if (c != null) c.receiveResult(result);
             }
           
             public void receiveException(Exception exception) {
-              logger.logException("exception when requesting cert for ("+certHolder+") c:"+c,exception);
+              //logger.logException("exception when requesting cert for ("+certHolder+") c:"+c,exception);
               if (c != null) c.receiveException(exception);
             }
           

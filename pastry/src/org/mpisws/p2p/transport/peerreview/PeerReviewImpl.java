@@ -229,7 +229,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   updated, this function is called. */
 
   protected void updateLogTime() {
-    logger.log("updateLogTime()");
+    if (logger.level <= Logger.FINEST) logger.log("updateLogTime()");
     long now = env.getTimeSource().currentTimeMillis();
   
     if (now > lastLogEntry) {
@@ -304,7 +304,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   }
   
   public void setApp(PeerReviewCallback<Handle, Identifier> callback) {
-    logger.log("setApp("+callback+")");
+    if (logger.level <= Logger.INFO) logger.log("setApp("+callback+")");
     this.callback = callback;
   }
   
