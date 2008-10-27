@@ -93,7 +93,7 @@ public class Authenticator implements Comparable<Authenticator> {
   public boolean equals(Object o) {
     Authenticator that = (Authenticator)o;
     if (seq == that.seq) {
-      if (hash.equals(that.hash)) {
+      if (Arrays.equals(hash, that.hash)) {
         if (Arrays.equals(signature, that.signature)) {
           return true;
         }
@@ -103,19 +103,19 @@ public class Authenticator implements Comparable<Authenticator> {
   }
   
   public int compareTo(Authenticator that) {
-    if (this.seq < that.seq)
+    if (this.seq > that.seq)
       return -1;     
 
-    if (this.seq > that.seq)
+    if (this.seq < that.seq)
         return 1;    
 
     // seqs are the same
     if (this.hash == null) {
-      return -1;
+      return 1;
     }
     
     if (that.hash == null) {
-      return 1;
+      return -1;
     }
     
     // exit quickly if they are actually equal

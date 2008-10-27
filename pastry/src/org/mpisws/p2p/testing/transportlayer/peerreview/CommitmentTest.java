@@ -53,6 +53,7 @@ import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -336,12 +337,12 @@ public class CommitmentTest {
     }
 
     public void scheduleMessageToBeSent() {
-      scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+rand.nextInt(19999)+1);
+      scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+rand.nextInt(1999)+1);
     }
     
     public void scheduleMessageToBeSent(long time) {
       nextSendTime = time;
-      logger.log("scheduling message to be sent at:"+time);
+      if (logger.level <= Logger.FINE) logger.log("scheduling message to be sent at:"+time);
       env.getSelectorManager().schedule(new TimerTask() {
         public String toString() {
           return "SendMessageTask "+scheduledExecutionTime();
@@ -357,7 +358,8 @@ public class CommitmentTest {
     public void sendMessage() {
       byte[] msg = new byte[rand.nextInt(31)+1];
       rand.nextBytes(msg);
-      logger.log("sending message "+msg.length+" "+MathUtils.toBase64(msg));
+      if (logger.level <= Logger.INFO) logger.log("sending message "+msg.length+" "+MathUtils.toBase64(msg));
+      try {
       tl.sendMessage(bob.localHandle, ByteBuffer.wrap(msg), new MessageCallback<HandleImpl, ByteBuffer>() {
         
         public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
@@ -367,17 +369,21 @@ public class CommitmentTest {
         }
       
         public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
-          alice.logger.log("ack("+msg+")");
+          if (logger.level <= Logger.FINE) alice.logger.log("ack("+msg+")");
         }
       
       }, null);      
+      } catch (NullPointerException npe) {
+        logger.log("tl:"+tl+" "+bob);
+        throw npe;
+      }
       scheduleMessageToBeSent();
     }
 
     public boolean loadCheckpoint(InputBuffer buffer) throws IOException {
       if (buffer.readInt() != 31173) throw new RuntimeException("invalid checkpoint");
       nextSendTime = buffer.readLong();
-      logger.log("loadCheckpoint "+nextSendTime);
+      if (logger.level <= Logger.FINER) logger.log("loadCheckpoint "+nextSendTime);
       byte[] bytes = new byte[buffer.readInt()];
       buffer.read(bytes);
       ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
@@ -394,14 +400,15 @@ public class CommitmentTest {
     }
     
     public void storeCheckpoint(OutputBuffer buffer) throws IOException {
-      logger.log("storeCheckpoint "+nextSendTime);
+      if (logger.level <= Logger.FINER) logger.log("storeCheckpoint "+nextSendTime);
       buffer.writeInt(31173);
       buffer.writeLong(nextSendTime);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       new ObjectOutputStream(baos).writeObject(rand);
       byte[] bytes = baos.toByteArray();
-      buffer.writeInt(bytes.length);
+      buffer.writeInt(bytes.length);      
       buffer.write(bytes, 0, bytes.length);
+      if (logger.level <= Logger.FINEST) logger.log("storeCheckpoint:"+Arrays.toString(((SimpleOutputBuffer)buffer).getBytes()));
     }
 
     public void destroy() {
@@ -430,7 +437,7 @@ public class CommitmentTest {
 
     public void messageReceived(HandleImpl i, ByteBuffer m,
         Map<String, Object> options) throws IOException {
-      logger.log("Message received: "+MathUtils.toBase64(m.array()));
+      if (logger.level <= Logger.INFO) logger.log("Message received: "+MathUtils.toBase64(m.array()));
     }
 
     public void getWitnesses(IdImpl subject,
@@ -441,7 +448,7 @@ public class CommitmentTest {
     public void notifyStatusChange(
         IdImpl id,
         int newStatus) {
-      logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
+      if (logger.level <= Logger.INFO) logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
     }
 
     public Collection<HandleImpl> getMyWitnessedNodes() {

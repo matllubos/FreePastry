@@ -152,8 +152,8 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
     }
     if (!allowDuplicateSeqs) {
       SortedSet<Authenticator> sub = list.subSet(
-          new Authenticator(authenticator.getSeq(),null,null),
-          new Authenticator(authenticator.getSeq()+1, null, null));
+          new Authenticator(authenticator.getSeq()+1, null, null),
+          new Authenticator(authenticator.getSeq(),null,null));
       if (!sub.isEmpty()) {
         if (!sub.contains(authenticator)) {
           throw new RuntimeException("Adding duplicate auths for the same sequence number is not allowed for this store old:"+sub.first()+" new:"+authenticator);
@@ -225,9 +225,10 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
   public List<Authenticator> getAuthenticators(Identifier id, long minseq,
       long maxseq) {
     SortedSet<Authenticator> list = authenticators.get(id);    
-
+    //logger.log("getAuthenticators("+id+","+minseq+"->"+maxseq+"): total:"+list);
     if (list != null) {
-      SortedSet<Authenticator> subList = list.subSet(new Authenticator(minseq,null,null), new Authenticator(maxseq+1,null,null));      
+      SortedSet<Authenticator> subList = list.subSet(new Authenticator(maxseq+1,null,null), new Authenticator(minseq,null,null));      
+      //logger.log("getAuthenticators: "+subList);
       return new ArrayList<Authenticator>(subList);
     }    
     return Collections.emptyList();
@@ -240,13 +241,13 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
   public Authenticator getLastAuthenticatorBefore(Identifier id, long seq) {
     List<Authenticator> list = getAuthenticators(id, Long.MIN_VALUE, seq);
     if (list.isEmpty()) return null;
-    return list.get(list.size()-1);
+    return list.get(0);
   }
 
   public Authenticator getMostRecentAuthenticator(Identifier id) {
     SortedSet<Authenticator> list = authenticators.get(id);    
     if (list == null || list.isEmpty()) return null;
-    return list.last();
+    return list.first();
   }
 
   public int getNumSubjects() {
@@ -256,7 +257,7 @@ public class AuthenticatorStoreImpl<Identifier extends RawSerializable> implemen
   public Authenticator getOldestAuthenticator(Identifier id) {
     SortedSet<Authenticator> list = authenticators.get(id);    
     if (list == null) return null;
-    return list.first();
+    return list.last();
   }
 
   public List<Identifier> getSubjects() {

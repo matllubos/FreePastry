@@ -385,12 +385,12 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
               foundFault = true;
               return false;
             }
-          } else {
-            if (next.getSizeInFile() != transport.getHashSizeBytes()) {
-              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed but has the wrong length?!?");
-              foundFault = true;
-              return false;
-            }
+          } else {            
+//            if (next.getSizeInFile() != transport.getHashSizeBytes()) {
+//              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed but has the wrong length?!? file:"+next.getSizeInFile()+" hashSize:"+transport.getHashSizeBytes());
+//              foundFault = true;
+//              return false;
+//            }
           
 //            unsigned char checkpointHash[transport.getHashSizeBytes()];
             byte[] checkpointHash = transport.hash(buf.getByteBuffer());

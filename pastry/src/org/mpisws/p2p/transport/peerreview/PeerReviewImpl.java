@@ -385,7 +385,9 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
    */
   public boolean addAuthenticatorIfValid(AuthenticatorStore<Identifier> store, Identifier subject, Authenticator auth) {
     // see if we can exit early
-    Authenticator existingAuth = store.statAuthenticator(subject, auth.getSeq());
+        
+    Authenticator existingAuth = null;
+    if (store != null) existingAuth = store.statAuthenticator(subject, auth.getSeq());
     if (existingAuth != null) {       
       /* If yes, then it should be bit-wise identical to the new one */
     
@@ -441,7 +443,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
        
      
        /* We haven't seen this authenticator... Signature is ok, so we keep the new authenticator in our store. */  
-       store.addAuthenticator(subject, auth);
+       if (store != null) store.addAuthenticator(subject, auth);
        return true;       
     } catch (Exception e) {
       throw new RuntimeException(e);
