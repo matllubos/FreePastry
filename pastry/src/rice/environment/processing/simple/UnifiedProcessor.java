@@ -34,38 +34,52 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-/*
- * Created on Aug 16, 2005
- */
 package rice.environment.processing.simple;
 
+import rice.Continuation;
+import rice.Executable;
+import rice.environment.logging.LogManager;
 import rice.environment.processing.WorkRequest;
+import rice.environment.time.TimeSource;
+import rice.p2p.commonapi.Cancellable;
+import rice.selector.SelectorManager;
 
-/**
- * @author Jeff Hoye
- */
-public class BlockingIOThread extends Thread {
-  WorkQueue workQ;
-
-  volatile boolean running = true;
-
-  public BlockingIOThread(WorkQueue workQ) {
-    super("Persistence Worker Thread");
-    this.workQ = workQ;
+public class UnifiedProcessor extends SimpleProcessor {
+  SelectorManager sman;
+  TimeSource ts;
+  LogManager log;
+  
+  Continuation<Object, Exception> bogusContinuation;
+  
+  public UnifiedProcessor(String name, SelectorManager sman, TimeSource ts, LogManager log) {
+    super(name);
+    this.sman = sman;
+    this.ts = ts;
+    this.log = log;
+    bogusContinuation = new Continuation<Object, Exception>() {
+    
+      public void receiveResult(Object result) {
+        // TODO Auto-generated method stub
+    
+      }
+    
+      public void receiveException(Exception exception) {
+        // TODO Auto-generated method stub
+    
+      }
+    
+    };
+    // kill the blocking io thread
+    bioThread.destroy();
   }
-
-  public void run() {
-    running = true;
-    while (running) {
-      WorkRequest wr = workQ.dequeue();
-      if (wr != null)
-        wr.run();
-    }
-  }
-
-  @SuppressWarnings("deprecation")
-  public void destroy() {
-    running = false;
-    workQ.destroy();
+  
+  @Override
+  public Cancellable processBlockingIO(final WorkRequest workRequest) {    
+    return process(new Executable<Object, Exception>() {
+      public Object execute() throws Exception {
+        workRequest.run();
+        return null;
+      }      
+    }, bogusContinuation, sman, ts, log);
   }
 }

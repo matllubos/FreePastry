@@ -55,12 +55,12 @@ import java.util.Queue;
  */
 public class SimpleProcessor implements Processor {
   // the queue used for processing requests
-  private PriorityBlockingQueue<ProcessingRequest> QUEUE;
-  private ProcessingThread THREAD;
+  protected PriorityBlockingQueue<ProcessingRequest> QUEUE;
+  protected ProcessingThread THREAD;
 
   // for blocking IO WorkRequests
-  private WorkQueue workQueue;
-  private BlockingIOThread bioThread;
+  protected WorkQueue workQueue;
+  protected BlockingIOThread bioThread;
   
   long seq = Long.MIN_VALUE;
 

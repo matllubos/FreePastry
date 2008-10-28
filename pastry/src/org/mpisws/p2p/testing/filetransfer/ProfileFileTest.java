@@ -37,12 +37,14 @@ advised of the possibility of such damage.
 package org.mpisws.p2p.testing.filetransfer;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import org.mpisws.p2p.filetransfer.BBReceipt;
 import org.mpisws.p2p.filetransfer.FileReceipt;
@@ -89,6 +91,18 @@ public class ProfileFileTest {
    */
   public static void main(String[] args) throws Exception {
     // globals
+    File f = new File("delme.txt");
+    if (!f.exists()) {
+      // make a 10 meg file
+      Random r = new Random();
+      FileOutputStream fos = new FileOutputStream(f);
+      byte[] foo = new byte[10000];
+      for (int ctr = 0; ctr < 1000; ctr++) {
+        r.nextBytes(foo);      
+        fos.write(foo);
+      }      
+    }
+    
     final Environment env = new Environment();
     InetAddress local = InetAddress.getLocalHost();
     final Logger logger = env.getLogManager().getLogger(ProfileFileTest.class, null);
@@ -168,7 +182,7 @@ public class ProfileFileTest {
               long startTime = startTimes.get(receipt);
               double kbps = (1.0*total)/(1.0*(finTime-startTime));
               startTimes.remove(receipt);
-              System.out.println("Took "+(finTime-startTime)+" to "+s+" "+total+" bytes. "+kbps+" kbps. Started at "+startTime);
+              System.out.println("Took "+(finTime-startTime)+" millis to "+s+" "+total+" bytes. "+kbps+" kbps. Started at "+startTime);
             }
           }
 

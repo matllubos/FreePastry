@@ -45,8 +45,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ClosedChannelException;
@@ -142,24 +144,30 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    * can be reading when < MAX_PENDING_CHUNKS, allowed to be greater
    */
   public int fileChunksInMemory = 0;
-  
-  public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy fileAllocater, Environment env) {
+
+  public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy fileAllocater, Environment env, Processor p) {
     this.socket = socket;
     this.callback = callback;
     this.fileAllocater = fileAllocater;
+    if (this.fileAllocater == null) this.fileAllocater = new TempFileAllocationStrategy();    
     this.queue = new SortedLinkedList<MessageWrapper>();
     this.selectorManager = env.getSelectorManager();
     this.logger = env.getLogManager().getLogger(FileTransferImpl.class, null);
-    this.processor = env.getProcessor();
+    this.processor = p;
+    if (this.processor == null) this.processor = env.getProcessor();
     this.environment = env;
     
     socket.register(true, false, -1, this);
   }
 
   public FileTransferImpl(AppSocket socket, FileTransferCallback callback, Environment env) {
-    this(socket, callback, new TempFileAllocationStrategy(), env);      
+    this(socket, callback, null, env);      
   }
 
+  public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy fileAllocater, Environment env) {
+    this(socket,callback,fileAllocater, env,null);
+  }
+  
   protected void socketClosed() {    
     receiveException(socket,new ClosedChannelException("Underlieing socket was closed."));
   }
@@ -602,16 +610,19 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     byte[] metadata;
     Continuation<FileReceipt, Exception> deliverAckToMe;
     
-    LinkedList<ByteBuffer> msgList; 
-    MessageWrapperImpl outstanding; // = new MessageWrapper
+//    LinkedList<ByteBuffer> msgList; 
+    List<MessageWrapperImpl> outstanding = new ArrayList<MessageWrapperImpl>();// = new MessageWrapper
+    List<WorkRequest<Object>> outstandingWRs = new ArrayList<WorkRequest<Object>>();
     int wrapperSeq = Integer.MIN_VALUE;    
-    final ByteBuffer chunk;
-    byte[] chunkBytes;
+//    final ByteBuffer chunk;
+//    byte[] chunkBytes;
     long lastByte;
-    long ptr;
+    long ptr; // managed on the selector thread
     long length;
     long initialPosition;
-    ByteBuffer header;
+//    ByteBuffer header;
+    
+    int numOutstandingChunks = 10;
     
     public FileReceiptImpl(File f, byte[] metadata, byte priority, long offset, long length, int uid, Continuation<FileReceipt, Exception> c) throws IOException {
       super(priority, uid);
@@ -637,16 +648,17 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       this.initialPosition = offset;
       this.ptr = offset;
       this.length = length;
-      
-      msgList = new LinkedList<ByteBuffer>(); 
-      long chunkSize = length;
-      if (length > CHUNK_SIZE) chunkSize = CHUNK_SIZE;
-      chunkBytes = new byte[(int)chunkSize]; 
-      chunk = ByteBuffer.wrap(chunkBytes);
 
-      // used to send the chunks
-      header = ByteBuffer.allocate(9);
       
+      ArrayList<ByteBuffer> msgList = new ArrayList<ByteBuffer>(); 
+//      long chunkSize = length;
+//      if (length > CHUNK_SIZE) chunkSize = CHUNK_SIZE;
+//      chunkBytes = new byte[(int)chunkSize]; 
+//      chunk = ByteBuffer.wrap(chunkBytes);
+//
+//      // used to send the chunks
+//      header = ByteBuffer.allocate(9);
+//      
       // construct header
       // byte MSG_BB_HEADER, int UID, long offset, long length, int nameLength, UTF name
       ByteBuffer hdr = ByteBuffer.allocate(25);
@@ -659,8 +671,13 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       msgList.add(hdr);
       msgList.add(ByteBuffer.wrap(metadata));
       
-      outstanding = new MessageWrapperImpl(this,wrapperSeq++,msgList);
-      enqueue(outstanding);
+      MessageWrapperImpl foo = new MessageWrapperImpl(this,wrapperSeq++,msgList);
+      enqueue(foo);
+      
+      // NOTE: the last one comes when foo is written
+      for (int i = 0; i < numOutstandingChunks-1; i++) {
+        scheduleNewFileReaderIfNecessary();
+      }
     }
     
     @Override
@@ -673,53 +690,143 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       return "Outgoing file<"+uid+"> "+metadata.length+" size:"+getSize()+" priority:"+priority+" "+f;
     }
 
-    void complete(MessageWrapper wrapper) {
-      // notify listener
-      notifyListenersSendFileProgress(this,ptr-initialPosition, length);
+    public void scheduleNewFileReaderIfNecessary() {
+      // call me on the selector
       
       if (cancelled) return;
       
       // if need to send more:
       if (ptr < lastByte) {
         // Construct a chunk (note that we reuse all the objects...)
-        try {
-          long ret = file.read(chunkBytes);
-          if (ret < 0) {
-            throw new EOFException("Unexpected EOF... cancelling "+uid+" "+f+".");
-          }
-          ptr += ret;
-          chunk.clear();
-          chunk.limit((int)ret);
-                      
-          header.clear();
-          header.put(MSG_CHUNK);
-          header.put(MathUtils.intToByteArray(uid));
-          header.put(MathUtils.intToByteArray(chunk.remaining()));
-          header.clear();
-          msgList.add(header);
-          msgList.add(chunk);
-  
-          outstanding.clear(msgList, wrapperSeq++);
+        
+        final int amtToRead = (int)Math.min(CHUNK_SIZE,lastByte-ptr);
+        final long seq = wrapperSeq++;
+
+        ptr+=amtToRead;
+        Continuation<Object, Exception> c = new Continuation<Object, Exception>() {
           
-          // schedule it
-          enqueue(outstanding);
-          return;        
-        } catch (IOException ioe) {
-          if (deliverAckToMe != null) deliverAckToMe.receiveException(ioe);          
-          FileTransferImpl.this.sendCancel(uid);
-          return;
+          public void receiveResult(Object result) {
+            // this is handled in MessageWrapperImpl.complete()
+        
+          }
+        
+          public void receiveException(Exception exception) {
+            if (deliverAckToMe != null) deliverAckToMe.receiveException(exception);          
+            FileTransferImpl.this.sendCancel(uid);
+            return;
+          }
+        
+        };
+        
+        processor.processBlockingIO(new WorkRequest<Object>(c, environment.getSelectorManager()) {
+          
+          @Override
+          public Object doWork() throws Exception {
+            //logger.log("doing "+seq);
+            byte[] chunkBytes = new byte[1+4+4+amtToRead];
+            
+            chunkBytes[0] = MSG_CHUNK;
+            MathUtils.intToByteArray(uid,chunkBytes,1);
+            MathUtils.intToByteArray(amtToRead,chunkBytes,5);
+            
+            // blocking
+            long ret = file.read(chunkBytes,9,amtToRead);
+            if (ret < 0) {
+              throw new EOFException("Unexpected EOF... cancelling "+uid+" "+f+".");
+            }
+            
+//            logger.log("enqueuing "+seq);
+            ArrayList<ByteBuffer> foo = new ArrayList<ByteBuffer>();
+            foo.add(ByteBuffer.wrap(chunkBytes));
+            enqueue(new MessageWrapperImpl(FileReceiptImpl.this,seq,foo));
+            return null;
+          }          
+        });
+        
+        if (ptr == lastByte) {
+          // schedule close
+          scheduleClose();
         }
+      }      
+    }
+
+    boolean closing = false;
+    void scheduleClose() {
+      synchronized (this) {
+        if (closing) return;
+        closing = true;        
       }
+      Continuation<Object, Exception> c2 = new Continuation<Object, Exception>() {
+        
+        public void receiveResult(Object result) {
+          outgoingData.remove(uid);
+          if (deliverAckToMe != null) deliverAckToMe.receiveResult(FileReceiptImpl.this);
+        }
+      
+        public void receiveException(Exception exception) {
+          if (logger.level <= Logger.WARNING) logger.logException("Error closing file <"+uid+"> "+file+" "+metadata.length, exception);
+        }
+      
+      };
+      processor.processBlockingIO(new WorkRequest<Object>(c2, environment.getSelectorManager()) {
+        @Override
+        public Object doWork() throws Exception {
+          file.close();
+          return null;
+        }
+      });                          
+    }
+    
+    void complete(MessageWrapper wrapper) {
+      // notify listener
+      notifyListenersSendFileProgress(this,ptr-initialPosition, length);
+      
+      // called on the selector, no worries about cancelled, it will work out
+      if (cancelled) return;
+
+      scheduleNewFileReaderIfNecessary();
+
+      // if need to send more:
+//      if (ptr < lastByte) {
+//        // Construct a chunk (note that we reuse all the objects...)
+//        try {
+//
+//          long ret = file.read(chunkBytes);
+//          if (ret < 0) {
+//            throw new EOFException("Unexpected EOF... cancelling "+uid+" "+f+".");
+//          }
+//          ptr += ret;
+//          chunk.clear();
+//          chunk.limit((int)ret);
+//                      
+//          header.clear();
+//          header.put(MSG_CHUNK);
+//          header.put(MathUtils.intToByteArray(uid));
+//          header.put(MathUtils.intToByteArray(chunk.remaining()));
+//          header.clear();
+//          msgList.add(header);
+//          msgList.add(chunk);
+//  
+//          outstanding.clear(msgList, wrapperSeq++);
+//          
+//          // schedule it
+//          enqueue(outstanding);
+//          return;        
+//        } catch (IOException ioe) {
+//          if (deliverAckToMe != null) deliverAckToMe.receiveException(ioe);          
+//          FileTransferImpl.this.sendCancel(uid);
+//          return;
+//        }
+//      }
   
       // we've sent the whole message
-      try {
-        file.close();
-      } catch (IOException ioe) {
-        if (logger.level <= Logger.WARNING) logger.logException("Error closing file <"+uid+"> "+file+" "+metadata.length, ioe);
-      }
-      outgoingData.remove(uid);
-      if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);
-//      notifyListenersSendFileComplete(this);
+//      try {
+//        file.close();
+//      } catch (IOException ioe) {
+//        if (logger.level <= Logger.WARNING) logger.logException("Error closing file <"+uid+"> "+file+" "+metadata.length, ioe);
+//      }
+//      outgoingData.remove(uid);
+//      if (deliverAckToMe != null) deliverAckToMe.receiveResult(this);      
     }
     
     public long getSize() {
@@ -744,14 +851,60 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     
     @Override
     public boolean cancel() {
-      try {
-        file.close();
-      } catch (IOException ioe) {
-        if (logger.level <= Logger.WARNING) logger.logException("Error closing file <"+uid+"> "+file, ioe);
+      cancelled = true;
+      
+//      try {
+//        file.close();
+//      } catch (IOException ioe) {
+//        if (logger.level <= Logger.WARNING) logger.logException("Error closing file <"+uid+"> "+file, ioe);
+//      }
+      for (WorkRequest<Object> wr : outstandingWRs) {
+        wr.cancel();
       }
-      outstanding.cancel();
-      return super.cancel();
+      for (MessageWrapperImpl mri : outstanding) {
+        mri.cancel();
+      }
+       
+      scheduleClose();
+
+      // this is weird, but we have to run a message through the 
+      // processor to make sure that cancel is called after all the pending
+      // requests are complete
+      Continuation<Object, Exception> c = new Continuation<Object, Exception>() {
+      
+        public void receiveResult(Object result) {
+          for (WorkRequest<Object> wr : outstandingWRs) {
+            wr.cancel();
+          }
+          for (MessageWrapperImpl mri : outstanding) {
+            mri.cancel();
+          }
+          
+          FileReceiptImpl.this.superCancel();
+        }
+      
+        public void receiveException(Exception exception) {
+          // TODO Auto-generated method stub
+      
+        }      
+      };
+      
+      processor.processBlockingIO(new WorkRequest<Object>(c,environment.getSelectorManager()) {
+
+        @Override
+        public Object doWork() throws Exception {
+          // do nothing, just used to call the above continuation after flushing out any existing stuff in the processor
+          return null;
+        }
+        
+      });
+      return true; // this is a lie, we don't know for sure whether or not we successfully cancelled
     }
+
+    protected void superCancel() {
+      super.cancel();
+    }
+    
     
     @Override
     public void notifyReceiverCancelled() {
@@ -773,10 +926,10 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   class MessageWrapperImpl implements MessageWrapper {
     boolean started = false;
     ReceiptImpl receipt;
-    LinkedList<ByteBuffer> message;
+    List<ByteBuffer> message;
     long seq;  // the sequence inside of the ReceiptImpl
 
-    public MessageWrapperImpl(ReceiptImpl receipt, long seq, LinkedList<ByteBuffer> message) {
+    public MessageWrapperImpl(ReceiptImpl receipt, long seq, List<ByteBuffer> message) {
       this.receipt = receipt;
       this.seq = seq;
       this.message = message;
@@ -845,19 +998,19 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       } else {
         started = true;
         long bytesWritten;
-        if ((bytesWritten = socket.write(message.getFirst())) == -1) {
+        if ((bytesWritten = socket.write(message.get(0))) == -1) {
           // socket was closed, panic
           socketClosed();
           return false;
         }
 //        if (logger.level <= Logger.FINER) logger.log(this+" wrote "+bytesWritten+" bytes of "+message.capacity()+" remaining:"+message.remaining());
 
-        if (message.getFirst().hasRemaining()) {
+        if (message.get(0).hasRemaining()) {
           if (logger.level <= Logger.FINEST) logger.log(this+".rsr("+socket+") has remaining"); 
           return false;
         } else {
           // write the next BB
-          message.removeFirst();
+          message.remove(0);
           if (!message.isEmpty())
             return receiveSelectResult(socket);
         }
