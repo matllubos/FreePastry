@@ -110,6 +110,8 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
    */
   protected int CHUNK_SIZE = 8192;
   
+  int NUM_OUTSTANDING_CHUNKS_TO_WRITE_TO_NETWORK = 10;
+
   /**
    * Number of chunks to keep in memory per file.
    * 
@@ -146,6 +148,17 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   public int fileChunksInMemory = 0;
 
   public FileTransferImpl(AppSocket socket, FileTransferCallback callback, FileAllocationStrategy fileAllocater, Environment env, Processor p) {
+    this(socket,callback,fileAllocater,env,null,-1,-1);
+  }
+  
+  public FileTransferImpl(AppSocket socket, FileTransferCallback callback, 
+      FileAllocationStrategy fileAllocater, Environment env, Processor p, int chunkSize, int numChunksToWriteToNetwork) {
+    if (chunkSize > 0) {
+      CHUNK_SIZE = chunkSize;
+    }
+    if (numChunksToWriteToNetwork > 0) {
+      NUM_OUTSTANDING_CHUNKS_TO_WRITE_TO_NETWORK = numChunksToWriteToNetwork;
+    }
     this.socket = socket;
     this.callback = callback;
     this.fileAllocater = fileAllocater;
@@ -622,7 +635,6 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     long initialPosition;
 //    ByteBuffer header;
     
-    int numOutstandingChunks = 10;
     
     public FileReceiptImpl(File f, byte[] metadata, byte priority, long offset, long length, int uid, Continuation<FileReceipt, Exception> c) throws IOException {
       super(priority, uid);
@@ -675,7 +687,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
       enqueue(foo);
       
       // NOTE: the last one comes when foo is written
-      for (int i = 0; i < numOutstandingChunks-1; i++) {
+      for (int i = 0; i < NUM_OUTSTANDING_CHUNKS_TO_WRITE_TO_NETWORK-1; i++) {
         scheduleNewFileReaderIfNecessary();
       }
     }
