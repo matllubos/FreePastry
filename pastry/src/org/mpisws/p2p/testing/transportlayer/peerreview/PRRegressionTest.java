@@ -278,24 +278,27 @@ public class PRRegressionTest {
     Environment env;
     Random rand;
     long nextSendTime = 0;
+    private HandleImpl dest;
     
     private TransportLayer<HandleImpl, ByteBuffer> tl;
-    
-    
+        
     public BogusApp(Player player, TransportLayer<HandleImpl, ByteBuffer> tl, Environment env) {
       super();
       this.player = player;
       this.tl = tl;
       this.env = env;
       this.logger = env.getLogManager().getLogger(BogusApp.class, null);
-      tl.setCallback(this);
+      dest = player.destHandle;
+      tl.setCallback(this);      
     }
     
 
     public void init() {
+      logger.log("init()");
       rand = new Random();
-      if (player.id == 1) {
-        scheduleMessageToBeSent();
+      if (player.localHandle.id.id == 1) {
+        // need to give the other nodes a second to boot, otherwise this message will go nowhere
+        scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+1000);
       }
     }
 
@@ -322,30 +325,51 @@ public class PRRegressionTest {
       byte[] msg = new byte[rand.nextInt(31)+1];
       rand.nextBytes(msg);
       if (logger.level <= Logger.INFO) logger.log("sending message "+msg.length+" "+MathUtils.toBase64(msg));
+//      HandleImpl dest = bob.localHandle;
       try {
-      tl.sendMessage(bob.localHandle, ByteBuffer.wrap(msg), new MessageCallback<HandleImpl, ByteBuffer>() {
+      tl.sendMessage(dest, ByteBuffer.wrap(msg), new MessageCallback<HandleImpl, ByteBuffer>() {
         
         public void sendFailed(MessageRequestHandle<HandleImpl, ByteBuffer> msg,
             Exception reason) {
-          System.out.println("sendFailed("+msg+")");
-          reason.printStackTrace();
+          logger.log("sendFailed("+msg+")");
+//          System.out.println("sendFailed("+msg+")");
+//          reason.printStackTrace();
         }
       
         public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
+          alice.logger.log("ack("+msg+")");
           if (logger.level <= Logger.FINE) alice.logger.log("ack("+msg+")");
         }
       
       }, null);      
       } catch (NullPointerException npe) {
-        logger.log("tl:"+tl+" "+bob);
+        logger.log("tl:"+tl+" "+dest);
         throw npe;
       }
       scheduleMessageToBeSent();
     }
 
+    public void storeCheckpoint(OutputBuffer buffer) throws IOException {
+      logger.log("storeCheckpoint "+nextSendTime+" dest:"+dest);
+      if (logger.level <= Logger.FINER) logger.log("storeCheckpoint "+nextSendTime);
+      buffer.writeInt(31173);
+      buffer.writeLong(nextSendTime);
+      buffer.writeBoolean(dest != null);
+      if (dest != null) dest.serialize(buffer);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      new ObjectOutputStream(baos).writeObject(rand);
+      byte[] bytes = baos.toByteArray();
+      buffer.writeInt(bytes.length);      
+      buffer.write(bytes, 0, bytes.length);
+      if (logger.level <= Logger.FINEST) logger.log("storeCheckpoint:"+Arrays.toString(((SimpleOutputBuffer)buffer).getBytes()));
+    }
+
     public boolean loadCheckpoint(InputBuffer buffer) throws IOException {
       if (buffer.readInt() != 31173) throw new RuntimeException("invalid checkpoint");
       nextSendTime = buffer.readLong();
+      if (buffer.readBoolean()) {
+        dest = new HandleSerializer().deserialize(buffer);
+      }
       if (logger.level <= Logger.FINER) logger.log("loadCheckpoint "+nextSendTime);
       byte[] bytes = new byte[buffer.readInt()];
       buffer.read(bytes);
@@ -362,18 +386,6 @@ public class PRRegressionTest {
       return true;
     }
     
-    public void storeCheckpoint(OutputBuffer buffer) throws IOException {
-      if (logger.level <= Logger.FINER) logger.log("storeCheckpoint "+nextSendTime);
-      buffer.writeInt(31173);
-      buffer.writeLong(nextSendTime);
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      new ObjectOutputStream(baos).writeObject(rand);
-      byte[] bytes = baos.toByteArray();
-      buffer.writeInt(bytes.length);      
-      buffer.write(bytes, 0, bytes.length);
-      if (logger.level <= Logger.FINEST) logger.log("storeCheckpoint:"+Arrays.toString(((SimpleOutputBuffer)buffer).getBytes()));
-    }
-
     public void destroy() {
       throw new RuntimeException("implement");
     }
@@ -387,10 +399,6 @@ public class PRRegressionTest {
     }
 
     public void sendComplete(long id) {
-      throw new RuntimeException("implement");
-    }
-
-    public void statusChange(IdImpl id, int newStatus) {
       throw new RuntimeException("implement");
     }
 
@@ -419,7 +427,8 @@ public class PRRegressionTest {
     }
 
     public PeerReviewCallback<HandleImpl, IdImpl> getReplayInstance(Verifier<HandleImpl> v) {
-      return new BogusApp(playerTable.get(v.getLocalIdentifier()),v,v.getEnvironment());
+      BogusApp ret = new BogusApp(playerTable.get(v.getLocalIdentifier()),v,v.getEnvironment());
+      return ret;
     }
   }
 
@@ -443,16 +452,20 @@ public class PRRegressionTest {
     BogusTransport t1;
     Environment env;
 
-    int id;
+//    int id;
     
-    public Player(final String name, int id, final Environment env2) throws Exception {
+    BogusApp app;
+    HandleImpl destHandle;
+    
+    public Player(HandleImpl localHandle, HandleImpl dstHandle, final Environment env2) throws Exception {
       super();
-      this.id = id;
-      env = cloneEnvironment(env2, name, id);
+      this.destHandle = dstHandle;
+//      this.id = id;
+      env = cloneEnvironment(env2, localHandle.name, localHandle.id.id);
       
       this.logger = env.getLogManager().getLogger(Player.class, null);
       
-      File f = new File(name);
+      File f = new File(localHandle.name);
       if (f.exists()) {
         File f2 = new File(f,"peers");
         File[] foo = f2.listFiles();
@@ -476,11 +489,11 @@ public class PRRegressionTest {
 //      f = new File(name+".index");
 //      if (f.exists()) f.delete();
       
-      this.localHandle = new HandleImpl(name, new IdImpl(id));
+      this.localHandle = localHandle;
       playerTable.put(localHandle, this);
       
       pair = keyPairGen.generateKeyPair();    
-      cert = caTool.sign(name,pair.getPublic());
+      cert = caTool.sign(localHandle.name,pair.getPublic());
 
       t1 = getTL();
             
@@ -488,11 +501,12 @@ public class PRRegressionTest {
         
       idTLTable.put(localHandle, transport);
       pr = getPeerReview();
-      pr.setApp(getApp());
+      app = getApp();
+      pr.setApp(app);
       env.getSelectorManager().invoke(new Runnable() {
         public void run() {
           try {
-            pr.init(name);
+            pr.init(Player.this.localHandle.name);
           } catch (IOException ioe) {
             ioe.printStackTrace();
             env2.destroy();
@@ -507,7 +521,8 @@ public class PRRegressionTest {
     }
     
     public BogusApp getApp() {
-      return new BogusApp(this,pr,env);
+      return getBogusApp(this, pr, env);
+//      return new BogusApp(this,pr,env);
     }
     
     public IdStrTranslator<IdImpl> getIdStrTranslator() {
@@ -583,10 +598,20 @@ public class PRRegressionTest {
   Player alice;
   Player bob;
   Player carol;
+  
+  HandleImpl aliceHandle = new HandleImpl("alice", new IdImpl(1));
+  HandleImpl bobHandle = new HandleImpl("bob", new IdImpl(2));
+  HandleImpl carolHandle = new HandleImpl("carol", new IdImpl(3));
+
 
   public void setLoggingParams(Environment env) {
     env.getParameters().setInt("org.mpisws.p2p.testing.transportlayer.peerreview_loglevel", Logger.INFO);
-    env.getParameters().setInt("org.mpisws.p2p.transport.peerreview.audit_loglevel", Logger.FINEST);    
+//    env.getParameters().setInt("org.mpisws.p2p.transport.peerreview.audit_loglevel", Logger.FINEST);    
+  }
+
+  protected BogusApp getBogusApp(Player player, PeerReview<HandleImpl, IdImpl> pr,
+      Environment env) {
+    return new BogusApp(player,pr,env);
   }
 
   public void buildCryptoMaterial(Environment env) throws Exception {
@@ -604,10 +629,11 @@ public class PRRegressionTest {
     historyFactory = new SecureHistoryFactoryImpl(hasher,env);
   }
 
-  public void buildPlayers(Environment env) throws Exception {
-    alice = new Player("alice",1,env);
-    bob = new Player("bob",2,env);    
-    carol = new Player("carol",3,env);    
+  public void buildPlayers(Environment env) throws Exception {    
+    alice = new Player(aliceHandle, bobHandle, env);
+    bob = new Player(bobHandle, aliceHandle, env);    
+    carol = new Player(carolHandle, null, env);  
+//    System.out.println("here");
   }
 
   public void setupWitnesses() {

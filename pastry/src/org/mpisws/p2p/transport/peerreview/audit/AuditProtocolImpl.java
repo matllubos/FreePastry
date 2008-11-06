@@ -643,7 +643,8 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
 
   public ActiveAuditInfo<Handle, Identifier> findOngoingAudit(Identifier subject, long evidenceSeq) {
     ActiveAuditInfo<Handle, Identifier> ret = activeAudit.get(subject);
-      if (!ret.isReplaying && ret.evidenceSeq == evidenceSeq) {
+    if (ret == null) return null;
+    if (!ret.isReplaying && ret.evidenceSeq == evidenceSeq) {
         return ret;
     }
     return null;

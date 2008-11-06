@@ -319,6 +319,12 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     
     assert(initialized);
     
+    if (infoStore.getStatus(identifierExtractor.extractIdentifier(handle)) == STATUS_EXPOSED) {
+      if (logger.level <= Logger.WARNING) logger.log("Received a message from an exposed node "+handle+" -- ignoring");
+      return;
+    }
+
+    
     /* Maybe do some mischief for testing */
     
     /* Deliver datagrams */
@@ -786,10 +792,6 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     } catch (IOException ioe) {
       throw new RuntimeException("Error serializing:"+message,ioe);
     }
-  }
-
-  public void statusChange(Identifier id, int newStatus) {
-    throw new RuntimeException("implement");
   }
 
   public boolean hasCertificate(Identifier id) {

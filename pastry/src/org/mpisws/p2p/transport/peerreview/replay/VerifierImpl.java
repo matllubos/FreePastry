@@ -249,7 +249,7 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
     if (logger.level <= Logger.FINER) logger.log("Replaying event #"+nextEventIndex+" (type "+next.getType()+", seq="+next.getSeq()+")");
       
     if (next.isHashed() && (next.getType() != EVT_CHECKPOINT) && (next.getType() != EVT_INIT)) {
-      if (logger.level <= Logger.WARNING) logger.log("Replay: Trying to replay hashed event");
+      if (logger.level <= Logger.WARNING) logger.log("Replay: Trying to replay hashed event "+next.getType());
       foundFault = true;
       return false;
     }
@@ -395,7 +395,8 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
 //            unsigned char checkpointHash[transport.getHashSizeBytes()];
             byte[] checkpointHash = transport.hash(buf.getByteBuffer());
             if (!Arrays.equals(checkpointHash, next.getContentHash())) {
-              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed, but does not match hash value in the log");
+              if (logger.level <= Logger.WARNING) logger.log("Replay: Checkpoint is hashed, but does not match hash value in the log\n"+
+                  Arrays.toString(checkpointHash)+"\n"+Arrays.toString(next.getContentHash()));
               foundFault = true;
               return false;
             }

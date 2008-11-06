@@ -223,11 +223,6 @@ public class AuthenticatorStoreTest {
       
     }
 
-    public void statusChange(MyInetSocketAddress id, int newStatus) {
-      // TODO Auto-generated method stub
-      
-    }
-
     public void incomingSocket(P2PSocket<MyInetSocketAddress> s)
         throws IOException {
       // TODO Auto-generated method stub

@@ -351,7 +351,7 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
               " has not acknowledged our message after "+info.retransmitsSoFar+
               " retransmissions; filing as evidence");
           OutgoingUserDataMessage<Handle> challenge = info.xmitQueue.removeFirst();
-          challenge.sendFailed(new IOException("Peer Review Giving Up."));
+          challenge.sendFailed(new IOException("Peer Review Giving Up sending message to "+idx));
           
           long evidenceSeq = peerreview.getEvidenceSeq();
 

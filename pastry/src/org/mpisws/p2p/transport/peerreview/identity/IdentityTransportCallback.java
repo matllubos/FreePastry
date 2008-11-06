@@ -43,7 +43,7 @@ import org.mpisws.p2p.transport.TransportLayerCallback;
 public interface IdentityTransportCallback<Handle, Identifier> extends TransportLayerCallback<Handle, ByteBuffer>{
 //  void receive(Handle source, boolean datagram, ByteBuffer msg);
 //  void sendComplete(long id);
-  void statusChange(Identifier id, int newStatus);
+//  void statusChange(Identifier id, int newStatus);
   void notifyCertificateAvailable(Identifier id);
 
 }
