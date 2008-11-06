@@ -101,7 +101,7 @@ public interface BaseScribe extends Destructable {
    * Returns the root of the topic, if we can determine it.
    * 
    * @param topic
-   * @return null if beyound our knowledge range
+   * @return null if beyond our knowledge range
    */
   public NodeHandle getRoot(Topic topic);
   
