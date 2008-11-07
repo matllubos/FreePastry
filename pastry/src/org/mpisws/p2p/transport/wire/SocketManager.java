@@ -191,7 +191,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
   }
   
   public String toString() {
-    return "SM "+channel; 
+    return "SM "+addr+" "+channel; 
   }
   
   /**
@@ -227,6 +227,8 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
       if (logger.level <= Logger.FINE) {
         logger.log("Closing " + this +" r:"+reader+" w:"+writer);
 //        logger.log("Closing connection to " + addr);
+      } else if (logger.level <= Logger.FINEST) {
+        logger.logException("Closing " + this +" r:"+reader+" w:"+writer, new Exception("Stack Trace"));
       }
       
       if (key != null) {
