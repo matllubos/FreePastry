@@ -193,6 +193,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
     tmf.init(trustStore);    
     
     TrustManager[] tms = tmf.getTrustManagers();
+    if (clientAuth == CLIENT_AUTH_NONE) tms = null;
     context.init(kmf.getKeyManagers(), tms, null);
 
     tl.setCallback(this);

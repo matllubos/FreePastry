@@ -65,6 +65,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   SSLTransportLayerImpl<Identifier, ?> sslTL;
 
   boolean handshaking = true;
+  boolean closed = true;
 
   SSLEngineResult result;
   HandshakeStatus status;
@@ -85,6 +86,11 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   boolean doneHandshaking = false;
   
   Map<String, Object> options;
+
+  boolean useClientAuth;
+  boolean server;
+
+  String name;
   
   /**
    * Called on incoming side
@@ -95,6 +101,8 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   public SSLSocketManager(SSLTransportLayerImpl<Identifier, ?> sslTL,
       P2PSocket<Identifier> s,
       Continuation<SSLSocketManager<Identifier>, Exception> c, boolean server, boolean useClientAuth) {
+    this.server = server;
+    this.useClientAuth = useClientAuth;
     this.sslTL = sslTL;
     this.socket = s;
     this.c = c;
@@ -102,6 +110,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     engine = sslTL.context.createSSLEngine(s.getIdentifier().toString(), 0);
     engine.setUseClientMode(!server);
     if (server && useClientAuth) engine.setNeedClientAuth(true);
+//    engine.setNeedClientAuth(false);
 
     // System.out.println(Arrays.toString(engine.getSupportedCipherSuites()));
     // engine.setEnabledCipherSuites(new String[]
@@ -121,6 +130,10 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     handshakeWrap();
   }
 
+  public String toString() {
+    return "SSLSocket to "+(name == null ? "unknown" : name)+" at "+socket.toString();
+  }
+  
   protected void handleResult(SSLEngineResult result) {
 //    sslTL.logger.log("handleResult:"+result);
     this.result = result;
@@ -169,7 +182,10 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 
   protected boolean read() throws IOException {
     ByteBuffer foo = ByteBuffer.allocate(netBufferMax);
-    if (socket.read(foo) < 0) fail(new ClosedChannelException("Unexpected socket closure "+this));
+    if (socket.read(foo) < 0) {
+      closed = true;
+      fail(new ClosedChannelException("Unexpected socket closure "+this));
+    }
     if (foo.position() != 0) {
       foo.flip();
       unwrapMe.addLast(foo);
@@ -181,6 +197,8 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   protected void handshakeWrap() {
       try {
         ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
+//        engine.beginHandshake();
+//        System.out.println("bogus");
         handleResult(engine.wrap(bogusEncryptMe, outgoing));
 //        sslTL.logger.log("client wrap: "+encryptMe+" "+result);
         if (outgoing.position() != 0) {
@@ -232,6 +250,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
   
   protected void fail(Exception e) {
+    if (doneHandshaking) return;
     sslTL.logger.log("fail:"+e);
     handshakeFail = true;
     c.receiveException(e);
@@ -263,21 +282,22 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 
   protected void checkDone() {
     if (((status == HandshakeStatus.FINISHED) || (status == HandshakeStatus.NOT_HANDSHAKING))) {
-      try {
-        
-        X509Certificate crt = ((X509Certificate) engine.getSession().getPeerCertificates()[0]);
-        String name = crt.getSubjectDN().getName();
-        if (name.startsWith("CN=")) {
-          name = name.substring(3);
-          options = OptionsFactory.addOption(socket.getOptions(), SSLTransportLayer.OPTION_CERT_SUBJECT, name);
-///          sslTL.logger.log("Talking to:"+name);
-        } else {
-          fail(new IllegalArgumentException("CN must start with CN= "+name+" "+this));
-          return;          
+      if (!server || useClientAuth) {
+        try {
+          X509Certificate crt = ((X509Certificate) engine.getSession().getPeerCertificates()[0]);
+          name = crt.getSubjectDN().getName();
+          if (name.startsWith("CN=")) {
+            name = name.substring(3);
+            options = OptionsFactory.addOption(socket.getOptions(), SSLTransportLayer.OPTION_CERT_SUBJECT, name);
+            sslTL.logger.log("Talking to:"+name);
+          } else {
+            fail(new IllegalArgumentException("CN must start with CN= "+name+" "+this));
+            return;          
+          }
+        } catch (Exception e) {
+          fail(e);
+          return;
         }
-      } catch (Exception e) {
-        fail(e);
-        return;
       }
       doneHandshaking = true;
       c.receiveResult(this);
@@ -365,6 +385,8 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   P2PSocketReceiver<Identifier> registeredToWrite;
   
   public long read(ByteBuffer dsts) throws IOException {
+//    if (closed && readMe.isEmpty() && unwrapMe.isEmpty()) return -1;
+    
     long start = dsts.position();
     unwrap();
     while(dsts.hasRemaining() && !readMe.isEmpty()) {
