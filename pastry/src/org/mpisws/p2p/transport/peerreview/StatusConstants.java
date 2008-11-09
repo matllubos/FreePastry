@@ -34,10 +34,10 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview.infostore;
+package org.mpisws.p2p.transport.peerreview;
 
-import org.mpisws.p2p.transport.peerreview.StatusConstants;
-
-public interface StatusChangeListener<Identifier> extends StatusConstants {  
-  void notifyStatusChange(Identifier id, int newStatus);
+public interface StatusConstants {
+  public static final int STATUS_TRUSTED = 0;
+  public static final int STATUS_SUSPECTED = 1;
+  public static final int STATUS_EXPOSED = 2;
 }

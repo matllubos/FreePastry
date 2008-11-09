@@ -36,7 +36,7 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package org.mpisws.p2p.transport.peerreview;
 
-public interface PeerReviewConstants {
+public interface PeerReviewConstants extends StatusConstants {
 
   public static final short EVT_SEND = 0; // Outgoing message (followed by SENDSIGN entry)
   public static final short EVT_RECV = 1; // Incoming message (followed by SIGN entry)
@@ -92,10 +92,6 @@ public interface PeerReviewConstants {
 
   /* Constants for reporting the status of a remote node to the application */
 
-  public static final int STATUS_TRUSTED = 0;
-  public static final int STATUS_SUSPECTED = 1;
-  public static final int STATUS_EXPOSED = 2;
-  
   public static final long DEFAULT_AUTH_PUSH_INTERVAL_MILLIS = 5000;
   public static final long DEFAULT_CHECKPOINT_INTERVAL_MILLIS = 10000L;
   public static final long MAINTENANCE_INTERVAL_MILLIS = 10000;

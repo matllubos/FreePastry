@@ -53,7 +53,8 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
  * During normal operation, PeerReview uses this interface to checkpoint the
  * application, and to inquire about the witness set of another node. 
  */
-public interface PeerReviewCallback<Handle, Identifier> extends Destructable, IdentityTransportCallback<Handle, Identifier>, StatusChangeListener<Identifier> {
+public interface PeerReviewCallback<Handle, Identifier> extends Destructable, IdentityTransportCallback<Handle, Identifier>, 
+      StatusChangeListener<Identifier> {
   // PeerReviewCallback() : IdentityTransportCallback() {};
   public void init();
   void storeCheckpoint(OutputBuffer buffer) throws IOException;

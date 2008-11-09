@@ -38,6 +38,7 @@ package org.mpisws.p2p.testing.transportlayer.peerreview;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
@@ -46,6 +47,8 @@ import org.mpisws.p2p.testing.transportlayer.peerreview.PRRegressionTest.HandleI
 import org.mpisws.p2p.testing.transportlayer.peerreview.PRRegressionTest.IdImpl;
 import org.mpisws.p2p.testing.transportlayer.peerreview.PRRegressionTest.Player;
 import org.mpisws.p2p.transport.peerreview.PeerReview;
+import org.mpisws.p2p.transport.peerreview.PeerReviewImpl;
+import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
 
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
@@ -55,7 +58,28 @@ import rice.selector.TimerTask;
 public class PRNonconform1 extends PRRegressionTest {
 
   public PRNonconform1() throws Exception {
-    super();
+    super(45000);
+  }
+
+  @Override
+  public void finish() {
+    // see if everyone found bob exposed
+    try {
+      if (recordedStatus.get(aliceHandle).get(bobHandle.id) != StatusChangeListener.STATUS_EXPOSED) {
+        logger.log("Alice Didn't expose bob");
+        System.exit(1);
+      }
+      if (recordedStatus.get(carolHandle).get(bobHandle.id) != StatusChangeListener.STATUS_EXPOSED) {
+        logger.log("Carol Didn't expose bob");
+        System.exit(1);
+      }
+    } catch (Exception e) {
+      // in case there is no record
+      logger.logException("Failure", e);
+      System.exit(1);
+    }
+    logger.log("Success");
+    System.exit(0);    
   }
   
   @Override
@@ -82,8 +106,23 @@ public class PRNonconform1 extends PRRegressionTest {
       @Override
       public void messageReceived(HandleImpl i, ByteBuffer m,
           Map<String, Object> options) throws IOException {
-        if (player.localHandle.id.id != 2) logger.logException("accepted illegal message", new Exception("stack trace"));
+//        if (player.localHandle.id.id != 2) logger.logException("accepted illegal message", new Exception("stack trace"));
         if (logger.level <= Logger.INFO) logger.log("Message received: "+MathUtils.toBase64(m.array()));
+      }
+      
+      @Override
+      public void notifyStatusChange(
+          IdImpl id,
+          int newStatus) {
+        if (logger.level <= Logger.INFO) logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
+        if (this.player.localHandle.equals(bobHandle)) return; // ignore bob
+        if (newStatus == STATUS_EXPOSED) {
+          if (!id.equals(bobHandle.id)) {
+            logger.log("Node not trusted: "+id);
+            System.exit(1);
+          }
+          addStatusNotification(this.player.localHandle,id,newStatus);
+        }
       }
 
     };
@@ -93,8 +132,7 @@ public class PRNonconform1 extends PRRegressionTest {
 //  public void buildPlayers(Environment env) throws Exception {
 //    super.buildPlayers(env);
 //  }
-
-  
+    
   public static void main(String[] args) throws Exception {
     new PRNonconform1();
   }

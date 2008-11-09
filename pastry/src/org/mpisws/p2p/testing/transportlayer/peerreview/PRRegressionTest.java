@@ -60,6 +60,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.Map.Entry;
 
 import org.mpisws.p2p.pki.x509.CATool;
 import org.mpisws.p2p.pki.x509.CAToolImpl;
@@ -98,6 +99,7 @@ import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
 import org.mpisws.p2p.transport.peerreview.infostore.PeerInfoStore;
+import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
 import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
 import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 import org.mpisws.p2p.transport.peerreview.replay.record.RecordLayer;
@@ -294,19 +296,19 @@ public class PRRegressionTest {
     
 
     public void init() {
-      logger.log("init()");
+//      logger.log("init()");
       rand = new Random();
       if (player.localHandle.id.id == 1) {
         // need to give the other nodes a second to boot, otherwise this message will go nowhere
-        scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+1000);
+        scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+1000, true);
       }
     }
 
     public void scheduleMessageToBeSent() {
-      scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+rand.nextInt(1999)+1);
+      scheduleMessageToBeSent(env.getTimeSource().currentTimeMillis()+rand.nextInt(1999)+1, true);
     }
     
-    public void scheduleMessageToBeSent(long time) {
+    public void scheduleMessageToBeSent(long time, final boolean reschedule) {
       nextSendTime = time;
       if (logger.level <= Logger.FINE) logger.log("scheduling message to be sent at:"+time);
       env.getSelectorManager().schedule(new TimerTask() {
@@ -317,6 +319,7 @@ public class PRRegressionTest {
         @Override
         public void run() {
           sendMessage();
+          if (reschedule) scheduleMessageToBeSent();
         }      
       }, nextSendTime-env.getTimeSource().currentTimeMillis());      
     }
@@ -346,11 +349,9 @@ public class PRRegressionTest {
         logger.log("tl:"+tl+" "+dest);
         throw npe;
       }
-      scheduleMessageToBeSent();
     }
 
     public void storeCheckpoint(OutputBuffer buffer) throws IOException {
-      logger.log("storeCheckpoint "+nextSendTime+" dest:"+dest);
       if (logger.level <= Logger.FINER) logger.log("storeCheckpoint "+nextSendTime);
       buffer.writeInt(31173);
       buffer.writeLong(nextSendTime);
@@ -381,7 +382,7 @@ public class PRRegressionTest {
         ioe.initCause(cnfe);
       }
       if (nextSendTime > 0) {
-        scheduleMessageToBeSent(nextSendTime);
+        scheduleMessageToBeSent(nextSendTime, true);
       }
       return true;
     }
@@ -420,6 +421,11 @@ public class PRRegressionTest {
         IdImpl id,
         int newStatus) {
       if (logger.level <= Logger.INFO) logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
+      if (newStatus != STATUS_TRUSTED) {
+        logger.log("Failure, Node not trusted: "+id+" at "+player.localHandle);
+        System.exit(1);
+      }
+      addStatusNotification(this.player.localHandle,id,newStatus);
     }
 
     public Collection<HandleImpl> getMyWitnessedNodes() {
@@ -641,8 +647,45 @@ public class PRRegressionTest {
     carol.witnessed.add(bob.localHandle);    
   }
   
-  public PRRegressionTest() throws Exception {
-    final Environment env = RecordLayer.generateEnvironment(); //new Environment();
+  protected Map<HandleImpl, Map<IdImpl, Integer>> recordedStatus = new HashMap<HandleImpl, Map<IdImpl,Integer>>();
+  protected void addStatusNotification(HandleImpl localHandle, IdImpl id,
+      int newStatus) {
+    Map<IdImpl, Integer> foo = recordedStatus.get(localHandle);
+    if (foo == null) {
+      foo = new HashMap<IdImpl, Integer>();
+      recordedStatus.put(localHandle,foo);
+    }
+    foo.put(id,newStatus);
+  }
+
+  public void finish() {
+    for (Entry<HandleImpl, Map<IdImpl, Integer>> foo : recordedStatus.entrySet()) {
+      for (Entry<IdImpl, Integer> i : foo.getValue().entrySet()) {
+        if (i.getValue() != StatusChangeListener.STATUS_TRUSTED) {
+          logger.log("Fail: "+foo.getKey()+" found "+i.getKey()+" "+i.getValue());
+          System.exit(1);
+        }
+      }
+    }
+    logger.log("Success");
+    System.exit(1);
+  }
+  
+  Environment env;
+  Logger logger;
+  public PRRegressionTest(int millisToFinish) throws Exception {
+
+    
+    env = RecordLayer.generateEnvironment(); //new Environment();
+    env.getSelectorManager().schedule(new TimerTask() {
+      
+      @Override
+      public void run() {
+        finish();
+      }
+    },millisToFinish);
+
+    logger = env.getLogManager().getLogger(PRRegressionTest.class, null);
     setLoggingParams(env);
     
     buildCryptoMaterial(env);
@@ -663,6 +706,6 @@ public class PRRegressionTest {
   }
   
   public static void main(String[] agrs) throws Exception {
-    new PRRegressionTest();
+    new PRRegressionTest(45000);
   }
 }
