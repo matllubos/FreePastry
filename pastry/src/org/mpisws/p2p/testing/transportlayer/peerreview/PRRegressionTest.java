@@ -325,8 +325,8 @@ public class PRRegressionTest {
     }
     
     public void sendMessage() {
-      byte[] msg = new byte[rand.nextInt(31)+1];
-      rand.nextBytes(msg);
+      byte[] msg = generateMessage();
+      
       if (logger.level <= Logger.INFO) logger.log("sending message "+msg.length+" "+MathUtils.toBase64(msg));
 //      HandleImpl dest = bob.localHandle;
       try {
@@ -351,6 +351,12 @@ public class PRRegressionTest {
       }
     }
 
+    protected byte[] generateMessage() {
+      byte[] msg = new byte[rand.nextInt(31)+1];
+      rand.nextBytes(msg);
+      return msg;
+    }
+    
     public void storeCheckpoint(OutputBuffer buffer) throws IOException {
       if (logger.level <= Logger.FINER) logger.log("storeCheckpoint "+nextSendTime);
       buffer.writeInt(31173);

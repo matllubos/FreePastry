@@ -56,15 +56,16 @@ import rice.p2p.util.MathUtils;
 import rice.selector.TimerTask;
 
 /**
- * Bob deviates from the protocol by sending an extra message.
-    Expectation: After the first audit, Bob is exposed by everyone.
+ * Alice deviates from the protocol by sending a message that's different 
+ * from the one she is supposed to send.
+    Expectation: After the first audit, Alice is exposed by everyone.
     (PROOF_CONFORMANCE) 
  * @author Jeff Hoye
  *
  */
-public class PRNonconform1 extends PRRegressionTest {
+public class PRNonconform2 extends PRRegressionTest {
 
-  public PRNonconform1() throws Exception {
+  public PRNonconform2() throws Exception {
     super(45000);
   }
 
@@ -72,12 +73,12 @@ public class PRNonconform1 extends PRRegressionTest {
   public void finish() {
     // see if everyone found bob exposed
     try {
-      if (recordedStatus.get(aliceHandle).get(bobHandle.id) != StatusChangeListener.STATUS_EXPOSED) {
-        logger.log("Alice Didn't expose bob");
+      if (recordedStatus.get(bobHandle).get(aliceHandle.id) != StatusChangeListener.STATUS_EXPOSED) {
+        logger.log("Bob Didn't expose Alice");
         System.exit(1);
       }
-      if (recordedStatus.get(carolHandle).get(bobHandle.id) != StatusChangeListener.STATUS_EXPOSED) {
-        logger.log("Carol Didn't expose bob");
+      if (recordedStatus.get(carolHandle).get(aliceHandle.id) != StatusChangeListener.STATUS_EXPOSED) {
+        logger.log("Carol Didn't expose Alice");
         System.exit(1);
       }
     } catch (Exception e) {
@@ -92,47 +93,52 @@ public class PRNonconform1 extends PRRegressionTest {
   @Override
   public BogusApp getBogusApp(Player player, PeerReview<HandleImpl, IdImpl> pr,
       Environment env) {
-    return new BogusApp(player,pr,env) {
-      
-      /**
-       * Make bob incorrectly send messages
-       */
-      @Override
-      public void init() {
-        super.init();
-        if (player.localHandle.id.id == 2) {
-          env.getSelectorManager().schedule(new TimerTask() {          
-            @Override
-            public void run() {
-              sendMessage();
-            }          
-          }, 10000);
-        }
-      }
-      
-      @Override
-      public void messageReceived(HandleImpl i, ByteBuffer m,
-          Map<String, Object> options) throws IOException {
-//        if (player.localHandle.id.id != 2) logger.logException("accepted illegal message", new Exception("stack trace"));
-        if (logger.level <= Logger.INFO) logger.log("Message received: "+MathUtils.toBase64(m.array()));
-      }
-      
-      @Override
-      public void notifyStatusChange(
-          IdImpl id,
-          int newStatus) {
-        if (player.localHandle.id.id == 2) return; // ignore bob's stuff
-        if (logger.level <= Logger.INFO) logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
-        if (newStatus == STATUS_EXPOSED) {
-          if (!id.equals(bobHandle.id)) {
-            logger.log("Node not trusted: "+id);
-            System.exit(1);
+    if (player.localHandle.id.id == 1) {
+      // alice
+      return new BogusApp(player,pr,env) {
+        int msgNum = 0;
+        
+        /**
+         * On the 3rd message, modify one of the bits.
+         */
+        @Override
+        protected byte[] generateMessage() {
+          byte[] ret = super.generateMessage();
+          msgNum++;
+          if (msgNum == 3) {
+            ret[ret.length-1]++;
           }
+          return ret;
         }
-        addStatusNotification(this.player.localHandle,id,newStatus);
-      }
-
-    };
+        
+        @Override
+        public void notifyStatusChange(
+            IdImpl id,
+            int newStatus) {
+          // ignore alice's stuff
+          return;
+        }
+  
+      };
+    } else {
+      return new BogusApp(player,pr,env) {
+       @Override
+        public void notifyStatusChange(
+            IdImpl id,
+            int newStatus) {
+          if (player.localHandle.id.id == 1) return; // ignore alice's stuff
+          if (logger.level <= Logger.INFO) logger.log("notifyStatusChange("+id+","+PeerReviewImpl.getStatusString(newStatus)+")");
+          if (newStatus == STATUS_EXPOSED) {
+            if (!id.equals(aliceHandle.id)) {
+              logger.log("Node not trusted: "+id);
+              System.exit(1);
+            }
+          }
+          addStatusNotification(this.player.localHandle,id,newStatus);
+        }
+ 
+      };      
+    }
   }
 
 //  @Override
@@ -141,7 +147,7 @@ public class PRNonconform1 extends PRRegressionTest {
 //  }
     
   public static void main(String[] args) throws Exception {
-    new PRNonconform1();
+    new PRNonconform2();
   }
 
 }
