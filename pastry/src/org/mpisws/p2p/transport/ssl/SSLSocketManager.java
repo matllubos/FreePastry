@@ -55,6 +55,7 @@ import org.mpisws.p2p.transport.util.OptionsFactory;
 
 import rice.Continuation;
 import rice.Executable;
+import rice.environment.logging.Logger;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
 
 public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
@@ -64,6 +65,8 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   SSLEngine engine;
   SSLTransportLayerImpl<Identifier, ?> sslTL;
 
+  Logger logger;
+  
   boolean handshaking = true;
   boolean closed = true;
 
@@ -106,6 +109,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     this.sslTL = sslTL;
     this.socket = s;
     this.c = c;
+    this.logger = sslTL.logger;
 
     engine = sslTL.context.createSSLEngine(s.getIdentifier().toString(), 0);
     engine.setUseClientMode(!server);
@@ -124,7 +128,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     bogusEncryptMe = ByteBuffer.allocate(0);
     readMe = new LinkedList<ByteBuffer>();
     
-//    sslTL.logger.log("app:"+appBufferMax+" net:"+netBufferMax);
+//    logger.log("app:"+appBufferMax+" net:"+netBufferMax);
     socket.register(true, false, this);
 
     handshakeWrap();
@@ -135,7 +139,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
   
   protected void handleResult(SSLEngineResult result) {
-//    sslTL.logger.log("handleResult:"+result);
+//    logger.log("handleResult:"+result);
     this.result = result;
     this.status = result.getHandshakeStatus();
   }
@@ -145,7 +149,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   public void receiveSelectResult(P2PSocket<Identifier> socket,
       boolean canRead, boolean canWrite) throws IOException {
     if (handshakeFail) return;
-//    sslTL.logger.log("receive select result r:"+canRead+" w:"+canWrite);
+//    logger.log("receive select result r:"+canRead+" w:"+canWrite);
     if (canWrite) {
       Iterator<ByteBuffer> i = writeMe.iterator();
       while (i.hasNext()) {
@@ -200,11 +204,11 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
 //        engine.beginHandshake();
 //        System.out.println("bogus");
         handleResult(engine.wrap(bogusEncryptMe, outgoing));
-//        sslTL.logger.log("client wrap: "+encryptMe+" "+result);
+//        logger.log("client wrap: "+encryptMe+" "+result);
         if (outgoing.position() != 0) {
           outgoing.flip();
           writeMe.addLast(outgoing);
-//          sslTL.logger.log("registering to write:"+outgoing);
+//          logger.log("registering to write:"+outgoing);
           socket.register(false, true, this);
         }    
       } catch (SSLException e) {
@@ -220,13 +224,13 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       ByteBuffer b = i.next();
       ByteBuffer foo = ByteBuffer.allocate(appBufferMax);
       handleResult(engine.unwrap(b, foo));
-//      sslTL.logger.log("client unwrap: "+foo+" "+result);
+//      logger.log("client unwrap: "+foo+" "+result);
       if (foo.position() != 0) {
         foo.flip();
         readMe.addLast(foo);
-//        sslTL.logger.log("reading into " +decryptToMe);
+//        logger.log("reading into " +decryptToMe);
       }
-//      sslTL.logger.log("unwrapped:"+b);
+//      logger.log("unwrapped:"+b);
       if (b.hasRemaining()) break;
       i.remove();
     }
@@ -251,7 +255,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   
   protected void fail(Exception e) {
     if (doneHandshaking) return;
-    sslTL.logger.log("fail:"+e);
+    logger.log("fail:"+e);
     handshakeFail = true;
     c.receiveException(e);
     socket.close();
@@ -260,7 +264,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   
   protected void continueHandshaking() {    
     if (runningTaskLock) {
-//      sslTL.logger.log("go2: processing... bye.");
+//      logger.log("go2: processing... bye.");
       return; // wait for processing to finish
     }
     switch(status) {
@@ -289,7 +293,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
           if (name.startsWith("CN=")) {
             name = name.substring(3);
             options = OptionsFactory.addOption(socket.getOptions(), SSLTransportLayer.OPTION_CERT_SUBJECT, name);
-            sslTL.logger.log("Talking to:"+name);
+            logger.log("Talking to:"+name);
           } else {
             fail(new IllegalArgumentException("CN must start with CN= "+name+" "+this));
             return;          
@@ -320,7 +324,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
           // TODO Auto-generated method 
           Runnable runnable;
           while ((runnable = engine.getDelegatedTask()) != null) {
-//            sslTL.logger.log("\trunning delegated task...");
+//            logger.log("\trunning delegated task...");
             runnable.run();
           }
           status = engine.getHandshakeStatus();
@@ -328,7 +332,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
             fail(new IOException("handshake shouldn't need additional tasks"));
             return null;
           }
-//          sslTL.logger.log("\tnew HandshakeStatus: " + status);
+//          logger.log("\tnew HandshakeStatus: " + status);
           return null;
         }
       },new Continuation<Object, Exception>() {
@@ -336,7 +340,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
           exception.printStackTrace();
         };
         public void receiveResult(Object result) {          
-//          sslTL.logger.log("Done executing, calling go2");          
+//          logger.log("Done executing, calling go2");          
           runningTaskLock = false;
           continueHandshaking();
         };
@@ -390,8 +394,13 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     long start = dsts.position();
     unwrap();
     while(dsts.hasRemaining() && !readMe.isEmpty()) {
-      dsts.put(readMe.getFirst());
-      if (readMe.getFirst().hasRemaining()) {
+      // dsts.put() can overflow, must do the bounds checking manually
+      ByteBuffer foo = readMe.getFirst();
+      int len = Math.min(dsts.remaining(), foo.remaining());
+      int pos = foo.position();
+      dsts.put(foo.array(),pos,len);
+      foo.position(pos+len);
+      if (foo.hasRemaining()) {
         return dsts.position()-start;
       } else {
         readMe.removeFirst();
@@ -414,6 +423,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
 
   public long write(ByteBuffer srcs) throws IOException {
+//    logger.log("write "+srcs);
     ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
     SSLEngineResult tempResult = engine.wrap(srcs, outgoing);
     if (outgoing.position() != 0) {
