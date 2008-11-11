@@ -255,7 +255,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   
   protected void fail(Exception e) {
     if (doneHandshaking) return;
-    logger.log("fail:"+e);
+    logger.logException("fail:",e);
     handshakeFail = true;
     c.receiveException(e);
     socket.close();
