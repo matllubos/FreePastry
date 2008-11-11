@@ -352,7 +352,15 @@ public class SimpleParameters implements Parameters {
     if (configFileName == null)
       return;
     try {
-      properties.store(new FileOutputStream(configFileName), null);
+      File current = new File(configFileName);
+      File next = new File(configFileName + ".new");
+      File old = new File(configFileName + ".old");
+
+      properties.store(new FileOutputStream(next), null);
+      
+      current.renameTo(old);
+      next.renameTo(current);
+      old.delete();
     } catch (IOException ioe) {
       System.err.println("[Loader       ]: Unable to store properties file "
           + configFileName + ", got error " + ioe);
