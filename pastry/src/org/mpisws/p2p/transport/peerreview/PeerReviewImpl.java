@@ -200,8 +200,12 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
 
     this.authenticatorSerialilzer = authenticatorSerialilzer; 
 
-    this.historyFactory = new SecureHistoryFactoryImpl(transport, env);
+    this.historyFactory = getSecureHistoryFactory(transport, env);
     random = new SimpleRandomSource(env.getLogManager(),"peerreview");
+  }
+  
+  protected SecureHistoryFactory getSecureHistoryFactory(IdentityTransport<Handle, Identifier> transport, Environment env) {
+    return new SecureHistoryFactoryImpl(transport, env);
   }
   
   /**

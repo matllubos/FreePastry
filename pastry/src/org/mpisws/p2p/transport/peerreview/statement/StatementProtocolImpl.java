@@ -39,6 +39,7 @@ package org.mpisws.p2p.transport.peerreview.statement;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -67,6 +68,7 @@ import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 import rice.Continuation;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.RawSerializable;
+import rice.p2p.util.MathUtils;
 import rice.p2p.util.tuples.Tuple;
 
 public class StatementProtocolImpl<Handle extends RawSerializable, Identifier extends RawSerializable> implements StatementProtocol<Handle, Identifier> {
@@ -218,211 +220,268 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
       return;
     }
  
-// unsigned char subjectAsBytes[identifierSizeBytes];
-// unsigned int subjectAsBytesLen = 0;
-// subject->write(subjectAsBytes, &subjectAsBytesLen, sizeof(subjectAsBytes));
- 
- /* Further checking depends on the type of the statement. At this point, we may still request
-    additional material from the sender, if it becomes necessary. */
- 
- if (statement.getType() == MSG_ACCUSATION) {
- 
-   /* === CHECK ACCUSATIONS === */
- 
-   switch (payload.getEvidenceType()) {
-     case CHAL_AUDIT: {
-       ChallengeAudit auditEvidence = (ChallengeAudit)payload;
-
-       if (!peerreview.verify(subject, auditEvidence.from)) {
-         if (logger.level <= Logger.WARNING) logger.log("AUDIT challenge's first authenticator has an invalid signature");
-         idx.finished = true;
-         return;
-       }
-
-       if (!peerreview.verify(subject, auditEvidence.to)) {
-         if (logger.level <= Logger.WARNING) logger.log("AUDIT challenge's second authenticator has an invalid signature");
-         idx.finished = true;
-         return;
-       }
-
-       break;
-     }
-     case CHAL_SEND: {
-       UserDataMessage<Handle> udm = (UserDataMessage<Handle>)payload;
-
-       byte[] innerHash = udm.getInnerHash(subject, transport);
+  // unsigned char subjectAsBytes[identifierSizeBytes];
+  // unsigned int subjectAsBytesLen = 0;
+  // subject->write(subjectAsBytes, &subjectAsBytesLen, sizeof(subjectAsBytes));
    
-       // NOTE: This call puts the authenticator in our authInStore. This is intentional! Otherwise the bad guys
-       // could fork their logs and send forked messages only as CHAL_SENDs.
-       Authenticator authenticator = peerreview.extractAuthenticator(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), udm.getTopSeq(), EVT_SEND, innerHash, udm.getHTopMinusOne(), udm.getSignature());
-       if (authenticator == null) {
-         if (logger.level <= Logger.WARNING) logger.log("Message in SEND challenge is not properly signed; discarding");
-         idx.finished = true;
-         return;
-       }       
-       break;
-     }
-     case PROOF_INCONSISTENT: {
-       ProofInconsistent pi = (ProofInconsistent)payload;
-       if (pi.auth2 == null)
-         throw new RuntimeException("Inconsistency II (log) not implemented "+pi);
-
-       if (!peerreview.verify(subject, pi.auth1)) {
-         if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT proof's first authenticator has an invalid signature");
-         idx.finished = true;
-         return;
-       }
-
-       if (!peerreview.verify(subject, pi.auth2)) {
-         if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT proof's second authenticator has an invalid signature");
-         idx.finished = true;
-         return;
-       }
-
-       break;
-     }
-     case PROOF_NONCONFORMANT: {
-       ProofNonconformant<Handle> pn = (ProofNonconformant<Handle>)payload;
-       
-//       unsigned int pos = 1;
-//       unsigned char *auth = &payload[pos];
-//       pos += authenticatorSizeBytes;
-//       NodeHandle *subjectHandle = peerreview->readNodeHandle(payload, &pos, payloadLen);
-//       long long firstSeq = readLongLong(payload, &pos);
-//       unsigned char *baseHash = &payload[pos];
-//       pos += hashSizeBytes;
-//
-       /* Is the authenticator properly signed? */
-
-//       unsigned char signedHash[hashSizeBytes];       
-       if (!peerreview.verify(subject, pn.to)) {
-         if (logger.level <= Logger.WARNING) logger.log("NONCONFORMANT proof's authenticator has an invalid signature");
-         idx.finished = true;
-         return;
-       }
-
-       /* Is the snippet well-formed, and do we have all the certificates? */
-
-       switch (checkSnippetAndRequestCertificates(pn.snippet, idx)) {
-         case INVALID:
-           if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT is not well-formed; discarding");
+   /* Further checking depends on the type of the statement. At this point, we may still request
+      additional material from the sender, if it becomes necessary. */
+   
+   if (statement.getType() == MSG_ACCUSATION) {
+   
+     /* === CHECK ACCUSATIONS === */
+   
+     switch (payload.getEvidenceType()) {
+       case CHAL_AUDIT: {
+         ChallengeAudit auditEvidence = (ChallengeAudit)payload;
+  
+         if (!peerreview.verify(subject, auditEvidence.from)) {
+           if (logger.level <= Logger.WARNING) logger.log("AUDIT challenge's first authenticator has an invalid signature");
            idx.finished = true;
-           return;
-         case CERT_MISSING:
-           return;
-         default:
-           break;
-       }
-
-       /* Are the signatures in the snippet okay, and does int contain the authenticated node? */
-       
-       if (!peerreview.getEvidenceTool().checkSnippetSignatures(
-           pn.snippet,pn.myHandle,null, FLAG_INCLUDE_CHECKPOINT,null,pn.to.getHash(),pn.to.getSeq())) {
-         if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT cannot be validated (signatures or authenticator)");
-         return;
-       }
-       
-       /* Now we are convinced that 
-            - the authenticator is valid
-            - the snippet is well-formed, and we have all the certificates
-            - the snippet starts with a checkpoint and contains the authenticated node 
-          We must now replay the log; if the proof is valid, it won't check out. */
-       try {
-         SecureHistory subjectHistory = peerreview.getHistoryFactory().createTemp(pn.snippet.getFirstSeq()-1, pn.snippet.getBaseHash());
-         subjectHistory.appendSnippetToHistory(pn.snippet);
-//         peerreview.getEvidenceTool().appendSnippetToHistory(pn.snippet, subjectHistory, -1);
-  
-  //#warning ext info missing
-         Verifier<Handle> verifier = peerreview.getVerifierFactory().getVerifier(subjectHistory, pn.myHandle, 1, pn.snippet.getFirstSeq()/1000000, null);
-         PeerReviewCallback<Handle, Identifier> replayApp = peerreview.getApp().getReplayInstance(verifier);
-         verifier.setApplication(replayApp);
-  
-         if (logger.level <= Logger.INFO) logger.log("REPLAY ============================================");
-         if (logger.level <= Logger.FINE) logger.log("Node being replayed: "+pn.myHandle);
-         if (logger.level <= Logger.FINE) logger.log("Range in log       : "+pn.snippet.getFirstSeq()+"-?");
-  
-         while (verifier.makeProgress());
-         boolean verifiedOK = verifier.verifiedOK();
-         
-         if (verifiedOK) {
-           if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT contains a log snippet that actually is conformant; discarding");
            return;
          }
-       } catch (IOException ioe) {
-         if (logger.level <= Logger.WARNING) logger.logException("Couldn't replay!!! "+pn, ioe);
-       }
-       break;        
-//       throw new RuntimeException("todo: implement");
-     }
-     default: {
-       if (logger.level <= Logger.WARNING) logger.log("Unknown payload type #"+payload.getEvidenceType()+" in accusation; discarding");
-       idx.finished = true;
-       return;
-     }
-   }
- } else {
- 
-   /* === CHECK RESPONSES === */
- 
-   switch (payload.getEvidenceType()) {
-     
-     /* To check an AUDIT RESPONSE, we need to verify that:
-           - it is well-formed
-           - we have certificates for all senders occurring in RECV entries 
-        We do NOT check signatures, sequence numbers, or whether the content makes any
-        sense at all. We also do NOT check whether this is a valid response to some
-        specific challenge.
-     */
-   
-     case CHAL_AUDIT: {
-
-       if (logger.level <= Logger.FINE) logger.log("Checking AUDIT RESPONSE statement");
-       
-       AuditResponse auditResponse = (AuditResponse)payload;
-       
-//       int readptr = 0;
-//       readByte(payload, (unsigned int*)&readptr); /* RESP_AUDIT */
-//       NodeHandle *subjectHandle = peerreview->readNodeHandle(payload, (unsigned int*)&readptr, payloadLen);
-//       readptr += sizeof(long long);
-//       readptr += 1 + payload[readptr];
-//       readptr += hashSizeBytes;
-//       delete subjectHandle;
-
-       switch (checkSnippetAndRequestCertificates(auditResponse.getLogSnippet(), idx)) {
-         case INVALID:
-           if (logger.level <= Logger.WARNING) logger.log("AUDIT RESPONSE is not well-formed; discarding");
+  
+         if (!peerreview.verify(subject, auditEvidence.to)) {
+           if (logger.level <= Logger.WARNING) logger.log("AUDIT challenge's second authenticator has an invalid signature");
            idx.finished = true;
            return;
-         case CERT_MISSING:
-           return;
-         default:
-           break;
+         }
+  
+         break;
        }
+       case CHAL_SEND: {
+         UserDataMessage<Handle> udm = (UserDataMessage<Handle>)payload;
+  
+         byte[] innerHash = udm.getInnerHash(subject, transport);
+     
+         // NOTE: This call puts the authenticator in our authInStore. This is intentional! Otherwise the bad guys
+         // could fork their logs and send forked messages only as CHAL_SENDs.
+         Authenticator authenticator = peerreview.extractAuthenticator(peerreview.getIdentifierExtractor().extractIdentifier(udm.getSenderHandle()), udm.getTopSeq(), EVT_SEND, innerHash, udm.getHTopMinusOne(), udm.getSignature());
+         if (authenticator == null) {
+           if (logger.level <= Logger.WARNING) logger.log("Message in SEND challenge is not properly signed; discarding");
+           idx.finished = true;
+           return;
+         }       
+         break;
+       }
+       case PROOF_INCONSISTENT: {
+         ProofInconsistent pi = (ProofInconsistent)payload;
+//         if (pi.snippet != null)
+//           throw new RuntimeException("Inconsistency II (log) not implemented "+pi);
+  
+         if (!peerreview.verify(subject, pi.auth1)) {
+           if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT proof's first authenticator has an invalid signature");
+           idx.finished = true;
+           return;
+         }
+  
+         if (!peerreview.verify(subject, pi.auth2)) {
+           if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT proof's second authenticator has an invalid signature");
+           idx.finished = true;
+           return;
+         }
 
-       break;
+         long seq1 = pi.auth1.getSeq();
+         long seq2 = pi.auth2.getSeq();
+         byte[] hash1 = pi.auth1.getHash();
+         byte[] hash2 = pi.auth2.getHash();
+
+         if(pi.snippet == null) {           
+           if (seq1 != seq2) {
+             if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT-0 proof's authenticators don't have matching sequence numbers (seq1="+seq1+", seq2="+seq2+") -- discarding");
+             idx.finished = true;
+             return;
+           }
+           
+           if (Arrays.equals(hash1, hash2)) {
+             if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT-0 proof's authenticators have the same hash (seq1="+seq1+", seq2="+seq2+") hash: "+MathUtils.toBase64(hash1)+" -- discarding");
+             idx.finished = true;
+             return;
+           }           
+         } else {
+//           unsigned int xpos = 2+2*authenticatorSizeBytes;
+//           unsigned char extInfoLen = ((xpos+sizeof(long long))<payloadLen) ? payload[xpos+sizeof(long long)] : 0;
+//
+//           if (payloadLen < (xpos + sizeof(long long) + 1 + extInfoLen + hashSizeBytes)) {
+//             if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT-1 proof is too short (case #2); discarding");
+//             idx.finished = true;
+//             return;
+//           }
+           
+           long firstSeq = pi.snippet.getFirstSeq();
+//           unsigned char *baseHash = &payload[xpos+sizeof(long long)+1+extInfoLen];
+//           unsigned char *snippet = &payload[xpos+sizeof(long long)+1+extInfoLen+hashSizeBytes];
+//           int snippetLen = payloadLen - (xpos+sizeof(long long)+1+extInfoLen+hashSizeBytes);
+           
+//           assert(snippetLen >= 0);
+           
+           if (!((firstSeq<seq2) && (seq2<seq1))) {
+             if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT-1 proof's sequence numbers do not make sense (first="+firstSeq+", seq2="+seq2+", seq1="+seq1+") -- discarding");
+             idx.finished = true;
+             return;
+           }
+           
+           if (!pi.snippet.checkHashChainContains(hash1, seq1, transport, logger)) {
+             if (logger.level <= Logger.WARNING) logger.log("Snippet in INCONSISTENT-1 proof cannot be authenticated using first authenticator (#"+seq1+") -- discarding");
+             idx.finished = true;
+             return;
+           }
+           
+           if (pi.snippet.checkHashChainContains(hash2, seq2, transport, logger)) {
+             if (logger.level <= Logger.WARNING) logger.log("INCONSISTENT-1 proof claims that authenticator 2 (#"+seq2+") is not in the snippet, but it is -- discarding");
+             idx.finished = true;
+             return;
+           }
+         }       
+
+         break;
+       }
+       case PROOF_NONCONFORMANT: {
+         ProofNonconformant<Handle> pn = (ProofNonconformant<Handle>)payload;
+         
+  //       unsigned int pos = 1;
+  //       unsigned char *auth = &payload[pos];
+  //       pos += authenticatorSizeBytes;
+  //       NodeHandle *subjectHandle = peerreview->readNodeHandle(payload, &pos, payloadLen);
+  //       long long firstSeq = readLongLong(payload, &pos);
+  //       unsigned char *baseHash = &payload[pos];
+  //       pos += hashSizeBytes;
+  //
+         /* Is the authenticator properly signed? */
+  
+  //       unsigned char signedHash[hashSizeBytes];       
+         if (!peerreview.verify(subject, pn.to)) {
+           if (logger.level <= Logger.WARNING) logger.log("NONCONFORMANT proof's authenticator has an invalid signature");
+           idx.finished = true;
+           return;
+         }
+  
+         /* Is the snippet well-formed, and do we have all the certificates? */
+  
+         switch (checkSnippetAndRequestCertificates(pn.snippet, idx)) {
+           case INVALID:
+             if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT is not well-formed; discarding");
+             idx.finished = true;
+             return;
+           case CERT_MISSING:
+             return;
+           default:
+             break;
+         }
+  
+         /* Are the signatures in the snippet okay, and does int contain the authenticated node? */
+         
+         if (!peerreview.getEvidenceTool().checkSnippetSignatures(
+             pn.snippet,pn.myHandle,null, FLAG_INCLUDE_CHECKPOINT,null,pn.to.getHash(),pn.to.getSeq())) {
+           if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT cannot be validated (signatures or authenticator)");
+           return;
+         }
+         
+         /* Now we are convinced that 
+              - the authenticator is valid
+              - the snippet is well-formed, and we have all the certificates
+              - the snippet starts with a checkpoint and contains the authenticated node 
+            We must now replay the log; if the proof is valid, it won't check out. */
+         try {
+           SecureHistory subjectHistory = peerreview.getHistoryFactory().createTemp(pn.snippet.getFirstSeq()-1, pn.snippet.getBaseHash());
+           subjectHistory.appendSnippetToHistory(pn.snippet);
+  //         peerreview.getEvidenceTool().appendSnippetToHistory(pn.snippet, subjectHistory, -1);
+    
+    //#warning ext info missing
+           Verifier<Handle> verifier = peerreview.getVerifierFactory().getVerifier(subjectHistory, pn.myHandle, 1, pn.snippet.getFirstSeq()/1000000, null);
+           PeerReviewCallback<Handle, Identifier> replayApp = peerreview.getApp().getReplayInstance(verifier);
+           verifier.setApplication(replayApp);
+    
+           if (logger.level <= Logger.INFO) logger.log("REPLAY ============================================");
+           if (logger.level <= Logger.FINE) logger.log("Node being replayed: "+pn.myHandle);
+           if (logger.level <= Logger.FINE) logger.log("Range in log       : "+pn.snippet.getFirstSeq()+"-?");
+    
+           while (verifier.makeProgress());
+           boolean verifiedOK = verifier.verifiedOK();
+           
+           if (verifiedOK) {
+             if (logger.level <= Logger.WARNING) logger.log("PROOF NONCONFORMANT contains a log snippet that actually is conformant; discarding");
+             return;
+           }
+         } catch (IOException ioe) {
+           if (logger.level <= Logger.WARNING) logger.logException("Couldn't replay!!! "+pn, ioe);
+         }
+         break;        
+  //       throw new RuntimeException("todo: implement");
+       }
+       default: {
+         if (logger.level <= Logger.WARNING) logger.log("Unknown payload type #"+payload.getEvidenceType()+" in accusation; discarding");
+         idx.finished = true;
+         return;
+       }
      }
+   } else {
+   
+     /* === CHECK RESPONSES === */
+   
+     switch (payload.getEvidenceType()) {
+       
+       /* To check an AUDIT RESPONSE, we need to verify that:
+             - it is well-formed
+             - we have certificates for all senders occurring in RECV entries 
+          We do NOT check signatures, sequence numbers, or whether the content makes any
+          sense at all. We also do NOT check whether this is a valid response to some
+          specific challenge.
+       */
      
-     case CHAL_SEND:
-     {
-       AckMessage<Identifier> ackMessage = (AckMessage<Identifier>)payload;
-       // this will be handled in challengeProtocol.handleStatement()
-       break;
-     }
-     
-     default :
-     {
-       if (logger.level <= Logger.WARNING) logger.log("Unknown payload type #"+payload.getEvidenceType()+" in response; discarding");
-       idx.finished = true;
-       return;
+       case CHAL_AUDIT: {
+  
+         if (logger.level <= Logger.FINE) logger.log("Checking AUDIT RESPONSE statement");
+         
+         AuditResponse auditResponse = (AuditResponse)payload;
+         
+  //       int readptr = 0;
+  //       readByte(payload, (unsigned int*)&readptr); /* RESP_AUDIT */
+  //       NodeHandle *subjectHandle = peerreview->readNodeHandle(payload, (unsigned int*)&readptr, payloadLen);
+  //       readptr += sizeof(long long);
+  //       readptr += 1 + payload[readptr];
+  //       readptr += hashSizeBytes;
+  //       delete subjectHandle;
+  
+         switch (checkSnippetAndRequestCertificates(auditResponse.getLogSnippet(), idx)) {
+           case INVALID:
+             if (logger.level <= Logger.WARNING) logger.log("AUDIT RESPONSE is not well-formed; discarding");
+             idx.finished = true;
+             return;
+           case CERT_MISSING:
+             return;
+           default:
+             break;
+         }
+  
+         break;
+       }
+       
+       case CHAL_SEND:
+       {
+         AckMessage<Identifier> ackMessage = (AckMessage<Identifier>)payload;
+         // this will be handled in challengeProtocol.handleStatement()
+         break;
+       }
+       
+       default :
+       {
+         if (logger.level <= Logger.WARNING) logger.log("Unknown payload type #"+payload.getEvidenceType()+" in response; discarding");
+         idx.finished = true;
+         return;
+       }
      }
    }
- }
- 
- /* At this point, we are convinced that the statement is valid, and we have all the 
-    necessary supplemental material to be able to check it and any responses to it */
-
- challengeProtocol.handleStatement(idx.sender, statement, idx.options);
- idx.finished = true;
-}
+   
+   /* At this point, we are convinced that the statement is valid, and we have all the 
+      necessary supplemental material to be able to check it and any responses to it */
+  
+    try {
+      challengeProtocol.handleStatement(idx.sender, statement, idx.options);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+    idx.finished = true;
+  }
 
 }

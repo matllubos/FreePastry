@@ -63,19 +63,19 @@ import rice.p2p.util.RandomAccessFileIOBuffer;
  */
 public class SecureHistoryImpl implements SecureHistory {
 
-  Logger logger;
+  protected Logger logger;
   
-  HashProvider hashProv;
-  boolean pointerAtEnd;
-  IndexEntry topEntry;
-  long baseSeq;
-  long nextSeq;
-  long numEntries;
-  RandomAccessFileIOBuffer indexFile;
-  RandomAccessFileIOBuffer dataFile;
-  boolean readOnly;
+  protected HashProvider hashProv;
+  protected boolean pointerAtEnd;
+  protected IndexEntry topEntry;
+  protected long baseSeq;
+  protected long nextSeq;
+  protected long numEntries;
+  protected RandomAccessFileIOBuffer indexFile;
+  protected RandomAccessFileIOBuffer dataFile;
+  protected boolean readOnly;
   
-  IndexEntryFactory indexFactory;
+  protected IndexEntryFactory indexFactory;
   
   public SecureHistoryImpl(RandomAccessFileIOBuffer indexFile, RandomAccessFileIOBuffer dataFile, boolean readOnly, HashProvider hashProv, IndexEntryFactory indexFactory, Logger logger) throws IOException {
     assert(indexFile != null && dataFile != null);
@@ -585,7 +585,7 @@ public class SecureHistoryImpl implements SecureHistory {
    * locating the last CHECKPOINT or INIT entry. 
    */
   public long findLastEntry(short[] types, long maxSeq) throws IOException {
-    long maxIdx = findSeqOrHigher(maxSeq, true);
+    long maxIdx = findSeqOrHigher(Math.min(maxSeq, topEntry.seq), true);
     long currentIdx = maxIdx;
    
     while (currentIdx >= 0) {
@@ -598,7 +598,7 @@ public class SecureHistoryImpl implements SecureHistory {
           return currentIdx;
          
       currentIdx--;
-    }   
+    }
     return -1;
   }
 

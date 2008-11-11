@@ -296,7 +296,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
 
   /* Called when we've challenged another node, and it has sent us a response */
 
-  protected void handleResponse(ResponseMessage<Identifier> message, Map<String, Object> options) {
+  protected void handleResponse(ResponseMessage<Identifier> message, Map<String, Object> options) throws IOException {
     /* If this is a response to an AUDIT, we let the AuditProtocol handle it */
 
     if (message.originator.equals(peerreview.getLocalId())) {
@@ -481,7 +481,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
    *  Handle an incoming RESPONSE or ACCUSATION from another node 
    * @throws IOException */
 
-  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) {
+  public void handleStatement(Handle source, PeerReviewMessage m, Map<String, Object> options) throws IOException {
     assert(m.getType() == MSG_ACCUSATION || m.getType() == MSG_RESPONSE);
 
 //    unsigned int pos = 1;

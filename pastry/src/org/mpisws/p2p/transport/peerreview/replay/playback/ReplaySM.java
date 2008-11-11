@@ -105,6 +105,7 @@ public class ReplaySM extends SelectorManager {
     long now = verifier.getNextEventTime();
     while (timerProgress) {
       now = verifier.getNextEventTime();
+      if (now == -1) return false;
 //      timerProgress = false;
   
 //     int best = -1;

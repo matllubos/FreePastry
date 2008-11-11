@@ -54,6 +54,7 @@ import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.evidence.AuditResponse;
 import org.mpisws.p2p.transport.peerreview.evidence.ChallengeAudit;
 import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocol;
+import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofNonconformant;
 import org.mpisws.p2p.transport.peerreview.history.IndexEntry;
 import org.mpisws.p2p.transport.peerreview.history.SecureHistory;
@@ -382,8 +383,8 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
    * an AUDIT challenge. At this point, we already know that we have all the
    * necessary certificates (because of the statement protocol).
    */
-  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse<Handle> response) {
-    try {
+  public void processAuditResponse(Identifier subject, long timestamp, AuditResponse<Handle> response) throws IOException {
+//    try {
     LogSnippet snippet = response.getLogSnippet();
     ActiveAuditInfo<Handle, Identifier> aai = findOngoingAudit(subject, timestamp);
     
@@ -486,22 +487,46 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
          authenticator must match the node hash. If not, we have a proof of misbehavior. */
 
       if (authPtr >= 0) {
-        if (currentSeq == nextAuthSeq) {
-          
+        boolean foundMisbehavior = false;
+        
+        if (currentSeq == nextAuthSeq) {          
           if (!Arrays.equals(currentNodeHash, nextAuth.getHash())) {
             if (logger.level <= Logger.WARNING) logger.log("Found a divergence for node <"+subject+">'s authenticator #"+currentSeq);
-            throw new RuntimeException("Cannot file PROOF yet");
+            foundMisbehavior = true;
+          } else {  
+            if (logger.level <= Logger.FINEST) logger.log("Authenticator verified OK");
+  
+            authPtr--;
+            nextAuth = (authPtr<0) ? null : auths.get(authPtr);
+            nextAuthSeq = (authPtr<0) ? -1 : nextAuth.getSeq();            
+            if (logger.level <= Logger.FINEST) logger.log( "NA #"+authPtr+" "+ nextAuthSeq);
           }
-
-          if (logger.level <= Logger.FINEST) logger.log("Authenticator verified OK");
-
-          authPtr --;
-          nextAuth = (authPtr<0) ? null : auths.get(authPtr);
-          nextAuthSeq = (authPtr<0) ? -1 : nextAuth.getSeq();
-          if (logger.level <= Logger.FINEST) logger.log( "NA #"+authPtr+" "+ nextAuthSeq);
         } else if (currentSeq > nextAuthSeq) {
           if (logger.level <= Logger.WARNING) logger.log("Node "+subject+" is trying to hide authenticator #"+nextAuthSeq);
-          throw new RuntimeException("Cannot file PROOF yet");
+          foundMisbehavior = true;
+        }
+        
+        if (foundMisbehavior) {
+          if (logger.level <= Logger.FINE) logger.log("Extracting proof of misbehavior from audit response");
+          ProofInconsistent proof = new ProofInconsistent(toAuthenticator,nextAuth,snippet);
+//          unsigned char proof[1+authenticatorSizeBytes+1+authenticatorSizeBytes+(snippetLen-posAfterNodeHandle)];
+//          unsigned int pos = 0;
+//          writeByte(proof, &pos, PROOF_INCONSISTENT);
+//          writeBytes(proof, &pos, toAuthenticator, authenticatorSizeBytes);
+//          writeByte(proof, &pos, 1);
+//          writeBytes(proof, &pos, nextAuth, authenticatorSizeBytes);
+//          writeBytes(proof, &pos, &snippet[posAfterNodeHandle], snippetLen-posAfterNodeHandle);
+//          assert(pos <= sizeof(proof));
+
+          long evidenceSeq = peerreview.getEvidenceSeq();
+          if (logger.level <= Logger.FINE) logger.log("Filing proof against "+subject+" under evidence sequence number #"+evidenceSeq);
+          infoStore.addEvidence(peerreview.getLocalId(), subject, evidenceSeq, proof);
+          peerreview.sendEvidenceToWitnesses(subject, evidenceSeq, proof);
+
+          terminateAudit(aai.target);
+//          terminateAudit(peerreview.getIdentifierExtractor().extractIdentifier(subject));
+          return;
+
         }
       }
     }
@@ -592,7 +617,8 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
 
 //      while (verifieverifier.makeProgress());
 //      if (true) throw new RuntimeException("delme");
-      while(((ReplaySM)verifier.getEnvironment().getSelectorManager()).makeProgress());
+      ReplaySM sm = ((ReplaySM)verifier.getEnvironment().getSelectorManager());
+      while(sm.makeProgress());
       
       boolean verifiedOK = verifier.verifiedOK(); 
       if (logger.level <= Logger.INFO) logger.log( "END OF REPLAY: "+(verifiedOK ? "VERIFIED OK" : "VERIFICATION FAILED")+" =================");
@@ -636,9 +662,9 @@ public class AuditProtocolImpl<Handle extends RawSerializable, Identifier extend
     if (logger.level <= Logger.FINE) logger.log( "Audit completed; terminating");  
     infoStore.setLastCheckedAuth(peerreview.getIdentifierExtractor().extractIdentifier(aai.target), ((ChallengeAudit)aai.request.challenge).to);
     terminateAudit(aai.target);
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
+//    } catch (IOException ioe) {
+//      throw new RuntimeException(ioe);
+//    }
   }
 
   public ActiveAuditInfo<Handle, Identifier> findOngoingAudit(Identifier subject, long evidenceSeq) {

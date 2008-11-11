@@ -217,10 +217,12 @@ public class PRRegressionTest {
     public static Map<HandleImpl, BogusTransport> peerTable = new HashMap<HandleImpl, BogusTransport>();
     
     HandleImpl localIdentifier;
+    Environment env;
     
-    public BogusTransport(HandleImpl handle, X509Certificate cert) {
+    public BogusTransport(HandleImpl handle, X509Certificate cert, Environment env) {
       peerTable.put(handle, this);
       this.localIdentifier = handle;
+      this.env = env;
     }
     
     public void acceptMessages(boolean b) {
@@ -244,19 +246,27 @@ public class PRRegressionTest {
     public MessageRequestHandle<HandleImpl, ByteBuffer> sendMessage(
         HandleImpl i, ByteBuffer m,
         MessageCallback<HandleImpl, ByteBuffer> deliverAckToMe,
-        Map<String, Object> options) {
+        Map<String, Object> options) {      
       peerTable.get(i).receiveMessage(localIdentifier, m);      
+//      if (deliverAckToMe != null) deliverAckToMe.ack(new Message)
       return null;
     }
 
     TransportLayerCallback<HandleImpl, ByteBuffer> callback;
     
-    private void receiveMessage(HandleImpl i, ByteBuffer m) {
-      try {
-        callback.messageReceived(i, m, null);
-      } catch (IOException ioe) {
-        ioe.printStackTrace();
-      }
+    private void receiveMessage(final HandleImpl i, final ByteBuffer m) {
+//      System.out.println(Thread.currentThread()+" invoking onto "+env.getSelectorManager());
+      env.getSelectorManager().invoke(new Runnable() {      
+        public void run() {
+          try {                
+            callback.messageReceived(i, m, null);
+          } catch (IOException ioe) {
+            ioe.printStackTrace();
+            System.exit(0);
+          }
+        }      
+      });
+//      System.out.println(Thread.currentThread()+" invoked onto "+env.getSelectorManager());
     }
 
     public void setCallback(
@@ -290,6 +300,7 @@ public class PRRegressionTest {
       this.tl = tl;
       this.env = env;
       this.logger = env.getLogManager().getLogger(BogusApp.class, null);
+      logger.log("new bogus app "+player);
       dest = player.destHandle;
       tl.setCallback(this);      
     }
@@ -327,6 +338,7 @@ public class PRRegressionTest {
     public void sendMessage() {
       byte[] msg = generateMessage();
       
+      logger.log("sending message "+msg.length+" "+MathUtils.toBase64(msg));
       if (logger.level <= Logger.INFO) logger.log("sending message "+msg.length+" "+MathUtils.toBase64(msg));
 //      HandleImpl dest = bob.localHandle;
       try {
@@ -340,7 +352,7 @@ public class PRRegressionTest {
         }
       
         public void ack(MessageRequestHandle<HandleImpl, ByteBuffer> msg) {
-          alice.logger.log("ack("+msg+")");
+          alice.logger.log("ack("+msg+") "+Thread.currentThread());
           if (logger.level <= Logger.FINE) alice.logger.log("ack("+msg+")");
         }
       
@@ -451,6 +463,11 @@ public class PRRegressionTest {
 
   Map<HandleImpl,Player> playerTable = new HashMap<HandleImpl, Player>();
 
+  protected PeerReviewImpl<HandleImpl, IdImpl> getPeerReview(Player player, MyIdTL transport, Environment env) {
+    return new PeerReviewImpl<HandleImpl, IdImpl>(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), getIdStrTranslator(),
+        new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
+  }
+  
   
   class Player {    
     Logger logger;
@@ -512,7 +529,7 @@ public class PRRegressionTest {
       transport = getIdTransport();
         
       idTLTable.put(localHandle, transport);
-      pr = getPeerReview();
+      pr = getPeerReview(this, transport, env);
       app = getApp();
       pr.setApp(app);
       env.getSelectorManager().invoke(new Runnable() {
@@ -527,28 +544,11 @@ public class PRRegressionTest {
       });
     }
     
-    public PeerReviewImpl<HandleImpl, IdImpl> getPeerReview() {
-      return new PeerReviewImpl<HandleImpl, IdImpl>(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), getIdStrTranslator(),
-          new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
-    }
-    
     public BogusApp getApp() {
       return getBogusApp(this, pr, env);
 //      return new BogusApp(this,pr,env);
     }
-    
-    public IdStrTranslator<IdImpl> getIdStrTranslator() {
-      return new IdStrTranslator<IdImpl>(){
-
-        public IdImpl readIdentifierFromString(String s) {
-          return new IdImpl(Integer.parseInt(s));
-        }
-
-        public String toString(IdImpl id) {
-          return Integer.toString(id.id);
-        }};
-    }
-    
+        
     // to be overridden
     public Environment cloneEnvironment(Environment env2, String name, int id) {
       return env2.cloneEnvironment(name);    
@@ -560,7 +560,7 @@ public class PRRegressionTest {
     }
 
     public BogusTransport getTL() throws Exception {
-      return new BogusTransport(localHandle, cert); 
+      return new BogusTransport(localHandle, cert, env); 
     }
     
     public MyIdTL getIdTransport() throws Exception {
@@ -571,6 +571,18 @@ public class PRRegressionTest {
     }
     
     
+  }
+
+  public IdStrTranslator<IdImpl> getIdStrTranslator() {
+    return new IdStrTranslator<IdImpl>(){
+
+      public IdImpl readIdentifierFromString(String s) {
+        return new IdImpl(Integer.parseInt(s));
+      }
+
+      public String toString(IdImpl id) {
+        return Integer.toString(id.id);
+      }};
   }
 
   class MyIdTL extends IdentityTransprotLayerImpl<HandleImpl, IdImpl> {
@@ -679,6 +691,11 @@ public class PRRegressionTest {
   
   Environment env;
   Logger logger;
+  
+  /**
+   * @param millisToFinish Call finish() after this amount of time
+   * @throws Exception
+   */
   public PRRegressionTest(int millisToFinish) throws Exception {
 
     

@@ -52,10 +52,8 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
  * byte type = PROOF_INCONSISTENT
  * authenticator auth1
  * char whichInconsistency   // 0=another auth, 1=a log snippet
- * -----------------------
  * authenticator auth2       // if whichInconsistency==0
- * -----------------------
- * long long firstSeq        // if whichInconsistency==1
+ * long long firstSeq         // these fields exist only if whichInconsistency==1
  * hash baseHash
  * [entries]
  * 
@@ -77,6 +75,12 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
     this.auth2 = auth2;
   }
   
+  public ProofInconsistent(Authenticator auth1, Authenticator auth2, LogSnippet snippet) {
+    this.auth1 = auth1;
+    this.auth2 = auth2;
+    this.snippet = snippet;
+  }
+  
   public short getEvidenceType() {
     return PROOF_INCONSISTENT;
   }
@@ -84,9 +88,9 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
   public ProofInconsistent(InputBuffer buf, AuthenticatorSerializer serializer, int hashSize) throws IOException {
     auth1 = serializer.deserialize(buf);
     byte type = buf.readByte();
+    auth2 = serializer.deserialize(buf);
     switch(type) {
     case ANOTHER_AUTH:
-      auth2 = serializer.deserialize(buf);
       break;
     case LOG_SNIPPET:
       snippet = new LogSnippet(buf, hashSize);
@@ -103,7 +107,10 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
       auth2.serialize(buf);
     } else {
       buf.writeByte(LOG_SNIPPET);
+      auth2.serialize(buf);
       snippet.serialize(buf);
     }
   }
+  
+  
 }

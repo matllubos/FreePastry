@@ -53,7 +53,7 @@ public interface Verifier<Handle> extends TransportLayer<Handle, ByteBuffer>, Pe
   public void setApplication(PeerReviewCallback app);
 
   public long getNextEventTime();
-
+  
   public boolean isSuccess();
 
   public Environment getEnvironment();

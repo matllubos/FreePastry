@@ -163,8 +163,9 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
 
     if (logger.level <= Logger.FINE) logger.log("fetchNextEvent():"+next);
 
-    if (next == null)
+    if (next == null) {
       return;
+    }
       
     if (next.isHashed()) {
       // make the nextEvent only the content hash
@@ -671,7 +672,9 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
       fetchNextEvent();
       assert(next.getType() == EVT_SENDSIGN);
     fetchNextEvent();
-    
+    if (next == null) {
+      logger.log("next event is null");
+    }
     return ret;
     } catch (IOException ioe) {
       logger.logException("Error calculating hash", ioe);
@@ -681,6 +684,8 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
   }
   
   public long getNextEventTime() {
+//    logger.log("getNextEventTime() "+next);
+    if (next == null) return -1;
     return next.getSeq()/1000000;
   }
   
