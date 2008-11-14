@@ -153,4 +153,5 @@ public interface PeerReview<Handle extends RawSerializable, Identifier extends R
   public SecureHistory getHistory();
   
   public long getTimeToleranceMillis();
+  public void sendEvidence(Handle destination, Identifier evidenceAgainst);
 }

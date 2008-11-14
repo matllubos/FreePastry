@@ -873,4 +873,8 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
   public long getTimeToleranceMillis() {
     return timeToleranceMillis;
   }
+
+  public void sendEvidence(Handle dest, Identifier evidenceAgainst) {
+    evidenceTransferProtocol.sendEvidence(dest, evidenceAgainst);
+  }
 }

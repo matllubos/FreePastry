@@ -429,6 +429,12 @@ public class AuthenticatorStoreTest {
       // TODO Auto-generated method stub
       return 0;
     }
+
+    public void sendEvidence(MyInetSocketAddress destination,
+        MyInetSocketAddress evidenceAgainst) {
+      // TODO Auto-generated method stub
+      
+    }
   }
 
   class TestAuthenticatorStore extends AuthenticatorStoreImpl<MyInetSocketAddress> {

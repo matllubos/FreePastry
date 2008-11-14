@@ -81,7 +81,7 @@ import rice.selector.TimerTask;
 public class PRInconsistent1 extends PRRegressionTest {
   
   public PRInconsistent1() throws Exception {
-    super(45000000);
+    super(45000);
   }
 
   @Override
@@ -183,7 +183,7 @@ public class PRInconsistent1 extends PRRegressionTest {
   }
   
   @Override
-  public BogusApp getBogusApp(Player player, PeerReview<HandleImpl, IdImpl> pr,
+  public BogusApp getBogusApp(Player player, final PeerReview<HandleImpl, IdImpl> pr,
       Environment env) {
     return new BogusApp(player,pr,env) {
             

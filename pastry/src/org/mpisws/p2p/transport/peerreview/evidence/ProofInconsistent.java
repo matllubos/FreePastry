@@ -60,7 +60,7 @@ import rice.p2p.commonapi.rawserialization.OutputBuffer;
  * @author Jeff Hoye
  */
 public class ProofInconsistent implements PeerReviewConstants, Evidence {
-  public static final byte ANOTHER_AUTH = 0;
+  public static final byte NO_SNIPPET = 0;
   public static final byte LOG_SNIPPET = 1;
   
   
@@ -90,7 +90,7 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
     byte type = buf.readByte();
     auth2 = serializer.deserialize(buf);
     switch(type) {
-    case ANOTHER_AUTH:
+    case NO_SNIPPET:
       break;
     case LOG_SNIPPET:
       snippet = new LogSnippet(buf, hashSize);
@@ -102,12 +102,13 @@ public class ProofInconsistent implements PeerReviewConstants, Evidence {
   
   public void serialize(OutputBuffer buf) throws IOException {
     auth1.serialize(buf);
-    if (auth2 != null) {
-      buf.writeByte(ANOTHER_AUTH);
-      auth2.serialize(buf);
+    if (snippet == null) {
+      buf.writeByte(NO_SNIPPET);
     } else {
       buf.writeByte(LOG_SNIPPET);
-      auth2.serialize(buf);
+    }
+    auth2.serialize(buf);
+    if (snippet != null) {
       snippet.serialize(buf);
     }
   }
