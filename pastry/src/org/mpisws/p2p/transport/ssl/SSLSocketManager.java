@@ -33,7 +33,7 @@ liability, whether in contract, strict liability, or tort (including negligence
 or otherwise) arising in any way out of the use of this software, even if 
 advised of the possibility of such damage.
 
- *******************************************************************************/
+*******************************************************************************/ 
 package org.mpisws.p2p.transport.ssl;
 
 import java.io.IOException;
