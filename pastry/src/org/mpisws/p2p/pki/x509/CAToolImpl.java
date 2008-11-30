@@ -217,7 +217,7 @@ public class CAToolImpl implements CATool {
     return sign(CN,key,exp,System.currentTimeMillis());
   }
   
-  public static X509Certificate sign(String CN, PublicKey publicKey, Date expiryDate, long serialNumber, X509Certificate caCert, KeyPair caPair) throws CertificateParsingException, CertificateEncodingException, InvalidKeyException, IllegalStateException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException {
+  public static X509Certificate sign(String CN, PublicKey publicKey, Date expiryDate, long serialNumber, X509Certificate caCert, PrivateKey privateKey) throws CertificateParsingException, CertificateEncodingException, InvalidKeyException, IllegalStateException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException {
 //    Date expiryDate = ...;               // time after which certificate is not valid
 //    BigInteger serialNumber = ...;       // serial number for certificate
 //    PrivateKey caKey = ...;              // private key of the certifying authority (ca) certificate
@@ -240,12 +240,12 @@ public class CAToolImpl implements CATool {
     certGen.addExtension(X509Extensions.SubjectKeyIdentifier, false,
                             new SubjectKeyIdentifierStructure(publicKey));
 
-    X509Certificate cert = certGen.generate(caPair.getPrivate(), "BC");   // note: private key of CA
+    X509Certificate cert = certGen.generate(privateKey, "BC");   // note: private key of CA
     return cert;        
   }
   
   public X509Certificate sign(String CN, PublicKey publicKey, Date expiryDate, long serialNumber) throws CertificateParsingException, CertificateEncodingException, InvalidKeyException, IllegalStateException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException {
-    return sign(CN,publicKey,expiryDate,serialNumber,cert,keyPair);
+    return sign(CN,publicKey,expiryDate,serialNumber,cert,keyPair.getPrivate());
   }
   
 //  public static final String CA_STORE_FILENAME = "ca-store";
