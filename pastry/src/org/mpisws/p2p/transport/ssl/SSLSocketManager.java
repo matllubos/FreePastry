@@ -60,40 +60,45 @@ import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
 
 public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     P2PSocketReceiver<Identifier> {
-  P2PSocket<Identifier> socket;
-
-  SSLEngine engine;
-  SSLTransportLayerImpl<Identifier, ?> sslTL;
-
-  Logger logger;
+  /**
+   * The cert of the remote node. (not applicable for non-clientAuth servers.
+   */
+  protected X509Certificate peerCert = null;
   
-  boolean handshaking = true;
-  boolean closed = true;
+  protected P2PSocket<Identifier> socket;
 
-  SSLEngineResult result;
-  HandshakeStatus status;
+  protected SSLEngine engine;
+  protected SSLTransportLayerImpl<Identifier, ?> sslTL;
+
+  protected Logger logger;
+  
+  protected boolean handshaking = true;
+  protected boolean closed = true;
+
+  protected SSLEngineResult result;
+  protected HandshakeStatus status;
 
 //  LinkedList<ByteBuffer> encryptMe; // plain, outgoing
-  LinkedList<ByteBuffer> writeMe = new LinkedList<ByteBuffer>(); // cipher, outgoing
-  LinkedList<ByteBuffer> unwrapMe = new LinkedList<ByteBuffer>(); // cipher, incoming
-  LinkedList<ByteBuffer> readMe; // plain, incoming
+  protected LinkedList<ByteBuffer> writeMe = new LinkedList<ByteBuffer>(); // cipher, outgoing
+  protected LinkedList<ByteBuffer> unwrapMe = new LinkedList<ByteBuffer>(); // cipher, incoming
+  protected LinkedList<ByteBuffer> readMe; // plain, incoming
   
 
-  ByteBuffer bogusEncryptMe;
+  protected ByteBuffer bogusEncryptMe;
 
-  int appBufferMax;
-  int netBufferMax;
+  protected int appBufferMax;
+  protected int netBufferMax;
 
-  private Continuation<SSLSocketManager<Identifier>, Exception> c;
+  protected Continuation<SSLSocketManager<Identifier>, Exception> c;
 
-  boolean doneHandshaking = false;
+  protected boolean doneHandshaking = false;
   
-  Map<String, Object> options;
+  protected Map<String, Object> options;
 
-  boolean useClientAuth;
-  boolean server;
+  protected boolean useClientAuth;
+  protected boolean server;
 
-  String name;
+  protected String name;
   
   /**
    * Called on incoming side
@@ -284,30 +289,40 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     }
   }
 
-  protected void checkDone() {
+  /**
+   * Return true when done.
+   * 
+   * @return
+   */
+  protected boolean checkDone() {
     if (((status == HandshakeStatus.FINISHED) || (status == HandshakeStatus.NOT_HANDSHAKING))) {
       if (!server || useClientAuth) {
         try {
-          X509Certificate crt = ((X509Certificate) engine.getSession().getPeerCertificates()[0]);
-          name = crt.getSubjectDN().getName();
+          peerCert = ((X509Certificate) engine.getSession().getPeerCertificates()[0]);
+          name = peerCert.getSubjectDN().getName();
           if (name.startsWith("CN=")) {
             name = name.substring(3);
             options = OptionsFactory.addOption(socket.getOptions(), SSLTransportLayer.OPTION_CERT_SUBJECT, name);
             logger.log("Talking to:"+name);
           } else {
             fail(new IllegalArgumentException("CN must start with CN= "+name+" "+this));
-            return;          
+            return false;          
           }
         } catch (Exception e) {
           fail(e);
-          return;
+          return false;
         }
       }
       doneHandshaking = true;
       c.receiveResult(this);
+      return true;
     }
+    return false;
   }
   
+  public X509Certificate getCert() {
+    return peerCert;
+  }
   
   /*
    * If the result indicates that we have outstanding tasks to do, go ahead and

@@ -91,74 +91,9 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
   protected SSLContext context;
   
-//  X509Certificate caCert;
   KeyPair keyPair;
-//  X509TrustManager innerTM;
-//  
-//  TrustManager[] tm = new TrustManager[]{
-//      new X509TrustManager() {
-//
-//          public X509Certificate[] getAcceptedIssuers() {
-//            logger.log("getAcceptedIssuers");
-//            return innerTM.getAcceptedIssuers();
-//            
-////              return new X509Certificate[] { caCert };
-//          }
-//
-//          public void checkClientTrusted(
-//                  java.security.cert.X509Certificate[] certs, String authType) throws CertificateException {
-//            logger.log("checkClientTrusted "+authType+" "+certs[0].getSubjectDN()); //+" "+Arrays.toString(certs));
-//            innerTM.checkClientTrusted(certs,authType);
-//          }
-//
-//          public void checkServerTrusted(
-//                  java.security.cert.X509Certificate[] certs, String authType) throws CertificateException {            
-//            logger.log("checkServerTrusted "+authType+" "+certs[0].getSubjectDN());//+" "+Arrays.toString(certs));
-//            innerTM.checkServerTrusted(certs, authType);
-//          }
-//      }};
-//        
-//  KeyManager[] km = new KeyManager[] {
-//      new X509KeyManager() {
-//      
-//        public String[] getServerAliases(String keyType, Principal[] issuers) {
-//          logger.log("getServerAlieses");
-//          return null;
-//        }
-//      
-//        public PrivateKey getPrivateKey(String alias) {
-//          logger.log("getPrivateKey("+alias);
-//          return keyPair.getPrivate();
-//        }
-//      
-//        public String[] getClientAliases(String keyType, Principal[] issuers) {
-//          logger.log("getClientAliases");
-//          return null;
-//        }
-//      
-//        public X509Certificate[] getCertificateChain(String alias) {
-//          logger.log("getCertificateChain");
-//          return null;
-//        }
-//      
-//        public String chooseServerAlias(String keyType, Principal[] issuers,
-//            Socket socket) {
-//          logger.log("chooseServerAlias");
-//          return null;
-//        }
-//      
-//        public String chooseClientAlias(String[] keyType, Principal[] issuers,
-//            Socket socket) {
-//          logger.log("chooseServerAlias");
-//          return null;
-//        }
-//      
-//      }};
   private int clientAuth;
   
-//  private static String keyStoreFile = "testkeys";
-//  private static String trustStoreFile = "testkeys";
-//  private static String passwd = "passphrase";
   public SSLTransportLayerImpl(TransportLayer<Identifier, MessageType> tl, KeyStore keyStore, KeyStore trustStore, Environment env) throws IOException {
     this(tl,keyStore,trustStore,CLIENT_AUTH_REQUIRED,env);
   }
@@ -175,8 +110,6 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
     if (clientAuth != CLIENT_AUTH_NONE && clientAuth != CLIENT_AUTH_REQUIRED) throw new IllegalArgumentException("clientAuth type:"+clientAuth+" not supported.");
     
     this.environment = env;
-//    this.keyPair = keyPair;
-//    this.caCert = caCert;
     this.logger = env.getLogManager().getLogger(SSLTransportLayerImpl.class, null);
     this.tl = tl;
     errorHandler = new DefaultErrorHandler<Identifier>(logger, Logger.WARNING);
@@ -217,7 +150,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
       public void receiveResult(SocketRequestHandle<Identifier> cancellable,
           P2PSocket<Identifier> sock) {
-        new SSLSocketManager(SSLTransportLayerImpl.this, sock, new Continuation<SSLSocketManager<Identifier>, Exception>() {
+        getSocketManager(SSLTransportLayerImpl.this, sock, new Continuation<SSLSocketManager<Identifier>, Exception>() {
 
           public void receiveException(Exception exception) {
             deliverSocketToMe.receiveException(ret, exception);
@@ -236,7 +169,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
    * TODO: support resuming
    */
   public void incomingSocket(final P2PSocket<Identifier> s) throws IOException {
-    new SSLSocketManager<Identifier>(this,s,new Continuation<SSLSocketManager<Identifier>, Exception>() {
+    getSocketManager(this,s,new Continuation<SSLSocketManager<Identifier>, Exception>() {
 
       public void receiveException(Exception exception) {
         errorHandler.receivedException(s.getIdentifier(), exception);
@@ -287,4 +220,10 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
     callback.messageReceived(i, m, options);
   }
 
+  protected SSLSocketManager<Identifier> getSocketManager(SSLTransportLayerImpl<Identifier, ?> sslTL,
+      P2PSocket<Identifier> s,
+      Continuation<SSLSocketManager<Identifier>, Exception> c, boolean server, boolean useClientAuth) {
+    return new SSLSocketManager<Identifier>(sslTL,s,c,server,useClientAuth);
+  }
+  
 }
