@@ -253,15 +253,16 @@ public class MagicNumberTransportLayer<Identifier> implements
     
     m.get(hdr);
     
+    int remaining = m.remaining();
     if (Arrays.equals(HEADER, hdr)) {
-      callback.messageReceived(i, m, options); 
       notifyListenersRead(HEADER.length, i, options, false, false);  // non-pasthrough part
-      notifyListenersRead(m.remaining(), i, options, true, false); // passthrough part
+      notifyListenersRead(remaining, i, options, true, false); // passthrough part
+      callback.messageReceived(i, m, options); 
       return;
     }
     
     notifyListenersRead(HEADER.length, i, options, false, false);  // non-pasthrough part
-    notifyListenersRead(m.remaining(), i, options, true, false); // passthrough part
+    notifyListenersRead(remaining, i, options, true, false); // passthrough part
 
     errorHandler.receivedUnexpectedData(i, m.array(), 0, null);
   }

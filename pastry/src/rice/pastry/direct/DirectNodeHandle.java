@@ -66,7 +66,7 @@ public class DirectNodeHandle extends TransportLayerNodeHandle<NodeRecord> imple
    * @param ln The local pastry node
    * @param sim The current network simulator
    */
-  DirectNodeHandle(PastryNode ln, NetworkSimulator sim) {
+  protected DirectNodeHandle(PastryNode ln, NetworkSimulator sim) {
     localnode = ln;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
 //    if (rn == null) throw new IllegalArgumentException("rn must be non-null");
