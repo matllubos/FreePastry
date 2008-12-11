@@ -87,9 +87,10 @@ public class PRInconsistent1 extends PRRegressionTest {
   @Override
   protected PeerReviewImpl<HandleImpl, IdImpl> getPeerReview(Player player, MyIdTL transport, Environment env) {
     if (player.localHandle.id.id == 2) {
-      return new PeerReviewImpl<HandleImpl, IdImpl>(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), getIdStrTranslator(),
-          new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),
-              new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes())) {
+      return new PeerReviewImpl<HandleImpl, IdImpl>(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), getIdStrTranslator()
+//          ,new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),
+//              new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes())
+              ) {
         
         @Override
         protected SecureHistoryFactory getSecureHistoryFactory(IdentityTransport<HandleImpl, IdImpl> transport, final Environment env) {

@@ -42,6 +42,7 @@ import java.lang.ref.*;
 import java.util.*;
 
 import rice.environment.random.RandomSource;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 
 /**
  * Represents a Pastry identifier for a node, object or key. A single identifier and the bit length
@@ -54,7 +55,7 @@ import rice.environment.random.RandomSource;
  * @author Peter Druschel
  * @author Alan Mislove
  */
-public class Id implements rice.p2p.commonapi.Id {
+public class Id implements rice.p2p.commonapi.Id, RawSerializable {
 
   public static final short TYPE = 1;
   

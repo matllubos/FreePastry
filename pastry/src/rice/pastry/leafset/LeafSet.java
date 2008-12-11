@@ -476,10 +476,7 @@ public class LeafSet extends Observable implements Serializable, Iterable<NodeHa
    * @return the number of unique nodes in the leafset
    */
   public int getUniqueCount() {
-    HashSet superset = new HashSet();
-    superset.addAll(cwSet.getCollection());
-    superset.addAll(ccwSet.getCollection());
-    return superset.size()+1; // the local node     
+    return getUniqueSet().size()+1; // the local node     
 //
 //    Vector v = new Vector();
 //
@@ -500,12 +497,22 @@ public class LeafSet extends Observable implements Serializable, Iterable<NodeHa
    * @return
    */
   public Iterator<NodeHandle> iterator() {
+    return getUniqueSet().iterator();         
+  }
+
+  /**
+   * Set of nodes in the leafset, not the local node, each node only once.
+   * @return
+   */
+  public Collection<NodeHandle> getUniqueSet() {
     HashSet superset = new HashSet();
     superset.addAll(cwSet.getCollection());
     superset.addAll(ccwSet.getCollection());
-    return superset.iterator();         
+    return superset;         
   }
 
+
+  
   /**
    * Perform (x mod y).  This is necessary because the java % operator
    * is actually remainder instead of mod.  Useless.

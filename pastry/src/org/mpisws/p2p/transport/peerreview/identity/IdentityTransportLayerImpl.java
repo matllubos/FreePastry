@@ -84,7 +84,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
  * @author Jeff Hoye
  *
  */
-public class IdentityTransprotLayerImpl<Identifier, I> extends 
+public class IdentityTransportLayerImpl<Identifier, I> extends 
      TableTransprotLayerImpl<Identifier, I, X509Certificate> 
      implements IdentityTransport<Identifier, I> {
   public static final String DEFAULT_SIGNATURE_ALGORITHM = "SHA1withRSA";
@@ -128,13 +128,16 @@ public class IdentityTransprotLayerImpl<Identifier, I> extends
       return ret;
     }}
   
-  public IdentityTransprotLayerImpl(Serializer<I> iSerializer, X509Serializer cSerializer, I localId, X509Certificate localCert, PrivateKey localPrivate, TransportLayer<Identifier, ByteBuffer> tl, HashProvider hasher, Environment env) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
+  public IdentityTransportLayerImpl(
+      Serializer<I> iSerializer, X509Serializer cSerializer, I localId, 
+      X509Certificate localCert, PrivateKey localPrivate, TransportLayer<Identifier, ByteBuffer> tl, 
+      HashProvider hasher, Environment env) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
     super(iSerializer, cSerializer, getTableStore(localId, localCert, iSerializer, cSerializer, null), tl, env);
     this.tl = tl;
     tl.setCallback(this);
     this.hasher = hasher;
     this.environment = env;
-    this.logger = env.getLogManager().getLogger(IdentityTransprotLayerImpl.class, null);
+    this.logger = env.getLogManager().getLogger(IdentityTransportLayerImpl.class, null);
     this.errorHandler = new DefaultErrorHandler<Identifier>(this.logger);
     
     signer = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM,"BC");

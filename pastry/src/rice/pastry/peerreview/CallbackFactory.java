@@ -34,40 +34,45 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package org.mpisws.p2p.transport.peerreview;
+package rice.pastry.peerreview;
 
 import java.io.IOException;
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
-import org.mpisws.p2p.transport.peerreview.infostore.StatusChangeListener;
-import org.mpisws.p2p.transport.peerreview.message.PeerReviewMessage;
-import org.mpisws.p2p.transport.peerreview.replay.Verifier;
+import rice.environment.Environment;
+import rice.pastry.NodeHandle;
+import rice.pastry.NodeHandleFactory;
+import rice.pastry.NodeIdFactory;
+import rice.pastry.PastryNode;
+import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.transport.NodeHandleAdapter;
+import rice.pastry.transport.TLDeserializer;
 
-import rice.Destructable;
-import rice.p2p.commonapi.rawserialization.InputBuffer;
-import rice.p2p.commonapi.rawserialization.OutputBuffer;
+public class CallbackFactory extends SocketPastryNodeFactory {
+  
+  public Map<PastryNode, NodeHandle> localHandleTable;
+  
+  public CallbackFactory(Environment env)
+      throws IOException {
+    super(null,0, env);
+    localHandleTable = new HashMap<PastryNode, NodeHandle>();
+  }
 
-/**
- * Callback interface that all PeerReview-enabled applications must implement. 
- * During normal operation, PeerReview uses this interface to checkpoint the
- * application, and to inquire about the witness set of another node. 
- */
-public interface PeerReviewCallback<Handle, Identifier> extends Destructable, IdentityTransportCallback<Handle, Identifier>, 
-      StatusChangeListener<Identifier> {
-  // PeerReviewCallback() : IdentityTransportCallback() {};
-  public void init();
-  void storeCheckpoint(OutputBuffer buffer) throws IOException;
-  /**
-   * Return false if the checkpoint is bogus.
-   * 
-   * @param buffer
-   * @return
-   * @throws IOException
-   */
-  boolean loadCheckpoint(InputBuffer buffer) throws IOException;
-  void getWitnesses(Identifier subject, WitnessListener<Handle, Identifier> callback);
-//  PeerReviewCallback getReplayInstance(ReplayWrapper replayWrapper);
-  public Collection<Handle> getMyWitnessedNodes();
-  PeerReviewCallback<Handle, Identifier> getReplayInstance(Verifier<Handle> v);
+  
+  @Override
+  public NodeHandleAdapter getNodeHandleAdapter(
+      PastryNode pn, 
+      NodeHandleFactory handleFactory2, 
+      TLDeserializer deserializer) throws IOException {
+    return null;
+  }
+  
+  @Override
+  public NodeHandle getLocalHandle(PastryNode pn, NodeHandleFactory nhf) {
+    NodeHandle ret = localHandleTable.remove(pn);
+    if (ret == null) throw new IllegalStateException("Couldn't find the handle in localHandleTable:"+pn);
+    return ret;
+  }
+
 }

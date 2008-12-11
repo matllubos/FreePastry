@@ -94,7 +94,7 @@ import org.mpisws.p2p.transport.peerreview.history.hasher.SHA1HashProvider;
 import org.mpisws.p2p.transport.peerreview.history.stub.NullHashProvider;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransport;
 import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportCallback;
-import org.mpisws.p2p.transport.peerreview.identity.IdentityTransprotLayerImpl;
+import org.mpisws.p2p.transport.peerreview.identity.IdentityTransportLayerImpl;
 import org.mpisws.p2p.transport.peerreview.identity.UnknownCertificateException;
 import org.mpisws.p2p.transport.peerreview.infostore.Evidence;
 import org.mpisws.p2p.transport.peerreview.infostore.IdStrTranslator;
@@ -398,6 +398,7 @@ public class PRRegressionTest {
       } catch (ClassNotFoundException cnfe) {
         IOException ioe = new IOException("Error reading random number from checkpoint");
         ioe.initCause(cnfe);
+        throw ioe;
       }
       if (nextSendTime > 0) {
         scheduleMessageToBeSent(nextSendTime, true);
@@ -456,7 +457,7 @@ public class PRRegressionTest {
     }
   }
 
-  static Map<HandleImpl, IdentityTransprotLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransprotLayerImpl<HandleImpl,IdImpl>>();
+  static Map<HandleImpl, IdentityTransportLayerImpl<HandleImpl, IdImpl>> idTLTable = new HashMap<HandleImpl, IdentityTransportLayerImpl<HandleImpl,IdImpl>>();
 
   CATool caTool;
   KeyPairGenerator keyPairGen;
@@ -464,8 +465,9 @@ public class PRRegressionTest {
   Map<HandleImpl,Player> playerTable = new HashMap<HandleImpl, Player>();
 
   protected PeerReviewImpl<HandleImpl, IdImpl> getPeerReview(Player player, MyIdTL transport, Environment env) {
-    return new PeerReviewImpl<HandleImpl, IdImpl>(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), getIdStrTranslator(),
-        new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes()));
+    return new PeerReviewImpl<HandleImpl, IdImpl>(transport, env, new HandleSerializer(), new IdSerializer(), new IdExtractor(), getIdStrTranslator()
+//        ,new AuthenticatorSerializerImpl(20,96), new EvidenceSerializerImpl<HandleImpl, IdImpl>(new HandleSerializer(),new IdSerializer(),transport.getHashSizeBytes(),transport.getSignatureSizeBytes())
+        );
   }
   
   
@@ -585,7 +587,7 @@ public class PRRegressionTest {
       }};
   }
 
-  class MyIdTL extends IdentityTransprotLayerImpl<HandleImpl, IdImpl> {
+  class MyIdTL extends IdentityTransportLayerImpl<HandleImpl, IdImpl> {
     public MyIdTL(Serializer<IdImpl> serializer, X509Serializer serializer2,
         IdImpl localId, X509Certificate localCert, PrivateKey localPrivate,
         TransportLayer<HandleImpl, ByteBuffer> tl, HashProvider hasher,

@@ -266,6 +266,8 @@ public class CAToolImpl implements CATool {
     char[] pw = new char[0];
     String caName = "MyCA";
     String CN = null;
+    boolean test = false;
+    boolean store = false;
     for (int c = 0; c < args.length; c++) {
       if (args[c].equalsIgnoreCase("-p")) {
         pw = args[c+1].toCharArray();
@@ -273,11 +275,17 @@ public class CAToolImpl implements CATool {
         caName = args[c+1];
       } else if (args[c].equalsIgnoreCase("-cn")) {
         CN = args[c+1];
+      } else if (args[c].equalsIgnoreCase("-test")) {
+        test = true;
+      } else if (args[c].equalsIgnoreCase("-store")) {
+        store = true;
       }
     }
     
+    Environment env = null;
     if (CN == null) {
-      Id id = new RandomNodeIdFactory(new Environment()).generateNodeId();
+      env = new Environment();
+      Id id = new RandomNodeIdFactory(env).generateNodeId();
       CN = id.toStringFull();
     }
         
@@ -292,75 +300,90 @@ public class CAToolImpl implements CATool {
         random);
     KeyPair pair = keyPairGen.generateKeyPair();    
     X509Certificate cert = caTool.sign(CN,pair.getPublic());
-
-    // write out the certs
     
-    System.out.println("Cert Type:"+cert.getType()+" len:"+cert.getEncoded().length);
-    
-    // serialize/deserialize
-    X509Serializer serializer = new X509SerializerImpl();
-    SimpleOutputBuffer sob = new SimpleOutputBuffer();
-    serializer.serialize(caTool.getCertificate(), sob);
-    
-    SimpleInputBuffer sib = new SimpleInputBuffer(sob.getBytes());    
-    X509Certificate caCert = serializer.deserialize(sib);
-    
-    cert.verify(caCert.getPublicKey());
-    System.out.println("cert verified.");
-
-    System.out.println(caCert);
-    System.out.println(cert);
-    
-    System.out.println(pair.getPublic().getFormat()+" "+pair.getPublic().getAlgorithm());
-    System.out.println(pair.getPrivate().getFormat()+" "+pair.getPrivate().getAlgorithm());
-    
-    Signature signer = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM,"BC");
-    signer.initSign(pair.getPrivate());
-    
-    byte[] msg = new byte[400];
-    random.nextBytes(msg);
-    
-    signer.update(msg);
-    byte[] signature = signer.sign();
-    
-    System.out.println(signer);
-    
-    System.out.println("Signature length:"+signature.length);
-    
-    Signature verifier = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM, "BC");
-    verifier.initVerify(cert);
-    verifier.update(msg);
-    System.out.println("verified:"+verifier.verify(signature));
-
-//    if (USE_BOGUS) {
-    if (true) {
-      // make a KeyPair
-      KeyPairGenerator kpg =
-        KeyPairGenerator.getInstance("RSA", "BC");
-      kpg.initialize(
-          new RSAKeyGenParameterSpec(768,
-              RSAKeyGenParameterSpec.F4),
-          random);
-      KeyPair bogusPair = kpg.generateKeyPair();
-  
-      try {
-        cert.verify(bogusPair.getPublic());
-        System.out.println("WARNING!  Bogus key verified!!!");
-      } catch (InvalidKeyException se) {
-        System.out.println("bogus didn't verify.");
-      }
-   
-      Signature bogusVerifier = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM, "BC");
-      bogusVerifier.initVerify(bogusPair.getPublic());
-      bogusVerifier.update(msg);
-      System.out.println("bogus verify: "+bogusVerifier.verify(signature));
+    if (store) {
+      KeyStore clientStore = KeyStore.getInstance("UBER", "BC");
+      clientStore.load(null, null);
+      clientStore.setKeyEntry("private",pair.getPrivate(), "".toCharArray(), new Certificate[] {cert});
+      clientStore.setCertificateEntry("cert", caTool.getCertificate());
+      String fileName = CN+".store";
+      FileOutputStream fos = new FileOutputStream(fileName);
+      clientStore.store(fos, "".toCharArray());
+      fos.close();
+      System.out.println("Stored to "+fileName);
     }
-    
-    verifier.update(msg);
-    System.out.println("verified 2:"+verifier.verify(signature));
+
+    if (test) {
+      // write out the certs
+      
+      System.out.println("Cert Type:"+cert.getType()+" len:"+cert.getEncoded().length);
+      
+      // serialize/deserialize
+      X509Serializer serializer = new X509SerializerImpl();
+      SimpleOutputBuffer sob = new SimpleOutputBuffer();
+      serializer.serialize(caTool.getCertificate(), sob);
+      
+      SimpleInputBuffer sib = new SimpleInputBuffer(sob.getBytes());    
+      X509Certificate caCert = serializer.deserialize(sib);
+      
+      cert.verify(caCert.getPublicKey());
+      System.out.println("cert verified.");
   
-    msg[0]++;
-    verifier.update(msg);
-    System.out.println("verified (should fail):"+verifier.verify(signature));
-  }
+      System.out.println(caCert);
+      System.out.println(cert);
+      
+      System.out.println(pair.getPublic().getFormat()+" "+pair.getPublic().getAlgorithm());
+      System.out.println(pair.getPrivate().getFormat()+" "+pair.getPrivate().getAlgorithm());
+      
+      Signature signer = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM,"BC");
+      signer.initSign(pair.getPrivate());
+      
+      byte[] msg = new byte[400];
+      random.nextBytes(msg);
+      
+      signer.update(msg);
+      byte[] signature = signer.sign();
+      
+      System.out.println(signer);
+      
+      System.out.println("Signature length:"+signature.length);
+      
+      Signature verifier = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM, "BC");
+      verifier.initVerify(cert);
+      verifier.update(msg);
+      System.out.println("verified:"+verifier.verify(signature));
+  
+  //    if (USE_BOGUS) {
+      if (true) {
+        // make a KeyPair
+        KeyPairGenerator kpg =
+          KeyPairGenerator.getInstance("RSA", "BC");
+        kpg.initialize(
+            new RSAKeyGenParameterSpec(768,
+                RSAKeyGenParameterSpec.F4),
+            random);
+        KeyPair bogusPair = kpg.generateKeyPair();
+    
+        try {
+          cert.verify(bogusPair.getPublic());
+          System.out.println("WARNING!  Bogus key verified!!!");
+        } catch (InvalidKeyException se) {
+          System.out.println("bogus didn't verify.");
+        }
+     
+        Signature bogusVerifier = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM, "BC");
+        bogusVerifier.initVerify(bogusPair.getPublic());
+        bogusVerifier.update(msg);
+        System.out.println("bogus verify: "+bogusVerifier.verify(signature));
+      }
+      
+      verifier.update(msg);
+      System.out.println("verified 2:"+verifier.verify(signature));
+    
+      msg[0]++;
+      verifier.update(msg);
+      System.out.println("verified (should fail):"+verifier.verify(signature));
+    }
+    if (env != null) env.destroy();
+  }  
 }

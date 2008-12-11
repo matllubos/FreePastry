@@ -65,10 +65,12 @@ import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocol;
 import org.mpisws.p2p.transport.peerreview.challenge.ChallengeResponseProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.Authenticator;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializer;
+import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStore;
 import org.mpisws.p2p.transport.peerreview.commitment.AuthenticatorStoreImpl;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocol;
 import org.mpisws.p2p.transport.peerreview.commitment.CommitmentProtocolImpl;
+import org.mpisws.p2p.transport.peerreview.evidence.EvidenceSerializerImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocol;
 import org.mpisws.p2p.transport.peerreview.evidence.EvidenceTransferProtocolImpl;
 import org.mpisws.p2p.transport.peerreview.evidence.ProofInconsistent;
@@ -181,9 +183,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
       Environment env, Serializer<Handle> handleSerializer,
       Serializer<Identifier> idSerializer,      
       IdentifierExtractor<Handle, Identifier> identifierExtractor,
-      IdStrTranslator<Identifier> stringTranslator,
-      AuthenticatorSerializer authenticatorSerialilzer,
-      EvidenceSerializer evidenceSerializer) {
+      IdStrTranslator<Identifier> stringTranslator
+//      AuthenticatorSerializer authenticatorSerialilzer,
+//      EvidenceSerializer evidenceSerializer
+      ) {
     super();
     if (!(env.getSelectorManager() instanceof RecordSM)) {
       throw new IllegalArgumentException("Environment.getSelectorManager() must return a RecordSM");
@@ -196,10 +199,10 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     this.idSerializer = idSerializer;
     this.handleSerializer = handleSerializer;
     this.identifierExtractor = identifierExtractor;
-    this.evidenceSerializer = evidenceSerializer;
 
-    this.authenticatorSerialilzer = authenticatorSerialilzer; 
-
+    this.authenticatorSerialilzer = new AuthenticatorSerializerImpl(transport.getHashSizeBytes(),transport.getSignatureSizeBytes());
+    this.evidenceSerializer = new EvidenceSerializerImpl<Handle, Identifier>(handleSerializer,
+        idSerializer,transport.getHashSizeBytes(),transport.getSignatureSizeBytes());
     this.historyFactory = getSecureHistoryFactory(transport, env);
     random = new SimpleRandomSource(env.getLogManager(),"peerreview");
   }

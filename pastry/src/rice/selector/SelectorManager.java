@@ -107,6 +107,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     super(instance == null ? "Selector Thread" : "Selector Thread -- "
         + instance);
     this.random = random;
+    if (this.random == null) this.random = new SimpleRandomSource(log);
     this.instance = instance;
     this.logger = log.getLogger(getClass(), instance);
     this.invocations = new LinkedList<Runnable>();
@@ -224,7 +225,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
    * their keys. Thus, modifyKeys() will be called on the next selection
    * operation
    * 
-   * @param key The key which is to be chanegd
+   * @param key The key which is to be changed
    */
   public synchronized void modifyKey(SelectionKey key) {
     if (key == null)

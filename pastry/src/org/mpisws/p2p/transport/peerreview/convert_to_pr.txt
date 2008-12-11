@@ -1,0 +1,14 @@
+  This document is a log of converting the ConsistencyPLTest to PRConsistenctyPLTest, which uses PR to audit the routing state in the presence of splitstream.
+
+* Copy ConsitencyPLTest to PRConsistencyPLTest, and get it running
+* Setup PKI:
+  java org.mpisws.p2p.pki.x509.CAToolImpl -store
+
+This output's a file called something like:
+  84FFD4C9B1449D7B8DD2984CC9511FFBB273BA9C.store, contains the client private-key/cert, and the caCert (to verify other clients)
+
+* Use the CertificateNodeId factory
+
+* Insert IdentityTL/PeerReviewImpl between UpperIdentity and CommonAPI 
+
+* Created PeerReviewCallbackImpl (should be reusable)

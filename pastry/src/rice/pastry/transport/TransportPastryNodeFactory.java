@@ -101,7 +101,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     routeSetMaintFreq = params.getInt("pastry_routeSetMaintFreq");
   }
     
-  protected PastryNode nodeHandleHelper(PastryNode pn) throws IOException {
+  public PastryNode nodeHandleHelper(PastryNode pn) throws IOException {
 //    final Object lock = new Object();
 //    final ArrayList<IOException> retException = new ArrayList<IOException>();
 //    Object nhaPart1 = getnodeHandleAdapterPart1(pn);

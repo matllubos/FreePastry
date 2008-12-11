@@ -39,6 +39,7 @@ package rice.pastry;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
+import rice.p2p.commonapi.rawserialization.RawSerializable;
 import rice.pastry.messaging.*;
 import rice.pastry.socket.TransportLayerNodeHandle;
 
@@ -53,7 +54,7 @@ import java.util.*;
  *
  * @author Andrew Ladd
  */
-public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle 
+public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implements RawSerializable 
 {
 
   public static final int LIVENESS_ALIVE = 1;

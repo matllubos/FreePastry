@@ -44,16 +44,18 @@ import java.util.Map;
 import java.util.Set;
 
 import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.util.Serializer;
 
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
+import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.NodeHandleFactoryListener;
 import rice.pastry.PastryNode;
 
-public class SocketNodeHandleFactory implements NodeHandleFactory<SocketNodeHandle> {
+public class SocketNodeHandleFactory implements NodeHandleFactory<SocketNodeHandle>, Serializer<SocketNodeHandle> {
   protected PastryNode pn;
   protected Map<SocketNodeHandle, SocketNodeHandle> handleSet;
   protected Collection<NodeHandleFactoryListener<SocketNodeHandle>> listeners = new ArrayList<NodeHandleFactoryListener<SocketNodeHandle>>();
@@ -125,5 +127,16 @@ public class SocketNodeHandleFactory implements NodeHandleFactory<SocketNodeHand
     synchronized(listeners) {
       listeners.remove(listener);
     }
+  }
+
+
+  public SocketNodeHandle deserialize(InputBuffer buf) throws IOException {
+    return readNodeHandle(buf);
+  }
+
+
+  public void serialize(SocketNodeHandle i, OutputBuffer buf)
+      throws IOException {
+    i.serialize(buf);
   }
 }
