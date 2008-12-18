@@ -119,15 +119,23 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
       return null;
     }
     
+    if (logger.level <= Logger.FINER) logger.log("requestValue("+source+","+principal+") opening socket");
     return tl.openSocket(source, new SocketCallback<Identifier>() {
 
       public void receiveResult(SocketRequestHandle<Identifier> cancellable,
           P2PSocket<Identifier> sock) {
-        SimpleOutputBuffer sob = new SimpleOutputBuffer();
-        try {
-          sob.writeByte(REQUEST);
+        try {          
+          SimpleOutputBuffer sob = new SimpleOutputBuffer();
           keySerializer.serialize(principal,sob);
-          new BufferWriter<Identifier>(sob.getByteBuffer(), sock, new Continuation<P2PSocket<Identifier>, Exception>() {
+                    
+          SimpleOutputBuffer sob2 = new SimpleOutputBuffer();
+          sob2.writeByte(REQUEST);
+          
+          // here, we are allocating the space for the size value
+          sob2.writeInt(sob.getWritten()); 
+          sob2.write(sob.getBytes());          
+          
+          new BufferWriter<Identifier>(sob2.getByteBuffer(), sock, new Continuation<P2PSocket<Identifier>, Exception>() {
   
             public void receiveException(Exception exception) {
               c.receiveException(exception);
@@ -144,13 +152,17 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
                     case RESPONSE_SUCCESS:
                       Value value = valueSerializer.deserialize(sib);
                       
+                      if (logger.level <= Logger.FINER) logger.log("requestValue("+source+","+principal+") got value "+value);
+
                       knownValues.put(principal, value);
                       c.receiveResult(value);
                       break;
                     case RESPONSE_FAILED:
                       c.receiveException(new UnknownValueException(source, principal));
+                      break;
                     default:
                       c.receiveException(new IllegalStateException("Unknown response:"+response));    
+                      break;
                     }
                   } catch (Exception ioe) {
                     c.receiveException(ioe);
@@ -163,7 +175,7 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
               
               });
             }        
-          });
+          },false);
         } catch (IOException ioe) {
           c.receiveException(ioe);
         }
@@ -212,10 +224,11 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
   
   public void incomingSocket(final P2PSocket<Identifier> sock) throws IOException {
     if (logger.level <= Logger.FINEST) logger.log("incomingSocket() from "+sock);
-    new BufferReader<Identifier>(sock,new Continuation<ByteBuffer, Exception>() {
-    
+    new BufferReader<Identifier>(sock,new Continuation<ByteBuffer, Exception>() {    
       public void receiveResult(ByteBuffer result) {
         byte type = result.get();
+        if (logger.level <= Logger.FINEST) logger.log("incomingSocket() from "+sock+" "+type);
+        
         switch (type) {
         case PASSTHROUGH:
           try {
@@ -226,6 +239,7 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
           return;
         case REQUEST:
           handleValueRequest(sock);
+          return;
         default:
           errorHandler.receivedUnexpectedData(sock.getIdentifier(), new byte[] {type}, 0, sock.getOptions());
           sock.close();
