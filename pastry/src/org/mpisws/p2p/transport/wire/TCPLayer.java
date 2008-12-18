@@ -185,9 +185,11 @@ public class TCPLayer extends SelectionKeyHandler {
     if (logger.level <= Logger.INFO) logger.log("destroy()");
 
     try {
-      key.channel().close();
-      key.cancel();    
-      key.attach(null);
+      if (key != null) {
+        key.channel().close();
+        key.cancel();    
+        key.attach(null);
+      }
     } catch (IOException ioe) {
       wire.errorHandler.receivedException(null, ioe); 
     }
