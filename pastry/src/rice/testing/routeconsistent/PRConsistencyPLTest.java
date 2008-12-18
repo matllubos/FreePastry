@@ -190,6 +190,8 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("rice.pastry.socket.SocketNodeHandle_loglevel",Logger.ALL);
     }
   
+  public static final String PEER_REVIEW = "PEER_REVIEW";
+  
   public static final int startPort = 21854;
   public static final int WAIT_TO_SUBSCRIBE_DELAY = 60000;
   
@@ -545,51 +547,53 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
                     i.serialize(buf);
                   }                  
                 };
-              final IdentityTransport<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> identityTL =
-                new IdentityTransportLayerImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, Id>(
-                    idSerializer, new X509SerializerImpl(), id, 
-                    (X509Certificate)store.getCertificateChain("private")[0], (PrivateKey)store.getKey("private", "".toCharArray()), 
-                    upper.getTransportLayer(), 
-                    new SHA1HashProvider(), pn.getEnvironment());
-              
-              
-              Serializer<TransportLayerNodeHandle<MultiInetSocketAddress>> handleSerializer = 
-                (Serializer<TransportLayerNodeHandle<MultiInetSocketAddress>>)
-                pn.getVars().get(SocketPastryNodeFactory.NODE_HANDLE_FACTORY);
-              
-              IdentifierExtractor<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> identifierExtractor = 
-                new IdentifierExtractor<TransportLayerNodeHandle<MultiInetSocketAddress>, Id>() {
-
-                  public Id extractIdentifier(
-                      TransportLayerNodeHandle<MultiInetSocketAddress> h) {
-                    NodeHandle handle = (NodeHandle)h;
-                    return handle.getNodeId();
-                  }
+                final IdentityTransport<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> identityTL =
+                  new IdentityTransportLayerImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, Id>(
+                      idSerializer, new X509SerializerImpl(), id, 
+                      (X509Certificate)store.getCertificateChain("private")[0], (PrivateKey)store.getKey("private", "".toCharArray()), 
+                      upper.getTransportLayer(), 
+                      new SHA1HashProvider(), pn.getEnvironment());
                 
-              };
-              
-              final PeerReview<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> pr = 
-                new PeerReviewImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, Id>(
-                    identityTL,pn.getEnvironment(), handleSerializer,
-                    idSerializer,      
-                    identifierExtractor,
-                    new IdStrTranslator<Id>() {
-
-                      public Id readIdentifierFromString(String s) {
-                        return Id.build(s);
-                      }
-
-                      public String toString(Id id) {
-                        return id.toStringFull();                        
-                      }                      
+                
+                Serializer<TransportLayerNodeHandle<MultiInetSocketAddress>> handleSerializer = 
+                  (Serializer<TransportLayerNodeHandle<MultiInetSocketAddress>>)
+                  pn.getVars().get(SocketPastryNodeFactory.NODE_HANDLE_FACTORY);
+                
+                IdentifierExtractor<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> identifierExtractor = 
+                  new IdentifierExtractor<TransportLayerNodeHandle<MultiInetSocketAddress>, Id>() {
+  
+                    public Id extractIdentifier(
+                        TransportLayerNodeHandle<MultiInetSocketAddress> h) {
+                      NodeHandle handle = (NodeHandle)h;
+                      return handle.getNodeId();
                     }
-                );
-               
-              CallbackFactory factory = new CallbackFactory(pn.getEnvironment());
-              
-                // adapts PR to a normal TL
-              final PeerReviewCallbackImpl ret = new PeerReviewCallbackImpl(pn,pr,factory);  
-              
+                  
+                };
+                
+                final PeerReview<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> pr = 
+                  new PeerReviewImpl<TransportLayerNodeHandle<MultiInetSocketAddress>, Id>(
+                      identityTL,pn.getEnvironment(), handleSerializer,
+                      idSerializer,      
+                      identifierExtractor,
+                      new IdStrTranslator<Id>() {
+  
+                        public Id readIdentifierFromString(String s) {
+                          return Id.build(s);
+                        }
+  
+                        public String toString(Id id) {
+                          return id.toStringFull();                        
+                        }                      
+                      }
+                  );
+                pn.getVars().put(PEER_REVIEW, pr);
+                 
+                CallbackFactory factory = new CallbackFactory(pn.getEnvironment());
+                
+                  // adapts PR to a normal TL
+                final PeerReviewCallbackImpl ret = new PeerReviewCallbackImpl(pn,pr,factory);  
+                pr.setApp(ret);
+                
                 return new TransLivenessProximity<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer>() {
   
                   public LivenessProvider<TransportLayerNodeHandle<MultiInetSocketAddress>> getLivenessProvider() {
@@ -1055,9 +1059,17 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
       // this is to cause different connections to open
       // TODO: Implement
 
+      final String dirName = "peerreview"; //-"+bindport;
       environment.getSelectorManager().invoke(new Runnable() {
         public void run() {
           System.out.println("Booting "+bootAddrCandidates);
+          PeerReview pr = (PeerReview)node.getVars().get(PEER_REVIEW);
+          try {
+            pr.init(dirName);
+          } catch (IOException ioe) {
+            ioe.printStackTrace();
+            System.exit(1);
+          }
           node.getBootstrapper().boot(bootAddrCandidates);
         }
       });

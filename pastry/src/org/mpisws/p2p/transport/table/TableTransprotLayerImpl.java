@@ -111,8 +111,9 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
    */
   public Cancellable requestValue(final Identifier source,
       final Key principal, final Continuation<Value, Exception> c,
-      Map<String, Object> options) {
+      Map<String, Object> options) {    
     
+    if (logger.level <= Logger.FINE) logger.log("requestValue("+source+","+principal+")");
     if (knownValues.containsKey(principal)) {
       if (c != null) c.receiveResult(knownValues.get(principal));
       return null;
@@ -210,6 +211,7 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
   }
   
   public void incomingSocket(final P2PSocket<Identifier> sock) throws IOException {
+    if (logger.level <= Logger.FINEST) logger.log("incomingSocket() from "+sock);
     new BufferReader<Identifier>(sock,new Continuation<ByteBuffer, Exception>() {
     
       public void receiveResult(ByteBuffer result) {
@@ -237,6 +239,7 @@ public class TableTransprotLayerImpl<Identifier, Key, Value> implements
   }
 
   public void handleValueRequest(final P2PSocket<Identifier> sock) {
+    if (logger.level <= Logger.FINER) logger.log("handleValueRequest() from "+sock);
     new BufferReader<Identifier>(sock,new Continuation<ByteBuffer, Exception>() {
     
       public void receiveResult(ByteBuffer result) {

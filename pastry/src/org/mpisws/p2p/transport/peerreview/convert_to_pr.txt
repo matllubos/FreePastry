@@ -6,9 +6,13 @@
 
 This output's a file called something like:
   84FFD4C9B1449D7B8DD2984CC9511FFBB273BA9C.store, contains the client private-key/cert, and the caCert (to verify other clients)
+  get the .store file to each node (in this case by running them in their own directory)
 
 * Use the CertificateNodeId factory
 
 * Insert IdentityTL/PeerReviewImpl between UpperIdentity and CommonAPI 
 
 * Created PeerReviewCallbackImpl (should be reusable)
+  * don't forget to call pr.setApp(), pr.init()
+
+  

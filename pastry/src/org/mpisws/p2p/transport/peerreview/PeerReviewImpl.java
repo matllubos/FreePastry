@@ -471,7 +471,7 @@ public class PeerReviewImpl<Handle extends RawSerializable, Identifier extends R
     return transport.requestCertificate(source, certHolder, new Continuation<X509Certificate, Exception>() {
 
       public void receiveException(Exception exception) {
-        if (logger.level <= Logger.WARNING) logger.log("error receiving cert for "+certHolder+" from "+source);
+        if (logger.level <= Logger.WARNING) logger.logException("error receiving cert for "+certHolder+" from "+source, exception);
       }
 
       public void receiveResult(X509Certificate result) {
