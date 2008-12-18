@@ -157,7 +157,15 @@ public class StandardRouter extends PastryAppl implements Router {
 //    route(rm, null);
 //  }
 
-  public void route(RouteMessage rm) {
+  public void route(final RouteMessage rm) {
+    if (!thePastryNode.getEnvironment().getSelectorManager().isSelectorThread()) {
+      thePastryNode.getEnvironment().getSelectorManager().invoke(new Runnable() {
+        public void run() {
+          route(rm);
+        }
+      });
+      return;
+    }
     if (logger.level <= Logger.FINE) logger.log("route("+rm+")");
     if (routeMessage(rm) == false)
       receiveRouteMessage(rm);    
