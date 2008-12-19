@@ -176,7 +176,7 @@ public class EvidenceTransferProtocolImpl<Handle extends RawSerializable, Identi
    */
   protected Collection<Handle> getWitnesses(Identifier subject) {
     CacheInfo foo = witnessCache.get(subject);
-    if (foo == null || foo.witness.isEmpty() || !foo.isValid()) {
+    if (foo == null || foo.witness == null || foo.witness.isEmpty() || !foo.isValid()) {
       return null;
     }
     return foo.witness;

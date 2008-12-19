@@ -130,12 +130,6 @@ public class PastryNode extends Observable implements
   protected Router router;
   
   /**
-   * ?  what does this do again?
-   * 
-   */
-  protected Deserializer deserializer;
-
-  /**
    * Used to deserialize NodeHandles
    */
   protected NodeHandleFactory handleFactory;
@@ -487,7 +481,6 @@ public class PastryNode extends Observable implements
   public void registerReceiver(int address,
       PastryAppl receiver) {
     if (logger.level <= Logger.FINE) logger.log("registerReceiver("+address+","+receiver+"):"+receiver.getDeserializer());
-    deserializer.setDeserializer(address, receiver.getDeserializer());
     myMessageDispatch.registerReceiver(address, receiver);
   }
 
@@ -796,7 +789,6 @@ public class PastryNode extends Observable implements
       TransportLayer<NodeHandle, RawMessage> tl,
       LivenessProvider<NodeHandle> livenessProvider,
       ProximityProvider<NodeHandle> proxProvider,
-      Deserializer deserializer, 
       NodeHandleFactory handleFactory) {
     this.localhandle = localhandle;
     this.leafSetMaintFreq = lsmf;
@@ -807,7 +799,6 @@ public class PastryNode extends Observable implements
     
     this.tl = tl;
     this.livenessProvider = livenessProvider;
-    this.deserializer = deserializer;
     tl.setCallback(this);
     livenessProvider.addLivenessListener(this);
   }

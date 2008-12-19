@@ -430,5 +430,9 @@ public class NodeSet implements NodeSetI, Serializable {
   public short getType() {
     return TYPE; 
   }
+  
+  public Collection<NodeHandle> getCollection()  {
+    return set;
+  }
 }
 

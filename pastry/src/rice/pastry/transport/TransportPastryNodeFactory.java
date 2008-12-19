@@ -111,7 +111,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     
     TLDeserializer deserializer = getTLDeserializer(handleFactory,pn);
   
-    MessageDispatch msgDisp = new MessageDispatch(pn);
+    MessageDispatch msgDisp = new MessageDispatch(pn, deserializer);
     RoutingTable routeTable = new RoutingTable(localhandle, rtMax, rtBase,
         pn);
     LeafSet leafSet = new LeafSet(localhandle, lSetSize, routeTable);
@@ -123,7 +123,7 @@ public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
     NodeHandleAdapter nha = getNodeHandleAdapter(pn, handleFactory, deserializer);
 
     pn.setSocketElements(leafSetMaintFreq, routeSetMaintFreq, 
-        nha, nha, nha, deserializer, handleFactory);
+        nha, nha, nha, handleFactory);
     
     router.register();
     

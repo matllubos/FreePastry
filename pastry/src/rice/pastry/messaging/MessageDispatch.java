@@ -43,6 +43,7 @@ import rice.Destructable;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
 import rice.pastry.client.PastryAppl;
+import rice.pastry.transport.Deserializer;
 
 /**
  * An object which remembers the mapping from names to MessageReceivers
@@ -74,9 +75,15 @@ public class MessageDispatch implements Destructable {
   protected Logger logger;
   
   /**
+   * Also held by the transport layer to allow it to deserialize the messages.
+   */
+  protected Deserializer deserializer;
+  
+  /**
    * Constructor.
    */
-  public MessageDispatch(PastryNode pn) {
+  public MessageDispatch(PastryNode pn, Deserializer deserializer) {
+    this.deserializer = deserializer;
     addressBook = new HashMap();
     this.localNode = pn;
     this.logger = pn.getEnvironment().getLogManager().getLogger(getClass(), null);    
@@ -91,6 +98,8 @@ public class MessageDispatch implements Destructable {
   public void registerReceiver(int address, PastryAppl receiver) {
     // the stack trace is to figure out who registered for what, it is not an error
     
+
+    
     if (logger.level <= Logger.FINE) logger.log(
         "Registering "+receiver+" for address " + address);
     if (logger.level <= Logger.FINEST) logger.logException(
@@ -101,6 +110,7 @@ public class MessageDispatch implements Destructable {
 //          "ERROR - Registering receiver for already-registered address " + address, new Exception("stack trace"));
     }
 
+    deserializer.setDeserializer(address, receiver.getDeserializer());
     addressBook.put(Integer.valueOf(address), receiver);
   }
   

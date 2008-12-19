@@ -56,6 +56,7 @@ import org.mpisws.p2p.transport.peerreview.PeerReviewCallback;
 import org.mpisws.p2p.transport.peerreview.WitnessListener;
 import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 
+import rice.Continuation;
 import rice.environment.Environment;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
@@ -63,6 +64,7 @@ import rice.pastry.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeHandleFactory;
 import rice.pastry.PastryNode;
+import rice.pastry.socket.SocketNodeHandle;
 import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.socket.TransportLayerNodeHandle;
@@ -79,10 +81,15 @@ public class PeerReviewCallbackImpl implements PeerReviewCallback<TransportLayer
   TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> tl;
   TransportLayerCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer>callback;
 
+  FetchLeafsetApp fetchLeafSetApp;
+  
   public PeerReviewCallbackImpl(PastryNode pn, TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> tl, CallbackFactory nodeFactory) {
     this(tl);
     this.pn = pn;
     this.nodeFactory = nodeFactory;
+    
+    this.fetchLeafSetApp = new FetchLeafsetApp(pn,4);
+    fetchLeafSetApp.register();
   }
   
   // only used in getReplayInstance
@@ -178,9 +185,23 @@ public class PeerReviewCallbackImpl implements PeerReviewCallback<TransportLayer
   }
 
   public void getWitnesses(
-      Id subject,
-      WitnessListener<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> callback) {
-    throw new RuntimeException("implement");
+      final Id subject,
+      final WitnessListener<TransportLayerNodeHandle<MultiInetSocketAddress>, Id> callback) {
+    fetchLeafSetApp.getNeighbors(subject,new Continuation<Collection<NodeHandle>, Exception>() {
+    
+      public void receiveResult(Collection<NodeHandle> result) {
+        ArrayList<TransportLayerNodeHandle<MultiInetSocketAddress>> ret = new ArrayList<TransportLayerNodeHandle<MultiInetSocketAddress>>(result.size());
+        for (NodeHandle nh : result) {
+          ret.add((TransportLayerNodeHandle<MultiInetSocketAddress>)nh);
+        }
+        callback.notifyWitnessSet(subject, ret);
+      }
+    
+      public void receiveException(Exception exception) {
+        throw new RuntimeException(exception);
+      }
+    
+    });
   }
 
   public TransportLayerNodeHandle<MultiInetSocketAddress> getLocalIdentifier() {
