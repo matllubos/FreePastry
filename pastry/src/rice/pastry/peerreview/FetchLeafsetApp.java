@@ -75,6 +75,7 @@ public class FetchLeafsetApp extends PastryAppl {
       public Message deserialize(InputBuffer buf, short type, int priority, rice.p2p.commonapi.NodeHandle sender) throws IOException {
         switch(type) {
         case FetchLeafsetRequest.TYPE:
+          if (sender == null) throw new IOException("Sender is null for FetchLeafsetRequest");
           return new FetchLeafsetRequest((rice.pastry.NodeHandle)sender,Id.build(buf));
         case FetchLeafsetResponse.TYPE:
           return new FetchLeafsetResponse(buf,pn,(rice.pastry.NodeHandle)sender);
@@ -94,7 +95,7 @@ public class FetchLeafsetApp extends PastryAppl {
       FetchLeafsetRequest req = (FetchLeafsetRequest)m;
       logger.log("getNeighbors("+req.subject+") sending response");
 
-      thePastryNode.send(req.sender,new FetchLeafsetResponse(req.subject,thePastryNode.getLeafSet()),null,null);
+      thePastryNode.send(req.getSender(),new FetchLeafsetResponse(req.subject,thePastryNode.getLeafSet()),null,null);
       return;
     case FetchLeafsetResponse.TYPE:
       handleResponse((FetchLeafsetResponse)m);

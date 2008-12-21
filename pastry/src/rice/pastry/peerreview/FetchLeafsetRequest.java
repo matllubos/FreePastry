@@ -49,12 +49,13 @@ public class FetchLeafsetRequest extends PRawMessage {
   /**
    * Stored in the RouteMessage
    */
-  transient public NodeHandle sender;
+//  transient public NodeHandle sender;
   public Id subject;
   
   public FetchLeafsetRequest(NodeHandle sender, Id subject) {
     super(FetchLeafsetApp.APP_ID);
-    this.sender = sender;
+    if (sender == null) throw new IllegalArgumentException("sender is null!");
+    setSender(sender);
     this.subject = subject;
   }
 
