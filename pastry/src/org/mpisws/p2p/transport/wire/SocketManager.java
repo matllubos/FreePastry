@@ -135,7 +135,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
     channel = SocketChannel.open();
     channel.socket().setSendBufferSize(tcp.SOCKET_BUFFER_SIZE);
     channel.socket().setReceiveBufferSize(tcp.SOCKET_BUFFER_SIZE);
-    if (tcp.wire.bindAddress != null) channel.socket().bind(new InetSocketAddress(tcp.wire.bindAddress.getAddress(),0));
+    if (tcp.wire.forceBindAddress && tcp.wire.bindAddress != null) channel.socket().bind(new InetSocketAddress(tcp.wire.bindAddress.getAddress(),0));
     channel.configureBlocking(false);
     
     if (logger.level <= Logger.FINE) logger.log("(SM) Initiating socket connection to " + addr);

@@ -60,6 +60,7 @@ import org.mpisws.p2p.transport.util.DefaultErrorHandler;
 import rice.Continuation;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
+import rice.environment.params.Parameters;
 import rice.p2p.commonapi.Cancellable;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
@@ -81,7 +82,13 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
   
   private TransportLayerCallback<InetSocketAddress, ByteBuffer> callback;
   protected ErrorHandler<InetSocketAddress> errorHandler;
-    
+
+  /**
+   * true for modelnet, who needs to set the bind address even on outgoing sockets
+   */
+  public boolean forceBindAddress = false;
+
+  
   /**
    * 
    * @param bindAddress the address to bind to, if it fails, it will throw an exception
@@ -109,6 +116,11 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
     this.logger = env.getLogManager().getLogger(WireTransportLayer.class, null);
     this.bindAddress = bindAddress;
     this.environment = env;
+    
+    Parameters p = this.environment.getParameters();
+    if (p.contains("wire_forceBindAddress")) {
+      forceBindAddress = p.getBoolean("wire_forceBindAddress");
+    }
     
     this.callback = new DefaultCallback<InetSocketAddress, ByteBuffer>(logger);    
     this.errorHandler = errorHandler;
@@ -236,6 +248,7 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
   
   Collection<SocketCountListener<InetSocketAddress>> slisteners = 
     new ArrayList<SocketCountListener<InetSocketAddress>>();
+
   public void addSocketCountListener(
       SocketCountListener<InetSocketAddress> listener) {
     synchronized(slisteners) {
