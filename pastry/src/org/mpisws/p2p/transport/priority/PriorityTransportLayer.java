@@ -127,6 +127,9 @@ public interface PriorityTransportLayer<Identifier> extends TransportLayer<Ident
    * @param i
    * @param notifyMe when it is open
    */
-  public void openPrimaryConnection(Identifier i, Map<String, Object> options); 
+  public void openPrimaryConnection(Identifier i, Map<String, Object> options);
+  
+  public void addPrimarySocketListener(PrimarySocketListener<Identifier> listener); 
+  public void removePrimarySocketListener(PrimarySocketListener<Identifier> listener); 
 
 }

@@ -116,6 +116,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
   protected SelectorManager selectorManager;
   protected Environment environment;
   
+  protected ArrayList<PrimarySocketListener<Identifier>> primarySocketListeners = new ArrayList<PrimarySocketListener<Identifier>>();
+  
   /**
    * The maximum message size;
    * 
@@ -200,7 +202,8 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       public void receiveException(P2PSocket<Identifier> socket, Exception e) {
         errorHandler.receivedException(socket.getIdentifier(), e);
       }      
-    });
+//    }.receiveSelectResult(s, true, false);    
+      });    
   }
 
   public SocketRequestHandle<Identifier> openSocket(Identifier i, final SocketCallback<Identifier> deliverSocketToMe, Map<String, Object> options) {
@@ -574,6 +577,16 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //      if (logger.level <= Logger.FINEST) logger.log(this+".setWritingSocket("+s+")");
 //      if (logger.level <= Logger.INFO) logger.log(this+".setWritingSocket("+s+") loc:"+loc);
       writingSocket = s;
+      if (primarySocketListeners.isEmpty()) return;
+      if (s == null) {
+        for (PrimarySocketListener<Identifier> l : primarySocketListeners) {
+          l.notifyPrimarySocketClosed(identifier.get());
+        }
+      } else {
+        for (PrimarySocketListener<Identifier> l : primarySocketListeners) {
+          l.notifyPrimarySocketOpened(s.getIdentifier(), s.getOptions());
+        }
+      }
     }
 
     /**
@@ -692,7 +705,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
       }
       if (livenessChecker == null) {
         if (logger.level <= Logger.FINER) logger.log("startLivenessChecker("+temp+","+options+") pend:"+pendingSocket+" writingS:"+writingSocket+" theQueue:"+queue.size());
-        livenessChecker = new TimerTask() {        
+        livenessChecker = new TimerTask() {      
           @Override
           public void run() {            
             synchronized(EntityManager.this) {
@@ -1451,6 +1464,14 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
   
   public void openPrimaryConnection(Identifier i, Map<String, Object> options) {
     getEntityManager(i).openPrimarySocketHelper(i, options);
+  }
+
+  public void addPrimarySocketListener(PrimarySocketListener<Identifier> listener) {
+    primarySocketListeners.add(listener);
+  }
+  
+  public void removePrimarySocketListener(PrimarySocketListener<Identifier> listener) {
+    primarySocketListeners.remove(listener);
   }
 
 }
