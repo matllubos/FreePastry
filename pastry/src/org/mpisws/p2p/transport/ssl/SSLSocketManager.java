@@ -303,7 +303,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
           if (name.startsWith("CN=")) {
             name = name.substring(3);
             options = OptionsFactory.addOption(socket.getOptions(), SSLTransportLayer.OPTION_CERT_SUBJECT, name);
-            logger.log("Talking to:"+name);
+//            logger.log("Talking to:"+name);
           } else {
             fail(new IllegalArgumentException("CN must start with CN= "+name+" "+this));
             return false;          
