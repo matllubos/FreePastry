@@ -48,6 +48,7 @@ import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
@@ -154,7 +155,7 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     // ******** we overrode SPNF make sure to also override routeconsistent *******
 //    params.setInt("rice.pastry.socket.SocketPastryNodeFactory_loglevel",Logger.INFO);
 //    params.setInt("rice.testing.routeconsistent_loglevel", Logger.INFO);
-    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO-1);
+//    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.INFO-1);
    
 //    params.setInt("org.mpisws.p2p.transport.sourceroute.manager_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport.wire.UDPLayer_loglevel", Logger.ALL);
@@ -164,8 +165,8 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //    params.setInt("org.mpisws.p2p.transport.proximity_loglevel", Logger.ALL);
 //    params.setInt("org.mpisws.p2p.transport_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.liveness_loglevel", Logger.FINE);
-    params.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINEST);
-    params.setInt("rice.pastry.socket.nat.rendezvous.RendezvousApp_loglevel", Logger.FINEST);
+//    params.setInt("org.mpisws.p2p.transport.rendezvous_loglevel", Logger.FINEST);
+//    params.setInt("rice.pastry.socket.nat.rendezvous.RendezvousApp_loglevel", Logger.FINEST);
 //    params.setInt("org.mpisws.p2p.transport.limitsockets_loglevel", Logger.FINER);
 //    params.setInt("org.mpisws.p2p.transport.identity_loglevel", Logger.INFO);
 //    params.setInt("org.mpisws.p2p.transport.priority_loglevel", Logger.FINEST);
@@ -179,7 +180,7 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
     // to see the JoinRequests
 //    params.setInt("rice.pastry.socket.nat.rendezvous.RendezvousJoinProtocol_loglevel", Logger.CONFIG);
 
-    params.setInt("rice.pastry.socket.nat.rendezvous_loglevel", Logger.FINE);
+//    params.setInt("rice.pastry.socket.nat.rendezvous_loglevel", Logger.FINE);
     // to see rapid rerouting and dropping from consistency if gave lease
 //    params.setInt("rice.pastry.standard.StandardRouter_loglevel",Logger.INFO);
     
@@ -338,9 +339,9 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
   }  
   // killRingTime(mins) artificialChurnTime(mins) split/scribe/none sendInterval msgSize
   public static void main(String[] args) throws Exception {
-//    PrintStream ps = new PrintStream(new FileOutputStream("log4.txt", true));
-//    System.setErr(ps);
-//    System.setOut(ps);
+    PrintStream ps = new PrintStream(new FileOutputStream("log4.txt", true));
+    System.setErr(ps);
+    System.setOut(ps);
     
     System.out.println("pastry.jar date: "+new Date(new File("pastry.jar").lastModified()));
 
@@ -417,7 +418,11 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
         // this code makes ricepl-1 try to boot off of ricepl-3
         // everyone else boots off of ricepl-1
         if (isBootNode) {
-          bootaddr = InetAddress.getByName(ALT_BOOTNODE); 
+          try {
+            bootaddr = InetAddress.getByName(ALT_BOOTNODE); 
+          } catch (UnknownHostException uhe) {
+            bootaddr = null;
+          }
         } else {
           bootaddr = InetAddress.getByName(BOOTNODE);
         }
@@ -969,7 +974,7 @@ public class PRConsistencyPLTest implements Observer, LoopObserver, MyEvents {
 //            logger.logException("livenessChanged1("+i+","+val+")", new Exception("Stack Trace"));                
 //          } else {
           logger.log("livenessChanged1("+i+","+val+")"+i.getId().toString()+" "+i.getEpoch());
-//          new Exception("livenessChanged1("+i+","+val+"):"+i.getEpoch()).printStackTrace();
+          new Exception("livenessChanged1("+i+","+val+"):"+i.getEpoch()).printStackTrace();
           
           // this code prints stack trace if the value was notified, but didn't change
           if ((lastVal.containsKey(i) && lastVal.get(i).equals(val))) {

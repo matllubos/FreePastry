@@ -47,6 +47,7 @@ import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.mpisws.p2p.pki.x509.X509Serializer;
@@ -54,6 +55,7 @@ import org.mpisws.p2p.transport.ErrorHandler;
 import org.mpisws.p2p.transport.MessageCallback;
 import org.mpisws.p2p.transport.MessageRequestHandle;
 import org.mpisws.p2p.transport.P2PSocket;
+import org.mpisws.p2p.transport.P2PSocketReceiver;
 import org.mpisws.p2p.transport.SocketCallback;
 import org.mpisws.p2p.transport.SocketRequestHandle;
 import org.mpisws.p2p.transport.TransportLayer;
@@ -77,9 +79,13 @@ import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.util.MathUtils;
 import rice.p2p.util.rawserialization.SimpleInputBuffer;
 import rice.p2p.util.rawserialization.SimpleOutputBuffer;
+import rice.p2p.util.tuples.Tuple3;
 
 /**
  * TODO: make it store known certs to a file, make it periodically check the revocation server.
+ * 
+ * Extends the TableTLi, but uses Certs rather than general objects.
+ * Also, sends huge messages by opening temp tcp-socket.
  * 
  * @author Jeff Hoye
  *
@@ -87,6 +93,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 public class IdentityTransportLayerImpl<Identifier, I> extends 
      TableTransprotLayerImpl<Identifier, I, X509Certificate> 
      implements IdentityTransport<Identifier, I> {
+    
   public static final String DEFAULT_SIGNATURE_ALGORITHM = "SHA1withRSA";
   public static final short DEFAULT_SIGNATURE_SIZE = 96;
   String signatureAlgorithm = DEFAULT_SIGNATURE_ALGORITHM;
@@ -141,7 +148,7 @@ public class IdentityTransportLayerImpl<Identifier, I> extends
     this.errorHandler = new DefaultErrorHandler<Identifier>(this.logger);
     
     signer = Signature.getInstance(DEFAULT_SIGNATURE_ALGORITHM,"BC");
-    signer.initSign(localPrivate);
+    signer.initSign(localPrivate);    
   }
   
   @Override
@@ -248,6 +255,6 @@ public class IdentityTransportLayerImpl<Identifier, I> extends
 
   public Environment getEnvironment() {
     return environment;
-  }
-  
+  }  
 }
+

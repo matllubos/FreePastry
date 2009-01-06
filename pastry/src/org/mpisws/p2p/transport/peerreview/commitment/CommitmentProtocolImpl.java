@@ -559,12 +559,18 @@ public class CommitmentProtocolImpl<Handle extends RawSerializable, Identifier e
     if (transport.hasCertificate(ackMessage.getNodeId())) {
       PeerInfo<Handle> p = lookupPeer(source);
 
-      OutgoingUserDataMessage<Handle> udm = p.xmitQueue.getFirst();
-
+      boolean checkAck = true;
+      OutgoingUserDataMessage<Handle> udm = null;
+      if (p.xmitQueue.isEmpty()) {
+        checkAck = false;  // don't know why this happens, but maybe the ACK gets duplicated somehow
+      } else {
+        udm = p.xmitQueue.getFirst();
+      }
+      
       /* The ACK must acknowledge the sequence number of the packet that is currently
          at the head of the send queue */
 
-      if (ackMessage.getSendEntrySeq() == udm.getTopSeq()) {
+      if (checkAck && ackMessage.getSendEntrySeq() == udm.getTopSeq()) {
         
         /* Now we're ready to check the signature */
 

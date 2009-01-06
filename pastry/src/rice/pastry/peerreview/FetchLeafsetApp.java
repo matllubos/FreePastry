@@ -109,7 +109,7 @@ public class FetchLeafsetApp extends PastryAppl {
     if (foo == null) return;
     foo.a().cancel();
     
-    NodeSet ns = response.leafSet.replicaSet(response.subject, numNeighbors);
+    NodeSet ns = response.leafSet.replicaSet(response.subject, numNeighbors+1); // don't use self as the neighbor, so, need an extra
     Collection<NodeHandle> ret = ns.getCollection(); 
     for (Continuation<Collection<NodeHandle>, Exception> c : foo.b()) {
       c.receiveResult(ret);

@@ -58,6 +58,7 @@ import org.mpisws.p2p.transport.peerreview.replay.Verifier;
 
 import rice.Continuation;
 import rice.environment.Environment;
+import rice.environment.logging.Logger;
 import rice.p2p.commonapi.rawserialization.InputBuffer;
 import rice.p2p.commonapi.rawserialization.OutputBuffer;
 import rice.pastry.Id;
@@ -83,10 +84,13 @@ public class PeerReviewCallbackImpl implements PeerReviewCallback<TransportLayer
 
   FetchLeafsetApp fetchLeafSetApp;
   
+  Logger logger;
+  
   public PeerReviewCallbackImpl(PastryNode pn, TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> tl, CallbackFactory nodeFactory) {
     this(tl);
     this.pn = pn;
     this.nodeFactory = nodeFactory;
+    this.logger = pn.getEnvironment().getLogManager().getLogger(getClass(), null);
     
     this.fetchLeafSetApp = new FetchLeafsetApp(pn,4);
     fetchLeafSetApp.register();
@@ -129,19 +133,20 @@ public class PeerReviewCallbackImpl implements PeerReviewCallback<TransportLayer
     nodeFactory.localHandleTable.put(pn,handle); 
     nodeFactory.nodeHandleHelper(pn);
 
-    // loat rt/leafset, liveness state
+    // load rt/leafset, liveness state
     // register witness searching algorithm
 
     return true;
   }
 
   public Collection<TransportLayerNodeHandle<MultiInetSocketAddress>> getMyWitnessedNodes() {
-    Collection<NodeHandle> foo = pn.getLeafSet().getUniqueSet();
+    Collection<NodeHandle> foo = pn.getLeafSet().getUniqueSet(); // TODO: make this a smaller set
     ArrayList<TransportLayerNodeHandle<MultiInetSocketAddress>> ret = 
       new ArrayList<TransportLayerNodeHandle<MultiInetSocketAddress>>(foo.size());
     for (NodeHandle h : foo) {
       ret.add((TransportLayerNodeHandle<MultiInetSocketAddress>)h);
     }
+    logger.log("myWitnessedNodes: "+ret);
     return ret;
   }
   
@@ -192,8 +197,9 @@ public class PeerReviewCallbackImpl implements PeerReviewCallback<TransportLayer
       public void receiveResult(Collection<NodeHandle> result) {
         ArrayList<TransportLayerNodeHandle<MultiInetSocketAddress>> ret = new ArrayList<TransportLayerNodeHandle<MultiInetSocketAddress>>(result.size());
         for (NodeHandle nh : result) {
-          ret.add((TransportLayerNodeHandle<MultiInetSocketAddress>)nh);
+          if (!nh.getId().equals(subject)) ret.add((TransportLayerNodeHandle<MultiInetSocketAddress>)nh);
         }
+        logger.log("returning witnesses for "+subject+" "+ret);
         callback.notifyWitnessSet(subject, ret);
       }
     
