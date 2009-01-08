@@ -55,10 +55,9 @@ public class TestContinuationAnon {
     Id id = null; // generated elsewhere
     
     // same code as TestContinuation and MyContinuation combined
-    past.lookup(id, new Continuation() {
+    past.lookup(id, new Continuation<PastContent, Exception>() {
       // will be called if success in the lookup
-      public void receiveResult(Object result) {
-        PastContent pc = (PastContent)result;
+      public void receiveResult(PastContent pc) {
         System.out.println("Received a "+pc);        
       }
 

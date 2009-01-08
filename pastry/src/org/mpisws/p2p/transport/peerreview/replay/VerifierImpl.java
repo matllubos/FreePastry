@@ -697,6 +697,8 @@ public class VerifierImpl<Handle extends RawSerializable, Identifier extends Raw
     return false;
   }
   
+  
+  @SuppressWarnings("unchecked")
   protected IOException deserializeException(InputBuffer nextEvent) throws IOException {
     short exType = nextEvent.readShort();
     switch (exType) {

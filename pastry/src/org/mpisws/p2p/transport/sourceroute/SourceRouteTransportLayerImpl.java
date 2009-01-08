@@ -282,7 +282,7 @@ public class SourceRouteTransportLayerImpl<Identifier> implements
                         for (SourceRouteTap tap : taps) {
                           tap.socketOpened(sr, socka, sockb);
                         }
-                        new Forwarder(sr, socka, sockb, logger);
+                        new Forwarder<Identifier>(sr, socka, sockb, logger);
                       }
                     }
                   

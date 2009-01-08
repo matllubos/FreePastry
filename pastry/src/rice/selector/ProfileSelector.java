@@ -140,7 +140,7 @@ public class ProfileSelector extends SelectorManager {
   /**
    * Records how long it takes to receive each type of message.
    */
-  private Hashtable stats = new Hashtable();
+  private Hashtable<String, Stat> stats = new Hashtable<String, Stat>();
   
   public void addStat(String s, long time) {
     if (!recordStats) return;
@@ -155,31 +155,31 @@ public class ProfileSelector extends SelectorManager {
   public void printStats() {
     if (!recordStats) return;
 
-    ArrayList list = new ArrayList(stats.size());
+    ArrayList<Stat> list = new ArrayList<Stat>(stats.size());
     if (stats != null) {
       synchronized(stats) {
-        Enumeration e = stats.elements();
-        while(e.hasMoreElements()) {
-          Stat s = (Stat)e.nextElement(); 
+        Iterator<Stat> e = stats.values().iterator();
+        while(e.hasNext()) {
+          Stat s = (Stat)e.next(); 
           list.add(s);
 //          System.out.println("  "+s);
         }
       }
     }
     
-    Collections.sort(list,new Comparator() {
+    Collections.sort(list,new Comparator<Stat>() {
       public boolean equals(Object arg0) {
         return false;
       }
 
-      public int compare(Object arg0, Object arg1) {
+      public int compare(Stat arg0, Stat arg1) {
         Stat stat1 = (Stat)arg0;
         Stat stat2 = (Stat)arg1;
         
         return (int)(stat2.totalTime-stat1.totalTime);
       }
     });
-    Iterator i = list.iterator();
+    Iterator<Stat> i = list.iterator();
     while(i.hasNext()) {
       System.out.println("  "+i.next()); 
     }
@@ -278,9 +278,9 @@ public class ProfileSelector extends SelectorManager {
    * called by the selector thread.
    */
   protected void doInvocations() {    
-    Iterator i;
+    Iterator<Runnable> i;
     synchronized(this) {
-      i = new ArrayList(invocations).iterator();
+      i = new ArrayList<Runnable>(invocations).iterator();
       invocations.clear();
     }
     Runnable run;
@@ -309,12 +309,13 @@ public class ProfileSelector extends SelectorManager {
       }
     }
 
+    Iterator<SelectionKey> i2;
     synchronized(this) {
-      i = new ArrayList(modifyKeys).iterator();
+      i2 = new ArrayList<SelectionKey>(modifyKeys).iterator();
     }
     SelectionKey key;
-    while (i.hasNext()) {
-      key = (SelectionKey)i.next();
+    while (i2.hasNext()) {
+      key = (SelectionKey)i2.next();
       if (key.isValid() && (key.attachment() != null)) {
         SelectionKeyHandler skh = (SelectionKeyHandler) key.attachment();
         lastTaskType = "ModifyKey";

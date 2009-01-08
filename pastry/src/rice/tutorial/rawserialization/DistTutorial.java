@@ -51,6 +51,7 @@ import rice.pastry.PastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
+import rice.tutorial.rawserialization2.MyApp;
 
 /**
  * This tutorial shows how to use FreePastry 2.0's raw serialization (instead of Java Serialization).
@@ -117,7 +118,7 @@ public class DistTutorial {
     for (int i = 0; i < 10; i++) {
         
       // for each app
-      Iterator appIterator = apps.iterator();
+      Iterator<MyApp> appIterator = apps.iterator();
       while(appIterator.hasNext()) {
         MyApp app = (MyApp)appIterator.next();
         
@@ -135,7 +136,7 @@ public class DistTutorial {
     env.getTimeSource().sleep(1000);
       
     // for each app
-    Iterator appIterator = apps.iterator();
+    Iterator<MyApp> appIterator = apps.iterator();
     while(appIterator.hasNext()) {
       MyApp app = (MyApp)appIterator.next();
       PastryNode node = (PastryNode)app.getNode();

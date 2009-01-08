@@ -47,6 +47,7 @@ import java.util.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class SoftHashMap extends HashMap {
   
   /**

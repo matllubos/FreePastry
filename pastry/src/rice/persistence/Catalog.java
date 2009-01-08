@@ -64,6 +64,7 @@ import rice.p2p.commonapi.*;
  * which specify how objects are inserted and stored, and are designed to
  * include a cache and persistent storage interface.
  */
+@SuppressWarnings("unchecked")
 public interface Catalog {
 
   /**

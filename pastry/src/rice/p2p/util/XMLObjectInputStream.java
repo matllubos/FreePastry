@@ -64,6 +64,7 @@ import sun.reflect.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class XMLObjectInputStream extends ObjectInputStream {
   
   /**

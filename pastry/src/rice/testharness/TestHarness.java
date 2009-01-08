@@ -82,7 +82,7 @@ import rice.testharness.messaging.UnsubscribedMessage;
  *
  * @author Alan Mislove
  */
-
+@SuppressWarnings("unchecked")
 public class TestHarness implements Application, ScribeClient {
   
   /**
@@ -185,6 +185,7 @@ public class TestHarness implements Application, ScribeClient {
    * @param id The destination id of the message
    * @param message The message being sent
    */
+  @SuppressWarnings("unchecked")
   public void deliver(Id id, Message msg) {
     if (msg instanceof SubscribedMessage) {
       _subscribedNodes.addElement(((SubscribedMessage) msg).getSource());

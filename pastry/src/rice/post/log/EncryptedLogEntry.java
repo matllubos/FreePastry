@@ -53,6 +53,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 final class EncryptedLogEntry extends LogEntry {
 
   // the enclosed log entry

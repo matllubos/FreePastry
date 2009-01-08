@@ -63,6 +63,7 @@ import java.util.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class XMLObjectOutputStream extends ObjectOutputStream {
   
   /**

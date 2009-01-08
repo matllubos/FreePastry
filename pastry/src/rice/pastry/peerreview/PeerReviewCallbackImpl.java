@@ -75,7 +75,6 @@ import rice.pastry.transport.TLDeserializer;
 public class PeerReviewCallbackImpl implements PeerReviewCallback<TransportLayerNodeHandle<MultiInetSocketAddress>, Id>,
     TransportLayer<TransportLayerNodeHandle<MultiInetSocketAddress>, ByteBuffer> {
 
-  // static magic is evil, refactor this
   CallbackFactory nodeFactory;
   
   PastryNode pn;

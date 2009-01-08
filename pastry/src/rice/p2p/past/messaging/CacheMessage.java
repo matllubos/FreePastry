@@ -58,6 +58,7 @@ import rice.p2p.past.rawserialization.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
+@SuppressWarnings("unchecked")
 public class CacheMessage extends PastMessage {
 
   public static final short TYPE = 1;

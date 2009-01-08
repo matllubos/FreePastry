@@ -59,7 +59,7 @@ public abstract class AbstractLogManager implements LogManager {
   /**
    * Hashtable of loggers stored by full.class.name[instance]
    */
-  protected Hashtable loggers;
+  protected Hashtable<String, Logger> loggers;
   protected Parameters params;
   
   protected TimeSource time;
@@ -121,7 +121,7 @@ public abstract class AbstractLogManager implements LogManager {
       this.packageOnly = params.getBoolean("logging_packageOnly");
     }
 
-    this.loggers = new Hashtable();
+    this.loggers = new Hashtable<String, Logger>();
     this.globalLogLevel = parseVal("loglevel");
 
     params.addChangeListener(new ParameterChangeListener() {
@@ -133,7 +133,7 @@ public abstract class AbstractLogManager implements LogManager {
               // iterate over all loggers, if they are default loggers,
               // set the level
               globalLogLevel = parseVal(paramName);
-              Iterator i = loggers.values().iterator();
+              Iterator<Logger> i = loggers.values().iterator();
               while(i.hasNext()) {
                 HeirarchyLogger hl = (HeirarchyLogger)i.next();
                 if (hl.useDefault) {
@@ -147,7 +147,7 @@ public abstract class AbstractLogManager implements LogManager {
               // parameter "removed" 
               // a) set the logger to use defaultlevel, 
               // b) set the level 
-              Iterator i = loggers.keySet().iterator();
+              Iterator<String> i = loggers.keySet().iterator();
               while(i.hasNext()) {
                 String name = (String)i.next();
                 if (name.startsWith(loggerName)) {
@@ -160,7 +160,7 @@ public abstract class AbstractLogManager implements LogManager {
             } else {
               // a) set the logger to not use the defaultlevel, 
               // b) set the level 
-              Iterator i = loggers.keySet().iterator();
+              Iterator<String> i = loggers.keySet().iterator();
               while(i.hasNext()) {
                 String name = (String)i.next();
                 if (name.startsWith(loggerName)) {
@@ -198,6 +198,7 @@ public abstract class AbstractLogManager implements LogManager {
   /**
    * 
    */
+  @SuppressWarnings("unchecked")
   public Logger getLogger(Class clazz, String instance) {
     // first we want to get the logger name
     String loggerName;

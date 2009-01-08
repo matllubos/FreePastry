@@ -151,6 +151,7 @@ public class InternetPastryNodeFactory extends
    * @param localAddress the address of the interface we should search for a NAT on
    * @return
    */
+  @SuppressWarnings("unchecked")
   protected NATHandler getDefaultNatHandler(Environment env, InetAddress localAddress) {
     Parameters params = env.getParameters();
     if (params.contains("nat_handler_class")) {

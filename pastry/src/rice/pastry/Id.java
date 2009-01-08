@@ -532,7 +532,7 @@ public class Id implements rice.p2p.commonapi.Id, RawSerializable {
    * @param obj the Id to compare with.
    * @return negative if this < obj, 0 if they are equal and positive if this > obj.
    */
-  public int compareTo(Object obj) {
+  public int compareTo(rice.p2p.commonapi.Id obj) {
     Id oth = (Id) obj;
 
     for (int i = nlen - 1; i >= 0; i--) {
@@ -1065,7 +1065,7 @@ public class Id implements rice.p2p.commonapi.Id, RawSerializable {
      * @param obj the Distance to compare with.
      * @return negative if this < obj, 0 if they are equal and positive if this > obj.
      */
-    public int compareTo(Object obj) {
+    public int compareTo(rice.p2p.commonapi.Id.Distance obj) {
       Distance oth = (Distance) obj;
 
       for (int i = nlen - 1; i >= 0; i--) {
@@ -1090,7 +1090,7 @@ public class Id implements rice.p2p.commonapi.Id, RawSerializable {
      * @return true if they are the same, false otherwise.
      */
     public boolean equals(Object obj) {
-      if (compareTo(obj) == 0) {
+      if (compareTo((Id.Distance)obj) == 0) {
         return true;
       } else {
         return false;

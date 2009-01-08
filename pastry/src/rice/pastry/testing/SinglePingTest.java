@@ -57,6 +57,7 @@ import java.lang.*;
  * @author Rongmei Zhang
  */
 
+@SuppressWarnings("unchecked")
 public class SinglePingTest {
   private DirectPastryNodeFactory factory;
 

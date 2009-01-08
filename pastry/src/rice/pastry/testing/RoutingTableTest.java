@@ -61,10 +61,9 @@ import rice.selector.TimerTask;
 import rice.tutorial.direct.MyMsg;
 
 /**
- * This tutorial shows how to setup a FreePastry node using the Socket Protocol.
- * 
  * @author Jeff Hoye
  */
+@SuppressWarnings("unchecked")
 public class RoutingTableTest {
   boolean printLiveness = false;
   boolean printLeafSets = false;
@@ -436,10 +435,10 @@ public class RoutingTableTest {
   
   private void testLeafSets() {
 //    if (!logHeavy) return;
-    ArrayList nds = new ArrayList(nodes);
-    Collections.sort(nds,new Comparator() {
+    ArrayList<PastryNode> nds = new ArrayList<PastryNode>(nodes);
+    Collections.sort(nds,new Comparator<PastryNode>() {
     
-      public int compare(Object one, Object two) {
+      public int compare(PastryNode one, PastryNode two) {
         PastryNode n1 = (PastryNode)one;
         PastryNode n2 = (PastryNode)two;
         return n1.getId().compareTo(n2.getId());

@@ -96,7 +96,7 @@ public class IdBloomFilter implements Serializable {
   public IdBloomFilter(IdSet set) {
     int size = (set.numElements() < 64 ? 64 : set.numElements());
     this.filter = new BloomFilter(NUM_HASH_FUNCTIONS, NUM_BITS_PER_KEY * size);
-    Iterator i = set.getIterator();  
+    Iterator<Id> i = set.getIterator();  
     
     while (i.hasNext())
       addId((Id) i.next());
@@ -148,7 +148,7 @@ public class IdBloomFilter implements Serializable {
    * @param max The maximum number of keys to return
    */
   public void check(IdSet set, IdSet result, int max) {
-    Iterator it = set.getIterator();
+    Iterator<Id> it = set.getIterator();
     int count = 0;
     
     while (it.hasNext() && (count < max)) {

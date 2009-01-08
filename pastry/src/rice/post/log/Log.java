@@ -58,6 +58,7 @@ import rice.post.storage.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public class Log implements PostData {
   
   static final long serialVersionUID = -2375808799970141618L;

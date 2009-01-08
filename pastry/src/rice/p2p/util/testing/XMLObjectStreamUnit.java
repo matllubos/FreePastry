@@ -43,6 +43,7 @@ import java.util.*;
 import java.util.zip.*;
 import rice.p2p.util.*;
 
+@SuppressWarnings("unchecked")
 public class XMLObjectStreamUnit {
   
   protected XMLObjectOutputStream xoos;

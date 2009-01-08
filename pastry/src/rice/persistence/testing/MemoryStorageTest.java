@@ -59,6 +59,7 @@ import rice.persistence.*;
  * This class is a class which tests the Storage class
  * in the rice.persistence package.
  */
+@SuppressWarnings("unchecked")
 public class MemoryStorageTest extends Test {
 
   private IdFactory FACTORY;// = new PastryIdFactory();
@@ -843,7 +844,7 @@ public class MemoryStorageTest extends Test {
       else
         return STRING + num;
     }
-    public int compareTo(Object o) { return 0; }
+    public int compareTo(Id o) { return 0; }
     public void serialize(OutputBuffer buf) throws IOException {
       buf.writeInt(num);
     }

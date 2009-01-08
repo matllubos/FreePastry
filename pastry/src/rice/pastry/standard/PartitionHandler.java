@@ -91,7 +91,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   protected int maxGoneSize;
   protected int maxGoneAge;
   // map from Id's -> NodeHandle's to keep things unique per NodeId
-  protected Map gone;
+  protected Map<rice.p2p.commonapi.Id,GoneSetEntry> gone;
   
   protected Environment env;
   
@@ -110,7 +110,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     this.factory = factory;
     this.bootstraps = bootstraps;
     env = pastryNode.getEnvironment();
-    gone = new HashMap();
+    gone = new HashMap<rice.p2p.commonapi.Id, GoneSetEntry>();
     this.logger = pn.getEnvironment().getLogManager().getLogger(PartitionHandler.class,"");
     
     maxGoneSize = env.getParameters().getInt("partition_handler_max_history_size");
@@ -122,7 +122,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   }
   
   private synchronized void doGoneMaintainence() {
-    Iterator it = gone.values().iterator();
+    Iterator<GoneSetEntry> it = gone.values().iterator();
     long now = env.getTimeSource().currentTimeMillis();
 
     if (logger.level <= Logger.FINE) logger.log("Doing maintainence in PartitionHandler "+now);
@@ -149,9 +149,9 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     if (logger.level <= Logger.FINER) logger.log("gone size 3 is "+gone.size()+" of "+maxGoneSize);
   }
 
-  private List getRoutingTableAsList() {
+  private List<NodeHandle> getRoutingTableAsList() {
     RoutingTable rt = pastryNode.getRoutingTable();
-    List rtHandles = new ArrayList(rt.numEntries());
+    List<NodeHandle> rtHandles = new ArrayList<NodeHandle>(rt.numEntries());
 
     for (int r = 0; r < rt.numRows(); r++) {
       RouteSet[] row = rt.getRow(r);
@@ -188,7 +188,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
       int which = env.getRandomSource().nextInt(maxGoneSize);
       if (logger.level <= Logger.FINEST) logger.log("getGone choosing node "+which+" from gone or routing table");
       
-      Iterator it = gone.values().iterator();
+      Iterator<GoneSetEntry> it = gone.values().iterator();
       while (which>0 && it.hasNext()) {
         which--;
         it.next();
@@ -216,7 +216,7 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
   }
   
   // possibly make this abstract
-  private void getNodeHandleToProbe(Continuation c) {
+  private void getNodeHandleToProbe(Continuation<NodeHandle, Exception> c) {
     if (env.getRandomSource().nextDouble() > bootstrapRate) {
       NodeHandle nh = getCandidateNode();
       if (logger.level <= Logger.FINEST) logger.log("getGone chose "+nh);
@@ -234,9 +234,9 @@ public class PartitionHandler extends TimerTask implements NodeSetListener {
     if (logger.level <= Logger.INFO) logger.log("running partition handler");
     doGoneMaintainence();
     
-    getNodeHandleToProbe(new Continuation() {
+    getNodeHandleToProbe(new Continuation<NodeHandle, Exception>() {
 
-      public void receiveResult(Object result) {
+      public void receiveResult(NodeHandle result) {
         if (result != null) {
           rejoin((NodeHandle)result);
         } else {

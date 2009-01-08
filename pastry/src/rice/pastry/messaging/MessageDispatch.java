@@ -68,7 +68,7 @@ public class MessageDispatch implements Destructable {
   // have modified from HashMap to HashMap to use the internal representation
   // of a LocalAddress.  Otherwise remote node cannot get its message delivered
   // because objects constructed differently are not mapped to the same value
-  private HashMap addressBook;
+  private HashMap<Integer,PastryAppl> addressBook;
 
   protected PastryNode localNode;
   
@@ -84,7 +84,7 @@ public class MessageDispatch implements Destructable {
    */
   public MessageDispatch(PastryNode pn, Deserializer deserializer) {
     this.deserializer = deserializer;
-    addressBook = new HashMap();
+    addressBook = new HashMap<Integer, PastryAppl>();
     this.localNode = pn;
     this.logger = pn.getEnvironment().getLogManager().getLogger(getClass(), null);    
   }
@@ -180,9 +180,9 @@ public class MessageDispatch implements Destructable {
 //  }  
   
   public void destroy() {
-    Iterator i = addressBook.values().iterator();
+    Iterator<PastryAppl> i = addressBook.values().iterator();
     while(i.hasNext()) {
-      PastryAppl mr = (PastryAppl)i.next();
+      PastryAppl mr = i.next();
       if (logger.level <= Logger.INFO) logger.log("Destroying "+mr);
       mr.destroy(); 
     }      

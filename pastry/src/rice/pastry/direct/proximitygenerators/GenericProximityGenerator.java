@@ -56,11 +56,6 @@ public class GenericProximityGenerator implements ProximityGenerator {
   // This stores the matrix stored in millis
   private float distance[][];
 
-  // This stores the coordinates
-  public Hashtable nodePos = new Hashtable();
-
-//  private Vector transit = new Vector();
-
   /**
    * The number of stubs.
    */

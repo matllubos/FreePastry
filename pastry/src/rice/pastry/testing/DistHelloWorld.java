@@ -39,6 +39,7 @@ package rice.pastry.testing;
 import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.pastry.*;
+import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.*;
 import rice.pastry.dist.*;
 
@@ -117,7 +118,7 @@ public class DistHelloWorld {
       }
     }
 
-    NodeHandle bshandle = ((DistPastryNodeFactory) factory).getNodeHandle(addr);
+    NodeHandle bshandle = ((SocketPastryNodeFactory) factory).getNodeHandle(addr);
     return bshandle;
   }
 

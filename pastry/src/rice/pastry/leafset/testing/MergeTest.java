@@ -200,6 +200,7 @@ public class MergeTest {
       }
 
       @Override
+      @SuppressWarnings("unchecked")
       public Bootstrapper getBootstrapper() {
         // TODO Auto-generated method stub
         return null;

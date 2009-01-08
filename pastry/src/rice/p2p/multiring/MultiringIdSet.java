@@ -134,17 +134,17 @@ public class MultiringIdSet implements IdSet {
   
   /**
    * return an iterator over the elements of this set
-   * @return the interator
+   * @return the iterator
    */
-  public Iterator getIterator() {
-    return new Iterator() {
-      protected Iterator i = set.getIterator();
+  public Iterator<Id> getIterator() {
+    return new Iterator<Id>() {
+      protected Iterator<Id> i = set.getIterator();
       
       public boolean hasNext() {
         return i.hasNext();
       }
       
-      public Object next() {
+      public Id next() {
         return RingId.build(ringId, (Id) i.next());
       }
       

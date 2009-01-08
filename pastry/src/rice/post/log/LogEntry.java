@@ -53,6 +53,7 @@ import rice.post.storage.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public abstract class LogEntry implements PostData {
 
   // serialver for backward compatibility

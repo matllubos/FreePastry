@@ -65,6 +65,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class MultiringRegrTest {
 
   // ----- VARAIBLES -----

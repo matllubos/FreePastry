@@ -99,14 +99,14 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
    */
   HashMap<NodeHandle, FailedTime> failed;
   TimerTask cleanupTask; // cleans up failed
-  static class FailedTime implements Comparable {
+  static class FailedTime implements Comparable<FailedTime> {
     long time;
     NodeHandle handle;
     public FailedTime(NodeHandle handle, long time) {
       this.time = time;
       this.handle = handle;
     }
-    public int compareTo(Object arg0) {
+    public int compareTo(FailedTime arg0) {
       FailedTime ft = (FailedTime)arg0;
       // note this is backwards, because we want them sorted in reverse order
       return (int)(ft.time-this.time);
@@ -253,7 +253,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         synchronized(failed) {
           long now = thePastryNode.getEnvironment().getTimeSource().currentTimeMillis();
           long expiration = now-failedNodeExpirationTime;
-          Iterator i = failed.values().iterator();
+          Iterator<FailedTime> i = failed.values().iterator();
           while(i.hasNext()) {
             FailedTime ft = (FailedTime)i.next();
             if (ft.time < expiration) {
@@ -335,10 +335,10 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       return; 
     }
     
-    Collection c = whoDoWeNeedAResponseFrom();
+    Collection<NodeHandle> c = whoDoWeNeedAResponseFrom();
     if (logger.level <= Logger.INFO) logger.log("CJP: timeout1, still waiting to hear from "+c.size()+" nodes.");
     
-    Iterator i = c.iterator();
+    Iterator<NodeHandle> i = c.iterator();
     while(i.hasNext()) {
       NodeHandle nh = (NodeHandle)i.next(); 
       if (logger.level <= Logger.FINE) logger.log("CJP: timeout2, still waiting to hear from "+nh);
@@ -433,7 +433,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       // for each n in L_i and failed do {probe}
       // rather than removing everyone in the remote failedset,
       // checkLiveness on them all
-      Iterator it = cjm.failed.iterator();
+      Iterator<NodeHandle> it = cjm.failed.iterator();
       while(it.hasNext()) {
         NodeHandle nh = (NodeHandle)it.next(); 
         if (leafSet.member(nh)) {
@@ -474,7 +474,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         }
       }
       
-      Iterator it2 = addThese.iterator();
+      Iterator<NodeHandle> it2 = addThese.iterator();
       while(it2.hasNext()) {
         NodeHandle nh = (NodeHandle)it2.next();
         // he's not a member, but he could be
@@ -556,7 +556,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
       } else {
         if (logger.level <= Logger.FINE) {
           String toHearFromStr = "";
-          Iterator i = toHearFrom.iterator();
+          Iterator<NodeHandle> i = toHearFrom.iterator();
           while(i.hasNext()) {
             NodeHandle nh = (NodeHandle)i.next();
             toHearFromStr+=nh+":"+nh.getLiveness()+",";
@@ -707,7 +707,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
     if (logger.level <= Logger.INFO) logger.log("CJP: destroy() called");
     thePastryNode.getEnvironment().getSelectorManager().removeLoopObserver(this);
     cleanupTask.cancel();
-    Iterator it2 = observing.iterator();
+    Iterator<NodeHandle> it2 = observing.iterator();
     while(it2.hasNext()) {
       NodeHandle nh = (NodeHandle)it2.next();
       nh.deleteObserver(this);

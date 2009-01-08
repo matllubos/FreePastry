@@ -99,9 +99,9 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
   /**
    * return an iterator over the elements of this set
    *
-   * @return the interator
+   * @return the iterator
    */
-  public Iterator getIterator() {
+  public Iterator<Id> getIterator() {
     return idSet.keySet().iterator();
   }
 
@@ -229,7 +229,7 @@ public class VersionKeySet implements rice.p2p.commonapi.IdSet {
    */
 
   public String toString() {
-    Iterator it = getIterator();
+    Iterator<Id> it = getIterator();
     Id key;
     String s = "[ IdSet:  ]";
     return s;

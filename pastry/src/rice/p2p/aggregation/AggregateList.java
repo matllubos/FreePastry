@@ -48,6 +48,7 @@ import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.IdFactory;
 import rice.p2p.glacier.VersionKey;
 
+@SuppressWarnings("unchecked")
 public class AggregateList {
 
   protected final Hashtable aggregateList;

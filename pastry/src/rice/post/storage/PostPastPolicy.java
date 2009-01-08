@@ -54,6 +54,7 @@ import rice.persistence.*;
  * @version $Id$
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class PostPastPolicy implements PastPolicy {
   
   /**

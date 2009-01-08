@@ -71,6 +71,7 @@ import rice.post.security.ca.*;
  * @author Alan Mislove
  * @author Ansley Post
  */
+@SuppressWarnings("unchecked")
 public class PostImpl implements Post, Application, ScribeClient {
 
   /**

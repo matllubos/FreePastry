@@ -48,6 +48,7 @@ import rice.p2p.util.*;
 import java.io.IOException;
 import java.util.*;
 
+@SuppressWarnings("unchecked")
 public class RedBlackMapUnit {
   
   public static void main(String[] args) {

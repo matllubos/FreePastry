@@ -357,14 +357,14 @@ public abstract class PastryRegrTest {
     // now check the replicaSet and range method
 
     // a comparator that orders nodeIds by distance from the localId
-    class DistComp implements Comparator {
+    class DistComp implements Comparator<Id> {
       Id id;
 
       public DistComp(Id id) {
         this.id = id;
       }
 
-      public int compare(Object o1, Object o2) {
+      public int compare(Id o1, Id o2) {
         Id nid1 = (Id) o1;
         Id nid2 = (Id) o2;
         return nid1.distance(id).compareTo(nid2.distance(id));

@@ -55,6 +55,7 @@ import rice.selector.SelectorManager;
  * @author Alan Mislove
  * @author Andreas Haeberlen
  */
+@SuppressWarnings("unchecked")
 public interface Continuation<R, E extends Exception> {
 
   /**
@@ -78,12 +79,12 @@ public interface Continuation<R, E extends Exception> {
    * is constructed with.  Subclasses should implement the
    * receiveResult() method with the appropriate behavior.
    */
-  public static abstract class StandardContinuation implements Continuation {
+  public static abstract class StandardContinuation<R, E extends Exception> implements Continuation<R, E> {
 
     /**
      * The parent continuation
      */
-    protected Continuation parent;
+    protected Continuation<R,E> parent;
     
     /**
      * Constructor which takes in the parent continuation
@@ -91,7 +92,7 @@ public interface Continuation<R, E extends Exception> {
      *
      * @param continuation The parent of this continuation
      */
-    public StandardContinuation(Continuation continuation) {
+    public StandardContinuation(Continuation<R, E> continuation) {
       parent = continuation;
     }
 
@@ -102,7 +103,7 @@ public interface Continuation<R, E extends Exception> {
      *
      * @param result The exception which was caused.
      */
-    public void receiveException(Exception result) {
+    public void receiveException(E result) {
       parent.receiveException(result);
     }
   }
@@ -113,12 +114,12 @@ public interface Continuation<R, E extends Exception> {
    * is constructed with.  Subclasses should implement the
    * receiveException() method with the appropriate behavior.
    */
-  public static abstract class ErrorContinuation implements Continuation {
+  public static abstract class ErrorContinuation<R, E extends Exception> implements Continuation<R, E> {
     
     /**
     * The parent continuation
      */
-    protected Continuation parent;
+    protected Continuation<R, E> parent;
     
     /**
      * Constructor which takes in the parent continuation
@@ -126,7 +127,7 @@ public interface Continuation<R, E extends Exception> {
      *
      * @param continuation The parent of this continuation
      */
-    public ErrorContinuation(Continuation continuation) {
+    public ErrorContinuation(Continuation<R, E> continuation) {
       parent = continuation;
     }
     
@@ -136,7 +137,7 @@ public interface Continuation<R, E extends Exception> {
      *
      * @param result The result
      */
-    public void receiveResult(Object result) {
+    public void receiveResult(R result) {
       parent.receiveResult(result);
     }
   }
@@ -147,7 +148,7 @@ public interface Continuation<R, E extends Exception> {
    * Continuation is provided for testing convenience only and should *NOT* be
    * used in production environment.
    */
-  public static class ListenerContinuation implements Continuation {
+  public static class ListenerContinuation<R, E extends Exception> implements Continuation<R, E> {
 
     /**
      * The name of this continuation
@@ -212,7 +213,7 @@ public interface Continuation<R, E extends Exception> {
    * up, the user should check exceptionThrown() to determine if an error was
    * caused, and then call getException() or getResult() as appropriate.
    */
-  public static class ExternalContinuation implements Continuation {
+  public static class ExternalContinuation<R, E extends Exception> implements Continuation<R, E> {
 
     protected Exception exception;
     protected Object result;
@@ -269,11 +270,11 @@ public interface Continuation<R, E extends Exception> {
    * @author jstewart
    *
    */
-  public static abstract class ExternalContinuationRunnable implements Runnable {
-    private ExternalContinuation e;
+  public static abstract class ExternalContinuationRunnable<R, E extends Exception> implements Runnable {
+    private ExternalContinuation<R,E> e;
 
     public ExternalContinuationRunnable() {
-      e = new ExternalContinuation();
+      e = new ExternalContinuation<R,E>();
     }
     
     public void run() {

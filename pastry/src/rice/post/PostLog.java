@@ -55,6 +55,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public class PostLog extends Log {
 
   /**

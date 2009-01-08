@@ -336,7 +336,7 @@ public class LeafSetTest {
     test.start();
   }
 
-  public static class TestNodeHandle extends NodeHandle implements Comparable {
+  public static class TestNodeHandle extends NodeHandle implements Comparable<TestNodeHandle> {
     private Id id;
 
     public TestNodeHandle(Id id) {
@@ -380,7 +380,7 @@ public class LeafSetTest {
     public void receiveMessage(Message m) {
     };
 
-    public int compareTo(Object o) {
+    public int compareTo(TestNodeHandle o) {
       return id.compareTo(((TestNodeHandle) o).id);
     }
 

@@ -49,6 +49,7 @@ import rice.p2p.glacier.*;
  * @version $Id$
  * @author ahae
  */
+@SuppressWarnings("unchecked")
 public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
 
   private SortedMap idSet;
@@ -101,7 +102,7 @@ public class FragmentKeySet implements rice.p2p.commonapi.IdSet {
    *
    * @return the interator
    */
-  public Iterator getIterator() {
+  public Iterator<Id> getIterator() {
     return idSet.keySet().iterator();
   }
 

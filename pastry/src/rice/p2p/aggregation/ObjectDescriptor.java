@@ -39,7 +39,7 @@ package rice.p2p.aggregation;
 import java.io.Serializable;
 import rice.p2p.commonapi.Id;
 
-public class ObjectDescriptor implements Serializable, Comparable {
+public class ObjectDescriptor implements Serializable, Comparable<ObjectDescriptor> {
   
   private static final long serialVersionUID = -3035115249019556223L;
   
@@ -65,7 +65,7 @@ public class ObjectDescriptor implements Serializable, Comparable {
     return (currentLifetime > pointInTime) || (refreshedLifetime > pointInTime);
   }
 
-  public int compareTo(Object other) {
+  public int compareTo(ObjectDescriptor other) {
     ObjectDescriptor metadata = (ObjectDescriptor) other;
     
     int result = this.key.compareTo(metadata.key);

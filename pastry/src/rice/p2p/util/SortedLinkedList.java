@@ -37,11 +37,10 @@ advised of the possibility of such damage.
 package rice.p2p.util;
 
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
-public class SortedLinkedList<E extends Comparable> extends LinkedList<E> {
+public class SortedLinkedList<E extends Comparable<E>> extends LinkedList<E> {
 
   @Override
   public boolean addAll(Collection<? extends E> c) {

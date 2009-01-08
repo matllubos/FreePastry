@@ -53,6 +53,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 final class CoalescedLogEntry extends LogEntry {
   
   // the enclosed log entry

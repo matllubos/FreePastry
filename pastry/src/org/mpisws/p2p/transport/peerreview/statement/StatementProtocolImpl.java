@@ -197,6 +197,7 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
   we need but don't have, (b) forward the message to another protocol, or (c) discard
   the message because it's malformed. */
 
+  @SuppressWarnings("unchecked")
   public void makeProgressOnStatement(IncompleteStatementInfo<Handle, Identifier> idx) {
     assert(!idx.finished);
 
@@ -433,7 +434,7 @@ public class StatementProtocolImpl<Handle extends RawSerializable, Identifier ex
   
          if (logger.level <= Logger.FINE) logger.log("Checking AUDIT RESPONSE statement");
          
-         AuditResponse auditResponse = (AuditResponse)payload;
+         AuditResponse<Handle> auditResponse = (AuditResponse<Handle>)payload;
          
   //       int readptr = 0;
   //       readByte(payload, (unsigned int*)&readptr); /* RESP_AUDIT */

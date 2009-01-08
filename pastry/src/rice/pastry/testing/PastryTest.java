@@ -57,7 +57,7 @@ import java.util.*;
  * @author andrew ladd
  * @author sitaram iyer
  */
-
+@SuppressWarnings("unchecked")
 public class PastryTest {
   private DirectPastryNodeFactory factory;
 

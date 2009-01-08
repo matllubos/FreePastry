@@ -56,6 +56,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public class EncryptedLog extends Log {
 
   private static final long serialVersionUID = 369232753739190225L;

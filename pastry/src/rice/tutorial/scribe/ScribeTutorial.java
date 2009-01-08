@@ -57,7 +57,7 @@ public class ScribeTutorial {
   /**
    * this will keep track of our Scribe applications
    */
-  Vector apps = new Vector();
+  Vector<MyScribeClient> apps = new Vector<MyScribeClient>();
 
   /**
    * Based on the rice.tutorial.lesson4.DistTutorial
@@ -116,7 +116,7 @@ public class ScribeTutorial {
     }
 
     // for the first app subscribe then start the publishtask
-    Iterator i = apps.iterator();
+    Iterator<MyScribeClient> i = apps.iterator();
     MyScribeClient app = (MyScribeClient) i.next();
     app.subscribe();
     app.startPublishTask();
@@ -137,10 +137,10 @@ public class ScribeTutorial {
    * 
    * @param apps Vector of the applicatoins.
    */
-  public static void printTree(Vector apps) {
+  public static void printTree(Vector<MyScribeClient> apps) {
     // build a hashtable of the apps, keyed by nodehandle
-    Hashtable appTable = new Hashtable();
-    Iterator i = apps.iterator();
+    Hashtable<NodeHandle, MyScribeClient> appTable = new Hashtable<NodeHandle, MyScribeClient>();
+    Iterator<MyScribeClient> i = apps.iterator();
     while (i.hasNext()) {
       MyScribeClient app = (MyScribeClient) i.next();
       appTable.put(app.endpoint.getLocalNodeHandle(), app);
@@ -158,7 +158,7 @@ public class ScribeTutorial {
   /**
    * Recursively crawl up the tree to find the root.
    */
-  public static NodeHandle getRoot(NodeHandle seed, Hashtable appTable) {
+  public static NodeHandle getRoot(NodeHandle seed, Hashtable<NodeHandle, MyScribeClient> appTable) {
     MyScribeClient app = (MyScribeClient) appTable.get(seed);
     if (app.isRoot())
       return seed;
@@ -170,7 +170,7 @@ public class ScribeTutorial {
    * Print's self, then children.
    */
   public static void recursivelyPrintChildren(NodeHandle curNode,
-      int recursionDepth, Hashtable appTable) {
+      int recursionDepth, Hashtable<NodeHandle, MyScribeClient> appTable) {
     // print self at appropriate tab level
     String s = "";
     for (int numTabs = 0; numTabs < recursionDepth; numTabs++) {

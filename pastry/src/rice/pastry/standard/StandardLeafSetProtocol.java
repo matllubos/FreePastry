@@ -69,12 +69,12 @@ public class StandardLeafSetProtocol extends PastryAppl implements LeafSetProtoc
       LeafSet ls, RoutingTable rt) {
     super(ln, LeafSetProtocolAddress.getCode());
     leafSet = ls;
-    Iterator i = leafSet.asList().iterator();
+    Iterator<NodeHandle> i = leafSet.asList().iterator();
     while(i.hasNext()) {
       NodeHandle nh = (NodeHandle)i.next(); 
       nh.addObserver(this);
     }    
-    cachedSet = new HashSet(leafSet.maxSize() * 2);  
+    cachedSet = new HashSet<NodeHandle>(leafSet.maxSize() * 2);  
     routeTable = rt;
     logger = ln.getEnvironment().getLogManager().getLogger(getClass(), null);
   }
@@ -156,7 +156,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements LeafSetProtoc
    * Optimization. 
    * gc was thrashing due to all of these HashSets being created.  So, now we just reuse one.
    */
-  HashSet cachedSet = null;
+  HashSet<NodeHandle> cachedSet = null;
   
   /**
    * Checks a received leafset advertisement for missing nodes
@@ -177,7 +177,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements LeafSetProtoc
     // same leaf set
     // it also ensures recovery in the event of node failures
 
-    HashSet insertedHandles;
+    HashSet<NodeHandle> insertedHandles;
     if (notifyMissing) {
       cachedSet.clear();
       insertedHandles = cachedSet;      
@@ -199,7 +199,7 @@ public class StandardLeafSetProtocol extends PastryAppl implements LeafSetProtoc
         // for now, conservatively send to everyone
         // broadcast(BroadcastLeafSet.Correction);
 
-        Iterator it = new ArrayList(insertedHandles).iterator();
+        Iterator<NodeHandle> it = new ArrayList<NodeHandle>(insertedHandles).iterator();
         while (it.hasNext()) {
           // send leafset to missing node
           NodeHandle nh = (NodeHandle) it.next();

@@ -93,7 +93,7 @@ public class MultiringNode implements Node, ScribeClient {
   /**
    * The list of all of the endpoints connected to this node
    */
-  protected Hashtable endpoints;
+  protected Hashtable<String, Endpoint> endpoints;
   
   /**
    * A cached IdFactory for internal use
@@ -118,7 +118,7 @@ public class MultiringNode implements Node, ScribeClient {
     this.environment = node.getEnvironment();
     this.logger = environment.getLogManager().getLogger(MultiringNode.class, null);
     this.ringId = ringId;
-    this.endpoints = new Hashtable();
+    this.endpoints = new Hashtable<String, Endpoint>();
     this.scribe = new ScribeImpl(this, "Multiring");
     scribe.setContentDeserializer(new ScribeContentDeserializer() {
       

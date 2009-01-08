@@ -132,7 +132,7 @@ public class IdBloomFilterReplicationTest {
     while (missing > 0) {
       count++;
       IdBloomFilter filter = new IdBloomFilter(local);
-      Iterator i = remote.getIterator();
+      Iterator<Id> i = remote.getIterator();
       
       while (i.hasNext()) {
         Id next = (Id) i.next();

@@ -57,7 +57,7 @@ import rice.p2p.util.*;
  *
  * @author Peter Druschel
  */
-
+@SuppressWarnings("unchecked")
 public final class IdSet implements rice.p2p.commonapi.IdSet {
   
   

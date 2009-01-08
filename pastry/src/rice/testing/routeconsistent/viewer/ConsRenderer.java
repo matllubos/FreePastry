@@ -56,13 +56,13 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   long startTime = Long.MAX_VALUE;
   long endTime = 0;
   
-  HashSet selected = new HashSet();
+  HashSet<Node> selected = new HashSet<Node>();
 
   
   /**
    * String nodeName -> List of Square, ordered by time
    */
-  Hashtable nodes = new Hashtable();
+  Hashtable<String, Node> nodes = new Hashtable<String, Node>();
   
   /**
    * True if nodeList is stale.  In other words, a new 
@@ -77,8 +77,8 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
 
   JLabel statusBar;
   
-  HashSet leafSets = new HashSet();
-  HashSet overlaps = new HashSet();
+  HashSet<LeafSet> leafSets = new HashSet<LeafSet>();
+  HashSet<Overlap> overlaps = new HashSet<Overlap>();
   
   public String selectedString = "";
   
@@ -117,7 +117,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
           } else if (e.getButton() == MouseEvent.BUTTON3) {
             // don't know what this was for
             if (e.isAltDown() && e.isControlDown()) {
-              Iterator i = nodes.values().iterator();
+              Iterator<Node> i = nodes.values().iterator();
               while(i.hasNext()) {
                 Node n = (Node)i.next(); 
                 if (n.t1 < d.absTime) {
@@ -131,9 +131,9 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
           } else if (e.getButton() == MouseEvent.BUTTON2) {
             System.out.println("removing");
             Details det = new Details(e.getX(), e.getY());
-            ArrayList reverseList = new ArrayList(selected.size());
+            ArrayList<Node> reverseList = new ArrayList<Node>(selected.size());
   //          reverseList.
-            Iterator i = selected.iterator();
+            Iterator<Node> i = selected.iterator();
             while(i.hasNext()) {
               reverseList.add(i.next()); 
             }
@@ -164,7 +164,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }
   
   private void moveSelected(Details d, boolean allOnSameComputer) {
-    Iterator i = selected.iterator();
+    Iterator<Node> i = selected.iterator();
     while(i.hasNext()) {
       Node n = (Node)i.next(); 
       n.move(d.absTime, allOnSameComputer, ConsRenderer.this);            
@@ -177,9 +177,9 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }
   
   private void toggleSelect(Details d) {
-    List squares = getSquares(d.space, d.absTime);
+    List<SuperSquare> squares = getSquares(d.space, d.absTime);
     String s = d.toString();    
-    Iterator i = squares.iterator();
+    Iterator<SuperSquare> i = squares.iterator();
     while(i.hasNext()) {
       SuperSquare ss = (SuperSquare)i.next(); 
       if (selected.contains(ss.node)) {
@@ -193,11 +193,11 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }
   
   private void select(Details d, boolean showLeafSet) {
-    List squares = getSquares(d.space, d.absTime);
+    List<SuperSquare> squares = getSquares(d.space, d.absTime);
     String s = d.toString();
     selectNone();
     selectedString = " N:"+squares.size();
-    Iterator i = squares.iterator();
+    Iterator<SuperSquare> i = squares.iterator();
     while(i.hasNext()) {
       SuperSquare ss = (SuperSquare)i.next(); 
       selectedString+=",<font color=\""+ss.node.htmlColor()+"\">\u2588</font>"+ss.toString();  
@@ -210,10 +210,10 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     if (showLeafSet) {
       //System.out.println("finding leafsets");
       // build leafsets
-      i = selected.iterator();
-      while(i.hasNext()) {
-        Node n = (Node)i.next(); 
-        Object o = getLeafSet(n.nodeName, d.absTime);
+      Iterator<Node> i2 = selected.iterator();
+      while(i2.hasNext()) {
+        Node n = (Node)i2.next(); 
+        LeafSet o = getLeafSet(n.nodeName, d.absTime);
         if (o != null) {
           leafSets.add(o);
           System.out.println(o);
@@ -222,7 +222,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     }
   }
   
-  private Object getLeafSet(String nodeName, long absTime) {
+  private LeafSet getLeafSet(String nodeName, long absTime) {
     try {
       //System.out.println("getLeafSet("+nodeName+")");
       String fname = "ls."+nodeName+".txt";
@@ -235,8 +235,8 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       
       long lastTime = 0;
       long time = 0;
-      ArrayList leftSide = new ArrayList();
-      ArrayList rightSide = new ArrayList();
+      ArrayList<String> leftSide = new ArrayList<String>();
+      ArrayList<String> rightSide = new ArrayList<String>();
       String owner = null;
       while (st.ttype != StreamTokenizer.TT_EOF) {
         lastTime = time;
@@ -297,7 +297,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       Node a = nodeList[n1];
       for (int n2 = n1+1; n2 < nodeList.length; n2++) {
         Node b = nodeList[n2];
-        Collection c = a.overlaps(b);
+        Collection<Overlap> c = a.overlaps(b);
         if (c != null) {
           overlaps.addAll(c);
         }
@@ -307,7 +307,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   }
   
   class LeafSet {
-    ArrayList left,right;
+    ArrayList<String> left,right;
     String owner;
     long time;
     /**
@@ -315,7 +315,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
      * @param owner2
      * @param rightSide
      */
-    public LeafSet(long time, ArrayList leftSide, String owner, ArrayList rightSide) {
+    public LeafSet(long time, ArrayList<String> leftSide, String owner, ArrayList<String> rightSide) {
       this.left = leftSide;
       this.right = rightSide;
       this.owner = owner;
@@ -324,7 +324,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     
     public String toString() {
       String ret = time+":";
-      Iterator i = left.iterator();
+      Iterator<String> i = left.iterator();
       while(i.hasNext()) {
         ret+=" "+i.next(); 
       }
@@ -361,7 +361,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
       int ownerX = (int)((xOff+getIntVal(owner))*xScale);
       int firstX = ownerX;
       int lastX = ownerX;
-      Iterator i = left.iterator();            
+      Iterator<String> i = left.iterator();            
       while(i.hasNext()) {
         String node = (String)i.next();
         int x = (int)((xOff+getIntVal(node))*xScale);        
@@ -398,7 +398,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     synchronized(this) {
       startTime = Long.MAX_VALUE;      
       endTime = 0;
-      Iterator i = nodes.values().iterator();
+      Iterator<Node> i = nodes.values().iterator();
       while(i.hasNext()) {
         Node n = (Node)i.next();
         if (n.t1 < startTime) startTime = n.t1; 
@@ -424,10 +424,10 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
    * @param nodes
    * @return
    */
-  public List getSquares(int space, long time, Collection nodes) {
-    ArrayList ret = new ArrayList();
+  public List<SuperSquare> getSquares(int space, long time, Collection<Node> nodes) {
+    ArrayList<SuperSquare> ret = new ArrayList<SuperSquare>();
     
-    Iterator i = nodes.iterator();
+    Iterator<Node> i = nodes.iterator();
     while(i.hasNext()) {
       Node n = (Node)i.next();
       Square s = n.getSquare(space, time);
@@ -435,12 +435,12 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
         ret.add(new SuperSquare(n,s));
       }
     }
-    Collections.sort(ret, new Comparator() {
+    Collections.sort(ret, new Comparator<SuperSquare>() {
       public boolean equals(Object arg0) {
         return false;
       }
 
-      public int compare(Object a0, Object a1) {
+      public int compare(SuperSquare a0, SuperSquare a1) {
         SuperSquare s1 = (SuperSquare)a0;
         SuperSquare s2 = (SuperSquare)a1;
         
@@ -643,7 +643,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     synchronized(this) {
 //      System.out.println("paintComponent.synch");
 //      System.out.println("Time:["+startTime+","+endTime+"]F:"+timeFactor+" Space:["+0+","+maxRingSpaceValue+"]F:"+spaceFactor+" NumNodes:"+nodes.size());
-      Iterator i = nodes.keySet().iterator();
+      Iterator<String> i = nodes.keySet().iterator();
       while(i.hasNext()) {
         String nodeName = (String)i.next(); 
         Node n = (Node)nodes.get(nodeName);
@@ -651,20 +651,20 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
           n.renderSelf(g, spaceFactor, timeFactor, -renderStartSpace, -renderStartTime, size.width, size.height, false, prelifeRenderType);
         }
       }
-      i = selected.iterator(); 
-      while(i.hasNext()) {
-        Node n = (Node)i.next(); 
+      Iterator<Node> i2 = selected.iterator(); 
+      while(i2.hasNext()) {
+        Node n = (Node)i2.next(); 
         n.renderSelf(g, spaceFactor, timeFactor, -renderStartSpace, -renderStartTime, size.width, size.height, true, prelifeRenderType);
       }
-      i = leafSets.iterator(); 
-      while(i.hasNext()) {
-        LeafSet l = (LeafSet)i.next(); 
+      Iterator<LeafSet> i3 = leafSets.iterator(); 
+      while(i3.hasNext()) {
+        LeafSet l = (LeafSet)i3.next(); 
         l.renderSelf(g, spaceFactor, timeFactor, -renderStartSpace, -renderStartTime, size.width, size.height, true);
       }
       if (renderOverlaps) {
-        i = overlaps.iterator();
-        while(i.hasNext()) {
-          Overlap o = (Overlap)i.next(); 
+        Iterator<Overlap> i4 = overlaps.iterator();
+        while(i4.hasNext()) {
+          Overlap o = (Overlap)i4.next(); 
           o.renderSelf(g, spaceFactor, timeFactor, -renderStartSpace, -renderStartTime, size.width, size.height);
         }
       }
@@ -918,7 +918,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
             cr.selectNone();
             String s = d.toString();
             cr.selectedString = "";
-            Iterator i = cr.nodes.values().iterator();
+            Iterator<Node> i = cr.nodes.values().iterator();
             while(i.hasNext()) {              
               Node n = (Node)i.next();
               if (n.t1 <= d.absTime) {
@@ -941,7 +941,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
             cr.selectNone();
             String s = d.toString();
             cr.selectedString = "";
-            Iterator i = cr.nodes.values().iterator();
+            Iterator<Node> i = cr.nodes.values().iterator();
             while(i.hasNext()) {              
               Node n = (Node)i.next();
               if (n.t2 >= d.absTime) {
@@ -966,7 +966,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
     
     removeSelected.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent arg0) {
-        Iterator i = cr.selected.iterator();
+        Iterator<Node> i = cr.selected.iterator();
         while(i.hasNext()) {
           Node n = (Node)i.next();
           cr.nodes.remove(n.nodeName);
@@ -1089,7 +1089,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
   
   protected void setSelectedLabel() {
     selectedString = " N:"+selected.size();
-    Iterator i = selected.iterator();
+    Iterator<Node> i = selected.iterator();
     while(i.hasNext()) {
       Node n = (Node)i.next(); 
       selectedString+=",<font color=\""+n.htmlColor()+"\">\u2588</font>"+n.toString();  
@@ -1102,7 +1102,7 @@ public class ConsRenderer extends JPanel implements SquareConsumer, NodeConsumer
    * 
    */
   protected Node getLongestToBeReady() {
-    Iterator i = nodes.values().iterator();
+    Iterator<Node> i = nodes.values().iterator();
     Node longest = (Node)i.next();
     while(i.hasNext()) {
       Node n = (Node)i.next();

@@ -56,6 +56,7 @@ public class StandardAddress {
   //serial ver for backward compatibility
   private static final long serialVersionUID = 1564239935633411277L;
 
+  @SuppressWarnings("unchecked")
   public static int getAddress(Class c, String instance, Environment env) {
     MessageDigest md = null;
     
@@ -96,6 +97,7 @@ public class StandardAddress {
    * @param env
    * @return
    */
+  @SuppressWarnings("unchecked")
   public static short getAddress(Class c, Environment env) {
     int myCode = getAddress(c, null, env);
     
@@ -112,6 +114,7 @@ public class StandardAddress {
   }
 
   
+  @SuppressWarnings("unchecked")
   public static void main(String[] args) {
     Class c = StandardAddress.class;
 //    Class c = SocketPastryNode.class;

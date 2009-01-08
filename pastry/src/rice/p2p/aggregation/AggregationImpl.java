@@ -71,6 +71,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.persistence.StorageManager;
 import rice.p2p.glacier.v2.GlacierContentHandle;
 
+@SuppressWarnings("unchecked")
 public class AggregationImpl implements GCPast, VersioningPast, Aggregation, Application, DebugCommandHandler {
   protected final Past aggregateStore;
   protected final StorageManager waitingList;

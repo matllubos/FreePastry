@@ -164,6 +164,7 @@ public class SBBINatHandler implements NATHandler {
    * @param type TCP or UDP
    * @return
    */
+  @SuppressWarnings("unchecked")
   private boolean checkSpecificPortMappingEntryResponse(
       ActionResponse response, int internal, int external, String type,
       String app) {

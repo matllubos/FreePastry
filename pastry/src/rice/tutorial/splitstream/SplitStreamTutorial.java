@@ -42,6 +42,7 @@ import java.util.*;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.*;
 import rice.pastry.commonapi.PastryIdFactory;
@@ -59,7 +60,7 @@ public class SplitStreamTutorial {
   /**
    * this will keep track of our Scribe applications
    */
-  Vector apps = new Vector();
+  Vector<MySplitStreamClient> apps = new Vector<MySplitStreamClient>();
 
   /**
    * Based on the rice.tutorial.lesson4.DistTutorial
@@ -82,7 +83,7 @@ public class SplitStreamTutorial {
     // construct the PastryNodeFactory
     PastryNodeFactory factory;
     if (useDirect) {
-      NetworkSimulator sim = new EuclideanNetwork(env);
+      NetworkSimulator<DirectNodeHandle,RawMessage> sim = new EuclideanNetwork<DirectNodeHandle,RawMessage>(env);
       factory = new DirectPastryNodeFactory(nidFactory, sim, env);
     } else {
       factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
@@ -129,7 +130,7 @@ public class SplitStreamTutorial {
     }
 
     // for the first app subscribe then start the publishtask
-    Iterator i = apps.iterator();
+    Iterator<MySplitStreamClient> i = apps.iterator();
     MySplitStreamClient app = (MySplitStreamClient) i.next();
     app.subscribe();
     app.startPublishTask();

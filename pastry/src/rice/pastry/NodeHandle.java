@@ -195,7 +195,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
    * Class which holds an observer and a priority.  For sorting.
    * @author Jeff Hoye
    */
-  static class ObsPri implements Comparable {
+  static class ObsPri implements Comparable<ObsPri> {
     Observer obs;
     int pri;
     
@@ -204,7 +204,7 @@ public abstract class NodeHandle extends rice.p2p.commonapi.NodeHandle implement
       pri = priority;
     }
 
-    public int compareTo(Object o) {
+    public int compareTo(ObsPri o) {
       ObsPri that = (ObsPri)o;
       int ret = that.pri - pri;
       if (ret == 0) {

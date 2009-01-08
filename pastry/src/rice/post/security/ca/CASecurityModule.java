@@ -51,6 +51,7 @@ import rice.p2p.util.*;
  * @version $Id$
  * @author amislove
  */
+@SuppressWarnings("unchecked")
 public class CASecurityModule implements SecurityModule {
 
   /**

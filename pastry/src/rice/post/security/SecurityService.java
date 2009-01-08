@@ -49,6 +49,7 @@ import rice.post.*;
  * @version $Id$
  * @author amislove
  */
+@SuppressWarnings("unchecked")
 public class SecurityService {
 
   /**

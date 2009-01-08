@@ -55,7 +55,7 @@ import java.util.*;
  * 
  * @author Sitaram Iyer
  */
-
+@SuppressWarnings("unchecked")
 public class HelloWorld {
   private PastryNodeFactory factory;
 

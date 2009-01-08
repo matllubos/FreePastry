@@ -58,6 +58,7 @@ import rice.p2p.past.*;
  * @author Alan Mislove
  * @author Andreas Haeberlen
  */
+@SuppressWarnings("unchecked")
 public interface GCPast extends Past {
   
   /**

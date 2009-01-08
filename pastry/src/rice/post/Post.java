@@ -57,6 +57,7 @@ import rice.post.security.*;
  * @author Ansley Post
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public interface Post {
   
   /**

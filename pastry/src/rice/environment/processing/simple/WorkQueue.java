@@ -46,8 +46,9 @@ import rice.environment.processing.WorkRequest;
 /**
  * @author Jeff Hoye
  */
+@SuppressWarnings("unchecked")
 public class WorkQueue {
-  List q = new LinkedList();
+  List<WorkRequest> q = new LinkedList<WorkRequest>();
   /* A negative capacity, is equivalent to infinted capacity */
   int capacity = -1;
 

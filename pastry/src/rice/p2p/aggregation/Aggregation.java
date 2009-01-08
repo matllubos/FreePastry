@@ -52,6 +52,7 @@ import java.io.Serializable;
 import rice.Continuation;
 import rice.p2p.commonapi.Id;
 
+@SuppressWarnings("unchecked")
 public interface Aggregation {
 
   /**

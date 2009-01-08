@@ -50,6 +50,7 @@ import rice.selector.SelectorManager;
  * 
  * @author Jeff Hoye
  */
+@SuppressWarnings("unchecked")
 public class ProcessingRequest implements Runnable,
     Comparable<ProcessingRequest>, Cancellable {
   Continuation c;

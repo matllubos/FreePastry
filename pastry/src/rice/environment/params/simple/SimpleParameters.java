@@ -59,7 +59,7 @@ public class SimpleParameters implements Parameters {
 
   private MyProperties defaults;
 
-  private Set changeListeners;
+  private Set<ParameterChangeListener> changeListeners;
 
   /**
    * Where items are written out.
@@ -97,7 +97,7 @@ public class SimpleParameters implements Parameters {
     }
     this.properties = new MyProperties();
     this.defaults = new MyProperties();
-    this.changeListeners = new HashSet();
+    this.changeListeners = new HashSet<ParameterChangeListener>();
 
     for (int ctr = 0; ctr < orderedDefaults.length; ctr++) {
       try {        
@@ -131,10 +131,12 @@ public class SimpleParameters implements Parameters {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public Enumeration enumerateDefaults() {
     return defaults.keys();
   }
 
+  @SuppressWarnings("unchecked")
   public Enumeration enumerateNonDefaults() {
     return properties.keys();
   }
@@ -265,7 +267,7 @@ public class SimpleParameters implements Parameters {
       return new InetSocketAddress[0];
       
     String[] addresses = getString(name).split(ARRAY_SPACER);
-    List result = new LinkedList();
+    List<InetSocketAddress> result = new LinkedList<InetSocketAddress>();
 
     for (int i = 0; i < addresses.length; i++) {
       InetSocketAddress address = parseInetSocketAddress(addresses[i]);
@@ -377,7 +379,7 @@ public class SimpleParameters implements Parameters {
   }
 
   private void fireChangeEvent(String name, String val) {
-    Iterator i = changeListeners.iterator();
+    Iterator<ParameterChangeListener> i = changeListeners.iterator();
     while (i.hasNext()) {
       ParameterChangeListener p = (ParameterChangeListener) i.next();
       p.parameterChange(name, val);
@@ -385,6 +387,7 @@ public class SimpleParameters implements Parameters {
   }
 
   protected class MyProperties extends Properties {
+    @SuppressWarnings("unchecked")
     public Enumeration keys() {
       final String[] keys = (String[]) keySet().toArray(new String[0]);
       Arrays.sort(keys);

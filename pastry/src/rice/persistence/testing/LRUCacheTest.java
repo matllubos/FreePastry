@@ -58,6 +58,7 @@ import rice.pastry.commonapi.*;
  * This class is a class which tests the Cache class
  * in the rice.persistence package.
  */
+@SuppressWarnings("unchecked")
 public class LRUCacheTest extends Test {
 
   protected static final int CACHE_SIZE = 100;

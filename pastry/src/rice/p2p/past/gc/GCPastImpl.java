@@ -62,6 +62,7 @@ import rice.persistence.*;
  * @author Alan Mislove
  * @author Andreas Haeberlen
  */
+@SuppressWarnings("unchecked")
 public class GCPastImpl extends PastImpl implements GCPast {
 
   /**

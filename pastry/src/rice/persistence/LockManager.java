@@ -39,6 +39,7 @@ package rice.persistence;
 import rice.Continuation;
 import rice.p2p.commonapi.Id;
 
+@SuppressWarnings("unchecked")
 public interface LockManager {
   public void lock(Id id, Continuation c);
   

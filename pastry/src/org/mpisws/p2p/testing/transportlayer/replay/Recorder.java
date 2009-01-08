@@ -162,6 +162,7 @@ public class Recorder implements MyEvents {
       }
       
       @Override
+      @SuppressWarnings("unchecked")
       protected Bootstrapper getBootstrapper(final PastryNode pn, NodeHandleAdapter tl, NodeHandleFactory handleFactory, ProximityNeighborSelector pns) {
         final Bootstrapper internal = super.getBootstrapper(pn, tl, handleFactory, pns);
         Bootstrapper ret = new Bootstrapper() {        
@@ -229,7 +230,7 @@ public class Recorder implements MyEvents {
     }
 
     // for the first app subscribe then start the publishtask
-    Iterator i = apps.iterator();
+    Iterator<MyScribeClient> i = apps.iterator();
     MyScribeClient app = (MyScribeClient) i.next();
     env.getSelectorManager().invoke(new SubscribeInvokation(app));
     env.getSelectorManager().invoke(new PublishInvokation(app));
@@ -326,8 +327,8 @@ public class Recorder implements MyEvents {
    */
   public static void printTree(ArrayList<MyScribeClient> apps) {
     // build a hashtable of the apps, keyed by nodehandle
-    Hashtable appTable = new Hashtable();
-    Iterator i = apps.iterator();
+    Hashtable<NodeHandle,MyScribeClient> appTable = new Hashtable<NodeHandle,MyScribeClient>();
+    Iterator<MyScribeClient> i = apps.iterator();
     while (i.hasNext()) {
       MyScribeClient app = (MyScribeClient) i.next();
       appTable.put(app.endpoint.getLocalNodeHandle(), app);
@@ -345,7 +346,7 @@ public class Recorder implements MyEvents {
   /**
    * Recursively crawl up the tree to find the root.
    */
-  public static NodeHandle getRoot(NodeHandle seed, Hashtable appTable) {
+  public static NodeHandle getRoot(NodeHandle seed, Hashtable<NodeHandle,MyScribeClient> appTable) {
     MyScribeClient app = (MyScribeClient) appTable.get(seed);
     if (app.isRoot())
       return seed;
@@ -357,7 +358,7 @@ public class Recorder implements MyEvents {
    * Print's self, then children.
    */
   public static void recursivelyPrintChildren(NodeHandle curNode,
-      int recursionDepth, Hashtable appTable) {
+      int recursionDepth, Hashtable<NodeHandle,MyScribeClient> appTable) {
     // print self at appropriate tab level
     String s = "";
     for (int numTabs = 0; numTabs < recursionDepth; numTabs++) {

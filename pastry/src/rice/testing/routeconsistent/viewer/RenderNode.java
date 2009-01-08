@@ -54,7 +54,7 @@ public class RenderNode {
   /**
    * List of squares, sorted by t1
    */
-  List squares;
+  List<Square> squares;
 
   int readyStart;
   int readyEnd;
@@ -69,7 +69,7 @@ public class RenderNode {
   public RenderNode(Node node, boolean leftSide) {
     this.n = node;
     this.leftSide = leftSide;
-    squares = new LinkedList();
+    squares = new LinkedList<Square>();
   }
 
   public Square getSquare(int space, long time) {
@@ -78,7 +78,7 @@ public class RenderNode {
     if (space > right) return null;
     
     // linear search, could be much faster with binary search
-    Iterator i = squares.iterator();
+    Iterator<Square> i = squares.iterator();
     while(i.hasNext()) {
       Square s = (Square)i.next(); 
       if (time > s.t2) continue;
@@ -105,7 +105,7 @@ public class RenderNode {
       g.setColor(n.color);
     }
 //    System.out.println(nodeName+" numSq:"+squares.size());
-    Iterator i = squares.iterator();
+    Iterator<Square> i = squares.iterator();
     while(i.hasNext()) {
       Square s = (Square)i.next();
       if ((renderType != ConsRenderer.PL_RENDER_NOT) || s.type < 3) {
@@ -139,7 +139,7 @@ public class RenderNode {
   }
 
   public void move(long diff) {
-    Iterator i = squares.iterator();
+    Iterator<Square> i = squares.iterator();
     while(i.hasNext()) {
       Square s = (Square)i.next();
       s.time+=diff;
@@ -176,14 +176,14 @@ public class RenderNode {
     }
   }
   
-  public Collection overlaps(RenderNode that) {
-    List l = new LinkedList();
+  public Collection<Overlap> overlaps(RenderNode that) {
+    List<Overlap> l = new LinkedList<Overlap>();
     if (this.left >= that.right) return l;
     if (this.right <= that.left) return l;      
-    Iterator i = squares.iterator();
+    Iterator<Square> i = squares.iterator();
     while(i.hasNext()) {
       Square thisSquare = (Square)i.next(); 
-      Iterator i2 = that.squares.iterator();
+      Iterator<Square> i2 = that.squares.iterator();
       while(i2.hasNext()) {
         Square thatSquare = (Square)i2.next(); 
         Overlap o = thisSquare.overlap(thatSquare);

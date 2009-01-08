@@ -47,6 +47,7 @@ import rice.post.messaging.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public abstract class PostClient extends Observable {
 
   /**

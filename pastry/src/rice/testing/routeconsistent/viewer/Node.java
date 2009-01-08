@@ -335,8 +335,8 @@ public class Node {
    * @param b
    * @return
    */
-  public Collection overlaps(Node that) {
-    List l = new LinkedList();
+  public Collection<Overlap> overlaps(Node that) {
+    List<Overlap> l = new LinkedList<Overlap>();
     if (this.t1 > that.t2) return l;
     if (this.t2 < that.t1) return l;
     l.addAll(this.r1.overlaps(that.r1));
@@ -346,7 +346,7 @@ public class Node {
     if (l.size() > 0) {
       long minTime = Long.MAX_VALUE;
       long maxTime = 0;
-      Iterator i = l.iterator();
+      Iterator<Overlap> i = l.iterator();
       while(i.hasNext()) {
         Overlap o = (Overlap)i.next(); 
         if (o.t1 < minTime) minTime = o.t1;

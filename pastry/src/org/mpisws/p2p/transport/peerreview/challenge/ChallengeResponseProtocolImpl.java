@@ -304,7 +304,7 @@ public class ChallengeResponseProtocolImpl<Handle extends RawSerializable, Ident
       if (auditEvidence != null) {
         if (isValidResponse(message.subject, auditEvidence, message.evidence, true)) {
           if (logger.level <= Logger.FINE) logger.log( "Received response to ongoing AUDIT from "+message.subject);
-          auditProtocol.processAuditResponse(message.subject, message.evidenceSeq, (AuditResponse)message.evidence);
+          auditProtocol.processAuditResponse(message.subject, message.evidenceSeq, (AuditResponse<Handle>)message.evidence);
         } else {
           if (logger.level <= Logger.WARNING) logger.log("Invalid response to ongoing audit of "+message.subject);
         }

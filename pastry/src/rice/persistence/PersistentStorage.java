@@ -95,6 +95,7 @@ import rice.p2p.util.rawserialization.JavaSerializationException;
  * in memory, so fetching the metadata of a given key is an efficient
  * operation.  
  */
+@SuppressWarnings("unchecked")
 public class PersistentStorage implements Storage {
   
   /**

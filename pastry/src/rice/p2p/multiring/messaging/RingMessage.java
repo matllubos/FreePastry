@@ -171,7 +171,7 @@ public class RingMessage implements RawScribeContent {
    * @param priority
    * @throws IOException
    */
-  public RingMessage(InputBuffer buf, Endpoint ringEndpoint, Hashtable endpoints) throws IOException {
+  public RingMessage(InputBuffer buf, Endpoint ringEndpoint, Hashtable<String, Endpoint> endpoints) throws IOException {
     id = new RingId(buf, ringEndpoint);
     application = buf.readUTF();
 

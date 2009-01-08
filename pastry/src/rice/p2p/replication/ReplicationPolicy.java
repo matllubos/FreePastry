@@ -82,7 +82,7 @@ public interface ReplicationPolicy {
      */
     public IdSet difference(IdSet local, IdSet remote, IdFactory factory) {
       IdSet result = factory.buildIdSet();
-      Iterator i = remote.getIterator();
+      Iterator<Id> i = remote.getIterator();
       
       while (i.hasNext()) {
         Id id = (Id) i.next();

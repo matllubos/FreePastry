@@ -47,12 +47,11 @@ import rice.p2p.past.PastContent;
  * 
  * @author Jeff Hoye
  */
-class MyContinuation implements Continuation {
+class MyContinuation implements Continuation<PastContent, Exception> {
   /**
    * Called when the result arrives.
    */
-  public void receiveResult(Object result) {
-    PastContent pc = (PastContent)result;
+  public void receiveResult(PastContent pc) {
     System.out.println("Received a "+pc);
   }
 

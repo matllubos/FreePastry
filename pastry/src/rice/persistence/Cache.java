@@ -57,6 +57,7 @@ import rice.p2p.commonapi.*;
  *
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public interface Cache extends Catalog {
   
   /**

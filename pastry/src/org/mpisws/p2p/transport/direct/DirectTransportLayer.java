@@ -122,7 +122,7 @@ public class DirectTransportLayer<Identifier, MessageType> implements TransportL
     if (simulator.isAlive(i)) {
       int delay = (int)Math.round(simulator.networkDelay(localIdentifier, i));
       DirectAppSocket<Identifier, MessageType> socket = new DirectAppSocket<Identifier, MessageType>(i, localIdentifier, deliverSocketToMe, simulator, handle, options);
-      CancelAndClose cancelAndClose = new CancelAndClose(socket, simulator.enqueueDelivery(socket.getAcceptorDelivery(),
+      CancelAndClose<Identifier, MessageType> cancelAndClose = new CancelAndClose<Identifier, MessageType>(socket, simulator.enqueueDelivery(socket.getAcceptorDelivery(),
           delay));
       handle.setSubCancellable(cancelAndClose);
     } else {

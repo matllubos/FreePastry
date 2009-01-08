@@ -59,6 +59,7 @@ import rice.p2p.util.*;
  * to provide persistent storage, and simply functions as an
  * enhanced hash table.
  */
+@SuppressWarnings("unchecked")
 public class MemoryStorage implements Storage {
 
   // the map used to store the data

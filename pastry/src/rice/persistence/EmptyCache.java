@@ -57,6 +57,7 @@ import rice.p2p.util.*;
 /**
  * This class is a cahcce which doesn't store anything.
  */
+@SuppressWarnings("unchecked")
 public class EmptyCache implements Cache {
   
   /**

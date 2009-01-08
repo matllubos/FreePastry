@@ -130,9 +130,9 @@ public class ClosestRegrTest {
     System.out.println("SO FAR: " + incorrect + "/" + NUM_NODES + " PERCENTAGE: " + (sum/incorrect));
   }
 
-  protected double getAvgNumEntries(Collection nds) {
+  protected double getAvgNumEntries(Collection<PastryNode> nds) {
     double sum = 0;
-    Iterator i = nds.iterator(); 
+    Iterator<PastryNode> i = nds.iterator(); 
     while(i.hasNext()) {
       PastryNode pn = (PastryNode)i.next(); 
       sum+=pn.getRoutingTable().numUniqueEntries();

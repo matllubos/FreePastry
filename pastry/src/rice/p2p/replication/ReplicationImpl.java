@@ -61,6 +61,7 @@ import rice.p2p.util.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class ReplicationImpl implements Replication, Application, Destructable {
   /**
    * The amount of time to wait between replications

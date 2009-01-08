@@ -58,6 +58,7 @@ import rice.p2p.past.rawserialization.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
+@SuppressWarnings("unchecked")
 public interface Past {
 
   /**
@@ -70,7 +71,7 @@ public interface Past {
    * @param obj the object to be inserted
    * @param command Command to be performed when the result is received
    */
-  public void insert(PastContent obj, Continuation command);
+  public void insert(PastContent obj, Continuation<Boolean[], Exception> command);
  
   /**
    * Retrieves the object stored in this instance of Past with the
@@ -97,7 +98,7 @@ public interface Past {
    * @param id the key to be queried
    * @param command Command to be performed when the result is received
    */
-  public void lookup(Id id, Continuation command);
+  public void lookup(Id id, Continuation<PastContent, Exception> command);
   
   /**
    * Retrieves the object stored in this instance of Past with the

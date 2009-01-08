@@ -50,7 +50,7 @@ import rice.p2p.past.*;
  * @version $Id$
  * @author Peter Druschel 
  */
-public class GCPastMetadata implements Serializable, Comparable {
+public class GCPastMetadata implements Serializable, Comparable<GCPastMetadata> {
   
   // serialver for backwards compatibility
   private static final long serialVersionUID = -2432306227012003387L;
@@ -99,7 +99,7 @@ public class GCPastMetadata implements Serializable, Comparable {
    * @param other The object ot compare to
    * @return the comparison
    */
-  public int compareTo(Object other) {
+  public int compareTo(GCPastMetadata other) {
     GCPastMetadata metadata = (GCPastMetadata) other;
     
     if (metadata.expiration > expiration) 

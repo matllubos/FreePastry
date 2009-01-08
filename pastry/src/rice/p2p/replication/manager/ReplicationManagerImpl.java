@@ -60,6 +60,7 @@ import rice.p2p.replication.manager.messaging.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class ReplicationManagerImpl implements ReplicationManager, ReplicationClient, Application {
   
   /**

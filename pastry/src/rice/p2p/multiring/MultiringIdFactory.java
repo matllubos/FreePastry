@@ -288,6 +288,7 @@ public class MultiringIdFactory implements IdFactory {
     return new MultiringNodeHandleSet(getRingId(), factory.buildNodeHandleSet());
   }
   
+  @SuppressWarnings("unchecked")
   protected class MultiringSortedMap implements SortedMap {
     protected SortedMap map;
     
@@ -317,6 +318,7 @@ public class MultiringIdFactory implements IdFactory {
     public Collection values() { throw new UnsupportedOperationException("values not supported!"); }
   }
 
+  @SuppressWarnings("unchecked")
   protected class MultiringEntrySet implements Set {
     protected Set set;
     
@@ -347,6 +349,7 @@ public class MultiringIdFactory implements IdFactory {
     public Object[] toArray(Object[] a) { throw new UnsupportedOperationException("toArray not supported!"); }
   }
   
+  @SuppressWarnings("unchecked")
   protected class MultiringKeySet implements Set {
     protected Set set;
     

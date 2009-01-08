@@ -132,6 +132,7 @@ public class PastryNode extends Observable implements
   /**
    * Used to deserialize NodeHandles
    */
+  @SuppressWarnings("unchecked")
   protected NodeHandleFactory handleFactory;
 
   /**
@@ -142,6 +143,7 @@ public class PastryNode extends Observable implements
   /**
    * Call boot on this class.
    */
+  @SuppressWarnings("unchecked")
   protected Bootstrapper bootstrapper;
   
   /**
@@ -174,6 +176,7 @@ public class PastryNode extends Observable implements
     }
   }
   
+  @SuppressWarnings("unchecked")
   public void boot(Collection o2) {
     ArrayList o = new ArrayList(o2);
     while (o.remove(null)); // remove all null
@@ -245,6 +248,7 @@ public class PastryNode extends Observable implements
     this.router = router;
   }
 
+  @SuppressWarnings("unchecked")
   public void setJoinProtocols(Bootstrapper boot, JoinProtocol joinP, LeafSetProtocol leafsetP, RouteSetProtocol routeP) {
     this.bootstrapper = boot;
     this.joiner = joinP;
@@ -350,8 +354,8 @@ public class PastryNode extends Observable implements
         // notify applications
         // we iterate over private copy to allow addition of new apps in the
         // context of notifyReady()
-        Vector tmpApps = new Vector(apps);
-        Iterator it = tmpApps.iterator();
+        Vector<PastryAppl> tmpApps = new Vector(apps);
+        Iterator<PastryAppl> it = tmpApps.iterator();
         while (it.hasNext())
           ((PastryAppl) (it.next())).notifyReady();
         neverBeenReady = false;
@@ -577,6 +581,7 @@ public class PastryNode extends Observable implements
    * @param command
    *          The command to return the result to once it's done
    */
+  @SuppressWarnings("unchecked")
   public void process(Executable task, Continuation command) {
     try {
       myEnvironment.getProcessor().process(task, 
@@ -628,6 +633,7 @@ public class PastryNode extends Observable implements
    * @param receiver
    * @param appl
    */
+  @SuppressWarnings("unchecked")
   public SocketRequestHandle connect(final NodeHandle i, final AppSocketReceiver deliverSocketToMe,
       final PastryAppl appl, int timeout) {
     
@@ -1079,6 +1085,7 @@ public class PastryNode extends Observable implements
 //    this.bootstrapper = bootstrapper;
 //  }
   
+  @SuppressWarnings("unchecked")
   public Bootstrapper getBootstrapper() {
     return bootstrapper;
   }

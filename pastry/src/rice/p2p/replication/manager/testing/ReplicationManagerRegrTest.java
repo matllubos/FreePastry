@@ -54,6 +54,7 @@ import rice.p2p.replication.manager.*;
  * @version $Id$
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class ReplicationManagerRegrTest extends CommonAPITest {
 
   /**

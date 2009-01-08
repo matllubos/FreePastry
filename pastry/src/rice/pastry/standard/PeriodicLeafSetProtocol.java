@@ -146,7 +146,7 @@ public class PeriodicLeafSetProtocol extends PastryAppl implements ReadyStrategy
     
     // make sure to register all the existing leafset entries
     this.leafSet = ls;
-    Iterator i = this.leafSet.asList().iterator();
+    Iterator<NodeHandle> i = this.leafSet.asList().iterator();
     while(i.hasNext()) {
       NodeHandle nh = (NodeHandle)i.next(); 
       nh.addObserver(this, 50);

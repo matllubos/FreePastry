@@ -49,6 +49,7 @@ import rice.p2p.commonapi.*;
  * @author Andreas Haeberlen
  */
 
+@SuppressWarnings("unchecked")
 public interface VersioningPast {
 
   /**

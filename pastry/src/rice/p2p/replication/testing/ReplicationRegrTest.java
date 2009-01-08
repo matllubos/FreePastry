@@ -53,6 +53,7 @@ import rice.persistence.MemoryStorage;
  * @version $Id$
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class ReplicationRegrTest extends CommonAPITest {
 
   /**

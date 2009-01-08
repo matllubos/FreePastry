@@ -278,7 +278,7 @@ public class AnycastMessage extends ScribeMessage {
     initialRequestor.serialize(buf);
     
     buf.writeInt(toVisit.size());
-    Iterator i = toVisit.iterator();
+    Iterator<NodeHandle> i = toVisit.iterator();
     while(i.hasNext()) {
       ((NodeHandle)i.next()).serialize(buf); 
     }
@@ -318,7 +318,7 @@ public class AnycastMessage extends ScribeMessage {
 
     initialRequestor = endpoint.readNodeHandle(buf);
     
-    toVisit = new LinkedList();
+    toVisit = new LinkedList<NodeHandle>();
     int toVisitLength = buf.readInt();
     for (int i = 0; i < toVisitLength; i++) {
       toVisit.addLast(endpoint.readNodeHandle(buf)); 

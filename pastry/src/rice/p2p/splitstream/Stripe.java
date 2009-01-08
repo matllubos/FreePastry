@@ -87,7 +87,7 @@ public class Stripe implements ScribeClient {
   /**
    * The list of SplitStreamClients interested in data from this client
    */
-  protected Vector clients;
+  protected Vector<SplitStreamClient> clients;
 
   /**
    * This stripe's channel
@@ -97,7 +97,7 @@ public class Stripe implements ScribeClient {
   /**
    * The count of failed subscribe messages
    */
-  protected Hashtable failed;
+  protected Hashtable<Topic, Integer> failed;
 
   protected String instance;
   
@@ -117,7 +117,7 @@ public class Stripe implements ScribeClient {
     logger = scribe.getEnvironment().getLogManager().getLogger(Stripe.class, instance);    
     this.channel = channel;
     this.isPrimary = false;
-    this.failed = new Hashtable();
+    this.failed = new Hashtable<Topic, Integer>();
     if(SplitStreamScribePolicy.getPrefixMatch(this.channel.getLocalId(), stripeId.getId(), channel.getStripeBase()) > 0)
       this.isPrimary = true;
     

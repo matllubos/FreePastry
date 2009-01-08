@@ -45,6 +45,7 @@ import java.util.Vector;
 import rice.environment.Environment;
 import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
@@ -63,7 +64,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
 public class Tutorial {
   
   // this will keep track of our applications
-  Vector apps = new Vector();
+  Vector<MyApp> apps = new Vector<MyApp>();
   
   /**
    * This constructor launches numNodes PastryNodes.  They will bootstrap 
@@ -84,7 +85,7 @@ public class Tutorial {
     // construct the PastryNodeFactory
     PastryNodeFactory factory;
     if (useDirect) {
-      NetworkSimulator sim = new EuclideanNetwork(env);
+      NetworkSimulator<DirectNodeHandle,RawMessage> sim = new EuclideanNetwork<DirectNodeHandle,RawMessage>(env);
       factory = new DirectPastryNodeFactory(nidFactory, sim, env);
     } else {
       factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
@@ -139,7 +140,7 @@ public class Tutorial {
 //    if (true) return;
     
     // for each app
-    Iterator appIterator = apps.iterator();
+    Iterator<MyApp> appIterator = apps.iterator();
     while(appIterator.hasNext()) {
       MyApp app = (MyApp)appIterator.next();
       PastryNode node = (PastryNode)app.getNode();

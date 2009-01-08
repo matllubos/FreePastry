@@ -723,7 +723,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
   }
 
   public int numUniqueEntries() {
-    HashSet set = new HashSet();
+    HashSet<NodeHandle> set = new HashSet<NodeHandle>();
     int maxr = numRows();
     int maxc = numColumns();
     for (int r = 0; r < maxr; r++) {
@@ -739,7 +739,7 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
     return set.size();
   }
 
-  ArrayList listeners = new ArrayList();
+  ArrayList<NodeSetListener> listeners = new ArrayList<NodeSetListener>();
   
   /**
    * Generates too many objects to use this interface
@@ -777,8 +777,8 @@ public class RoutingTable extends Observable implements NodeSetEventSource {
    * 
    * @return list of NodeHandle
    */
-  public synchronized List asList() {
-    List rtHandles = new ArrayList(numEntries());
+  public synchronized List<NodeHandle> asList() {
+    List<NodeHandle> rtHandles = new ArrayList<NodeHandle>(numEntries());
 
     for (int r = 0; r < numRows(); r++) {
       RouteSet[] row = getRow(r);

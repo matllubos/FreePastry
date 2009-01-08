@@ -315,9 +315,9 @@ public class NodeSet implements NodeSetI, Serializable {
   /**
    * return an iterator that iterates over the elements of this set
    * 
-   * @return the interator
+   * @return the iterator
    */
-  public Iterator getIterator() {
+  public Iterator<NodeHandle> getIterator() {
     return set.iterator();
   }
 
@@ -420,7 +420,7 @@ public class NodeSet implements NodeSetI, Serializable {
   
   public void serialize(OutputBuffer buf) throws IOException {
     buf.writeShort((short)set.size());
-    Iterator i = set.iterator();
+    Iterator<NodeHandle> i = set.iterator();
     while(i.hasNext()) {
       NodeHandle nh = (NodeHandle)i.next();
       nh.serialize(buf);

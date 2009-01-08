@@ -48,6 +48,7 @@ import java.util.Vector;
 import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.Message;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.JoinFailedException;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
@@ -84,7 +85,7 @@ public class DirectTutorial {
     final NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
     // create a new network
-    NetworkSimulator simulator = new EuclideanNetwork(env);
+    NetworkSimulator<DirectNodeHandle,RawMessage> simulator = new EuclideanNetwork<DirectNodeHandle,RawMessage>(env);
 
     // stop the simulator to schedule events
     simulator.stop();
@@ -172,7 +173,7 @@ public class DirectTutorial {
       @Override
       public void run() {
         // for each app
-        Iterator appIterator = apps.iterator();
+        Iterator<MyApp> appIterator = apps.iterator();
         while(appIterator.hasNext()) {
           MyApp app = (MyApp)appIterator.next();
           
@@ -190,7 +191,7 @@ public class DirectTutorial {
     // wait 20 seconds, then repeat every second
     env.getSelectorManager().getTimer().schedule(new TimerTask() {    
       // counter to construct nodes/apps
-      Iterator appIterator = apps.iterator();
+      Iterator<MyApp> appIterator = apps.iterator();
       
       @Override
       public void run() {

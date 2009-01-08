@@ -225,7 +225,7 @@ public class GCEndpoint implements Endpoint {
     return endpoint.getLocalNodeHandle();
   }
   
-  public List networkNeighbors(int num) {
+  public List<NodeHandle> networkNeighbors(int num) {
     return endpoint.networkNeighbors(num);
   }
   
@@ -264,6 +264,7 @@ public class GCEndpoint implements Endpoint {
    * @param task The task to run on the processing thread
    * @param command The command to return the result to once it's done
    */
+  @SuppressWarnings("unchecked")
   public void process(Executable task, Continuation command) {
     endpoint.process(task, command);
   }

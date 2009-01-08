@@ -49,7 +49,7 @@ import rice.p2p.util.MathUtils;
  * @version $Id$
  * @author ahae
  */
-public class VersionKey implements Id, Serializable, Comparable {
+public class VersionKey implements Id, Serializable {
   public static final short TYPE = 41;
   
   /**
@@ -131,7 +131,7 @@ public class VersionKey implements Id, Serializable, Comparable {
    * @param o DESCRIBE THE PARAMETER
    * @return DESCRIBE THE RETURN VALUE
    */
-  public int compareTo(Object o) {
+  public int compareTo(Id o) {
     int idResult = id.compareTo(((VersionKey) o).id);
     if (idResult != 0) {
       return idResult;

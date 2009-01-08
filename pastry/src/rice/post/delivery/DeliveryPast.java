@@ -51,6 +51,7 @@ import rice.post.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
+@SuppressWarnings("unchecked")
 public interface DeliveryPast extends GCPast {
   
   /**

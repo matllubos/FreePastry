@@ -129,12 +129,12 @@ public class GCIdSet implements IdSet {
    * return an iterator over the elements of this set
    * @return the interator
    */
-  public Iterator getIterator() {
-    return new Iterator() {
-      Iterator i = ids.getIterator();
+  public Iterator<Id> getIterator() {
+    return new Iterator<Id>() {
+      Iterator<Id> i = ids.getIterator();
       
       public boolean hasNext() { return i.hasNext(); }
-      public Object next() { return getGCId((Id) i.next()); }
+      public Id next() { return getGCId((Id) i.next()); }
       public void remove() { throw new UnsupportedOperationException("Remove on GCIdSet()!"); }
     };
   }
@@ -182,7 +182,7 @@ public class GCIdSet implements IdSet {
     if (numElements() != other.numElements())
       return false;
     
-    Iterator i = ids.getIterator();
+    Iterator<Id> i = ids.getIterator();
     while (i.hasNext())
       if (! other.isMemberId((Id) i.next()))
         return false;

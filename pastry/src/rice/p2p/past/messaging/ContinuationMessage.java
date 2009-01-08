@@ -58,6 +58,7 @@ import rice.p2p.util.rawserialization.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
+@SuppressWarnings("unchecked")
 public abstract class ContinuationMessage extends PastMessage implements Continuation {
 
   static final long serialVersionUID = 1321112527034107161L; 

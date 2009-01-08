@@ -58,6 +58,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public class CoalescedLog extends EncryptedLog {
   
   private static final long serialVersionUID = -8781290016130834529L;

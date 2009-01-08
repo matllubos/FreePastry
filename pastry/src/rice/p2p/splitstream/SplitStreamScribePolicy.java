@@ -75,7 +75,7 @@ public class SplitStreamScribePolicy extends DefaultScribePolicy /*implements Sc
   /**
    * A mapping from channelId -> maximum children
    */
-  protected Hashtable policy;
+  protected Hashtable<ChannelId, Integer> policy;
 
   /**
    * Constructor which takes a splitStream object
@@ -87,7 +87,7 @@ public class SplitStreamScribePolicy extends DefaultScribePolicy /*implements Sc
     DEFAULT_MAXIMUM_CHILDREN = scribe.getEnvironment().getParameters().getInt("p2p_splitStream_policy_default_maximum_children");
     this.scribe = scribe;
     this.splitStream = splitStream;
-    this.policy = new Hashtable();
+    this.policy = new Hashtable<ChannelId, Integer>();
   }
 
   /**

@@ -199,7 +199,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     Iterable<MessageWrapper> dropMe;
     synchronized(queue) {
       failed = true;
-      dropMe = new ArrayList(queue);
+      dropMe = new ArrayList<MessageWrapper>(queue);
     }    
     for (MessageWrapper foo : dropMe) {
       foo.drop();

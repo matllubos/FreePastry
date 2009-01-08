@@ -81,7 +81,7 @@ public class MyMsg implements Message {
     return Message.LOW_PRIORITY;
   }
 
-  ArrayList passport = new ArrayList();
+  ArrayList<NodeHandle> passport = new ArrayList<NodeHandle>();
   public void addHop(NodeHandle hop) {
     passport.add(hop);
   }

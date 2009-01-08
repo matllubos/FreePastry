@@ -94,7 +94,7 @@ public abstract class CommonAPITest {
   protected NodeIdFactory idFactory;
 
   // the simulator, in case of direct
-  protected NetworkSimulator<NodeHandle, Message> simulator;
+  protected NetworkSimulator simulator;
   
   // the environment
   protected Environment environment;

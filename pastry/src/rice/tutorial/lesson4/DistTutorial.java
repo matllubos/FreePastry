@@ -117,7 +117,7 @@ public class DistTutorial {
     for (int i = 0; i < 10; i++) {
         
       // for each app
-      Iterator appIterator = apps.iterator();
+      Iterator<MyApp> appIterator = apps.iterator();
       while(appIterator.hasNext()) {
         MyApp app = (MyApp)appIterator.next();
         
@@ -135,7 +135,7 @@ public class DistTutorial {
     env.getTimeSource().sleep(1000);
       
     // for each app
-    Iterator appIterator = apps.iterator();
+    Iterator<MyApp> appIterator = apps.iterator();
     while(appIterator.hasNext()) {
       MyApp app = (MyApp)appIterator.next();
       PastryNode node = (PastryNode)app.getNode();

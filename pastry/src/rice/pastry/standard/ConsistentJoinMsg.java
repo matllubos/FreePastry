@@ -58,12 +58,12 @@ public class ConsistentJoinMsg extends PRawMessage {
   
   LeafSet ls;
   boolean request;
-  HashSet failed;
+  HashSet<NodeHandle> failed;
   
   /**
    * 
    */
-  public ConsistentJoinMsg(LeafSet ls, HashSet failed, boolean request) {
+  public ConsistentJoinMsg(LeafSet ls, HashSet<NodeHandle> failed, boolean request) {
     super(JoinAddress.getCode());
     this.ls = ls;
     this.request = request;
@@ -84,7 +84,7 @@ public class ConsistentJoinMsg extends PRawMessage {
     ls.serialize(buf);
     buf.writeBoolean(request);
     buf.writeInt(failed.size());
-    Iterator i = failed.iterator();
+    Iterator<NodeHandle> i = failed.iterator();
     while(i.hasNext()) {
       NodeHandle h = (NodeHandle)i.next(); 
       h.serialize(buf);
@@ -99,7 +99,7 @@ public class ConsistentJoinMsg extends PRawMessage {
         setSender(sender);
         ls = LeafSet.build(buf, nhf);
         request = buf.readBoolean();
-        failed = new HashSet();
+        failed = new HashSet<NodeHandle>();
         int numInSet = buf.readInt();
         for (int i = 0; i < numInSet; i++) {
           failed.add(nhf.readNodeHandle(buf));

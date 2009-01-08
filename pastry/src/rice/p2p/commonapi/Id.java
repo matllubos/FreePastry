@@ -49,7 +49,7 @@ import rice.p2p.commonapi.rawserialization.*;
  * @author Alan Mislove
  * @author Peter Druschel
  */
-public interface Id extends Comparable, Serializable {
+public interface Id extends Comparable<Id>, Serializable {
 
   /**
    * Checks if this Id is between two given ids ccw (inclusive) and cw (exclusive) on the circle
@@ -100,7 +100,7 @@ public interface Id extends Comparable, Serializable {
    * @version $Id$
    * @author amislove
    */
-  public static interface Distance extends Comparable, Serializable {
+  public static interface Distance extends Comparable<Distance>, Serializable {
 
     /**
      * Shift operator. shift(-1,0) multiplies value of this by two, shift(1,0) divides by 2

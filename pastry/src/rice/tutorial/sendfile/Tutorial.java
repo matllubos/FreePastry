@@ -45,6 +45,7 @@ import java.util.Vector;
 import rice.environment.Environment;
 import rice.environment.params.simple.SimpleParameters;
 import rice.p2p.commonapi.*;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
@@ -84,7 +85,7 @@ public class Tutorial {
     // construct the PastryNodeFactory
     PastryNodeFactory factory;
     if (useDirect) {
-      NetworkSimulator sim = new EuclideanNetwork(env);
+      NetworkSimulator<DirectNodeHandle,RawMessage> sim = new EuclideanNetwork<DirectNodeHandle,RawMessage>(env);
       factory = new DirectPastryNodeFactory(nidFactory, sim, env);
     } else {
       factory = new SocketPastryNodeFactory(nidFactory, bindport, env);

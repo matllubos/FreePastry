@@ -71,6 +71,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public class StorageService {
   
   // the maximum size of a content-hash object

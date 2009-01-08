@@ -92,7 +92,7 @@ public class StringCacheUnit {
     }
   
     System.out.print("    Loading 10000 4-char strings\t\t\t\t");
-    HashSet set = new HashSet();
+    HashSet<String> set = new HashSet<String>();
     char[] array = new char[4];
     String t = null;
     
@@ -102,7 +102,7 @@ public class StringCacheUnit {
       if (! set.contains(t)) {
         set.add(t);
       } else {
-        Iterator j = set.iterator();
+        Iterator<String> j = set.iterator();
         
         while (j.hasNext()) {
           String other = (String) j.next();

@@ -60,6 +60,7 @@ import rice.persistence.Storage;
 import rice.persistence.StorageManager;
 import rice.persistence.PersistentStorage;
 
+@SuppressWarnings("unchecked")
 public class GlacierImpl implements Glacier, GCPast, VersioningPast, Application, DebugCommandHandler {
   protected final StorageManager fragmentStorage;
   protected final StorageManager neighborStorage;

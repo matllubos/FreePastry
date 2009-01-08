@@ -49,7 +49,7 @@ import rice.p2p.util.MathUtils;
  * @version $Id$
  * @author ahae
  */
-public class FragmentKey implements Id, Comparable {
+public class FragmentKey implements Id {
   public static final short TYPE = 42;
   
   /**
@@ -224,7 +224,7 @@ public class FragmentKey implements Id, Comparable {
    * @param o DESCRIBE THE PARAMETER
    * @return DESCRIBE THE RETURN VALUE
    */
-  public int compareTo(Object o) {
+  public int compareTo(Id o) {
     int keyResult = key.compareTo(((FragmentKey) o).key);
     if (keyResult != 0) {
       return keyResult;

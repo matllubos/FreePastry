@@ -233,6 +233,7 @@ public interface Endpoint extends NodeHandleReader {
    * @param task The task to run on the processing thread
    * @param command The command to return the result to once it's done
    */
+  @SuppressWarnings("unchecked")
   void process(Executable task, Continuation command);
   
   /**
@@ -325,7 +326,7 @@ public interface Endpoint extends NodeHandleReader {
    * @param num
    * @return List of NodeHandle
    */
-  public List networkNeighbors(int num);
+  public List<NodeHandle> networkNeighbors(int num);
   
   /**
    * To use Raw Serialization

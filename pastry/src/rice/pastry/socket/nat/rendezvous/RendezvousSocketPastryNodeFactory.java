@@ -470,6 +470,7 @@ public class RendezvousSocketPastryNodeFactory extends SocketPastryNodeFactory {
    * When the node goes live, close all of the opened pilots, to not blow out the bootstrap node.
    */
   @Override
+  @SuppressWarnings("unchecked")
   protected Bootstrapper getBootstrapper(final PastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,

@@ -53,6 +53,7 @@ import rice.post.security.*;
  * @version $Id$
  * @author amislove
  */
+@SuppressWarnings("unchecked")
 public class PKnoISecurityModule extends PostClient implements SecurityModule {
 
   /**

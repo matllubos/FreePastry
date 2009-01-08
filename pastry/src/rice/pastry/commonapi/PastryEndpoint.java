@@ -603,6 +603,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
    * @param task The task to run on the processing thread
    * @param command The command to return the result to once it's done
    */
+  @SuppressWarnings("unchecked")
   public void process(Executable task, Continuation command) {
     thePastryNode.process(task, command);
   }
@@ -670,7 +671,7 @@ public class PastryEndpoint extends PastryAppl implements Endpoint {
     throw new IllegalArgumentException("Unknown type: "+type);
   }
 
-  public List networkNeighbors(int num) {
+  public List<NodeHandle> networkNeighbors(int num) {
     HashSet<NodeHandle> handles = new HashSet<NodeHandle>();    
     List<rice.pastry.NodeHandle> l = (List<rice.pastry.NodeHandle>)thePastryNode.getRoutingTable().asList();    
     Iterator<rice.pastry.NodeHandle> i = l.iterator();

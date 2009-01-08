@@ -38,7 +38,7 @@ package rice.p2p.glacier.v2;
 
 import java.io.Serializable;
 
-public class FragmentMetadata implements Serializable, Comparable {
+public class FragmentMetadata implements Serializable, Comparable<FragmentMetadata> {
   
   private static final long serialVersionUID = 3380538644355999384L;
   
@@ -64,7 +64,7 @@ public class FragmentMetadata implements Serializable, Comparable {
     return storedSince;
   }
   
-  public int compareTo(Object object) {
+  public int compareTo(FragmentMetadata object) {
     FragmentMetadata metadata = (FragmentMetadata) object;
     
     if (metadata.currentExpirationDate > currentExpirationDate) 

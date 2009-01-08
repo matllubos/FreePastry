@@ -121,7 +121,7 @@ public class DirectAppSocket<Identifier, MessageType> {
     /**
      * of byte[]
      */
-    LinkedList byteDeliveries = new LinkedList();
+    LinkedList<byte[]> byteDeliveries = new LinkedList<byte[]>();
     /**
      * The offset of the first delivery, in case the reader didn't have enough space to read everything available.
      */
@@ -158,7 +158,7 @@ public class DirectAppSocket<Identifier, MessageType> {
 //          inputClosed = true;
           return -1;          
         }
-        Iterator i = byteDeliveries.iterator();
+        Iterator<byte[]> i = byteDeliveries.iterator();
         // loop over all messages to be delivered
         while(i.hasNext()) {
           byte[] msg = (byte[])i.next();          
@@ -414,11 +414,11 @@ public class DirectAppSocket<Identifier, MessageType> {
           simulator.enqueueDelivery(new ConnectorDelivery(),
               (int)Math.round(simulator.networkDelay(acceptor, connector))); 
         } else {
-          simulator.enqueueDelivery(new ConnectorExceptionDelivery(connectorReceiver,connectorHandle,new SocketTimeoutException()),
+          simulator.enqueueDelivery(new ConnectorExceptionDelivery<Identifier>(connectorReceiver,connectorHandle,new SocketTimeoutException()),
               (int)Math.round(simulator.networkDelay(acceptor, connector))); 
         }
       } else {
-        simulator.enqueueDelivery(new ConnectorExceptionDelivery(connectorReceiver,connectorHandle,new NodeIsFaultyException(acceptor)),0);
+        simulator.enqueueDelivery(new ConnectorExceptionDelivery<Identifier>(connectorReceiver,connectorHandle,new NodeIsFaultyException(acceptor)),0);
         // TODO: this should probably take into account a real delay, however, acceptor has already been removed from the simulator
 //            (int)Math.round(simulator.networkDelay(acceptor, connector))+
 //            (int)Math.round(simulator.networkDelay(connector, acceptor))); 

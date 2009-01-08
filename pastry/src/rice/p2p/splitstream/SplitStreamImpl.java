@@ -72,7 +72,7 @@ public class SplitStreamImpl implements SplitStream {
   /**
    * Hashtable of all the channels currently created on this node implicitly or explicitly.
    */
-  protected Hashtable channels;
+  protected Hashtable<ChannelId, Channel> channels;
 
   protected final int stripeBaseBitLength;  
   protected final int maxFailedSubscriptions;
@@ -81,7 +81,7 @@ public class SplitStreamImpl implements SplitStream {
   protected String instance;
 
   /**
-   * Convienience constructor which uses the default SplitStreamScribePolicy.
+   * Convenience constructor which uses the default SplitStreamScribePolicy.
    * @param node
    * @param instance
    */
@@ -123,7 +123,7 @@ public class SplitStreamImpl implements SplitStream {
     });
     
     this.node = node;
-    this.channels = new Hashtable();
+    this.channels = new Hashtable<ChannelId, Channel>();
     scribe.setPolicy(factory.getSplitStreamScribePolicy(scribe, this));
   }
 

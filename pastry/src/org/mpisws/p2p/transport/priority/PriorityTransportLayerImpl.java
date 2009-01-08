@@ -111,9 +111,6 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
    */
   public int MAX_BIG_MSG_SIZE = Integer.MAX_VALUE;
   
-  // maps a SelectionKey -> SocketConnector
-  public Hashtable sockets;
-  
   public Logger logger;
   
   protected Map<Identifier, EntityManager> entityManagers;

@@ -54,6 +54,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public class ForwardLog extends Log {
   
   /**

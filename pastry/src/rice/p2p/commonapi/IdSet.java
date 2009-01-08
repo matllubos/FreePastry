@@ -88,7 +88,7 @@ public interface IdSet extends Serializable {
    * return an iterator over the elements of this set
    * @return the interator
    */
-  public Iterator getIterator();
+  public Iterator<Id> getIterator();
   
   /**
    * return this set as an array

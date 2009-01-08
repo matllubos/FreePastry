@@ -67,7 +67,7 @@ public class IdBloomFilterUnit {
     System.out.println("Start: " + System.currentTimeMillis());
     IdBloomFilter filter = new IdBloomFilter(set);
     System.out.println("Done1: " + System.currentTimeMillis());
-    Iterator i = set.getIterator();
+    Iterator<Id> i = set.getIterator();
     
     while (i.hasNext()) {
       if (! filter.check((Id) i.next()))
@@ -94,7 +94,7 @@ public class IdBloomFilterUnit {
     System.out.println("Start: " + System.currentTimeMillis());
     IdBloomFilter filter2 = new IdBloomFilter(set2);
     System.out.println("Done1: " + System.currentTimeMillis());
-    Iterator i2 = set2.getIterator();
+    Iterator<Id> i2 = set2.getIterator();
     
     while (i2.hasNext()) {
       if (! filter2.check((Id) i2.next()))

@@ -161,7 +161,7 @@ public class Proxy {
   }
 
   protected String[] buildJavaEnvironment(Parameters parameters) {
-    HashSet set = new HashSet();
+    HashSet<String> set = new HashSet<String>();
     
     if (parameters.getBoolean("java_profiling_enable") ||
         parameters.getBoolean("java_thread_debugger_enable"))  {
@@ -601,8 +601,8 @@ public class Proxy {
         }
       });
       
-      Arrays.sort(this.files, new Comparator() {
-        public int compare(Object a, Object b) {
+      Arrays.sort(this.files, new Comparator<File>() {
+        public int compare(File a, File b) {
           long am = ((File) a).lastModified();
           long bm = ((File) b).lastModified();
           

@@ -63,6 +63,7 @@ import rice.p2p.past.rawserialization.PastContentHandleDeserializer;
  * @author jstewart
  *
  */
+@SuppressWarnings("unchecked")
 public class Moraine implements GCPast, VersioningPast {
   protected GCPast newPast;
   protected GCPast oldPast;

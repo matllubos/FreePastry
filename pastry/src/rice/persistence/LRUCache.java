@@ -62,6 +62,7 @@ import rice.p2p.util.*;
  * store the cached data.  If the Storage provides non-corruption
  * services, these services will also be provided by this cache.
  */
+@SuppressWarnings("unchecked")
 public class LRUCache implements Cache {
 
   // the maximum size of the cache

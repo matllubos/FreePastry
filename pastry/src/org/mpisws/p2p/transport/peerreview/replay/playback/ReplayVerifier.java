@@ -916,6 +916,7 @@ public abstract class ReplayVerifier<Identifier> implements Verifier<Identifier>
     return false;
   }
   
+  @SuppressWarnings("unchecked")
   protected IOException deserializeException(InputBuffer nextEvent) throws IOException {
     short exType = nextEvent.readShort();
     switch (exType) {

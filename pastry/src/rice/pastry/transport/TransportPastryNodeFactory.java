@@ -72,6 +72,7 @@ import rice.pastry.standard.StandardLeafSetProtocol;
 import rice.pastry.standard.StandardRouteSetProtocol;
 import rice.pastry.standard.StandardRouter;
 
+@SuppressWarnings("unchecked")
 public abstract class TransportPastryNodeFactory extends PastryNodeFactory {
 
   /**

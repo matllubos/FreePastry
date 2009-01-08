@@ -56,6 +56,7 @@ import rice.p2p.past.messaging.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class GCCollectMessage extends PastMessage {
   public static final short TYPE = 8;
 

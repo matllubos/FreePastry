@@ -215,6 +215,7 @@ public class GCIdFactory implements IdFactory {
     throw new UnsupportedOperationException("GCIdFactory cannot be used to build NodeHandleSets!");
   }
   
+  @SuppressWarnings("unchecked")
   protected class GCSortedMap implements SortedMap {
     protected SortedMap map;
     
@@ -244,6 +245,7 @@ public class GCIdFactory implements IdFactory {
     public Collection values() { throw new UnsupportedOperationException("values not supported!"); }
   }
   
+  @SuppressWarnings("unchecked")
   protected class GCEntrySet implements Set {
     protected Set set;
     
@@ -274,6 +276,7 @@ public class GCIdFactory implements IdFactory {
     public Object[] toArray(Object[] a) { throw new UnsupportedOperationException("toArray not supported!"); }
   }
   
+  @SuppressWarnings("unchecked")
   protected class GCMapEntry implements Map.Entry {
     protected Map.Entry entry;
     

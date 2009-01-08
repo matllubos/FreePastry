@@ -61,6 +61,7 @@ import rice.post.security.*;
  * 
  * @version $Id$
  */
+@SuppressWarnings("unchecked")
 public class DeliveryService implements ScribeClient {
   
   /**

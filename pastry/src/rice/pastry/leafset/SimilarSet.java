@@ -212,7 +212,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
     return true;
   }
 
-  transient ArrayList listeners = new ArrayList();
+  transient ArrayList<NodeSetListener> listeners = new ArrayList<NodeSetListener>();
   
   /**
    * Generates too many objects to use this interface
@@ -694,8 +694,8 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
    * 
    * @return
    */
-  public Collection getCollection() {
-    ArrayList al = new ArrayList();
+  public Collection<NodeHandle> getCollection() {
+    ArrayList<NodeHandle> al = new ArrayList<NodeHandle>();
     for (int i = 0; i < theSize; i++) {
       NodeHandle nh = nodes[i];
       if (nh != null) {
@@ -710,7 +710,7 @@ public class SimilarSet extends Observable implements NodeSetEventSource, Serial
     in.defaultReadObject();
     d1 = new Id.Distance();
     d = new Id.Distance();
-    listeners = new ArrayList();
+    listeners = new ArrayList<NodeSetListener>();
   }
 
   public String toString() {

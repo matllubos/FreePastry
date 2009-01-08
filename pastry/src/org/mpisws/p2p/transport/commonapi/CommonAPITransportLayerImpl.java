@@ -92,7 +92,7 @@ public class CommonAPITransportLayerImpl<Identifier extends NodeHandle> implemen
       IdFactory idFactory,
       RawMessageDeserializer deserializer,
       OptionsAdder optionsAdder,
-      ErrorHandler errorHandler,
+      ErrorHandler<Identifier> errorHandler,
       Environment env) {
     
     this.logger = env.getLogManager().getLogger(CommonAPITransportLayerImpl.class, null);

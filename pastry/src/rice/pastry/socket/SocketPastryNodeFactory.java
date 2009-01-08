@@ -838,6 +838,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   protected Bootstrapper getBootstrapper(PastryNode pn, 
       NodeHandleAdapter tl, 
       NodeHandleFactory handleFactory,
@@ -930,7 +931,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
       }
 
       // this is the end of the task, but we have to declare it here
-      final Continuation beginPns = new Continuation<Collection<NodeHandle>, Exception>(){
+      final Continuation<Collection<NodeHandle>, Exception> beginPns = new Continuation<Collection<NodeHandle>, Exception>(){
         boolean done = false; // to make sure this is only called once
         /**
          * This is usually going to get called twice.  The first time when bootHandles is complete,
@@ -1083,7 +1084,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return new BogusNodeHandle(bootstrap);
   }
 
-  public void getNodeHandle(InetSocketAddress[] bootstraps, Continuation c) {
+  public void getNodeHandle(InetSocketAddress[] bootstraps, Continuation<NodeHandle, Exception> c) {
     c.receiveResult(getNodeHandle(bootstraps, 0));
   }
 

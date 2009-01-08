@@ -505,7 +505,7 @@ public class LeafSet extends Observable implements Serializable, Iterable<NodeHa
    * @return
    */
   public Collection<NodeHandle> getUniqueSet() {
-    HashSet superset = new HashSet();
+    HashSet<NodeHandle> superset = new HashSet<NodeHandle>();
     superset.addAll(cwSet.getCollection());
     superset.addAll(ccwSet.getCollection());
     return superset;         
@@ -632,7 +632,7 @@ public class LeafSet extends Observable implements Serializable, Iterable<NodeHa
    * @return true if the local leafset changed
    */
   public boolean merge(LeafSet remotels, NodeHandle from, RoutingTable routeTable,
-                       boolean testOnly, Set insertedHandles) {
+                       boolean testOnly, Set<NodeHandle> insertedHandles) {
 //    System.out.println(this+".merge("+remotels+","+from+",...,"+testOnly+","+insertedHandles+")");
     
     boolean changed, result = false;
@@ -1011,10 +1011,10 @@ public class LeafSet extends Observable implements Serializable, Iterable<NodeHa
    *   
    */  
   public synchronized void serialize(OutputBuffer buf) throws IOException {
-    HashSet superset = new HashSet();
+    HashSet<NodeHandle> superset = new HashSet<NodeHandle>();
     superset.addAll(cwSet.getCollection());
     superset.addAll(ccwSet.getCollection());    
-    ArrayList list = new ArrayList(superset);
+    ArrayList<NodeHandle> list = new ArrayList<NodeHandle>(superset);
         
     buf.writeByte((byte)theSize);
     buf.writeByte((byte)list.size());
@@ -1023,7 +1023,7 @@ public class LeafSet extends Observable implements Serializable, Iterable<NodeHa
 
     baseHandle.serialize(buf);
     
-    Iterator it = list.iterator();
+    Iterator<NodeHandle> it = list.iterator();
     while(it.hasNext()) {
       NodeHandle nh = (NodeHandle)it.next(); 
       nh.serialize(buf);

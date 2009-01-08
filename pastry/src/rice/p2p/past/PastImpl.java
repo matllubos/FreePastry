@@ -69,6 +69,7 @@ import rice.persistence.*;
  * @author Ansley Post
  * @author Peter Druschel
  */
+@SuppressWarnings("unchecked")
 public class PastImpl implements Past, Application, ReplicationManagerClient {
   
   
@@ -760,7 +761,7 @@ public class PastImpl implements Past, Application, ReplicationManagerClient {
    * @param id the key to be queried
    * @param command Command to be performed when the result is received
    */
-  public void lookup(final Id id, final Continuation command) {
+  public void lookup(final Id id, final Continuation<PastContent, Exception> command) {
     lookup(id, true, command);
   }
   

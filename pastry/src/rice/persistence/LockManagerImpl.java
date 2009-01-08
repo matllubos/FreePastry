@@ -43,6 +43,7 @@ import rice.environment.Environment;
 import rice.environment.logging.Logger;
 import rice.p2p.commonapi.Id;
 
+@SuppressWarnings("unchecked")
 public class LockManagerImpl implements LockManager {
 
   // map: Id -> List<Continuation>

@@ -64,6 +64,7 @@ import java.io.Serializable;
  * @author Alan Mislove
  */
 
+@SuppressWarnings("unchecked")
 public class PastRegrTest extends CommonAPITest {
 
   // the instance name to use

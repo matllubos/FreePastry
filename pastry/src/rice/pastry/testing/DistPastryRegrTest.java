@@ -39,6 +39,7 @@ package rice.pastry.testing;
 import rice.environment.Environment;
 import rice.pastry.*;
 import rice.pastry.dist.*;
+import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.*;
 
 import java.util.*;
@@ -107,7 +108,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
    */
   protected NodeHandle getBootstrap(boolean firstNode) {
     if (firstNode)
-      return ((DistPastryNodeFactory) factory).getNodeHandle(bsaddress);
+      return ((SocketPastryNodeFactory) factory).getNodeHandle(bsaddress);
     else {
       InetSocketAddress addr = null;
       try {
@@ -116,7 +117,7 @@ public class DistPastryRegrTest extends PastryRegrTest {
       } catch (UnknownHostException e) {
         System.out.println(e);
       }
-      return ((DistPastryNodeFactory) factory).getNodeHandle(addr);
+      return ((SocketPastryNodeFactory) factory).getNodeHandle(addr);
     }
   }
 

@@ -52,7 +52,7 @@ import java.util.*;
  * some version of the tree, and may show nodes which were deleted or which
  * were subsequently added, but it will not die.
  */
-
+@SuppressWarnings("unchecked")
 public class RedBlackMap extends AbstractMap implements SortedMap, Cloneable, java.io.Serializable {
     /**
      * The Comparator used to maintain order in this RedBlackMap, or

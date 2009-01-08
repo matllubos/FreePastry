@@ -51,6 +51,7 @@ import rice.p2p.commonapi.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public interface ReplicationManagerClient {
   
   /**

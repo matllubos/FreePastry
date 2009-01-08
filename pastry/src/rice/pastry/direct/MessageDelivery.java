@@ -41,14 +41,10 @@ import java.util.Map;
 
 import org.mpisws.p2p.transport.direct.Delivery;
 import org.mpisws.p2p.transport.direct.DirectTransportLayer;
-import org.mpisws.p2p.transport.direct.GenericNetworkSimulator;
 
 import rice.environment.logging.Logger;
-import rice.pastry.PastryNode;
-import rice.pastry.commonapi.PastryEndpointMessage;
-import rice.pastry.messaging.Message;
 
-/**
+  /**
    * 
    * @version $Id: EuclideanNetwork.java 2561 2005-06-09 16:22:02Z jeffh $
    * @author amislove
@@ -66,7 +62,7 @@ import rice.pastry.messaging.Message;
      * Constructor for MessageDelivery.
      */
     public MessageDelivery(MessageType m, Identifier to, Identifier from, Map<String, Object> options, BasicNetworkSimulator<Identifier, MessageType> sim) {
-      logger = ((DirectTransportLayer)sim.getTL(to)).getLogger();
+      logger = ((DirectTransportLayer<Identifier, MessageType>)sim.getTL(to)).getLogger();
 //      if (m instanceof rice.pastry.routing.RouteMessage) {
 //        rice.pastry.routing.RouteMessage m1 = (rice.pastry.routing.RouteMessage)m;
 //        rice.p2p.commonapi.Message m2 = m1.unwrap();
@@ -87,11 +83,11 @@ import rice.pastry.messaging.Message;
       this.options = options;
       this.from = from;
       this.networkSimulator = sim;
-      this.seq = ((DirectTransportLayer)sim.getTL(to)).getNextSeq();
+      this.seq = ((DirectTransportLayer<Identifier, MessageType>)sim.getTL(to)).getNextSeq();
       
       // Note: this is done to reduce memory thrashing.  There are a ton of strings created
       // in getLogger(), and this is a really temporary object.
-      logger = ((DirectTransportLayer)sim.getTL(to)).getLogger();
+      logger = ((DirectTransportLayer<Identifier, MessageType>)sim.getTL(to)).getLogger();
 //      logger = pn.getEnvironment().getLogManager().getLogger(MessageDelivery.class, null);
     }
 

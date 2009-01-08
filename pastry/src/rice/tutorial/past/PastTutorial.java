@@ -155,10 +155,9 @@ public class PastTutorial {
       System.out.println("Inserting " + myContent + " at node "+p.getLocalNodeHandle());
       
       // insert the data
-      p.insert(myContent, new Continuation() {
+      p.insert(myContent, new Continuation<Boolean[], Exception>() {
         // the result is an Array of Booleans for each insert
-        public void receiveResult(Object result) {          
-          Boolean[] results = ((Boolean[]) result);
+        public void receiveResult(Boolean[] results) {          
           int numSuccessfulStores = 0;
           for (int ctr = 0; ctr < results.length; ctr++) {
             if (results[ctr].booleanValue()) 
@@ -189,8 +188,8 @@ public class PastTutorial {
       Past p = (Past)apps.get(env.getRandomSource().nextInt(numNodes));
 
       System.out.println("Looking up " + lookupKey + " at node "+p.getLocalNodeHandle());
-      p.lookup(lookupKey, new Continuation() {
-        public void receiveResult(Object result) {
+      p.lookup(lookupKey, new Continuation<PastContent, Exception>() {
+        public void receiveResult(PastContent result) {
           System.out.println("Successfully looked up " + result + " for key "+lookupKey+".");
         }
   
@@ -212,8 +211,8 @@ public class PastTutorial {
     Past p = (Past)apps.get(env.getRandomSource().nextInt(numNodes));
 
     System.out.println("Looking up bogus key " + bogusKey + " at node "+p.getLocalNodeHandle());
-    p.lookup(bogusKey, new Continuation() {
-      public void receiveResult(Object result) {
+    p.lookup(bogusKey, new Continuation<PastContent, Exception>() {
+      public void receiveResult(PastContent result) {
         System.out.println("Successfully looked up " + result + " for key "+bogusKey+".  Notice that the result is null.");
         env.destroy();
       }

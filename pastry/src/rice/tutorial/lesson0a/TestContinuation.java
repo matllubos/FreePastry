@@ -53,7 +53,7 @@ public class TestContinuation {
     Id id = null; // generated elsewhere
     
     // create the continuation
-    Continuation command = new MyContinuation();    
+    Continuation<PastContent, Exception> command = new MyContinuation();    
     
     // make the call with the continuation
     past.lookup(id, command);    

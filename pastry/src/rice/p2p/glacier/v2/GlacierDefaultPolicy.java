@@ -73,6 +73,7 @@ public class GlacierDefaultPolicy implements GlacierPolicy {
     manifest.setSignature(key.toByteArray());
   }
 
+  @SuppressWarnings("unchecked")
   public void prefetchLocalObject(VersionKey key, Continuation command) {
     command.receiveResult(null);
   }

@@ -60,6 +60,7 @@ import rice.persistence.*;
  *
  * @author Alan Mislove
  */
+@SuppressWarnings("unchecked")
 public class DeliveryPastImpl extends GCPastImpl implements DeliveryPast {
 
   protected int redundancy;

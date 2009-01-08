@@ -303,7 +303,7 @@ public class RingId implements Id {
    *
    * @return The comparison
    */
-  public int compareTo(Object o) {
+  public int compareTo(Id o) {
     return id.compareTo(((RingId)o).id);
   }
 

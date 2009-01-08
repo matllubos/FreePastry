@@ -225,7 +225,7 @@ public class GCId implements Id {
    *
    * @return The comparison
    */
-  public int compareTo(Object o) {
+  public int compareTo(Id o) {
     return id.compareTo(((GCId) o).id);
   }
 

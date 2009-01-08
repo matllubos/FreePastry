@@ -72,6 +72,7 @@ import org.mpisws.p2p.transport.proximity.ProximityProvider;
  * @author Sitaram Iyer
  * @author Rongmei Zhang/Y. Charlie Hu
  */
+@SuppressWarnings("unchecked")
 public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   protected NodeIdFactory nidFactory;
 //  protected RandomSource random;
@@ -89,7 +90,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
    * @param sim the NetworkSimulator
    * @param e the Enviornment
    */
-  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator sim, Environment env) {    
+  public DirectPastryNodeFactory(NodeIdFactory nf, NetworkSimulator<DirectNodeHandle,RawMessage> sim, Environment env) {    
     super(env);
     env.getParameters().setInt("pastry_protocol_consistentJoin_max_time_to_be_scheduled",120000);
     nidFactory = nf;
@@ -114,7 +115,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
    * 
    * @return the NetworkSimulator we are using.
    */
-  public NetworkSimulator getNetworkSimulator() { return simulator; }
+  public NetworkSimulator<DirectNodeHandle,RawMessage> getNetworkSimulator() { return simulator; }
   
   /**
    * Manufacture a new Pastry node.
@@ -209,7 +210,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
   }
 
   
-  public CancellableTask getLeafSet(NodeHandle handle, Continuation c) {
+  public CancellableTask getLeafSet(NodeHandle handle, Continuation<LeafSet, Exception> c) {
     DirectNodeHandle dHandle = (DirectNodeHandle) handle;
     c.receiveResult(dHandle.getRemote().getLeafSet());
     return new NullCancellableTask();  
@@ -230,7 +231,7 @@ public class DirectPastryNodeFactory extends TransportPastryNodeFactory {
     return dHandle.getRemote().getRoutingTable().getRow(row);
   }
 
-  public CancellableTask getRouteRow(NodeHandle handle, int row, Continuation c) {
+  public CancellableTask getRouteRow(NodeHandle handle, int row, Continuation<RouteSet[], Exception> c) {
     DirectNodeHandle dHandle = (DirectNodeHandle) handle;
     c.receiveResult(dHandle.getRemote().getRoutingTable().getRow(row));
     return new NullCancellableTask();  

@@ -61,6 +61,7 @@ import rice.p2p.util.*;
  * areas for the Cache and Storage, but the next version will allow
  * the cache to use the unused storage space.
  */
+@SuppressWarnings("unchecked")
 public class StorageManagerImpl implements StorageManager {
 
   // the factory used to manipulate ids

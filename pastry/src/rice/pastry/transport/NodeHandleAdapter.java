@@ -36,7 +36,6 @@ advised of the possibility of such damage.
 *******************************************************************************/ 
 package rice.pastry.transport;
 
-import java.util.Collection;
 import java.util.Map;
 
 import org.mpisws.p2p.transport.ErrorHandler;
@@ -55,6 +54,7 @@ import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.boot.Bootstrapper;
 
+@SuppressWarnings("unchecked")
 public class NodeHandleAdapter implements 
     TransportLayer<NodeHandle, RawMessage>, 
     LivenessProvider<NodeHandle>, 

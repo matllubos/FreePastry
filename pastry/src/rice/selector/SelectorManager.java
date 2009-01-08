@@ -274,7 +274,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
           select(selectTime);
           
           if (cancelledKeys.size() > 0) {
-            Iterator i = cancelledKeys.iterator();
+            Iterator<SelectionKey> i = cancelledKeys.iterator();
 
             while (i.hasNext())
               ((SelectionKey) i.next()).cancel();
@@ -341,7 +341,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
     long diff = now - lastTime;
     // notify observers
     synchronized (loopObservers) {
-      Iterator i = loopObservers.iterator();
+      Iterator<LoopObserver> i = loopObservers.iterator();
       while (i.hasNext()) {
         LoopObserver lo = (LoopObserver) i.next();
         if (lo.delayInterest() <= diff) {
@@ -382,7 +382,7 @@ public class SelectorManager extends Thread implements Timer, Destructable {
         }
       }
       logger.log("begin selection keys by class");
-      Iterator it = histo.keySet().iterator();
+      Iterator<String> it = histo.keySet().iterator();
       while (it.hasNext()) {
         String name = (String)it.next();
         logger.log("Selection Key: " + name + ": "+histo.get(name));

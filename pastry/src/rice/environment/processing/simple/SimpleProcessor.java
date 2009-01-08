@@ -124,6 +124,7 @@ public class SimpleProcessor implements Processor {
   /**
    * This is a test to make sure the order is correct.
    */
+  @SuppressWarnings("unchecked")
   public static void main(String[] args) throws Exception {
     Environment env = new Environment();
     Processor p = env.getProcessor();

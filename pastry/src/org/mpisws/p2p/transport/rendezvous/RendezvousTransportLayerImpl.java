@@ -717,7 +717,7 @@ public class RendezvousTransportLayerImpl<Identifier, HighIdentifier extends Ren
 
   protected void createForwarder(P2PSocket<Identifier> a, P2PSocket<Identifier> b, HighIdentifier connector, HighIdentifier acceptor, int uid) {
     if (logger.level <= Logger.FINE) logger.log("createForwarder("+a+","+b+","+connector+","+acceptor+","+uid+")");
-    new Forwarder(null,a,b,logger);
+    new Forwarder<Identifier>(null,a,b,logger);
   }
   
   /**

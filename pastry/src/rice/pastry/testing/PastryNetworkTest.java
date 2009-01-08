@@ -52,6 +52,7 @@ import rice.pastry.socket.*;
  * Utility class for checking the consistency of an existing pastry
  * network.
  */
+@SuppressWarnings("unchecked")
 public class PastryNetworkTest {
   
   protected SocketPastryNodeFactory factory;

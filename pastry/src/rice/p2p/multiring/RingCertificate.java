@@ -66,7 +66,7 @@ public class RingCertificate implements Serializable {
   private static final long serialVersionUID = 5915358246762577456L;
   
   // the static map of all RingCertificates available (id -> cert)
-  protected static HashMap CERTIFICATES = new HashMap();
+  protected static HashMap<Id, RingCertificate> CERTIFICATES = new HashMap<Id, RingCertificate>();
   
   // load all certificates that con be found
   static {

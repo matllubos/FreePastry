@@ -44,6 +44,7 @@ import java.util.Vector;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
+import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
@@ -77,7 +78,7 @@ public class DirectTutorial {
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
     
-    NetworkSimulator simulator = new GenericNetwork(env, new File(fileName));
+    NetworkSimulator<DirectNodeHandle,RawMessage> simulator = new GenericNetwork<DirectNodeHandle,RawMessage>(env, new File(fileName));
     
     // limit the max speed so the simulation doesn't run away
     simulator.setMaxSpeed(1.0f);
@@ -131,7 +132,7 @@ public class DirectTutorial {
     for (int i = 0; i < 10; i++) {
         
       // for each app
-      Iterator appIterator = apps.iterator();
+      Iterator<MyApp> appIterator = apps.iterator();
       while(appIterator.hasNext()) {
         MyApp app = (MyApp)appIterator.next();
         
@@ -149,7 +150,7 @@ public class DirectTutorial {
     env.getTimeSource().sleep(1000);
       
     // for each app
-    Iterator appIterator = apps.iterator();
+    Iterator<MyApp> appIterator = apps.iterator();
     while(appIterator.hasNext()) {
       MyApp app = (MyApp)appIterator.next();
       PastryNode node = (PastryNode)app.getNode();

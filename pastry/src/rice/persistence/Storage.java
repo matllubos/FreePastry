@@ -56,6 +56,7 @@ import rice.p2p.commonapi.*;
  * an in-memory storage service.  Two implementations are provided,
  * the PersistentStorage and MemoryStorage, respsectively.
  */
+@SuppressWarnings("unchecked")
 public interface Storage extends Catalog {
 
   /**

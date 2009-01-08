@@ -47,7 +47,7 @@ import rice.p2p.commonapi.CancellableTask;
 /**
  * @author Jeff Hoye
  */
-public abstract class TimerTask implements Comparable, CancellableTask {
+public abstract class TimerTask implements Comparable<TimerTask>, CancellableTask {
   private long nextExecutionTime;
   protected boolean cancelled = false;
   protected int seq;
@@ -99,7 +99,7 @@ public abstract class TimerTask implements Comparable, CancellableTask {
     return nextExecutionTime; 
   }
 
-  public int compareTo(Object arg0) {
+  public int compareTo(TimerTask arg0) {
     TimerTask tt = (TimerTask)arg0;
     if (tt == this) return 0;
 //    return (int)(tt.nextExecutionTime-nextExecutionTime);
