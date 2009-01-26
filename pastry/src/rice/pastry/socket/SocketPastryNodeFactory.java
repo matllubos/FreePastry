@@ -772,36 +772,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
         upperIdentity, 
         idFactory, 
         deserializer,
-        new OptionsAdder() {
-        
-          public Map<String, Object> addOptions(Map<String, Object> options,
-              RawMessage m1) {
-            Message m = m1;
-            if (m instanceof RouteMessage) {
-              RouteMessage rm = (RouteMessage)m;
-              m = rm.internalMsg;
-              if (m == null) m = rm;
-            }
-            if (m instanceof PastryEndpointMessage) {
-              PastryEndpointMessage pem = (PastryEndpointMessage)m;
-              m = pem.getMessage();
-              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_ADDR, pem.getDestination());
-            }
-            if (m instanceof rice.pastry.messaging.Message) {
-              rice.pastry.messaging.Message pm = (rice.pastry.messaging.Message)m;
-              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_ADDR, pm.getDestination());
-            }
-            if (m instanceof RawMessage) {
-              RawMessage rm = (RawMessage)m;
-              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_TYPE, rm.getType());
-//            } else {
-//              options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_TYPE, 0);              
-            }
-            
-            return OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_STRING, m.toString(), CommonAPITransportLayerImpl.MSG_CLASS, m.getClass().getName());
-          }
-        
-        },
+        getOptionsAdder(pn),
         new ErrorHandler<TransportLayerNodeHandle<MultiInetSocketAddress>>() {          
           Logger logger = environment.getLogManager().getLogger(SocketPastryNodeFactory.class, null);
           public void receivedUnexpectedData(
@@ -837,6 +808,40 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
     return commonAPItl;
   }
 
+  protected OptionsAdder getOptionsAdder(PastryNode pn) {
+    byte[] foo = pn.getId().toByteArray();
+    
+    return new OptionsAdder() {
+      
+      public Map<String, Object> addOptions(Map<String, Object> options,
+          RawMessage m1) {
+        Message m = m1;
+        if (m instanceof RouteMessage) {
+          RouteMessage rm = (RouteMessage)m;
+          m = rm.internalMsg;
+          if (m == null) m = rm;
+        }
+        if (m instanceof PastryEndpointMessage) {
+          PastryEndpointMessage pem = (PastryEndpointMessage)m;
+          m = pem.getMessage();
+          options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_ADDR, pem.getDestination());
+        }
+        if (m instanceof rice.pastry.messaging.Message) {
+          rice.pastry.messaging.Message pm = (rice.pastry.messaging.Message)m;
+          options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_ADDR, pm.getDestination());
+        }
+        if (m instanceof RawMessage) {
+          RawMessage rm = (RawMessage)m;
+          options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_TYPE, rm.getType());
+//        } else {
+//          options = OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_TYPE, 0);              
+        }
+        
+        return OptionsFactory.addOption(options, CommonAPITransportLayerImpl.MSG_STRING, m.toString(), CommonAPITransportLayerImpl.MSG_CLASS, m.getClass().getName());
+      }    
+    };
+  }
+  
   @Override
   @SuppressWarnings("unchecked")
   protected Bootstrapper getBootstrapper(PastryNode pn, 
