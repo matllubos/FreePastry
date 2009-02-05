@@ -50,7 +50,7 @@ public class SimpleAddressStrategy implements AddressStrategy {
     
     try {
       for (int ctr = 0; ctr < remote.address.length; ctr++) {
-        if (!remote.address[ctr].getAddress().equals(local.address[ctr].getAddress())) {
+        if (!local.address[ctr].getAddress().equals(remote.address[ctr].getAddress())) {
           return remote.address[ctr];
         }
       }
