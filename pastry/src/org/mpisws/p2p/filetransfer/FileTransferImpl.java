@@ -182,7 +182,7 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
   }
   
   protected void socketClosed() {    
-    receiveException(socket,new ClosedChannelException("Underlieing socket was closed."));
+    receiveException(socket,new ClosedChannelException("Underlying socket was closed."));
   }
   
   public void receiveException(AppSocket socket, Exception e) {
