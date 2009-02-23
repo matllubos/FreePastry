@@ -255,9 +255,7 @@ public class CAToolImpl implements CATool {
   
   /**
    * 
-   * produces 3 files newCN.cert, newCN.pub, newCN.priv
-   * 
-   * -p password -ca CAname -cn newCN
+   * -p CApassword -ca CAname -cn newCN
    * 
    * @param args
    * @throws Exception
@@ -302,12 +300,20 @@ public class CAToolImpl implements CATool {
     X509Certificate cert = caTool.sign(CN,pair.getPublic());
     
     if (store) {
+      // initialize the clientStore
       KeyStore clientStore = KeyStore.getInstance("UBER", "BC");
       clientStore.load(null, null);
+      
+      // store the private key under the client cert
       clientStore.setKeyEntry("private",pair.getPrivate(), "".toCharArray(), new Certificate[] {cert});
+      
+      // store the CA cert
       clientStore.setCertificateEntry("cert", caTool.getCertificate());
+      
+      // write the clientStore to disk
       String fileName = CN+".store";
       FileOutputStream fos = new FileOutputStream(fileName);
+      // store the clientStore under a blank password, if you want a password on the client store, do it here
       clientStore.store(fos, "".toCharArray());
       fos.close();
       System.out.println("Stored to "+fileName);

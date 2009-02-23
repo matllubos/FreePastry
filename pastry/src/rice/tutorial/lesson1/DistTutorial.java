@@ -68,12 +68,12 @@ public class DistTutorial {
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
     PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
-    // This will return null if we there is no node at that location
-    NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
+    // construct a node, but this does not cause it to boot
+    PastryNode node = factory.newNode();
       
-    // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-    PastryNode node = factory.newNode(bootHandle);
-      
+    // in later tutorials, we will register applications before calling boot
+    node.boot(bootaddress);
+    
     // the node may require sending several messages to fully boot into the ring
     synchronized(node) {
       while(!node.isReady() && !node.joinFailed()) {

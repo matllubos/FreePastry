@@ -113,6 +113,11 @@ public class DistTutorial {
     env.getTimeSource().sleep(10000);
 
       
+    MyApp foo = (MyApp)apps.get(0);
+    System.out.println(((PastryNode)foo.node).getRoutingTable().printSelf());
+    
+    System.exit(0);
+    
     // route 10 messages
     for (int i = 0; i < 10; i++) {
         

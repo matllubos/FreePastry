@@ -172,7 +172,11 @@ public class PastryNode extends Observable implements
     if (o == null) {
       getBootstrapper().boot(Collections.EMPTY_LIST);      
     } else {
-      getBootstrapper().boot(Collections.singleton(o));
+      if (o instanceof Collection) {
+        boot((Collection)o);
+      } else {
+        getBootstrapper().boot(Collections.singleton(o));
+      }
     }
   }
   

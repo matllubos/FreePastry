@@ -34,11 +34,30 @@ or otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 
 *******************************************************************************/ 
-package rice.tutorial.lesson3;
+package rice.tutorial.ssl;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.security.KeyStore;
+import java.security.Security;
+import java.util.Map;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.mpisws.p2p.transport.TransportLayer;
+import org.mpisws.p2p.transport.identity.BindStrategy;
+import org.mpisws.p2p.transport.identity.IdentityImpl;
+import org.mpisws.p2p.transport.identity.LowerIdentity;
+import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
+import org.mpisws.p2p.transport.sourceroute.SourceRoute;
+import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayer;
+import org.mpisws.p2p.transport.sourceroute.SourceRouteTransportLayerImpl;
+import org.mpisws.p2p.transport.sourceroute.factory.MultiAddressSourceRouteFactory;
+import org.mpisws.p2p.transport.ssl.SSLTransportLayer;
+import org.mpisws.p2p.transport.ssl.SSLTransportLayerImpl;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
@@ -49,6 +68,7 @@ import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
+import rice.pastry.socket.TransportLayerNodeHandle;
 import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
@@ -67,16 +87,69 @@ public class DistTutorial {
    * @param bootaddress the IP:port of the node to boot from
    * @param env the environment for these nodes
    */
-  public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
+  public DistTutorial(int bindport, InetSocketAddress bootaddress, Environment env, File keyStoreFile) throws Exception {
     
     // Generate the NodeIds Randomly
     NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
+
+    // Add the bouncycastle security provider
+    Security.addProvider(new BouncyCastleProvider());
+    
+    // create the keystore    
+    final KeyStore store = KeyStore.getInstance("UBER", "BC");
+    store.load(new FileInputStream(keyStoreFile), "".toCharArray());        
+    
+    // create the id from the file name
+    rice.pastry.Id id = rice.pastry.Id.build(keyStoreFile.getName().split("\\.")[0]);
     
     // construct the PastryNodeFactory, this is how we use rice.pastry.socket
-    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
+    PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env) {
+      @Override
+      protected TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getSourceRouteTransportLayer(
+          TransportLayer<MultiInetSocketAddress, ByteBuffer> etl, 
+          PastryNode pn, 
+          MultiAddressSourceRouteFactory esrFactory) {
 
-    // construct a node
-    PastryNode node = factory.newNode();
+        // get the default layer by calling super
+        TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> sourceRoutingTransportLayer = super.getSourceRouteTransportLayer(etl, pn, esrFactory);
+        
+        try {
+          // return our layer
+          return new SSLTransportLayerImpl<SourceRoute<MultiInetSocketAddress>, ByteBuffer>(sourceRoutingTransportLayer,store,store,pn.getEnvironment());
+        } catch (IOException ioe) {
+          throw new RuntimeException(ioe);
+        }
+      }
+
+      @Override
+      protected BindStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>, SourceRoute<MultiInetSocketAddress>> getBindStrategy() {
+        return new BindStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>, SourceRoute<MultiInetSocketAddress>>() {        
+          public boolean accept(TransportLayerNodeHandle<MultiInetSocketAddress> u,
+              SourceRoute<MultiInetSocketAddress> l, Map<String, Object> options) {
+            
+            // get the id from the certificate
+            String idName = (String)options.get(SSLTransportLayer.OPTION_CERT_SUBJECT);
+            
+            // if it's not there, it could be because this is a UDP message, just accept
+            if (idName != null) {              
+              // compare the name to the id
+              if (u.getId().toStringFull().equals(idName)) {
+                // accept
+                return true;
+              } else {
+                // reject
+                System.out.println("Rejecting id:"+u+" which does not match the certificate entry:"+idName);
+                return false;
+              }
+            }
+            return true;
+          }        
+        };
+      }
+    };
+
+    // construct a node with the id this time
+    PastryNode node = factory.newNode(id);
       
     // construct a new MyApp
     MyApp app = new MyApp(node);    
@@ -159,9 +232,14 @@ public class DistTutorial {
       InetAddress bootaddr = InetAddress.getByName(args[1]);
       int bootport = Integer.parseInt(args[2]);
       InetSocketAddress bootaddress = new InetSocketAddress(bootaddr,bootport);
-  
+      
+      // get the keystore file
+      String keystoreFileName = args[3];
+      File keystoreFile = new File(keystoreFileName);
+      if (!keystoreFile.exists()) throw new IllegalArgumentException("The file: "+keystoreFileName+" was not found.");
+      
       // launch our node!
-      DistTutorial dt = new DistTutorial(bindport, bootaddress, env);
+      DistTutorial dt = new DistTutorial(bindport, bootaddress, env, keystoreFile);
     } catch (Exception e) {
       // remind user how to use
       System.out.println("Usage:"); 

@@ -130,15 +130,19 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
   public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_to_index";
 //  public static final String NODE_HANDLE_FROM_INDEX = "identity.node_handle_from_index";
   public static final String DONT_VERIFY = "identity.dont_verify_dest";
+
+  public BindStrategy<UpperIdentifier, LowerIdentifier> bindStrategy;
   
   public IdentityImpl(
       byte[] localIdentifier, 
       IdentitySerializer<UpperIdentifier, MiddleIdentifier, LowerIdentifier> serializer, 
       NodeChangeStrategy<UpperIdentifier> nodeChangeStrategy,
       SanityChecker<UpperIdentifier, MiddleIdentifier> sanityChecker,
+      BindStrategy<UpperIdentifier, LowerIdentifier> bindStrategy,
       Environment environment) {
     this.logger = environment.getLogManager().getLogger(IdentityImpl.class, null);
 //    logger.log("IdentityImpl.ctor");
+    this.bindStrategy = bindStrategy;
     this.sanityChecker = sanityChecker;
     if (sanityChecker == null) throw new IllegalArgumentException("SanityChecker is null");
     this.localIdentifier = localIdentifier;    
@@ -271,6 +275,9 @@ public class IdentityImpl<UpperIdentifier, MiddleIdentifier, UpperMsgType, Lower
    */
   protected boolean addBinding(UpperIdentifier u, LowerIdentifier l, Map<String, Object> options) {
     if (!environment.getSelectorManager().isSelectorThread()) throw new RuntimeException("Must be called on selector thread.");
+    if (bindStrategy != null && options != null) {
+      if (!bindStrategy.accept(u, l, options)) return false;
+    }
     MiddleIdentifier m = serializer.translateDown(u);
 //    synchronized(bindings) { // synchronization by selector thread
       if (deadForever.contains(u)) return false;

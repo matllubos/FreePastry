@@ -62,6 +62,7 @@ import org.mpisws.p2p.transport.commonapi.CommonAPITransportLayerImpl;
 import org.mpisws.p2p.transport.commonapi.IdFactory;
 import org.mpisws.p2p.transport.commonapi.OptionsAdder;
 import org.mpisws.p2p.transport.exception.NodeIsFaultyException;
+import org.mpisws.p2p.transport.identity.BindStrategy;
 import org.mpisws.p2p.transport.identity.IdentityImpl;
 import org.mpisws.p2p.transport.identity.IdentitySerializer;
 import org.mpisws.p2p.transport.identity.LowerIdentity;
@@ -619,8 +620,14 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
               return upper.getAddress().equals(middle);
             }
           
-          },environment);
+          },
+          getBindStrategy(),
+          environment);
     return identity;
+  }
+
+  protected BindStrategy<TransportLayerNodeHandle<MultiInetSocketAddress>, SourceRoute<MultiInetSocketAddress>> getBindStrategy() {
+    return null;
   }
 
   protected TransportLayer<SourceRoute<MultiInetSocketAddress>, ByteBuffer> getLowerIdentityLayer(
