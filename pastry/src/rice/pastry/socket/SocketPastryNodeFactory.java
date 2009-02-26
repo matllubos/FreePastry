@@ -1199,7 +1199,17 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * @param pAddress
    * @return
    */
-  public synchronized PastryNode newNode(final Id nodeId, final InetSocketAddress pAddress) {
+  public synchronized PastryNode newNode(final Id nodeId, InetSocketAddress pAddress) {
+    if (pAddress == null) {
+      if (environment.getParameters().contains("external_address")) {
+        try {
+          pAddress = environment.getParameters().getInetSocketAddress("external_address");
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+      }
+    }
+
     try {      
       MultiInetSocketAddress multiAddress;
       if (pAddress == null) {
@@ -1256,8 +1266,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
    * Method which creates a Pastry node from the next port with the specified
    * nodeId (or one generated from the NodeIdFactory if not specified)
    * 
-   * @param pilot
-   *          Node handle to bootstrap from.
    * @param nodeId
    *          if non-null, will use this nodeId for the node, rather than using
    *          the NodeIdFactory

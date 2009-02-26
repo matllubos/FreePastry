@@ -91,20 +91,28 @@ public class SplitStreamTutorial {
     
     IdFactory idFactory = new PastryIdFactory(env);
     
-    NodeHandle bootHandle = null;
+    Object bootHandle = null;
     
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
       // This will return null if we there is no node at that location
   
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      PastryNode node = factory.newNode(bootHandle);
+      PastryNode node = factory.newNode();
+      
+      // construct a new splitstream application      
+      MySplitStreamClient app = new MySplitStreamClient(node);
+      apps.add(app);
+
+      // boot the node
+      node.boot(bootHandle);
+      
       if (bootHandle == null) {
         if (useDirect) {
           bootHandle = node.getLocalHandle();
         } else {
           // This will return null if we there is no node at that location
-          bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
+          bootHandle = bootaddress;
         }
       }
       
@@ -122,11 +130,6 @@ public class SplitStreamTutorial {
       }
       
       System.out.println("Finished creating new node "+node);
-
-      // construct a new scribe application
-      
-      MySplitStreamClient app = new MySplitStreamClient(node);
-      apps.add(app);
     }
 
     // for the first app subscribe then start the publishtask

@@ -37,14 +37,11 @@ advised of the possibility of such damage.
 package rice.tutorial.direct;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Vector;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
-import rice.p2p.commonapi.Message;
 import rice.p2p.commonapi.rawserialization.RawMessage;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
@@ -62,7 +59,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
 public class DirectTutorial {
 
   // this will keep track of our applications
-  Vector apps = new Vector();
+  Vector<MyApp> apps = new Vector<MyApp>();
   
   /**
    * This constructor launches numNodes PastryNodes.  They will bootstrap 
@@ -96,8 +93,16 @@ public class DirectTutorial {
     for (int curNode = 0; curNode < numNodes; curNode++) {
   
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      PastryNode node = factory.newNode(bootHandle);
+      PastryNode node = factory.newNode();
 //      System.out.println("here:"+node+" "+env.getTimeSource().currentTimeMillis());
+      
+      // construct a new MyApp
+      MyApp app = new MyApp(node);
+      
+      apps.add(app);
+
+      // boot the node
+      node.boot(bootHandle);
       
       // this way we can boot off the previous node
       bootHandle = node.getLocalHandle();
@@ -117,10 +122,6 @@ public class DirectTutorial {
       
       System.out.println("Finished creating new node "+node);
       
-      // construct a new MyApp
-      MyApp app = new MyApp(node);
-      
-      apps.add(app);
     }
       
     // don't limit the simulation speed anymore

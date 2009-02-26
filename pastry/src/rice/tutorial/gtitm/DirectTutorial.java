@@ -93,7 +93,15 @@ public class DirectTutorial {
     for (int curNode = 0; curNode < numNodes; curNode++) {
   
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      PastryNode node = factory.newNode(bootHandle);
+      PastryNode node = factory.newNode();
+      
+      // construct a new MyApp
+      MyApp app = new MyApp(node);
+      
+      apps.add(app);
+
+      // boot the node, null the first pass
+      node.boot(bootHandle);
       
       // this way we can boot off the previous node
       bootHandle = node.getLocalHandle();
@@ -114,12 +122,7 @@ public class DirectTutorial {
         }       
       }
       
-      System.out.println("Finished creating new node "+node);
-      
-      // construct a new MyApp
-      MyApp app = new MyApp(node);
-      
-      apps.add(app);
+      System.out.println("Finished creating new node "+node);      
     }
       
     // wait 10 seconds

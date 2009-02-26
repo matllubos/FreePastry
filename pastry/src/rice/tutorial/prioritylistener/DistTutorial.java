@@ -89,11 +89,16 @@ public class DistTutorial {
 
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
-      // This will return null if we there is no node at that location
-      NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
-  
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      final PastryNode node = factory.newNode(bootHandle);
+      final PastryNode node = factory.newNode();
+      
+      // construct a new MyApp
+      MyApp app = new MyApp(node);
+      
+      apps.add(app);
+
+      // boot the node
+      node.boot(bootaddress);
         
       PriorityTransportLayer<MultiInetSocketAddress> ptl = (PriorityTransportLayer<MultiInetSocketAddress>)node.getVars().get(SocketPastryNodeFactory.PRIORITY_TL);
       ptl.addPriorityTransportLayerListener(new PriorityTransportLayerListener<MultiInetSocketAddress>() {
@@ -169,12 +174,7 @@ public class DistTutorial {
         }       
       }
       
-      System.out.println("Finished creating new node "+node);
-      
-      // construct a new MyApp
-      MyApp app = new MyApp(node);
-      
-      apps.add(app);
+      System.out.println("Finished creating new node "+node);      
     }
       
     // wait 10 seconds

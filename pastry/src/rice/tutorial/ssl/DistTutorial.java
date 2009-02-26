@@ -154,6 +154,7 @@ public class DistTutorial {
     // construct a new MyApp
     MyApp app = new MyApp(node);    
     
+    // boot the node
     node.boot(bootaddress);
     
     // the node may require sending several messages to fully boot into the ring

@@ -97,8 +97,16 @@ public class DistTutorial {
       NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
   
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      PastryNode node = factory.newNode(bootHandle);
-        
+      PastryNode node = factory.newNode();
+      
+      // construct a new MyApp
+      MyApp app = new MyApp(node);
+      
+      apps.add(app);
+
+      // boot the node
+      node.boot(bootaddress);
+      
       // the node may require sending several messages to fully boot into the ring
       synchronized(node) {
         while(!node.isReady() && !node.joinFailed()) {
@@ -112,12 +120,7 @@ public class DistTutorial {
         }       
       }
       
-      System.out.println("Finished creating new node "+node);
-      
-      // construct a new MyApp
-      MyApp app = new MyApp(node);
-      
-      apps.add(app);
+      System.out.println("Finished creating new node "+node);      
     }
       
     // wait 10 seconds

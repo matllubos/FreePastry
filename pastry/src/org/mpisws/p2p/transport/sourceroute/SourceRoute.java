@@ -145,7 +145,7 @@ public abstract class SourceRoute<Identifier> {
   }
   
   /**
-   * Checks equaltiy on source routes
+   * Checks equality on source routes
    *
    * @param o The source route to compare to
    * @return The equality

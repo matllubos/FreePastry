@@ -63,7 +63,7 @@ public class PastTutorial {
   /**
    * this will keep track of our Past applications
    */
-  Vector apps = new Vector();
+  Vector<Past> apps = new Vector<Past>();
 
   /**
    * Based on the rice.tutorial.scribe.ScribeTutorial
@@ -88,31 +88,11 @@ public class PastTutorial {
         bindport, env);
 
     // loop to construct the nodes/apps
-    for (int curNode = 0; curNode < numNodes; curNode++) {
-      // This will return null if we there is no node at that location
-      NodeHandle bootHandle = ((SocketPastryNodeFactory) factory)
-          .getNodeHandle(bootaddress);
-      
+    for (int curNode = 0; curNode < numNodes; curNode++) {      
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
-      PastryNode node = factory.newNode((rice.pastry.NodeHandle) bootHandle);
+      PastryNode node = factory.newNode();
 
-      // the node may require sending several messages to fully boot into the ring
-      synchronized(node) {
-        while(!node.isReady() && !node.joinFailed()) {
-          // delay so we don't busy-wait
-          node.wait(500);
-          
-          // abort if can't join
-          if (node.joinFailed()) {
-            throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
-          }
-        }       
-      }
-      
-      System.out.println("Finished creating new node " + node);
-      
-      
       // used for generating PastContent object Ids.
       // this implements the "hash function" for our DHT
       PastryIdFactory idf = new rice.pastry.commonapi.PastryIdFactory(env);
@@ -128,6 +108,23 @@ public class PastTutorial {
           new MemoryStorage(idf), 512 * 1024, node.getEnvironment())), 0, "");
       
       apps.add(app);      
+
+      node.boot(bootaddress);
+      
+      // the node may require sending several messages to fully boot into the ring
+      synchronized(node) {
+        while(!node.isReady() && !node.joinFailed()) {
+          // delay so we don't busy-wait
+          node.wait(500);
+          
+          // abort if can't join
+          if (node.joinFailed()) {
+            throw new IOException("Could not join the FreePastry ring.  Reason:"+node.joinFailedReason()); 
+          }
+        }       
+      }
+      
+      System.out.println("Finished creating new node " + node);      
     }
     
     // wait 5 seconds

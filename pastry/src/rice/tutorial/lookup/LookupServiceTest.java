@@ -78,13 +78,18 @@ public class LookupServiceTest {
 
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
-      // This will return null if we there is no node at that location
-      NodeHandle bootHandle = ((SocketPastryNodeFactory) factory).getNodeHandle(bootaddress);
-
       // construct a node, passing the null boothandle on the first loop will
       // cause the node to start its own ring
-      PastryNode node = factory.newNode(bootHandle);
+      PastryNode node = factory.newNode();
 
+      // create the lookup service
+      LookupService ls = new LookupService(node);
+
+      lookups.add(ls);
+
+      // boot the node
+      node.boot(bootaddress);
+      
       // the node may require sending several messages to fully boot into the
       // ring
       synchronized (node) {
@@ -101,9 +106,6 @@ public class LookupServiceTest {
 
       System.out.println("Finished creating new node " + node);
 
-      LookupService ls = new LookupService(node);
-
-      lookups.add(ls);
     }
 
     // wait 10 seconds

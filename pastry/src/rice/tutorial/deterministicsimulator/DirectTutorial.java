@@ -148,7 +148,7 @@ public class DirectTutorial {
           });
           
           // boot the node
-          node.boot(Collections.singleton(bootHandle));
+          node.boot(bootHandle);
           
           // store the bootHandle
           bootHandle = node.getLocalHandle();

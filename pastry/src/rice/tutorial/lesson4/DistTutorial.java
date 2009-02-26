@@ -60,7 +60,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
 public class DistTutorial {
 
   // this will keep track of our applications
-  Vector apps = new Vector();
+  Vector<MyApp> apps = new Vector<MyApp>();
   
   /**
    * This constructor launches numNodes PastryNodes.  They will bootstrap 
@@ -82,11 +82,15 @@ public class DistTutorial {
 
     // loop to construct the nodes/apps
     for (int curNode = 0; curNode < numNodes; curNode++) {
-      // This will return null if we there is no node at that location
-      NodeHandle bootHandle = ((SocketPastryNodeFactory)factory).getNodeHandle(bootaddress);
-  
       // construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
-      PastryNode node = factory.newNode(bootHandle);
+      PastryNode node = factory.newNode();
+      
+      // construct a new MyApp
+      MyApp app = new MyApp(node);
+      
+      apps.add(app);
+
+      node.boot(bootaddress);
         
       // the node may require sending several messages to fully boot into the ring
       synchronized(node) {
@@ -101,12 +105,7 @@ public class DistTutorial {
         }       
       }
       
-      System.out.println("Finished creating new node "+node);
-      
-      // construct a new MyApp
-      MyApp app = new MyApp(node);
-      
-      apps.add(app);
+      System.out.println("Finished creating new node "+node);      
     }
       
     // wait 10 seconds
