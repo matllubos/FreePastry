@@ -105,38 +105,38 @@ public class DistTutorial {
     env.getTimeSource().sleep(10000);
     
       
-//    // route 10 messages
-//    for (int i = 0; i < 10; i++) {
-//      // pick a key at random
-//      Id randId = nidFactory.generateNodeId();
-//      
-//      // send to that key
-//      app.routeMyMsg(randId);
-//      
-//      // wait a sec
-//      env.getTimeSource().sleep(1000);
-//    }
-//
-//    // wait 10 seconds
-//    env.getTimeSource().sleep(10000);
-//    
-//    // send directly to my leafset
-//    LeafSet leafSet = node.getLeafSet();
-//    
-//    // this is a typical loop to cover your leafset.  Note that if the leafset
-//    // overlaps, then duplicate nodes will be sent to twice
-//    for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
-//      if (i != 0) { // don't send to self
-//        // select the item
-//        NodeHandle nh = leafSet.get(i);
-//        
-//        // send the message directly to the node
-//        app.routeMyMsgDirect(nh);   
-//        
-//        // wait a sec
-//        env.getTimeSource().sleep(1000);
-//      }
-//    }
+    // route 10 messages
+    for (int i = 0; i < 10; i++) {
+      // pick a key at random
+      Id randId = nidFactory.generateNodeId();
+      
+      // send to that key
+      app.routeMyMsg(randId);
+      
+      // wait a sec
+      env.getTimeSource().sleep(1000);
+    }
+
+    // wait 10 seconds
+    env.getTimeSource().sleep(10000);
+    
+    // send directly to my leafset
+    LeafSet leafSet = node.getLeafSet();
+    
+    // this is a typical loop to cover your leafset.  Note that if the leafset
+    // overlaps, then duplicate nodes will be sent to twice
+    for (int i=-leafSet.ccwSize(); i<=leafSet.cwSize(); i++) {
+      if (i != 0) { // don't send to self
+        // select the item
+        NodeHandle nh = leafSet.get(i);
+        
+        // send the message directly to the node
+        app.routeMyMsgDirect(nh);   
+        
+        // wait a sec
+        env.getTimeSource().sleep(1000);
+      }
+    }
   }
 
   /**
