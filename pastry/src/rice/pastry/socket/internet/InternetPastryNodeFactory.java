@@ -580,6 +580,7 @@ public class InternetPastryNodeFactory extends
    * @return
    */
   protected boolean shouldCheckConnectivity(MultiInetSocketAddress proxyAddress, Collection<InetSocketAddress> bootstraps) {
+    if (bootstraps == null) return false;
     switch (getFireWallPolicyVariable("firewall_test_policy")) {
     case NEVER:
       return false;
