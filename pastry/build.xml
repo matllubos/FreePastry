@@ -334,6 +334,7 @@
         <include name="xpp*.jar"/> 
         <include name="sbbi*.jar"/>
         <include name="commons*.jar"/>
+        <include name="junit*.jar"/>
       </tarfileset> 
       <tarfileset dir="${docs.dir}" includes="**/*" prefix="pastry-${freepastry-version}/docs" />
       <tarfileset dir="." includes="build.xml" prefix="pastry-${freepastry-version}"/>
