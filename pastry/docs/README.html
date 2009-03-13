@@ -7,7 +7,7 @@
 <center>
 <h1><font size="+4">FreePastry release notes</font></h1>
 <hr size="2" width="100%"></center>
-Release 2.1beta1,&nbsp; 26 May, 2008.
+Release 2.1,&nbsp; 13 March, 2009.
 </h2>
 <p>FreePastry is a modular, open source implementation of the <a href="http://freepastry.org/"> Pastry</a> p2p structured overlay network. <br>
 &nbsp; </p>
@@ -117,6 +117,40 @@ Andreas Haeberlen, Jeff Hoye, Alan Mislove, and Peter Druschel,
 <h3>Requirements</h3>
 The software requires a Java runtime, version 1.5.0+. The software was
 developed using Sun's SDK, version 1.5.0+
+
+<h3>Changes since release 2.1-beta</h3>
+<ul>
+  <li>New Transport Layers</li>
+  <ul>
+    <li>SSL Transport Layer, Certificate Authority, Tutorial</li>
+  </ul>      
+  <li>Tutorials</li>
+  <ul>
+    <li>Can construct applications before booting the node, which prevents message loss due to the app not being registered.</li>
+    
+<br/><br/>The old code looked like this:
+<pre>
+  InetAddress bootAddress; // the address to boot from (initialized elsewhere)
+  PastryNodeFactory factory;  // initialized elsewhere
+  NodeHandle bootHandle = factory.getNodeHandle(bootAddress);
+  PastryNode node = factory.newNode(bootHandle); // boots the node
+  new MyApp(node); // registers the app
+</pre>
+
+Now the code looks like this:
+<pre>
+  InetAddress bootAddress; // the address to boot from (initialized elsewhere)
+  PastryNodeFactory factory;  // initialized elsewhere
+  PastryNode node = factory.newNode(); // does not boot the node
+  new MyApp(node); // registers the app
+  node.boot(bootAddress); // boot the node
+</pre>
+
+    <li>Boot nodes constructed from the <b>SocketPastryNodeFactory</b> with an <b>InetSocketAddress</b>, or <b>Collection&lt;InetSocketAddress&gt;</b></li>    
+    <li>Boot nodes constructed from the <b>DirectPastryNodeFactory</b> (simulator) with a <b>NodeHandle</b> (as before), or <b>Collection&lt;NodeHandle&gt;</b></li>
+    <li>New Tutorials</b></li>
+  </ul>      
+</ul>
 
 <h3>Changes since release 2.1alpha3</h3>
 <ul>
