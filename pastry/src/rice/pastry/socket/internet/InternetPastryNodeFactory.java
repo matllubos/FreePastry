@@ -117,6 +117,21 @@ public class InternetPastryNodeFactory extends
     this(nf, null, startPort, env, null, null, null);
   }
 
+  /**
+   * May block for more than a second to determine network information.
+   * 
+   * @param nf can be null, but must call newNode() with a NodeId of the new PastryNode
+   * @param bindAddress the NIC to use (null will choose one that can access the Internet)
+   * @param startPort the port of the first created node, will be incremented for additional nodes, 
+   *   can be specified on a per-Node basis by calling newNode() with a MultiInetSocketAddress 
+   * @param env can't be null
+   * @param handler will attempt to use SBBI's UPnP library if null, unless blocked by deleting the 
+   *   param "nat_handler_class" 
+   * @param probeAddresses a list of bootstrap nodes' Internet routable addresses, used to establish
+   *   firewall information
+   * @param externalAddresses ordered addresses of the nat propagation from most external to most internal,
+   *   null will use natHandler and probeAddresses to determine this
+   */
   public InternetPastryNodeFactory(NodeIdFactory nf, InetAddress bindAddress,
       int startPort, Environment env, NATHandler handler, Collection<InetSocketAddress> probeAddresses, InetAddress[] externalAddresses)
       throws IOException {
