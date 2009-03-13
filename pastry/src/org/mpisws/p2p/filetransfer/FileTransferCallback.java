@@ -40,8 +40,19 @@ import java.io.File;
 import java.nio.ByteBuffer;
 
 public interface FileTransferCallback {
+  /**
+   * Called when a message is received.
+   * @param bb
+   */
   public void messageReceived(ByteBuffer bb);
+  
+  /**
+   * Called when a file is received.
+   * @param f
+   * @param metadata
+   */
   public void fileReceived(File f, ByteBuffer metadata);
+  
   /**
    * Called when the FileTransfer fails.
    * @param ioe

@@ -61,7 +61,7 @@ import rice.pastry.standard.RandomNodeIdFactory;
 public class DirectTutorial {
 
   // this will keep track of our applications
-  Vector apps = new Vector();
+  Vector<MyApp> apps = new Vector<MyApp>();
   
   /**
    * This constructor launches numNodes PastryNodes.  They will bootstrap 
