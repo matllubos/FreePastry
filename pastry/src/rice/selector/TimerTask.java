@@ -60,6 +60,14 @@ public abstract class TimerTask implements Comparable<TimerTask>, CancellableTas
     
   protected boolean fixedRate = false;
   
+  public TimerTask() {
+    
+  }
+  
+  public TimerTask(long initialExecutionTime) {
+    nextExecutionTime = initialExecutionTime;
+  }
+  
   public abstract void run();
 
   /**
