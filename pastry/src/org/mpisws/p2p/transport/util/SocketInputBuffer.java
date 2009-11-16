@@ -328,7 +328,7 @@ public class SocketInputBuffer implements InputBuffer {
   }  
   
   private void grow() {
-    byte[] newCache = new byte[cache.length];
+    byte[] newCache = new byte[cache.length*2];
     System.arraycopy(cache, 0, newCache, 0, cache.length);
     ByteBuffer newReadPtr = ByteBuffer.wrap(newCache);
     ByteBuffer newWritePtr = ByteBuffer.wrap(newCache);
