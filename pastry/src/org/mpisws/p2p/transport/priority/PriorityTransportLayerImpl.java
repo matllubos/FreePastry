@@ -1559,7 +1559,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         }
         
         if (e instanceof IOException) {
-          if (e.getMessage().equals("An established connection was aborted by the software in your host machine")) {
+          if (e.getMessage() != null && e.getMessage().equals("An established connection was aborted by the software in your host machine")) {
             printError = false;
           }
         }
