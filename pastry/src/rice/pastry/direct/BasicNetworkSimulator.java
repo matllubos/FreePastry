@@ -298,7 +298,7 @@ public class BasicNetworkSimulator<Identifier, MessageType> extends EventSimulat
     }
   }
   
-  private void notifyLivenessListeners(Identifier i, int liveness, Map<String, Object> options) {
+  protected void notifyLivenessListeners(Identifier i, int liveness, Map<String, Object> options) {
     if (logger.level <= Logger.FINER) logger.log("notifyLivenessListeners("+i+","+liveness+"):"+livenessListeners.get(0));
     List<LivenessListener<Identifier>> temp;
     synchronized(livenessListeners) {

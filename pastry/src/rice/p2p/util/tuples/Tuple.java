@@ -53,6 +53,10 @@ public class Tuple<A,B> {
     return b;
   }
   
+  public String toString() {
+    return a+","+b;
+  }
+  
   /**
    * Gotta handle null values
    */
