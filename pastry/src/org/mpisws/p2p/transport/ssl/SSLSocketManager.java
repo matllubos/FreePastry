@@ -189,6 +189,12 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     }    
   }
 
+  /**
+   * Read ciphertext off the socket and add it to unwrapMe
+   * 
+   * @return true if there is something in unwrapMe to decode
+   * @throws IOException
+   */
   protected boolean read() throws IOException {
     ByteBuffer foo = ByteBuffer.allocate(netBufferMax);
     if (socket.read(foo) < 0) {
@@ -197,6 +203,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     }
     if (foo.position() != 0) {
       foo.flip();
+//      logger.log("unwrapMe.add("+foo+")");
       unwrapMe.addLast(foo);
       return true;
     }
@@ -223,21 +230,73 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       continueHandshaking();
   }
 
+  /**
+   * move data from unwrapMe to readMe
+   * 
+   * This got harry with big messages, because BUFFER_UNDERFLOW was being returned.  To handle this, you need to deliver more bytes to the engine.
+   * 
+   * The code is really messy, but basically, it tries to compact() the buffer then read bytes from the next buffer in.  
+   * 
+   * This can leave empty buffers in unwrapMe, so they need to be cleaned out.
+   * 
+   * @throws SSLException
+   */
   protected void unwrap() throws SSLException{
+//    logger.log("unwrap():"+unwrapMe.size());
     Iterator<ByteBuffer> i = unwrapMe.iterator();
     while (i.hasNext()) {
       ByteBuffer b = i.next();
-      ByteBuffer foo = ByteBuffer.allocate(appBufferMax);
-      handleResult(engine.unwrap(b, foo));
-//      logger.log("client unwrap: "+foo+" "+result);
-      if (foo.position() != 0) {
-        foo.flip();
-        readMe.addLast(foo);
-//        logger.log("reading into " +decryptToMe);
+      while(!b.hasRemaining()) {
+        i.remove();
+        if (!i.hasNext()) return;
+        b = i.next();
       }
-//      logger.log("unwrapped:"+b);
-      if (b.hasRemaining()) break;
-      i.remove();
+      ByteBuffer foo = ByteBuffer.allocate(appBufferMax);
+//      logger.log("unwrapping from:"+b+" to:"+foo);
+      result = engine.unwrap(b, foo);
+      if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
+        if (foo.position() != 0) {
+          foo.flip();
+          readMe.addLast(foo);
+        }
+                
+        // we need more data to continue...        
+        if (logger.level <= Logger.FINE) logger.log("undeflow:"+result+" "+b);
+        // if there is more data in the next buffer, compact, and add it on
+        b.compact();
+        long start = b.position();
+//        logger.log("compacted:"+b);
+        while(b.hasRemaining() && i.hasNext()) {
+          ByteBuffer tempNext = i.next();
+//          logger.log("unwrap putting:"+tempNext);
+          int amt = Math.min(b.remaining(), tempNext.remaining());
+          b.put(tempNext.array(),tempNext.position(),amt);
+          tempNext.position(tempNext.position()+amt);
+//          logger.log("unwrap done putting:"+b+" "+tempNext);          
+        }
+//        logger.log("filled:"+b);
+        b.flip();
+//        logger.log("flipped:"+b);   
+        if (start == b.limit()) {
+//          logger.log("unwrap(): bailing:"+start);
+          return; // if we didn't add anything to b, then just bail
+        }
+//        logger.log("unwrap(): trying again");
+        i = unwrapMe.iterator(); // try again
+//        return; // continue on the next pass (this could be done better, but can't figure out best way)
+      } else {
+//        logger.log("unwrap(): success:"+foo);
+        handleResult(result);
+  //      logger.log("client unwrap: "+foo+" "+result);
+        if (foo.position() != 0) {
+          foo.flip();
+          readMe.addLast(foo);
+  //        logger.log("reading into " +decryptToMe);
+        }
+  //      logger.log("unwrapped:"+b);
+        if (b.hasRemaining()) break;
+        i.remove();
+      }
     }
   }
   
@@ -386,6 +445,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       } else {
         // TODO: check not already registered
         registeredToRead = receiver;
+//        logger.log("registering to read");
         socket.register(true, false, this);
       }
     }
@@ -410,7 +470,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   
   public long read(ByteBuffer dsts) throws IOException {
 //    if (closed && readMe.isEmpty() && unwrapMe.isEmpty()) return -1;
-    
+//    logger.log("read("+dsts+"):"+readMe.size());
     long start = dsts.position();
     unwrap();
     while(dsts.hasRemaining() && !readMe.isEmpty()) {
@@ -418,6 +478,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       ByteBuffer foo = readMe.getFirst();
       int len = Math.min(dsts.remaining(), foo.remaining());
       int pos = foo.position();
+//      logger.log("putting:"+len);
       dsts.put(foo.array(),pos,len);
       foo.position(pos+len);
       if (foo.hasRemaining()) {
@@ -431,11 +492,18 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     if (dsts.hasRemaining()) {
       if (read()) {
         unwrap();
-        dsts.put(readMe.getFirst());
-        if (readMe.getFirst().hasRemaining()) {
+//        logger.log("readMe size:"+readMe.size());
+        if (readMe.isEmpty()) {
+          logger.log("readMe is empty");
           return dsts.position()-start;
         } else {
-          readMe.removeFirst();
+//          logger.log("putting2:"+readMe.getFirst());
+          dsts.put(readMe.getFirst());
+          if (readMe.getFirst().hasRemaining()) {
+            return dsts.position()-start;
+          } else {
+            readMe.removeFirst();
+          }
         }
       }    
     }
@@ -443,6 +511,18 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
 
   public long write(ByteBuffer srcs) throws IOException {
+//    if (srcs.remaining() > appBufferMax/2) {
+//      int pos = srcs.position();
+//      ByteBuffer temp = ByteBuffer.wrap(srcs.array(),pos,appBufferMax/2);
+//      long consumed = writeHelper(temp);
+//      srcs.position((int)(pos+consumed));
+//      return consumed;
+//    } else {
+//      return writeHelper(srcs);
+//    }
+//  }
+//  
+//  public long writeHelper(ByteBuffer srcs) throws IOException {
 //    logger.log("write "+srcs);
     ByteBuffer outgoing = ByteBuffer.allocate(netBufferMax);
     SSLEngineResult tempResult = engine.wrap(srcs, outgoing);
