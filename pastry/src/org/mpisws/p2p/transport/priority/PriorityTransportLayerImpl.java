@@ -1549,6 +1549,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //        }
 
         if (e instanceof ClosedChannelException) {
+          closeMe(socket);
           return;
         }
         

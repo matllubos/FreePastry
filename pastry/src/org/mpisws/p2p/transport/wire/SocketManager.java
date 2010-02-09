@@ -495,7 +495,10 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
         logger.logException(this+" error reading", ioe);
       } else if (logger.level <= Logger.INFO) logger.log(this+" error reading");
       close();
-      throw ioe;
+//      throw ioe;
+      ClosedChannelException throwMe = new ClosedChannelException("Socket closed");
+      throwMe.initCause(ioe);
+      throw throwMe;
     }
   }
 //  public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {

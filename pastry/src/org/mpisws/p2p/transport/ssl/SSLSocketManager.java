@@ -175,11 +175,20 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     }
     if (canRead) {
       if (doneHandshaking) {
-        if (read()) {
+//        logger.log("receiveSelectResult():read");
+        try {
+          if (read()) {
+            if (registeredToRead != null) {
+              P2PSocketReceiver<Identifier> temp = registeredToRead;
+              registeredToRead = null;
+              temp.receiveSelectResult(this, true, false);                 
+            }
+          }
+        } catch(IOException ioe) {
           if (registeredToRead != null) {
             P2PSocketReceiver<Identifier> temp = registeredToRead;
             registeredToRead = null;
-            temp.receiveSelectResult(this, true, false);                 
+            if (temp != null) temp.receiveException(this, ioe);
           }
         }
       } else {
