@@ -1337,11 +1337,11 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     public void cancelled(DataReader reader);
   }
   
-  class BBDataReader implements DataReader, BBReceipt {
-    int uid;
-    byte[] bytes;
-    ByteBuffer curReader;
-    boolean requestedCancel = false;    
+  public class BBDataReader implements DataReader, BBReceipt {
+    protected int uid;
+    protected byte[] bytes;
+    protected ByteBuffer curReader;
+    protected boolean requestedCancel = false;    
     
     
     public BBDataReader(int uid, int size) {
@@ -1422,26 +1422,26 @@ public class FileTransferImpl implements FileTransfer, AppSocketReceiver {
     }
   }
   
-  class FileDataReader implements DataReader, FileReceipt {
-    int uid;
-    byte[] bytes;
-    ByteBuffer curReader;
-    RandomAccessFile file;
+  public class FileDataReader implements DataReader, FileReceipt {
+    protected int uid;
+    protected byte[] bytes;
+    protected ByteBuffer curReader;
+    protected RandomAccessFile file;
     
-    File f;    
-    byte[] metadata;
-    long offset;
-    long length;
+    protected File f;    
+    protected byte[] metadata;
+    protected long offset;
+    protected long length;
     
-    long ptr;
+    protected long ptr;
     
-    boolean requestedCancel = false;
-    boolean cancelled = false;
+    protected boolean requestedCancel = false;
+    protected boolean cancelled = false;
     
     /**
      * Null if there is no problem, set if there is a problem.
      */
-    Exception exception = null;
+    protected Exception exception = null;
     
     public FileDataReader(int uid, byte[] metadata, File f, long offset, long length) throws IOException {
       this.uid = uid;
