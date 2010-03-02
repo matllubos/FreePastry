@@ -699,7 +699,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
           public void receiveException(SocketRequestHandle<Identifier> s, Exception ex) {
             if (handle.getSubCancellable() != null && s != handle.getSubCancellable()) throw new IllegalArgumentException(
                 "s != handle.getSubCancellable() must be a bug. s:"+
-                s+" sub:"+handle.getSubCancellable());
+                s+" sub:"+handle.getSubCancellable(),ex);
             getEntityManager(s.getIdentifier()).receiveSocketException(handle, ex);
           }
         }, options));
@@ -860,7 +860,11 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
 //      }
       synchronized(EntityManager.this) {
         if (handle == pendingSocket) {        
-          if (logger.level <= logger.INFO) logger.log(EntityManager.this+".receiveSocketException("+ex+") setting pendingSocket to null "+pendingSocket);
+          if (logger.level <= logger.FINE) {
+            logger.logException(EntityManager.this+".receiveSocketException("+ex+") setting pendingSocket to null "+pendingSocket, ex);
+          } else if (logger.level <= logger.INFO) {
+            logger.log(EntityManager.this+".receiveSocketException("+ex+") setting pendingSocket to null "+pendingSocket);
+          }
 
           stopLivenessChecker();
           pendingSocket = null; 

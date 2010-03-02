@@ -145,7 +145,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
 
       public void receiveException(SocketRequestHandle<Identifier> s,
           Exception ex) {
-        deliverSocketToMe.receiveException(s, ex);
+        deliverSocketToMe.receiveException(ret, ex);
       }
 
       public void receiveResult(SocketRequestHandle<Identifier> cancellable,
