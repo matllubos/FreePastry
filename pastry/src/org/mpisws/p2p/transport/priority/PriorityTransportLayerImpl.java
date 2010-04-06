@@ -1124,6 +1124,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
             } else {
               // done
               if (msgs.removeFirst() != this) throw new RuntimeException("Error, removing first was not this!"+this); 
+              if (deliverAckToMe != null) deliverAckToMe.ack(this);
               sendNextMessage();
             }
           }
