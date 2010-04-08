@@ -259,7 +259,7 @@ public class MathUtils {
    */
   public static byte[] shortToByteArray(short input) {
     byte[] output = new byte[2];
-    intToByteArray(input, output, 0);
+    shortToByteArray(input, output, 0);
     return output;
   }
   
