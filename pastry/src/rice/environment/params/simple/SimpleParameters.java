@@ -358,7 +358,9 @@ public class SimpleParameters implements Parameters {
       File next = new File(configFileName + ".new");
       File old = new File(configFileName + ".old");
 
-      properties.store(new FileOutputStream(next), null);
+      FileOutputStream fos = new FileOutputStream(next);
+      properties.store(fos, null);
+      fos.close();
       
       current.renameTo(old);
       next.renameTo(current);
