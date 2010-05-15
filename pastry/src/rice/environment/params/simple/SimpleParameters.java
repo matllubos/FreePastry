@@ -201,6 +201,13 @@ public class SimpleParameters implements Parameters {
     }
   }
 
+  public void restoreDefault(String name) {    
+    if (properties.getProperty(name) != null) {
+      properties.remove(name);
+      fireChangeEvent(name, defaults.getProperty(name));
+    }    
+  }
+  
   public void remove(String name) {
     properties.remove(name);
     fireChangeEvent(name, null);

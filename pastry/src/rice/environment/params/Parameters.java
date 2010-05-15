@@ -114,7 +114,8 @@ public interface Parameters {
   public void setInetAddress(String paramName, InetAddress val);
   public void setInetSocketAddress(String paramName, InetSocketAddress val);
   public void setInetSocketAddressArray(String paramName, InetSocketAddress[] val);
-  
+  public void restoreDefault(String paramName);
+    
   public void addChangeListener(ParameterChangeListener p);
   public void removeChangeListener(ParameterChangeListener p);
 }
