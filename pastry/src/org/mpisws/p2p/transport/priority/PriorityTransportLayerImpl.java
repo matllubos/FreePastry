@@ -326,11 +326,15 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     synchronized(entityManagers) {
       EntityManager ret = entityManagers.get(i); 
       if (ret == null) {
-        ret = new EntityManager(i);
+        ret = generateEntityManager(i);
         entityManagers.put(i, ret);
       }
       return ret;
     }
+  }
+  
+  protected EntityManager generateEntityManager(Identifier i) {
+    return new EntityManager(i);
   }
   
   protected EntityManager deleteEntityManager(Identifier i) {
@@ -464,7 +468,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
    * 
    * @author Jeff Hoye
    */
-  class EntityManager implements P2PSocketReceiver<Identifier> {
+  public class EntityManager implements P2PSocketReceiver<Identifier> {
     // TODO: think about the behavior of this when it wraps around...
     int seq = Integer.MIN_VALUE;
     SortedLinkedList<MessageWrapper> queue; // messages we want to send
@@ -479,7 +483,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
     // Invariant: if (messageThatIsBeingWritten != null) then (writingSocket != null)
     private boolean registered = false;  // true if registed for writing
     
-    EntityManager(Identifier identifier) {
+    public EntityManager(Identifier identifier) {
       this.identifier = new WeakReference<Identifier>(identifier);
       queue = new SortedLinkedList<MessageWrapper>();
       sockets = new HashSet<P2PSocket<Identifier>>();
