@@ -144,7 +144,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
   }
   
   protected void handleResult(SSLEngineResult result) {
-//    logger.log("handleResult:"+result);
+    if (logger.level <= Logger.FINE) logger.log("handleResult:"+result);
     this.result = result;
     this.status = result.getHandshakeStatus();
   }
@@ -340,11 +340,16 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
     doneHandshaking = true;
   }
   
+  /**
+   * Called after unwrapping(), wrapping(), read(), or when task is complete
+   */
   protected void continueHandshaking() {    
     if (runningTaskLock) {
+      if (logger.level <= Logger.FINE) logger.log(this+".continueHandshaking() locked");
 //      logger.log("go2: processing... bye.");
       return; // wait for processing to finish
     }
+    if (logger.level <= Logger.FINE) logger.log(this+".continueHandshaking("+status+")");
     switch(status) {
     case NOT_HANDSHAKING:
       return;
@@ -376,7 +381,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
           if (name.startsWith("CN=")) {
             name = name.substring(3);
             options = OptionsFactory.addOption(socket.getOptions(), SSLTransportLayer.OPTION_CERT_SUBJECT, name);
-//            logger.log("Talking to:"+name);
+            if (logger.level <= Logger.FINE) logger.log("Talking to:"+name);
           } else {
             fail(new IllegalArgumentException("CN must start with CN= "+name+" "+this));
             return false;          
@@ -386,6 +391,7 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
           return false;
         }
       }
+      if (logger.level <= Logger.FINE) logger.log(this+"checkDone() doneHandshaking");
       doneHandshaking = true;
       c.receiveResult(this);
       return true;
@@ -507,8 +513,14 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
           return dsts.position()-start;
         } else {
 //          logger.log("putting2:"+readMe.getFirst());
-          dsts.put(readMe.getFirst());
-          if (readMe.getFirst().hasRemaining()) {
+//          dsts.put(foo); // this could overflow            
+          ByteBuffer foo = readMe.getFirst();
+          int len = Math.min(dsts.remaining(), foo.remaining());
+          int pos = foo.position();
+//          logger.log("putting:"+len);
+          dsts.put(foo.array(),pos,len);
+          foo.position(pos+len);
+          if (foo.hasRemaining()) {
             return dsts.position()-start;
           } else {
             readMe.removeFirst();

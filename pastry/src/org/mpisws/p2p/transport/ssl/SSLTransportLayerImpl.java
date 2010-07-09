@@ -169,6 +169,7 @@ public class SSLTransportLayerImpl<Identifier, MessageType> implements SSLTransp
    * TODO: support resuming
    */
   public void incomingSocket(final P2PSocket<Identifier> s) throws IOException {
+    if (logger.level <= Logger.FINE) logger.log("incomingSocket("+s+")");
     getSocketManager(this,s,new Continuation<SSLSocketManager<Identifier>, Exception>() {
 
       public void receiveException(Exception exception) {
