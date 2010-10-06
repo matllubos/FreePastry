@@ -302,6 +302,7 @@ public class MagicNumberTransportLayer<Identifier> implements
         } else {    
           cancel();
           errorHandler.receivedUnexpectedData(socket.getIdentifier(), buf.array(), 0, null); 
+          socket.close();
         }
       }
     }
