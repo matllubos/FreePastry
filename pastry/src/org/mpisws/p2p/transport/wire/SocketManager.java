@@ -489,6 +489,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
           logger.log(this+"read("+ret+")");
         }
       }    
+      tcp.notifyRead(ret,addr);
       return ret;
     } catch (IOException ioe) {
       if (logger.level <= Logger.FINE) {
@@ -518,6 +519,7 @@ public class SocketManager extends SelectionKeyHandler implements P2PSocket<Inet
           logger.log(this+"write("+ret+")");
         }
       }
+      tcp.notifyWrite(ret,addr);
       return ret;
     } catch (IOException ioe) {
       if (logger.level <= Logger.FINER) {

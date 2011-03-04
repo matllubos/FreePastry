@@ -245,4 +245,12 @@ public class TCPLayer extends SelectionKeyHandler {
   public boolean isDestroyed() {
     return wire.isDestroyed();
   }
+
+  public void notifyRead(long ret, InetSocketAddress addr) {
+    wire.notifyRead(ret, addr, true);
+  }
+  
+  public void notifyWrite(long ret, InetSocketAddress addr) {
+    wire.notifyWrite(ret, addr, true);
+  }
 }

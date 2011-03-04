@@ -67,7 +67,7 @@ import rice.p2p.util.rawserialization.SimpleOutputBuffer;
 import rice.pastry.NetworkListener;
 import rice.pastry.messaging.Message;
 
-public class WireTransportLayerImpl implements WireTransportLayer, SocketOpeningTransportLayer<InetSocketAddress> {
+public class WireTransportLayerImpl implements WireTransportLayer, ListenableTransportLayer<InetSocketAddress>, SocketOpeningTransportLayer<InetSocketAddress> {
   // state
   protected InetSocketAddress bindAddress;
   
@@ -277,5 +277,21 @@ public class WireTransportLayerImpl implements WireTransportLayer, SocketOpening
   public void broadcastChannelClosed(InetSocketAddress addr, Map<String, Object> options) {
     for (SocketCountListener<InetSocketAddress> listener : getSlisteners())
       listener.socketClosed(addr, options);
+  }
+
+  public void notifyRead(long bytes, InetSocketAddress addr, boolean tcp) {    
+    synchronized(listeners) {
+      for (TransportLayerListener<InetSocketAddress> l : listeners) {
+        l.read((int)bytes, addr, null, true, tcp);
+      }
+    }    
+  }
+
+  public void notifyWrite(long bytes, InetSocketAddress addr, boolean tcp) {    
+    synchronized(listeners) {
+      for (TransportLayerListener<InetSocketAddress> l : listeners) {
+        l.wrote((int)bytes, addr, null, true, tcp);
+      }
+    }    
   }
 }

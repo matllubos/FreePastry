@@ -415,7 +415,6 @@ public class SSLSocketManager<Identifier> implements P2PSocket<Identifier>,
       sslTL.environment.getProcessor().process(new Executable<Object, Exception>() {
         
         public Object execute() throws Exception {
-          // TODO Auto-generated method 
           Runnable runnable;
           while ((runnable = engine.getDelegatedTask()) != null) {
 //            logger.log("\trunning delegated task...");
