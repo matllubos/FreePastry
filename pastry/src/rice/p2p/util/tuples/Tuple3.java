@@ -59,6 +59,11 @@ public class Tuple3<A,B,C> {
     return c;
   }
   
+  public String toString() {
+    return a+","+b+","+c;
+  }
+
+  
   /**
    * Gotta handle null values
    */
