@@ -889,7 +889,7 @@ public class PriorityTransportLayerImpl<Identifier> implements PriorityTransport
         // drop the lowest priority message if the queue is overflowing        
         while (queue.size() > MAX_QUEUE_SIZE) {
           MessageWrapper w = queue.removeLast();
-          if (logger.level <= Logger.CONFIG) logger.log("Dropping "+w+" because queue is full. MAX_QUEUE_SIZE:"+MAX_QUEUE_SIZE);
+          if (logger.level <= Logger.INFO+50) logger.log("Dropping "+w+" because queue is full. MAX_QUEUE_SIZE:"+MAX_QUEUE_SIZE);
           w.drop();
         }
       }
