@@ -479,6 +479,7 @@ public class ConsistentJoinProtocol extends StandardJoinProtocol implements Obse
         NodeHandle nh = (NodeHandle)it2.next();
         // he's not a member, but he could be
         if (!failed.containsKey(nh) && nh.getLiveness() < NodeHandle.LIVENESS_DEAD) {
+            System.out.println("dsfa");
           addToLeafSet(nh);
           // probe
           sendTheMessage(nh, false);

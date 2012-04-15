@@ -1032,7 +1032,6 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
             @Override
             public void run() {
               if (logger.level <= Logger.FINE) logger.log("boot() timer expiring, attempting to start pns (it may have already started)");
-
               beginPns.receiveResult(bootHandles);
             }            
           }, 20000);

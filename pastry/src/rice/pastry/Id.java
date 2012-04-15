@@ -101,6 +101,8 @@ public class Id implements rice.p2p.commonapi.Id, RawSerializable {
         for (int i = 0; (i < nlen) && (i < material.length); i++) {
             Id[i] = material[i];
         }
+        this.raw = new byte[8];
+        this.validationAlg = -1;
     }
 
     protected Id(int material[], byte raw[], short validationAlg) {
