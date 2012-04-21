@@ -12,6 +12,7 @@ import rice.pastry.routing.RoutingTable;
 public class SecureRoutingTable extends RoutingTable {
 
     private SecureIdValidator controller;
+    
     public SecureRoutingTable(NodeHandle me, int max, byte base, PastryNode pn, SecureIdValidator controller) {
         super(me, max, base, pn);
         this.controller = controller;

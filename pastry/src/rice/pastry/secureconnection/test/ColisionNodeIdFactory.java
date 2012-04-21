@@ -1,4 +1,4 @@
-package rice.pastry.secureconnection;
+package rice.pastry.secureconnection.test;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -11,33 +11,29 @@ import rice.pastry.NodeIdFactory;
  *
  * @author Luboš Mátl
  */
-public class SecureRandomNodeIdFactory implements NodeIdFactory {
+public class ColisionNodeIdFactory implements NodeIdFactory {
 
-    private long next;
-    Environment environment;
     protected Logger logger;
 
     /**
      * Constructor.
      */
-    public SecureRandomNodeIdFactory(Environment env) {
-        this.environment = env;
-        next = env.getRandomSource().nextLong();
+    public ColisionNodeIdFactory(Environment env) {
         this.logger = env.getLogManager().getLogger(getClass(), null);
     }
 
+    /**
+     * generate a colision nodeId
+     * 
+     * @return the new nodeId
+     */
     @Override
     public Id generateNodeId() {
 
         //byte raw[] = new byte[NodeId.nodeIdBitLength >> 3];
         //rng.nextBytes(raw);
 
-        byte raw[] = new byte[10];
-        long tmp = ++next;
-        for (int i = 0; i < 10; i++) {
-            raw[i] = (byte) (tmp & 0xff);
-            tmp >>= 10;
-        }
+        byte raw[] = new byte[]{1, 1, 1, 1, 1, 1, 1, 1};
 
         MessageDigest md = null;
         try {
@@ -51,9 +47,10 @@ public class SecureRandomNodeIdFactory implements NodeIdFactory {
         }
 
         md.update(raw);
-
         byte[] digest = md.digest();
+
         Id nodeId = Id.build(digest, raw, (short) 1);
+
         return nodeId;
     }
 }

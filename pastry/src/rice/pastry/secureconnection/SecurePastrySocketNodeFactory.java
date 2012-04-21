@@ -2,8 +2,6 @@ package rice.pastry.secureconnection;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import org.mpisws.p2p.transport.multiaddress.MultiInetSocketAddress;
 import rice.environment.Environment;
 import rice.pastry.Id;
 import rice.pastry.NodeHandle;
@@ -15,8 +13,6 @@ import rice.pastry.join.JoinProtocol;
 import rice.pastry.leafset.LeafSet;
 import rice.pastry.messaging.MessageDispatch;
 import rice.pastry.routing.RoutingTable;
-import rice.pastry.socket.SocketNodeHandle;
-import rice.pastry.socket.SocketNodeHandleFactory;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.ConsistentJoinProtocol;
 import rice.pastry.standard.RapidRerouter;
@@ -50,6 +46,7 @@ public class SecurePastrySocketNodeFactory extends SocketPastryNodeFactory {
         return jProtocol;
     }
 
+    @Override
     public PastryNode nodeHandleHelper(PastryNode pn) throws IOException {
         NodeHandleFactory handleFactory = getNodeHandleFactory(pn);
         NodeHandle localhandle = getLocalHandle(pn, handleFactory);

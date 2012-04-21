@@ -30,7 +30,7 @@ public class ScribeTest implements MessageReceiverI {
 
     public static void main(String args[]) throws Exception {
 
-        Connector connector = new Connector();
+        SecureIdConnector connector = new SecureIdConnector();
         MessagingApp receiver = connector.getSender(new InetSocketAddress("127.0.0.1", 6000), new InetSocketAddress("127.0.0.1", 6000), new ScribeTest());
         Thread.sleep(1000);
         MessagingApp sender = connector.getSender(new InetSocketAddress("127.0.0.1", 6001), new InetSocketAddress("127.0.0.1", 6000), new ScribeTest());
