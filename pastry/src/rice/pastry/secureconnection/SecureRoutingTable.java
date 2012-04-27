@@ -21,8 +21,7 @@ public class SecureRoutingTable extends RoutingTable {
     @Override
     public synchronized boolean put(NodeHandle handle) {
         
-        Id nid = handle.getNodeId();
-        if (!controller.isValid(nid)) {
+        if (!controller.isValid(handle)) {
             return false;
         }
         return super.put(handle);

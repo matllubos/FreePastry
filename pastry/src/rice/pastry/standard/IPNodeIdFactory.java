@@ -108,6 +108,7 @@ public class IPNodeIdFactory implements NodeIdFactory {
       tmp >>= 8;
     }
 
+    
     MessageDigest md = null;
     try {
       md = MessageDigest.getInstance("SHA");
@@ -119,6 +120,7 @@ public class IPNodeIdFactory implements NodeIdFactory {
     md.update(rawIP);
     md.update(rawPort);
     md.update(raw);
+    
     byte[] digest = md.digest();
 
     // now, we randomize the least significant 32 bits to ensure

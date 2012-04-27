@@ -53,7 +53,7 @@ public class SecureConsistentJoinProtocol extends ConsistentJoinProtocol {
     public void receiveMessage(Message msg) {
         if (msg instanceof JoinRequest) {
             JoinRequest cjm = (JoinRequest) msg;
-            if (!controller.isValid((Id)cjm.getHandle().getId())) {
+            if (!controller.isValid(cjm.getHandle())) {
                 FailJoinMessage fjm = new FailJoinMessage();
                 thePastryNode.send(cjm.getHandle(), fjm, null, null);
                 return;
@@ -63,7 +63,7 @@ public class SecureConsistentJoinProtocol extends ConsistentJoinProtocol {
                 RouteMessage rm = (RouteMessage) msg;
                 JoinRequest jr = (JoinRequest) rm.unwrap(deserializer);
                 NodeHandle jh = jr.getHandle();
-                if (! controller.isValid((Id)jh.getId())) {
+                if (! controller.isValid(jh)) {
                     FailJoinMessage fjm = new FailJoinMessage();
                     thePastryNode.send(jh, fjm, null, null);
                     return;

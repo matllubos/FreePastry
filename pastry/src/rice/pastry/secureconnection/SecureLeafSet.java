@@ -29,9 +29,8 @@ public class SecureLeafSet extends LeafSet {
 
     
     public boolean put(NodeHandle handle, boolean suppressNotification) {
-        Id nid = handle.getNodeId();
         //test if node is valid
-        if (!controller.isValid(nid)) {
+        if (!controller.isValid(handle)) {
             return false;
         }
 

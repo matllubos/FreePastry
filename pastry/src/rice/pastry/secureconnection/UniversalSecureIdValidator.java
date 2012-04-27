@@ -2,6 +2,7 @@ package rice.pastry.secureconnection;
 
 import java.util.HashMap;
 import java.util.Map;
+import rice.p2p.commonapi.NodeHandle;
 import rice.pastry.Id;
 
 /**
@@ -16,6 +17,9 @@ public class UniversalSecureIdValidator implements SecureIdValidator{
         switch(controlType) {
             case 1:
                 return new ShaSecureIdValidator();
+                
+            case 2:
+                return new ShaSecureIPIdValidator();
         }
         return null;
     }
@@ -34,11 +38,12 @@ public class UniversalSecureIdValidator implements SecureIdValidator{
     }
     
     @Override
-    public boolean isValid(Id id) {
+    public boolean isValid(NodeHandle nh) {
+        Id id = (Id) nh.getId();
         if (id.getValidationAlg() == -1) return false;
         SecureIdValidator controller = getController(id.getValidationAlg());
         if (controller == null) return false;
-        return controller.isValid(id);
+        return controller.isValid(nh);
     }
     
     

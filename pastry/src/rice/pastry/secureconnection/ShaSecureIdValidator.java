@@ -3,6 +3,7 @@ package rice.pastry.secureconnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import rice.p2p.commonapi.NodeHandle;
 import rice.pastry.Id;
 
 /**
@@ -12,7 +13,8 @@ import rice.pastry.Id;
 public class ShaSecureIdValidator implements SecureIdValidator {
 
     @Override
-    public boolean isValid(Id id) {
+    public boolean isValid(NodeHandle nh) {
+        Id id = (Id) nh.getId();
         MessageDigest md = null;
         try {
             md = MessageDigest.getInstance("SHA");

@@ -86,7 +86,7 @@ public class Id implements rice.p2p.commonapi.Id, RawSerializable {
      * The actual contents of this Id
      */
     private int Id[];
-    public final static int rlen = 8;
+    public final static int rlen = 10;
     private static boolean secureId = false;
     private byte raw[];
     private short validationAlg;
@@ -101,14 +101,14 @@ public class Id implements rice.p2p.commonapi.Id, RawSerializable {
         for (int i = 0; (i < nlen) && (i < material.length); i++) {
             Id[i] = material[i];
         }
-        this.raw = new byte[8];
+        this.raw = new byte[rlen];
         this.validationAlg = -1;
     }
 
     protected Id(int material[], byte raw[], short validationAlg) {
         this(material);
-        this.raw = new byte[8];
-        for (int i = 0; (i < 8) && (i < raw.length); i++) {
+        this.raw = new byte[rlen];
+        for (int i = 0; (i < rlen) && (i < raw.length); i++) {
             this.raw[i] = raw[i];
         }
 

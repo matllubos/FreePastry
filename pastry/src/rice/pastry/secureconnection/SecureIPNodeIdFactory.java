@@ -100,9 +100,9 @@ public class SecureIPNodeIdFactory implements NodeIdFactory {
             tmp >>= 8;
         }
 
-        byte raw[] = new byte[4];
+        byte raw[] = new byte[10];
         tmp = ++nextInstance;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 10; i++) {
             raw[i] = (byte) (tmp & 0xff);
             tmp >>= 8;
         }
@@ -126,7 +126,7 @@ public class SecureIPNodeIdFactory implements NodeIdFactory {
         md.update(allRaw);
         byte[] digest = md.digest();
 
-        Id nodeId = Id.build(digest, allRaw, (short) 1);
+        Id nodeId = Id.build(digest, raw, (short) 2);
 
         return nodeId;
     }

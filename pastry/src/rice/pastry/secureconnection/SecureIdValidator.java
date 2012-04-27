@@ -1,6 +1,6 @@
 package rice.pastry.secureconnection;
 
-import rice.pastry.Id;
+import rice.p2p.commonapi.NodeHandle;
 
 /**
  *
@@ -8,6 +8,6 @@ import rice.pastry.Id;
  */
 public interface SecureIdValidator {
     
-    public boolean isValid(Id id);
+    public boolean isValid(NodeHandle nh);
 
 }
