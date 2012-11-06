@@ -477,7 +477,7 @@ public class SocketPastryNodeFactory extends TransportPastryNodeFactory {
   protected TransportLayer<InetSocketAddress, ByteBuffer> getMagicNumberTransportLayer(TransportLayer<InetSocketAddress, ByteBuffer> wtl, PastryNode pn) {
     Environment environment = pn.getEnvironment();
     MagicNumberTransportLayer<InetSocketAddress> mntl = 
-      new MagicNumberTransportLayer<InetSocketAddress>(wtl,environment,null,PASTRY_MAGIC_NUMBER, 50000);
+      new MagicNumberTransportLayer<InetSocketAddress>(wtl,environment,null,PASTRY_MAGIC_NUMBER, 5000);
     return mntl;
   }
 
