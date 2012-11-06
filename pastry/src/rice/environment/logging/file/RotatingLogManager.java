@@ -47,8 +47,6 @@ import java.io.PrintStream;
 import java.text.*;
 import java.util.Date;
 
-import javax.swing.text.DateFormatter;
-
 import rice.environment.Environment;
 import rice.environment.logging.AbstractLogManager;
 import rice.environment.logging.LogManager;
@@ -112,10 +110,9 @@ public class RotatingLogManager extends AbstractLogManager {
     synchronized (this) {
       PrintStream oldps = ps;
       String dateFormat = params.getString("log_rotating_date_format");
-      DateFormatter dateFormatter = null;
+      DateFormat dateFormatter = null;
       if (dateFormat != null && !dateFormat.equals("")) {
-        dateFormatter = new DateFormatter(new SimpleDateFormat(
-            dateFormat));
+        dateFormatter = new SimpleDateFormat(dateFormat);
       }
 
       System.out.println("rotate: about to rotate log");
@@ -126,11 +123,7 @@ public class RotatingLogManager extends AbstractLogManager {
         long filedate = oldfile.lastModified();
         String rot_filename = filename + "." + filedate;
         if (dateFormatter != null) {
-          try {
-            rot_filename = filename + "." + dateFormatter.valueToString(new Date(filedate));         
-          } catch (ParseException pe) {
-            pe.printStackTrace();
-          }
+            rot_filename = filename + "." + dateFormatter.format(new Date(filedate));         
         }
         System.out.println("rotate: renaming "+filename+" to "+rot_filename);
         // have to close before we rename for Windows 

@@ -366,7 +366,7 @@ org.mpisws.p2p.testing.transportlayer.replay.Recorder_printlog = true
 
 # logging
 #default log level
-loglevel = WARNING
+loglevel = FINEST
 
 #example of enabling logging on the endpoint:
 #rice.p2p.scribe@ScribeRegrTest-endpoint_loglevel = INFO
@@ -401,4 +401,4 @@ fileLogManager_overwrite_existing_log_file = false
 # in milliseconds, default is 30 seconds
 lookup_service.timeout = 30000
 # how long to wait before the first retry
-lookup_service.firstTimeout = 500
+lookup_service.firstTimeout = 5000

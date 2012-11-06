@@ -99,7 +99,7 @@ public class HttpFetcher {
   
   public static void main(String[] args) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    HttpFetcher f = new HttpFetcher(new URL("http://www.epostmail.org/code/epost-2.1.3.jar"), baos);
+    HttpFetcher f = new HttpFetcher(new URL("http://google.com"), baos);
     
     byte[] bytes = f.fetch();
 

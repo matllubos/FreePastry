@@ -43,8 +43,6 @@ import java.io.PrintStream;
 import java.text.*;
 import java.util.Date;
 
-import javax.swing.text.DateFormatter;
-
 import rice.environment.logging.*;
 import rice.environment.time.TimeSource;
 
@@ -88,12 +86,8 @@ public class SimpleLogger extends HeirarchyLogger {
     synchronized(alm) {
       String dateString = ""+alm.getTimeSource().currentTimeMillis();
       if (alm.dateFormatter != null) {
-        try {
           Date date = new Date(alm.getTimeSource().currentTimeMillis());            
-          dateString = alm.dateFormatter.valueToString(date);
-        } catch (ParseException pe) {
-          pe.printStackTrace();
-        }
+          dateString = alm.dateFormatter.format(date);
       }
 
       alm.getPrintStream().println(alm.getPrefix()+":"+loggerName+":"+dateString+":"+message);
@@ -107,12 +101,8 @@ public class SimpleLogger extends HeirarchyLogger {
     synchronized(alm) {
       String dateString = ""+alm.getTimeSource().currentTimeMillis();
       if (alm.dateFormatter != null) {
-        try {
           Date date = new Date(alm.getTimeSource().currentTimeMillis());            
-          dateString = alm.dateFormatter.valueToString(date);
-        } catch (ParseException pe) {
-          pe.printStackTrace();
-        }
+          dateString = alm.dateFormatter.format(date);
       }
       
       alm.getPrintStream().print(alm.getPrefix()+":"+loggerName+":"+dateString+":"+message+" ");

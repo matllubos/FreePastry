@@ -41,10 +41,9 @@ advised of the possibility of such damage.
 package rice.environment.logging;
 
 import java.io.*;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
-import javax.swing.text.DateFormatter;
 
 import rice.environment.logging.simple.SimpleLogger;
 import rice.environment.params.ParameterChangeListener;
@@ -80,7 +79,7 @@ public abstract class AbstractLogManager implements LogManager {
   protected boolean enabled;
   protected static final PrintStream nullPrintStream = new PrintStream(new NullOutputStream());
 
-  public DateFormatter dateFormatter;
+  public DateFormat dateFormatter;
   
   public static final String SYSTEM_OUT = "System.out";
   public static final String SYSTEM_ERR = "System.err";
@@ -112,7 +111,7 @@ public abstract class AbstractLogManager implements LogManager {
       this.dateFormat = params.getString("logging_date_format");
     }
     if (this.dateFormat != null && !this.dateFormat.equals("")) {      
-      dateFormatter = new DateFormatter(new SimpleDateFormat(this.dateFormat));
+      dateFormatter = new SimpleDateFormat(this.dateFormat);
 //      System.out.println("DateFormat "+this.dateFormat);
     }
 
